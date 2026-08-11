@@ -1,0 +1,141 @@
+{
+    "nav": {
+        "brand": "Warehouse Admin",
+        "rows": "Rows",
+        "cellLog": "Cell Log",
+        "users": "Users",
+        "logout": "Log out"
+    },
+    "language": {
+        "label": "Language",
+        "en": "English",
+        "ar": "Arabic"
+    },
+    "common": {
+        "confirmDelete": "Delete {label}? This cannot be undone."
+    },
+    "auth": {
+        "login": {
+            "brand": "Warehouse Admin",
+            "email": "Email",
+            "password": "Password",
+            "submit": "Log in",
+            "submitting": "Logging in..."
+        }
+    },
+    "rows": {
+        "index": {
+            "title": "Rows",
+            "addRow": "Add row",
+            "columnLetter": "Letter",
+            "columnCells": "Cells",
+            "columnFlats": "Flats",
+            "columnAction": "Action",
+            "empty": "No rows yet.",
+            "view": "View",
+            "delete": "Delete",
+            "rowLabel": "row {letter}",
+            "hasPallets": "Has pallets",
+            "hasPalletsTitle": "This row has pallets stored in it, so it can't be deleted."
+        },
+        "create": {
+            "title": "Add row",
+            "submit": "Create row",
+            "submitting": "Creating..."
+        },
+        "edit": {
+            "title": "Edit row {letter}",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "show": {
+            "title": "Row {letter}",
+            "editRow": "Edit row",
+            "column": "Column {n}",
+            "flat": "Flat {n}",
+            "empty": "Empty"
+        },
+        "fields": {
+            "letter": "Letter",
+            "cellsPerFlat": "Cells per flat",
+            "flats": "Flats",
+            "dimensionsLocked": "This row has pallets stored in it, so its dimensions can't be changed."
+        }
+    },
+    "users": {
+        "index": {
+            "title": "Users",
+            "addUser": "Add user",
+            "columnName": "Name",
+            "columnEmail": "Email",
+            "columnRole": "Role",
+            "columnActions": "Actions",
+            "empty": "No users yet.",
+            "edit": "Edit",
+            "delete": "Delete",
+            "roleAdmin": "Admin",
+            "roleMobile": "Mobile user"
+        },
+        "create": {
+            "title": "Add user",
+            "submit": "Create user",
+            "submitting": "Creating..."
+        },
+        "edit": {
+            "title": "Edit {name}",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "fields": {
+            "name": "Name",
+            "email": "Email",
+            "password": "Password",
+            "newPassword": "New password",
+            "confirmPassword": "Confirm password",
+            "passwordPlaceholder": "Leave blank to keep current password",
+            "passwordMismatch": "Passwords do not match.",
+            "adminAccess": "Admin access",
+            "disabledAdminHint": "You cannot remove your own admin access."
+        }
+    },
+    "cellLog": {
+        "title": "Cell Log",
+        "filters": {
+            "product": "Product",
+            "row": "Row",
+            "column": "Column",
+            "doneBy": "Done by",
+            "statusChange": "Status change",
+            "from": "From",
+            "to": "To",
+            "all": "All",
+            "apply": "Apply filters",
+            "clear": "Clear",
+            "palletHistory": "Showing history for pallet #{id}"
+        },
+        "columns": {
+            "cell": "Cell",
+            "action": "Action",
+            "product": "Product",
+            "pallet": "Pallet",
+            "expires": "Expires",
+            "viewPalletHistory": "View all logs for this pallet",
+            "note": "Note",
+            "doneBy": "Done by",
+            "when": "When"
+        },
+        "actions": {
+            "stored": "Stored",
+            "opened": "Opened",
+            "emptied": "Emptied",
+            "transferred_out": "Transferred out",
+            "transferred_in": "Transferred in"
+        },
+        "states": {
+            "empty": "Empty",
+            "full": "Full",
+            "opened": "Opened"
+        },
+        "empty": "No activity yet."
+    }
+}
