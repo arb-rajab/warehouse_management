@@ -1,5 +1,8 @@
 import stylistic from '@stylistic/eslint-plugin';
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript';
+import {
+    defineConfigWithVueTs,
+    vueTsConfigs,
+} from '@vue/eslint-config-typescript';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
 import vue from 'eslint-plugin-vue';
@@ -50,7 +53,14 @@ export default defineConfigWithVueTs(
             'import/order': [
                 'error',
                 {
-                    groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+                    groups: [
+                        'builtin',
+                        'external',
+                        'internal',
+                        'parent',
+                        'sibling',
+                        'index',
+                    ],
                     alphabetize: {
                         order: 'asc',
                         caseInsensitive: true,
@@ -68,7 +78,11 @@ export default defineConfigWithVueTs(
             '@stylistic': stylistic,
         },
         rules: {
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
             '@stylistic/padding-line-between-statements': [
                 'error',
                 ...paddingAroundControl,
@@ -83,6 +97,8 @@ export default defineConfigWithVueTs(
             'bootstrap/ssr',
             'tailwind.config.js',
             'vite.config.ts',
+            'vitest.config.ts',
+            'playwright.config.ts',
             'resources/js/actions/**',
             'resources/js/components/ui/*',
             'resources/js/routes/**',
@@ -96,7 +112,11 @@ export default defineConfigWithVueTs(
         },
         rules: {
             curly: ['error', 'all'],
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
         },
     },
 );

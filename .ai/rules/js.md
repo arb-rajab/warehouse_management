@@ -1,0 +1,48 @@
+---
+paths:
+  - 'resources/js/**'
+---
+
+# Js
+
+## Build admin UI from the shared FormField / SubmitButton / DataTable components
+Do not hand-write input, submit-button, or table markup in a page — the Tailwind class strings were duplicated 9x/5x/3x before being extracted.
+
+- `components/FormField.vue` — label + input + error `<p>`. Props: id, label, type, value, error, inputClass. Extra attrs (min, maxlength, required, readonly, placeholder, autocomplete) pass through `$attrs` to the input.
+- `components/SubmitButton.vue` — label / processingLabel / processing.
+- `components/DataTable.vue` — wrapper + thead + tbody + empty state. Props: columns (string[]), rows (T extends {id:number}), emptyMessage; render cells via the `#row` slot. It derives the empty-state colspan from columns.length, so no hand-maintained colspan.
+
+FormField binds `:value.attr` (not `:value`) on purpose: the input stays uncontrolled so what the user typed survives the re-render after a failed submit. `tests/e2e/admin-form-retention.spec.ts` covers this — do not switch it to a plain `:value` binding.
+
+Pagination.vue carries its own `mt-4`; do not wrap it in a spacing div.
+
+## Shared table actions, slot labels, and delete confirmation
+Alongside FormField / SubmitButton / DataTable, these are the single definitions for their concern — do not re-type the class strings or wording:
+
+- `components/TableActionLink.vue` — pill link inside a table cell. `variant="primary"` (blue, default) or `"danger"` (red). Extra attrs (`method`, `as`, `:on-before`) fall through to the Inertia Link.
+- `components/AddResourceLink.vue` — the "Add X" header button; bakes in the Plus icon. Props: href, label.
+- `lib/confirm.ts` `confirmDelete(label)` — the only place the "Delete {label}? This cannot be undone." wording lives. Pass `` `row ${row.letter}` `` or a user's name.
+- `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
+
+## Every component/lib file needs a co-located *.test.ts
+Every `.vue` file in `components/` and `layouts/`, and every `.ts` file in `lib/`, must have a co-located `<Name>.test.ts` covering it (see the existing pairs, e.g. `DataTable.vue`/`DataTable.test.ts`). When adding a new file here or editing an existing one, add or update its test in the same change and run it (`npx vitest run <path>`) before finishing — don't rely on the file merely compiling/type-checking.
+
+For components that call `usePage()` or `router.*` from `@inertiajs/vue3` (no Inertia app is booted in unit tests), mock the whole module:
+
+```ts
+const { usePageMock, routerPostMock } = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+    routerPostMock: vi.fn(),
+}));
+vi.mock('@inertiajs/vue3', () => ({
+    usePage: usePageMock,
+    router: { post: routerPostMock },
+}));
+```
+
+`<Link>` itself mounts fine unmocked when the test never triggers a visit; only stub it (via a `defineComponent`/`h` built *inside* the `vi.mock` factory — `vi.hoisted` can't close over other imports) when the component also needs `usePage`/`router` mocked, since mocking the module removes the real `Link` too.
+
+`t()` from `@/lib/i18n` works unmocked in tests (documented in i18n.ts) — don't stub it.
+
+## Every form field mirrors its backend rule client-side via HTML5 attributes
+To keep invalid submissions from reaching the backend, every field bound to a FormRequest rule must carry the matching native HTML5 constraint, passed through FormField's `$attrs` (see js.md): `required` for `required`, `maxlength`/`minlength` for `max:`/`min:` on strings, `min`/`max`/`step="1"` for integer rules, `type="email"` for `email`. Only mirror rules that don't require a round trip (skip `unique`, `confirmed`-style cross-field checks stay client-side too when cheap — see UserFormFields.vue's `password`/`password_confirmation` `setCustomValidity` mismatch check). The backend rule stays authoritative; the frontend copy is just a flood guard. When adding/editing a form field, check its FormRequest's `rules()` and add the missing attribute in the same change, with a test asserting it (see UserFormFields.test.ts, RowFormFields.test.ts, Login.test.ts).

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -10,14 +12,6 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
     /**
      * Bootstrap any application services.
      */
@@ -31,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureDefaults(): void
     {
+        JsonResource::withoutWrapping();
+
+        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.rows.index'));
+
         Date::use(CarbonImmutable::class);
 
         DB::prohibitDestructiveCommands(

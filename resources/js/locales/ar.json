@@ -1,0 +1,141 @@
+{
+    "nav": {
+        "brand": "إدارة المستودع",
+        "rows": "الصفوف",
+        "cellLog": "سجل الخلايا",
+        "users": "المستخدمون",
+        "logout": "تسجيل الخروج"
+    },
+    "language": {
+        "label": "اللغة",
+        "en": "الإنجليزية",
+        "ar": "العربية"
+    },
+    "common": {
+        "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء."
+    },
+    "auth": {
+        "login": {
+            "brand": "إدارة المستودع",
+            "email": "البريد الإلكتروني",
+            "password": "كلمة المرور",
+            "submit": "تسجيل الدخول",
+            "submitting": "جارٍ تسجيل الدخول..."
+        }
+    },
+    "rows": {
+        "index": {
+            "title": "الصفوف",
+            "addRow": "إضافة صف",
+            "columnLetter": "الحرف",
+            "columnCells": "الخلايا",
+            "columnFlats": "الطبقات",
+            "columnAction": "الإجراء",
+            "empty": "لا توجد صفوف بعد.",
+            "view": "عرض",
+            "delete": "حذف",
+            "rowLabel": "الصف {letter}",
+            "hasPallets": "يحتوي على منصات",
+            "hasPalletsTitle": "يحتوي هذا الصف على منصات نقالة، لذا لا يمكن حذفه."
+        },
+        "create": {
+            "title": "إضافة صف",
+            "submit": "إنشاء الصف",
+            "submitting": "جارٍ الإنشاء..."
+        },
+        "edit": {
+            "title": "تعديل الصف {letter}",
+            "submit": "حفظ التغييرات",
+            "submitting": "جارٍ الحفظ..."
+        },
+        "show": {
+            "title": "الصف {letter}",
+            "editRow": "تعديل الصف",
+            "column": "العمود {n}",
+            "flat": "الطبقة {n}",
+            "empty": "فارغ"
+        },
+        "fields": {
+            "letter": "الحرف",
+            "cellsPerFlat": "الخلايا في كل طبقة",
+            "flats": "الطبقات",
+            "dimensionsLocked": "يحتوي هذا الصف على منصات نقالة، لذا لا يمكن تغيير أبعاده."
+        }
+    },
+    "users": {
+        "index": {
+            "title": "المستخدمون",
+            "addUser": "إضافة مستخدم",
+            "columnName": "الاسم",
+            "columnEmail": "البريد الإلكتروني",
+            "columnRole": "الدور",
+            "columnActions": "الإجراءات",
+            "empty": "لا يوجد مستخدمون بعد.",
+            "edit": "تعديل",
+            "delete": "حذف",
+            "roleAdmin": "مسؤول",
+            "roleMobile": "مستخدم جوال"
+        },
+        "create": {
+            "title": "إضافة مستخدم",
+            "submit": "إنشاء المستخدم",
+            "submitting": "جارٍ الإنشاء..."
+        },
+        "edit": {
+            "title": "تعديل {name}",
+            "submit": "حفظ التغييرات",
+            "submitting": "جارٍ الحفظ..."
+        },
+        "fields": {
+            "name": "الاسم",
+            "email": "البريد الإلكتروني",
+            "password": "كلمة المرور",
+            "newPassword": "كلمة مرور جديدة",
+            "confirmPassword": "تأكيد كلمة المرور",
+            "passwordPlaceholder": "اتركه فارغًا للاحتفاظ بكلمة المرور الحالية",
+            "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+            "adminAccess": "صلاحية المسؤول",
+            "disabledAdminHint": "لا يمكنك إزالة صلاحية المسؤول الخاصة بك."
+        }
+    },
+    "cellLog": {
+        "title": "سجل الخلايا",
+        "filters": {
+            "product": "المنتج",
+            "row": "الصف",
+            "column": "العمود",
+            "doneBy": "بواسطة",
+            "statusChange": "تغيير الحالة",
+            "from": "من",
+            "to": "إلى",
+            "all": "الكل",
+            "apply": "تطبيق الفلاتر",
+            "clear": "مسح",
+            "palletHistory": "عرض سجل الطبلية رقم #{id}"
+        },
+        "columns": {
+            "cell": "الخلية",
+            "action": "الإجراء",
+            "product": "المنتج",
+            "pallet": "الطبلية",
+            "expires": "تنتهي في",
+            "viewPalletHistory": "عرض كل سجلات هذه الطبلية",
+            "note": "ملاحظة",
+            "doneBy": "بواسطة",
+            "when": "الوقت"
+        },
+        "actions": {
+            "stored": "تم التخزين",
+            "opened": "تم الفتح",
+            "emptied": "تم التفريغ",
+            "transferred_out": "تم النقل منها",
+            "transferred_in": "تم النقل إليها"
+        },
+        "states": {
+            "empty": "فارغ",
+            "full": "ممتلئ",
+            "opened": "مفتوح"
+        },
+        "empty": "لا يوجد نشاط بعد."
+    }
+}

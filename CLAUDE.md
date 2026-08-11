@@ -104,6 +104,13 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
+=== tests rules ===
+
+# Test Enforcement
+
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+
 === inertia-laravel/core rules ===
 
 # Inertia
@@ -187,3 +194,107 @@ Vue components must have a single root element.
 - IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>
+
+# Project Conventions
+
+Apply these on every file add/edit in this project, not as an occasional audit.
+
+## Pre-change checklist — run on every file add/edit
+
+1. Before adding a new file, check the code you're about to add for duplication
+   against the rest of the codebase (not just sibling files). If it repeats
+   logic that already exists elsewhere, extract the shared logic instead of
+   duplicating it — but only once there are 2+ real call sites (see below).
+2. Before editing a file, look at what's being removed. If it was the second-
+   to-last caller of a shared helper/trait/composable/component, inline that
+   shared code into the one remaining caller and delete the now-unused shared
+   definition, in the same change — don't leave a one-caller indirection
+   "in case it's needed again."
+3. Before editing a file, check the code being added the same way as point 1.
+4. After any file is added or edited, add or update the test(s) covering that
+   change and run them before finalizing.
+
+## Duplication threshold
+
+- An extraction only clears the bar once 2+ real call sites need it. Don't
+  extract speculatively, and don't add flexibility (extra params/options) that
+  nothing currently uses.
+- Two files/components that look structurally similar isn't proof of
+  duplication — check whether each *specific* symbol (a constant, a type, a
+  variant map) would actually be imported by 2+ places post-extraction, not
+  just whether the surrounding shape looks alike.
+- The reverse applies: if a change drops a shared helper to one caller,
+  inline it back in the same change.
+
+## Reuse before writing new UI
+
+- Before writing a new button/input/modal/dropdown, or repeating a class
+  string, check existing shared components first.
+- Only promote a component-local variant/style map to a shared file once a
+  second component actually needs it.
+
+## Format/type-check incrementally, not just at the final gate
+
+- Run the formatter (Pint/Prettier) and type-checker (vue-tsc/PHPStan) right
+  after editing the file(s) they cover, not only via one final CI-check
+  command at the end. Catching an issue on the file you just touched is
+  cheaper than finding a pile of unrelated fallout later.
+
+## Testing conventions
+
+- Every model relationship/filter/scope test needs unrelated "noise" data in
+  the setup (another owner's row, a sibling record) and an assertion that it's
+  excluded — a test that only creates the data it expects back can pass even
+  if the relation silently returns everything.
+- A file already having a matching test is not proof its coverage is
+  current — when changing a file, diff its actual current logic against what
+  the test file asserts, don't assume coverage from the test file's mere
+  existence.
+- Frontend: default to a full mount, not a shallow one, unless the test is
+  purely checking prop pass-through to a child. Match child components by
+  reference/import, not by a name string (components with no inferred name
+  silently fail name-string matching). Assert on the actual props a child
+  component receives, not just that some text appears on the page.
+- Every user-facing static text label needs an assertion that it renders —
+  not just the strings a happy-path behavioral test happens to touch.
+- Every access-controlled route (auth-gated, role-gated, ownership-gated)
+  needs its own "unauthorized caller is rejected" test, for every action, not
+  just the happy path — including mutating actions, with a DB assertion that
+  nothing changed.
+- Any endpoint that paginates needs a test that seeds more rows than one page
+  and asserts the first page doesn't return all of them — a test with 1-2
+  rows can't distinguish `paginate()` from a plain `get()`.
+
+## Database query minimalism
+
+- Any query whose result reaches a rendered view/API response should select
+  only the columns actually needed by the consumer's type/shape — no bare
+  `Model::all()`/unrestricted `->with('relation')` when a narrower column
+  list would do. Applies to eager-loaded relations too (and remember to keep
+  the foreign key in a relation's column list, even if the frontend doesn't
+  render it directly).
+- Don't spread a full model into an array/JSON response when only a few
+  fields are needed — it silently re-exposes every future column added to
+  that table.
+
+## Authorization
+
+- Ownership checks (does this user own this record?) go through a proper
+  policy/guard mechanism, not an inline conditional duplicated across every
+  action that needs it.
+- Mass-assignment protection and per-request ownership authorization are
+  different concerns — removing a foreign key from a fillable/whitelisted
+  attribute list doesn't stop a different authenticated user from mutating
+  someone else's record via a route-bound ID. Both are needed.
+- A role check ("is this user an admin at all") belongs in middleware/route
+  guards; a per-record ownership check belongs in a policy. Don't add a
+  policy ability for something that's actually a blanket role check.
+
+## External input handling
+
+- Normalize untrusted input before persisting it, don't store it verbatim —
+  e.g. an uploaded image gets resized/re-encoded to a fixed format before
+  being written to disk, rather than saving whatever the client sent.
+- Every submit form validates client-side in addition to its backend
+  validation; the backend stays authoritative for anything requiring a round
+  trip (uniqueness, existence, auth).

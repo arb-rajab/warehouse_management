@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\CellState;
+use Database\Factories\PalletFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property int $product_id
+ * @property int $cell_id
+ * @property Carbon $expiration_date
+ * @property-read CellState $state
+ */
+#[Fillable(['product_id', 'cell_id', 'expiration_date'])]
+class Pallet extends Model
+{
+    /** @use HasFactory<PalletFactory> */
+    use HasFactory;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'expiration_date' => 'date',
+        ];
+    }
+
+    /**
+     * @return BelongsTo<Product, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return BelongsTo<Cell, $this>
+     */
+    public function cell(): BelongsTo
+    {
+        return $this->belongsTo(Cell::class);
+    }
+
+    /**
+     * The pallet's state is read through its current cell — there is no stored column here.
+     *
+     * @return Attribute<CellState, never>
+     */
+    protected function state(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): CellState => $this->cell->state,
+        );
+    }
+}
