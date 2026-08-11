@@ -1,0 +1,423 @@
+<?php
+
+use App\Models\Pallet;
+use App\Models\Product;
+use App\Models\Row;
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('an authenticated user can view the row list with every property the table renders', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 3, 'flats_count' => 2]);
+
+    $response = $this->get('/admin/rows');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Index')
+            ->has('rows.data', 1)
+            ->has('rows.data.0', fn (Assert $rowProp) => $rowProp
+                ->where('id', $row->id)
+                ->where('letter', 'Z')
+                ->where('cells_count', 3)
+                ->where('flats_count', 2)
+                ->where('has_pallets', false)
+            )
+    );
+});
+
+test('the row list flags rows that have pallets in them', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    Pallet::factory()->create(['cell_id' => $row->cells()->first()->id]);
+
+    $response = $this->get('/admin/rows');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Index')
+            ->where('rows.data.0.has_pallets', true)
+    );
+});
+
+test('the row list paginates instead of returning everything at once', function () {
+    actingAsAdmin();
+    Row::factory()->count(25)->create();
+
+    $response = $this->get('/admin/rows');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Index')
+            ->has('rows.data', 20)
+            ->where('rows.meta.total', 25)
+    );
+});
+
+test('a mobile app user cannot view the row list', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+
+    $response = $this->actingAs($mobileUser)->get('/admin/rows');
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing the row list', function () {
+    $response = $this->get('/admin/rows');
+
+    $response->assertRedirect(route('login'));
+});
+
+test('an authenticated user can view the create row page', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/rows/create');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Create')
+    );
+});
+
+test('a mobile app user cannot view the create row page', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+
+    $response = $this->actingAs($mobileUser)->get('/admin/rows/create');
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing the create row page', function () {
+    $response = $this->get('/admin/rows/create');
+
+    $response->assertRedirect(route('login'));
+});
+
+test('an authenticated user can create a row and its cells are generated', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $row = Row::query()->where('letter', 'Z')->first();
+
+    $response->assertRedirect(route('admin.rows.show', $row));
+    expect($row)->not->toBeNull();
+    expect($row->cells()->count())->toBe(6);
+});
+
+test('creating a row with a duplicate letter is rejected and nothing changes', function () {
+    actingAsAdmin();
+    Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('letter');
+    $this->assertDatabaseCount('rows', 1);
+});
+
+test('creating a row with invalid dimensions is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 0,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('a mobile app user cannot create a row and nothing changes', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+
+    $response = $this->actingAs($mobileUser)->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertForbidden();
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('an unauthenticated caller cannot create a row and nothing changes', function () {
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('an authenticated user can view a rows cell grid, including pallet and added_at for occupied cells', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['letter' => 'C', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $product = Product::factory()->create([
+        'name' => 'Widgets',
+        'image_url' => 'https://cdn.example.com/widgets.png',
+    ]);
+    $occupiedCell = $row->cells()->where('cell_number', 1)->first();
+    $emptyCell = $row->cells()->where('cell_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $occupiedCell->id, 'product_id' => $product->id]);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Show')
+            ->has('row', fn (Assert $rowProp) => $rowProp
+                ->where('id', $row->id)
+                ->where('letter', 'B')
+                ->where('cells_count', 2)
+                ->where('flats_count', 1)
+                ->where('has_pallets', true)
+            )
+            ->has('cells', 2)
+            ->has('cells.0', fn (Assert $cell) => $cell
+                ->where('id', $occupiedCell->id)
+                ->where('cell_number', 1)
+                ->where('flat_number', 1)
+                ->where('state', 'full')
+                ->has('pallet', fn (Assert $palletProp) => $palletProp
+                    ->where('id', $pallet->id)
+                    ->where('product_name', 'Widgets')
+                    ->where('product_image_url', 'https://cdn.example.com/widgets.png')
+                    ->where('expiration_date', $pallet->expiration_date->toDateString())
+                    ->where('added_at', $pallet->created_at->toIso8601String())
+                )
+            )
+            ->has('cells.1', fn (Assert $cell) => $cell
+                ->where('id', $emptyCell->id)
+                ->where('cell_number', 2)
+                ->where('flat_number', 1)
+                ->where('state', 'empty')
+                ->where('pallet', null)
+            )
+    );
+
+    expect($otherRow->id)->not->toBeNull();
+});
+
+test('a mobile app user cannot view a rows cell grid', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->actingAs($mobileUser)->get("/admin/rows/{$row->letter}");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing a rows cell grid', function () {
+    $row = Row::factory()->create();
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('an authenticated user can view the edit row page with every property the form needs', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/edit");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Edit')
+            ->has('row', fn (Assert $rowProp) => $rowProp
+                ->where('id', $row->id)
+                ->where('letter', 'B')
+                ->where('cells_count', 2)
+                ->where('flats_count', 1)
+                ->where('has_pallets', false)
+            )
+    );
+});
+
+test('a mobile app user cannot view the edit row page', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->actingAs($mobileUser)->get("/admin/rows/{$row->letter}/edit");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing the edit row page', function () {
+    $row = Row::factory()->create();
+
+    $response = $this->get("/admin/rows/{$row->letter}/edit");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('viewing the edit page for a non-existent row returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/rows/ZZ/edit');
+
+    $response->assertNotFound();
+});
+
+test('renaming a rows letter always succeeds', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+});
+
+test('renaming a row to a letter that already exists is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['letter' => 'Y']);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertSessionHasErrors('letter');
+    expect($row->fresh()->letter)->toBe('Z');
+    expect($otherRow->fresh()->letter)->toBe('Y');
+});
+
+test('resizing a row with no pallets regenerates its cells', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 4,
+        'flats_count' => 3,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->cells()->count())->toBe(12);
+});
+
+test('resizing a row that has a pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 5,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    expect($row->fresh()->cells_count)->toBe(2);
+    expect($row->fresh()->flats_count)->toBe(1);
+    expect($row->cells()->count())->toBe(2);
+});
+
+test('a mobile app user cannot update a row and nothing changes', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->actingAs($mobileUser)->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => 4,
+        'flats_count' => 3,
+    ]);
+
+    $response->assertForbidden();
+    expect($row->fresh()->letter)->toBe('Z');
+    expect($row->fresh()->cells_count)->toBe(2);
+});
+
+test('an unauthenticated caller cannot update a row and nothing changes', function () {
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => 2,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertRedirect(route('login'));
+    expect($row->fresh()->letter)->toBe('Z');
+});
+
+test('updating a non-existent row returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->put('/admin/rows/ZZ', [
+        'letter' => 'Y',
+        'cells_count' => 2,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertNotFound();
+});
+
+test('an admin can delete a row with no pallets in it', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['letter' => 'Y']);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertRedirect(route('admin.rows.index'));
+    $this->assertDatabaseMissing('rows', ['id' => $row->id]);
+    $this->assertDatabaseMissing('cells', ['row_id' => $row->id]);
+    $this->assertDatabaseHas('rows', ['id' => $otherRow->id]);
+});
+
+test('deleting a row that has a pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertSessionHasErrors('row');
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+    expect($row->cells()->count())->toBe(2);
+});
+
+test('a mobile app user cannot delete a row and nothing changes', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->actingAs($mobileUser)->delete("/admin/rows/{$row->letter}");
+
+    $response->assertForbidden();
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+    expect($row->cells()->count())->toBe(2);
+});
+
+test('an unauthenticated caller cannot delete a row and nothing changes', function () {
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+});
+
+test('deleting a non-existent row returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->delete('/admin/rows/ZZ');
+
+    $response->assertNotFound();
+});
