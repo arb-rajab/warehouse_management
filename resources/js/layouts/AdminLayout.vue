@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LogOut, Users } from '@lucide/vue';
+import { ArrowLeftRight, LogOut, Rows3, Users } from '@lucide/vue';
 import { computed } from 'vue';
+import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { destroy } from '@/actions/App/Http/Controllers/LoginController';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -10,6 +12,12 @@ import { t } from '@/lib/i18n';
 const page = usePage();
 
 const navItems = computed(() => [
+    { labelKey: 'nav.rows', href: rowsIndex().url, icon: Rows3 },
+    {
+        labelKey: 'nav.cellLog',
+        href: cellLogsIndex().url,
+        icon: ArrowLeftRight,
+    },
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
 ]);
 
