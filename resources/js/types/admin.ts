@@ -16,3 +16,10 @@ export interface Paginated<T> {
         links: PaginationLink[];
     };
 }
+
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+    is_admin: boolean;
+}
