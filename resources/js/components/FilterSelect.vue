@@ -1,0 +1,34 @@
+<script setup lang="ts">
+defineProps<{
+    id: string;
+    label: string;
+    allLabel: string;
+    options: { value: string | number; label: string }[];
+}>();
+
+const model = defineModel<string>({ required: true });
+</script>
+
+<template>
+    <div>
+        <label
+            :for="id"
+            class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
+            >{{ label }}</label
+        >
+        <select
+            :id="id"
+            v-model="model"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+        >
+            <option value="">{{ allLabel }}</option>
+            <option
+                v-for="option in options"
+                :key="option.value"
+                :value="option.value"
+            >
+                {{ option.label }}
+            </option>
+        </select>
+    </div>
+</template>
