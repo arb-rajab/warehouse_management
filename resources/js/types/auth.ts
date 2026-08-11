@@ -1,14 +1,13 @@
-export type User = {
+/**
+ * The signed-in user as shared with every page by HandleInertiaRequests. Kept to
+ * the fields the UI actually reads — widen both sides together, never just this.
+ */
+type AuthUser = {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
-    email_verified_at: string | null;
-    created_at: string;
-    updated_at: string;
-    [key: string]: unknown;
 };
 
 export type Auth = {
-    user: User;
+    user: AuthUser | null;
 };

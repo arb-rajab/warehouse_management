@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 /**
  * @extends Factory<User>
@@ -34,12 +35,22 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Assign the admin role, since most factory-created users stand in for admin panel users.
      */
-    public function unverified(): static
+    public function configure(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->afterCreating(function (User $user) {
+            $user->assignRole(Role::findOrCreate('admin', 'web'));
+        });
+    }
+
+    /**
+     * Indicate that the user is a mobile app user, without admin panel access.
+     */
+    public function mobileUser(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $user->syncRoles([]);
+        });
     }
 }

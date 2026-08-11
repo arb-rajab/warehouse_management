@@ -30,7 +30,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'locale' => app()->getLocale(),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->only(['id', 'name', 'email']),
             ],
         ];
     }
