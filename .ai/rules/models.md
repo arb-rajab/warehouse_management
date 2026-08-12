@@ -1,6 +1,7 @@
 ---
 paths:
   - 'app/Models/*.php'
+  - app/Models/CellStatusLog.php
 ---
 
 # Models
@@ -13,3 +14,10 @@ Whenever a model is added or its behavior changes (relationships, casts, compute
 - Every custom public method, in both its true/false or populated/empty branches.
 
 This is additive to, not a replacement for, controller/feature tests that exercise the model through HTTP routes.
+
+## CellStatusLog::attachNextLogs() computes next_log_at/duration_seconds for a pallet
+`CellStatusLog::attachNextLogs($logs)` sets `next_log_at` and `duration_seconds` on each log in an Eloquent collection — the `created_at` of the next log sharing the same `pallet_id` (ordered by `created_at`, then `id`), or `null` when this is the newest entry for that pallet, plus the seconds until that timestamp (or until `now()` when `next_log_at` is null). It's one extra query for the whole collection (grouped in PHP, selecting only `id`/`pallet_id`/`created_at` off the siblings — no other columns, no eager loads), not N+1 per row. Call it on `$logs->getCollection()` right after `paginate()`, before building `CellStatusLogResource::collection()`. Both `Admin\CellStatusLogController::index()` and `Api\V1\CellStatusLogController::index()` call it.
+
+Special case: a `TransferredOut` entry's immediate next same-pallet log is always the paired `TransferredIn` written in the same transaction (see `PalletController::transfer`) — that pairing isn't a movement of its own, so it's skipped (index+2 instead of index+1) in favor of whatever happens after the pallet lands in the destination cell.
+
+`duration_seconds` is computed server-side deliberately: by the time `attachNextLogs()` runs, both timestamps are already Carbon instances in memory, so the diff is a single CPU-only subtraction — negligible next to the sibling query/hydration/serialization already happening in the same request, so there's no real load argument for pushing it to the client. Both `next_log_at`/`duration_seconds` are plain dynamic attributes (`setAttribute`), not real columns/relations — `CellStatusLogResource` reads them directly and exposes `next_log_at` as an ISO8601 string or `null`. Do not remove `duration_seconds` in favor of frontend-computed durations without discussing it first — this was tried and reverted.

@@ -10,7 +10,7 @@ Do not hand-write input, submit-button, or table markup in a page — the Tailwi
 
 - `components/FormField.vue` — label + input + error `<p>`. Props: id, label, type, value, error, inputClass. Extra attrs (min, maxlength, required, readonly, placeholder, autocomplete) pass through `$attrs` to the input.
 - `components/SubmitButton.vue` — label / processingLabel / processing.
-- `components/DataTable.vue` — wrapper + thead + tbody + empty state. Props: columns (string[]), rows (T extends {id:number}), emptyMessage; render cells via the `#row` slot. It derives the empty-state colspan from columns.length, so no hand-maintained colspan.
+- `components/DataTable.vue` — wrapper + thead + tbody + empty state. Props: columns (`string | { label, sortKey }`, mix freely), rows (T extends {id:number}), emptyMessage, optional `sort: { by, direction }`; render cells via the `#row` slot. It derives the empty-state colspan from columns.length, so no hand-maintained colspan. A column with `sortKey` renders as a button and emits `sort` with that key on click — the header shows an up/down arrow when it's the active `sort.by`, otherwise a faded up-down arrow; the parent page owns applying the sort (see CellStatusLogs/Index.vue's `toggleSort()`), DataTable only renders state and emits intent.
 
 FormField binds `:value.attr` (not `:value`) on purpose: the input stays uncontrolled so what the user typed survives the re-render after a failed submit. `tests/e2e/admin-form-retention.spec.ts` covers this — do not switch it to a plain `:value` binding.
 
@@ -23,6 +23,11 @@ Alongside FormField / SubmitButton / DataTable, these are the single definitions
 - `components/AddResourceLink.vue` — the "Add X" header button; bakes in the Plus icon. Props: href, label.
 - `lib/confirm.ts` `confirmDelete(label)` — the only place the "Delete {label}? This cannot be undone." wording lives. Pass `` `row ${row.letter}` `` or a user's name.
 - `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
+
+## lib/date.ts formats dates/durations locale-aware, not with the browser default
+`formatDate`/`formatDateTime` pass `currentLocaleTag()` (not `undefined`) to `toLocaleDateString`/`toLocaleString` — Arabic (`ar`) resolves to `ar-u-nu-latn` specifically so numbers render as Western digits (the plain `ar` tag's default numbering system is Arabic-Indic digits, which the rest of this app's UI doesn't use). Don't revert to `undefined`/the bare locale without re-checking that.
+
+`formatDuration(seconds)` renders the two largest non-zero units ("2d 3h", "45m", "30s" — see date.test.ts), dropping to one unit once it's the smallest; unit suffixes come from `common.duration.*` in both locale files, not hardcoded, so a new locale needs those keys.
 
 ## Every component/lib file needs a co-located *.test.ts
 Every `.vue` file in `components/` and `layouts/`, and every `.ts` file in `lib/`, must have a co-located `<Name>.test.ts` covering it (see the existing pairs, e.g. `DataTable.vue`/`DataTable.test.ts`). When adding a new file here or editing an existing one, add or update its test in the same change and run it (`npx vitest run <path>`) before finishing — don't rely on the file merely compiling/type-checking.
