@@ -46,29 +46,27 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Deploy over FTPS
+      - name: Build release archive
+        run: |
+          mkdir -p /tmp/release-payload
+          zip -rq /tmp/release-payload/payload.zip . \
+            -x '.git/*' '.github/*' '.ai/*' 'node_modules/*' 'tests/*' \
+               'storage/*' '*.sqlite' '.env' '.env.example'
+
+      - name: Upload release archive over FTPS
         uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
         with:
           server: ${{ secrets.STAGING_FTP_SERVER }}
           username: ${{ secrets.STAGING_FTP_USERNAME }}
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          server-dir: ${{ secrets.STAGING_FTP_SERVER_DIR }}
+          server-dir: ${{ secrets.STAGING_FTP_SERVER_DIR }}/storage/app/deploy/
           protocol: ftps
-          local-dir: ./
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/tests/**
-            **/.github/**
-            **/.ai/**
-            **/.phpunit.cache/**
-            **/storage/framework/cache/**
-            **/storage/framework/sessions/**
-            **/storage/framework/testing/**
-            **/storage/framework/views/**
-            **/storage/logs/**
-            **/storage/inertia-devtools/**
-            **/database/*.sqlite
-            **/.env
-            **/.env.example
+          local-dir: /tmp/release-payload/
+          state-name: .deploy-payload-sync-state.json
+
+      - name: Trigger remote extraction and deploy
+        run: |
+          curl --fail --show-error --silent --max-time 300 \
+            -X POST \
+            -H "X-Deploy-Token: ${{ secrets.STAGING_DEPLOY_TOKEN }}" \
+            "${{ secrets.STAGING_APP_URL }}/deploy-hook.php"
