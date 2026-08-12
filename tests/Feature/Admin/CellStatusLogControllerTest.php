@@ -2,14 +2,17 @@
 
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the cell log with every property the table renders', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
     actingAsAdmin();
     $mover = User::factory()->mobileUser()->create(['name' => 'Bob Mover']);
 
@@ -75,10 +78,55 @@ test('an authenticated admin can view the cell log with every property the table
                     ->where('id', $mover->id)
                     ->where('name', 'Bob Mover')
                 )
+                ->where('next_log_at', null)
+                ->where('duration_seconds', 0)
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
             ->has('filterOptions.actions', 5)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the cell log includes the next same-pallet log timestamp as next_log_at', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->create();
+
+    $stored = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id, 'action' => CellLogAction::Stored]), '2026-08-01 10:00:00');
+    $opened = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id, 'action' => CellLogAction::Opened]), '2026-08-01 12:00:00');
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.1.id', $stored->id)
+            ->where('logs.data.1.next_log_at', $opened->created_at->toIso8601String())
+            ->where('logs.data.1.duration_seconds', 7200)
+    );
+});
+
+test('the cell log skips the paired transferred-in log when computing next_log_at for a transferred-out entry', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->create();
+    $sourceCell = Cell::factory()->create();
+    $destinationCell = Cell::factory()->create();
+
+    [$transferredOut] = createTransferPair($pallet, $sourceCell, $destinationCell, '2026-08-01 10:00:00', '2026-08-01 10:00:01');
+
+    $emptied = backdate(CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $destinationCell->id,
+        'action' => CellLogAction::Emptied,
+    ]), '2026-08-01 14:00:01');
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 3)
+            ->where('logs.data.2.id', $transferredOut->id)
+            ->where('logs.data.2.next_log_at', $emptied->created_at->toIso8601String())
+            ->where('logs.data.2.duration_seconds', 14401)
     );
 });
 
@@ -93,6 +141,47 @@ test('the cell log paginates instead of returning everything at once', function 
         fn (Assert $page) => $page->component('Admin/CellStatusLogs/Index')
             ->has('logs.data', 25)
             ->where('logs.meta.total', 30)
+    );
+});
+
+test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->create();
+
+    $older = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 08:00:00');
+    $newer = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 09:00:00');
+
+    // 24 unrelated logs, all newer than $newer, so the listing (ordered by
+    // latest()) puts $newer plus these 24 on page 1 (25 rows) and pushes
+    // $older, the single oldest row, onto page 2 by itself.
+    collect(range(1, 24))->each(function (int $i) {
+        backdate(CellStatusLog::factory()->create(), sprintf('2026-08-01 10:%02d:00', $i));
+    });
+
+    $response = $this->get('/admin/cell-logs?page=2');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $older->id)
+            ->where('logs.data.0.next_log_at', $newer->created_at->toIso8601String())
+            ->where('logs.data.0.duration_seconds', 3600)
+    );
+});
+
+test('next_log_at is found even when the next log for the same pallet is excluded by the current filters', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->create();
+
+    $stored = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id, 'action' => CellLogAction::Stored]), '2026-08-01 10:00:00');
+    $opened = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id, 'action' => CellLogAction::Opened]), '2026-08-01 12:00:00');
+
+    $response = $this->get('/admin/cell-logs?action[]=stored');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $stored->id)
+            ->where('logs.data.0.next_log_at', $opened->created_at->toIso8601String())
+            ->where('logs.data.0.duration_seconds', 7200)
     );
 });
 
@@ -228,11 +317,27 @@ test('the cell log can be filtered by status change, excluding entries for other
     $matching = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
     CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
 
-    $response = $this->get('/admin/cell-logs?action=opened');
+    $response = $this->get('/admin/cell-logs?action[]=opened');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by multiple status changes at once, excluding entries for the remaining action', function () {
+    actingAsAdmin();
+
+    $opened = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
+    $emptied = CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
+    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+
+    $response = $this->get('/admin/cell-logs?action[]=opened&action[]=emptied');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $emptied->id)
+            ->where('logs.data.1.id', $opened->id)
     );
 });
 
@@ -250,5 +355,106 @@ test('the cell log can be filtered by a date range, excluding entries outside it
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by created_within_days, excluding entries older than that window', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $withinWindow = backdate(CellStatusLog::factory()->create(), '2026-08-10 00:00:00');
+    backdate(CellStatusLog::factory()->create(), '2026-08-01 00:00:00');
+
+    $response = $this->get('/admin/cell-logs?created_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $withinWindow->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('filtering the cell log by created_within_days together with a date range is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cell-logs?created_within_days=7&date_from=2026-06-01');
+
+    $response->assertSessionHasErrors('created_within_days');
+});
+
+test('the cell log can be filtered by pallet expiration date range, excluding entries outside it', function () {
+    actingAsAdmin();
+
+    $matchingPallet = Pallet::factory()->create(['expiration_date' => '2026-06-15']);
+    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-01-01']);
+
+    $matching = CellStatusLog::factory()->create(['pallet_id' => $matchingPallet->id]);
+    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+
+    $response = $this->get('/admin/cell-logs?expiration_date_from=2026-06-01&expiration_date_to=2026-06-30');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log defaults to newest-first when no sort is requested', function () {
+    actingAsAdmin();
+
+    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+    $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $newer->id)
+            ->where('logs.data.1.id', $older->id)
+    );
+});
+
+test('the cell log can be sorted by log date ascending', function () {
+    actingAsAdmin();
+
+    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+    $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+
+    $response = $this->get('/admin/cell-logs?sort_by=created_at&sort_direction=asc');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $older->id)
+            ->where('logs.data.1.id', $newer->id)
+    );
+});
+
+test('the cell log can be sorted by pallet expiration date, with a direction, placing null expiration dates first ascending', function () {
+    actingAsAdmin();
+
+    $soonPallet = Pallet::factory()->create(['expiration_date' => '2026-06-01']);
+    $latePallet = Pallet::factory()->create(['expiration_date' => '2026-12-01']);
+
+    $noExpiration = CellStatusLog::factory()->create(['pallet_id' => null]);
+    $soon = CellStatusLog::factory()->create(['pallet_id' => $soonPallet->id]);
+    $late = CellStatusLog::factory()->create(['pallet_id' => $latePallet->id]);
+
+    $response = $this->get('/admin/cell-logs?sort_by=expiration_date&sort_direction=asc');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 3)
+            ->where('logs.data.0.id', $noExpiration->id)
+            ->where('logs.data.1.id', $soon->id)
+            ->where('logs.data.2.id', $late->id)
+    );
+
+    $descResponse = $this->get('/admin/cell-logs?sort_by=expiration_date&sort_direction=desc');
+
+    $descResponse->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 3)
+            ->where('logs.data.0.id', $late->id)
+            ->where('logs.data.1.id', $soon->id)
+            ->where('logs.data.2.id', $noExpiration->id)
     );
 });

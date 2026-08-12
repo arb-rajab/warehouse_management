@@ -21,13 +21,15 @@ class CellStatusLogController extends Controller
             ->select(CellStatusLog::SELECT_COLUMNS)
             ->with(CellStatusLog::WITH_DETAILS)
             ->filtered($request)
-            ->latest()
+            ->sorted($request)
             ->paginate(25)
             ->withQueryString();
 
+        CellStatusLog::attachNextLogs($logs->getCollection());
+
         return Inertia::render('Admin/CellStatusLogs/Index', [
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
-            'filters' => $request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to']),
+            'filters' => $request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'sort_by', 'sort_direction']),
             'filterOptions' => [
                 'rows' => Row::query()->select(['id', 'letter'])->orderBy('letter')->get(),
                 'maxColumnNumber' => (int) (Row::query()->max('cells_count') ?? 0),

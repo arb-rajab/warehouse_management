@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property int $id
@@ -24,6 +26,8 @@ use Illuminate\Http\Request;
  * @property int|null $pallet_id
  * @property int $user_id
  * @property string|null $note
+ * @property-read Carbon|null $next_log_at
+ * @property-read int $duration_seconds
  */
 #[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'user_id', 'note'])]
 class CellStatusLog extends Model
@@ -113,6 +117,48 @@ class CellStatusLog extends Model
     }
 
     /**
+     * Attach each log's next same-pallet log's timestamp as `next_log_at`,
+     * plus `duration_seconds` — the time until that timestamp, or until now
+     * when this is the newest entry for its pallet (`next_log_at` is then
+     * null). One extra query for the whole collection, not one per row; the
+     * duration itself is a single Carbon subtraction on timestamps already
+     * in memory, so it adds no meaningful cost on top of that query.
+     *
+     * A `TransferredOut` entry's immediate next same-pallet log is always the
+     * paired `TransferredIn` written in the same transaction (see
+     * PalletController::transfer) — that pairing isn't a movement of its own,
+     * so it is skipped in favor of whatever happens to the pallet after it
+     * lands in the destination cell.
+     *
+     * @param  Collection<int, CellStatusLog>  $logs
+     */
+    public static function attachNextLogs(Collection $logs): void
+    {
+        $palletIds = $logs->pluck('pallet_id')->filter()->unique()->values();
+
+        $siblingsByPallet = static::query()
+            ->select(['id', 'pallet_id', 'created_at'])
+            ->whereIn('pallet_id', $palletIds)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('pallet_id');
+
+        $now = now();
+
+        foreach ($logs as $log) {
+            $siblings = $siblingsByPallet->get($log->pallet_id)?->values();
+
+            $index = $siblings?->search(fn (CellStatusLog $sibling): bool => $sibling->id === $log->id) ?? false;
+            $nextIndex = $index === false ? null : $index + ($log->action === CellLogAction::TransferredOut ? 2 : 1);
+            $nextLog = $nextIndex === null ? null : $siblings?->get($nextIndex);
+
+            $log->setAttribute('next_log_at', $nextLog?->created_at);
+            $log->setAttribute('duration_seconds', (int) $log->created_at->diffInSeconds($nextLog->created_at ?? $now));
+        }
+    }
+
+    /**
      * Scope a query by the product/pallet/row/column/user/action/date-range filters
      * shared by the admin and mobile API listings. Reads straight off the request
      * (not `$request->validated()`) so an absent filter is skipped rather than
@@ -127,13 +173,53 @@ class CellStatusLog extends Model
             ->when($request->filled('product_id'), fn (Builder $q) => $q->where('product_id', $request->integer('product_id')))
             ->when($request->filled('pallet_id'), fn (Builder $q) => $q->where('pallet_id', $request->integer('pallet_id')))
             ->when($request->filled('user_id'), fn (Builder $q) => $q->where('user_id', $request->integer('user_id')))
-            ->when($request->filled('action'), fn (Builder $q) => $q->where('action', $request->string('action')))
+            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', array_map(
+                fn (CellLogAction $action): string => $action->value,
+                $request->enums('action', CellLogAction::class),
+            )))
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
+            ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
+            ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
+                $palletQuery
+                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->whereDate('expiration_date', '>=', $request->date('expiration_date_from')))
+                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')));
+            }))
             ->when($request->filled('row_id') || $request->filled('column_number'), fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $cellQuery
                     ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
             }));
+    }
+
+    /**
+     * Sort a query of cell status logs by `created_at` (default) or the
+     * related pallet's `expiration_date`, per the `sort_by`/`sort_direction`
+     * request params shared by the admin and mobile API listings. Falls back
+     * to `created_at` descending — the previous, hardcoded `->latest()`
+     * behavior — when either param is absent, and always breaks ties on
+     * `id` so pagination stays stable.
+     *
+     * Sorting by `expiration_date` orders by a correlated subquery instead
+     * of joining `pallets` — a join would require aliasing every column in
+     * `SELECT_COLUMNS`/`WITH_DETAILS` to avoid colliding with `pallets.id`.
+     *
+     * @param  Builder<CellStatusLog>  $query
+     */
+    #[Scope]
+    protected function sorted(Builder $query, Request $request): void
+    {
+        $direction = $request->string('sort_direction')->value() === 'asc' ? 'asc' : 'desc';
+
+        if ($request->string('sort_by')->value() === 'expiration_date') {
+            $query->orderBy(
+                Pallet::query()->select('expiration_date')->whereColumn('pallets.id', 'cell_status_logs.pallet_id'),
+                $direction,
+            );
+        } else {
+            $query->orderBy('created_at', $direction);
+        }
+
+        $query->orderBy('id', $direction);
     }
 }
