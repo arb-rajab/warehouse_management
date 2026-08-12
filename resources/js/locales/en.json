@@ -12,7 +12,13 @@
         "ar": "Arabic"
     },
     "common": {
-        "confirmDelete": "Delete {label}? This cannot be undone."
+        "confirmDelete": "Delete {label}? This cannot be undone.",
+        "duration": {
+            "day": "d",
+            "hour": "h",
+            "minute": "m",
+            "second": "s"
+        }
     },
     "auth": {
         "login": {
@@ -101,13 +107,25 @@
     "cellLog": {
         "title": "Cell Log",
         "filters": {
+            "title": "Filters",
+            "close": "Close filters",
+            "sections": {
+                "location": "Location",
+                "activity": "Activity",
+                "date": "Date",
+                "expiration": "Expiration"
+            },
             "product": "Product",
             "row": "Row",
             "column": "Column",
             "doneBy": "Done by",
             "statusChange": "Status change",
+            "selectedCount": "{count} selected",
             "from": "From",
             "to": "To",
+            "withinDays": "Within last (days)",
+            "expirationFrom": "Expires from",
+            "expirationTo": "Expires to",
             "all": "All",
             "apply": "Apply filters",
             "clear": "Clear",
@@ -122,14 +140,17 @@
             "viewPalletHistory": "View all logs for this pallet",
             "note": "Note",
             "doneBy": "Done by",
-            "when": "When"
+            "when": "When",
+            "duration": "Duration",
+            "ongoing": "Ongoing"
         },
         "actions": {
             "stored": "Stored",
             "opened": "Opened",
             "emptied": "Emptied",
             "transferred_out": "Transferred out",
-            "transferred_in": "Transferred in"
+            "transferred_in": "Transferred in",
+            "transferred": "Transferred"
         },
         "states": {
             "empty": "Empty",

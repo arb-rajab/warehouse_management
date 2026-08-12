@@ -12,7 +12,13 @@
         "ar": "العربية"
     },
     "common": {
-        "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء."
+        "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
+        "duration": {
+            "day": "ي",
+            "hour": "س",
+            "minute": "د",
+            "second": "ث"
+        }
     },
     "auth": {
         "login": {
@@ -101,13 +107,25 @@
     "cellLog": {
         "title": "سجل الخلايا",
         "filters": {
+            "title": "الفلاتر",
+            "close": "إغلاق الفلاتر",
+            "sections": {
+                "location": "الموقع",
+                "activity": "النشاط",
+                "date": "التاريخ",
+                "expiration": "الانتهاء"
+            },
             "product": "المنتج",
             "row": "الصف",
             "column": "العمود",
             "doneBy": "بواسطة",
             "statusChange": "تغيير الحالة",
+            "selectedCount": "تم اختيار {count}",
             "from": "من",
             "to": "إلى",
+            "withinDays": "خلال آخر (أيام)",
+            "expirationFrom": "تاريخ الانتهاء من",
+            "expirationTo": "تاريخ الانتهاء إلى",
             "all": "الكل",
             "apply": "تطبيق الفلاتر",
             "clear": "مسح",
@@ -122,14 +140,17 @@
             "viewPalletHistory": "عرض كل سجلات هذه الطبلية",
             "note": "ملاحظة",
             "doneBy": "بواسطة",
-            "when": "الوقت"
+            "when": "الوقت",
+            "duration": "المدة",
+            "ongoing": "مستمر"
         },
         "actions": {
             "stored": "تم التخزين",
             "opened": "تم الفتح",
             "emptied": "تم التفريغ",
             "transferred_out": "تم النقل منها",
-            "transferred_in": "تم النقل إليها"
+            "transferred_in": "تم النقل إليها",
+            "transferred": "تم النقل"
         },
         "states": {
             "empty": "فارغ",

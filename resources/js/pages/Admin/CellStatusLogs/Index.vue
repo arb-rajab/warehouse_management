@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowRight, History } from '@lucide/vue';
-import { reactive } from 'vue';
+import { ArrowRight, History, SlidersHorizontal } from '@lucide/vue';
+import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import DataTable from '@/components/DataTable.vue';
+import FilterDateField from '@/components/FilterDateField.vue';
+import FilterDialog from '@/components/FilterDialog.vue';
+import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import { formatDate, formatDateTime } from '@/lib/date';
+import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import type {
@@ -36,8 +39,10 @@ function stateLabel(state: CellStatusLog['from_state']): string {
 }
 
 const selectClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
+    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800';
 const labelClass = 'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
+const sectionHeadingClass =
+    'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
 
 const columnNumbers = Array.from(
     { length: props.filterOptions.maxColumnNumber },
@@ -50,23 +55,71 @@ const filters = reactive({
     row_id: props.filters.row_id?.toString() ?? '',
     column_number: props.filters.column_number?.toString() ?? '',
     user_id: props.filters.user_id?.toString() ?? '',
-    action: props.filters.action ?? '',
+    action: [...(props.filters.action ?? [])],
     date_from: props.filters.date_from ?? '',
     date_to: props.filters.date_to ?? '',
+    created_within_days: props.filters.created_within_days?.toString() ?? '',
+    expiration_date_from: props.filters.expiration_date_from ?? '',
+    expiration_date_to: props.filters.expiration_date_to ?? '',
+    sort_by: props.filters.sort_by ?? '',
+    sort_direction: props.filters.sort_direction ?? '',
 });
+
+const dateRangeDisabled = computed(() => filters.created_within_days !== '');
+const createdWithinDaysDisabled = computed(
+    () => filters.date_from !== '' || filters.date_to !== '',
+);
+
+const filtersOpen = ref(false);
+
+const activeFilterCount = computed(
+    () =>
+        [
+            filters.product_id !== '',
+            filters.row_id !== '',
+            filters.column_number !== '',
+            filters.user_id !== '',
+            filters.action.length > 0,
+            filters.date_from !== '' ||
+                filters.date_to !== '' ||
+                filters.created_within_days !== '',
+            filters.expiration_date_from !== '' ||
+                filters.expiration_date_to !== '',
+        ].filter(Boolean).length,
+);
 
 function applyFilters(): void {
     router.get(cellLogsIndex().url, filters, {
         preserveState: true,
         replace: true,
     });
+    filtersOpen.value = false;
 }
 
 function clearFilters(): void {
-    (Object.keys(filters) as (keyof typeof filters)[]).forEach((key) => {
-        filters[key] = '';
-    });
+    filters.product_id = '';
+    filters.pallet_id = '';
+    filters.row_id = '';
+    filters.column_number = '';
+    filters.user_id = '';
+    filters.action = [];
+    filters.date_from = '';
+    filters.date_to = '';
+    filters.created_within_days = '';
+    filters.expiration_date_from = '';
+    filters.expiration_date_to = '';
+    filters.sort_by = '';
+    filters.sort_direction = '';
     router.get(cellLogsIndex().url, {}, { preserveState: true, replace: true });
+}
+
+function toggleSort(key: string): void {
+    filters.sort_direction =
+        filters.sort_by === key && filters.sort_direction === 'asc'
+            ? 'desc'
+            : 'asc';
+    filters.sort_by = key;
+    applyFilters();
 }
 
 function viewPalletHistory(palletId: number): void {
@@ -87,123 +140,270 @@ function transferPair(log: CellStatusLog): {
 
     return { from: log.cell, to: log.related_cell };
 }
+
+type DisplayCellStatusLog = CellStatusLog & { pairedIn?: CellStatusLog };
+
+function sameCellLocation(
+    a: CellSlotLocation | null,
+    b: CellSlotLocation | null,
+): boolean {
+    return (
+        a !== null &&
+        b !== null &&
+        a.row_letter === b.row_letter &&
+        a.cell_number === b.cell_number &&
+        a.flat_number === b.flat_number
+    );
+}
+
+function isTransferPair(out: CellStatusLog, incoming: CellStatusLog): boolean {
+    return (
+        incoming.action === 'transferred_in' &&
+        out.pallet !== null &&
+        incoming.pallet !== null &&
+        out.pallet.id === incoming.pallet.id &&
+        out.created_at === incoming.created_at &&
+        sameCellLocation(out.cell, incoming.related_cell) &&
+        sameCellLocation(out.related_cell, incoming.cell)
+    );
+}
+
+/**
+ * A transfer writes a `transferred_out` row (on the source cell) and a
+ * `transferred_in` row (on the destination cell) in the same transaction.
+ * Every column except the action label ends up identical between the two, so
+ * when both sides land on the current page, merge them into a single row
+ * keyed on the `transferred_out` side. Filtering to one cell, one pallet's
+ * history split across a page boundary, or a single action naturally yields
+ * only one side — those fall through unmerged.
+ */
+const displayLogs = computed<DisplayCellStatusLog[]>(() => {
+    const logs = props.logs.data;
+    const pairedInByOutId = new Map<number, CellStatusLog>();
+    const pairedInIds = new Set<number>();
+
+    for (const log of logs) {
+        if (log.action !== 'transferred_out') {
+            continue;
+        }
+
+        const incoming = logs.find(
+            (candidate) =>
+                !pairedInIds.has(candidate.id) &&
+                isTransferPair(log, candidate),
+        );
+
+        if (incoming) {
+            pairedInByOutId.set(log.id, incoming);
+            pairedInIds.add(incoming.id);
+        }
+    }
+
+    return logs
+        .filter((log) => !pairedInIds.has(log.id))
+        .map((log) => {
+            const pairedIn = pairedInByOutId.get(log.id);
+
+            return pairedIn ? { ...log, pairedIn } : log;
+        });
+});
 </script>
 
 <template>
     <Head :title="t('cellLog.title')" />
 
     <AdminLayout>
-        <h1 class="mb-6 text-xl font-semibold">{{ t('cellLog.title') }}</h1>
+        <div class="mb-6 flex items-center justify-between">
+            <h1 class="text-xl font-semibold">{{ t('cellLog.title') }}</h1>
+            <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                @click="filtersOpen = true"
+            >
+                <SlidersHorizontal class="h-4 w-4" />
+                {{ t('cellLog.filters.title') }}
+                <span
+                    v-if="activeFilterCount > 0"
+                    class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-medium text-white dark:bg-white dark:text-gray-900"
+                >
+                    {{ activeFilterCount }}
+                </span>
+            </button>
+        </div>
 
-        <form
-            class="mb-6 grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4 sm:grid-cols-3 lg:grid-cols-7 dark:border-neutral-800"
-            @submit.prevent="applyFilters"
+        <FilterDialog
+            v-model:open="filtersOpen"
+            :title="t('cellLog.filters.title')"
+            :close-label="t('cellLog.filters.close')"
         >
-            <FilterSelect
-                id="filter-product"
-                v-model="filters.product_id"
-                :label="t('cellLog.filters.product')"
-                :all-label="t('cellLog.filters.all')"
-                :options="
-                    filterOptions.products.map((product) => ({
-                        value: product.id,
-                        label: product.name,
-                    }))
-                "
-            />
+            <form class="space-y-6" @submit.prevent="applyFilters">
+                <div>
+                    <h3 :class="sectionHeadingClass">
+                        {{ t('cellLog.filters.sections.location') }}
+                    </h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FilterSelect
+                            id="filter-row"
+                            v-model="filters.row_id"
+                            :label="t('cellLog.filters.row')"
+                            :all-label="t('cellLog.filters.all')"
+                            :options="
+                                filterOptions.rows.map((row) => ({
+                                    value: row.id,
+                                    label: row.letter,
+                                }))
+                            "
+                        />
 
-            <FilterSelect
-                id="filter-row"
-                v-model="filters.row_id"
-                :label="t('cellLog.filters.row')"
-                :all-label="t('cellLog.filters.all')"
-                :options="
-                    filterOptions.rows.map((row) => ({
-                        value: row.id,
-                        label: row.letter,
-                    }))
-                "
-            />
+                        <FilterSelect
+                            id="filter-column"
+                            v-model="filters.column_number"
+                            :label="t('cellLog.filters.column')"
+                            :all-label="t('cellLog.filters.all')"
+                            :options="
+                                columnNumbers.map((columnNumber) => ({
+                                    value: columnNumber,
+                                    label: String(columnNumber),
+                                }))
+                            "
+                        />
+                    </div>
+                </div>
 
-            <FilterSelect
-                id="filter-column"
-                v-model="filters.column_number"
-                :label="t('cellLog.filters.column')"
-                :all-label="t('cellLog.filters.all')"
-                :options="
-                    columnNumbers.map((columnNumber) => ({
-                        value: columnNumber,
-                        label: String(columnNumber),
-                    }))
-                "
-            />
-
-            <FilterSelect
-                id="filter-user"
-                v-model="filters.user_id"
-                :label="t('cellLog.filters.doneBy')"
-                :all-label="t('cellLog.filters.all')"
-                :options="
-                    filterOptions.users.map((user) => ({
-                        value: user.id,
-                        label: user.name,
-                    }))
-                "
-            />
-
-            <FilterSelect
-                id="filter-action"
-                v-model="filters.action"
-                :label="t('cellLog.filters.statusChange')"
-                :all-label="t('cellLog.filters.all')"
-                :options="
-                    filterOptions.actions.map((action) => ({
-                        value: action,
-                        label: actionLabel(action),
-                    }))
-                "
-            />
-
-            <div>
-                <label :class="labelClass" for="filter-date-from">{{
-                    t('cellLog.filters.from')
-                }}</label>
-                <input
-                    id="filter-date-from"
-                    v-model="filters.date_from"
-                    type="date"
-                    :class="[selectClass, 'dark:[color-scheme:dark]']"
-                />
-            </div>
-
-            <div>
-                <label :class="labelClass" for="filter-date-to">{{
-                    t('cellLog.filters.to')
-                }}</label>
-                <input
-                    id="filter-date-to"
-                    v-model="filters.date_to"
-                    type="date"
-                    :class="[selectClass, 'dark:[color-scheme:dark]']"
-                />
-            </div>
-
-            <div class="col-span-full flex items-end gap-2">
-                <button
-                    type="submit"
-                    class="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
                 >
-                    {{ t('cellLog.filters.apply') }}
-                </button>
-                <button
-                    type="button"
-                    class="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
-                    @click="clearFilters"
+                    <h3 :class="sectionHeadingClass">
+                        {{ t('cellLog.filters.sections.activity') }}
+                    </h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <FilterSelect
+                            id="filter-product"
+                            v-model="filters.product_id"
+                            :label="t('cellLog.filters.product')"
+                            :all-label="t('cellLog.filters.all')"
+                            :options="
+                                filterOptions.products.map((product) => ({
+                                    value: product.id,
+                                    label: product.name,
+                                }))
+                            "
+                        />
+
+                        <FilterMultiSelect
+                            id="filter-action"
+                            v-model="filters.action"
+                            :label="t('cellLog.filters.statusChange')"
+                            :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="
+                                (count) =>
+                                    t('cellLog.filters.selectedCount', {
+                                        count,
+                                    })
+                            "
+                            :options="
+                                filterOptions.actions.map((action) => ({
+                                    value: action,
+                                    label: actionLabel(action),
+                                }))
+                            "
+                        />
+
+                        <FilterSelect
+                            id="filter-user"
+                            v-model="filters.user_id"
+                            :label="t('cellLog.filters.doneBy')"
+                            :all-label="t('cellLog.filters.all')"
+                            :options="
+                                filterOptions.users.map((user) => ({
+                                    value: user.id,
+                                    label: user.name,
+                                }))
+                            "
+                        />
+                    </div>
+                </div>
+
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
                 >
-                    {{ t('cellLog.filters.clear') }}
-                </button>
-            </div>
-        </form>
+                    <h3 :class="sectionHeadingClass">
+                        {{ t('cellLog.filters.sections.date') }}
+                    </h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <FilterDateField
+                            id="filter-date-from"
+                            v-model="filters.date_from"
+                            :label="t('cellLog.filters.from')"
+                            :disabled="dateRangeDisabled"
+                        />
+
+                        <FilterDateField
+                            id="filter-date-to"
+                            v-model="filters.date_to"
+                            :label="t('cellLog.filters.to')"
+                            :disabled="dateRangeDisabled"
+                        />
+
+                        <div>
+                            <label
+                                :class="labelClass"
+                                for="filter-created-within-days"
+                                >{{ t('cellLog.filters.withinDays') }}</label
+                            >
+                            <input
+                                id="filter-created-within-days"
+                                v-model="filters.created_within_days"
+                                type="number"
+                                min="1"
+                                step="1"
+                                :disabled="createdWithinDaysDisabled"
+                                :class="selectClass"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
+                >
+                    <h3 :class="sectionHeadingClass">
+                        {{ t('cellLog.filters.sections.expiration') }}
+                    </h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FilterDateField
+                            id="filter-expiration-date-from"
+                            v-model="filters.expiration_date_from"
+                            :label="t('cellLog.filters.expirationFrom')"
+                        />
+
+                        <FilterDateField
+                            id="filter-expiration-date-to"
+                            v-model="filters.expiration_date_to"
+                            :label="t('cellLog.filters.expirationTo')"
+                        />
+                    </div>
+                </div>
+
+                <div
+                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
+                >
+                    <button
+                        type="submit"
+                        class="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+                    >
+                        {{ t('cellLog.filters.apply') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                        @click="clearFilters"
+                    >
+                        {{ t('cellLog.filters.clear') }}
+                    </button>
+                </div>
+            </form>
+        </FilterDialog>
 
         <div
             v-if="filters.pallet_id"
@@ -226,13 +426,27 @@ function transferPair(log: CellStatusLog): {
                 t('cellLog.columns.cell'),
                 t('cellLog.columns.action'),
                 t('cellLog.columns.product'),
-                t('cellLog.columns.pallet'),
+                {
+                    label: t('cellLog.columns.pallet'),
+                    sortKey: 'expiration_date',
+                },
                 t('cellLog.columns.note'),
                 t('cellLog.columns.doneBy'),
-                t('cellLog.columns.when'),
+                { label: t('cellLog.columns.when'), sortKey: 'created_at' },
+                t('cellLog.columns.duration'),
             ]"
-            :rows="logs.data"
+            :rows="displayLogs"
             :empty-message="t('cellLog.empty')"
+            :sort="
+                filters.sort_by
+                    ? {
+                          by: filters.sort_by,
+                          direction:
+                              filters.sort_direction === 'asc' ? 'asc' : 'desc',
+                      }
+                    : undefined
+            "
+            @sort="toggleSort"
         >
             <template #row="{ row: log }">
                 <template
@@ -279,12 +493,18 @@ function transferPair(log: CellStatusLog): {
                     <div
                         class="font-medium text-gray-900 dark:text-neutral-100"
                     >
-                        {{ actionLabel(log.action) }}
+                        {{
+                            log.pairedIn
+                                ? t('cellLog.actions.transferred')
+                                : actionLabel(log.action)
+                        }}
                     </div>
                     <div class="text-xs text-gray-500 dark:text-neutral-400">
                         {{ stateLabel(log.from_state) }}
-                        <span class="inline-block rtl:rotate-180">→</span>
-                        {{ stateLabel(log.to_state) }}
+                        <template v-if="!log.pairedIn">
+                            <span class="inline-block rtl:rotate-180">→</span>
+                            {{ stateLabel(log.to_state) }}
+                        </template>
                     </div>
                 </td>
                 <td class="px-4 py-2">
@@ -340,6 +560,19 @@ function transferPair(log: CellStatusLog): {
                 </td>
                 <td class="px-4 py-2 text-gray-500 dark:text-neutral-400">
                     {{ formatDateTime(log.created_at) }}
+                </td>
+                <td class="px-4 py-2">
+                    <div
+                        class="font-medium text-gray-900 dark:text-neutral-100"
+                    >
+                        {{ formatDuration(log.duration_seconds) }}
+                    </div>
+                    <div
+                        v-if="!log.next_log_at"
+                        class="text-xs text-gray-400 dark:text-neutral-600"
+                    >
+                        {{ t('cellLog.columns.ongoing') }}
+                    </div>
                 </td>
             </template>
         </DataTable>
