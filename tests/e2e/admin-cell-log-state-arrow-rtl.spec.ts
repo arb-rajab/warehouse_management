@@ -9,7 +9,7 @@ test('the cell log state-change arrow flips direction in RTL layouts', async ({
     await page.getByRole('button', { name: 'Arabic' }).click();
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    await page.goto('/admin/cell-logs?action=stored');
+    await page.goto('/admin/cell-logs?action[]=stored');
 
     const arrow = page.locator('tbody tr').first().getByText('→');
     await expect(arrow).toBeVisible();

@@ -56,6 +56,8 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         pallet: { id: 55, expiration_date: '2026-09-01' },
         user: { id: 7, name: 'Jane Doe' },
         created_at: '2026-08-01T10:00:00Z',
+        next_log_at: null,
+        duration_seconds: 3600,
         ...overrides,
     };
 }
@@ -107,6 +109,15 @@ function rowCells(wrapper: ReturnType<typeof mountPage>, rowIndex = 0) {
     return wrapper.findAll('tbody tr')[rowIndex].findAll('td');
 }
 
+async function openFilters(
+    wrapper: ReturnType<typeof mountPage>,
+): Promise<void> {
+    const trigger = wrapper
+        .findAll('button')
+        .find((button) => button.text().includes(t('cellLog.filters.title')));
+    await trigger?.trigger('click');
+}
+
 describe('CellStatusLogs Index', () => {
     beforeEach(() => {
         usePageMock.mockReset();
@@ -125,6 +136,7 @@ describe('CellStatusLogs Index', () => {
             t('cellLog.columns.note'),
             t('cellLog.columns.doneBy'),
             t('cellLog.columns.when'),
+            t('cellLog.columns.duration'),
         ]);
     });
 
@@ -134,8 +146,75 @@ describe('CellStatusLogs Index', () => {
         expect(wrapper.text()).toContain(t('cellLog.empty'));
     });
 
-    it("populates each filter select's options from filterOptions", () => {
+    it('hides the filter fields until the Filters button is clicked', () => {
         const wrapper = mountPage([]);
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.find('#filter-product').exists()).toBe(false);
+    });
+
+    it('opens the filter dialog when the Filters button is clicked', async () => {
+        const wrapper = mountPage([]);
+
+        await openFilters(wrapper);
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            t('cellLog.filters.title'),
+        );
+        expect(wrapper.find('#filter-product').exists()).toBe(true);
+    });
+
+    it('groups the filter fields under section headings', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(dialog.text()).toContain(t('cellLog.filters.sections.location'));
+        expect(dialog.text()).toContain(t('cellLog.filters.sections.activity'));
+        expect(dialog.text()).toContain(t('cellLog.filters.sections.date'));
+        expect(dialog.text()).toContain(
+            t('cellLog.filters.sections.expiration'),
+        );
+    });
+
+    it('closes the filter dialog after Apply is clicked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('form').trigger('submit');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('does not show a filter count badge when no filters are active', () => {
+        const wrapper = mountPage([]);
+
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.filters.title')),
+            );
+        expect(trigger?.find('span').exists()).toBe(false);
+    });
+
+    it('shows a filter count badge for each distinct active filter', () => {
+        const wrapper = mountPage([], {
+            product_id: 10,
+            action: ['opened'],
+            date_from: '2026-08-01',
+        });
+
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.filters.title')),
+            );
+        expect(trigger?.get('span').text()).toBe('3');
+    });
+
+    it("populates each filter select's options from filterOptions", async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
 
         expect(
             wrapper
@@ -161,13 +240,19 @@ describe('CellStatusLogs Index', () => {
                 .findAll('option')
                 .map((o) => o.text()),
         ).toEqual([t('cellLog.filters.all'), 'Jane Doe']);
-        expect(
-            wrapper
-                .get('#filter-action')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([
-            t('cellLog.filters.all'),
+    });
+
+    it("populates the status filter's checkboxes from filterOptions", async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-action').trigger('click');
+
+        const labels = wrapper
+            .get('[role="listbox"]')
+            .findAll('label')
+            .map((label) => label.text());
+        expect(labels).toEqual([
             t('cellLog.actions.stored'),
             t('cellLog.actions.opened'),
             t('cellLog.actions.emptied'),
@@ -242,6 +327,98 @@ describe('CellStatusLogs Index', () => {
         expect(actionCell.text()).toContain(t('cellLog.actions.opened'));
         expect(actionCell.text()).toContain(t('cellLog.states.full'));
         expect(actionCell.text()).toContain(t('cellLog.states.opened'));
+    });
+
+    it('merges a transferred_out/transferred_in pair into a single row', () => {
+        const transferredOut = cellLog({
+            id: 1,
+            action: 'transferred_out',
+            from_state: 'full',
+            to_state: 'empty',
+            cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+            related_cell: { row_letter: 'B', cell_number: 1, flat_number: 1 },
+            created_at: '2026-08-01T10:00:00Z',
+        });
+        const transferredIn = cellLog({
+            id: 2,
+            action: 'transferred_in',
+            from_state: 'empty',
+            to_state: 'full',
+            cell: { row_letter: 'B', cell_number: 1, flat_number: 1 },
+            related_cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+            created_at: '2026-08-01T10:00:00Z',
+        });
+        const wrapper = mountPage([transferredOut, transferredIn]);
+
+        const rows = wrapper.findAll('tbody tr');
+        expect(rows).toHaveLength(1);
+
+        const cells = rowCells(wrapper)[0];
+        const links = cells.findAll('a');
+        expect(links.map((a) => a.text())).toEqual(['A3·2', 'B1·1']);
+
+        const actionCell = rowCells(wrapper)[1];
+        expect(actionCell.text()).toContain(t('cellLog.actions.transferred'));
+        expect(actionCell.text()).not.toContain(
+            t('cellLog.actions.transferred_out'),
+        );
+        expect(actionCell.text()).toContain(t('cellLog.states.full'));
+        expect(actionCell.text()).not.toContain(t('cellLog.states.empty'));
+    });
+
+    it('does not merge transferred logs for different pallets or times', () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 1,
+                action: 'transferred_out',
+                pallet: { id: 55, expiration_date: null },
+                cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+                related_cell: {
+                    row_letter: 'B',
+                    cell_number: 1,
+                    flat_number: 1,
+                },
+                created_at: '2026-08-01T10:00:00Z',
+            }),
+            cellLog({
+                id: 2,
+                action: 'transferred_in',
+                pallet: { id: 56, expiration_date: null },
+                cell: { row_letter: 'B', cell_number: 1, flat_number: 1 },
+                related_cell: {
+                    row_letter: 'A',
+                    cell_number: 3,
+                    flat_number: 2,
+                },
+                created_at: '2026-08-01T10:00:00Z',
+            }),
+        ]);
+
+        expect(wrapper.findAll('tbody tr')).toHaveLength(2);
+    });
+
+    it('does not merge a lone transferred_out log filtered to its own cell', () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 1,
+                action: 'transferred_out',
+                from_state: 'full',
+                to_state: 'empty',
+                cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+                related_cell: {
+                    row_letter: 'B',
+                    cell_number: 1,
+                    flat_number: 1,
+                },
+            }),
+        ]);
+
+        const actionCell = rowCells(wrapper)[1];
+        expect(actionCell.text()).toContain(
+            t('cellLog.actions.transferred_out'),
+        );
+        expect(actionCell.text()).toContain(t('cellLog.states.full'));
+        expect(actionCell.text()).toContain(t('cellLog.states.empty'));
     });
 
     it('renders the product name and image when the log has a product', () => {
@@ -342,20 +519,51 @@ describe('CellStatusLogs Index', () => {
         );
     });
 
+    it('shows the formatted duration when a next log exists', () => {
+        const wrapper = mountPage([
+            cellLog({
+                next_log_at: '2026-08-01T11:01:00Z',
+                duration_seconds: 3660,
+            }),
+        ]);
+
+        const durationCell = rowCells(wrapper)[7];
+        expect(durationCell.text()).toContain('1h 1m');
+        expect(durationCell.text()).not.toContain(t('cellLog.columns.ongoing'));
+    });
+
+    it('shows the ongoing label alongside the duration when there is no next log', () => {
+        const wrapper = mountPage([
+            cellLog({ next_log_at: null, duration_seconds: 90 }),
+        ]);
+
+        const durationCell = rowCells(wrapper)[7];
+        expect(durationCell.text()).toContain(t('cellLog.columns.ongoing'));
+        expect(durationCell.text()).toContain('1m');
+    });
+
     it('requests the current filter values when the filter form is submitted', async () => {
         const wrapper = mountPage([]);
+        await openFilters(wrapper);
 
-        await wrapper.get('#filter-action').setValue('opened');
+        await wrapper.get('#filter-action').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[1].setValue(true);
         await wrapper.get('#filter-date-from').setValue('2026-08-01');
         await wrapper.get('#filter-date-to').setValue('2026-08-10');
+        await wrapper
+            .get('#filter-expiration-date-from')
+            .setValue('2026-09-01');
+        await wrapper.get('#filter-expiration-date-to').setValue('2026-09-10');
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/cell-logs',
             expect.objectContaining({
-                action: 'opened',
+                action: ['opened'],
                 date_from: '2026-08-01',
                 date_to: '2026-08-10',
+                expiration_date_from: '2026-09-01',
+                expiration_date_to: '2026-09-10',
             }),
             { preserveState: true, replace: true },
         );
@@ -363,9 +571,11 @@ describe('CellStatusLogs Index', () => {
 
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage([], {
-            action: 'opened',
+            action: ['opened'],
             date_from: '2026-08-01',
+            expiration_date_from: '2026-09-01',
         });
+        await openFilters(wrapper);
 
         const clearButton = wrapper
             .findAll('button')
@@ -382,8 +592,157 @@ describe('CellStatusLogs Index', () => {
                 .value,
         ).toBe('');
         expect(
-            (wrapper.get('#filter-action').element as HTMLSelectElement).value,
+            (
+                wrapper.get('#filter-expiration-date-from')
+                    .element as HTMLInputElement
+            ).value,
         ).toBe('');
+        expect(wrapper.get('#filter-action').text()).toBe(
+            t('cellLog.filters.all'),
+        );
+        expect(
+            (
+                wrapper.get('#filter-created-within-days')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('');
+    });
+
+    it('requests created_within_days when it is filled in instead of a date range', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-created-within-days').setValue('7');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ created_within_days: 7 }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('disables the created_within_days field once a date range value is entered', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(
+            (
+                wrapper.get('#filter-created-within-days')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(false);
+
+        await wrapper.get('#filter-date-from').setValue('2026-08-01');
+
+        expect(
+            (
+                wrapper.get('#filter-created-within-days')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+    });
+
+    it('disables the date range fields once created_within_days is filled in', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(
+            (wrapper.get('#filter-date-from').element as HTMLInputElement)
+                .disabled,
+        ).toBe(false);
+        expect(
+            (wrapper.get('#filter-date-to').element as HTMLInputElement)
+                .disabled,
+        ).toBe(false);
+
+        await wrapper.get('#filter-created-within-days').setValue('7');
+
+        expect(
+            (wrapper.get('#filter-date-from').element as HTMLInputElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (wrapper.get('#filter-date-to').element as HTMLInputElement)
+                .disabled,
+        ).toBe(true);
+    });
+
+    it('re-enables the date range fields once created_within_days is cleared', async () => {
+        const wrapper = mountPage([], { created_within_days: 7 });
+        await openFilters(wrapper);
+
+        expect(
+            (wrapper.get('#filter-date-from').element as HTMLInputElement)
+                .disabled,
+        ).toBe(true);
+
+        await wrapper.get('#filter-created-within-days').setValue('');
+
+        expect(
+            (wrapper.get('#filter-date-from').element as HTMLInputElement)
+                .disabled,
+        ).toBe(false);
+    });
+
+    it('applies a sort immediately when a sortable column header is clicked, without waiting for Apply', async () => {
+        const wrapper = mountPage([]);
+
+        const whenHeader = wrapper
+            .findAll('thead th')
+            .find((th) => th.text().includes(t('cellLog.columns.when')));
+        await whenHeader?.get('button').trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({
+                sort_by: 'created_at',
+                sort_direction: 'asc',
+            }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('flips the sort direction when the same sortable header is clicked again', async () => {
+        const wrapper = mountPage([], {
+            sort_by: 'created_at',
+            sort_direction: 'asc',
+        });
+
+        const whenHeader = wrapper
+            .findAll('thead th')
+            .find((th) => th.text().includes(t('cellLog.columns.when')));
+        await whenHeader?.get('button').trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({
+                sort_by: 'created_at',
+                sort_direction: 'desc',
+            }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('switches to ascending when a different sortable header is clicked', async () => {
+        const wrapper = mountPage([], {
+            sort_by: 'created_at',
+            sort_direction: 'desc',
+        });
+
+        const palletHeader = wrapper
+            .findAll('thead th')
+            .find((th) => th.text().includes(t('cellLog.columns.pallet')));
+        await palletHeader?.get('button').trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({
+                sort_by: 'expiration_date',
+                sort_direction: 'asc',
+            }),
+            { preserveState: true, replace: true },
+        );
     });
 
     it('shows the pallet-history banner with the id when filtering by pallet', () => {

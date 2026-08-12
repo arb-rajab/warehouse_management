@@ -25,6 +25,8 @@ use Illuminate\Support\Carbon;
  * @property-read Pallet|null $pallet
  * @property-read User $user
  * @property-read Carbon $created_at
+ * @property-read Carbon|null $next_log_at
+ * @property-read int $duration_seconds
  */
 class CellStatusLogResource extends JsonResource
 {
@@ -53,6 +55,8 @@ class CellStatusLogResource extends JsonResource
                 'name' => $this->user->name,
             ]),
             'created_at' => $this->created_at->toIso8601String(),
+            'next_log_at' => $this->next_log_at?->toIso8601String(),
+            'duration_seconds' => $this->duration_seconds,
         ];
     }
 }

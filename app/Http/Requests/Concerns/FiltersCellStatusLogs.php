@@ -25,9 +25,17 @@ trait FiltersCellStatusLogs
             'row_id' => ['nullable', 'integer', 'exists:rows,id'],
             'column_number' => ['nullable', 'integer', 'min:1'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'action' => ['nullable', Rule::enum(CellLogAction::class)],
+            'action' => ['nullable', 'array'],
+            'action.*' => [Rule::enum(CellLogAction::class)],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            // Alternative to date_from/date_to, not a companion to them — mutually
+            // exclusive so the two ways of expressing the same range can't conflict.
+            'created_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:date_from,date_to'],
+            'expiration_date_from' => ['nullable', 'date'],
+            'expiration_date_to' => ['nullable', 'date', 'after_or_equal:expiration_date_from'],
+            'sort_by' => ['nullable', 'in:created_at,expiration_date'],
+            'sort_direction' => ['nullable', 'in:asc,desc'],
         ];
     }
 }

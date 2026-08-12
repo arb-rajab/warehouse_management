@@ -12,13 +12,15 @@ class CellStatusLogController extends Controller
 {
     public function index(FilterCellStatusLogsRequest $request): AnonymousResourceCollection
     {
-        return CellStatusLogResource::collection(
-            CellStatusLog::query()
-                ->select(CellStatusLog::SELECT_COLUMNS)
-                ->with(CellStatusLog::WITH_DETAILS)
-                ->filtered($request)
-                ->latest()
-                ->paginate(20)
-        );
+        $logs = CellStatusLog::query()
+            ->select(CellStatusLog::SELECT_COLUMNS)
+            ->with(CellStatusLog::WITH_DETAILS)
+            ->filtered($request)
+            ->sorted($request)
+            ->paginate(20);
+
+        CellStatusLog::attachNextLogs($logs->getCollection());
+
+        return CellStatusLogResource::collection($logs);
     }
 }
