@@ -51,3 +51,12 @@ vi.mock('@inertiajs/vue3', () => ({
 
 ## Every form field mirrors its backend rule client-side via HTML5 attributes
 To keep invalid submissions from reaching the backend, every field bound to a FormRequest rule must carry the matching native HTML5 constraint, passed through FormField's `$attrs` (see js.md): `required` for `required`, `maxlength`/`minlength` for `max:`/`min:` on strings, `min`/`max`/`step="1"` for integer rules, `type="email"` for `email`. Only mirror rules that don't require a round trip (skip `unique`, `confirmed`-style cross-field checks stay client-side too when cheap — see UserFormFields.vue's `password`/`password_confirmation` `setCustomValidity` mismatch check). The backend rule stays authoritative; the frontend copy is just a flood guard. When adding/editing a form field, check its FormRequest's `rules()` and add the missing attribute in the same change, with a test asserting it (see UserFormFields.test.ts, RowFormFields.test.ts, Login.test.ts).
+
+## Add a Playwright e2e spec for browser-only behavior
+tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise — don't use it to re-test things unit/component tests already cover. Add or extend a spec (one concern per file, see existing tests/e2e/*.spec.ts for the pattern) whenever a change introduces:
+- a native `<input type="date">` (or other native picker) styled with `dark:[color-scheme:dark]` — assert `toHaveCSS('color-scheme', 'dark')` (see admin-cell-log-date-filter-dark-mode.spec.ts)
+- an icon/arrow flipped with `rtl:rotate-*` — assert the computed `rotate` CSS in both LTR and RTL (see admin-cell-log-*-arrow-rtl.spec.ts)
+- a table cell linking to another admin page (TableLink) — assert the href and that clicking actually navigates (see admin-cell-log-table-links.spec.ts)
+- a native browser dialog (`window.confirm`/`alert`, anything in lib/confirm.ts) — Playwright can drive `page.on('dialog', ...)`, jsdom cannot (see admin-delete-confirmation.spec.ts, which covers Rows/Index.vue and Users/Index.vue's `confirmDelete()` wiring)
+- a real cross-request round trip that must retain form input after a server validation error (see admin-form-retention.spec.ts)
+- new text/input color pairs in dark mode that could fail contrast (see login-dark-mode.spec.ts)
