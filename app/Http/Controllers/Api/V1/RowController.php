@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RowResource;
+use App\Models\Cell;
 use App\Models\Row;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -13,6 +14,23 @@ class RowController extends Controller
     {
         return RowResource::collection(
             Row::query()->select(['id', 'letter', 'cells_count', 'flats_count'])->paginate(20)
+        );
+    }
+
+    /**
+     * Every row with its cells and the pallet occupying each occupied flat, unpaginated.
+     */
+    public function full(): AnonymousResourceCollection
+    {
+        return RowResource::collection(
+            Row::query()
+                ->select(['id', 'letter', 'cells_count', 'flats_count'])
+                ->with(['cells' => fn ($query) => $query
+                    ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+                    ->with(Cell::WITH_CONTENTS)
+                    ->orderedByCoordinates()])
+                ->orderBy('letter')
+                ->get()
         );
     }
 }

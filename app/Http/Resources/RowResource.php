@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Cell;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,6 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string $letter
  * @property-read int $cells_count
  * @property-read int $flats_count
+ * @property-read Collection<int, Cell> $cells
  */
 class RowResource extends JsonResource
 {
@@ -26,6 +29,7 @@ class RowResource extends JsonResource
             'cells_count' => $this->cells_count,
             'flats_count' => $this->flats_count,
             'has_pallets' => $this->resource->hasPallets(),
+            'cells' => $this->whenLoaded('cells', fn () => CellResource::collection($this->cells)),
         ];
     }
 }
