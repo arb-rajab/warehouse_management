@@ -158,5 +158,18 @@
             "opened": "Opened"
         },
         "empty": "No activity yet."
+    },
+    "cells": {
+        "title": "Cells",
+        "filters": {
+            "state": "State"
+        },
+        "columns": {
+            "location": "Location",
+            "state": "State",
+            "product": "Product",
+            "expires": "Expires"
+        },
+        "empty": "No cells match these filters."
     }
 }

@@ -20,3 +20,6 @@ The product/pallet/row/column/user/action/date-range filters for listing `CellSt
 
 ## ValidatesOptionalNote: merge via noteRules(), don't inline the note rule
 Requests that need an optional note field alongside other rules (e.g. `StorePalletRequest`, `TransferPalletRequest`) must merge `App\Http\Requests\Concerns\ValidatesOptionalNote::noteRules()` into their `rules()` array with `...$this->noteRules()`, not retype `'note' => ['nullable', 'string', 'max:1000']`. `EmptyPalletRequest`/`OpenPalletRequest` (which validate nothing else) just `use` the trait and inherit its `rules()` directly. The trait's `rules()` itself calls `noteRules()`, so there is exactly one definition of the note rule.
+
+## Row/column/expiration filter rules live in FiltersByRowAndExpiration
+`row_id`, `column_number`, `expiration_date_from`, `expiration_date_to` validation is shared via `App\Http\Requests\Concerns\FiltersByRowAndExpiration::rowAndExpirationFilterRules()`, used by both `Admin\FilterCellsRequest` and `Concerns\FiltersCellStatusLogs` (itself shared by Admin/Api\V1 `FilterCellStatusLogsRequest`). Merge it with `...$this->rowAndExpirationFilterRules()` inside `rules()` rather than retyping these four rules. If a third request needs this slot/expiration filter slice, extend this trait instead of copying.

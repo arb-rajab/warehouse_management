@@ -2,6 +2,7 @@
 paths:
   - 'app/Models/*.php'
   - app/Models/CellStatusLog.php
+  - app/Models/Row.php
 ---
 
 # Models
@@ -21,3 +22,6 @@ This is additive to, not a replacement for, controller/feature tests that exerci
 Special case: a `TransferredOut` entry's immediate next same-pallet log is always the paired `TransferredIn` written in the same transaction (see `PalletController::transfer`) — that pairing isn't a movement of its own, so it's skipped (index+2 instead of index+1) in favor of whatever happens after the pallet lands in the destination cell.
 
 `duration_seconds` is computed server-side deliberately: by the time `attachNextLogs()` runs, both timestamps are already Carbon instances in memory, so the diff is a single CPU-only subtraction — negligible next to the sibling query/hydration/serialization already happening in the same request, so there's no real load argument for pushing it to the client. Both `next_log_at`/`duration_seconds` are plain dynamic attributes (`setAttribute`), not real columns/relations — `CellStatusLogResource` reads them directly and exposes `next_log_at` as an ISO8601 string or `null`. Do not remove `duration_seconds` in favor of frontend-computed durations without discussing it first — this was tried and reverted.
+
+## Row::filterOptions() is the shared rows+maxColumnNumber filter-dropdown shape
+`Row::filterOptions()` returns `['rows' => ..., 'maxColumnNumber' => ...]` — the row-letter list and max column count used to populate the row/column filter dropdowns. `Admin\CellController::index()` and `Admin\CellStatusLogController::index()` both spread it into their Inertia `filterOptions` prop (`...Row::filterOptions()`) instead of re-querying Row directly. Extend this method (not a second inline query) if another admin listing needs the same dropdown data.

@@ -18,7 +18,7 @@ class SetLocaleFromHeader
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $supported = array_map(fn (Locale $locale) => $locale->value, Locale::cases());
+        $supported = array_column(Locale::cases(), 'value');
 
         app()->setLocale($request->getPreferredLanguage($supported) ?? config('app.locale'));
 
