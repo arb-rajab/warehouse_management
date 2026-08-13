@@ -43,6 +43,7 @@ class DashboardController extends Controller
                     'emptied' => (int) ($activityToday[CellLogAction::Emptied->value] ?? 0),
                     'transferred' => (int) ($activityToday[CellLogAction::TransferredOut->value] ?? 0) + (int) ($activityToday[CellLogAction::TransferredIn->value] ?? 0),
                 ],
+                'stale' => Pallet::query()->stale()->count(),
             ],
             'today' => $today->toDateString(),
             'expiringSoonUntil' => $expiringSoonUntil->toDateString(),

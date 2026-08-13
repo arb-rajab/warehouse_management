@@ -17,6 +17,7 @@ const props = defineProps<{
             emptied: number;
             transferred: number;
         };
+        stale: number;
     };
     today: string;
     expiringSoonUntil: string;
@@ -77,6 +78,21 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                         expiration_date_from: props.today,
                         expiration_date_to: props.expiringSoonUntil,
                     }"
+                    tone="warning"
+                />
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.stale.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.stale.count')"
+                    :value="props.stats.stale"
+                    :href="cellsIndex().url"
+                    :query="{ stale: 1 }"
                     tone="warning"
                 />
             </div>

@@ -38,6 +38,7 @@ export interface CellPallet {
     product_image_url: string | null;
     expiration_date: string;
     added_at: string;
+    is_stale: boolean;
 }
 
 export interface Cell {
@@ -56,6 +57,7 @@ export type CellSortBy = 'expiration_date';
 
 export interface CellFilters {
     state?: Cell['state'];
+    stale?: boolean;
     row_id?: number;
     column_number?: number;
     expiration_date_from?: string;

@@ -43,4 +43,16 @@ class PalletFactory extends Factory
             fn (Pallet $pallet) => $pallet->cell->update(['state' => CellState::Opened])
         );
     }
+
+    /**
+     * Backdate the pallet past {@see Pallet::STALE_AFTER_DAYS} so it reads as stale.
+     */
+    public function stale(): static
+    {
+        return $this->afterCreating(
+            fn (Pallet $pallet) => $pallet->forceFill([
+                'created_at' => now()->subDays(Pallet::STALE_AFTER_DAYS)->subMinute(),
+            ])->save()
+        );
+    }
 }

@@ -21,6 +21,7 @@ class FilterCellsRequest extends FormRequest
     {
         return [
             'state' => ['nullable', Rule::enum(CellState::class)],
+            'stale' => ['nullable', 'boolean'],
             ...$this->rowAndExpirationFilterRules(),
             'sort_by' => ['nullable', 'in:expiration_date'],
             'sort_direction' => ['nullable', 'in:asc,desc'],

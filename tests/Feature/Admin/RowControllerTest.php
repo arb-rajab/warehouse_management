@@ -192,6 +192,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', $pallet->expiration_date->toDateString())
                     ->where('added_at', $pallet->created_at->toIso8601String())
+                    ->where('is_stale', false)
                 )
             )
             ->has('cells.1', fn (Assert $cell) => $cell
@@ -204,6 +205,20 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
     );
 
     expect($otherRow->id)->not->toBeNull();
+});
+
+test('the rows cell grid flags a pallet that has been stored longer than the stale threshold', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->stale()->create(['cell_id' => $cell->id]);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Show')
+            ->where('cells.0.pallet.is_stale', true)
+    );
 });
 
 test('a mobile app user cannot view a rows cell grid', function () {

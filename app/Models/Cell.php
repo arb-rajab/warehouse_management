@@ -123,6 +123,7 @@ class Cell extends Model
     {
         $query
             ->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->enum('state', CellState::class)?->value))
+            ->when($request->boolean('stale'), fn (Builder $q) => $q->whereHas('pallet', fn (Builder $palletQuery) => $palletQuery->where('created_at', '<=', now()->subDays(Pallet::STALE_AFTER_DAYS))))
             ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
             ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')))
             ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {

@@ -37,6 +37,7 @@ const stats = {
     occupancy: { empty: 3, full: 5, opened: 1 },
     expiring: { expired: 2, soon: 4 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
+    stale: 7,
 };
 
 function mountPage() {
@@ -180,11 +181,24 @@ describe('Dashboard Index', () => {
         });
     });
 
+    it('renders the stale tile linking to the cells list filtered to stale cells', () => {
+        const wrapper = mountPage();
+
+        const stale = tileByLabelAndHref(
+            wrapper,
+            t('dashboard.stale.count'),
+            '/admin/cells',
+        );
+        expect(stale?.props('value')).toBe(7);
+        expect(stale?.props('query')).toEqual({ stale: 1 });
+    });
+
     it('renders every section heading', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('dashboard.occupancy.title'));
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityToday.title'));
+        expect(wrapper.text()).toContain(t('dashboard.stale.title'));
     });
 });

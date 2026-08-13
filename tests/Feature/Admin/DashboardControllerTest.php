@@ -104,6 +104,19 @@ test("the dashboard counts today's activity per action, merging transfers, and e
     Carbon::setTestNow();
 });
 
+test('the dashboard shows the stale pallet count, excluding fresh pallets', function () {
+    actingAsAdmin();
+
+    Pallet::factory()->stale()->create();
+    Pallet::factory()->create();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale', 1)
+    );
+});
+
 test("the dashboard exposes today's date and the expiring-soon cutoff date", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();

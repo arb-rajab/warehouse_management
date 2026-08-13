@@ -25,7 +25,7 @@ class CellController extends Controller
 
         return Inertia::render('Admin/Cells/Index', [
             'cells' => $this->paginated(CellResource::collection($cells)),
-            'filters' => $request->only(['state', 'row_id', 'column_number', 'expiration_date_from', 'expiration_date_to', 'sort_by', 'sort_direction']),
+            'filters' => $request->only(['state', 'stale', 'row_id', 'column_number', 'expiration_date_from', 'expiration_date_to', 'sort_by', 'sort_direction']),
             'filterOptions' => [
                 ...Row::filterOptions(),
                 'states' => array_column(CellState::cases(), 'value'),
