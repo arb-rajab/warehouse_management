@@ -3,6 +3,7 @@ paths:
   - 'app/Models/*.php'
   - app/Models/CellStatusLog.php
   - app/Models/Row.php
+  - app/Models/Pallet.php
 ---
 
 # Models
@@ -25,3 +26,9 @@ Special case: a `TransferredOut` entry's immediate next same-pallet log is alway
 
 ## Row::filterOptions() is the shared rows+maxColumnNumber filter-dropdown shape
 `Row::filterOptions()` returns `['rows' => ..., 'maxColumnNumber' => ...]` — the row-letter list and max column count used to populate the row/column filter dropdowns. `Admin\CellController::index()` and `Admin\CellStatusLogController::index()` both spread it into their Inertia `filterOptions` prop (`...Row::filterOptions()`) instead of re-querying Row directly. Extend this method (not a second inline query) if another admin listing needs the same dropdown data.
+
+## Pallet staleness: STALE_AFTER_DAYS is the single source of truth
+A pallet is "stale" once it's been stored longer than `Pallet::STALE_AFTER_DAYS` (currently 3 days), regardless of its cell's current state (full/opened). This threshold is read in exactly two places off the same constant: the `is_stale` computed attribute (`Attribute::make`, used by `CellResource`/`Admin/Rows/Show.vue`/`Admin/Cells/Index.vue`) and the `stale()` `#[Scope]` (used by `DashboardController` for the stale-pallet count). Don't hardcode `3` or recompute the cutoff elsewhere — change the constant and both consumers follow. In tests, use `Pallet::factory()->stale()` (backdates `created_at` past the threshold in `afterCreating`) instead of hand-rolling `backdate(Pallet::factory()->create(), now()->subDays(Pallet::STALE_AFTER_DAYS)->subMinute()->toDateTimeString())` — this was duplicated across 4 test files before being extracted into the factory state.
+
+## Don't call another model's #[Scope] method inside whereHas() — Larastan loses the generic type
+Calling a model-specific `#[Scope]` method (e.g. `Pallet::stale()`) from inside a `whereHas('relation', fn (Builder $q) => ...)` closure on a *different* model fails PHPStan/Larastan with "Call to an undefined method Builder<Model>::stale()" — the closure's `Builder $q` type-hint has no generic, so Larastan can't resolve the relation to the related model's class and falls back to the base `Model` template, even though it works fine at runtime. This is why `Cell::filtered()`'s `stale` filter inlines the condition (`$palletQuery->where('created_at', '<=', now()->subDays(Pallet::STALE_AFTER_DAYS))`) instead of calling `$palletQuery->stale()`, matching how the adjacent `expiration_date` filter in the same method already inlines its condition rather than calling into a Pallet scope. Do the same for any future cross-model filter inside `whereHas`/`whereDoesntHave` — don't try to fix it with `@phpstan-ignore`, an inline `@var` override, or a type cast.

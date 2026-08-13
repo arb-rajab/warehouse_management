@@ -60,7 +60,8 @@
             "editRow": "Edit row",
             "column": "Column {n}",
             "flat": "Flat {n}",
-            "empty": "Empty"
+            "empty": "Empty",
+            "stale": "Stale — stored too long"
         },
         "fields": {
             "letter": "Letter",
@@ -163,7 +164,9 @@
     "cells": {
         "title": "Cells",
         "filters": {
-            "state": "State"
+            "state": "State",
+            "stale": "Staleness",
+            "staleOnly": "Stale only"
         },
         "columns": {
             "location": "Location",
@@ -192,6 +195,10 @@
             "opened": "Opened",
             "emptied": "Emptied",
             "transferred": "Transferred"
+        },
+        "stale": {
+            "title": "Stale pallets",
+            "count": "Stale"
         }
     }
 }

@@ -18,7 +18,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/layouts/** | .ai/rules/layouts.md |
 | app/Http/Middleware/** | .ai/rules/middleware.md |
 | database/migrations/** | .ai/rules/migrations.md |
-| app/Models/*.php, app/Models/CellStatusLog.php, app/Models/Row.php | .ai/rules/models.md |
+| app/Models/*.php, app/Models/CellStatusLog.php, app/Models/Row.php, app/Models/Pallet.php | .ai/rules/models.md |
 | app/Observers/** | .ai/rules/observers.md |
 | resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/CellStatusLogs/Index.test.ts | .ai/rules/pages-admin-cell-status-logs.md |
 | resources/js/pages/** | .ai/rules/pages.md |

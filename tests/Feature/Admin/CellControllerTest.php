@@ -42,6 +42,7 @@ test('an authenticated admin can view the cell list with every property the tabl
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
+                    ->where('is_stale', false)
                 )
             )
             ->has('filterOptions.rows', 1)
@@ -105,6 +106,21 @@ test('the cell list can be filtered by state, excluding cells in other states', 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('cells.data', 1)
             ->where('cells.data.0.id', $matching->id)
+    );
+});
+
+test('the cell list can be filtered to stale cells, excluding fresh pallets and empty cells', function () {
+    actingAsAdmin();
+
+    $stalePallet = Pallet::factory()->stale()->create();
+    Pallet::factory()->create();
+    Cell::factory()->create(['state' => CellState::Empty]);
+
+    $response = $this->get('/admin/cells?stale=1');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('cells.data', 1)
+            ->where('cells.data.0.id', $stalePallet->cell_id)
     );
 });
 

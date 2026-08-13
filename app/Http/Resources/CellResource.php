@@ -40,6 +40,7 @@ class CellResource extends JsonResource
                 'product_image_url' => $pallet->product->image_url,
                 'expiration_date' => $pallet->expiration_date->toDateString(),
                 'added_at' => $pallet->created_at?->toIso8601String(),
+                'is_stale' => $pallet->is_stale,
             ]),
         ];
     }

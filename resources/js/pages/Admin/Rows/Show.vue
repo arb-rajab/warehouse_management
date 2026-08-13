@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { CalendarPlus, CalendarX, Pencil } from '@lucide/vue';
+import { AlertTriangle, CalendarPlus, CalendarX, Pencil } from '@lucide/vue';
 import { computed } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -120,6 +120,12 @@ const stateClasses: Record<Cell['state'], string> = {
                                     )
                                 }}
                             </span>
+
+                            <AlertTriangle
+                                v-if="entry.cell?.pallet?.is_stale"
+                                :title="t('rows.show.stale')"
+                                class="absolute end-1 top-1 h-3.5 w-3.5 text-red-500 dark:text-red-400"
+                            />
 
                             <template v-if="entry.cell?.pallet">
                                 <img

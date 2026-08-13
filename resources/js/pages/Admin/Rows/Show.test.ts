@@ -139,6 +139,7 @@ describe('Rows Show', () => {
                     product_image_url: '/img/widgets.png',
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
+                    is_stale: false,
                 },
             }),
         ]);
@@ -191,6 +192,50 @@ describe('Rows Show', () => {
         );
         expect(slot(wrapper, formatSlot('A', 3, 1))?.classes()).toContain(
             'bg-white',
+        );
+    });
+
+    it('shows a stale badge when the pallet has been stored too long', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                pallet: {
+                    id: 9,
+                    product_name: 'Widgets',
+                    product_image_url: null,
+                    expiration_date: '2026-09-01',
+                    added_at: '2026-08-01T10:00:00Z',
+                    is_stale: true,
+                },
+            }),
+        ]);
+
+        expect(wrapper.find(`[title="${t('rows.show.stale')}"]`).exists()).toBe(
+            true,
+        );
+    });
+
+    it('does not show a stale badge when the pallet is not stale', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                pallet: {
+                    id: 9,
+                    product_name: 'Widgets',
+                    product_image_url: null,
+                    expiration_date: '2026-09-01',
+                    added_at: '2026-08-01T10:00:00Z',
+                    is_stale: false,
+                },
+            }),
+        ]);
+
+        expect(wrapper.find(`[title="${t('rows.show.stale')}"]`).exists()).toBe(
+            false,
         );
     });
 });

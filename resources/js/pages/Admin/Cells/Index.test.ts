@@ -56,6 +56,7 @@ function cell(overrides: Partial<CellWithLocation> = {}): CellWithLocation {
             product_image_url: null,
             expiration_date: '2026-09-01',
             added_at: '2026-08-01T10:00:00Z',
+            is_stale: false,
         },
         ...overrides,
     };
@@ -148,6 +149,18 @@ describe('Cells Index', () => {
         expect(wrapper.find('#filter-state').exists()).toBe(true);
     });
 
+    it('offers a "stale only" option in the staleness filter', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(
+            wrapper
+                .get('#filter-stale')
+                .findAll('option')
+                .map((o) => o.text()),
+        ).toEqual([t('cellLog.filters.all'), t('cells.filters.staleOnly')]);
+    });
+
     it("populates each filter select's options from filterOptions", async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
@@ -202,6 +215,7 @@ describe('Cells Index', () => {
                     product_image_url: '/img/widgets.png',
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
+                    is_stale: false,
                 },
             }),
         ]);
@@ -229,6 +243,7 @@ describe('Cells Index', () => {
                     product_image_url: null,
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
+                    is_stale: false,
                 },
             }),
         ]);
@@ -260,9 +275,24 @@ describe('Cells Index', () => {
         );
     });
 
+    it('requests only stale cells when the staleness filter is applied', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-stale').setValue('1');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            expect.objectContaining({ stale: '1' }),
+            { preserveState: true, replace: true },
+        );
+    });
+
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage([], {
             state: 'opened',
+            stale: true,
             expiration_date_from: '2026-09-01',
         });
         await openFilters(wrapper);
@@ -279,6 +309,9 @@ describe('Cells Index', () => {
         );
         expect(
             (wrapper.get('#filter-state').element as HTMLSelectElement).value,
+        ).toBe('');
+        expect(
+            (wrapper.get('#filter-stale').element as HTMLSelectElement).value,
         ).toBe('');
     });
 

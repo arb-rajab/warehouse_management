@@ -40,6 +40,7 @@ const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
 
 const filters = reactive({
     state: props.filters.state ?? '',
+    stale: props.filters.stale ? '1' : '',
     row_id: props.filters.row_id?.toString() ?? '',
     column_number: props.filters.column_number?.toString() ?? '',
     expiration_date_from: props.filters.expiration_date_from ?? '',
@@ -54,6 +55,7 @@ const activeFilterCount = computed(
     () =>
         [
             filters.state !== '',
+            filters.stale !== '',
             filters.row_id !== '',
             filters.column_number !== '',
             filters.expiration_date_from !== '' ||
@@ -71,6 +73,7 @@ function applyFilters(): void {
 
 function clearFilters(): void {
     filters.state = '';
+    filters.stale = '';
     filters.row_id = '';
     filters.column_number = '';
     filters.expiration_date_from = '';
@@ -117,7 +120,7 @@ function toggleSort(key: string): void {
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
                     </h3>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
                         <FilterSelect
                             id="filter-state"
                             v-model="filters.state"
@@ -129,6 +132,19 @@ function toggleSort(key: string): void {
                                     label: stateLabel(state),
                                 }))
                             "
+                        />
+
+                        <FilterSelect
+                            id="filter-stale"
+                            v-model="filters.stale"
+                            :label="t('cells.filters.stale')"
+                            :all-label="t('cellLog.filters.all')"
+                            :options="[
+                                {
+                                    value: '1',
+                                    label: t('cells.filters.staleOnly'),
+                                },
+                            ]"
                         />
 
                         <FilterSelect
