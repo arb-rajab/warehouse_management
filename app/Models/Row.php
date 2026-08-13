@@ -7,6 +7,7 @@ use Database\Factories\RowFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -39,5 +40,19 @@ class Row extends Model
     public function hasPallets(): bool
     {
         return $this->cells()->whereHas('pallet')->exists();
+    }
+
+    /**
+     * The rows + max column number shape shared by the admin cell and cell
+     * status log filter dropdowns.
+     *
+     * @return array{rows: Collection<int, Row>, maxColumnNumber: int}
+     */
+    public static function filterOptions(): array
+    {
+        return [
+            'rows' => self::query()->select(['id', 'letter'])->orderBy('letter')->get(),
+            'maxColumnNumber' => (int) (self::query()->max('cells_count') ?? 0),
+        ];
     }
 }

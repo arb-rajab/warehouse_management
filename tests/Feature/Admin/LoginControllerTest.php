@@ -19,7 +19,7 @@ test('a user can log in with correct credentials', function () {
         'password' => 'correct-password',
     ]);
 
-    $response->assertRedirect(route('admin.rows.index'));
+    $response->assertRedirect(route('admin.dashboard'));
     $this->assertAuthenticatedAs($user);
 });
 
@@ -72,7 +72,7 @@ test('a logged-in user visiting the login page is redirected away', function () 
 
     $response = $this->get('/login');
 
-    $response->assertRedirect(route('admin.rows.index'));
+    $response->assertRedirect(route('admin.dashboard'));
 });
 
 test('a logged-in user can log out', function () {

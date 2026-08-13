@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
     {
         JsonResource::withoutWrapping();
 
-        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.rows.index'));
+        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.dashboard'));
 
         Date::use(CarbonImmutable::class);
 

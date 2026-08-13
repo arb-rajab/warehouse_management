@@ -48,6 +48,36 @@ export interface Cell {
     pallet: CellPallet | null;
 }
 
+export interface CellWithLocation extends Cell {
+    row_letter: string;
+}
+
+export type CellSortBy = 'expiration_date';
+
+export interface CellFilters {
+    state?: Cell['state'];
+    row_id?: number;
+    column_number?: number;
+    expiration_date_from?: string;
+    expiration_date_to?: string;
+    sort_by?: CellSortBy;
+    sort_direction?: 'asc' | 'desc';
+}
+
+export interface RowFilterOption {
+    id: number;
+    letter: string;
+}
+
+export interface RowAndColumnFilterOptions {
+    rows: RowFilterOption[];
+    maxColumnNumber: number;
+}
+
+export interface CellFilterOptions extends RowAndColumnFilterOptions {
+    states: Cell['state'][];
+}
+
 export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
@@ -101,9 +131,7 @@ export interface CellStatusLogFilters {
     sort_direction?: 'asc' | 'desc';
 }
 
-export interface CellStatusLogFilterOptions {
-    rows: { id: number; letter: string }[];
-    maxColumnNumber: number;
+export interface CellStatusLogFilterOptions extends RowAndColumnFilterOptions {
     products: { id: number; name: string }[];
     users: { id: number; name: string }[];
     actions: CellLogAction[];

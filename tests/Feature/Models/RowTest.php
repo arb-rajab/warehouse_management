@@ -43,3 +43,22 @@ test('hasPallets is true when one of the rows cells holds a pallet', function ()
     expect($row->hasPallets())->toBeTrue();
     expect($emptyCell->fresh()->pallet)->toBeNull();
 });
+
+test('filterOptions returns rows ordered by letter and the highest cells_count as maxColumnNumber', function () {
+    $rowC = Row::factory()->create(['letter' => 'C', 'cells_count' => 2, 'flats_count' => 1]);
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 5, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 3, 'flats_count' => 1]);
+
+    $options = Row::filterOptions();
+
+    expect($options['rows']->pluck('letter')->all())->toBe(['A', 'B', 'C']);
+    expect($options['rows']->pluck('id')->all())->toBe([$rowA->id, $rowB->id, $rowC->id]);
+    expect($options['maxColumnNumber'])->toBe(5);
+});
+
+test('filterOptions maxColumnNumber is 0 when there are no rows', function () {
+    $options = Row::filterOptions();
+
+    expect($options['rows'])->toBeEmpty();
+    expect($options['maxColumnNumber'])->toBe(0);
+});

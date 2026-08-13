@@ -14,6 +14,11 @@ import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
+import {
+    applySortToggle,
+    columnNumberOptions,
+    filterSectionHeadingClass as sectionHeadingClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import type {
@@ -41,13 +46,8 @@ function stateLabel(state: CellStatusLog['from_state']): string {
 const selectClass =
     'w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800';
 const labelClass = 'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
-const sectionHeadingClass =
-    'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
 
-const columnNumbers = Array.from(
-    { length: props.filterOptions.maxColumnNumber },
-    (_, i) => i + 1,
-);
+const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
 
 const filters = reactive({
     product_id: props.filters.product_id?.toString() ?? '',
@@ -114,12 +114,7 @@ function clearFilters(): void {
 }
 
 function toggleSort(key: string): void {
-    filters.sort_direction =
-        filters.sort_by === key && filters.sort_direction === 'asc'
-            ? 'desc'
-            : 'asc';
-    filters.sort_by = key;
-    applyFilters();
+    applySortToggle(filters, key, applyFilters);
 }
 
 function viewPalletHistory(palletId: number): void {

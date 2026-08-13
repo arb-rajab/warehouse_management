@@ -1,6 +1,7 @@
 {
     "nav": {
         "brand": "Warehouse Admin",
+        "dashboard": "Dashboard",
         "rows": "Rows",
         "cellLog": "Cell Log",
         "users": "Users",
@@ -158,5 +159,39 @@
             "opened": "Opened"
         },
         "empty": "No activity yet."
+    },
+    "cells": {
+        "title": "Cells",
+        "filters": {
+            "state": "State"
+        },
+        "columns": {
+            "location": "Location",
+            "state": "State",
+            "product": "Product",
+            "expires": "Expires"
+        },
+        "empty": "No cells match these filters."
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "occupancy": {
+            "title": "Cell occupancy",
+            "empty": "Empty",
+            "full": "Full",
+            "opened": "Opened"
+        },
+        "expiring": {
+            "title": "Expiring pallets",
+            "expired": "Expired",
+            "soon": "Expiring within 7 days"
+        },
+        "activityToday": {
+            "title": "Today's activity",
+            "stored": "Stored",
+            "opened": "Opened",
+            "emptied": "Emptied",
+            "transferred": "Transferred"
+        }
     }
 }

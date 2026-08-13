@@ -31,11 +31,10 @@ class CellStatusLogController extends Controller
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
             'filters' => $request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'sort_by', 'sort_direction']),
             'filterOptions' => [
-                'rows' => Row::query()->select(['id', 'letter'])->orderBy('letter')->get(),
-                'maxColumnNumber' => (int) (Row::query()->max('cells_count') ?? 0),
+                ...Row::filterOptions(),
                 'products' => Product::query()->select(['id', 'name'])->orderBy('name')->get(),
                 'users' => User::query()->select(['id', 'name'])->orderBy('name')->get(),
-                'actions' => array_map(fn (CellLogAction $action) => $action->value, CellLogAction::cases()),
+                'actions' => array_column(CellLogAction::cases(), 'value'),
             ],
         ]);
     }
