@@ -15,6 +15,7 @@ Route::prefix('v1')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
 
         Route::get('rows', [RowController::class, 'index']);
+        Route::get('rows/full', [RowController::class, 'full']);
         Route::get('rows/{row}/cells', [CellController::class, 'index']);
         Route::get('rows/{row}/cells/{cellNumber}/flats/{flatNumber}', [CellController::class, 'show'])
             ->whereNumber(['cellNumber', 'flatNumber']);
