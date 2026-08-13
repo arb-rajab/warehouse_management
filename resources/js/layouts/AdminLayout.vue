@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { ArrowLeftRight, LogOut, Rows3, Users } from '@lucide/vue';
+import {
+    ArrowLeftRight,
+    LayoutDashboard,
+    LogOut,
+    Rows3,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { destroy } from '@/actions/App/Http/Controllers/LoginController';
@@ -12,6 +19,11 @@ import { t } from '@/lib/i18n';
 const page = usePage();
 
 const navItems = computed(() => [
+    {
+        labelKey: 'nav.dashboard',
+        href: dashboardIndex().url,
+        icon: LayoutDashboard,
+    },
     { labelKey: 'nav.rows', href: rowsIndex().url, icon: Rows3 },
     {
         labelKey: 'nav.cellLog',
@@ -21,8 +33,23 @@ const navItems = computed(() => [
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
 ]);
 
+/**
+ * A nav item matches on exact URL or as a path prefix, but the dashboard's
+ * href ('/admin') is itself a prefix of every other nav item's href, so a
+ * plain prefix check would mark it active alongside whichever section is
+ * actually open. Only the longest matching href wins.
+ */
 function isActive(href: string): boolean {
-    return page.url === href || page.url.startsWith(`${href}/`);
+    const matches = (candidate: string) =>
+        page.url === candidate || page.url.startsWith(`${candidate}/`);
+
+    if (!matches(href)) {
+        return false;
+    }
+
+    return !navItems.value.some(
+        (item) => item.href.length > href.length && matches(item.href),
+    );
 }
 </script>
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
@@ -21,7 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::redirect('/', '/admin/rows');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('rows', [RowController::class, 'index'])->name('rows.index');
         Route::get('rows/create', [RowController::class, 'create'])->name('rows.create');

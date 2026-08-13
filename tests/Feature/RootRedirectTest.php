@@ -9,23 +9,23 @@ test('a guest visiting the root is sent to the login page', function () {
     $response->assertRedirect('/login');
 });
 
-test('a signed-in admin visiting the root lands on the row list', function () {
+test('a signed-in admin visiting the root lands on the dashboard', function () {
     actingAsAdmin();
 
     $response = $this->followingRedirects()->get('/');
 
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Rows/Index')
+        fn (Assert $page) => $page->component('Admin/Dashboard/Index')
     );
 });
 
-test('a signed-in admin visiting the admin index lands on the row list', function () {
+test('a signed-in admin visiting the admin index lands on the dashboard', function () {
     actingAsAdmin();
 
     $response = $this->followingRedirects()->get('/admin');
 
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Rows/Index')
+        fn (Assert $page) => $page->component('Admin/Dashboard/Index')
     );
 });
 

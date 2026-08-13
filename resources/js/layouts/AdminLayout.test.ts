@@ -57,6 +57,7 @@ describe('AdminLayout', () => {
 
         const links = wrapper.findAll('nav a');
         expect(links.map((link) => link.attributes('href'))).toEqual([
+            '/admin',
             '/admin/rows',
             '/admin/cell-logs',
             '/admin/users',
@@ -78,6 +79,31 @@ describe('AdminLayout', () => {
         expect(rowsLink?.classes()).toContain('border-gray-900');
         expect(usersLink?.attributes('aria-current')).toBeUndefined();
         expect(usersLink?.classes()).not.toContain('border-gray-900');
+    });
+
+    it('marks the dashboard link active on its own URL, not on other sections', () => {
+        const wrapper = mountLayout('/admin');
+
+        const links = wrapper.findAll('nav a');
+        const dashboardLink = links.find(
+            (link) => link.attributes('href') === '/admin',
+        );
+        const rowsLink = links.find(
+            (link) => link.attributes('href') === '/admin/rows',
+        );
+
+        expect(dashboardLink?.attributes('aria-current')).toBe('page');
+        expect(rowsLink?.attributes('aria-current')).toBeUndefined();
+    });
+
+    it('does not mark the dashboard link active while a more specific section is open', () => {
+        const wrapper = mountLayout('/admin/rows');
+
+        const dashboardLink = wrapper
+            .findAll('nav a')
+            .find((link) => link.attributes('href') === '/admin');
+
+        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
     });
 
     it('marks a nested section path as active too', () => {
