@@ -27,11 +27,12 @@ test('an authenticated worker can list a row cells with every property the app r
         'state' => 'full',
         'pallet' => [
             'id' => $pallet->id,
+            'product_id' => $product->id,
             'product_name' => 'Widgets',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
-            'is_stale' => false,
+            'is_stale' => null,
         ],
     ]);
     expect(collect($response->json('data'))->firstWhere('id', $emptyCell->id))->toEqual([
@@ -42,6 +43,30 @@ test('an authenticated worker can list a row cells with every property the app r
         'state' => 'empty',
         'pallet' => null,
     ]);
+});
+
+test('a row cell listing computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $stalePallet = Pallet::factory()->stale()->create(['cell_id' => $row->cells()->where('cell_number', 1)->first()->id]);
+    $freshPallet = Pallet::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]);
+
+    $response = $this->getJson("/api/v1/rows/{$row->letter}/cells?stale_after_days=5");
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $stalePallet->cell_id)['pallet']['is_stale'])->toBeTrue();
+    expect(collect($response->json('data'))->firstWhere('id', $freshPallet->cell_id)['pallet']['is_stale'])->toBeFalse();
+});
+
+test('a row cell listing rejects a non-positive stale_after_days', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create();
+
+    $response = $this->getJson("/api/v1/rows/{$row->letter}/cells?stale_after_days=0");
+
+    $response->assertInvalid(['stale_after_days']);
 });
 
 test('a row cell listing excludes cells belonging to a different row', function () {
@@ -98,13 +123,26 @@ test('an authenticated worker can look up a cell by its coordinates with every p
         'state' => 'full',
         'pallet' => [
             'id' => $pallet->id,
+            'product_id' => $product->id,
             'product_name' => 'Widgets',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
-            'is_stale' => false,
+            'is_stale' => null,
         ],
     ]);
+});
+
+test('a cell lookup computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
+    Pallet::factory()->stale()->create(['cell_id' => $cell->id]);
+
+    $response = $this->getJson("/api/v1/rows/{$row->letter}/cells/1/flats/1?stale_after_days=5");
+
+    $response->assertOk()->assertJsonPath('pallet.is_stale', true);
 });
 
 test('looking up out-of-range coordinates for an existing row returns 404', function () {

@@ -36,11 +36,14 @@ class CellResource extends JsonResource
             'state' => $this->state->value,
             'pallet' => $this->when($palletLoaded, fn () => $pallet === null ? null : [
                 'id' => $pallet->id,
+                'product_id' => $pallet->product_id,
                 'product_name' => $pallet->product->name,
                 'product_image_url' => $pallet->product->image_url,
                 'expiration_date' => $pallet->expiration_date->toDateString(),
                 'added_at' => $pallet->created_at?->toIso8601String(),
-                'is_stale' => $pallet->is_stale,
+                'is_stale' => $request->filled('stale_after_days')
+                    ? $pallet->isStaleAfter($request->integer('stale_after_days'))
+                    : null,
             ]),
         ];
     }

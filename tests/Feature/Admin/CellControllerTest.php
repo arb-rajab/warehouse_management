@@ -38,11 +38,12 @@ test('an authenticated admin can view the cell list with every property the tabl
                 ->where('state', 'full')
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)
+                    ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('is_stale', false)
+                    ->where('is_stale', null)
                 )
             )
             ->has('filterOptions.rows', 1)

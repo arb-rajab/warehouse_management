@@ -29,7 +29,8 @@ class Pallet extends Model
 
     /**
      * A pallet is flagged as stale once it's been stored longer than this, regardless
-     * of whether its cell is currently full or opened.
+     * of whether its cell is currently full or opened. Used by the admin UI and
+     * dashboard; the mobile API uses the caller-supplied {@see self::isStaleAfter()} instead.
      */
     public const int STALE_AFTER_DAYS = 3;
 
@@ -92,5 +93,15 @@ class Pallet extends Model
     protected function stale(Builder $query): void
     {
         $query->where('created_at', '<=', now()->subDays(self::STALE_AFTER_DAYS));
+    }
+
+    /**
+     * Whether this pallet has been stored longer than the given number of days —
+     * used by the mobile API, which has no fixed threshold and always supplies
+     * its own day count (unlike the admin UI/dashboard's {@see self::STALE_AFTER_DAYS}).
+     */
+    public function isStaleAfter(int $days): bool
+    {
+        return $this->created_at->lte(now()->subDays($days));
     }
 }
