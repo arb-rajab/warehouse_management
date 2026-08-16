@@ -1,36 +1,113 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
+import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
+import {
+    filterSectionHeadingClass as sectionHeadingClass,
+    selectedCountLabel,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { ProductFilterOptions } from '@/types/admin';
+
+interface ExpiringWindow {
+    days: number;
+    until: string;
+    count: number;
+}
 
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
-        expiring: { expired: number; soon: number };
+        expiring: {
+            expired: number;
+            windows: ExpiringWindow[];
+            custom: ExpiringWindow;
+        };
         activity_today: {
             stored: number;
             opened: number;
             emptied: number;
             transferred: number;
         };
-        stale: number;
+        activity_week: {
+            stored: number;
+            opened: number;
+            emptied: number;
+            transferred: number;
+        };
     };
     today: string;
-    expiringSoonUntil: string;
+    weekStart: string;
+    filters: { product_id: number[] | null };
+    filterOptions: ProductFilterOptions;
 }>();
 
 const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
+
+const productIdStrings = computed(() =>
+    (props.filters.product_id ?? []).map(String),
+);
+
+const productQuery = computed(() =>
+    props.filters.product_id && props.filters.product_id.length > 0
+        ? { product_id: props.filters.product_id }
+        : {},
+);
+
+const customExpiringDays = ref(String(props.stats.expiring.custom.days));
+
+function onCustomExpiringDaysChange(): void {
+    if (customExpiringDays.value === '') {
+        return;
+    }
+
+    router.get(
+        dashboardIndex().url,
+        {
+            product_id: props.filters.product_id ?? [],
+            expiring_days: Number(customExpiringDays.value),
+        },
+        { preserveState: true, replace: true },
+    );
+}
+
+function onProductIdsChange(ids: string[]): void {
+    router.get(
+        dashboardIndex().url,
+        { product_id: ids, expiring_days: props.stats.expiring.custom.days },
+        { preserveState: true, replace: true },
+    );
+}
 </script>
 
 <template>
     <Head :title="t('dashboard.title')" />
 
     <AdminLayout>
-        <h1 class="mb-6 text-xl font-semibold">{{ t('dashboard.title') }}</h1>
+        <div class="mb-6 flex items-center justify-between">
+            <h1 class="text-xl font-semibold">{{ t('dashboard.title') }}</h1>
+            <div class="flex items-center gap-4">
+                <FilterMultiSelect
+                    id="dashboard-product"
+                    :model-value="productIdStrings"
+                    :label="t('cellLog.filters.product')"
+                    :all-label="t('cellLog.filters.all')"
+                    :selected-count-label="selectedCountLabel"
+                    :options="
+                        filterOptions.products.map((product) => ({
+                            value: product.id.toString(),
+                            label: product.name,
+                        }))
+                    "
+                    @update:model-value="onProductIdsChange"
+                />
+            </div>
+        </div>
 
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">
@@ -41,19 +118,19 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                     :label="t('dashboard.occupancy.empty')"
                     :value="props.stats.occupancy.empty"
                     :href="cellsIndex().url"
-                    :query="{ state: 'empty' }"
+                    :query="{ state: 'empty', ...productQuery }"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
                     :value="props.stats.occupancy.full"
                     :href="cellsIndex().url"
-                    :query="{ state: 'full' }"
+                    :query="{ state: 'full', ...productQuery }"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
                     :value="props.stats.occupancy.opened"
                     :href="cellsIndex().url"
-                    :query="{ state: 'opened' }"
+                    :query="{ state: 'opened', ...productQuery }"
                 />
             </div>
         </section>
@@ -66,39 +143,71 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
                     :value="props.stats.expiring.expired"
-                    :href="cellsIndex().url"
-                    :query="{ expiration_date_to: props.today }"
+                    :href="cellLogsIndex().url"
+                    :query="{
+                        expiration_date_to: props.today,
+                        ...productQuery,
+                    }"
                     tone="danger"
                 />
                 <DashboardStatTile
-                    :label="t('dashboard.expiring.soon')"
-                    :value="props.stats.expiring.soon"
-                    :href="cellsIndex().url"
+                    v-for="window in props.stats.expiring.windows"
+                    :key="window.days"
+                    :label="t('dashboard.expiring.soon', { days: window.days })"
+                    :value="window.count"
+                    :href="cellLogsIndex().url"
                     :query="{
                         expiration_date_from: props.today,
-                        expiration_date_to: props.expiringSoonUntil,
+                        expiration_date_to: window.until,
+                        ...productQuery,
                     }"
                     tone="warning"
                 />
+                <div
+                    class="rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
+                >
+                    <Link
+                        :href="cellLogsIndex().url"
+                        :data="{
+                            expiration_date_from: props.today,
+                            expiration_date_to:
+                                props.stats.expiring.custom.until,
+                            ...productQuery,
+                        }"
+                        method="get"
+                        class="block"
+                    >
+                        <div
+                            class="text-2xl font-semibold text-amber-600 dark:text-amber-400"
+                        >
+                            {{ props.stats.expiring.custom.count }}
+                        </div>
+                        <div
+                            class="mt-1 text-sm text-gray-500 dark:text-neutral-400"
+                        >
+                            {{
+                                t('dashboard.expiring.soon', {
+                                    days: props.stats.expiring.custom.days,
+                                })
+                            }}
+                        </div>
+                    </Link>
+                    <input
+                        id="dashboard-custom-expiring-days"
+                        v-model="customExpiringDays"
+                        type="number"
+                        min="1"
+                        step="1"
+                        :aria-label="t('expiringWindow.label')"
+                        :placeholder="t('expiringWindow.customPlaceholder')"
+                        class="mt-2 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        @change="onCustomExpiringDaysChange"
+                    />
+                </div>
             </div>
         </section>
 
         <section class="mb-8">
-            <h2 :class="sectionHeadingClass">
-                {{ t('dashboard.stale.title') }}
-            </h2>
-            <div :class="tileGridClass">
-                <DashboardStatTile
-                    :label="t('dashboard.stale.count')"
-                    :value="props.stats.stale"
-                    :href="cellsIndex().url"
-                    :query="{ stale: 1 }"
-                    tone="warning"
-                />
-            </div>
-        </section>
-
-        <section>
             <h2 :class="sectionHeadingClass">
                 {{ t('dashboard.activityToday.title') }}
             </h2>
@@ -111,6 +220,7 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                         action: ['stored'],
                         date_from: props.today,
                         date_to: props.today,
+                        ...productQuery,
                     }"
                 />
                 <DashboardStatTile
@@ -121,6 +231,7 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                         action: ['opened'],
                         date_from: props.today,
                         date_to: props.today,
+                        ...productQuery,
                     }"
                 />
                 <DashboardStatTile
@@ -131,6 +242,7 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                         action: ['emptied'],
                         date_from: props.today,
                         date_to: props.today,
+                        ...productQuery,
                     }"
                 />
                 <DashboardStatTile
@@ -141,6 +253,59 @@ const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
                         action: ['transferred_out', 'transferred_in'],
                         date_from: props.today,
                         date_to: props.today,
+                        ...productQuery,
+                    }"
+                />
+            </div>
+        </section>
+
+        <section>
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.activityWeek.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.activityWeek.stored')"
+                    :value="props.stats.activity_week.stored"
+                    :href="cellLogsIndex().url"
+                    :query="{
+                        action: ['stored'],
+                        date_from: props.weekStart,
+                        date_to: props.today,
+                        ...productQuery,
+                    }"
+                />
+                <DashboardStatTile
+                    :label="t('dashboard.activityWeek.opened')"
+                    :value="props.stats.activity_week.opened"
+                    :href="cellLogsIndex().url"
+                    :query="{
+                        action: ['opened'],
+                        date_from: props.weekStart,
+                        date_to: props.today,
+                        ...productQuery,
+                    }"
+                />
+                <DashboardStatTile
+                    :label="t('dashboard.activityWeek.emptied')"
+                    :value="props.stats.activity_week.emptied"
+                    :href="cellLogsIndex().url"
+                    :query="{
+                        action: ['emptied'],
+                        date_from: props.weekStart,
+                        date_to: props.today,
+                        ...productQuery,
+                    }"
+                />
+                <DashboardStatTile
+                    :label="t('dashboard.activityWeek.transferred')"
+                    :value="props.stats.activity_week.transferred"
+                    :href="cellLogsIndex().url"
+                    :query="{
+                        action: ['transferred_out', 'transferred_in'],
+                        date_from: props.weekStart,
+                        date_to: props.today,
+                        ...productQuery,
                     }"
                 />
             </div>

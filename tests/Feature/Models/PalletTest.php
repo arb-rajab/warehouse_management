@@ -40,37 +40,6 @@ test('the state attribute reads the state of the pallets current cell', function
     expect($openedPallet->state)->toBe(CellState::Opened);
 });
 
-test('the is_stale attribute is false for a freshly stored pallet', function () {
-    $pallet = Pallet::factory()->create();
-
-    expect($pallet->is_stale)->toBeFalse();
-});
-
-test('the is_stale attribute is true once a pallet has been stored longer than the threshold', function () {
-    $pallet = Pallet::factory()->stale()->create();
-
-    expect($pallet->fresh()->is_stale)->toBeTrue();
-});
-
-test('the is_stale attribute is true exactly at the threshold boundary', function () {
-    $pallet = backdate(
-        Pallet::factory()->create(),
-        now()->subDays(Pallet::STALE_AFTER_DAYS)->toDateTimeString(),
-    );
-
-    expect($pallet->fresh()->is_stale)->toBeTrue();
-});
-
-test('the stale scope only matches pallets past the threshold', function () {
-    $stalePallet = Pallet::factory()->stale()->create();
-    $freshPallet = Pallet::factory()->create();
-
-    $staleIds = Pallet::query()->stale()->pluck('id');
-
-    expect($staleIds)->toContain($stalePallet->id);
-    expect($staleIds)->not->toContain($freshPallet->id);
-});
-
 test('isStaleAfter is false for a freshly stored pallet given any caller-chosen day count', function () {
     $pallet = Pallet::factory()->create();
 

@@ -170,6 +170,10 @@
         "expiresWithinDays": "Expires within (days)",
         "expiresWithinDaysPlaceholder": "e.g. 7"
     },
+    "expiringWindow": {
+        "label": "Expiring soon window",
+        "customPlaceholder": "e.g. 45"
+    },
     "cells": {
         "title": "Cells",
         "filters": {
@@ -201,7 +205,7 @@
         "expiring": {
             "title": "Expiring pallets",
             "expired": "Expired",
-            "soon": "Expiring within 7 days"
+            "soon": "Expiring within {days} days"
         },
         "activityToday": {
             "title": "Today's activity",
@@ -210,9 +214,12 @@
             "emptied": "Emptied",
             "transferred": "Transferred"
         },
-        "stale": {
-            "title": "Stale pallets",
-            "count": "Stale"
+        "activityWeek": {
+            "title": "This week's activity",
+            "stored": "Stored",
+            "opened": "Opened",
+            "emptied": "Emptied",
+            "transferred": "Transferred"
         }
     }
 }

@@ -170,6 +170,10 @@
         "expiresWithinDays": "تنتهي خلال (أيام)",
         "expiresWithinDaysPlaceholder": "مثال: 7"
     },
+    "expiringWindow": {
+        "label": "فترة الاقتراب من الانتهاء",
+        "customPlaceholder": "مثال: 45"
+    },
     "cells": {
         "title": "الخلايا",
         "filters": {
@@ -201,7 +205,7 @@
         "expiring": {
             "title": "الطبليات القريبة من الانتهاء",
             "expired": "منتهية الصلاحية",
-            "soon": "تنتهي خلال 7 أيام"
+            "soon": "تنتهي خلال {days} أيام"
         },
         "activityToday": {
             "title": "نشاط اليوم",
@@ -210,9 +214,12 @@
             "emptied": "تم التفريغ",
             "transferred": "تم النقل"
         },
-        "stale": {
-            "title": "الطبليات الراكدة",
-            "count": "راكدة"
+        "activityWeek": {
+            "title": "نشاط هذا الأسبوع",
+            "stored": "تم التخزين",
+            "opened": "تم الفتح",
+            "emptied": "تم التفريغ",
+            "transferred": "تم النقل"
         }
     }
 }
