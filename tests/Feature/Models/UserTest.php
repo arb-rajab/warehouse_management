@@ -36,4 +36,9 @@ test('password and remember_token are hidden from array and json representations
 
     expect($array)->not->toHaveKey('password');
     expect($array)->not->toHaveKey('remember_token');
+
+    $json = json_decode($user->toJson(), true);
+
+    expect($json)->not->toHaveKey('password');
+    expect($json)->not->toHaveKey('remember_token');
 });
