@@ -207,11 +207,30 @@ test('the cell log can be filtered by product, excluding entries for other produ
     $matching = CellStatusLog::factory()->create(['product_id' => $product->id]);
     CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
 
-    $response = $this->get("/admin/cell-logs?product_id={$product->id}");
+    $response = $this->get("/admin/cell-logs?product_id[]={$product->id}");
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by multiple products at once, excluding entries for the remaining product', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    $thirdProduct = Product::factory()->create();
+
+    $matchingA = CellStatusLog::factory()->create(['product_id' => $product->id]);
+    $matchingB = CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
+    CellStatusLog::factory()->create(['product_id' => $thirdProduct->id]);
+
+    $response = $this->get("/admin/cell-logs?product_id[]={$product->id}&product_id[]={$otherProduct->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $matchingB->id)
+            ->where('logs.data.1.id', $matchingA->id)
     );
 });
 
@@ -303,11 +322,30 @@ test('the cell log can be filtered by who did it, excluding entries by other use
     $matching = CellStatusLog::factory()->create(['user_id' => $mover->id]);
     CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
 
-    $response = $this->get("/admin/cell-logs?user_id={$mover->id}");
+    $response = $this->get("/admin/cell-logs?user_id[]={$mover->id}");
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by multiple users at once, excluding entries by the remaining user', function () {
+    actingAsAdmin();
+    $mover = User::factory()->create();
+    $otherMover = User::factory()->create();
+    $thirdMover = User::factory()->create();
+
+    $matchingA = CellStatusLog::factory()->create(['user_id' => $mover->id]);
+    $matchingB = CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
+    CellStatusLog::factory()->create(['user_id' => $thirdMover->id]);
+
+    $response = $this->get("/admin/cell-logs?user_id[]={$mover->id}&user_id[]={$otherMover->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $matchingB->id)
+            ->where('logs.data.1.id', $matchingA->id)
     );
 });
 
@@ -398,6 +436,34 @@ test('the cell log can be filtered by pallet expiration date range, excluding en
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
     );
+});
+
+test('the cell log can be filtered by expires_within_days, excluding pallets expiring after that window', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $withinWindowPallet = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-09-01']);
+
+    $matching = CellStatusLog::factory()->create(['pallet_id' => $withinWindowPallet->id]);
+    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+
+    $response = $this->get('/admin/cell-logs?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('filtering the cell log by expires_within_days together with an expiration date range is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cell-logs?expires_within_days=7&expiration_date_from=2026-06-01');
+
+    $response->assertSessionHasErrors('expires_within_days');
 });
 
 test('the cell log defaults to newest-first when no sort is requested', function () {

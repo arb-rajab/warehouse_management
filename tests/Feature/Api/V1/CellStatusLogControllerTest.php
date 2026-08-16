@@ -207,11 +207,28 @@ test('the cell log listing can be filtered by product, excluding entries for oth
     $matching = CellStatusLog::factory()->create(['product_id' => $product->id]);
     CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
 
-    $response = $this->getJson("/api/v1/cell-logs?product_id={$product->id}");
+    $response = $this->getJson("/api/v1/cell-logs?product_id[]={$product->id}");
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the cell log listing can be filtered by multiple products at once, excluding entries for the remaining product', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    $thirdProduct = Product::factory()->create();
+
+    $matchingA = CellStatusLog::factory()->create(['product_id' => $product->id]);
+    $matchingB = CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
+    CellStatusLog::factory()->create(['product_id' => $thirdProduct->id]);
+
+    $response = $this->getJson("/api/v1/cell-logs?product_id[]={$product->id}&product_id[]={$otherProduct->id}");
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+    expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$matchingB->id, $matchingA->id]);
 });
 
 test('the cell log listing can be filtered by pallet, excluding entries for other pallets, even after the pallet is deleted', function () {
@@ -273,11 +290,28 @@ test('the cell log listing can be filtered by who did it, excluding entries by o
     $matching = CellStatusLog::factory()->create(['user_id' => $mover->id]);
     CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
 
-    $response = $this->getJson("/api/v1/cell-logs?user_id={$mover->id}");
+    $response = $this->getJson("/api/v1/cell-logs?user_id[]={$mover->id}");
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the cell log listing can be filtered by multiple users at once, excluding entries by the remaining user', function () {
+    actingAsMobileUser();
+    $mover = User::factory()->create();
+    $otherMover = User::factory()->create();
+    $thirdMover = User::factory()->create();
+
+    $matchingA = CellStatusLog::factory()->create(['user_id' => $mover->id]);
+    $matchingB = CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
+    CellStatusLog::factory()->create(['user_id' => $thirdMover->id]);
+
+    $response = $this->getJson("/api/v1/cell-logs?user_id[]={$mover->id}&user_id[]={$otherMover->id}");
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+    expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$matchingB->id, $matchingA->id]);
 });
 
 test('the cell log listing can be filtered by status change, excluding entries for other actions', function () {
@@ -375,6 +409,33 @@ test('filtering cell logs with an invalid expiration date range is rejected', fu
     actingAsMobileUser();
 
     $response = $this->getJson('/api/v1/cell-logs?expiration_date_from=2026-06-30&expiration_date_to=2026-06-01');
+
+    $response->assertUnprocessable();
+});
+
+test('the cell log listing can be filtered by expires_within_days, excluding pallets expiring after that window', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsMobileUser();
+
+    $withinWindowPallet = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-09-01']);
+
+    $matching = CellStatusLog::factory()->create(['pallet_id' => $withinWindowPallet->id]);
+    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs?expires_within_days=7');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+
+    Carbon::setTestNow();
+});
+
+test('filtering cell logs by expires_within_days together with an expiration date range is rejected', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/cell-logs?expires_within_days=7&expiration_date_from=2026-06-01');
 
     $response->assertUnprocessable();
 });

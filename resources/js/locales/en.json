@@ -131,6 +131,7 @@
             "withinDays": "Within last (days)",
             "expirationFrom": "Expires from",
             "expirationTo": "Expires to",
+            "expiresWithinDays": "Expires within (days)",
             "all": "All",
             "apply": "Apply filters",
             "clear": "Clear",

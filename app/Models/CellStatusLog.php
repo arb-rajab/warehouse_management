@@ -170,9 +170,9 @@ class CellStatusLog extends Model
     protected function filtered(Builder $query, Request $request): void
     {
         $query
-            ->when($request->filled('product_id'), fn (Builder $q) => $q->where('product_id', $request->integer('product_id')))
+            ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))))
             ->when($request->filled('pallet_id'), fn (Builder $q) => $q->where('pallet_id', $request->integer('pallet_id')))
-            ->when($request->filled('user_id'), fn (Builder $q) => $q->where('user_id', $request->integer('user_id')))
+            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
             ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', array_map(
                 fn (CellLogAction $action): string => $action->value,
                 $request->enums('action', CellLogAction::class),
@@ -180,10 +180,11 @@ class CellStatusLog extends Model
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
             ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
-            ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
+            ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to') || $request->filled('expires_within_days'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
                 $palletQuery
                     ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->whereDate('expiration_date', '>=', $request->date('expiration_date_from')))
-                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')));
+                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')))
+                    ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))));
             }))
             ->when($request->filled('row_id') || $request->filled('column_number'), fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $cellQuery

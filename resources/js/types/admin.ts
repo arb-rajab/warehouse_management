@@ -123,17 +123,18 @@ export interface CellStatusLog {
 export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
 
 export interface CellStatusLogFilters {
-    product_id?: number;
+    product_id?: number[];
     pallet_id?: number;
     row_id?: number;
     column_number?: number;
-    user_id?: number;
+    user_id?: number[];
     action?: CellLogAction[];
     date_from?: string;
     date_to?: string;
     created_within_days?: number;
     expiration_date_from?: string;
     expiration_date_to?: string;
+    expires_within_days?: number;
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
 }

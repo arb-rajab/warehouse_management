@@ -131,6 +131,7 @@
             "withinDays": "خلال آخر (أيام)",
             "expirationFrom": "تاريخ الانتهاء من",
             "expirationTo": "تاريخ الانتهاء إلى",
+            "expiresWithinDays": "تنتهي خلال (أيام)",
             "all": "الكل",
             "apply": "تطبيق الفلاتر",
             "clear": "مسح",

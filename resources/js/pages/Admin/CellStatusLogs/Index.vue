@@ -18,6 +18,7 @@ import {
     applySortToggle,
     columnNumberOptions,
     filterSectionHeadingClass as sectionHeadingClass,
+    selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -50,17 +51,18 @@ const labelClass = 'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
 const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
 
 const filters = reactive({
-    product_id: props.filters.product_id?.toString() ?? '',
+    product_id: (props.filters.product_id ?? []).map(String),
     pallet_id: props.filters.pallet_id?.toString() ?? '',
     row_id: props.filters.row_id?.toString() ?? '',
     column_number: props.filters.column_number?.toString() ?? '',
-    user_id: props.filters.user_id?.toString() ?? '',
+    user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
     date_from: props.filters.date_from ?? '',
     date_to: props.filters.date_to ?? '',
     created_within_days: props.filters.created_within_days?.toString() ?? '',
     expiration_date_from: props.filters.expiration_date_from ?? '',
     expiration_date_to: props.filters.expiration_date_to ?? '',
+    expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     sort_by: props.filters.sort_by ?? '',
     sort_direction: props.filters.sort_direction ?? '',
 });
@@ -70,21 +72,31 @@ const createdWithinDaysDisabled = computed(
     () => filters.date_from !== '' || filters.date_to !== '',
 );
 
+const expirationRangeDisabled = computed(
+    () => filters.expires_within_days !== '',
+);
+const expiresWithinDaysDisabled = computed(
+    () =>
+        filters.expiration_date_from !== '' ||
+        filters.expiration_date_to !== '',
+);
+
 const filtersOpen = ref(false);
 
 const activeFilterCount = computed(
     () =>
         [
-            filters.product_id !== '',
+            filters.product_id.length > 0,
             filters.row_id !== '',
             filters.column_number !== '',
-            filters.user_id !== '',
+            filters.user_id.length > 0,
             filters.action.length > 0,
             filters.date_from !== '' ||
                 filters.date_to !== '' ||
                 filters.created_within_days !== '',
             filters.expiration_date_from !== '' ||
-                filters.expiration_date_to !== '',
+                filters.expiration_date_to !== '' ||
+                filters.expires_within_days !== '',
         ].filter(Boolean).length,
 );
 
@@ -97,17 +109,18 @@ function applyFilters(): void {
 }
 
 function clearFilters(): void {
-    filters.product_id = '';
+    filters.product_id = [];
     filters.pallet_id = '';
     filters.row_id = '';
     filters.column_number = '';
-    filters.user_id = '';
+    filters.user_id = [];
     filters.action = [];
     filters.date_from = '';
     filters.date_to = '';
     filters.created_within_days = '';
     filters.expiration_date_from = '';
     filters.expiration_date_to = '';
+    filters.expires_within_days = '';
     filters.sort_by = '';
     filters.sort_direction = '';
     router.get(cellLogsIndex().url, {}, { preserveState: true, replace: true });
@@ -272,14 +285,15 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                         {{ t('cellLog.filters.sections.activity') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <FilterSelect
+                        <FilterMultiSelect
                             id="filter-product"
                             v-model="filters.product_id"
                             :label="t('cellLog.filters.product')"
                             :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
                             :options="
                                 filterOptions.products.map((product) => ({
-                                    value: product.id,
+                                    value: product.id.toString(),
                                     label: product.name,
                                 }))
                             "
@@ -290,12 +304,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                             v-model="filters.action"
                             :label="t('cellLog.filters.statusChange')"
                             :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="
-                                (count) =>
-                                    t('cellLog.filters.selectedCount', {
-                                        count,
-                                    })
-                            "
+                            :selected-count-label="selectedCountLabel"
                             :options="
                                 filterOptions.actions.map((action) => ({
                                     value: action,
@@ -304,14 +313,15 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                             "
                         />
 
-                        <FilterSelect
+                        <FilterMultiSelect
                             id="filter-user"
                             v-model="filters.user_id"
                             :label="t('cellLog.filters.doneBy')"
                             :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
                             :options="
                                 filterOptions.users.map((user) => ({
-                                    value: user.id,
+                                    value: user.id.toString(),
                                     label: user.name,
                                 }))
                             "
@@ -365,18 +375,39 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.expiration') }}
                     </h3>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <FilterDateField
                             id="filter-expiration-date-from"
                             v-model="filters.expiration_date_from"
                             :label="t('cellLog.filters.expirationFrom')"
+                            :disabled="expirationRangeDisabled"
                         />
 
                         <FilterDateField
                             id="filter-expiration-date-to"
                             v-model="filters.expiration_date_to"
                             :label="t('cellLog.filters.expirationTo')"
+                            :disabled="expirationRangeDisabled"
                         />
+
+                        <div>
+                            <label
+                                :class="labelClass"
+                                for="filter-expires-within-days"
+                                >{{
+                                    t('cellLog.filters.expiresWithinDays')
+                                }}</label
+                            >
+                            <input
+                                id="filter-expires-within-days"
+                                v-model="filters.expires_within_days"
+                                type="number"
+                                min="1"
+                                step="1"
+                                :disabled="expiresWithinDaysDisabled"
+                                :class="selectClass"
+                            />
+                        </div>
                     </div>
                 </div>
 
