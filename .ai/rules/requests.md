@@ -23,3 +23,6 @@ Requests that need an optional note field alongside other rules (e.g. `StorePall
 
 ## Row/column/expiration filter rules live in FiltersByRowAndExpiration
 `row_id`, `column_number`, `expiration_date_from`, `expiration_date_to` validation is shared via `App\Http\Requests\Concerns\FiltersByRowAndExpiration::rowAndExpirationFilterRules()`, used by both `Admin\FilterCellsRequest` and `Concerns\FiltersCellStatusLogs` (itself shared by Admin/Api\V1 `FilterCellStatusLogsRequest`). Merge it with `...$this->rowAndExpirationFilterRules()` inside `rules()` rather than retyping these four rules. If a third request needs this slot/expiration filter slice, extend this trait instead of copying.
+
+## FiltersDashboard: Admin/Api\V1 ShowDashboardRequest share rules() via a trait
+Admin\ShowDashboardRequest and Api\V1\ShowDashboardRequest both `use App\Http\Requests\Concerns\FiltersDashboard` and delegate `rules()` entirely to `$this->dashboardFilterRules()` — same pattern as FilterCellStatusLogsRequest -> FiltersCellStatusLogs. FiltersDashboard itself composes FiltersByProductIds (adds `expiring_days`), so `productIds()` stays available. Don't inline `['expiring_days' => [...], ...$this->productIdsFilterRules()]` directly in a ShowDashboardRequest again — extend FiltersDashboard instead if a third dashboard consumer needs different/extra rules.
