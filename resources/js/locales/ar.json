@@ -3,6 +3,7 @@
         "brand": "إدارة المستودع",
         "dashboard": "لوحة التحكم",
         "rows": "الصفوف",
+        "map": "الخريطة",
         "cellLog": "سجل الخلايا",
         "users": "المستخدمون",
         "logout": "تسجيل الخروج"
@@ -61,7 +62,9 @@
             "column": "العمود {n}",
             "flat": "الطبقة {n}",
             "empty": "فارغ",
-            "stale": "راكدة — مخزنة لفترة طويلة"
+            "highlight": {
+                "button": "تمييز الخلايا"
+            }
         },
         "fields": {
             "letter": "الحرف",
@@ -161,20 +164,31 @@
         },
         "empty": "لا يوجد نشاط بعد."
     },
+    "cellHighlight": {
+        "staleAfterDays": "راكدة منذ (أيام) على الأقل",
+        "staleAfterDaysPlaceholder": "مثال: 5",
+        "expiresWithinDays": "تنتهي خلال (أيام)",
+        "expiresWithinDaysPlaceholder": "مثال: 7"
+    },
     "cells": {
         "title": "الخلايا",
         "filters": {
-            "state": "الحالة",
-            "stale": "الركود",
-            "staleOnly": "الراكدة فقط"
+            "state": "الحالة"
         },
-        "columns": {
-            "location": "الموقع",
-            "state": "الحالة",
-            "product": "المنتج",
-            "expires": "تنتهي في"
+        "empty": "لم تتم إضافة أي صفوف بعد.",
+        "flatNotAvailable": "هذه الطبقة غير موجودة لهذا الصف",
+        "search": {
+            "placeholder": "ابحث عن موضع الخلية (A12·3)…",
+            "submit": "بحث",
+            "notFound": "لم يتم العثور على خلية مطابقة."
         },
-        "empty": "لا توجد خلايا مطابقة لهذه الفلاتر."
+        "map": {
+            "zoomIn": "تكبير",
+            "zoomOut": "تصغير",
+            "rotateLeft": "تدوير لليسار",
+            "rotateRight": "تدوير لليمين",
+            "resetView": "إعادة ضبط العرض"
+        }
     },
     "dashboard": {
         "title": "لوحة التحكم",

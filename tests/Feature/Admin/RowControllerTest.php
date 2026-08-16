@@ -4,6 +4,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated user can view the row list with every property the table renders', function () {
@@ -206,6 +207,34 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
     );
 
     expect($otherRow->id)->not->toBeNull();
+});
+
+test("a rows cell grid exposes today's date", function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('today', '2026-08-13')
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a rows cell grid exposes the product list for the highlight filter', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+    $product = Product::factory()->create(['name' => 'Widgets']);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0.id', $product->id)
+            ->where('filterOptions.products.0.name', 'Widgets')
+    );
 });
 
 test('a mobile app user cannot view a rows cell grid', function () {

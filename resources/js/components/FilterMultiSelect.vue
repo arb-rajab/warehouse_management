@@ -76,7 +76,7 @@ onBeforeUnmount(() => {
         <button
             :id="id"
             type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
+            class="flex w-full min-w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
             aria-haspopup="listbox"
             :aria-expanded="open"
             @click="open = !open"
@@ -87,19 +87,20 @@ onBeforeUnmount(() => {
         <div
             v-if="open"
             role="listbox"
-            class="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            class="absolute z-10 mt-1 w-max max-w-xs min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
         >
             <label
                 v-for="option in options"
                 :key="option.value"
-                class="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                class="flex items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
             >
                 <input
                     type="checkbox"
+                    class="mt-0.5 shrink-0"
                     :checked="isChecked(option.value)"
                     @change="toggleValue(option.value)"
                 />
-                {{ option.label }}
+                <span class="break-words">{{ option.label }}</span>
             </label>
         </div>
     </div>

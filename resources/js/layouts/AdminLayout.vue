@@ -4,10 +4,12 @@ import {
     ArrowLeftRight,
     LayoutDashboard,
     LogOut,
+    Map,
     Rows3,
     Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -25,6 +27,7 @@ const navItems = computed(() => [
         icon: LayoutDashboard,
     },
     { labelKey: 'nav.rows', href: rowsIndex().url, icon: Rows3 },
+    { labelKey: 'nav.map', href: cellsIndex().url, icon: Map },
     {
         labelKey: 'nav.cellLog',
         href: cellLogsIndex().url,

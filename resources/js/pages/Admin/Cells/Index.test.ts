@@ -1,12 +1,13 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { formatDate } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { formatSlot } from '@/lib/location';
 import type {
-    CellFilterOptions,
-    CellFilters,
+    CellHighlightSeed,
+    ProductFilterOptions,
+    CellMapRow,
+    CellSlotLocation,
     CellWithLocation,
-    Paginated,
 } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -43,314 +44,557 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
+const products = [
+    { id: 1, name: 'Widgets' },
+    { id: 2, name: 'Gadgets' },
+];
+
+function row(overrides: Partial<CellMapRow> = {}): CellMapRow {
+    return { id: 1, letter: 'A', cells_count: 2, flats_count: 2, ...overrides };
+}
+
 function cell(overrides: Partial<CellWithLocation> = {}): CellWithLocation {
     return {
         id: 1,
         row_letter: 'A',
-        cell_number: 3,
-        flat_number: 2,
-        state: 'full',
-        pallet: {
-            id: 55,
-            product_name: 'Widgets',
-            product_image_url: null,
-            expiration_date: '2026-09-01',
-            added_at: '2026-08-01T10:00:00Z',
-            is_stale: false,
-        },
+        cell_number: 1,
+        flat_number: 1,
+        state: 'empty',
+        pallet: null,
         ...overrides,
     };
 }
 
-function paginatedCells(
-    cells: CellWithLocation[],
-): Paginated<CellWithLocation> {
+function pallet(
+    overrides: Partial<CellWithLocation['pallet']> = {},
+): NonNullable<CellWithLocation['pallet']> {
     return {
-        data: cells,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 25,
-            total: cells.length,
-            from: cells.length ? 1 : null,
-            to: cells.length,
-            links: [],
-        },
+        id: 1,
+        product_id: 1,
+        product_name: 'Widgets',
+        product_image_url: null,
+        expiration_date: '2026-09-01',
+        added_at: '2026-07-01T10:00:00Z',
+        is_stale: null,
+        ...overrides,
     };
 }
 
-const filterOptions: CellFilterOptions = {
-    rows: [
-        { id: 1, letter: 'A' },
-        { id: 2, letter: 'B' },
-    ],
-    maxColumnNumber: 3,
-    states: ['empty', 'full', 'opened'],
-};
-
-function mountPage(cells: CellWithLocation[], filters: CellFilters = {}) {
+function mountPage(
+    rows: CellMapRow[],
+    cells: CellWithLocation[],
+    overrides: {
+        flatNumber?: number;
+        maxFlatNumber?: number;
+        today?: string;
+        initialHighlight?: CellHighlightSeed;
+        jumpToCell?: CellSlotLocation | null;
+        searchError?: boolean;
+        filterOptions?: ProductFilterOptions;
+    } = {},
+) {
     usePageMock.mockReturnValue({
         url: '/admin/cells',
         props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
     });
 
     return mount(Index, {
-        props: { cells: paginatedCells(cells), filters, filterOptions },
+        props: {
+            rows,
+            cells,
+            flatNumber: overrides.flatNumber ?? 1,
+            maxFlatNumber: overrides.maxFlatNumber ?? 2,
+            today: overrides.today ?? '2026-08-13',
+            initialHighlight: overrides.initialHighlight ?? {
+                state: null,
+                productIds: [],
+            },
+            jumpToCell: overrides.jumpToCell ?? null,
+            searchError: overrides.searchError ?? false,
+            filterOptions: overrides.filterOptions ?? { products },
+        },
     });
 }
 
-function rowCells(wrapper: ReturnType<typeof mountPage>, rowIndex = 0) {
-    return wrapper.findAll('tbody tr')[rowIndex].findAll('td');
-}
-
-async function openFilters(
+async function openHighlightFilters(
     wrapper: ReturnType<typeof mountPage>,
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) => button.text().includes(t('cellLog.filters.title')));
+        .find((button) =>
+            button.text().includes(t('rows.show.highlight.button')),
+        );
     await trigger?.trigger('click');
 }
 
-describe('Cells Index', () => {
+function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
+    return wrapper
+        .findAll('[data-testid="cell-slot"]')
+        .find((el) => el.text().includes(label));
+}
+
+describe('Cells Index (warehouse map)', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerGetMock.mockReset();
+        routerGetMock.mockClear();
     });
 
-    it('renders every column header', () => {
-        const wrapper = mountPage([]);
-
-        const headers = wrapper.findAll('thead th').map((th) => th.text());
-        expect(headers).toEqual([
-            t('cells.columns.location'),
-            t('cells.columns.state'),
-            t('cells.columns.product'),
-            t('cells.columns.expires'),
-        ]);
-    });
-
-    it('shows the empty message when there are no cells', () => {
-        const wrapper = mountPage([]);
+    it('shows the empty message when there are no rows', () => {
+        const wrapper = mountPage([], []);
 
         expect(wrapper.text()).toContain(t('cells.empty'));
     });
 
-    it('opens the filter dialog when the Filters button is clicked', async () => {
-        const wrapper = mountPage([]);
-
-        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
-
-        await openFilters(wrapper);
-
-        expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellLog.filters.title'),
+    it('renders every row with a slot per its cell count', () => {
+        const wrapper = mountPage(
+            [
+                row({ letter: 'A', cells_count: 2 }),
+                row({ id: 2, letter: 'B', cells_count: 1 }),
+            ],
+            [],
         );
-        expect(wrapper.find('#filter-state').exists()).toBe(true);
+
+        const rowGroups = wrapper.findAll('[data-testid="map-row"]');
+        expect(rowGroups).toHaveLength(2);
+        expect(rowGroups[0].text()).toContain('A');
+        expect(rowGroups[0].findAll('[data-testid="cell-slot"]')).toHaveLength(
+            2,
+        );
+        expect(rowGroups[1].text()).toContain('B');
+        expect(rowGroups[1].findAll('[data-testid="cell-slot"]')).toHaveLength(
+            1,
+        );
     });
 
-    it('offers a "stale only" option in the staleness filter', async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
+    it('places each cell in its own row and cell-number slot, leaving unmatched slots empty', () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet(),
+                }),
+            ],
+        );
+
+        const slotWithPallet = slot(wrapper, formatSlot('A', 1, 1));
+        expect(slotWithPallet?.text()).toContain('Widgets');
+
+        const emptySlot = slot(wrapper, formatSlot('A', 2, 1));
+        expect(emptySlot?.text()).toContain(t('rows.show.empty'));
+    });
+
+    it('shows a not-available placeholder instead of empty cells for a row without this flat', () => {
+        const wrapper = mountPage(
+            [
+                row({ letter: 'A', cells_count: 2, flats_count: 1 }),
+                row({ id: 2, letter: 'B', cells_count: 2, flats_count: 3 }),
+            ],
+            [],
+            { flatNumber: 2, maxFlatNumber: 3 },
+        );
+
+        const rowGroups = wrapper.findAll('[data-testid="map-row"]');
+        expect(
+            rowGroups[0].findAll('[data-testid="flat-not-available"]'),
+        ).toHaveLength(2);
+        expect(rowGroups[0].text()).toContain(t('cells.flatNotAvailable'));
+        expect(rowGroups[0].findAll('[data-testid="cell-slot"]')).toHaveLength(
+            0,
+        );
 
         expect(
-            wrapper
-                .get('#filter-stale')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), t('cells.filters.staleOnly')]);
+            rowGroups[1].findAll('[data-testid="flat-not-available"]'),
+        ).toHaveLength(0);
+        expect(rowGroups[1].findAll('[data-testid="cell-slot"]')).toHaveLength(
+            2,
+        );
     });
 
-    it("populates each filter select's options from filterOptions", async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
+    it('renders a tab for every flat number and marks the current one active', () => {
+        const wrapper = mountPage([row()], [], {
+            flatNumber: 2,
+            maxFlatNumber: 3,
+        });
 
-        expect(
-            wrapper
-                .get('#filter-state')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([
-            t('cellLog.filters.all'),
-            t('cellLog.states.empty'),
-            t('cellLog.states.full'),
-            t('cellLog.states.opened'),
+        const tabs = wrapper.findAll('[data-testid="flat-tab"]');
+        expect(tabs.map((tab) => tab.text())).toEqual([
+            t('rows.show.flat', { n: 1 }),
+            t('rows.show.flat', { n: 2 }),
+            t('rows.show.flat', { n: 3 }),
         ]);
-        expect(
-            wrapper
-                .get('#filter-row')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'A', 'B']);
-        expect(
-            wrapper
-                .get('#filter-column')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), '1', '2', '3']);
+        expect(tabs[1].attributes('aria-pressed')).toBe('true');
+        expect(tabs[0].attributes('aria-pressed')).toBe('false');
     });
 
-    it('links the location cell to the row show page', () => {
-        const wrapper = mountPage([
-            cell({ row_letter: 'A', cell_number: 3, flat_number: 2 }),
-        ]);
+    it('navigates to the clicked flat', async () => {
+        const wrapper = mountPage([row()], [], {
+            flatNumber: 1,
+            maxFlatNumber: 2,
+        });
 
-        const link = rowCells(wrapper)[0].get('a');
-        expect(link.attributes('href')).toBe('/admin/rows/A');
-        expect(link.text()).toContain('A3·2');
+        await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            { flat_number: 2 },
+            { preserveState: true, replace: true },
+        );
     });
 
-    it('shows the state label', () => {
-        const wrapper = mountPage([cell({ state: 'opened' })]);
+    it('pre-highlights cells matching the initial highlight seed from the dashboard link', () => {
+        const seed: CellHighlightSeed = { state: 'full', productIds: [] };
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet(),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'empty',
+                }),
+            ],
+            { initialHighlight: seed },
+        );
 
-        expect(rowCells(wrapper)[1].text()).toBe(t('cellLog.states.opened'));
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
     });
 
-    it('renders the product name and image when the cell has a pallet', () => {
-        const wrapper = mountPage([
-            cell({
-                pallet: {
-                    id: 55,
-                    product_name: 'Widgets',
-                    product_image_url: '/img/widgets.png',
-                    expiration_date: '2026-09-01',
-                    added_at: '2026-08-01T10:00:00Z',
-                    is_stale: false,
-                },
-            }),
-        ]);
+    it('opens the highlight filter dialog with every expected field', async () => {
+        const wrapper = mountPage([], []);
 
-        const productCell = rowCells(wrapper)[2];
-        expect(productCell.text()).toContain('Widgets');
-        const img = productCell.get('img');
-        expect(img.attributes('src')).toBe('/img/widgets.png');
-        expect(img.attributes('alt')).toBe('Widgets');
+        await openHighlightFilters(wrapper);
+
+        expect(wrapper.find('#highlight-state').exists()).toBe(true);
+        expect(wrapper.find('#highlight-expires-within-days').exists()).toBe(
+            true,
+        );
+        expect(wrapper.find('#highlight-product').exists()).toBe(true);
+        expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
 
-    it('shows a dash for product and expiration when the cell has no pallet', () => {
-        const wrapper = mountPage([cell({ pallet: null })]);
+    it('highlights only cells matching the selected product', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({
+                        id: 2,
+                        product_id: 2,
+                        product_name: 'Gadgets',
+                    }),
+                }),
+            ],
+        );
 
-        expect(rowCells(wrapper)[2].text()).toBe('—');
-        expect(rowCells(wrapper)[3].text()).toBe('—');
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
     });
 
-    it('renders the formatted expiration date when the cell has a pallet', () => {
-        const wrapper = mountPage([
-            cell({
-                pallet: {
-                    id: 55,
-                    product_name: 'Widgets',
-                    product_image_url: null,
-                    expiration_date: '2026-09-01',
-                    added_at: '2026-08-01T10:00:00Z',
-                    is_stale: false,
-                },
-            }),
-        ]);
+    it('submits a search and reloads with the query, preserving the current flat', async () => {
+        const wrapper = mountPage([row()], [], { flatNumber: 2 });
 
-        expect(rowCells(wrapper)[3].text()).toBe(formatDate('2026-09-01'));
+        await wrapper.get('input[type="text"]').setValue('A12·3');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            { flat_number: 2, search: 'A12·3' },
+            { preserveState: true, replace: true },
+        );
     });
 
-    it('requests the current filter values when the filter form is submitted', async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
+    it('does not reload when the search box is submitted empty', async () => {
+        const wrapper = mountPage([row()], []);
 
-        await wrapper.get('#filter-state').setValue('opened');
-        await wrapper.get('#filter-row').setValue('1');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+    });
+
+    it('shows a not-found message when the search found nothing', () => {
+        const wrapper = mountPage([row()], [], { searchError: true });
+
+        expect(wrapper.text()).toContain(t('cells.search.notFound'));
+    });
+
+    it('pulses the cell matched by a search result', async () => {
+        const jumpToCell: CellSlotLocation = {
+            row_letter: 'A',
+            cell_number: 1,
+            flat_number: 1,
+        };
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            jumpToCell,
+        });
+
+        await flushPromises();
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-emerald-500',
+        );
+    });
+
+    it('zooms in and out via the toolbar buttons, clamped to the zoom bounds', async () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '100%',
+        );
+
         await wrapper
-            .get('#filter-expiration-date-from')
-            .setValue('2026-09-01');
-        await wrapper.get('#filter-expiration-date-to').setValue('2026-09-10');
-        await wrapper.get('form').trigger('submit');
+            .get(`[title="${t('cells.map.zoomIn')}"]`)
+            .trigger('click');
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '120%',
+        );
 
-        expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
-            expect.objectContaining({
-                state: 'opened',
-                row_id: 1,
-                expiration_date_from: '2026-09-01',
-                expiration_date_to: '2026-09-10',
-            }),
-            { preserveState: true, replace: true },
+        await wrapper
+            .get(`[title="${t('cells.map.zoomOut')}"]`)
+            .trigger('click');
+        await wrapper
+            .get(`[title="${t('cells.map.zoomOut')}"]`)
+            .trigger('click');
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '80%',
         );
     });
 
-    it('requests only stale cells when the staleness filter is applied', async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
+    function headerLabels(wrapper: ReturnType<typeof mountPage>): string[] {
+        return wrapper
+            .findAll('[data-testid="axis-header-item"]')
+            .map((el) => el.text());
+    }
 
-        await wrapper.get('#filter-stale').setValue('1');
-        await wrapper.get('form').trigger('submit');
+    function bandLabels(wrapper: ReturnType<typeof mountPage>): string[] {
+        return wrapper
+            .findAll('[data-testid="band-label"]')
+            .map((el) => el.text());
+    }
 
-        expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
-            expect.objectContaining({ stale: '1' }),
-            { preserveState: true, replace: true },
+    function bandLabelAtEnd(wrapper: ReturnType<typeof mountPage>): boolean {
+        return (
+            wrapper
+                .findAll('[data-testid="map-row"]')[0]
+                .element.lastElementChild?.getAttribute('data-testid') ===
+            'band-label'
         );
-    });
+    }
 
-    it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
-        const wrapper = mountPage([], {
-            state: 'opened',
-            stale: true,
-            expiration_date_from: '2026-09-01',
+    function bandsAsColumns(wrapper: ReturnType<typeof mountPage>): boolean {
+        return wrapper
+            .get('[data-testid="map-viewport"] > div')
+            .classes()
+            .includes('flex-row');
+    }
+
+    function headerAtBottom(wrapper: ReturnType<typeof mountPage>): boolean {
+        const children = Array.from(
+            wrapper.get('[data-testid="map-viewport"] > div').element.children,
+        );
+        const headerIndex = children.findIndex((el) =>
+            el.querySelector('[data-testid="axis-header-item"]'),
+        );
+        const firstRowIndex = children.findIndex(
+            (el) => el.getAttribute('data-testid') === 'map-row',
+        );
+
+        return headerIndex > firstRowIndex;
+    }
+
+    /** The cell-number each band's slots resolve to, in on-screen order, '-' for a padded slot. */
+    function bandItemNumbers(
+        wrapper: ReturnType<typeof mountPage>,
+        bandIndex: number,
+    ): string[] {
+        const band = wrapper.findAll('[data-testid="map-row"]')[bandIndex];
+        const itemsContainer = band.element.children[
+            band.element.children[0].getAttribute('data-testid') ===
+            'band-label'
+                ? 1
+                : 0
+        ] as HTMLElement;
+
+        return Array.from(itemsContainer.children).map((el) => {
+            const label = el.getAttribute('data-slot-label');
+
+            return label ? label.split('·')[0].slice(1) : '-';
         });
-        await openFilters(wrapper);
+    }
 
-        const clearButton = wrapper
-            .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
-        await clearButton?.trigger('click');
-
-        expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
-            {},
-            { preserveState: true, replace: true },
+    it('keeps row headers in the same relative order through every rotation direction', async () => {
+        const wrapper = mountPage(
+            [
+                row({ id: 1, letter: 'A', cells_count: 2, flats_count: 2 }),
+                row({ id: 2, letter: 'B', cells_count: 2, flats_count: 2 }),
+            ],
+            [],
         );
-        expect(
-            (wrapper.get('#filter-state').element as HTMLSelectElement).value,
-        ).toBe('');
-        expect(
-            (wrapper.get('#filter-stale').element as HTMLSelectElement).value,
-        ).toBe('');
+
+        expect(bandLabels(wrapper)).toEqual(['A', 'B']);
+
+        for (const title of [
+            t('cells.map.rotateRight'),
+            t('cells.map.rotateRight'),
+            t('cells.map.rotateRight'),
+            t('cells.map.rotateLeft'),
+            t('cells.map.rotateLeft'),
+        ]) {
+            await wrapper.get(`[title="${title}"]`).trigger('click');
+            expect(bandLabels(wrapper)).toEqual(['A', 'B']);
+        }
     });
 
-    it('applies a sort immediately when the expiration column header is clicked', async () => {
-        const wrapper = mountPage([]);
-
-        const expiresHeader = wrapper
-            .findAll('thead th')
-            .find((th) => th.text().includes(t('cells.columns.expires')));
-        await expiresHeader?.get('button').trigger('click');
-
-        expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
-            expect.objectContaining({
-                sort_by: 'expiration_date',
-                sort_direction: 'asc',
-            }),
-            { preserveState: true, replace: true },
+    it('rotates the map, swapping rows-as-columns and re-anchoring the band label edge', async () => {
+        const wrapper = mountPage(
+            [
+                row({ id: 1, letter: 'A', cells_count: 2, flats_count: 2 }),
+                row({ id: 2, letter: 'B', cells_count: 2, flats_count: 2 }),
+            ],
+            [],
         );
+
+        expect(bandsAsColumns(wrapper)).toBe(false);
+        expect(headerLabels(wrapper)).toEqual(['1', '2']);
+        expect(bandLabelAtEnd(wrapper)).toBe(false);
+        expect(headerAtBottom(wrapper)).toBe(false);
+
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+
+        // 90deg: bands run as columns, no shared number header, label at the
+        // trailing (bottom) edge of each column.
+        expect(bandsAsColumns(wrapper)).toBe(true);
+        expect(wrapper.find('[data-testid="axis-header-item"]').exists()).toBe(
+            false,
+        );
+        expect(bandLabelAtEnd(wrapper)).toBe(true);
+
+        await wrapper
+            .get(`[title="${t('cells.map.rotateLeft')}"]`)
+            .trigger('click');
+        await wrapper
+            .get(`[title="${t('cells.map.rotateLeft')}"]`)
+            .trigger('click');
+
+        // wraps past 0deg to 270deg: bands run as columns again, but the
+        // label sits at the leading (top) edge this time.
+        expect(bandsAsColumns(wrapper)).toBe(true);
+        expect(wrapper.find('[data-testid="axis-header-item"]').exists()).toBe(
+            false,
+        );
+        expect(bandLabelAtEnd(wrapper)).toBe(false);
     });
 
-    it('flips the sort direction when the same sortable header is clicked again', async () => {
-        const wrapper = mountPage([], {
-            sort_by: 'expiration_date',
-            sort_direction: 'asc',
-        });
+    it('pads shorter rows so every band label lines up flush, matching the sorted cell order', async () => {
+        const wrapper = mountPage(
+            [
+                row({ id: 1, letter: 'A', cells_count: 2, flats_count: 2 }),
+                row({ id: 2, letter: 'B', cells_count: 3, flats_count: 2 }),
+            ],
+            [],
+        );
 
-        const expiresHeader = wrapper
-            .findAll('thead th')
-            .find((th) => th.text().includes(t('cells.columns.expires')));
-        await expiresHeader?.get('button').trigger('click');
+        // 0deg: label at the start, rows are left unpadded/ragged.
+        expect(bandItemNumbers(wrapper, 0)).toEqual(['1', '2']);
+        expect(bandItemNumbers(wrapper, 1)).toEqual(['1', '2', '3']);
 
-        expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
-            expect.objectContaining({
-                sort_by: 'expiration_date',
-                sort_direction: 'desc',
-            }),
-            { preserveState: true, replace: true },
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+
+        // 90deg: bands as columns, numbers high-to-low, padded at the
+        // leading edge so both labels land in the same trailing row.
+        expect(bandItemNumbers(wrapper, 0)).toEqual(['-', '2', '1']);
+        expect(bandItemNumbers(wrapper, 1)).toEqual(['3', '2', '1']);
+
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+
+        // 180deg: bands as rows again, numbers high-to-low, label at the
+        // end — padded at the leading edge so both labels line up.
+        expect(bandItemNumbers(wrapper, 0)).toEqual(['-', '2', '1']);
+        expect(bandItemNumbers(wrapper, 1)).toEqual(['3', '2', '1']);
+
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+
+        // 270deg: bands as columns, numbers low-to-high, label at the start
+        // — padded at the trailing edge.
+        expect(bandItemNumbers(wrapper, 0)).toEqual(['1', '2', '-']);
+        expect(bandItemNumbers(wrapper, 1)).toEqual(['1', '2', '3']);
+    });
+
+    it('resets zoom and position but keeps rotation via the reset-view button', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        await wrapper
+            .get(`[title="${t('cells.map.zoomIn')}"]`)
+            .trigger('click');
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+        await wrapper
+            .get(`[title="${t('cells.map.resetView')}"]`)
+            .trigger('click');
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '100%',
+        );
+        // rotation from rotateRight is preserved: still columns with the
+        // band label at the end, not reset back to 0deg.
+        expect(bandsAsColumns(wrapper)).toBe(true);
+        expect(bandLabelAtEnd(wrapper)).toBe(true);
+    });
+
+    it('zooms via a wheel event on the map viewport', async () => {
+        const wrapper = mountPage([row()], []);
+
+        await wrapper
+            .get('[data-testid="map-viewport"]')
+            .trigger('wheel', { deltaY: -500 });
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '150%',
         );
     });
 });
