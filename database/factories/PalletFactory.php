@@ -45,13 +45,15 @@ class PalletFactory extends Factory
     }
 
     /**
-     * Backdate the pallet past {@see Pallet::STALE_AFTER_DAYS} so it reads as stale.
+     * Backdate the pallet by a generous 30 days, so it reads as stale under both
+     * the fixed {@see Pallet::STALE_AFTER_DAYS} threshold and any reasonable
+     * caller-chosen day count passed to {@see Pallet::isStaleAfter()}.
      */
     public function stale(): static
     {
         return $this->afterCreating(
             fn (Pallet $pallet) => $pallet->forceFill([
-                'created_at' => now()->subDays(Pallet::STALE_AFTER_DAYS)->subMinute(),
+                'created_at' => now()->subDays(30),
             ])->save()
         );
     }

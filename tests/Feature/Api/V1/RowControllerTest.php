@@ -73,11 +73,12 @@ test('an authenticated worker can list every row with its cells and their pallet
         'state' => 'full',
         'pallet' => [
             'id' => $pallet->id,
+            'product_id' => $product->id,
             'product_name' => 'Widgets',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
-            'is_stale' => false,
+            'is_stale' => null,
         ],
     ]);
     expect(collect($rowPayload['cells'])->firstWhere('id', $emptyCell->id))->toEqual([
@@ -87,6 +88,20 @@ test('an authenticated worker can list every row with its cells and their pallet
         'state' => 'empty',
         'pallet' => null,
     ]);
+});
+
+test('listing every row with its cells computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->where('cell_number', 1)->first();
+    Pallet::factory()->stale()->create(['cell_id' => $cell->id]);
+
+    $response = $this->getJson('/api/v1/rows/full?stale_after_days=5');
+
+    $response->assertOk();
+    $rowPayload = collect($response->json())->firstWhere('id', $row->id);
+    expect(collect($rowPayload['cells'])->firstWhere('id', $cell->id)['pallet']['is_stale'])->toBeTrue();
 });
 
 test('listing every row with its cells excludes cells belonging to a different row', function () {

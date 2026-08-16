@@ -3,6 +3,7 @@
         "brand": "Warehouse Admin",
         "dashboard": "Dashboard",
         "rows": "Rows",
+        "map": "Map",
         "cellLog": "Cell Log",
         "users": "Users",
         "logout": "Log out"
@@ -61,7 +62,9 @@
             "column": "Column {n}",
             "flat": "Flat {n}",
             "empty": "Empty",
-            "stale": "Stale — stored too long"
+            "highlight": {
+                "button": "Highlight cells"
+            }
         },
         "fields": {
             "letter": "Letter",
@@ -128,6 +131,7 @@
             "withinDays": "Within last (days)",
             "expirationFrom": "Expires from",
             "expirationTo": "Expires to",
+            "expiresWithinDays": "Expires within (days)",
             "all": "All",
             "apply": "Apply filters",
             "clear": "Clear",
@@ -161,20 +165,35 @@
         },
         "empty": "No activity yet."
     },
+    "cellHighlight": {
+        "staleAfterDays": "Stale for at least (days)",
+        "staleAfterDaysPlaceholder": "e.g. 5",
+        "expiresWithinDays": "Expires within (days)",
+        "expiresWithinDaysPlaceholder": "e.g. 7"
+    },
+    "expiringWindow": {
+        "label": "Expiring soon window",
+        "customPlaceholder": "e.g. 45"
+    },
     "cells": {
         "title": "Cells",
         "filters": {
-            "state": "State",
-            "stale": "Staleness",
-            "staleOnly": "Stale only"
+            "state": "State"
         },
-        "columns": {
-            "location": "Location",
-            "state": "State",
-            "product": "Product",
-            "expires": "Expires"
+        "empty": "No rows have been added yet.",
+        "flatNotAvailable": "This flat doesn't exist for this row",
+        "search": {
+            "placeholder": "Search cell position (A12·3)…",
+            "submit": "Search",
+            "notFound": "No matching cell found."
         },
-        "empty": "No cells match these filters."
+        "map": {
+            "zoomIn": "Zoom in",
+            "zoomOut": "Zoom out",
+            "rotateLeft": "Rotate left",
+            "rotateRight": "Rotate right",
+            "resetView": "Reset view"
+        }
     },
     "dashboard": {
         "title": "Dashboard",
@@ -187,7 +206,7 @@
         "expiring": {
             "title": "Expiring pallets",
             "expired": "Expired",
-            "soon": "Expiring within 7 days"
+            "soon": "Expiring within {days} days"
         },
         "activityToday": {
             "title": "Today's activity",
@@ -196,9 +215,12 @@
             "emptied": "Emptied",
             "transferred": "Transferred"
         },
-        "stale": {
-            "title": "Stale pallets",
-            "count": "Stale"
+        "activityWeek": {
+            "title": "This week's activity",
+            "stored": "Stored",
+            "opened": "Opened",
+            "emptied": "Emptied",
+            "transferred": "Transferred"
         }
     }
 }

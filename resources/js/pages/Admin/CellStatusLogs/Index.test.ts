@@ -199,7 +199,7 @@ describe('CellStatusLogs Index', () => {
 
     it('shows a filter count badge for each distinct active filter', () => {
         const wrapper = mountPage([], {
-            product_id: 10,
+            product_id: [10],
             action: ['opened'],
             date_from: '2026-08-01',
         });
@@ -212,16 +212,10 @@ describe('CellStatusLogs Index', () => {
         expect(trigger?.get('span').text()).toBe('3');
     });
 
-    it("populates each filter select's options from filterOptions", async () => {
+    it("populates the row and column filter select's options from filterOptions", async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
 
-        expect(
-            wrapper
-                .get('#filter-product')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'Widgets']);
         expect(
             wrapper
                 .get('#filter-row')
@@ -234,25 +228,43 @@ describe('CellStatusLogs Index', () => {
                 .findAll('option')
                 .map((o) => o.text()),
         ).toEqual([t('cellLog.filters.all'), '1', '2', '3']);
-        expect(
-            wrapper
-                .get('#filter-user')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'Jane Doe']);
+    });
+
+    async function checkboxLabels(
+        wrapper: ReturnType<typeof mountPage>,
+        toggleId: string,
+    ): Promise<string[]> {
+        await wrapper.get(toggleId).trigger('click');
+
+        return wrapper
+            .get('[role="listbox"]')
+            .findAll('label')
+            .map((label) => label.text());
+    }
+
+    it("populates the product filter's checkboxes from filterOptions", async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(await checkboxLabels(wrapper, '#filter-product')).toEqual([
+            'Widgets',
+        ]);
+    });
+
+    it("populates the user filter's checkboxes from filterOptions", async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(await checkboxLabels(wrapper, '#filter-user')).toEqual([
+            'Jane Doe',
+        ]);
     });
 
     it("populates the status filter's checkboxes from filterOptions", async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
 
-        await wrapper.get('#filter-action').trigger('click');
-
-        const labels = wrapper
-            .get('[role="listbox"]')
-            .findAll('label')
-            .map((label) => label.text());
-        expect(labels).toEqual([
+        expect(await checkboxLabels(wrapper, '#filter-action')).toEqual([
             t('cellLog.actions.stored'),
             t('cellLog.actions.opened'),
             t('cellLog.actions.emptied'),
@@ -569,8 +581,40 @@ describe('CellStatusLogs Index', () => {
         );
     });
 
+    it('requests the selected products when the product filter is submitted', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-product').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ product_id: ['10'] }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('requests the selected users when the user filter is submitted', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-user').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ user_id: ['7'] }),
+            { preserveState: true, replace: true },
+        );
+    });
+
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage([], {
+            product_id: [10],
+            user_id: [7],
             action: ['opened'],
             date_from: '2026-08-01',
             expiration_date_from: '2026-09-01',
@@ -600,9 +644,21 @@ describe('CellStatusLogs Index', () => {
         expect(wrapper.get('#filter-action').text()).toBe(
             t('cellLog.filters.all'),
         );
+        expect(wrapper.get('#filter-product').text()).toBe(
+            t('cellLog.filters.all'),
+        );
+        expect(wrapper.get('#filter-user').text()).toBe(
+            t('cellLog.filters.all'),
+        );
         expect(
             (
                 wrapper.get('#filter-created-within-days')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('');
+        expect(
+            (
+                wrapper.get('#filter-expires-within-days')
                     .element as HTMLInputElement
             ).value,
         ).toBe('');
@@ -682,6 +738,97 @@ describe('CellStatusLogs Index', () => {
         expect(
             (wrapper.get('#filter-date-from').element as HTMLInputElement)
                 .disabled,
+        ).toBe(false);
+    });
+
+    it('requests expires_within_days when it is filled in instead of an expiration date range', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-expires-within-days').setValue('5');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ expires_within_days: 5 }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('disables the expires_within_days field once an expiration date range value is entered', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(
+            (
+                wrapper.get('#filter-expires-within-days')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(false);
+
+        await wrapper
+            .get('#filter-expiration-date-from')
+            .setValue('2026-09-01');
+
+        expect(
+            (
+                wrapper.get('#filter-expires-within-days')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+    });
+
+    it('disables the expiration date range fields once expires_within_days is filled in', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-from')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(false);
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-to')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(false);
+
+        await wrapper.get('#filter-expires-within-days').setValue('5');
+
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-from')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-to')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+    });
+
+    it('re-enables the expiration date range fields once expires_within_days is cleared', async () => {
+        const wrapper = mountPage([], { expires_within_days: 5 });
+        await openFilters(wrapper);
+
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-from')
+                    .element as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+
+        await wrapper.get('#filter-expires-within-days').setValue('');
+
+        expect(
+            (
+                wrapper.get('#filter-expiration-date-from')
+                    .element as HTMLInputElement
+            ).disabled,
         ).toBe(false);
     });
 

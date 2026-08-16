@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDuration } from './date';
+import {
+    formatDate,
+    formatDateTime,
+    formatDuration,
+    subtractDays,
+} from './date';
 import { i18n } from './i18n';
 
 describe('formatDate', () => {
@@ -48,6 +53,24 @@ describe('formatDateTime', () => {
 
         expect(formatted).toContain('أغسطس');
         expect(formatted).not.toMatch(/[٠-٩]/);
+    });
+});
+
+describe('subtractDays', () => {
+    it('subtracts days within the same month', () => {
+        expect(subtractDays('2026-08-20', 5)).toBe('2026-08-15');
+    });
+
+    it('subtracts days across a month boundary', () => {
+        expect(subtractDays('2026-08-03', 5)).toBe('2026-07-29');
+    });
+
+    it('subtracts days across a year boundary', () => {
+        expect(subtractDays('2026-01-02', 5)).toBe('2025-12-28');
+    });
+
+    it('returns the same date when subtracting zero days', () => {
+        expect(subtractDays('2026-08-20', 0)).toBe('2026-08-20');
     });
 });
 

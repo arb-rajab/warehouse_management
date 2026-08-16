@@ -5,8 +5,6 @@ namespace App\Models;
 use App\Enums\CellState;
 use Database\Factories\PalletFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,19 +17,12 @@ use Illuminate\Support\Carbon;
  * @property int $cell_id
  * @property Carbon $expiration_date
  * @property-read CellState $state
- * @property-read bool $is_stale
  */
 #[Fillable(['product_id', 'cell_id', 'expiration_date'])]
 class Pallet extends Model
 {
     /** @use HasFactory<PalletFactory> */
     use HasFactory;
-
-    /**
-     * A pallet is flagged as stale once it's been stored longer than this, regardless
-     * of whether its cell is currently full or opened.
-     */
-    public const int STALE_AFTER_DAYS = 3;
 
     /**
      * @return array<string, string>
@@ -72,25 +63,11 @@ class Pallet extends Model
     }
 
     /**
-     * Whether this pallet has been stored longer than {@see self::STALE_AFTER_DAYS}.
-     *
-     * @return Attribute<bool, never>
+     * Whether this pallet has been stored longer than the given number of days. There is
+     * no fixed "stale" threshold — the caller (admin UI or API client) always supplies it.
      */
-    protected function isStale(): Attribute
+    public function isStaleAfter(int $days): bool
     {
-        return Attribute::make(
-            get: fn (): bool => $this->created_at->lte(now()->subDays(self::STALE_AFTER_DAYS)),
-        );
-    }
-
-    /**
-     * Scope a query to pallets stored longer than {@see self::STALE_AFTER_DAYS}.
-     *
-     * @param  Builder<Pallet>  $query
-     */
-    #[Scope]
-    protected function stale(Builder $query): void
-    {
-        $query->where('created_at', '<=', now()->subDays(self::STALE_AFTER_DAYS));
+        return $this->created_at->lte(now()->subDays($days));
     }
 }

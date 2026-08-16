@@ -4,6 +4,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated user can view the row list with every property the table renders', function () {
@@ -188,11 +189,12 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                 ->where('state', 'full')
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)
+                    ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', $pallet->expiration_date->toDateString())
                     ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('is_stale', false)
+                    ->where('is_stale', null)
                 )
             )
             ->has('cells.1', fn (Assert $cell) => $cell
@@ -207,17 +209,31 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
     expect($otherRow->id)->not->toBeNull();
 });
 
-test('the rows cell grid flags a pallet that has been stored longer than the stale threshold', function () {
+test("a rows cell grid exposes today's date", function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    Pallet::factory()->stale()->create(['cell_id' => $cell->id]);
+    $row = Row::factory()->create(['letter' => 'Z']);
 
     $response = $this->get("/admin/rows/{$row->letter}");
 
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Rows/Show')
-            ->where('cells.0.pallet.is_stale', true)
+        fn (Assert $page) => $page->where('today', '2026-08-13')
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a rows cell grid exposes the product list for the highlight filter', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+    $product = Product::factory()->create(['name' => 'Widgets']);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0.id', $product->id)
+            ->where('filterOptions.products.0.name', 'Widgets')
     );
 });
 

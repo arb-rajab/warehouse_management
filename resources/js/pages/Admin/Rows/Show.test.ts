@@ -6,8 +6,9 @@ import { formatSlot } from '@/lib/location';
 import type { Cell, Row } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerPostMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
+    routerGetMock: vi.fn(),
     routerPostMock: vi.fn(),
 }));
 
@@ -35,9 +36,14 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: defineComponent({ render: () => null }),
         Link: LinkStub,
         usePage: usePageMock,
-        router: { post: routerPostMock },
+        router: { get: routerGetMock, post: routerPostMock },
     };
 });
+
+const products = [
+    { id: 1, name: 'Widgets' },
+    { id: 2, name: 'Gadgets' },
+];
 
 function row(overrides: Partial<Row> = {}): Row {
     return {
@@ -61,18 +67,55 @@ function cell(overrides: Partial<Cell> = {}): Cell {
     };
 }
 
-function mountPage(rowOverrides: Partial<Row>, cells: Cell[]) {
+function pallet(
+    overrides: Partial<Cell['pallet']> = {},
+): NonNullable<Cell['pallet']> {
+    return {
+        id: 1,
+        product_id: 1,
+        product_name: 'Widgets',
+        product_image_url: null,
+        expiration_date: '2026-09-01',
+        added_at: '2026-07-01T10:00:00Z',
+        is_stale: null,
+        ...overrides,
+    };
+}
+
+function mountPage(
+    rowOverrides: Partial<Row>,
+    cells: Cell[],
+    dateOverrides: { today?: string } = {},
+) {
     usePageMock.mockReturnValue({
         url: '/admin/rows/A',
         props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
     });
 
-    return mount(Show, { props: { row: row(rowOverrides), cells } });
+    return mount(Show, {
+        props: {
+            row: row(rowOverrides),
+            cells,
+            today: dateOverrides.today ?? '2026-08-13',
+            filterOptions: { products },
+        },
+    });
+}
+
+async function openHighlightFilters(
+    wrapper: ReturnType<typeof mountPage>,
+): Promise<void> {
+    const trigger = wrapper
+        .findAll('button')
+        .find((button) =>
+            button.text().includes(t('rows.show.highlight.button')),
+        );
+    await trigger?.trigger('click');
 }
 
 function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
     return wrapper
-        .findAll('[data-testid], .relative')
+        .findAll('[data-testid="cell-slot"]')
         .find((el) => el.text().includes(label));
 }
 
@@ -133,14 +176,12 @@ describe('Rows Show', () => {
                 cell_number: 1,
                 flat_number: 1,
                 state: 'full',
-                pallet: {
+                pallet: pallet({
                     id: 9,
-                    product_name: 'Widgets',
                     product_image_url: '/img/widgets.png',
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
-                    is_stale: false,
-                },
+                }),
             }),
         ]);
 
@@ -185,57 +226,195 @@ describe('Rows Show', () => {
         ]);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
-            'bg-red-50',
+            'bg-green-50',
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
-            'bg-amber-50',
+            'bg-orange-50',
         );
         expect(slot(wrapper, formatSlot('A', 3, 1))?.classes()).toContain(
-            'bg-white',
+            'bg-gray-100',
         );
     });
 
-    it('shows a stale badge when the pallet has been stored too long', () => {
+    it("does not mark an expired pallet's slot with a warning badge or border, absent a highlight filter", () => {
         const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
             cell({
                 cell_number: 1,
                 flat_number: 1,
                 state: 'full',
-                pallet: {
-                    id: 9,
-                    product_name: 'Widgets',
-                    product_image_url: null,
-                    expiration_date: '2026-09-01',
-                    added_at: '2026-08-01T10:00:00Z',
-                    is_stale: true,
-                },
+                pallet: pallet({ expiration_date: '2026-08-01' }),
             }),
         ]);
 
-        expect(wrapper.find(`[title="${t('rows.show.stale')}"]`).exists()).toBe(
+        const slotEl = slot(wrapper, formatSlot('A', 1, 1));
+        expect(slotEl?.find('[data-testid="expiry-badge"]').exists()).toBe(
+            false,
+        );
+        expect(slotEl?.classes()).not.toContain('border-red-500');
+    });
+
+    it('opens the highlight filter dialog when the highlight button is clicked', async () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, []);
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        await openHighlightFilters(wrapper);
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            t('rows.show.highlight.button'),
+        );
+        expect(wrapper.find('#highlight-state').exists()).toBe(true);
+        expect(wrapper.find('#highlight-expires-within-days').exists()).toBe(
             true,
         );
+        expect(wrapper.find('#highlight-product').exists()).toBe(true);
+        expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
 
-    it('does not show a stale badge when the pallet is not stale', () => {
-        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+    it('highlights only cells matching the selected state', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+            cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-state').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('highlights only cells expiring within the given number of days', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
             cell({
                 cell_number: 1,
                 flat_number: 1,
                 state: 'full',
-                pallet: {
-                    id: 9,
-                    product_name: 'Widgets',
-                    product_image_url: null,
+                pallet: pallet({ id: 1, expiration_date: '2026-08-15' }),
+            }),
+            cell({
+                cell_number: 2,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({
+                    id: 2,
+                    product_name: 'Gadgets',
                     expiration_date: '2026-09-01',
-                    added_at: '2026-08-01T10:00:00Z',
-                    is_stale: false,
-                },
+                }),
             }),
         ]);
 
-        expect(wrapper.find(`[title="${t('rows.show.stale')}"]`).exists()).toBe(
-            false,
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-expires-within-days').setValue(5);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('highlights only cells whose pallet matches the selected product', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({
+                    id: 1,
+                    product_id: 1,
+                    product_name: 'Widgets',
+                }),
+            }),
+            cell({
+                cell_number: 2,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({
+                    id: 2,
+                    product_id: 2,
+                    product_name: 'Gadgets',
+                }),
+            }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('highlights only cells stale for at least the given number of days', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({ id: 1, added_at: '2026-07-01T00:00:00Z' }),
+            }),
+            cell({
+                cell_number: 2,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({ id: 2, added_at: '2026-08-12T00:00:00Z' }),
+            }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-stale-after-days').setValue(5);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('shows no highlights when no highlight filters are selected', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+        ]);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('clears highlight filters and removes the highlight when Clear is clicked', async () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'opened' }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-state').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+
+        const clearButton = wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('cellLog.filters.clear'));
+        await clearButton?.trigger('click');
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+        expect(wrapper.get('#highlight-state').text()).toBe(
+            t('cellLog.filters.all'),
         );
     });
 });

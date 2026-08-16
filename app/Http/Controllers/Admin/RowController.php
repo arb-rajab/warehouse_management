@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateRowRequest;
 use App\Http\Resources\CellResource;
 use App\Http\Resources\RowResource;
 use App\Models\Cell;
+use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -47,6 +48,10 @@ class RowController extends Controller
                     ->orderedByCoordinates()
                     ->get()
             ),
+            'today' => today()->toDateString(),
+            'filterOptions' => [
+                'products' => Product::filterOptions(),
+            ],
         ]);
     }
 

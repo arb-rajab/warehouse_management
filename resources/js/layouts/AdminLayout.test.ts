@@ -59,6 +59,7 @@ describe('AdminLayout', () => {
         expect(links.map((link) => link.attributes('href'))).toEqual([
             '/admin',
             '/admin/rows',
+            '/admin/cells',
             '/admin/cell-logs',
             '/admin/users',
         ]);
@@ -124,6 +125,16 @@ describe('AdminLayout', () => {
             .find((link) => link.attributes('href') === '/admin/rows');
 
         expect(rowsLink?.attributes('aria-current')).toBeUndefined();
+    });
+
+    it('links the map nav item straight to the warehouse map with no filters applied', () => {
+        const wrapper = mountLayout('/admin/rows');
+
+        const mapLink = wrapper
+            .findAll('nav a')
+            .find((link) => link.attributes('href') === '/admin/cells');
+
+        expect(mapLink?.attributes('href')).toBe('/admin/cells');
     });
 
     it("renders the signed-in user's name", () => {

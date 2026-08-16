@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Http\Request;
 
 /**
  * @property int $id
@@ -106,61 +105,5 @@ class Cell extends Model
     protected function orderedByCoordinates(Builder $query): void
     {
         $query->orderBy('cell_number')->orderBy('flat_number');
-    }
-
-    /**
-     * Scope a query by the state/location/expiration filters for the admin
-     * "current cells" listing. This is deliberately separate from
-     * CellStatusLog::filtered() — that one filters audit-log rows by
-     * product/pallet/user/action/date; this one filters a cell's current
-     * state and its current pallet's expiration, so the two don't share a
-     * trait despite the similar row_id/column_number filters.
-     *
-     * @param  Builder<Cell>  $query
-     */
-    #[Scope]
-    protected function filtered(Builder $query, Request $request): void
-    {
-        $query
-            ->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->enum('state', CellState::class)?->value))
-            ->when($request->boolean('stale'), fn (Builder $q) => $q->whereHas('pallet', fn (Builder $palletQuery) => $palletQuery->where('created_at', '<=', now()->subDays(Pallet::STALE_AFTER_DAYS))))
-            ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
-            ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')))
-            ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
-                $palletQuery
-                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->whereDate('expiration_date', '>=', $request->date('expiration_date_from')))
-                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')));
-            }));
-    }
-
-    /**
-     * Scope a query to sort by the related pallet's expiration_date, per the
-     * sort_by/sort_direction request params — the only sortable column for
-     * this listing. Falls back to orderedByCoordinates() when no sort_by is
-     * given, so the default view reads like the row/cell grid.
-     *
-     * Sorts through a correlated subquery instead of joining pallets, same
-     * technique as CellStatusLog::sorted(), to avoid aliasing every select
-     * column against a pallets.id/cells.id collision.
-     *
-     * @param  Builder<Cell>  $query
-     */
-    #[Scope]
-    protected function sorted(Builder $query, Request $request): void
-    {
-        if ($request->string('sort_by')->value() !== 'expiration_date') {
-            $query->orderedByCoordinates();
-
-            return;
-        }
-
-        $direction = $request->string('sort_direction')->value() === 'asc' ? 'asc' : 'desc';
-
-        $query->orderBy(
-            Pallet::query()->select('expiration_date')->whereColumn('pallets.cell_id', 'cells.id'),
-            $direction,
-        );
-
-        $query->orderBy('id', $direction);
     }
 }

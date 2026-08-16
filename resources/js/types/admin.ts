@@ -34,11 +34,12 @@ export interface Row {
 
 export interface CellPallet {
     id: number;
+    product_id: number;
     product_name: string;
     product_image_url: string | null;
     expiration_date: string;
     added_at: string;
-    is_stale: boolean;
+    is_stale: boolean | null;
 }
 
 export interface Cell {
@@ -53,19 +54,6 @@ export interface CellWithLocation extends Cell {
     row_letter: string;
 }
 
-export type CellSortBy = 'expiration_date';
-
-export interface CellFilters {
-    state?: Cell['state'];
-    stale?: boolean;
-    row_id?: number;
-    column_number?: number;
-    expiration_date_from?: string;
-    expiration_date_to?: string;
-    sort_by?: CellSortBy;
-    sort_direction?: 'asc' | 'desc';
-}
-
 export interface RowFilterOption {
     id: number;
     letter: string;
@@ -76,8 +64,25 @@ export interface RowAndColumnFilterOptions {
     maxColumnNumber: number;
 }
 
-export interface CellFilterOptions extends RowAndColumnFilterOptions {
-    states: Cell['state'][];
+export interface CellMapRow {
+    id: number;
+    letter: string;
+    cells_count: number;
+    flats_count: number;
+}
+
+export interface ProductFilterOption {
+    id: number;
+    name: string;
+}
+
+export interface ProductFilterOptions {
+    products: ProductFilterOption[];
+}
+
+export interface CellHighlightSeed {
+    state: Cell['state'] | null;
+    productIds: number[];
 }
 
 export interface CellSlotLocation {
@@ -118,23 +123,24 @@ export interface CellStatusLog {
 export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
 
 export interface CellStatusLogFilters {
-    product_id?: number;
+    product_id?: number[];
     pallet_id?: number;
     row_id?: number;
     column_number?: number;
-    user_id?: number;
+    user_id?: number[];
     action?: CellLogAction[];
     date_from?: string;
     date_to?: string;
     created_within_days?: number;
     expiration_date_from?: string;
     expiration_date_to?: string;
+    expires_within_days?: number;
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
 }
 
-export interface CellStatusLogFilterOptions extends RowAndColumnFilterOptions {
-    products: { id: number; name: string }[];
+export interface CellStatusLogFilterOptions
+    extends RowAndColumnFilterOptions, ProductFilterOptions {
     users: { id: number; name: string }[];
     actions: CellLogAction[];
 }

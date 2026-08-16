@@ -172,8 +172,11 @@ test('the filtered scope can filter by multiple actions at once, excluding the r
 });
 
 test('the sorted scope defaults to created_at descending when no sort params are given', function () {
-    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+    // Created in the reverse order of their timestamps (lower id gets the later
+    // timestamp), so the assertion only passes if the scope truly orders by
+    // created_at and not by insertion/id order.
     $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
 
     $results = CellStatusLog::query()->sorted(Request::create('/', 'GET'))->get();
 
@@ -181,8 +184,9 @@ test('the sorted scope defaults to created_at descending when no sort params are
 });
 
 test('the sorted scope can sort by created_at ascending', function () {
-    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+    // Same reversed id/timestamp setup as the descending-default test above.
     $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
 
     $request = Request::create('/', 'GET', ['sort_by' => 'created_at', 'sort_direction' => 'asc']);
 
@@ -191,13 +195,28 @@ test('the sorted scope can sort by created_at ascending', function () {
     expect($results->pluck('id')->all())->toEqual([$older->id, $newer->id]);
 });
 
+test('the sorted scope breaks ties on id, in the requested direction, when created_at values are equal', function () {
+    $first = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+    $second = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
+
+    $desc = CellStatusLog::query()->sorted(Request::create('/', 'GET', ['sort_direction' => 'desc']))->get();
+    expect($desc->pluck('id')->all())->toEqual([$second->id, $first->id]);
+
+    $asc = CellStatusLog::query()->sorted(Request::create('/', 'GET', ['sort_direction' => 'asc']))->get();
+    expect($asc->pluck('id')->all())->toEqual([$first->id, $second->id]);
+});
+
 test('the sorted scope can sort by the related pallet expiration date, including logs with no pallet', function () {
     $soonPallet = Pallet::factory()->create(['expiration_date' => '2026-06-01']);
     $latePallet = Pallet::factory()->create(['expiration_date' => '2026-12-01']);
 
+    // Created in an order that doesn't match the expected expiration-date order
+    // (late, then no-expiration, then soon), so the assertion only passes if the
+    // scope truly orders by the pallet's expiration_date and not by insertion/id
+    // order.
+    $late = CellStatusLog::factory()->create(['pallet_id' => $latePallet->id]);
     $noExpiration = CellStatusLog::factory()->create(['pallet_id' => null]);
     $soon = CellStatusLog::factory()->create(['pallet_id' => $soonPallet->id]);
-    $late = CellStatusLog::factory()->create(['pallet_id' => $latePallet->id]);
 
     $request = Request::create('/', 'GET', ['sort_by' => 'expiration_date', 'sort_direction' => 'asc']);
 
@@ -308,4 +327,22 @@ test('attachNextLogs treats a log with no pallet as having no next log and uses 
     expect($fresh->duration_seconds)->toBe(7200);
 
     Carbon::setTestNow();
+});
+
+test('attachNextLogs breaks ties on id when same-pallet siblings share the same created_at timestamp', function () {
+    $pallet = Pallet::factory()->create();
+
+    $first = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 10:00:00');
+    $second = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 10:00:00');
+    $third = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 11:00:00');
+
+    $logs = CellStatusLog::query()->orderBy('id')->get();
+    CellStatusLog::attachNextLogs($logs);
+
+    $firstFresh = $logs->firstWhere('id', $first->id);
+    expect($firstFresh->next_log_at?->equalTo($second->created_at))->toBeTrue();
+    expect($firstFresh->duration_seconds)->toBe(0);
+
+    $secondFresh = $logs->firstWhere('id', $second->id);
+    expect($secondFresh->next_log_at?->equalTo($third->created_at))->toBeTrue();
 });

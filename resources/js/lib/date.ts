@@ -33,6 +33,30 @@ export function formatDateTime(value: string): string {
 }
 
 /**
+ * Subtracts `days` from a `YYYY-MM-DD` date string, returning a `YYYY-MM-DD`
+ * string — plain date arithmetic anchored on the given date, never the
+ * browser clock (the caller passes in the server-provided "today").
+ */
+export function subtractDays(dateString: string, days: number): string {
+    const date = new Date(`${dateString}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - days);
+
+    return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Adds `days` to a `YYYY-MM-DD` date string, returning a `YYYY-MM-DD`
+ * string — plain date arithmetic anchored on the given date, never the
+ * browser clock (the caller passes in the server-provided "today").
+ */
+export function addDays(dateString: string, days: number): string {
+    const date = new Date(`${dateString}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+
+    return date.toISOString().slice(0, 10);
+}
+
+/**
  * A short "2d 3h" / "45m" / "30s" label for a duration in seconds — the two
  * largest non-zero units, dropping to a single unit once it's the smallest.
  * Unit suffixes are translated (see `common.duration.*`); Arabic keeps

@@ -1,9 +1,19 @@
+import { t } from '@/lib/i18n';
+
 /**
  * The heading style shared by every section inside a filter dialog (see
  * Cells/Index.vue and CellStatusLogs/Index.vue).
  */
 export const filterSectionHeadingClass =
     'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
+
+/**
+ * The `selectedCountLabel` FilterMultiSelect expects, shared by every
+ * multi-select filter (product/action/user/state) across the admin pages.
+ */
+export function selectedCountLabel(count: number): string {
+    return t('cellLog.filters.selectedCount', { count });
+}
 
 /**
  * The 1..maxColumnNumber options for a "column" filter dropdown.

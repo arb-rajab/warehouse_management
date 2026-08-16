@@ -3,6 +3,7 @@
         "brand": "إدارة المستودع",
         "dashboard": "لوحة التحكم",
         "rows": "الصفوف",
+        "map": "الخريطة",
         "cellLog": "سجل الخلايا",
         "users": "المستخدمون",
         "logout": "تسجيل الخروج"
@@ -61,7 +62,9 @@
             "column": "العمود {n}",
             "flat": "الطبقة {n}",
             "empty": "فارغ",
-            "stale": "راكدة — مخزنة لفترة طويلة"
+            "highlight": {
+                "button": "تمييز الخلايا"
+            }
         },
         "fields": {
             "letter": "الحرف",
@@ -128,6 +131,7 @@
             "withinDays": "خلال آخر (أيام)",
             "expirationFrom": "تاريخ الانتهاء من",
             "expirationTo": "تاريخ الانتهاء إلى",
+            "expiresWithinDays": "تنتهي خلال (أيام)",
             "all": "الكل",
             "apply": "تطبيق الفلاتر",
             "clear": "مسح",
@@ -161,20 +165,35 @@
         },
         "empty": "لا يوجد نشاط بعد."
     },
+    "cellHighlight": {
+        "staleAfterDays": "راكدة منذ (أيام) على الأقل",
+        "staleAfterDaysPlaceholder": "مثال: 5",
+        "expiresWithinDays": "تنتهي خلال (أيام)",
+        "expiresWithinDaysPlaceholder": "مثال: 7"
+    },
+    "expiringWindow": {
+        "label": "فترة الاقتراب من الانتهاء",
+        "customPlaceholder": "مثال: 45"
+    },
     "cells": {
         "title": "الخلايا",
         "filters": {
-            "state": "الحالة",
-            "stale": "الركود",
-            "staleOnly": "الراكدة فقط"
+            "state": "الحالة"
         },
-        "columns": {
-            "location": "الموقع",
-            "state": "الحالة",
-            "product": "المنتج",
-            "expires": "تنتهي في"
+        "empty": "لم تتم إضافة أي صفوف بعد.",
+        "flatNotAvailable": "هذه الطبقة غير موجودة لهذا الصف",
+        "search": {
+            "placeholder": "ابحث عن موضع الخلية (A12·3)…",
+            "submit": "بحث",
+            "notFound": "لم يتم العثور على خلية مطابقة."
         },
-        "empty": "لا توجد خلايا مطابقة لهذه الفلاتر."
+        "map": {
+            "zoomIn": "تكبير",
+            "zoomOut": "تصغير",
+            "rotateLeft": "تدوير لليسار",
+            "rotateRight": "تدوير لليمين",
+            "resetView": "إعادة ضبط العرض"
+        }
     },
     "dashboard": {
         "title": "لوحة التحكم",
@@ -187,7 +206,7 @@
         "expiring": {
             "title": "الطبليات القريبة من الانتهاء",
             "expired": "منتهية الصلاحية",
-            "soon": "تنتهي خلال 7 أيام"
+            "soon": "تنتهي خلال {days} أيام"
         },
         "activityToday": {
             "title": "نشاط اليوم",
@@ -196,9 +215,12 @@
             "emptied": "تم التفريغ",
             "transferred": "تم النقل"
         },
-        "stale": {
-            "title": "الطبليات الراكدة",
-            "count": "راكدة"
+        "activityWeek": {
+            "title": "نشاط هذا الأسبوع",
+            "stored": "تم التخزين",
+            "opened": "تم الفتح",
+            "emptied": "تم التفريغ",
+            "transferred": "تم النقل"
         }
     }
 }
