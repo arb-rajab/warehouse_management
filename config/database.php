@@ -3,6 +3,26 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+/*
+|--------------------------------------------------------------------------
+| Shared Sqlite Pragmas
+|--------------------------------------------------------------------------
+|
+| WAL lets readers (and other writers) proceed instead of blocking behind
+| an in-place page rewrite, and busy_timeout makes a momentary write
+| collision wait briefly instead of throwing "database is locked". SQLite
+| silently ignores both pragmas for the :memory: database phpunit.xml uses.
+| Shared by every sqlite-backed connection below, including Telescope,
+| Pulse, and Health's own dedicated databases.
+|
+*/
+
+$sqlitePragmas = [
+    'busy_timeout' => 5000,
+    'journal_mode' => 'wal',
+    'synchronous' => 'normal',
+];
+
 return [
 
     /*
@@ -38,10 +58,40 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            ...$sqlitePragmas,
             'transaction_mode' => 'DEFERRED',
+            // spatie/laravel-backup shells out to the sqlite3 CLI to dump this connection;
+            // only needed if it isn't already on PATH (e.g. this machine's winget install).
+            'dump' => [
+                'dump_binary_path' => env('SQLITE3_DUMP_BINARY_PATH', ''),
+            ],
+        ],
+
+        // Telescope/Pulse/Health always use their own sqlite file regardless of the
+        // app's default DB_CONNECTION (see 'telescope'/'pulse'/'health' below), so these
+        // pragmas apply even when 'default' above is mysql/pgsql in production.
+        'telescope' => [
+            'driver' => 'sqlite',
+            'database' => env('TELESCOPE_DB_DATABASE', database_path('telescope.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            ...$sqlitePragmas,
+        ],
+
+        'pulse' => [
+            'driver' => 'sqlite',
+            'database' => env('PULSE_DB_DATABASE', database_path('pulse.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            ...$sqlitePragmas,
+        ],
+
+        'health' => [
+            'driver' => 'sqlite',
+            'database' => env('HEALTH_DB_DATABASE', database_path('health.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            ...$sqlitePragmas,
         ],
 
         'mysql' => [

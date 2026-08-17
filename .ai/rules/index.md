@@ -6,12 +6,15 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php,resources/js/pages/Admin/CellStatusLogs/Index.vue | .ai/rules/admin-cell-status-logs.md |
 | resources/js/pages/Admin/** | .ai/rules/admin.md |
+| app/Providers/TelescopeServiceProvider.php | .ai/rules/app-providers.md |
 | bootstrap/app.php,app/Http/Controllers/LoginController.php,resources/js/pages/Auth/Login.vue,routes/web.php | .ai/rules/auth.md |
 | resources/js/pages/Admin/CellStatusLogs/** | .ai/rules/cell-status-logs.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts | .ai/rules/components-js-lib.md |
 | resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts | .ai/rules/components.md |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php | .ai/rules/concerns.md |
+| config/telescope.php,database/migrations/*telescope*, config/pulse.php,database/migrations/*pulse* | .ai/rules/config-migrations.md |
+| config/backup.php,config/database.php, config/database.php | .ai/rules/config.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | app/Enums/** | .ai/rules/enums.md |
 | app/Exceptions/** | .ai/rules/exceptions.md |
@@ -22,15 +25,16 @@ Before planning or editing, find the row whose globs match the file's path and r
 | lang/** | .ai/rules/lang.md |
 | resources/js/layouts/** | .ai/rules/layouts.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellSlot.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellStatus.ts,resources/js/lib/cellHighlight.ts | .ai/rules/lib.md |
-| app/Http/Middleware/**, app/Http/Middleware/BlockMaliciousRequests.php,config/waf.php | .ai/rules/middleware.md |
+| app/Http/Middleware/**, app/Http/Middleware/BlockMaliciousRequests.php,config/waf.php, app/Http/Middleware/RestrictToAllowedIps.php,config/telescope.php,config/pulse.php | .ai/rules/middleware.md |
 | database/migrations/** | .ai/rules/migrations.md |
 | app/Models/*.php, app/Models/CellStatusLog.php, app/Models/Row.php, app/Models/Pallet.php | .ai/rules/models.md |
 | app/Observers/** | .ai/rules/observers.md |
 | resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/CellStatusLogs/Index.test.ts | .ai/rules/pages-admin-cell-status-logs.md |
 | resources/js/pages/** | .ai/rules/pages.md |
+| config/health.php,database/migrations/*health*,app/Providers/HealthServiceProvider.php | .ai/rules/providers.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/** | .ai/rules/resources.md |
-| routes/web.php, routes/api.php | .ai/rules/routes.md |
+| routes/web.php, routes/api.php, routes/console.php | .ai/rules/routes.md |
 | database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |
 | resources/js/types/admin.ts | .ai/rules/types.md |

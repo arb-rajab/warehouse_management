@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Closure;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -45,5 +46,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    /**
+     * Shared `Gate::define()` callback for the admin-only internal tools
+     * (Telescope, Pulse, Health) — avoids repeating the same closure in
+     * every tool's service provider.
+     */
+    public static function isAdminGate(): Closure
+    {
+        return fn (User $user): bool => $user->isAdmin();
     }
 }
