@@ -7,15 +7,21 @@ use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
+use App\Http\Middleware\RestrictToAllowedIps;
 use Illuminate\Support\Facades\Route;
+use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 
 Route::redirect('/', '/login');
 
 Route::post('locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 
+Route::get('health', HealthCheckResultsController::class)
+    ->middleware(['can:viewHealth', RestrictToAllowedIps::class.':health.allowed_ips'])
+    ->name('health');
+
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
-    Route::post('login', [LoginController::class, 'store']);
+    Route::post('login', [LoginController::class, 'store'])->middleware('honeypot');
 });
 
 Route::middleware('auth')->group(function () {
