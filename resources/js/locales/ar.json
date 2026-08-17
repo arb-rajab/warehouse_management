@@ -169,7 +169,8 @@
         "staleAfterDays": "راكدة منذ (أيام) على الأقل",
         "staleAfterDaysPlaceholder": "مثال: 5",
         "expiresWithinDays": "تنتهي خلال (أيام)",
-        "expiresWithinDaysPlaceholder": "مثال: 7"
+        "expiresWithinDaysPlaceholder": "مثال: 7",
+        "expired": "منتهية الصلاحية"
     },
     "expiringWindow": {
         "label": "فترة الاقتراب من الانتهاء",

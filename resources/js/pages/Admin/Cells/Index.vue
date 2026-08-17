@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
 import {
     Ban,
@@ -51,10 +52,44 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
     ...emptyCellHighlightFilters(),
     state: props.initialHighlight.state ? [props.initialHighlight.state] : [],
     productIds: props.initialHighlight.productIds.map(String),
+    expiresWithinDays:
+        props.initialHighlight.expiresWithinDays !== null
+            ? String(props.initialHighlight.expiresWithinDays)
+            : '',
+    expired: props.initialHighlight.expired,
 });
 
 function highlighted(cell: CellWithLocation | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
+}
+
+/**
+ * The current highlight filters, re-serialized as the same query keys the
+ * dashboard deep-links with — kept in every in-page navigation (flat switch,
+ * search) so the active highlight survives instead of dropping out of the
+ * URL. `state` can only carry one value here since the backend seed still
+ * validates it as a single string (see `.ai/rules/components-js-lib.md`).
+ */
+function highlightQuery(): Record<string, FormDataConvertible> {
+    const query: Record<string, FormDataConvertible> = {};
+
+    if (highlightFilters.state.length === 1) {
+        query.state = highlightFilters.state[0];
+    }
+
+    if (highlightFilters.productIds.length > 0) {
+        query.product_id = highlightFilters.productIds;
+    }
+
+    if (highlightFilters.expiresWithinDays !== '') {
+        query.expires_within_days = Number(highlightFilters.expiresWithinDays);
+    }
+
+    if (highlightFilters.expired) {
+        query.expired = true;
+    }
+
+    return query;
 }
 
 const flatNumberOptions = computed(() =>
@@ -161,7 +196,7 @@ const displayBands = computed<DisplayBand[]>(() =>
 function goToFlat(flatNumber: number): void {
     router.get(
         cellsIndex().url,
-        { flat_number: flatNumber },
+        { flat_number: flatNumber, ...highlightQuery() },
         { preserveState: true, replace: true },
     );
 }
@@ -177,7 +212,7 @@ function onSearchSubmit(): void {
 
     router.get(
         cellsIndex().url,
-        { flat_number: props.flatNumber, search },
+        { flat_number: props.flatNumber, search, ...highlightQuery() },
         { preserveState: true, replace: true },
     );
 }

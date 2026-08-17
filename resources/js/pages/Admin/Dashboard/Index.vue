@@ -143,9 +143,9 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
                     :value="props.stats.expiring.expired"
-                    :href="cellLogsIndex().url"
+                    :href="cellsIndex().url"
                     :query="{
-                        expiration_date_to: props.today,
+                        expired: true,
                         ...productQuery,
                     }"
                     tone="danger"
@@ -155,10 +155,9 @@ function onProductIdsChange(ids: string[]): void {
                     :key="window.days"
                     :label="t('dashboard.expiring.soon', { days: window.days })"
                     :value="window.count"
-                    :href="cellLogsIndex().url"
+                    :href="cellsIndex().url"
                     :query="{
-                        expiration_date_from: props.today,
-                        expiration_date_to: window.until,
+                        expires_within_days: window.days,
                         ...productQuery,
                     }"
                     tone="warning"
@@ -167,11 +166,10 @@ function onProductIdsChange(ids: string[]): void {
                     class="rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
                 >
                     <Link
-                        :href="cellLogsIndex().url"
+                        :href="cellsIndex().url"
                         :data="{
-                            expiration_date_from: props.today,
-                            expiration_date_to:
-                                props.stats.expiring.custom.until,
+                            expires_within_days:
+                                props.stats.expiring.custom.days,
                             ...productQuery,
                         }"
                         method="get"

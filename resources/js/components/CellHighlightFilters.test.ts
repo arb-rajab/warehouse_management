@@ -28,6 +28,7 @@ describe('CellHighlightFilters', () => {
         expect(wrapper.find('#highlight-expires-within-days').exists()).toBe(
             true,
         );
+        expect(wrapper.find('#highlight-expired').exists()).toBe(true);
         expect(wrapper.find('#highlight-product').exists()).toBe(true);
         expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
@@ -38,6 +39,7 @@ describe('CellHighlightFilters', () => {
                 products,
                 modelValue: {
                     state: ['full'],
+                    expired: true,
                     expiresWithinDays: '',
                     productIds: ['1'],
                     staleAfterDays: '',
@@ -45,7 +47,19 @@ describe('CellHighlightFilters', () => {
             },
         });
 
-        expect(wrapper.get('button').text()).toContain('2');
+        expect(wrapper.get('button').text()).toContain('3');
+    });
+
+    it('updates the model when the expired checkbox is toggled', async () => {
+        const modelValue = emptyCellHighlightFilters();
+        const wrapper = mount(CellHighlightFilters, {
+            props: { products, modelValue },
+        });
+        await wrapper.get('button').trigger('click');
+
+        await wrapper.get('#highlight-expired').setValue(true);
+
+        expect(modelValue.expired).toBe(true);
     });
 
     it('updates the model when the state filter changes, allowing more than one selection', async () => {
@@ -66,6 +80,7 @@ describe('CellHighlightFilters', () => {
     it('resets the model when Clear is clicked', async () => {
         const modelValue: CellHighlightFiltersValue = {
             state: ['full'],
+            expired: true,
             expiresWithinDays: '3',
             productIds: ['1'],
             staleAfterDays: '5',

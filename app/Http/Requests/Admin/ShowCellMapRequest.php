@@ -20,6 +20,8 @@ class ShowCellMapRequest extends FormRequest
         return [
             'flat_number' => ['nullable', 'integer', 'min:1'],
             'state' => ['nullable', 'string', 'in:empty,full,opened'],
+            'expires_within_days' => ['nullable', 'integer', 'min:0'],
+            'expired' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),
             'search' => ['nullable', 'string', 'max:100'],
         ];

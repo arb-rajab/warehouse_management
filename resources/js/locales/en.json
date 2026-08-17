@@ -169,7 +169,8 @@
         "staleAfterDays": "Stale for at least (days)",
         "staleAfterDaysPlaceholder": "e.g. 5",
         "expiresWithinDays": "Expires within (days)",
-        "expiresWithinDaysPlaceholder": "e.g. 7"
+        "expiresWithinDaysPlaceholder": "e.g. 7",
+        "expired": "Expired"
     },
     "expiringWindow": {
         "label": "Expiring soon window",

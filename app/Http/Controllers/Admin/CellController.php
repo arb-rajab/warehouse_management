@@ -43,6 +43,10 @@ class CellController extends Controller
             'initialHighlight' => [
                 'state' => $request->string('state')->value() ?: null,
                 'productIds' => $request->productIds() ?? [],
+                'expiresWithinDays' => $request->filled('expires_within_days')
+                    ? $request->integer('expires_within_days')
+                    : null,
+                'expired' => $request->boolean('expired'),
             ],
             'jumpToCell' => $matchedCell?->toLocationArray(),
             'searchError' => $searched && $matchedCell === null,

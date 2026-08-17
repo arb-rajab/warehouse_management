@@ -83,6 +83,8 @@ export interface ProductFilterOptions {
 export interface CellHighlightSeed {
     state: Cell['state'] | null;
     productIds: number[];
+    expiresWithinDays: number | null;
+    expired: boolean;
 }
 
 export interface CellSlotLocation {

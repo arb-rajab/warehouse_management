@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Cell } from '@/types/admin';
-import { isCellExpiringWithin, isCellStale } from './cellStatus';
+import { isCellExpired, isCellExpiringWithin, isCellStale } from './cellStatus';
 
 function cell(pallet: Partial<Cell['pallet']> | null): Cell {
     return {
@@ -38,9 +38,19 @@ describe('isCellExpiringWithin', () => {
         expect(isCellExpiringWithin(cell(null), '2026-08-13', 5)).toBe(false);
     });
 
-    it('is true when the pallet already expired', () => {
+    it('is false when the pallet already expired', () => {
         const result = isCellExpiringWithin(
             cell({ expiration_date: '2026-08-01' }),
+            '2026-08-13',
+            5,
+        );
+
+        expect(result).toBe(false);
+    });
+
+    it('is true when the pallet expires today', () => {
+        const result = isCellExpiringWithin(
+            cell({ expiration_date: '2026-08-13' }),
             '2026-08-13',
             5,
         );
@@ -76,6 +86,39 @@ describe('isCellExpiringWithin', () => {
         );
 
         expect(result).toBe(true);
+    });
+});
+
+describe('isCellExpired', () => {
+    it('is false for a cell with no pallet', () => {
+        expect(isCellExpired(cell(null), '2026-08-13')).toBe(false);
+    });
+
+    it('is true when the expiration date is before today', () => {
+        const result = isCellExpired(
+            cell({ expiration_date: '2026-08-01' }),
+            '2026-08-13',
+        );
+
+        expect(result).toBe(true);
+    });
+
+    it('is false when the pallet expires today', () => {
+        const result = isCellExpired(
+            cell({ expiration_date: '2026-08-13' }),
+            '2026-08-13',
+        );
+
+        expect(result).toBe(false);
+    });
+
+    it('is false when the expiration date is in the future', () => {
+        const result = isCellExpired(
+            cell({ expiration_date: '2026-08-20' }),
+            '2026-08-13',
+        );
+
+        expect(result).toBe(false);
     });
 });
 

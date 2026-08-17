@@ -1,4 +1,8 @@
-import { isCellExpiringWithin, isCellStale } from '@/lib/cellStatus';
+import {
+    isCellExpired,
+    isCellExpiringWithin,
+    isCellStale,
+} from '@/lib/cellStatus';
 import type { Cell } from '@/types/admin';
 
 /**
@@ -8,6 +12,7 @@ import type { Cell } from '@/types/admin';
  */
 export interface CellHighlightFiltersValue {
     state: Cell['state'][];
+    expired: boolean;
     expiresWithinDays: string;
     productIds: string[];
     staleAfterDays: string;
@@ -16,6 +21,7 @@ export interface CellHighlightFiltersValue {
 export function emptyCellHighlightFilters(): CellHighlightFiltersValue {
     return {
         state: [],
+        expired: false,
         expiresWithinDays: '',
         productIds: [],
         staleAfterDays: '',
@@ -27,6 +33,7 @@ export function countActiveCellHighlightFilters(
 ): number {
     return [
         filters.state.length > 0,
+        filters.expired,
         filters.expiresWithinDays !== '',
         filters.productIds.length > 0,
         filters.staleAfterDays !== '',
@@ -48,6 +55,10 @@ export function matchesCellHighlight(
     }
 
     if (filters.state.length > 0 && !filters.state.includes(cell.state)) {
+        return false;
+    }
+
+    if (filters.expired && !isCellExpired(cell, today)) {
         return false;
     }
 
