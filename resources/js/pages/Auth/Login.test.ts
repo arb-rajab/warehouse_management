@@ -38,10 +38,17 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function mountPage() {
+const honeypotProp = {
+    enabled: true,
+    nameFieldName: 'my_name_abc123',
+    validFromFieldName: 'valid_from',
+    encryptedValidFrom: 'encrypted-timestamp',
+};
+
+function mountPage(honeypot = honeypotProp) {
     usePageMock.mockReturnValue({ props: { locale: 'en' } });
 
-    return mount(Login);
+    return mount(Login, { props: { honeypot } });
 }
 
 describe('Login', () => {
@@ -132,5 +139,33 @@ describe('Login', () => {
 
         expect(wrapper.text()).toContain('English');
         expect(wrapper.text()).toContain('Arabic');
+    });
+
+    it('renders the honeypot fields with the names and value provided by the backend', () => {
+        const wrapper = mountPage();
+
+        const nameField = wrapper.get(
+            `input[name="${honeypotProp.nameFieldName}"]`,
+        );
+        expect(nameField.attributes('value')).toBe('');
+        expect(nameField.attributes('autocomplete')).toBe('nope');
+        expect(nameField.attributes('tabindex')).toBe('-1');
+
+        const validFromField = wrapper.get(
+            `input[name="${honeypotProp.validFromFieldName}"]`,
+        );
+        expect(validFromField.attributes('value')).toBe(
+            honeypotProp.encryptedValidFrom,
+        );
+    });
+
+    it('omits the honeypot fields when disabled', () => {
+        const wrapper = mountPage({ ...honeypotProp, enabled: false });
+
+        expect(
+            wrapper
+                .find(`input[name="${honeypotProp.nameFieldName}"]`)
+                .exists(),
+        ).toBe(false);
     });
 });

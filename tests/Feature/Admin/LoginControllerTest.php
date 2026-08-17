@@ -11,6 +11,31 @@ test('the login screen can be rendered', function () {
     );
 });
 
+test('the login screen shares honeypot configuration', function () {
+    $response = $this->get('/login');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Auth/Login')
+            ->where('honeypot.enabled', true)
+            ->where('honeypot.validFromFieldName', config('honeypot.valid_from_field_name'))
+            ->has('honeypot.nameFieldName')
+            ->has('honeypot.encryptedValidFrom')
+    );
+});
+
+test('a login submission that fills in the honeypot field is rejected as spam', function () {
+    $user = User::factory()->create(['password' => 'correct-password']);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'correct-password',
+        config('honeypot.name_field_name').'_suffix' => 'filled-by-a-bot',
+    ]);
+
+    $response->assertOk()->assertContent('');
+    $this->assertGuest();
+});
+
 test('a user can log in with correct credentials', function () {
     $user = User::factory()->create(['password' => 'correct-password']);
 
