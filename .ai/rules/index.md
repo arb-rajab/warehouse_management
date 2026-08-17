@@ -7,7 +7,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php,resources/js/pages/Admin/CellStatusLogs/Index.vue | .ai/rules/admin-cell-status-logs.md |
 | resources/js/pages/Admin/** | .ai/rules/admin.md |
 | resources/js/pages/Admin/CellStatusLogs/** | .ai/rules/cell-status-logs.md |
-| resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts | .ai/rules/components-js-lib.md |
+| resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts | .ai/rules/components-js-lib.md |
 | resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts | .ai/rules/components.md |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php | .ai/rules/concerns.md |

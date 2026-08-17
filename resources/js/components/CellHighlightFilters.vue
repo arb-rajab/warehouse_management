@@ -96,6 +96,20 @@ function clear(): void {
                     />
                 </div>
 
+                <div class="flex items-center gap-2">
+                    <input
+                        id="highlight-expired"
+                        v-model="filters.expired"
+                        type="checkbox"
+                        class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
+                    />
+                    <label
+                        for="highlight-expired"
+                        class="text-sm text-gray-700 dark:text-neutral-300"
+                        >{{ t('cellHighlight.expired') }}</label
+                    >
+                </div>
+
                 <FilterMultiSelect
                     id="highlight-product"
                     v-model="filters.productIds"

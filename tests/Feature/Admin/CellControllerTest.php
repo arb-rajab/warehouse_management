@@ -54,6 +54,8 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('today', '2026-08-01')
             ->where('initialHighlight.state', null)
             ->where('initialHighlight.productIds', [])
+            ->where('initialHighlight.expiresWithinDays', null)
+            ->where('initialHighlight.expired', false)
             ->where('jumpToCell', null)
             ->where('searchError', false)
             ->has('filterOptions.products', 1)
@@ -82,6 +84,44 @@ test('an invalid state passed from the dashboard is rejected', function () {
     $response = $this->get('/admin/cells?state=bogus');
 
     $response->assertInvalid(['state']);
+});
+
+test('an expires_within_days passed from the dashboard seeds the initial highlight filter', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.expiresWithinDays', 7)
+    );
+});
+
+test('an invalid expires_within_days passed from the dashboard is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cells?expires_within_days=-1');
+
+    $response->assertInvalid(['expires_within_days']);
+});
+
+test('expired passed from the dashboard seeds the initial highlight filter', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?expired=1');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.expired', true)
+    );
+});
+
+test('an invalid expired value passed from the dashboard is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cells?expired=bogus');
+
+    $response->assertInvalid(['expired']);
 });
 
 test('a location search with a flat number jumps to that exact cell', function () {

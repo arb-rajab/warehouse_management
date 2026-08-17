@@ -346,7 +346,9 @@ describe('Rows Show', () => {
 
         await openHighlightFilters(wrapper);
         await wrapper.get('#highlight-product').trigger('click');
-        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
             'ring-blue-500',

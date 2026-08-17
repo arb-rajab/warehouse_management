@@ -44,12 +44,13 @@ describe('countActiveCellHighlightFilters', () => {
     it('counts each independently-set field', () => {
         const filters: CellHighlightFiltersValue = {
             state: ['full'],
+            expired: true,
             expiresWithinDays: '7',
             productIds: ['1'],
             staleAfterDays: '5',
         };
 
-        expect(countActiveCellHighlightFilters(filters)).toBe(4);
+        expect(countActiveCellHighlightFilters(filters)).toBe(5);
     });
 });
 
@@ -91,7 +92,7 @@ describe('matchesCellHighlight', () => {
         ).toBe(false);
     });
 
-    it('matches by expires-within-days', () => {
+    it('matches by expires-within-days, excluding already-expired pallets', () => {
         const filters = {
             ...emptyCellHighlightFilters(),
             expiresWithinDays: '5',
@@ -103,7 +104,7 @@ describe('matchesCellHighlight', () => {
                 filters,
                 today,
             ),
-        ).toBe(true);
+        ).toBe(false);
         expect(
             matchesCellHighlight(
                 cell({}, { expiration_date: '2026-08-17' }),
@@ -111,6 +112,32 @@ describe('matchesCellHighlight', () => {
                 today,
             ),
         ).toBe(true);
+        expect(
+            matchesCellHighlight(
+                cell({}, { expiration_date: '2026-09-01' }),
+                filters,
+                today,
+            ),
+        ).toBe(false);
+    });
+
+    it('matches by expired', () => {
+        const filters = { ...emptyCellHighlightFilters(), expired: true };
+
+        expect(
+            matchesCellHighlight(
+                cell({}, { expiration_date: '2026-08-01' }),
+                filters,
+                today,
+            ),
+        ).toBe(true);
+        expect(
+            matchesCellHighlight(
+                cell({}, { expiration_date: '2026-08-13' }),
+                filters,
+                today,
+            ),
+        ).toBe(false);
         expect(
             matchesCellHighlight(
                 cell({}, { expiration_date: '2026-09-01' }),
@@ -164,6 +191,7 @@ describe('matchesCellHighlight', () => {
     it('requires every active filter to match at once', () => {
         const filters: CellHighlightFiltersValue = {
             state: ['full'],
+            expired: false,
             expiresWithinDays: '',
             productIds: ['1'],
             staleAfterDays: '',

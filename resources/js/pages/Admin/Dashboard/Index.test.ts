@@ -140,16 +140,16 @@ describe('Dashboard Index', () => {
         });
     });
 
-    it('renders the expired tile linking to the cell log with the expiration range', () => {
+    it('renders the expired tile linking to the cells map with an expires-within-days highlight', () => {
         const wrapper = mountPage();
 
         const expired = tileByLabelAndQuery(
             wrapper,
             t('dashboard.expiring.expired'),
-            { expiration_date_to: '2026-08-13' },
+            { expired: true },
         );
         expect(expired?.props('value')).toBe(2);
-        expect(expired?.props('href')).toBe('/admin/cell-logs');
+        expect(expired?.props('href')).toBe('/admin/cells');
     });
 
     it('renders one tile per fixed expiring-soon window', () => {
@@ -159,13 +159,10 @@ describe('Dashboard Index', () => {
             const tile = tileByLabelAndQuery(
                 wrapper,
                 t('dashboard.expiring.soon', { days: window.days }),
-                {
-                    expiration_date_from: '2026-08-13',
-                    expiration_date_to: window.until,
-                },
+                { expires_within_days: window.days },
             );
             expect(tile?.props('value')).toBe(window.count);
-            expect(tile?.props('href')).toBe('/admin/cell-logs');
+            expect(tile?.props('href')).toBe('/admin/cells');
         }
     });
 
@@ -176,11 +173,9 @@ describe('Dashboard Index', () => {
             .find('#dashboard-custom-expiring-days')
             .element.closest('div')
             ?.querySelector('a');
+        expect(customLink?.getAttribute('href')).toBe('/admin/cells');
         expect(customLink?.getAttribute('data-query')).toBe(
-            JSON.stringify({
-                expiration_date_from: '2026-08-13',
-                expiration_date_to: '2026-09-27',
-            }),
+            JSON.stringify({ expires_within_days: 45 }),
         );
         expect(wrapper.text()).toContain('8');
         expect(wrapper.text()).toContain(
@@ -275,6 +270,13 @@ describe('Dashboard Index', () => {
             },
         );
         expect(stored?.exists()).toBe(true);
+
+        const expired = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.expiring.expired'),
+            { expired: true, product_id: [1, 2] },
+        );
+        expect(expired?.exists()).toBe(true);
     });
 
     it('renders exactly four sections, with the stale section removed', () => {

@@ -108,6 +108,8 @@ function mountPage(
             initialHighlight: overrides.initialHighlight ?? {
                 state: null,
                 productIds: [],
+                expiresWithinDays: null,
+                expired: false,
             },
             jumpToCell: overrides.jumpToCell ?? null,
             searchError: overrides.searchError ?? false,
@@ -245,7 +247,12 @@ describe('Cells Index (warehouse map)', () => {
     });
 
     it('pre-highlights cells matching the initial highlight seed from the dashboard link', () => {
-        const seed: CellHighlightSeed = { state: 'full', productIds: [] };
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
             [
@@ -271,6 +278,126 @@ describe('Cells Index (warehouse map)', () => {
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
             'ring-blue-500',
+        );
+    });
+
+    it('pre-highlights cells by an expires-within-days seed from the dashboard link', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: 7,
+            expired: false,
+        };
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-15' }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-12-01' }),
+                }),
+            ],
+            { today: '2026-08-13', initialHighlight: seed },
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('pre-highlights only already-expired cells from an expired seed, not future ones', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            expired: true,
+        };
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-01' }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-20' }),
+                }),
+            ],
+            { today: '2026-08-13', initialHighlight: seed },
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('keeps the active highlight filters in the query when switching flats', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            initialHighlight: {
+                state: null,
+                productIds: [1, 2],
+                expiresWithinDays: 7,
+                expired: false,
+            },
+        });
+
+        await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            {
+                flat_number: 2,
+                product_id: ['1', '2'],
+                expires_within_days: 7,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('keeps the active highlight filters in the query when submitting a search', async () => {
+        const wrapper = mountPage([row()], [], {
+            initialHighlight: {
+                state: 'full',
+                productIds: [],
+                expiresWithinDays: null,
+                expired: true,
+            },
+        });
+
+        await wrapper.get('input[type="text"]').setValue('A1');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            {
+                flat_number: 1,
+                search: 'A1',
+                state: 'full',
+                expired: true,
+            },
+            { preserveState: true, replace: true },
         );
     });
 
@@ -314,7 +441,9 @@ describe('Cells Index (warehouse map)', () => {
 
         await openHighlightFilters(wrapper);
         await wrapper.get('#highlight-product').trigger('click');
-        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
             'ring-blue-500',
