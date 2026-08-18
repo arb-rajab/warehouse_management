@@ -21,7 +21,7 @@ Route::get('health', HealthCheckResultsController::class)
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
-    Route::post('login', [LoginController::class, 'store'])->middleware('honeypot');
+    Route::post('login', [LoginController::class, 'store'])->middleware(['honeypot', 'throttle:login']);
 });
 
 Route::middleware('auth')->group(function () {
