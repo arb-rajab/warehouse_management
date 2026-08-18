@@ -142,4 +142,84 @@ describe('FilterMultiSelect', () => {
 
         expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
     });
+
+    it('marks each option with role=option and aria-selected reflecting its checked state', async () => {
+        const wrapper = mountSelect(['opened']);
+        await wrapper.get('button').trigger('click');
+
+        const optionEls = wrapper.findAll('[role="option"]');
+        expect(optionEls.map((el) => el.attributes('aria-selected'))).toEqual([
+            'false',
+            'true',
+            'false',
+        ]);
+    });
+
+    it('moves focus to the next option when ArrowDown is pressed, wrapping past the last option', async () => {
+        const wrapper = mount(FilterMultiSelect, {
+            attachTo: document.body,
+            props: {
+                id: 'filter-status',
+                label: 'Status change',
+                allLabel: 'All',
+                selectedCountLabel: (count: number) => `${count} selected`,
+                options,
+                modelValue: [],
+                'onUpdate:modelValue': () => {},
+            },
+        });
+        await wrapper.get('button').trigger('click');
+
+        const checkboxes = wrapper
+            .findAll('input[type="checkbox"]')
+            .map((checkbox) => checkbox.element as HTMLInputElement);
+
+        checkboxes[0].focus();
+        await wrapper
+            .findAll('input[type="checkbox"]')[0]
+            .trigger('keydown', { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(checkboxes[1]);
+
+        checkboxes[2].focus();
+        await wrapper
+            .findAll('input[type="checkbox"]')[2]
+            .trigger('keydown', { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(checkboxes[0]);
+
+        wrapper.unmount();
+    });
+
+    it('moves focus to the previous option when ArrowUp is pressed, wrapping before the first option', async () => {
+        const wrapper = mount(FilterMultiSelect, {
+            attachTo: document.body,
+            props: {
+                id: 'filter-status',
+                label: 'Status change',
+                allLabel: 'All',
+                selectedCountLabel: (count: number) => `${count} selected`,
+                options,
+                modelValue: [],
+                'onUpdate:modelValue': () => {},
+            },
+        });
+        await wrapper.get('button').trigger('click');
+
+        const checkboxes = wrapper
+            .findAll('input[type="checkbox"]')
+            .map((checkbox) => checkbox.element as HTMLInputElement);
+
+        checkboxes[1].focus();
+        await wrapper
+            .findAll('input[type="checkbox"]')[1]
+            .trigger('keydown', { key: 'ArrowUp' });
+        expect(document.activeElement).toBe(checkboxes[0]);
+
+        checkboxes[0].focus();
+        await wrapper
+            .findAll('input[type="checkbox"]')[0]
+            .trigger('keydown', { key: 'ArrowUp' });
+        expect(document.activeElement).toBe(checkboxes[2]);
+
+        wrapper.unmount();
+    });
 });
