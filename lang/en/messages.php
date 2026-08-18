@@ -3,6 +3,7 @@
 return [
     'admin_cannot_remove_own_access' => 'You cannot remove your own admin access.',
     'row_cannot_resize_has_pallets' => 'Cannot resize a row that has pallets in it.',
+    'row_cannot_delete_has_pallets' => 'Cannot delete a row that has pallets in it.',
     'slot_does_not_exist' => 'This slot does not exist for this row.',
     'cannot_delete_own_account' => 'You cannot delete your own account.',
     'pallet_already_at_location' => 'Pallet is already at that location.',

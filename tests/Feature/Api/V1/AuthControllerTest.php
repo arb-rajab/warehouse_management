@@ -70,6 +70,25 @@ test('logging in with an overly long email or password is rejected', function ()
     $this->assertDatabaseCount('personal_access_tokens', 0);
 });
 
+test('login attempts are throttled after too many failures', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+
+    foreach (range(1, 5) as $_) {
+        $this->postJson('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertStatus(422);
+    }
+
+    $response = $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'wrong-password',
+    ]);
+
+    $response->assertStatus(429);
+    $this->assertDatabaseCount('personal_access_tokens', 0);
+});
+
 test('a user can log out and their token is deleted', function () {
     $user = User::factory()->mobileUser()->create();
     $token = $user->createToken('test-device');

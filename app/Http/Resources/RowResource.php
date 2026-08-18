@@ -28,7 +28,9 @@ class RowResource extends JsonResource
             'letter' => $this->letter,
             'cells_count' => $this->cells_count,
             'flats_count' => $this->flats_count,
-            'has_pallets' => $this->resource->hasPallets(),
+            'has_pallets' => array_key_exists('has_pallets', $this->resource->getAttributes())
+                ? (bool) $this->resource->has_pallets
+                : $this->resource->hasPallets(),
             'cells' => $this->whenLoaded('cells', fn () => CellResource::collection($this->cells)),
         ];
     }

@@ -64,10 +64,14 @@ function paginatedRows(rows: Row[]): Paginated<Row> {
     };
 }
 
-function mountPage(rows: Row[]) {
+function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
     usePageMock.mockReturnValue({
         url: '/admin/rows',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: {
+            locale: 'en',
+            auth: { user: { name: 'Jane Doe', id: 7 } },
+            errors,
+        },
     });
 
     return mount(Index, { props: { rows: paginatedRows(rows) } });
@@ -145,5 +149,21 @@ describe('Rows Index', () => {
         expect(deleteButton).toBeUndefined();
         expect(wrapper.text()).toContain(t('rows.index.hasPallets'));
         expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
+    });
+
+    it('shows no delete-error banner when the backend reports no error', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('shows the delete-error banner when the backend rejects deleting a row', () => {
+        const wrapper = mountPage([], {
+            row: 'Cannot delete a row that has pallets in it.',
+        });
+
+        expect(wrapper.get('[role="alert"]').text()).toBe(
+            'Cannot delete a row that has pallets in it.',
+        );
     });
 });

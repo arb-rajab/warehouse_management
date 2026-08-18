@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { Eye, Trash2, TriangleAlert } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
     show,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -18,6 +20,10 @@ import type { Paginated, Row } from '@/types/admin';
 defineProps<{
     rows: Paginated<Row>;
 }>();
+
+const deleteError = computed(
+    () => (usePage().props.errors as Partial<Record<'row', string>>)?.row,
+);
 </script>
 
 <template>
@@ -28,6 +34,8 @@ defineProps<{
             <h1 class="text-xl font-semibold">{{ t('rows.index.title') }}</h1>
             <AddResourceLink :href="create()" :label="t('rows.index.addRow')" />
         </div>
+
+        <ActionErrorBanner :message="deleteError" />
 
         <DataTable
             :columns="[
