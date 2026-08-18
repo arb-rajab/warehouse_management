@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import {
+    ArrowLeftRight,
+    CalendarPlus,
+    CalendarX,
+    CircleDashed,
+    Inbox,
+    PackageOpen,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
@@ -8,6 +16,7 @@ import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
+    fieldLabelClass,
     filterSectionHeadingClass as sectionHeadingClass,
     selectedCountLabel,
 } from '@/lib/filters';
@@ -119,18 +128,21 @@ function onProductIdsChange(ids: string[]): void {
                     :value="props.stats.occupancy.empty"
                     :href="cellsIndex().url"
                     :query="{ state: 'empty', ...productQuery }"
+                    :icon="CircleDashed"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
                     :value="props.stats.occupancy.full"
                     :href="cellsIndex().url"
                     :query="{ state: 'full', ...productQuery }"
+                    :icon="Inbox"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
                     :value="props.stats.occupancy.opened"
                     :href="cellsIndex().url"
                     :query="{ state: 'opened', ...productQuery }"
+                    :icon="PackageOpen"
                 />
             </div>
         </section>
@@ -149,6 +161,7 @@ function onProductIdsChange(ids: string[]): void {
                         ...productQuery,
                     }"
                     tone="danger"
+                    :icon="CalendarX"
                 />
                 <DashboardStatTile
                     v-for="window in props.stats.expiring.windows"
@@ -161,6 +174,7 @@ function onProductIdsChange(ids: string[]): void {
                         ...productQuery,
                     }"
                     tone="warning"
+                    :icon="CalendarX"
                 />
                 <div
                     class="rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
@@ -176,9 +190,12 @@ function onProductIdsChange(ids: string[]): void {
                         class="block"
                     >
                         <div
-                            class="text-2xl font-semibold text-amber-600 dark:text-amber-400"
+                            class="flex items-center gap-2 text-amber-600 dark:text-amber-400"
                         >
-                            {{ props.stats.expiring.custom.count }}
+                            <CalendarX class="h-5 w-5 shrink-0" />
+                            <div class="text-2xl font-semibold">
+                                {{ props.stats.expiring.custom.count }}
+                            </div>
                         </div>
                         <div
                             class="mt-1 text-sm text-gray-500 dark:text-neutral-400"
@@ -190,15 +207,19 @@ function onProductIdsChange(ids: string[]): void {
                             }}
                         </div>
                     </Link>
+                    <label
+                        for="dashboard-custom-expiring-days"
+                        :class="[fieldLabelClass, 'mt-2']"
+                        >{{ t('expiringWindow.label') }}</label
+                    >
                     <input
                         id="dashboard-custom-expiring-days"
                         v-model="customExpiringDays"
                         type="number"
                         min="1"
                         step="1"
-                        :aria-label="t('expiringWindow.label')"
                         :placeholder="t('expiringWindow.customPlaceholder')"
-                        class="mt-2 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        class="w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
                         @change="onCustomExpiringDaysChange"
                     />
                 </div>
@@ -220,6 +241,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="CalendarPlus"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityToday.opened')"
@@ -231,6 +253,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="PackageOpen"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityToday.emptied')"
@@ -242,6 +265,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="CircleDashed"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityToday.transferred')"
@@ -253,6 +277,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="ArrowLeftRight"
                 />
             </div>
         </section>
@@ -272,6 +297,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="CalendarPlus"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityWeek.opened')"
@@ -283,6 +309,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="PackageOpen"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityWeek.emptied')"
@@ -294,6 +321,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="CircleDashed"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.activityWeek.transferred')"
@@ -305,6 +333,7 @@ function onProductIdsChange(ids: string[]): void {
                         date_to: props.today,
                         ...productQuery,
                     }"
+                    :icon="ArrowLeftRight"
                 />
             </div>
         </section>

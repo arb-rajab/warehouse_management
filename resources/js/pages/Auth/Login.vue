@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { Warehouse } from '@lucide/vue';
 import { store } from '@/actions/App/Http/Controllers/LoginController';
 import FormField from '@/components/FormField.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -27,8 +28,9 @@ const props = defineProps<{
         >
             <div class="mb-6 flex items-center justify-between">
                 <h1
-                    class="text-lg font-semibold text-gray-900 dark:text-neutral-100"
+                    class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-neutral-100"
                 >
+                    <Warehouse class="h-5 w-5 shrink-0" />
                     {{ t('auth.login.brand') }}
                 </h1>
                 <LanguageSwitcher />

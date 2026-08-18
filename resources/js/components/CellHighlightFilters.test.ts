@@ -1,3 +1,4 @@
+import { X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { emptyCellHighlightFilters } from '@/lib/cellHighlight';
@@ -90,10 +91,11 @@ describe('CellHighlightFilters', () => {
         });
         await wrapper.get('button').trigger('click');
 
-        await wrapper
+        const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'))
-            ?.trigger('click');
+            .find((button) => button.text() === t('cellLog.filters.clear'));
+        expect(clearButton?.findComponent(X).exists()).toBe(true);
+        await clearButton?.trigger('click');
 
         expect(modelValue).toEqual(emptyCellHighlightFilters());
     });

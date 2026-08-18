@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/vue3';
+import { CircleDashed } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import DashboardStatTile from './DashboardStatTile.vue';
@@ -61,5 +62,26 @@ describe('DashboardStatTile', () => {
         });
 
         expect(wrapper.find('.text-red-600').exists()).toBe(true);
+    });
+
+    it('renders the given icon next to the value', () => {
+        const wrapper = mount(DashboardStatTile, {
+            props: {
+                label: 'Empty',
+                value: 12,
+                href: '/admin/cells',
+                icon: CircleDashed,
+            },
+        });
+
+        expect(wrapper.findComponent(CircleDashed).exists()).toBe(true);
+    });
+
+    it('renders no icon when none is given', () => {
+        const wrapper = mount(DashboardStatTile, {
+            props: { label: 'Empty', value: 12, href: '/admin/cells' },
+        });
+
+        expect(wrapper.find('svg').exists()).toBe(false);
     });
 });

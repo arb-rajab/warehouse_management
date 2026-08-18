@@ -80,4 +80,29 @@ describe('Pagination', () => {
         const firstLink = wrapper.findAll('a').find((a) => a.text() === '1');
         expect(firstLink?.attributes('href')).toBe('/admin/rows?page=1');
     });
+
+    it('shows a previous chevron on the first link and a next chevron on the last link only', () => {
+        const wrapper = mount(Pagination, {
+            props: {
+                links: [
+                    link({ url: null, label: '&laquo; Previous' }),
+                    link({ url: '/admin/rows?page=1', label: '1' }),
+                    link({ url: '/admin/rows?page=2', label: '2' }),
+                    link({ url: null, label: 'Next &raquo;' }),
+                ],
+            },
+        });
+
+        const items = Array.from(wrapper.get('nav').element.children);
+        expect(items).toHaveLength(4);
+        expect(
+            items[0].querySelector('svg.lucide-chevron-left'),
+        ).not.toBeNull();
+        expect(items[0].querySelector('svg.lucide-chevron-right')).toBeNull();
+        expect(items[1].querySelector('svg')).toBeNull();
+        expect(
+            items[3].querySelector('svg.lucide-chevron-right'),
+        ).not.toBeNull();
+        expect(items[3].querySelector('svg.lucide-chevron-left')).toBeNull();
+    });
 });

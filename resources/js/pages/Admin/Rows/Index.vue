@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { Eye, Trash2 } from '@lucide/vue';
+import { Eye, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     create,
@@ -82,9 +82,10 @@ const deleteError = computed(
                         </TableActionLink>
                         <span
                             v-else
-                            class="text-xs text-amber-600 dark:text-amber-400"
+                            class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
                             :title="t('rows.index.hasPalletsTitle')"
                         >
+                            <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
                             {{ t('rows.index.hasPallets') }}
                         </span>
                     </div>

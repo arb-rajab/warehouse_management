@@ -1,3 +1,4 @@
+import { CircleUser, Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminLayout from './AdminLayout.vue';
@@ -137,10 +138,17 @@ describe('AdminLayout', () => {
         expect(mapLink?.attributes('href')).toBe('/admin/cells');
     });
 
-    it("renders the signed-in user's name", () => {
+    it("renders the signed-in user's name with a user icon", () => {
         const wrapper = mountLayout('/admin/rows');
 
         expect(wrapper.text()).toContain('Jane Doe');
+        expect(wrapper.findComponent(CircleUser).exists()).toBe(true);
+    });
+
+    it('renders a brand icon next to the app name', () => {
+        const wrapper = mountLayout('/admin/rows');
+
+        expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
     });
 
     it('links the logout action to the /logout route', () => {

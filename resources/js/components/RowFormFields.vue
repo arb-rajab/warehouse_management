@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TriangleAlert } from '@lucide/vue';
 import { t } from '@/lib/i18n';
 import FormField from './FormField.vue';
 
@@ -59,8 +60,9 @@ withDefaults(
 
         <p
             v-if="disableDimensions"
-            class="text-sm text-amber-600 dark:text-amber-400"
+            class="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400"
         >
+            <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
             {{ t('rows.fields.dimensionsLocked') }}
         </p>
     </div>

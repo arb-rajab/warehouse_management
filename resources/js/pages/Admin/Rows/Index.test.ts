@@ -1,3 +1,4 @@
+import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -147,6 +148,7 @@ describe('Rows Index', () => {
             .find((b) => b.text().includes(t('rows.index.delete')));
         expect(deleteButton).toBeUndefined();
         expect(wrapper.text()).toContain(t('rows.index.hasPallets'));
+        expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
     });
 
     it('shows no delete-error banner when the backend reports no error', () => {

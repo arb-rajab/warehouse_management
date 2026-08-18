@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowUpDown } from '@lucide/vue';
+import { ArrowUp, ArrowUpDown, PackageSearch } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import DataTable from './DataTable.vue';
@@ -51,6 +51,7 @@ describe('DataTable', () => {
         const emptyCell = wrapper.get('tbody td');
         expect(emptyCell.text()).toBe('No rows yet.');
         expect(emptyCell.attributes('colspan')).toBe(String(columns.length));
+        expect(emptyCell.findComponent(PackageSearch).exists()).toBe(true);
     });
 
     it('renders a plain column header as text, with no sort button', () => {

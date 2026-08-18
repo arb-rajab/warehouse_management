@@ -1,3 +1,4 @@
+import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import RowFormFields from './RowFormFields.vue';
@@ -84,5 +85,6 @@ describe('RowFormFields', () => {
         expect(wrapper.text()).toContain(
             "This row has pallets stored in it, so its dimensions can't be changed.",
         );
+        expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
     });
 });

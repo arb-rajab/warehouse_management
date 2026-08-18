@@ -1,3 +1,11 @@
+import {
+    ArrowLeftRight,
+    CalendarPlus,
+    CalendarX,
+    CircleDashed,
+    Inbox,
+    PackageOpen,
+} from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
@@ -123,6 +131,10 @@ describe('Dashboard Index', () => {
         );
         expect(opened?.props('value')).toBe(1);
         expect(opened?.props('query')).toEqual({ state: 'opened' });
+
+        expect(empty?.props('icon')).toBe(CircleDashed);
+        expect(full?.props('icon')).toBe(Inbox);
+        expect(opened?.props('icon')).toBe(PackageOpen);
     });
 
     it('includes the active product filter in every occupancy tile link', () => {
@@ -150,6 +162,7 @@ describe('Dashboard Index', () => {
         );
         expect(expired?.props('value')).toBe(2);
         expect(expired?.props('href')).toBe('/admin/cells');
+        expect(expired?.props('icon')).toBe(CalendarX);
     });
 
     it('renders one tile per fixed expiring-soon window', () => {
@@ -163,7 +176,16 @@ describe('Dashboard Index', () => {
             );
             expect(tile?.props('value')).toBe(window.count);
             expect(tile?.props('href')).toBe('/admin/cells');
+            expect(tile?.props('icon')).toBe(CalendarX);
         }
+    });
+
+    it('shows a visible label for the custom expiring-days input', () => {
+        const wrapper = mountPage();
+
+        expect(
+            wrapper.get('label[for="dashboard-custom-expiring-days"]').text(),
+        ).toBe(t('expiringWindow.label'));
     });
 
     it('renders the custom expiring-soon card with its current count and day count', () => {
@@ -177,6 +199,9 @@ describe('Dashboard Index', () => {
         expect(customLink?.getAttribute('data-query')).toBe(
             JSON.stringify({ expires_within_days: 45 }),
         );
+        expect(
+            customLink?.querySelector('svg.lucide-calendar-x')?.tagName,
+        ).toBe('svg');
         expect(wrapper.text()).toContain('8');
         expect(wrapper.text()).toContain(
             t('dashboard.expiring.soon', { days: 45 }),
@@ -217,6 +242,7 @@ describe('Dashboard Index', () => {
         );
         expect(stored?.props('value')).toBe(6);
         expect(stored?.props('href')).toBe('/admin/cell-logs');
+        expect(stored?.props('icon')).toBe(CalendarPlus);
 
         const transferred = tileByLabelAndQuery(
             wrapper,
@@ -228,6 +254,7 @@ describe('Dashboard Index', () => {
             },
         );
         expect(transferred?.props('value')).toBe(3);
+        expect(transferred?.props('icon')).toBe(ArrowLeftRight);
     });
 
     it("renders this week's activity tiles linking to the cell log filtered to the week", () => {
@@ -243,6 +270,7 @@ describe('Dashboard Index', () => {
             },
         );
         expect(stored?.props('value')).toBe(20);
+        expect(stored?.props('icon')).toBe(CalendarPlus);
 
         const emptied = tileByLabelAndQuery(
             wrapper,
@@ -254,6 +282,7 @@ describe('Dashboard Index', () => {
             },
         );
         expect(emptied?.props('value')).toBe(4);
+        expect(emptied?.props('icon')).toBe(CircleDashed);
     });
 
     it('includes the active product filter in every activity/expiring tile link', () => {

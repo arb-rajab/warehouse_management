@@ -20,6 +20,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | config/backup.php,config/database.php, config/database.php | .ai/rules/config.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts,app/Http/Controllers/Admin/CellController.php | .ai/rules/controllers-admin.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
+| resources/js/pages/Admin/Dashboard/Index.vue | .ai/rules/dashboard.md |
 | app/Enums/** | .ai/rules/enums.md |
 | app/Exceptions/** | .ai/rules/exceptions.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |

@@ -65,3 +65,14 @@ tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise —
 `components/FilterNumberField.vue` (mirrors `FilterDateField.vue`'s shape: props `id`, `label`, `placeholder?`, `disabled?`; `defineModel<string>()`) is the single definition for a labelled `type="number" min="1" step="1"` filter field — don't hand-roll this markup again (it was duplicated 4x across CellHighlightFilters.vue and CellStatusLogs/Index.vue before extraction). Note: because the input's `type="number"` is static, Vue auto-casts the emitted `update:modelValue` to a `number` even though the model/prop type is declared `string` — this matches the pre-existing app convention (e.g. `CellHighlightFiltersValue.expiresWithinDays: string` already held a runtime number the same way), so don't "fix" the type mismatch.
 
 `lib/filters.ts`'s `filterTriggerButtonClass` is the single definition for the "open filter dialog" trigger button's class string (border/gray-700/hover), shared by `CellHighlightFilters.vue` and `CellStatusLogs/Index.vue` — alongside the already-documented `filterSectionHeadingClass`/`countBadgeClass`. Don't retype it.
+
+## Always pair common UI affordances with an established @lucide/vue icon
+When adding or touching a page/component, give common affordances an icon instead of leaving them as plain text/color — warnings, errors, loading/processing states, empty states, status/role badges, clear/apply actions, and duration/time tags all get one. Reuse the icon already established for that concept elsewhere rather than picking a new one:
+
+- Add=Plus, Edit=Pencil, Delete=Trash2, View=Eye, external/related-record link=ArrowUpRight
+- Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check
+- Cell states (mirrored by hand in the Flutter app, see js-components.md): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
+- Warning/disabled hint=TriangleAlert, field/form error=CircleAlert, admin/privileged role=ShieldCheck, signed-in user=CircleUser, processing/loading=LoaderCircle (with animate-spin), ongoing/duration=Clock, transfer=ArrowLeftRight, empty table state=PackageSearch, brand mark=Warehouse
+- Nav icons: LayoutDashboard, Rows3, Map, ArrowLeftRight, Users, LogOut, Languages
+
+Before inventing an icon for a concept, grep the codebase for how that concept is already iconified (CellSlot.vue, AdminLayout.vue, DataTable.vue, TableActionLink usages) and reuse it. A directional/flow arrow (transfer, state-change) gets `rtl:rotate-180` and needs a Playwright e2e spec asserting the flip (see admin-cell-log-*-arrow-rtl.spec.ts) — a plain glyph icon (warning, error, role, loader) does not.
