@@ -16,11 +16,12 @@ import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
+    countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
-import { columnNumberOptions } from '@/lib/filters';
+import { columnNumberOptions, countBadgeClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
@@ -29,6 +30,7 @@ import {
     viewportTransform,
 } from '@/lib/mapViewport';
 import type {
+    CellHighlightSample,
     CellHighlightSeed,
     ProductFilterOptions,
     CellMapRow,
@@ -46,6 +48,7 @@ const props = defineProps<{
     jumpToCell: CellSlotLocation | null;
     searchError: boolean;
     filterOptions: ProductFilterOptions;
+    cellHighlightSamples: CellHighlightSample[];
 }>();
 
 const highlightFilters = reactive<CellHighlightFiltersValue>({
@@ -62,6 +65,41 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
 function highlighted(cell: CellWithLocation | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
 }
+
+const hasActiveHighlight = computed(
+    () => countActiveCellHighlightFilters(highlightFilters) > 0,
+);
+
+/**
+ * How many cells match the active highlight filters on each flat — computed
+ * from `cellHighlightSamples` (loaded for every flat, unlike `cells` which is
+ * scoped to the one on screen) so a flat tab's badge total, summed across
+ * every flat, always agrees with the dashboard tile that linked here.
+ */
+const flatMatchCounts = computed(() => {
+    const counts = new Map<number, number>();
+
+    for (const sample of props.cellHighlightSamples) {
+        if (!matchesCellHighlight(sample, highlightFilters, props.today)) {
+            continue;
+        }
+
+        counts.set(
+            sample.flat_number,
+            (counts.get(sample.flat_number) ?? 0) + 1,
+        );
+    }
+
+    return counts;
+});
+
+/** The warehouse-wide match total — the sum of every flat tab's own count. */
+const totalMatchCount = computed(() =>
+    Array.from(flatMatchCounts.value.values()).reduce(
+        (sum, count) => sum + count,
+        0,
+    ),
+);
 
 /**
  * The current highlight filters, re-serialized as the same query keys the
@@ -329,6 +367,17 @@ watch(
         <div class="mb-6 flex items-center justify-between">
             <h1 class="text-xl font-semibold">{{ t('cells.title') }}</h1>
             <div class="flex items-center gap-4">
+                <span
+                    v-if="hasActiveHighlight"
+                    data-testid="total-match-count"
+                    class="text-sm text-gray-500 dark:text-neutral-400"
+                >
+                    {{
+                        t('cells.filters.matchCount', {
+                            count: totalMatchCount,
+                        })
+                    }}
+                </span>
                 <CellHighlightFilters
                     :model-value="highlightFilters"
                     :products="filterOptions.products"
@@ -380,7 +429,7 @@ watch(
                     type="button"
                     data-testid="flat-tab"
                     :aria-pressed="n === flatNumber"
-                    class="rounded-md px-3 py-2 text-sm font-medium"
+                    class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
                     :class="
                         n === flatNumber
                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
@@ -389,6 +438,16 @@ watch(
                     @click="goToFlat(n)"
                 >
                     {{ t('rows.show.flat', { n }) }}
+                    <span
+                        v-if="
+                            hasActiveHighlight &&
+                            (flatMatchCounts.get(n) ?? 0) > 0
+                        "
+                        data-testid="flat-match-count"
+                        :class="countBadgeClass"
+                    >
+                        {{ flatMatchCounts.get(n) }}
+                    </span>
                 </button>
             </div>
 

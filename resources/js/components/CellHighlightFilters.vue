@@ -3,12 +3,18 @@ import { SlidersHorizontal } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
+import FilterNumberField from '@/components/FilterNumberField.vue';
 import {
     countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
-import { selectedCountLabel } from '@/lib/filters';
+import {
+    countBadgeClass,
+    filterClearButtonClass,
+    filterTriggerButtonClass,
+    selectedCountLabel,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
 
@@ -44,15 +50,12 @@ function clear(): void {
     <div>
         <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            :class="filterTriggerButtonClass"
             @click="open = true"
         >
             <SlidersHorizontal class="h-4 w-4" />
             {{ t('rows.show.highlight.button') }}
-            <span
-                v-if="activeCount > 0"
-                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-medium text-white dark:bg-white dark:text-gray-900"
-            >
+            <span v-if="activeCount > 0" :class="countBadgeClass">
                 {{ activeCount }}
             </span>
         </button>
@@ -77,24 +80,14 @@ function clear(): void {
                     "
                 />
 
-                <div>
-                    <label
-                        for="highlight-expires-within-days"
-                        class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
-                        >{{ t('cellHighlight.expiresWithinDays') }}</label
-                    >
-                    <input
-                        id="highlight-expires-within-days"
-                        v-model="filters.expiresWithinDays"
-                        type="number"
-                        min="1"
-                        step="1"
-                        :placeholder="
-                            t('cellHighlight.expiresWithinDaysPlaceholder')
-                        "
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                    />
-                </div>
+                <FilterNumberField
+                    id="highlight-expires-within-days"
+                    v-model="filters.expiresWithinDays"
+                    :label="t('cellHighlight.expiresWithinDays')"
+                    :placeholder="
+                        t('cellHighlight.expiresWithinDaysPlaceholder')
+                    "
+                />
 
                 <div class="flex items-center gap-2">
                     <input
@@ -124,24 +117,12 @@ function clear(): void {
                     "
                 />
 
-                <div>
-                    <label
-                        for="highlight-stale-after-days"
-                        class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
-                        >{{ t('cellHighlight.staleAfterDays') }}</label
-                    >
-                    <input
-                        id="highlight-stale-after-days"
-                        v-model="filters.staleAfterDays"
-                        type="number"
-                        min="1"
-                        step="1"
-                        :placeholder="
-                            t('cellHighlight.staleAfterDaysPlaceholder')
-                        "
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                    />
-                </div>
+                <FilterNumberField
+                    id="highlight-stale-after-days"
+                    v-model="filters.staleAfterDays"
+                    :label="t('cellHighlight.staleAfterDays')"
+                    :placeholder="t('cellHighlight.staleAfterDaysPlaceholder')"
+                />
             </div>
 
             <div
@@ -149,7 +130,7 @@ function clear(): void {
             >
                 <button
                     type="button"
-                    class="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                    :class="filterClearButtonClass"
                     @click="clear"
                 >
                     {{ t('cellLog.filters.clear') }}

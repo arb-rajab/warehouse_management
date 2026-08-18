@@ -3,6 +3,7 @@ import {
     isCellExpiringWithin,
     isCellStale,
 } from '@/lib/cellStatus';
+import type { MatchableCell } from '@/lib/cellStatus';
 import type { Cell } from '@/types/admin';
 
 /**
@@ -46,7 +47,7 @@ export function countActiveCellHighlightFilters(
  * selected" before deciding whether to draw a highlight ring.
  */
 export function matchesCellHighlight(
-    cell: Cell | null,
+    cell: MatchableCell | null,
     filters: CellHighlightFiltersValue,
     today: string,
 ): boolean {

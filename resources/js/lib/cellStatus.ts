@@ -1,5 +1,18 @@
 import { addDays, subtractDays } from '@/lib/date';
-import type { Cell } from '@/types/admin';
+import type { Cell, CellPallet } from '@/types/admin';
+
+/**
+ * The minimal cell shape these status checks need — satisfied by a full
+ * `Cell` and by the lighter per-flat `CellHighlightSample` the cell map loads
+ * for every flat to compute highlight-match counts (see cellHighlight.ts).
+ */
+export interface MatchableCell {
+    state: Cell['state'];
+    pallet: Pick<
+        CellPallet,
+        'product_id' | 'expiration_date' | 'added_at'
+    > | null;
+}
 
 /**
  * Whether a cell's pallet expires within `withinDays` days from `today`,
@@ -10,7 +23,7 @@ import type { Cell } from '@/types/admin';
  * expiry", so this always returns false.
  */
 export function isCellExpiringWithin(
-    cell: Cell | null,
+    cell: MatchableCell | null,
     today: string,
     withinDays: number | null,
 ): boolean {
@@ -29,7 +42,10 @@ export function isCellExpiringWithin(
  * `today` — anchored on the server-provided `today`, never the browser
  * clock. A pallet expiring today is not yet expired.
  */
-export function isCellExpired(cell: Cell | null, today: string): boolean {
+export function isCellExpired(
+    cell: MatchableCell | null,
+    today: string,
+): boolean {
     if (!cell?.pallet) {
         return false;
     }
@@ -44,7 +60,7 @@ export function isCellExpired(cell: Cell | null, today: string): boolean {
  * staleness", so this always returns false.
  */
 export function isCellStale(
-    cell: Cell | null,
+    cell: MatchableCell | null,
     today: string,
     staleAfterDays: number | null,
 ): boolean {

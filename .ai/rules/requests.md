@@ -23,3 +23,10 @@ Requests that need an optional note field alongside other rules (e.g. `StorePall
 
 ## FiltersDashboard: Admin/Api\V1 ShowDashboardRequest share rules() via a trait
 Admin\ShowDashboardRequest and Api\V1\ShowDashboardRequest both `use App\Http\Requests\Concerns\FiltersDashboard` and delegate `rules()` entirely to `$this->dashboardFilterRules()` — same pattern as FilterCellStatusLogsRequest -> FiltersCellStatusLogs. FiltersDashboard itself composes FiltersByProductIds (adds `expiring_days`), so `productIds()` stays available. Don't inline `['expiring_days' => [...], ...$this->productIdsFilterRules()]` directly in a ShowDashboardRequest again — extend FiltersDashboard instead if a third dashboard consumer needs different/extra rules.
+
+## GET-query booleans need prepareForValidation() before a 'boolean' rule
+Laravel's `boolean` validation rule only accepts `[true, false, 0, 1, '0', '1']` (strict in_array) — it rejects the literal string "true"/"false", which is exactly how a JS boolean serializes into an Inertia `<Link>` GET query string (e.g. `?expired=true`). A field validated as `['nullable', 'boolean']` will 422 (redirecting back) on that value.
+
+Fix: normalize in `prepareForValidation()` with `filter_var($this->input($field), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)`, merging back only when non-null — this coerces "true"/"1"/"on"/"yes" and "false"/"0"/"off"/"no" to real booleans while leaving genuinely invalid values (e.g. "bogus") untouched so the `boolean` rule still rejects them. See `ShowCellMapRequest::prepareForValidation()` for the pattern (fixed for the dashboard's "Expired" tile, which links with `expired=true`).
+
+A test asserting `?expired=1` passes is not proof the feature works — the frontend actually sends `expired=true`; test that literal value too.

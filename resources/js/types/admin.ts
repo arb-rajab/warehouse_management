@@ -87,6 +87,21 @@ export interface CellHighlightSeed {
     expired: boolean;
 }
 
+/**
+ * The minimal per-cell data the warehouse map loads for every flat (not just
+ * the one on screen) to compute a highlight-match count per flat tab —
+ * narrower than `Cell` since counting doesn't need id/cell_number/product
+ * name/image.
+ */
+export interface CellHighlightSample {
+    flat_number: number;
+    state: Cell['state'];
+    pallet: Pick<
+        CellPallet,
+        'product_id' | 'expiration_date' | 'added_at'
+    > | null;
+}
+
 export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
