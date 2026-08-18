@@ -89,11 +89,13 @@ export interface CellHighlightSeed {
 
 /**
  * The minimal per-cell data the warehouse map loads for every flat (not just
- * the one on screen) to compute a highlight-match count per flat tab —
- * narrower than `Cell` since counting doesn't need id/cell_number/product
- * name/image.
+ * the one on screen) to compute a highlight-match count per flat tab and to
+ * order matches for next/previous-match navigation — narrower than `Cell`
+ * since it doesn't need id/product name/image.
  */
 export interface CellHighlightSample {
+    row_letter: string;
+    cell_number: number;
     flat_number: number;
     state: Cell['state'];
     pallet: Pick<

@@ -62,6 +62,8 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('filterOptions.products.0.name', 'Widgets')
             ->has('cellHighlightSamples', 4)
             ->has('cellHighlightSamples.0', fn (Assert $sampleProp) => $sampleProp
+                ->where('row_letter', 'A')
+                ->where('cell_number', 1)
                 ->where('flat_number', 1)
                 ->where('state', 'full')
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
@@ -71,16 +73,22 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 )
             )
             ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
+                ->where('row_letter', 'A')
+                ->where('cell_number', 1)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
+                ->where('row_letter', 'A')
+                ->where('cell_number', 2)
                 ->where('flat_number', 1)
                 ->where('state', 'empty')
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
+                ->where('row_letter', 'A')
+                ->where('cell_number', 2)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
                 ->where('pallet', null)

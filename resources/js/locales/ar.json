@@ -180,7 +180,10 @@
         "title": "الخلايا",
         "filters": {
             "state": "الحالة",
-            "matchCount": "{count} خلية مطابقة"
+            "matchCount": "{count} خلية مطابقة",
+            "previousMatch": "المطابقة السابقة",
+            "nextMatch": "المطابقة التالية",
+            "matchPosition": "{current} من {total}"
         },
         "empty": "لم تتم إضافة أي صفوف بعد.",
         "flatNotAvailable": "هذه الطبقة غير موجودة لهذا الصف",

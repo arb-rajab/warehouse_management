@@ -180,7 +180,10 @@
         "title": "Cells",
         "filters": {
             "state": "State",
-            "matchCount": "{count} matching cells"
+            "matchCount": "{count} matching cells",
+            "previousMatch": "Previous match",
+            "nextMatch": "Next match",
+            "matchPosition": "{current} of {total}"
         },
         "empty": "No rows have been added yet.",
         "flatNotAvailable": "This flat doesn't exist for this row",
