@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { fieldLabelClass } from '@/lib/filters';
+
 defineProps<{
     id: string;
     label: string;
@@ -11,11 +13,7 @@ const model = defineModel<string>({ required: true });
 
 <template>
     <div>
-        <label
-            :for="id"
-            class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
-            >{{ label }}</label
-        >
+        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
         <select
             :id="id"
             v-model="model"

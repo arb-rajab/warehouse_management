@@ -8,6 +8,37 @@ export const filterSectionHeadingClass =
     'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
 
 /**
+ * The small rounded-pill count badge shared by the highlight-filter button's
+ * active-filter count (CellHighlightFilters.vue) and the cell map's per-flat
+ * highlight-match count (Cells/Index.vue). Blue rather than the page's usual
+ * gray-900/white pairing so it stays visible on the flat tab's own dark
+ * selected-state background, matching the blue highlight ring cells get.
+ */
+export const countBadgeClass =
+    'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500';
+
+/**
+ * The "open filter dialog" trigger button shared by CellHighlightFilters.vue
+ * and CellStatusLogs/Index.vue.
+ */
+export const filterTriggerButtonClass =
+    'inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
+
+/**
+ * The filter-dialog "Clear" button shared by CellHighlightFilters.vue and
+ * CellStatusLogs/Index.vue.
+ */
+export const filterClearButtonClass =
+    'rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800';
+
+/**
+ * The filter-field label shared by every FilterDateField/FilterMultiSelect/
+ * FilterNumberField/FilterSelect/FormField.
+ */
+export const fieldLabelClass =
+    'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
+
+/**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every
  * multi-select filter (product/action/user/state) across the admin pages.
  */

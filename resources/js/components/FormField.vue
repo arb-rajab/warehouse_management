@@ -7,6 +7,8 @@ defineOptions({ inheritAttrs: false });
  * the form with new errors. Any extra attributes (min, maxlength, required,
  * readonly, placeholder, autocomplete) land on the input via `$attrs`.
  */
+import { fieldLabelClass } from '@/lib/filters';
+
 withDefaults(
     defineProps<{
         id: string;
@@ -27,11 +29,7 @@ withDefaults(
 
 <template>
     <div>
-        <label
-            :for="id"
-            class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
-            >{{ label }}</label
-        >
+        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
         <input
             :id="id"
             :name="id"
