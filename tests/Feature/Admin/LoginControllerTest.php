@@ -92,6 +92,25 @@ test('a mobile app user cannot log in to the admin panel', function () {
     $this->assertGuest();
 });
 
+test('login attempts are throttled after too many failures', function () {
+    $user = User::factory()->create(['password' => 'correct-password']);
+
+    foreach (range(1, 5) as $_) {
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertSessionHasErrors('email');
+    }
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'wrong-password',
+    ]);
+
+    $response->assertStatus(429);
+    $this->assertGuest();
+});
+
 test('a logged-in user visiting the login page is redirected away', function () {
     actingAsAdmin();
 

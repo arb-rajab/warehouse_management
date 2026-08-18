@@ -62,18 +62,24 @@ class CellController extends Controller
      * every flat (not just the one currently on screen) — the map only ever
      * loads one flat's full cell/row/pallet.product data at a time, so this
      * covers the rest with the fewest columns that `matchesCellHighlight()`
-     * on the frontend needs.
+     * on the frontend needs. `row_letter`/`cell_number` are included so the
+     * frontend can also order matches for next/previous-match navigation.
      *
-     * @return array<int, array{flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, expiration_date: string, added_at: string|null}|null}>
+     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, expiration_date: string, added_at: string|null}|null}>
      */
     private function cellHighlightSamples(): array
     {
         return Cell::query()
-            ->select(['id', 'flat_number', 'state'])
-            ->with(['pallet:id,cell_id,product_id,expiration_date,created_at'])
+            ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+            ->with([
+                'row:id,letter',
+                'pallet:id,cell_id,product_id,expiration_date,created_at',
+            ])
             ->orderedByCoordinates()
             ->get()
             ->map(fn (Cell $cell) => [
+                'row_letter' => $cell->row->letter,
+                'cell_number' => $cell->cell_number,
                 'flat_number' => $cell->flat_number,
                 'state' => $cell->state->value,
                 'pallet' => $cell->pallet === null ? null : [

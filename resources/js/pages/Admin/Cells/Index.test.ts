@@ -85,6 +85,8 @@ function highlightSample(
     overrides: Partial<CellHighlightSample> = {},
 ): CellHighlightSample {
     return {
+        row_letter: 'A',
+        cell_number: 1,
         flat_number: 1,
         state: 'empty',
         pallet: null,
@@ -343,6 +345,171 @@ describe('Cells Index (warehouse map)', () => {
 
         expect(wrapper.get('[data-testid="total-match-count"]').text()).toBe(
             t('cells.filters.matchCount', { count: 3 }),
+        );
+    });
+
+    it('hides next/previous match controls when no highlight filter is active', () => {
+        const wrapper = mountPage([row()], [], {
+            cellHighlightSamples: [highlightSample({ state: 'full' })],
+        });
+
+        expect(wrapper.find('[data-testid="next-match"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="previous-match"]').exists()).toBe(
+            false,
+        );
+    });
+
+    it('hides next/previous match controls when the active highlight matches nothing', () => {
+        const seed: CellHighlightSeed = {
+            state: 'opened',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row()], [], {
+            initialHighlight: seed,
+            cellHighlightSamples: [highlightSample({ state: 'full' })],
+        });
+
+        expect(wrapper.find('[data-testid="next-match"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="previous-match"]').exists()).toBe(
+            false,
+        );
+    });
+
+    it('cycles next through matches on the current flat in row/cell-number order, wrapping around', async () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            flatNumber: 1,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    state: 'full',
+                }),
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    state: 'full',
+                }),
+            ],
+        });
+
+        const next = () =>
+            wrapper
+                .get(`[title="${t('cells.filters.nextMatch')}"]`)
+                .trigger('click');
+
+        await next();
+        await flushPromises();
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 1, total: 2 }),
+        );
+
+        await next();
+        await flushPromises();
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 2, total: 2 }),
+        );
+
+        await next();
+        await flushPromises();
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 1, total: 2 }),
+        );
+    });
+
+    it('jumps to the last match when clicking previous with no current focus', async () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            flatNumber: 1,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    state: 'full',
+                }),
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    state: 'full',
+                }),
+            ],
+        });
+
+        await wrapper
+            .get(`[title="${t('cells.filters.previousMatch')}"]`)
+            .trigger('click');
+        await flushPromises();
+
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 2, total: 2 }),
+        );
+    });
+
+    it('reloads onto the matching flat when the next match is on a different flat, keeping the highlight filters in the query', async () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            maxFlatNumber: 2,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                }),
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 2,
+                    state: 'full',
+                }),
+            ],
+        });
+
+        const next = () =>
+            wrapper
+                .get(`[title="${t('cells.filters.nextMatch')}"]`)
+                .trigger('click');
+
+        await next();
+        await next();
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            { flat_number: 2, search: 'A1·2', state: 'full' },
+            { preserveState: true, replace: true },
         );
     });
 

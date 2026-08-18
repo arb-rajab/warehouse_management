@@ -11,6 +11,7 @@ use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,7 +21,10 @@ class RowController extends Controller
     {
         return Inertia::render('Admin/Rows/Index', [
             'rows' => $this->paginated(RowResource::collection(
-                Row::query()->select(['id', 'letter', 'cells_count', 'flats_count'])->paginate(20)
+                Row::query()
+                    ->select(['id', 'letter', 'cells_count', 'flats_count'])
+                    ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
+                    ->paginate(20)
             )),
         ]);
     }
@@ -64,19 +68,36 @@ class RowController extends Controller
 
     public function update(UpdateRowRequest $request, Row $row): RedirectResponse
     {
-        $row->update($request->validated());
+        $validated = $request->validated();
 
-        return redirect()->route('admin.rows.show', $row);
+        return DB::transaction(function () use ($validated, $row) {
+            $row->cells()->lockForUpdate()->get();
+
+            $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
+                || $validated['flats_count'] !== $row->flats_count;
+
+            if ($dimensionsChanging && $row->hasPallets()) {
+                return back()->withErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
+            }
+
+            $row->update($validated);
+
+            return redirect()->route('admin.rows.show', $row);
+        });
     }
 
     public function destroy(Row $row): RedirectResponse
     {
-        if ($row->hasPallets()) {
-            return back()->withErrors(['row' => 'Cannot delete a row that has pallets in it.']);
-        }
+        return DB::transaction(function () use ($row) {
+            $row->cells()->lockForUpdate()->get();
 
-        $row->delete();
+            if ($row->hasPallets()) {
+                return back()->withErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
+            }
 
-        return redirect()->route('admin.rows.index');
+            $row->delete();
+
+            return redirect()->route('admin.rows.index');
+        });
     }
 }

@@ -55,6 +55,10 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
+            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
+            "@php -r \"file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');\"",
+            "@php -r \"file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');\"",
+            "@php -r \"file_exists('database/health.sqlite') || touch('database/health.sqlite');\"",
             "@php artisan migrate --force",
             "npm install",
             "npm run build"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue';
+import type { ComponentPublicInstance } from 'vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { fieldLabelClass } from '@/lib/filters';
 
@@ -15,6 +16,32 @@ const model = defineModel<string[]>({ required: true });
 
 const open = ref(false);
 const containerRef = ref<HTMLElement | null>(null);
+const optionRefs = ref<(HTMLInputElement | null)[]>([]);
+
+function setOptionRef(
+    el: Element | ComponentPublicInstance | null,
+    index: number,
+): void {
+    optionRefs.value[index] = el as HTMLInputElement | null;
+}
+
+function onOptionKeydown(event: KeyboardEvent, index: number): void {
+    const count = props.options.length;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        optionRefs.value[(index + 1) % count]?.focus();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        optionRefs.value[(index - 1 + count) % count]?.focus();
+    } else if (event.key === 'Home') {
+        event.preventDefault();
+        optionRefs.value[0]?.focus();
+    } else if (event.key === 'End') {
+        event.preventDefault();
+        optionRefs.value[count - 1]?.focus();
+    }
+}
 
 function isChecked(value: string): boolean {
     return model.value.includes(value);
@@ -87,15 +114,19 @@ onBeforeUnmount(() => {
             class="absolute z-10 mt-1 w-max max-w-xs min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
         >
             <label
-                v-for="option in options"
+                v-for="(option, index) in options"
                 :key="option.value"
+                role="option"
+                :aria-selected="isChecked(option.value)"
                 class="flex items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
             >
                 <input
+                    :ref="(el) => setOptionRef(el, index)"
                     type="checkbox"
                     class="mt-0.5 shrink-0"
                     :checked="isChecked(option.value)"
                     @change="toggleValue(option.value)"
+                    @keydown="onOptionKeydown($event, index)"
                 />
                 <span class="break-words">{{ option.label }}</span>
             </label>
