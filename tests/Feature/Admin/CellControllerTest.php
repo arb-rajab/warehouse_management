@@ -60,6 +60,58 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('searchError', false)
             ->has('filterOptions.products', 1)
             ->where('filterOptions.products.0.name', 'Widgets')
+            ->has('cellHighlightSamples', 4)
+            ->has('cellHighlightSamples.0', fn (Assert $sampleProp) => $sampleProp
+                ->where('flat_number', 1)
+                ->where('state', 'full')
+                ->has('pallet', fn (Assert $palletProp) => $palletProp
+                    ->where('product_id', $product->id)
+                    ->where('expiration_date', '2026-09-01')
+                    ->where('added_at', $pallet->created_at->toIso8601String())
+                )
+            )
+            ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
+                ->where('flat_number', 2)
+                ->where('state', 'empty')
+                ->where('pallet', null)
+            )
+            ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
+                ->where('flat_number', 1)
+                ->where('state', 'empty')
+                ->where('pallet', null)
+            )
+            ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
+                ->where('flat_number', 2)
+                ->where('state', 'empty')
+                ->where('pallet', null)
+            )
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the per-flat highlight-match samples cover every flat, unlike the flat-scoped cells prop', function () {
+    actingAsAdmin();
+    Carbon::setTestNow('2026-08-01 10:00:00');
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $product = Product::factory()->create();
+    $otherFlatCell = $row->cells()->where('flat_number', 2)->first();
+    Pallet::factory()->create([
+        'product_id' => $product->id,
+        'cell_id' => $otherFlatCell->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/cells');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('cells', 1)
+            ->where('cells.0.flat_number', 1)
+            ->has('cellHighlightSamples', 2)
+            ->where('cellHighlightSamples.1.flat_number', 2)
+            ->where('cellHighlightSamples.1.state', 'full')
+            ->where('cellHighlightSamples.1.pallet.product_id', $product->id)
     );
 
     Carbon::setTestNow();
@@ -110,6 +162,17 @@ test('expired passed from the dashboard seeds the initial highlight filter', fun
     Row::factory()->create();
 
     $response = $this->get('/admin/cells?expired=1');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.expired', true)
+    );
+});
+
+test('the literal "true" the dashboard link actually sends seeds the initial highlight filter', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?expired=true');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('initialHighlight.expired', true)

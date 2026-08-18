@@ -9,15 +9,17 @@ import DataTable from '@/components/DataTable.vue';
 import FilterDateField from '@/components/FilterDateField.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
+import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import {
-    applySortToggle,
     columnNumberOptions,
+    filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
+    filterTriggerButtonClass,
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -43,10 +45,6 @@ function actionLabel(action: CellStatusLog['action']): string {
 function stateLabel(state: CellStatusLog['from_state']): string {
     return t(`cellLog.states.${state}`);
 }
-
-const selectClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800';
-const labelClass = 'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
 
 const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
 
@@ -127,7 +125,12 @@ function clearFilters(): void {
 }
 
 function toggleSort(key: string): void {
-    applySortToggle(filters, key, applyFilters);
+    filters.sort_direction =
+        filters.sort_by === key && filters.sort_direction === 'asc'
+            ? 'desc'
+            : 'asc';
+    filters.sort_by = key;
+    applyFilters();
 }
 
 function viewPalletHistory(palletId: number): void {
@@ -225,7 +228,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
             <h1 class="text-xl font-semibold">{{ t('cellLog.title') }}</h1>
             <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                :class="filterTriggerButtonClass"
                 @click="filtersOpen = true"
             >
                 <SlidersHorizontal class="h-4 w-4" />
@@ -350,22 +353,12 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                             :disabled="dateRangeDisabled"
                         />
 
-                        <div>
-                            <label
-                                :class="labelClass"
-                                for="filter-created-within-days"
-                                >{{ t('cellLog.filters.withinDays') }}</label
-                            >
-                            <input
-                                id="filter-created-within-days"
-                                v-model="filters.created_within_days"
-                                type="number"
-                                min="1"
-                                step="1"
-                                :disabled="createdWithinDaysDisabled"
-                                :class="selectClass"
-                            />
-                        </div>
+                        <FilterNumberField
+                            id="filter-created-within-days"
+                            v-model="filters.created_within_days"
+                            :label="t('cellLog.filters.withinDays')"
+                            :disabled="createdWithinDaysDisabled"
+                        />
                     </div>
                 </div>
 
@@ -390,24 +383,12 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                             :disabled="expirationRangeDisabled"
                         />
 
-                        <div>
-                            <label
-                                :class="labelClass"
-                                for="filter-expires-within-days"
-                                >{{
-                                    t('cellLog.filters.expiresWithinDays')
-                                }}</label
-                            >
-                            <input
-                                id="filter-expires-within-days"
-                                v-model="filters.expires_within_days"
-                                type="number"
-                                min="1"
-                                step="1"
-                                :disabled="expiresWithinDaysDisabled"
-                                :class="selectClass"
-                            />
-                        </div>
+                        <FilterNumberField
+                            id="filter-expires-within-days"
+                            v-model="filters.expires_within_days"
+                            :label="t('cellLog.filters.expiresWithinDays')"
+                            :disabled="expiresWithinDaysDisabled"
+                        />
                     </div>
                 </div>
 
@@ -422,7 +403,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                     </button>
                     <button
                         type="button"
-                        class="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                        :class="filterClearButtonClass"
                         @click="clearFilters"
                     >
                         {{ t('cellLog.filters.clear') }}

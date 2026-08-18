@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import type {
+    CellHighlightSample,
     CellHighlightSeed,
     ProductFilterOptions,
     CellMapRow,
@@ -80,6 +81,17 @@ function pallet(
     };
 }
 
+function highlightSample(
+    overrides: Partial<CellHighlightSample> = {},
+): CellHighlightSample {
+    return {
+        flat_number: 1,
+        state: 'empty',
+        pallet: null,
+        ...overrides,
+    };
+}
+
 function mountPage(
     rows: CellMapRow[],
     cells: CellWithLocation[],
@@ -91,6 +103,7 @@ function mountPage(
         jumpToCell?: CellSlotLocation | null;
         searchError?: boolean;
         filterOptions?: ProductFilterOptions;
+        cellHighlightSamples?: CellHighlightSample[];
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -114,6 +127,7 @@ function mountPage(
             jumpToCell: overrides.jumpToCell ?? null,
             searchError: overrides.searchError ?? false,
             filterOptions: overrides.filterOptions ?? { products },
+            cellHighlightSamples: overrides.cellHighlightSamples ?? [],
         },
     });
 }
@@ -229,6 +243,107 @@ describe('Cells Index (warehouse map)', () => {
         ]);
         expect(tabs[1].attributes('aria-pressed')).toBe('true');
         expect(tabs[0].attributes('aria-pressed')).toBe('false');
+    });
+
+    it('shows no per-flat match count badge when no highlight filter is active', () => {
+        const wrapper = mountPage([row()], [], {
+            maxFlatNumber: 2,
+            cellHighlightSamples: [
+                highlightSample({ flat_number: 1, state: 'full' }),
+            ],
+        });
+
+        expect(
+            wrapper.findAll('[data-testid="flat-match-count"]'),
+        ).toHaveLength(0);
+    });
+
+    it('shows a per-flat match count badge for the active highlight, covering flats other than the one on screen', () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row()], [], {
+            flatNumber: 1,
+            maxFlatNumber: 3,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({ flat_number: 1, state: 'full' }),
+                highlightSample({ flat_number: 1, state: 'empty' }),
+                highlightSample({ flat_number: 2, state: 'full' }),
+                highlightSample({ flat_number: 2, state: 'full' }),
+                highlightSample({ flat_number: 3, state: 'opened' }),
+            ],
+        });
+
+        const badges = wrapper.findAll('[data-testid="flat-match-count"]');
+        expect(badges.map((badge) => badge.text())).toEqual(['1', '2']);
+    });
+
+    it('hides the per-flat match count badge for a flat with zero matches', () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row()], [], {
+            flatNumber: 1,
+            maxFlatNumber: 2,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({ flat_number: 1, state: 'full' }),
+                highlightSample({ flat_number: 2, state: 'opened' }),
+            ],
+        });
+
+        const tabs = wrapper.findAll('[data-testid="flat-tab"]');
+        expect(
+            tabs[0].findAll('[data-testid="flat-match-count"]'),
+        ).toHaveLength(1);
+        expect(
+            tabs[1].findAll('[data-testid="flat-match-count"]'),
+        ).toHaveLength(0);
+    });
+
+    it('shows no total match count when no highlight filter is active', () => {
+        const wrapper = mountPage([row()], [], {
+            maxFlatNumber: 2,
+            cellHighlightSamples: [
+                highlightSample({ flat_number: 1, state: 'full' }),
+            ],
+        });
+
+        expect(wrapper.find('[data-testid="total-match-count"]').exists()).toBe(
+            false,
+        );
+    });
+
+    it('shows the total match count across every flat for the active highlight', () => {
+        const seed: CellHighlightSeed = {
+            state: 'full',
+            productIds: [],
+            expiresWithinDays: null,
+            expired: false,
+        };
+        const wrapper = mountPage([row()], [], {
+            flatNumber: 1,
+            maxFlatNumber: 3,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({ flat_number: 1, state: 'full' }),
+                highlightSample({ flat_number: 1, state: 'empty' }),
+                highlightSample({ flat_number: 2, state: 'full' }),
+                highlightSample({ flat_number: 2, state: 'full' }),
+                highlightSample({ flat_number: 3, state: 'opened' }),
+            ],
+        });
+
+        expect(wrapper.get('[data-testid="total-match-count"]').text()).toBe(
+            t('cells.filters.matchCount', { count: 3 }),
+        );
     });
 
     it('navigates to the clicked flat', async () => {

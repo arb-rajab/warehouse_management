@@ -60,3 +60,8 @@ tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise —
 - a native browser dialog (`window.confirm`/`alert`, anything in lib/confirm.ts) — Playwright can drive `page.on('dialog', ...)`, jsdom cannot (see admin-delete-confirmation.spec.ts, which covers Rows/Index.vue and Users/Index.vue's `confirmDelete()` wiring)
 - a real cross-request round trip that must retain form input after a server validation error (see admin-form-retention.spec.ts)
 - new text/input color pairs in dark mode that could fail contrast (see login-dark-mode.spec.ts)
+
+## FilterNumberField and filterTriggerButtonClass are the shared number-filter/trigger-button pieces
+`components/FilterNumberField.vue` (mirrors `FilterDateField.vue`'s shape: props `id`, `label`, `placeholder?`, `disabled?`; `defineModel<string>()`) is the single definition for a labelled `type="number" min="1" step="1"` filter field — don't hand-roll this markup again (it was duplicated 4x across CellHighlightFilters.vue and CellStatusLogs/Index.vue before extraction). Note: because the input's `type="number"` is static, Vue auto-casts the emitted `update:modelValue` to a `number` even though the model/prop type is declared `string` — this matches the pre-existing app convention (e.g. `CellHighlightFiltersValue.expiresWithinDays: string` already held a runtime number the same way), so don't "fix" the type mismatch.
+
+`lib/filters.ts`'s `filterTriggerButtonClass` is the single definition for the "open filter dialog" trigger button's class string (border/gray-700/hover), shared by `CellHighlightFilters.vue` and `CellStatusLogs/Index.vue` — alongside the already-documented `filterSectionHeadingClass`/`countBadgeClass`. Don't retype it.

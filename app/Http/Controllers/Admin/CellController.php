@@ -53,7 +53,36 @@ class CellController extends Controller
             'filterOptions' => [
                 'products' => Product::filterOptions(),
             ],
+            'cellHighlightSamples' => $this->cellHighlightSamples(),
         ]);
+    }
+
+    /**
+     * The minimal per-cell data needed to compute a highlight-match count for
+     * every flat (not just the one currently on screen) — the map only ever
+     * loads one flat's full cell/row/pallet.product data at a time, so this
+     * covers the rest with the fewest columns that `matchesCellHighlight()`
+     * on the frontend needs.
+     *
+     * @return array<int, array{flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, expiration_date: string, added_at: string|null}|null}>
+     */
+    private function cellHighlightSamples(): array
+    {
+        return Cell::query()
+            ->select(['id', 'flat_number', 'state'])
+            ->with(['pallet:id,cell_id,product_id,expiration_date,created_at'])
+            ->orderedByCoordinates()
+            ->get()
+            ->map(fn (Cell $cell) => [
+                'flat_number' => $cell->flat_number,
+                'state' => $cell->state->value,
+                'pallet' => $cell->pallet === null ? null : [
+                    'product_id' => $cell->pallet->product_id,
+                    'expiration_date' => $cell->pallet->expiration_date->toDateString(),
+                    'added_at' => $cell->pallet->created_at?->toIso8601String(),
+                ],
+            ])
+            ->all();
     }
 
     /**

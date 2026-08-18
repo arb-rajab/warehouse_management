@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { fieldLabelClass } from '@/lib/filters';
 
 const props = defineProps<{
     id: string;
@@ -68,11 +69,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div ref="containerRef" class="relative">
-        <label
-            :for="id"
-            class="mb-1 block text-sm text-gray-700 dark:text-neutral-300"
-            >{{ label }}</label
-        >
+        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
         <button
             :id="id"
             type="button"

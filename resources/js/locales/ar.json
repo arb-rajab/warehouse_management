@@ -179,7 +179,8 @@
     "cells": {
         "title": "الخلايا",
         "filters": {
-            "state": "الحالة"
+            "state": "الحالة",
+            "matchCount": "{count} خلية مطابقة"
         },
         "empty": "لم تتم إضافة أي صفوف بعد.",
         "flatNotAvailable": "هذه الطبقة غير موجودة لهذا الصف",
