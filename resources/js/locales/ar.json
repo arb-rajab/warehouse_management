@@ -15,6 +15,7 @@
     },
     "common": {
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
+        "cancel": "إلغاء",
         "duration": {
             "day": "ي",
             "hour": "س",

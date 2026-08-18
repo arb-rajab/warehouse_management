@@ -148,4 +148,10 @@ describe('Rows Edit', () => {
 
         expect(wrapper.get('form button').text()).toBe(t('rows.edit.submit'));
     });
+
+    it('links the cancel action back to the row list', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('form a').attributes('href')).toBe('/admin/rows');
+    });
 });

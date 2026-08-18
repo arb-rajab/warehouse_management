@@ -24,7 +24,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Exceptions/** | .ai/rules/exceptions.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
 | app/Http/Requests/StoreRowRequest.php,app/Http/Requests/UpdateRowRequest.php | .ai/rules/http-requests.md |
-| resources/js/components/CellSlot.vue | .ai/rules/js-components.md |
+| resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts,app/Http/Controllers/Admin/CellController.php,resources/js/types/admin.ts | .ai/rules/js-types.md |
 | resources/js/** | .ai/rules/js.md |
