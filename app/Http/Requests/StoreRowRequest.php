@@ -4,9 +4,20 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 class StoreRowRequest extends FormRequest
 {
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('letter')) {
+            $this->merge(['letter' => Str::upper($this->string('letter'))]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *

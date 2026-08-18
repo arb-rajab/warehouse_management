@@ -106,6 +106,21 @@ test('an authenticated user can create a row and its cells are generated', funct
     expect($row->cells()->count())->toBe(6);
 });
 
+test('creating a row normalizes a lowercase letter to uppercase', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $row = Row::query()->where('letter', 'Z')->first();
+
+    $response->assertRedirect(route('admin.rows.show', $row));
+    expect($row)->not->toBeNull();
+});
+
 test('creating a row with a duplicate letter is rejected and nothing changes', function () {
     actingAsAdmin();
     Row::factory()->create(['letter' => 'Z']);
@@ -130,6 +145,32 @@ test('creating a row with invalid dimensions is rejected and nothing changes', f
     ]);
 
     $response->assertSessionHasErrors('cells_count');
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('creating a row with an invalid flats_count is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 0,
+    ]);
+
+    $response->assertSessionHasErrors('flats_count');
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('creating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'ABC',
+        'cells_count' => 2,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('letter');
     $this->assertDatabaseCount('rows', 0);
 });
 
@@ -311,6 +352,20 @@ test('renaming a rows letter always succeeds', function () {
     expect($row->fresh()->letter)->toBe('Y');
 });
 
+test('renaming a row normalizes a lowercase letter to uppercase', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+});
+
 test('renaming a row to a letter that already exists is rejected and nothing changes', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
@@ -353,10 +408,55 @@ test('resizing a row that has a pallet is rejected and nothing changes', functio
         'flats_count' => 5,
     ]);
 
-    $response->assertSessionHasErrors('cells_count');
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('resizing a row with invalid dimensions and an existing pallet reports the dimension error, not the pallet block', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 0,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    expect(session('errors')->get('cells_count'))->not->toContain(__('messages.row_cannot_resize_has_pallets'));
+    expect($row->fresh()->cells_count)->toBe(2);
+});
+
+test('updating a row with an invalid flats_count is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 0,
+    ]);
+
+    $response->assertSessionHasErrors('flats_count');
+    expect($row->fresh()->flats_count)->toBe(1);
+});
+
+test('updating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'ABC',
+        'cells_count' => 2,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('letter');
+    expect($row->fresh()->letter)->toBe('Z');
 });
 
 test('a mobile app user cannot update a row and nothing changes', function () {
@@ -420,7 +520,7 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
 
     $response = $this->delete("/admin/rows/{$row->letter}");
 
-    $response->assertSessionHasErrors('row');
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
 });
