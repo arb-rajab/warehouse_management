@@ -20,7 +20,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Enums/** | .ai/rules/enums.md |
 | app/Exceptions/** | .ai/rules/exceptions.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
-| resources/js/components/CellSlot.vue | .ai/rules/js-components.md |
+| resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
 | resources/js/** | .ai/rules/js.md |
 | lang/** | .ai/rules/lang.md |

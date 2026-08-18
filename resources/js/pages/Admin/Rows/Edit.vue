@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { update } from '@/actions/App/Http/Controllers/Admin/RowController';
+import {
+    index,
+    update,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import RowFormFields from '@/components/RowFormFields.vue';
 import { t } from '@/lib/i18n';
@@ -16,6 +19,7 @@ const props = defineProps<{
         :action="update(props.row)"
         :submit-label="t('rows.edit.submit')"
         :submitting-label="t('rows.edit.submitting')"
+        :cancel-href="index()"
         #default="{ errors }"
     >
         <RowFormFields

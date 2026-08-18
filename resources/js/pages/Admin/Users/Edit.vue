@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { update } from '@/actions/App/Http/Controllers/Admin/UserController';
+import {
+    index,
+    update,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import UserFormFields from '@/components/UserFormFields.vue';
 import { t } from '@/lib/i18n';
@@ -20,6 +23,7 @@ const isEditingSelf = page.props.auth.user?.id === props.user.id;
         :action="update(props.user)"
         :submit-label="t('users.edit.submit')"
         :submitting-label="t('users.edit.submitting')"
+        :cancel-href="index()"
         #default="{ errors }"
     >
         <UserFormFields

@@ -130,4 +130,10 @@ describe('Users Create', () => {
             t('users.create.submit'),
         );
     });
+
+    it('links the cancel action back to the user list', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('form a').attributes('href')).toBe('/admin/users');
+    });
 });

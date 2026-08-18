@@ -117,4 +117,35 @@ describe('ResourceFormPage', () => {
 
         expect(wrapper.get('form button').text()).toBe('Create');
     });
+
+    it('renders no cancel link when cancelHref is not given', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.find('form a').exists()).toBe(false);
+    });
+
+    it('renders a cancel link to the given href when provided', () => {
+        usePageMock.mockReturnValue({
+            url: '/admin/rows',
+            props: {
+                locale: 'en',
+                auth: { user: { name: 'Jane Doe', id: 7 } },
+            },
+        });
+
+        const wrapper = mount(ResourceFormPage, {
+            props: {
+                title: 'Add row',
+                action: '/admin/rows',
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+                cancelHref: '/admin/rows',
+            },
+            slots: { default: '<p>form fields go here</p>' },
+        });
+
+        const cancelLink = wrapper.get('form a');
+        expect(cancelLink.attributes('href')).toBe('/admin/rows');
+        expect(cancelLink.text()).toBe('Cancel');
+    });
 });

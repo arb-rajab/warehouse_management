@@ -15,6 +15,7 @@
     },
     "common": {
         "confirmDelete": "Delete {label}? This cannot be undone.",
+        "cancel": "Cancel",
         "duration": {
             "day": "d",
             "hour": "h",

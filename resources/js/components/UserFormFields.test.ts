@@ -1,3 +1,4 @@
+import { CircleAlert, TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import UserFormFields from './UserFormFields.vue';
@@ -36,6 +37,7 @@ describe('UserFormFields', () => {
         expect(wrapper.text()).toContain('The name field is required.');
         expect(wrapper.text()).toContain('The email has already been taken.');
         expect(wrapper.text()).toContain('The is admin field is invalid.');
+        expect(wrapper.findComponent(CircleAlert).exists()).toBe(true);
     });
 
     it('retains values the user typed and toggled when the errors prop changes after a failed submit', async () => {
@@ -69,6 +71,7 @@ describe('UserFormFields', () => {
         expect(wrapper.text()).toContain(
             'You cannot remove your own admin access.',
         );
+        expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
     });
 
     it('marks the name and email fields as required with a max length, mirroring the backend rules', () => {
@@ -124,6 +127,24 @@ describe('UserFormFields', () => {
 
         expect(confirmation.validationMessage).toBe('');
         expect(password.validationMessage).toBe('');
+
+        wrapper.unmount();
+    });
+
+    it('shows an app-styled mismatch message alongside the native validation error', async () => {
+        const wrapper = mount(UserFormFields, {
+            props: { errors: {} },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('#password').setValue('Password123!');
+        await wrapper.get('#password_confirmation').setValue('Different123!');
+
+        expect(wrapper.text()).toContain('Passwords do not match.');
+
+        await wrapper.get('#password_confirmation').setValue('Password123!');
+
+        expect(wrapper.text()).not.toContain('Passwords do not match.');
 
         wrapper.unmount();
     });
