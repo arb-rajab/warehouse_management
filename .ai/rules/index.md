@@ -9,6 +9,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Providers/TelescopeServiceProvider.php | .ai/rules/app-providers.md |
 | bootstrap/app.php,app/Http/Controllers/LoginController.php,resources/js/pages/Auth/Login.vue,routes/web.php | .ai/rules/auth.md |
 | resources/js/pages/Admin/CellStatusLogs/** | .ai/rules/cell-status-logs.md |
+| resources/js/pages/Admin/Cells/Index.vue | .ai/rules/cells.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts | .ai/rules/components-js-lib.md |
 | resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts | .ai/rules/components.md |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
@@ -22,6 +23,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
 | resources/js/components/CellSlot.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
+| resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts,app/Http/Controllers/Admin/CellController.php,resources/js/types/admin.ts | .ai/rules/js-types.md |
 | resources/js/** | .ai/rules/js.md |
 | lang/** | .ai/rules/lang.md |
 | resources/js/layouts/** | .ai/rules/layouts.md |
