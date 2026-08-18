@@ -1,3 +1,4 @@
+import { CircleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FormField from './FormField.vue';
@@ -44,6 +45,7 @@ describe('FormField', () => {
         expect(withError.get('p').text()).toBe(
             'The letter has already been taken.',
         );
+        expect(withError.findComponent(CircleAlert).exists()).toBe(true);
     });
 
     it('seeds the input as an attribute so typed values survive a re-render', async () => {

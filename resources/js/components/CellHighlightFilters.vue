@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SlidersHorizontal } from '@lucide/vue';
+import { SlidersHorizontal, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
@@ -133,6 +133,7 @@ function clear(): void {
                     :class="filterClearButtonClass"
                     @click="clear"
                 >
+                    <X class="h-4 w-4 shrink-0" />
                     {{ t('cellLog.filters.clear') }}
                 </button>
             </div>

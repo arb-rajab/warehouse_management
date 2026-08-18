@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { id: number }">
-import { ArrowDown, ArrowUp, ArrowUpDown } from '@lucide/vue';
+import { ArrowDown, ArrowUp, ArrowUpDown, PackageSearch } from '@lucide/vue';
 
 type Column = string | { label: string; sortKey: string };
 
@@ -73,7 +73,12 @@ function sortKey(column: Column): string | null {
                         :colspan="columns.length"
                         class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
                     >
-                        {{ emptyMessage }}
+                        <div class="flex flex-col items-center gap-2">
+                            <PackageSearch
+                                class="h-6 w-6 text-gray-300 dark:text-neutral-700"
+                            />
+                            <span>{{ emptyMessage }}</span>
+                        </div>
                     </td>
                 </tr>
             </tbody>

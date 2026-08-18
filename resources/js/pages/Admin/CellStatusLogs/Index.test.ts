@@ -1,3 +1,4 @@
+import { Check, Clock, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
@@ -180,6 +181,14 @@ describe('CellStatusLogs Index', () => {
     it('closes the filter dialog after Apply is clicked', async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
+
+        const applyButton = wrapper
+            .get('form')
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.filters.apply')),
+            );
+        expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
         await wrapper.get('form').trigger('submit');
 
@@ -552,6 +561,7 @@ describe('CellStatusLogs Index', () => {
         const durationCell = rowCells(wrapper)[7];
         expect(durationCell.text()).toContain(t('cellLog.columns.ongoing'));
         expect(durationCell.text()).toContain('1m');
+        expect(durationCell.findComponent(Clock).exists()).toBe(true);
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {
@@ -624,6 +634,7 @@ describe('CellStatusLogs Index', () => {
         const clearButton = wrapper
             .findAll('button')
             .find((button) => button.text() === t('cellLog.filters.clear'));
+        expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
@@ -910,7 +921,9 @@ describe('CellStatusLogs Index', () => {
         const wrapper = mountPage([], { pallet_id: 55 });
 
         const banner = wrapper.get('.bg-blue-50');
-        await banner.get('button').trigger('click');
+        const clearButton = banner.get('button');
+        expect(clearButton.findComponent(X).exists()).toBe(true);
+        await clearButton.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/cell-logs',

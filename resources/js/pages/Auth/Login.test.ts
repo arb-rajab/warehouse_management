@@ -1,3 +1,4 @@
+import { Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -59,10 +60,11 @@ describe('Login', () => {
         routerPostMock.mockReset();
     });
 
-    it('renders the brand title', () => {
+    it('renders the brand title with a brand icon', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('auth.login.brand'));
+        expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
     });
 
     it('submits the form to the login route', () => {

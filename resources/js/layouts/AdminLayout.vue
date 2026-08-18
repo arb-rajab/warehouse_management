@@ -2,11 +2,13 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
+    CircleUser,
     LayoutDashboard,
     LogOut,
     Map,
     Rows3,
     Users,
+    Warehouse,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
@@ -67,7 +69,12 @@ function isActive(href: string): boolean {
                 class="mx-auto flex max-w-6xl items-center justify-between px-6"
             >
                 <div class="flex items-center gap-6">
-                    <span class="py-3 font-semibold">{{ t('nav.brand') }}</span>
+                    <span
+                        class="inline-flex items-center gap-1.5 py-3 font-semibold"
+                    >
+                        <Warehouse class="h-5 w-5 shrink-0" />
+                        {{ t('nav.brand') }}
+                    </span>
                     <Link
                         v-for="item in navItems"
                         :key="item.labelKey"
@@ -86,9 +93,12 @@ function isActive(href: string): boolean {
                 </div>
                 <div class="flex items-center gap-4 text-sm">
                     <LanguageSwitcher />
-                    <span class="text-gray-600 dark:text-neutral-400">{{
-                        page.props.auth.user?.name
-                    }}</span>
+                    <span
+                        class="inline-flex items-center gap-1.5 text-gray-600 dark:text-neutral-400"
+                    >
+                        <CircleUser class="h-4 w-4 shrink-0" />
+                        {{ page.props.auth.user?.name }}
+                    </span>
                     <Link
                         :href="destroy()"
                         as="button"

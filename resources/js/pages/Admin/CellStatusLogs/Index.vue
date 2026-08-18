@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowRight, History, SlidersHorizontal } from '@lucide/vue';
+import {
+    ArrowRight,
+    Check,
+    Clock,
+    History,
+    SlidersHorizontal,
+    X,
+} from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -17,6 +24,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import {
     columnNumberOptions,
+    countBadgeClass,
     filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -233,10 +241,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
             >
                 <SlidersHorizontal class="h-4 w-4" />
                 {{ t('cellLog.filters.title') }}
-                <span
-                    v-if="activeFilterCount > 0"
-                    class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-medium text-white dark:bg-white dark:text-gray-900"
-                >
+                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                     {{ activeFilterCount }}
                 </span>
             </button>
@@ -397,8 +402,9 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                 >
                     <button
                         type="submit"
-                        class="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+                        class="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
                     >
+                        <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>
                     <button
@@ -406,6 +412,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                         :class="filterClearButtonClass"
                         @click="clearFilters"
                     >
+                        <X class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
@@ -421,9 +428,10 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
             }}</span>
             <button
                 type="button"
-                class="font-medium hover:underline"
+                class="inline-flex items-center gap-1 font-medium hover:underline"
                 @click="clearFilters"
             >
+                <X class="h-3.5 w-3.5 shrink-0" />
                 {{ t('cellLog.filters.clear') }}
             </button>
         </div>
@@ -576,8 +584,9 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                     </div>
                     <div
                         v-if="!log.next_log_at"
-                        class="text-xs text-gray-400 dark:text-neutral-600"
+                        class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-600"
                     >
+                        <Clock class="h-3 w-3 shrink-0" />
                         {{ t('cellLog.columns.ongoing') }}
                     </div>
                 </td>
