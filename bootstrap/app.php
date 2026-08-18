@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Env;
 use Spatie\Honeypot\ProtectAgainstSpam;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
@@ -23,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(BlockMaliciousRequests::class);
         $middleware->append(SecureHeadersMiddleware::class);
+
+        $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));
+
+        if ($trustedProxies !== []) {
+            $middleware->trustProxies(at: array_values($trustedProxies));
+        }
 
         $middleware->web(append: [
             SetLocale::class,
