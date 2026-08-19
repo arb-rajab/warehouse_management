@@ -16,8 +16,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     public function register(): void
     {
-        // Telescope::night();
-
         $this->hideSensitiveRequestDetails();
 
         $isLocal = $this->app->environment('local');
@@ -63,10 +61,25 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     /**
      * Register the Telescope gate.
      *
-     * This gate determines who can access Telescope in non-local environments.
+     * This gate determines who can access Telescope.
      */
     protected function gate(): void
     {
         Gate::define('viewTelescope', User::isAdminGate());
+    }
+
+    /**
+     * Configure the Telescope authorization services.
+     *
+     * The vendor default bypasses the gate entirely when app()->environment('local'),
+     * which is also the environment real local dev machines run with — leaving
+     * Telescope open to any visitor, authenticated or not. Always defer to the
+     * viewTelescope gate instead, regardless of environment.
+     */
+    protected function authorization(): void
+    {
+        $this->gate();
+
+        Telescope::auth(fn ($request) => Gate::check('viewTelescope', [$request->user()]));
     }
 }
