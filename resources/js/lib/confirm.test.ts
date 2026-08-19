@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { confirmDelete } from './confirm';
+import { confirmDelete, confirmLogout } from './confirm';
 
 afterEach(() => {
     vi.unstubAllGlobals();
@@ -23,5 +23,24 @@ describe('confirmDelete', () => {
 
         vi.stubGlobal('confirm', () => true);
         expect(confirmDelete('Jane Doe')).toBe(true);
+    });
+});
+
+describe('confirmLogout', () => {
+    it('asks with the shared logout wording', () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+
+        confirmLogout();
+
+        expect(confirmSpy).toHaveBeenCalledWith('Log out of your account?');
+    });
+
+    it('passes the user’s answer straight back to the caller', () => {
+        vi.stubGlobal('confirm', () => false);
+        expect(confirmLogout()).toBe(false);
+
+        vi.stubGlobal('confirm', () => true);
+        expect(confirmLogout()).toBe(true);
     });
 });

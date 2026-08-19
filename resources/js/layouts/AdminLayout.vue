@@ -18,6 +18,7 @@ import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowCont
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { destroy } from '@/actions/App/Http/Controllers/LoginController';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import { confirmLogout } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 
 const page = usePage();
@@ -103,6 +104,7 @@ function isActive(href: string): boolean {
                     <Link
                         :href="destroy()"
                         as="button"
+                        :on-before="confirmLogout"
                         class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
                     >
                         <LogOut class="h-4 w-4" />
