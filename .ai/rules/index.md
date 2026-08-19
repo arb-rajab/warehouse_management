@@ -33,7 +33,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/layouts/** | .ai/rules/layouts.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellSlot.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellStatus.ts,resources/js/lib/cellHighlight.ts | .ai/rules/lib.md |
 | app/Http/Middleware/**, app/Http/Middleware/BlockMaliciousRequests.php,config/waf.php, app/Http/Middleware/RestrictToAllowedIps.php,config/telescope.php,config/pulse.php | .ai/rules/middleware.md |
-| database/migrations/** | .ai/rules/migrations.md |
+| database/migrations/**, database/migrations/2026_08_08_154136_create_products_table.php | .ai/rules/migrations.md |
 | app/Models/*.php, app/Models/CellStatusLog.php, app/Models/Row.php, app/Models/Pallet.php | .ai/rules/models.md |
 | app/Observers/** | .ai/rules/observers.md |
 | resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/CellStatusLogs/Index.test.ts | .ai/rules/pages-admin-cell-status-logs.md |
