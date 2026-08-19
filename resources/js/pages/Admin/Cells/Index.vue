@@ -23,7 +23,11 @@ import {
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
-import { columnNumberOptions, countBadgeClass } from '@/lib/filters';
+import {
+    columnNumberOptions,
+    countBadgeClass,
+    mapToolbarButtonClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
@@ -481,7 +485,7 @@ watch(
                             type="button"
                             :title="t('cells.filters.previousMatch')"
                             data-testid="previous-match"
-                            class="rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            class="cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
                             @click="jumpToPreviousMatch"
                         >
                             <ChevronUp class="h-4 w-4" />
@@ -502,7 +506,7 @@ watch(
                             type="button"
                             :title="t('cells.filters.nextMatch')"
                             data-testid="next-match"
-                            class="rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            class="cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
                             @click="jumpToNextMatch"
                         >
                             <ChevronDown class="h-4 w-4" />
@@ -541,7 +545,7 @@ watch(
                         <button
                             type="submit"
                             :aria-label="t('cells.search.submit')"
-                            class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            class="cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
                         >
                             <Search class="h-4 w-4" />
                         </button>
@@ -563,7 +567,7 @@ watch(
                         type="button"
                         data-testid="flat-tab"
                         :aria-pressed="n === flatNumber"
-                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+                        class="inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
                         :class="
                             n === flatNumber
                                 ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
@@ -592,7 +596,7 @@ watch(
                 <button
                     type="button"
                     :title="t('cells.map.zoomOut')"
-                    class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                    :class="mapToolbarButtonClass"
                     @click="viewport.zoomOut"
                 >
                     <ZoomOut class="h-4 w-4" />
@@ -605,7 +609,7 @@ watch(
                 <button
                     type="button"
                     :title="t('cells.map.zoomIn')"
-                    class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                    :class="mapToolbarButtonClass"
                     @click="viewport.zoomIn"
                 >
                     <ZoomIn class="h-4 w-4" />
@@ -613,7 +617,7 @@ watch(
                 <button
                     type="button"
                     :title="t('cells.map.rotateLeft')"
-                    class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                    :class="mapToolbarButtonClass"
                     @click="rotateLeftAndRecenter"
                 >
                     <RotateCcw class="h-4 w-4" />
@@ -621,7 +625,7 @@ watch(
                 <button
                     type="button"
                     :title="t('cells.map.rotateRight')"
-                    class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                    :class="mapToolbarButtonClass"
                     @click="rotateRightAndRecenter"
                 >
                     <RotateCw class="h-4 w-4" />
@@ -629,7 +633,7 @@ watch(
                 <button
                     type="button"
                     :title="t('cells.map.resetView')"
-                    class="rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                    :class="mapToolbarButtonClass"
                     @click="resetViewAndRecenter"
                 >
                     <LocateFixed class="h-4 w-4" />

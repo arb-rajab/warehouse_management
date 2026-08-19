@@ -36,7 +36,7 @@ function switchTo(locale: SupportedLocale): void {
             v-for="locale in locales"
             :key="locale.code"
             type="button"
-            class="rounded px-1.5 py-0.5"
+            class="cursor-pointer rounded px-1.5 py-0.5"
             :class="
                 page.props.locale === locale.code
                     ? 'font-semibold text-gray-900 dark:text-white'

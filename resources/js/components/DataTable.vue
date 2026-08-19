@@ -40,7 +40,7 @@ function sortKey(column: Column): string | null {
                         <button
                             v-if="sortKey(column)"
                             type="button"
-                            class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                            class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
                             @click="emit('sort', sortKey(column)!)"
                         >
                             {{ columnLabel(column) }}

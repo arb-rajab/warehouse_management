@@ -97,7 +97,7 @@ onBeforeUnmount(() => {
                     ref="closeButtonRef"
                     type="button"
                     :aria-label="closeLabel"
-                    class="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                    class="cursor-pointer rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
                     @click="open = false"
                 >
                     <X class="h-5 w-5" />

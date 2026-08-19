@@ -23,14 +23,21 @@ export const countBadgeClass =
  * and CellStatusLogs/Index.vue.
  */
 export const filterTriggerButtonClass =
-    'inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
+    'inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 cursor-pointer';
 
 /**
  * The filter-dialog "Clear" button shared by CellHighlightFilters.vue and
  * CellStatusLogs/Index.vue.
  */
 export const filterClearButtonClass =
-    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800';
+    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800 cursor-pointer';
+
+/**
+ * The cell map's toolbar buttons (zoom out/in, rotate left/right, reset
+ * view) shared by Cells/Index.vue.
+ */
+export const mapToolbarButtonClass =
+    'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 /**
  * The filter-field label shared by every FilterDateField/FilterMultiSelect/
