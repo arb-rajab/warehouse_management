@@ -2,6 +2,7 @@
 paths:
   - 'config/backup.php,config/database.php'
   - config/database.php
+  - config/cache.php
 ---
 
 # Config
@@ -11,3 +12,6 @@ Scheduled backups run `backup:run --only-db` (see routes/console.php), which for
 
 ## All sqlite connections run WAL + busy_timeout — required even when the app DB is MySQL/Postgres
 The 'sqlite', 'telescope', 'pulse', and 'health' connections all set journal_mode=wal, synchronous=normal, busy_timeout=5000. Telescope/Pulse/Health are hardcoded to sqlite drivers regardless of the app's default DB_CONNECTION, so this matters in every environment, including production where the main DB is MySQL/Postgres. Without WAL, a scheduled write (health:check, telescope:prune, a queued job) holds an exclusive lock on the whole file and blocks concurrent readers/writers on the same connection — this caused real request hangs/PHP max_execution_time fatals when Telescope+Pulse were added, made worse on a Windows dev box by antivirus re-scanning the frequently-rewritten sqlite files. SQLite silently no-ops these pragmas for the ':memory:' databases phpunit.xml uses, so tests are unaffected. Covered by tests/Feature/DatabaseConnectionsTest.php.
+
+## cache.serializable_classes must allow-list Pulse's value objects
+Laravel 13's default `serializable_classes => false` blocks unserializing ANY object from cache. Laravel Pulse's dashboard cards (Exceptions, Servers) cache a Collection of stdClass rows with a CarbonImmutable property via `Cache::remember`, using whatever store `cache.default` resolves to — `serializable_classes` is a single global CacheManager setting, not per-store. With it `false`, those cards throw "incomplete object ... Illuminate\Support\Collection" (__PHP_Incomplete_Class) when rendered. Keep `serializable_classes` as an explicit allow-list including `Illuminate\Support\Collection::class`, `stdClass::class`, and `Carbon\CarbonImmutable::class` — do not set it back to `false` or `true`. If Pulse adds cards that cache other object types, extend this list rather than disabling the check.

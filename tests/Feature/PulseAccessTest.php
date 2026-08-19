@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 
 test('an admin passes the viewPulse gate', function () {
@@ -27,4 +30,23 @@ test('pulse.allowed_ips falls back to telescope.allowed_ips when PULSE_ALLOWED_I
     expect(getenv('PULSE_ALLOWED_IPS'))->toBeFalse('this test only proves the fallback when PULSE_ALLOWED_IPS is not set in the environment');
 
     expect(config('pulse.allowed_ips'))->toBe(config('telescope.allowed_ips'));
+});
+
+test('cache can unserialize the Collection/stdClass/CarbonImmutable payloads Pulse dashboard cards store', function () {
+    // Pulse's dashboard cards use the "database" store in production (config('cache.default')),
+    // which actually serializes values, unlike the "array" store this test suite runs on by default.
+    $store = Cache::store('database');
+    $key = 'pulse-cache-serializable-classes-test';
+
+    $payload = collect([
+        (object) ['class' => 'Exception', 'location' => 'app/Foo.php:1', 'latest' => CarbonImmutable::now(), 'count' => 3],
+    ]);
+
+    $store->put($key, $payload, now()->addMinute());
+    $restored = $store->get($key);
+
+    expect($restored)->toBeInstanceOf(Collection::class)
+        ->and($restored->isEmpty())->toBeFalse()
+        ->and($restored->first())->toBeInstanceOf(stdClass::class)
+        ->and($restored->first()->latest)->toBeInstanceOf(CarbonImmutable::class);
 });
