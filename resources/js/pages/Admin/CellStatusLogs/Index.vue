@@ -402,7 +402,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                 >
                     <button
                         type="submit"
-                        class="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
                     >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
@@ -428,7 +428,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
             }}</span>
             <button
                 type="button"
-                class="inline-flex items-center gap-1 font-medium hover:underline"
+                class="inline-flex cursor-pointer items-center gap-1 font-medium hover:underline"
                 @click="clearFilters"
             >
                 <X class="h-3.5 w-3.5 shrink-0" />
@@ -543,7 +543,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                     <template v-if="log.pallet">
                         <button
                             type="button"
-                            class="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            class="inline-flex cursor-pointer items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
                             :title="t('cellLog.columns.viewPalletHistory')"
                             @click="viewPalletHistory(log.pallet.id)"
                         >

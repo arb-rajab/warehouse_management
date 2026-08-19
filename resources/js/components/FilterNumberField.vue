@@ -28,7 +28,7 @@ const model = defineModel<string>({ required: true });
             step="1"
             :placeholder="placeholder"
             :disabled="disabled"
-            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800"
         />
     </div>
 </template>

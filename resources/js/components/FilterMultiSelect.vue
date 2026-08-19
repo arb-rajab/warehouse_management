@@ -100,7 +100,7 @@ onBeforeUnmount(() => {
         <button
             :id="id"
             type="button"
-            class="flex w-full min-w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
+            class="flex w-full min-w-48 cursor-pointer items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
             aria-haspopup="listbox"
             :aria-expanded="open"
             @click="open = !open"
@@ -118,7 +118,7 @@ onBeforeUnmount(() => {
                 :key="option.value"
                 role="option"
                 :aria-selected="isChecked(option.value)"
-                class="flex items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
             >
                 <input
                     :ref="(el) => setOptionRef(el, index)"
