@@ -17,7 +17,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php | .ai/rules/concerns.md |
 | config/telescope.php,database/migrations/*telescope*, config/pulse.php,database/migrations/*pulse* | .ai/rules/config-migrations.md |
-| config/backup.php,config/database.php, config/database.php | .ai/rules/config.md |
+| config/backup.php,config/database.php, config/database.php, config/cache.php | .ai/rules/config.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts,app/Http/Controllers/Admin/CellController.php | .ai/rules/controllers-admin.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | resources/js/pages/Admin/Dashboard/Index.vue | .ai/rules/dashboard.md |
