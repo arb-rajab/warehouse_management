@@ -643,7 +643,7 @@ watch(
             <div
                 ref="viewportEl"
                 data-testid="map-viewport"
-                class="relative h-[32rem] touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-800 dark:bg-neutral-950"
+                class="relative h-[32rem] cursor-grab touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950"
                 @wheel.prevent="viewport.onWheel"
                 @pointerdown="viewport.onPointerDown"
                 @pointermove="viewport.onPointerMove"

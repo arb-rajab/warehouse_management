@@ -1008,4 +1008,12 @@ describe('Cells Index (warehouse map)', () => {
             '150%',
         );
     });
+
+    it('shows a grab cursor on the map viewport to indicate it is scrollable', () => {
+        const wrapper = mountPage([row()], []);
+
+        const classes = wrapper.get('[data-testid="map-viewport"]').classes();
+        expect(classes).toContain('cursor-grab');
+        expect(classes).toContain('active:cursor-grabbing');
+    });
 });
