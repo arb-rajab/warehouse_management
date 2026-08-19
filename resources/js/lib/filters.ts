@@ -53,3 +53,12 @@ export function selectedCountLabel(count: number): string {
 export function columnNumberOptions(maxColumnNumber: number): number[] {
     return Array.from({ length: maxColumnNumber }, (_, i) => i + 1);
 }
+
+/**
+ * Counts how many of the given flags are true — shared by every
+ * active-filter-count computed (CellStatusLogs/Index.vue's
+ * `activeFilterCount`, cellHighlight.ts's `countActiveCellHighlightFilters`).
+ */
+export function countActive(flags: boolean[]): number {
+    return flags.filter(Boolean).length;
+}

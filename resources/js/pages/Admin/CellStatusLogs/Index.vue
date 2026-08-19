@@ -24,6 +24,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import {
     columnNumberOptions,
+    countActive,
     countBadgeClass,
     filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
@@ -73,37 +74,47 @@ const filters = reactive({
     sort_direction: props.filters.sort_direction ?? '',
 });
 
-const dateRangeDisabled = computed(() => filters.created_within_days !== '');
-const createdWithinDaysDisabled = computed(
+function exclusivePair(rangeFilled: () => boolean, daysFilled: () => boolean) {
+    return {
+        rangeDisabled: computed(daysFilled),
+        daysDisabled: computed(rangeFilled),
+    };
+}
+
+const {
+    rangeDisabled: dateRangeDisabled,
+    daysDisabled: createdWithinDaysDisabled,
+} = exclusivePair(
     () => filters.date_from !== '' || filters.date_to !== '',
+    () => filters.created_within_days !== '',
 );
 
-const expirationRangeDisabled = computed(
-    () => filters.expires_within_days !== '',
-);
-const expiresWithinDaysDisabled = computed(
+const {
+    rangeDisabled: expirationRangeDisabled,
+    daysDisabled: expiresWithinDaysDisabled,
+} = exclusivePair(
     () =>
         filters.expiration_date_from !== '' ||
         filters.expiration_date_to !== '',
+    () => filters.expires_within_days !== '',
 );
 
 const filtersOpen = ref(false);
 
-const activeFilterCount = computed(
-    () =>
-        [
-            filters.product_id.length > 0,
-            filters.row_id !== '',
-            filters.column_number !== '',
-            filters.user_id.length > 0,
-            filters.action.length > 0,
-            filters.date_from !== '' ||
-                filters.date_to !== '' ||
-                filters.created_within_days !== '',
-            filters.expiration_date_from !== '' ||
-                filters.expiration_date_to !== '' ||
-                filters.expires_within_days !== '',
-        ].filter(Boolean).length,
+const activeFilterCount = computed(() =>
+    countActive([
+        filters.product_id.length > 0,
+        filters.row_id !== '',
+        filters.column_number !== '',
+        filters.user_id.length > 0,
+        filters.action.length > 0,
+        filters.date_from !== '' ||
+            filters.date_to !== '' ||
+            filters.created_within_days !== '',
+        filters.expiration_date_from !== '' ||
+            filters.expiration_date_to !== '' ||
+            filters.expires_within_days !== '',
+    ]),
 );
 
 function applyFilters(): void {
