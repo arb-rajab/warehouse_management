@@ -101,6 +101,15 @@ function tileByLabelAndQuery(
         );
 }
 
+async function openCustomExpiringDaysDialog(
+    wrapper: ReturnType<typeof mountPage>,
+): Promise<void> {
+    const trigger = wrapper
+        .findAll('button')
+        .find((button) => button.text().includes(t('expiringWindow.label')));
+    await trigger?.trigger('click');
+}
+
 describe('Dashboard Index', () => {
     beforeEach(() => {
         usePageMock.mockReset();
@@ -180,32 +189,41 @@ describe('Dashboard Index', () => {
         }
     });
 
-    it('shows a visible label for the custom expiring-days input', () => {
+    it('keeps the custom expiring-days field out of the DOM until its dialog is opened', () => {
         const wrapper = mountPage();
 
-        expect(
-            wrapper.get('label[for="dashboard-custom-expiring-days"]').text(),
-        ).toBe(t('expiringWindow.label'));
+        expect(wrapper.find('#dashboard-custom-expiring-days').exists()).toBe(
+            false,
+        );
+        expect(wrapper.text()).toContain(t('expiringWindow.label'));
     });
 
     it('renders the custom expiring-soon card with its current count and day count', () => {
         const wrapper = mountPage();
 
         const customLink = wrapper
-            .find('#dashboard-custom-expiring-days')
-            .element.closest('div')
-            ?.querySelector('a');
-        expect(customLink?.getAttribute('href')).toBe('/admin/cells');
-        expect(customLink?.getAttribute('data-query')).toBe(
-            JSON.stringify({ expires_within_days: 45 }),
-        );
-        expect(
-            customLink?.querySelector('svg.lucide-calendar-x')?.tagName,
-        ).toBe('svg');
+            .findAll('a')
+            .find(
+                (link) =>
+                    link.attributes('data-query') ===
+                    JSON.stringify({ expires_within_days: 45 }),
+            );
+        expect(customLink?.attributes('href')).toBe('/admin/cells');
+        expect(customLink?.find('svg.lucide-calendar-x').exists()).toBe(true);
         expect(wrapper.text()).toContain('8');
         expect(wrapper.text()).toContain(
             t('dashboard.expiring.soon', { days: 45 }),
         );
+    });
+
+    it('opens the custom expiring-days dialog pre-filled with the current day count, and shows a visible label', async () => {
+        const wrapper = mountPage();
+
+        await openCustomExpiringDaysDialog(wrapper);
+
+        expect(
+            wrapper.get('label[for="dashboard-custom-expiring-days"]').text(),
+        ).toBe(t('cellHighlight.expiresWithinDays'));
         expect(
             (
                 wrapper.get('#dashboard-custom-expiring-days')
@@ -214,12 +232,18 @@ describe('Dashboard Index', () => {
         ).toBe('45');
     });
 
-    it('reloads with the new custom day count when it changes', async () => {
+    it("doesn't reload while the custom expiring-days field is being edited, only once the dialog form is submitted", async () => {
         const wrapper = mountPage();
+
+        await openCustomExpiringDaysDialog(wrapper);
 
         const input = wrapper.get('#dashboard-custom-expiring-days');
         await input.setValue('90');
         await input.trigger('change');
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+
+        await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
