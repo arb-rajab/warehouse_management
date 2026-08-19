@@ -45,9 +45,8 @@ class PalletFactory extends Factory
     }
 
     /**
-     * Backdate the pallet by a generous 30 days, so it reads as stale under both
-     * the fixed {@see Pallet::STALE_AFTER_DAYS} threshold and any reasonable
-     * caller-chosen day count passed to {@see Pallet::isStaleAfter()}.
+     * Backdate the pallet by a generous 30 days, so it reads as stale under any
+     * reasonable caller-chosen day count passed to {@see Pallet::isStaleAfter()}.
      */
     public function stale(): static
     {
