@@ -50,10 +50,7 @@ export function subtractDays(dateString: string, days: number): string {
  * browser clock (the caller passes in the server-provided "today").
  */
 export function addDays(dateString: string, days: number): string {
-    const date = new Date(`${dateString}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + days);
-
-    return date.toISOString().slice(0, 10);
+    return subtractDays(dateString, -days);
 }
 
 /**

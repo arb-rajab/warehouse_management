@@ -2,18 +2,18 @@ import { reactive, readonly } from 'vue';
 
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 2.5;
-export const ZOOM_STEP = 0.2;
-export const WHEEL_ZOOM_SENSITIVITY = 0.001;
-export const ROTATION_STEP_DEGREES = 90;
+const ZOOM_STEP = 0.2;
+const WHEEL_ZOOM_SENSITIVITY = 0.001;
+const ROTATION_STEP_DEGREES = 90;
 
-export interface MapViewportState {
+interface MapViewportState {
     panX: number;
     panY: number;
     zoom: number;
     rotation: number;
 }
 
-export function initialViewportState(): MapViewportState {
+function initialViewportState(): MapViewportState {
     return { panX: 0, panY: 0, zoom: 1, rotation: 0 };
 }
 
@@ -70,7 +70,7 @@ export function viewportTransform(state: MapViewportState): string {
  * band axis's direction (stacked rows vs. side-by-side columns), the cell-number order
  * within each band, and which edge the band label sits on change with rotation.
  */
-export interface MapOrientation {
+interface MapOrientation {
     /** Bands are laid out as side-by-side columns instead of stacked rows. */
     bandsAsColumns: boolean;
     /** Cell numbers within each band are listed high-to-low instead of low-to-high. */

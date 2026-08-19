@@ -4,6 +4,7 @@ import {
     isCellStale,
 } from '@/lib/cellStatus';
 import type { MatchableCell } from '@/lib/cellStatus';
+import { countActive } from '@/lib/filters';
 import type { Cell } from '@/types/admin';
 
 /**
@@ -32,13 +33,13 @@ export function emptyCellHighlightFilters(): CellHighlightFiltersValue {
 export function countActiveCellHighlightFilters(
     filters: CellHighlightFiltersValue,
 ): number {
-    return [
+    return countActive([
         filters.state.length > 0,
         filters.expired,
         filters.expiresWithinDays !== '',
         filters.productIds.length > 0,
         filters.staleAfterDays !== '',
-    ].filter(Boolean).length;
+    ]);
 }
 
 /**
