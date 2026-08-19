@@ -13,6 +13,16 @@ use Illuminate\Validation\Rule;
 trait FiltersCellStatusLogs
 {
     /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return $this->cellStatusLogFilterRules();
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     protected function cellStatusLogFilterRules(): array
