@@ -128,6 +128,36 @@ describe('AdminLayout', () => {
         expect(rowsLink?.attributes('aria-current')).toBeUndefined();
     });
 
+    it('marks the map section active when navigated to with a filter query string', () => {
+        const wrapper = mountLayout('/admin/cells?state=empty');
+
+        const links = wrapper.findAll('nav a');
+        const mapLink = links.find(
+            (link) => link.attributes('href') === '/admin/cells',
+        );
+        const dashboardLink = links.find(
+            (link) => link.attributes('href') === '/admin',
+        );
+
+        expect(mapLink?.attributes('aria-current')).toBe('page');
+        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+    });
+
+    it('marks the cell log section active when navigated to with a filter query string', () => {
+        const wrapper = mountLayout('/admin/cell-logs?action=inbound');
+
+        const links = wrapper.findAll('nav a');
+        const cellLogLink = links.find(
+            (link) => link.attributes('href') === '/admin/cell-logs',
+        );
+        const dashboardLink = links.find(
+            (link) => link.attributes('href') === '/admin',
+        );
+
+        expect(cellLogLink?.attributes('aria-current')).toBe('page');
+        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+    });
+
     it('links the map nav item straight to the warehouse map with no filters applied', () => {
         const wrapper = mountLayout('/admin/rows');
 
