@@ -45,8 +45,9 @@ const navItems = computed(() => [
  * actually open. Only the longest matching href wins.
  */
 function isActive(href: string): boolean {
+    const currentPath = page.url.split('?')[0];
     const matches = (candidate: string) =>
-        page.url === candidate || page.url.startsWith(`${candidate}/`);
+        currentPath === candidate || currentPath.startsWith(`${candidate}/`);
 
     if (!matches(href)) {
         return false;
