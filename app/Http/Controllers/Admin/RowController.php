@@ -71,12 +71,10 @@ class RowController extends Controller
         $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $row) {
-            $row->cells()->lockForUpdate()->get();
-
             $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
                 || $validated['flats_count'] !== $row->flats_count;
 
-            if ($dimensionsChanging && $row->hasPallets()) {
+            if ($dimensionsChanging && $this->lockedRowHasPallets($row)) {
                 return back()->withErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
             }
 
@@ -89,9 +87,7 @@ class RowController extends Controller
     public function destroy(Row $row): RedirectResponse
     {
         return DB::transaction(function () use ($row) {
-            $row->cells()->lockForUpdate()->get();
-
-            if ($row->hasPallets()) {
+            if ($this->lockedRowHasPallets($row)) {
                 return back()->withErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
             }
 
@@ -99,5 +95,12 @@ class RowController extends Controller
 
             return redirect()->route('admin.rows.index');
         });
+    }
+
+    private function lockedRowHasPallets(Row $row): bool
+    {
+        $row->cells()->lockForUpdate()->get();
+
+        return $row->hasPallets();
     }
 }
