@@ -23,6 +23,16 @@ test('the pulse route middleware is IP-restricted via pulse.allowed_ips', functi
     expect(config('pulse.middleware'))->toContain('App\Http\Middleware\RestrictToAllowedIps:pulse.allowed_ips');
 });
 
+test('the pulse dashboard route rejects a guest', function () {
+    $this->get('/pulse')->assertForbidden();
+});
+
+test('the pulse dashboard route rejects a non-admin user', function () {
+    $user = User::factory()->mobileUser()->create();
+
+    $this->actingAs($user)->get('/pulse')->assertForbidden();
+});
+
 test('pulse.allowed_ips falls back to telescope.allowed_ips when PULSE_ALLOWED_IPS is unset', function () {
     expect(getenv('PULSE_ALLOWED_IPS'))->toBeFalse('this test only proves the fallback when PULSE_ALLOWED_IPS is not set in the environment');
 
