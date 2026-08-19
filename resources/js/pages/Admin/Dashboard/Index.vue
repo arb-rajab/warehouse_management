@@ -4,9 +4,11 @@ import {
     ArrowLeftRight,
     CalendarPlus,
     CalendarX,
+    Check,
     CircleDashed,
     Inbox,
     PackageOpen,
+    SlidersHorizontal,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
@@ -14,11 +16,14 @@ import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellCo
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
+import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
+import FilterNumberField from '@/components/FilterNumberField.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
-    fieldLabelClass,
+    filterApplyButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
+    filterTriggerButtonClass,
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -84,10 +89,16 @@ const ACTIVITY_ACTIONS: {
     },
 ];
 
-const customExpiringDays = ref(String(props.stats.expiring.custom.days));
+const customExpiringDaysDialogOpen = ref(false);
+const customExpiringDaysDraft = ref(String(props.stats.expiring.custom.days));
 
-function onCustomExpiringDaysChange(): void {
-    if (customExpiringDays.value === '') {
+function openCustomExpiringDaysDialog(): void {
+    customExpiringDaysDraft.value = String(props.stats.expiring.custom.days);
+    customExpiringDaysDialogOpen.value = true;
+}
+
+function submitCustomExpiringDays(): void {
+    if (customExpiringDaysDraft.value === '') {
         return;
     }
 
@@ -95,10 +106,11 @@ function onCustomExpiringDaysChange(): void {
         dashboardIndex().url,
         {
             product_id: props.filters.product_id ?? [],
-            expiring_days: Number(customExpiringDays.value),
+            expiring_days: Number(customExpiringDaysDraft.value),
         },
         { preserveState: true, replace: true },
     );
+    customExpiringDaysDialogOpen.value = false;
 }
 
 function onProductIdsChange(ids: string[]): void {
@@ -223,21 +235,41 @@ function onProductIdsChange(ids: string[]): void {
                             }}
                         </div>
                     </Link>
-                    <label
-                        for="dashboard-custom-expiring-days"
-                        :class="[fieldLabelClass, 'mt-2']"
-                        >{{ t('expiringWindow.label') }}</label
+                    <button
+                        type="button"
+                        :class="['mt-2', filterTriggerButtonClass]"
+                        @click="openCustomExpiringDaysDialog"
                     >
-                    <input
-                        id="dashboard-custom-expiring-days"
-                        v-model="customExpiringDays"
-                        type="number"
-                        min="1"
-                        step="1"
-                        :placeholder="t('expiringWindow.customPlaceholder')"
-                        class="w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                        @change="onCustomExpiringDaysChange"
-                    />
+                        <SlidersHorizontal class="h-4 w-4" />
+                        {{ t('expiringWindow.label') }}
+                    </button>
+
+                    <FilterDialog
+                        v-model:open="customExpiringDaysDialogOpen"
+                        :title="t('expiringWindow.label')"
+                        :close-label="t('cellLog.filters.close')"
+                    >
+                        <form
+                            class="space-y-4"
+                            @submit.prevent="submitCustomExpiringDays"
+                        >
+                            <FilterNumberField
+                                id="dashboard-custom-expiring-days"
+                                v-model="customExpiringDaysDraft"
+                                :label="t('cellHighlight.expiresWithinDays')"
+                                :placeholder="
+                                    t('expiringWindow.customPlaceholder')
+                                "
+                            />
+                            <button
+                                type="submit"
+                                :class="filterApplyButtonClass"
+                            >
+                                <Check class="h-4 w-4 shrink-0" />
+                                {{ t('expiringWindow.apply') }}
+                            </button>
+                        </form>
+                    </FilterDialog>
                 </div>
             </div>
         </section>

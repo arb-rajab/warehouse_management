@@ -26,6 +26,7 @@ import {
     columnNumberOptions,
     countActive,
     countBadgeClass,
+    filterApplyButtonClass,
     filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -411,10 +412,7 @@ const displayLogs = computed<DisplayCellStatusLog[]>(() => {
                 <div
                     class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
                 >
-                    <button
-                        type="submit"
-                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
-                    >
+                    <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>

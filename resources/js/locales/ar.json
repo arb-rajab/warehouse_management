@@ -175,7 +175,8 @@
     },
     "expiringWindow": {
         "label": "فترة الاقتراب من الانتهاء",
-        "customPlaceholder": "مثال: 45"
+        "customPlaceholder": "مثال: 45",
+        "apply": "تطبيق"
     },
     "cells": {
         "title": "الخلايا",

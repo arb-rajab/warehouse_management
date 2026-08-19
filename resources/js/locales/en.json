@@ -175,7 +175,8 @@
     },
     "expiringWindow": {
         "label": "Expiring soon window",
-        "customPlaceholder": "e.g. 45"
+        "customPlaceholder": "e.g. 45",
+        "apply": "Apply"
     },
     "cells": {
         "title": "Cells",
