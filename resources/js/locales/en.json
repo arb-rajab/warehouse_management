@@ -6,7 +6,8 @@
         "map": "Map",
         "cellLog": "Cell Log",
         "users": "Users",
-        "logout": "Log out"
+        "logout": "Log out",
+        "confirmLogout": "Log out of your account?"
     },
     "language": {
         "label": "Language",
