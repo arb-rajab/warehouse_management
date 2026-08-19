@@ -1016,4 +1016,11 @@ describe('Cells Index (warehouse map)', () => {
         expect(classes).toContain('cursor-grab');
         expect(classes).toContain('active:cursor-grabbing');
     });
+
+    it('disables text selection on the map viewport so dragging does not select cell text', () => {
+        const wrapper = mountPage([row()], []);
+
+        const classes = wrapper.get('[data-testid="map-viewport"]').classes();
+        expect(classes).toContain('select-none');
+    });
 });
