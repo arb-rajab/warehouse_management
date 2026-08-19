@@ -1,6 +1,7 @@
 ---
 paths:
   - 'database/migrations/**'
+  - database/migrations/2026_08_08_154136_create_products_table.php
 ---
 
 # Migrations
@@ -17,3 +18,6 @@ Don't just assert a column/table exists — assert the behavior the migration en
 - Table/column dropped: `Schema::hasTable()` / `Schema::hasColumn()` is false.
 
 Model relationship tests (`tests/Feature/Models/*Test.php`) cover normal relation resolution — they don't double as constraint tests, so both are needed when a migration adds a relation with a delete rule.
+
+## Products table is owned by another project in production — migration skips there
+The `products` table already exists in the production database, created and managed by an unrelated project responsible for product CRUD. This app's `create_products_table` migration guards both `up()` and `down()` with `if (app()->isProduction()) { return; }` so it never creates/drops that table in production — it only runs in local/testing/staging. Keep this guard if the migration is ever edited, and don't add new migrations that alter the `products` table's schema in a way that would run against production.
