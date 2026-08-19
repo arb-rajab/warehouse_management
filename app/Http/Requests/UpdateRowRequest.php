@@ -2,22 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalizesRowLetter;
 use App\Models\Row;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 
 class UpdateRowRequest extends FormRequest
 {
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->filled('letter')) {
-            $this->merge(['letter' => Str::upper($this->string('letter'))]);
-        }
-    }
+    use NormalizesRowLetter;
 
     /**
      * Get the validation rules that apply to the request.
