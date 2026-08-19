@@ -9,6 +9,7 @@ import {
     PackageOpen,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import type { Component } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
@@ -67,6 +68,21 @@ const productQuery = computed(() =>
         ? { product_id: props.filters.product_id }
         : {},
 );
+
+const ACTIVITY_ACTIONS: {
+    key: 'stored' | 'opened' | 'emptied' | 'transferred';
+    icon: Component;
+    filterAction: string[];
+}[] = [
+    { key: 'stored', icon: CalendarPlus, filterAction: ['stored'] },
+    { key: 'opened', icon: PackageOpen, filterAction: ['opened'] },
+    { key: 'emptied', icon: CircleDashed, filterAction: ['emptied'] },
+    {
+        key: 'transferred',
+        icon: ArrowLeftRight,
+        filterAction: ['transferred_out', 'transferred_in'],
+    },
+];
 
 const customExpiringDays = ref(String(props.stats.expiring.custom.days));
 
@@ -232,52 +248,18 @@ function onProductIdsChange(ids: string[]): void {
             </h2>
             <div :class="tileGridClass">
                 <DashboardStatTile
-                    :label="t('dashboard.activityToday.stored')"
-                    :value="props.stats.activity_today.stored"
+                    v-for="action in ACTIVITY_ACTIONS"
+                    :key="action.key"
+                    :label="t(`dashboard.activityToday.${action.key}`)"
+                    :value="props.stats.activity_today[action.key]"
                     :href="cellLogsIndex().url"
                     :query="{
-                        action: ['stored'],
+                        action: action.filterAction,
                         date_from: props.today,
                         date_to: props.today,
                         ...productQuery,
                     }"
-                    :icon="CalendarPlus"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityToday.opened')"
-                    :value="props.stats.activity_today.opened"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['opened'],
-                        date_from: props.today,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="PackageOpen"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityToday.emptied')"
-                    :value="props.stats.activity_today.emptied"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['emptied'],
-                        date_from: props.today,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="CircleDashed"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityToday.transferred')"
-                    :value="props.stats.activity_today.transferred"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['transferred_out', 'transferred_in'],
-                        date_from: props.today,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="ArrowLeftRight"
+                    :icon="action.icon"
                 />
             </div>
         </section>
@@ -288,52 +270,18 @@ function onProductIdsChange(ids: string[]): void {
             </h2>
             <div :class="tileGridClass">
                 <DashboardStatTile
-                    :label="t('dashboard.activityWeek.stored')"
-                    :value="props.stats.activity_week.stored"
+                    v-for="action in ACTIVITY_ACTIONS"
+                    :key="action.key"
+                    :label="t(`dashboard.activityWeek.${action.key}`)"
+                    :value="props.stats.activity_week[action.key]"
                     :href="cellLogsIndex().url"
                     :query="{
-                        action: ['stored'],
+                        action: action.filterAction,
                         date_from: props.weekStart,
                         date_to: props.today,
                         ...productQuery,
                     }"
-                    :icon="CalendarPlus"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityWeek.opened')"
-                    :value="props.stats.activity_week.opened"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['opened'],
-                        date_from: props.weekStart,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="PackageOpen"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityWeek.emptied')"
-                    :value="props.stats.activity_week.emptied"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['emptied'],
-                        date_from: props.weekStart,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="CircleDashed"
-                />
-                <DashboardStatTile
-                    :label="t('dashboard.activityWeek.transferred')"
-                    :value="props.stats.activity_week.transferred"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: ['transferred_out', 'transferred_in'],
-                        date_from: props.weekStart,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
-                    :icon="ArrowLeftRight"
+                    :icon="action.icon"
                 />
             </div>
         </section>
