@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
+import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import {
     countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
@@ -103,18 +104,13 @@ function clear(): void {
                     >
                 </div>
 
-                <FilterMultiSelect
+                <FilterProductSelect
                     id="highlight-product"
                     v-model="filters.productIds"
                     :label="t('cellLog.filters.product')"
                     :all-label="t('cellLog.filters.all')"
                     :selected-count-label="selectedCountLabel"
-                    :options="
-                        products.map((product) => ({
-                            value: product.id.toString(),
-                            label: product.name,
-                        }))
-                    "
+                    :selected="products"
                 />
 
                 <FilterNumberField

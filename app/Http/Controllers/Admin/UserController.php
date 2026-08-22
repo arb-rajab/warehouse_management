@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Http\Resources\CellStatusLogResource;
 use App\Http\Resources\UserResource;
+use App\Models\CellStatusLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +32,24 @@ class UserController extends Controller
     public function create(): Response
     {
         return Inertia::render('Admin/Users/Create');
+    }
+
+    public function show(Request $request, User $user): Response
+    {
+        $logs = CellStatusLog::query()
+            ->select(CellStatusLog::SELECT_COLUMNS)
+            ->with(CellStatusLog::WITH_DETAILS)
+            ->where('user_id', $user->id)
+            ->sorted($request)
+            ->paginate(25)
+            ->withQueryString();
+
+        CellStatusLog::attachNextLogs($logs->getCollection());
+
+        return Inertia::render('Admin/Users/Show', [
+            'user' => new UserResource($user->loadMissing('roles:id,name')),
+            'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
+        ]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse

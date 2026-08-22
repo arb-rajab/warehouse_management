@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CellStatusLog;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -76,6 +77,99 @@ test('an unauthenticated caller is redirected to login when viewing the create u
     $response = $this->get('/admin/users/create');
 
     $response->assertRedirect(route('login'));
+});
+
+test('an authenticated admin can view a users action history with every property the table renders', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create(['name' => 'Bob Mover']);
+    $log = CellStatusLog::factory()->create(['user_id' => $target->id, 'note' => 'Handled with care']);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Users/Show')
+            ->has('user', fn (Assert $user) => $user
+                ->where('id', $target->id)
+                ->where('name', 'Bob Mover')
+                ->etc()
+            )
+            ->has('logs.data', 1)
+            ->has('logs.data.0', fn (Assert $logProp) => $logProp
+                ->where('id', $log->id)
+                ->where('note', 'Handled with care')
+                ->etc()
+            )
+    );
+});
+
+test('a users action history only shows their own logs, excluding another users', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $otherUser = User::factory()->mobileUser()->create();
+
+    $matching = CellStatusLog::factory()->create(['user_id' => $target->id]);
+    CellStatusLog::factory()->create(['user_id' => $otherUser->id]);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('a users action history paginates instead of returning everything at once', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id]);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 25)
+            ->where('logs.meta.total', 30)
+    );
+});
+
+test('a users action history defaults to newest-first', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $older = backdate(CellStatusLog::factory()->create(['user_id' => $target->id]), '2026-08-01 10:00:00');
+    $newer = backdate(CellStatusLog::factory()->create(['user_id' => $target->id]), '2026-08-01 12:00:00');
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $newer->id)
+            ->where('logs.data.1.id', $older->id)
+    );
+});
+
+test('a mobile app user cannot view a users action history', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $target = User::factory()->mobileUser()->create();
+
+    $response = $this->actingAs($mobileUser)->get("/admin/users/{$target->id}");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing a users action history', function () {
+    $target = User::factory()->mobileUser()->create();
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('viewing the action history for a non-existent user returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/users/999999');
+
+    $response->assertNotFound();
 });
 
 test('an admin can create a mobile user', function () {

@@ -5,6 +5,7 @@
         "rows": "الصفوف",
         "map": "الخريطة",
         "cellLog": "سجل الخلايا",
+        "products": "المنتجات",
         "users": "المستخدمون",
         "logout": "تسجيل الخروج",
         "confirmLogout": "هل تريد تسجيل الخروج من حسابك؟"
@@ -17,6 +18,7 @@
     "common": {
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
         "cancel": "إلغاء",
+        "filteredColumn": "متأثر بفلتر نشط",
         "duration": {
             "day": "ي",
             "hour": "س",
@@ -84,6 +86,7 @@
             "columnRole": "الدور",
             "columnActions": "الإجراءات",
             "empty": "لا يوجد مستخدمون بعد.",
+            "view": "عرض",
             "edit": "تعديل",
             "delete": "حذف",
             "roleAdmin": "مسؤول",
@@ -98,6 +101,11 @@
             "title": "تعديل {name}",
             "submit": "حفظ التغييرات",
             "submitting": "جارٍ الحفظ..."
+        },
+        "show": {
+            "title": "إجراءات {name}",
+            "editUser": "تعديل المستخدم",
+            "empty": "لا يوجد إجراءات بعد."
         },
         "fields": {
             "name": "الاسم",
@@ -137,7 +145,19 @@
             "all": "الكل",
             "apply": "تطبيق الفلاتر",
             "clear": "مسح",
-            "palletHistory": "عرض سجل الطبلية رقم #{id}"
+            "searchPlaceholder": "بحث عن منتجات…",
+            "searching": "جارٍ البحث…",
+            "noProductsFound": "لم يتم العثور على منتجات.",
+            "palletHistory": "عرض سجل الطبلية رقم #{id}",
+            "flaggedOnly": "المُعلَّمة فقط"
+        },
+        "flags": {
+            "acknowledge": "تأكيد المراجعة",
+            "reasons": {
+                "rapid_actions": "إجراءات متسارعة",
+                "off_hours": "نشاط خارج ساعات العمل",
+                "quick_flip": "تخزين وتفريغ سريع"
+            }
         },
         "columns": {
             "cell": "الخلية",
@@ -251,5 +271,23 @@
             "emptied": "تم التفريغ",
             "transferred": "تم النقل"
         }
+    },
+    "products": {
+        "title": "المنتجات",
+        "filters": {
+            "sections": {
+                "occupancy": "الإشغال"
+            }
+        },
+        "columns": {
+            "product": "المنتج",
+            "full": "ممتلئة",
+            "opened": "مفتوحة",
+            "expired": "منتهية الصلاحية",
+            "expiringSoon": "تنتهي ≤{days} يوم",
+            "activityToday": "اليوم",
+            "activityWeek": "هذا الأسبوع"
+        },
+        "empty": "لا توجد منتجات بعد."
     }
 }

@@ -27,7 +27,7 @@ class DashboardController extends Controller
                 'product_id' => $productIds,
             ],
             'filterOptions' => [
-                'products' => Product::filterOptions(),
+                'products' => Product::selectedOptions($productIds ?? []),
             ],
         ]);
     }

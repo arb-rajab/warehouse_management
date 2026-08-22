@@ -264,17 +264,15 @@ test("a rows cell grid exposes today's date", function () {
     Carbon::setTestNow();
 });
 
-test('a rows cell grid exposes the product list for the highlight filter', function () {
+test('a rows cell grid has no pre-selected products for the highlight filter, since it never has an initial selection', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z']);
-    $product = Product::factory()->create(['name' => 'Widgets']);
+    Product::factory()->create(['name' => 'Widgets']);
 
     $response = $this->get("/admin/rows/{$row->letter}");
 
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0.id', $product->id)
-            ->where('filterOptions.products.0.name', 'Widgets')
+        fn (Assert $page) => $page->has('filterOptions.products', 0)
     );
 });
 

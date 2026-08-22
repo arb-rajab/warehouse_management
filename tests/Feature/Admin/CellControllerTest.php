@@ -58,8 +58,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('initialHighlight.expired', false)
             ->where('jumpToCell', null)
             ->where('searchError', false)
-            ->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0.name', 'Widgets')
+            ->has('filterOptions.products', 0)
             ->has('cellHighlightSamples', 4)
             ->has('cellHighlightSamples.0', fn (Assert $sampleProp) => $sampleProp
                 ->where('row_letter', 'A')
@@ -98,6 +97,21 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
     );
 
     Carbon::setTestNow();
+});
+
+test('the warehouse map hydrates only the selected product ids for the highlight filter, not every product', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+    $selected = Product::factory()->create(['name' => 'Widgets']);
+    Product::factory()->create(['name' => 'Unselected Gadgets']);
+
+    $response = $this->get("/admin/cells?product_id[]={$selected->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0.id', $selected->id)
+            ->where('filterOptions.products.0.name', 'Widgets')
+    );
 });
 
 test('the per-flat highlight-match samples cover every flat, unlike the flat-scoped cells prop', function () {

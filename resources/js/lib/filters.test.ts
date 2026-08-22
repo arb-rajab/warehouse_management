@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { columnNumberOptions, countActive } from './filters';
+import { describe, expect, it, vi } from 'vitest';
+import {
+    columnNumberOptions,
+    countActive,
+    debounce,
+    toggleSort,
+} from './filters';
 
 describe('columnNumberOptions', () => {
     it('returns 1..maxColumnNumber', () => {
@@ -22,5 +27,75 @@ describe('countActive', () => {
 
     it('returns 0 for an empty array', () => {
         expect(countActive([])).toBe(0);
+    });
+});
+
+describe('toggleSort', () => {
+    it('sorts a new column ascending', () => {
+        const filters = { sort_by: '', sort_direction: '' };
+
+        toggleSort(filters, 'created_at');
+
+        expect(filters).toEqual({
+            sort_by: 'created_at',
+            sort_direction: 'asc',
+        });
+    });
+
+    it('flips the direction when the same column is clicked again', () => {
+        const filters = { sort_by: 'created_at', sort_direction: 'asc' };
+
+        toggleSort(filters, 'created_at');
+
+        expect(filters).toEqual({
+            sort_by: 'created_at',
+            sort_direction: 'desc',
+        });
+    });
+
+    it('resets to ascending when switching to a different column', () => {
+        const filters = { sort_by: 'created_at', sort_direction: 'desc' };
+
+        toggleSort(filters, 'expiration_date');
+
+        expect(filters).toEqual({
+            sort_by: 'expiration_date',
+            sort_direction: 'asc',
+        });
+    });
+});
+
+describe('debounce', () => {
+    it('calls the function once, after the delay, when called repeatedly in quick succession', () => {
+        vi.useFakeTimers();
+        const fn = vi.fn();
+        const debounced = debounce(fn, 300);
+
+        debounced('a');
+        debounced('b');
+        debounced('c');
+        expect(fn).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(300);
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith('c');
+        vi.useRealTimers();
+    });
+
+    it('calls the function again for a call made after the delay has elapsed', () => {
+        vi.useFakeTimers();
+        const fn = vi.fn();
+        const debounced = debounce(fn, 300);
+
+        debounced('a');
+        vi.advanceTimersByTime(300);
+        debounced('b');
+        vi.advanceTimersByTime(300);
+
+        expect(fn).toHaveBeenCalledTimes(2);
+        expect(fn).toHaveBeenNthCalledWith(1, 'a');
+        expect(fn).toHaveBeenNthCalledWith(2, 'b');
+        vi.useRealTimers();
     });
 });

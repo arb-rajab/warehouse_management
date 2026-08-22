@@ -1,7 +1,32 @@
 <script setup lang="ts" generic="T extends { id: number }">
-import { ArrowDown, ArrowUp, ArrowUpDown, PackageSearch } from '@lucide/vue';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    Filter,
+    PackageSearch,
+} from '@lucide/vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { t } from '@/lib/i18n';
 
-type Column = string | { label: string; sortKey: string };
+type Column =
+    | string
+    | {
+          label: string;
+          sortKey?: string;
+          filtered?: boolean;
+          filterKey?: string;
+          /**
+           * Set to `false` when several columns share one `filterKey` (so
+           * tapping any of their icons opens the same popover) and this
+           * particular column isn't the one meant to advertise it — its
+           * icon then only appears once `filtered` is actually true,
+           * instead of sitting there year-round inviting a tap that does
+           * nothing this column doesn't already offer via a sibling.
+           * Defaults to `true`.
+           */
+          filterIconAlwaysVisible?: boolean;
+      };
 
 defineProps<{
     columns: Column[];
@@ -14,74 +39,237 @@ const emit = defineEmits<{
     sort: [sortKey: string];
 }>();
 
+/**
+ * Which column's filter popover is open, if any — a two-way model so the
+ * parent page can gate its own "apply on change" watcher to only fire while
+ * a popover (not the full filter dialog) is driving the edit.
+ */
+const openFilterKey = defineModel<string | null>('openFilterKey', {
+    default: null,
+});
+
 function columnLabel(column: Column): string {
     return typeof column === 'string' ? column : column.label;
 }
 
 function sortKey(column: Column): string | null {
-    return typeof column === 'string' ? null : column.sortKey;
+    return typeof column === 'string' ? null : (column.sortKey ?? null);
 }
+
+function filterKey(column: Column): string | null {
+    return typeof column === 'string' ? null : (column.filterKey ?? null);
+}
+
+/**
+ * Whether an active filter currently narrows or drives this column's
+ * values — the parent page computes this per column from its own filter
+ * state; DataTable only renders the resulting indicator (same split of
+ * responsibility as the sort arrows above).
+ */
+function isFiltered(column: Column): boolean {
+    return typeof column !== 'string' && (column.filtered ?? false);
+}
+
+function showsFilterIcon(column: Column): boolean {
+    if (filterKey(column) === null) {
+        return false;
+    }
+
+    const alwaysVisible =
+        typeof column === 'string'
+            ? true
+            : (column.filterIconAlwaysVisible ?? true);
+
+    return alwaysVisible || isFiltered(column);
+}
+
+const outerRef = ref<HTMLElement | null>(null);
+const popoverRef = ref<HTMLElement | null>(null);
+const popoverStyle = ref<{ top: string; insetInlineStart: string }>({
+    top: '0px',
+    insetInlineStart: '0px',
+});
+
+const triggerRefs = new Map<string, HTMLElement>();
+
+function setTriggerRef(el: Element | null, key: string): void {
+    if (el instanceof HTMLElement) {
+        triggerRefs.set(key, el);
+    } else {
+        triggerRefs.delete(key);
+    }
+}
+
+/**
+ * The popover renders as a sibling of the table's own `overflow-hidden`
+ * wrapper (that wrapper exists only to clip the header background to the
+ * rounded corners) instead of nested inside a per-column `position:
+ * relative` anchor — nesting it there clipped the popover itself whenever
+ * the table was shorter than the popover. Its position is computed here
+ * from the clicked trigger's own rect instead.
+ */
+function positionPopover(trigger: HTMLElement): void {
+    const outer = outerRef.value;
+
+    if (!outer) {
+        return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const outerRect = outer.getBoundingClientRect();
+
+    popoverStyle.value = {
+        top: `${triggerRect.bottom - outerRect.top + 4}px`,
+        insetInlineStart: `${triggerRect.left - outerRect.left}px`,
+    };
+}
+
+function toggleFilterPopover(key: string, event: MouseEvent): void {
+    if (openFilterKey.value === key) {
+        openFilterKey.value = null;
+
+        return;
+    }
+
+    openFilterKey.value = key;
+    positionPopover(event.currentTarget as HTMLElement);
+}
+
+function onDocumentClick(event: MouseEvent): void {
+    const key = openFilterKey.value;
+
+    if (key === null) {
+        return;
+    }
+
+    const target = event.target as Node;
+    const withinTrigger = triggerRefs.get(key)?.contains(target) ?? false;
+    const withinPopover = popoverRef.value?.contains(target) ?? false;
+
+    if (!withinTrigger && !withinPopover) {
+        openFilterKey.value = null;
+    }
+}
+
+function onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+        openFilterKey.value = null;
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', onDocumentClick);
+    document.addEventListener('keydown', onKeydown);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', onDocumentClick);
+    document.removeEventListener('keydown', onKeydown);
+});
 </script>
 
 <template>
-    <div
-        class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
-    >
-        <table class="w-full text-left text-sm">
-            <thead
-                class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
-            >
-                <tr>
-                    <th
-                        v-for="column in columns"
-                        :key="columnLabel(column)"
-                        class="px-4 py-2 font-medium"
-                    >
-                        <button
-                            v-if="sortKey(column)"
-                            type="button"
-                            class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
-                            @click="emit('sort', sortKey(column)!)"
+    <div ref="outerRef" class="relative">
+        <div
+            class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
+        >
+            <table class="w-full text-left text-sm">
+                <thead
+                    class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
+                >
+                    <tr>
+                        <th
+                            v-for="column in columns"
+                            :key="columnLabel(column)"
+                            class="px-4 py-2 font-medium"
                         >
-                            {{ columnLabel(column) }}
-                            <ArrowUp
-                                v-if="
-                                    sort?.by === sortKey(column) &&
-                                    sort.direction === 'asc'
-                                "
-                                class="h-3 w-3 shrink-0"
-                            />
-                            <ArrowDown
-                                v-else-if="sort?.by === sortKey(column)"
-                                class="h-3 w-3 shrink-0"
-                            />
-                            <ArrowUpDown
-                                v-else
-                                class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
-                            />
-                        </button>
-                        <template v-else>{{ columnLabel(column) }}</template>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-neutral-800">
-                <tr v-for="row in rows" :key="row.id">
-                    <slot name="row" :row="row" />
-                </tr>
-                <tr v-if="rows.length === 0">
-                    <td
-                        :colspan="columns.length"
-                        class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
-                    >
-                        <div class="flex flex-col items-center gap-2">
-                            <PackageSearch
-                                class="h-6 w-6 text-gray-300 dark:text-neutral-700"
-                            />
-                            <span>{{ emptyMessage }}</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                            <div class="flex items-center gap-1">
+                                <button
+                                    v-if="sortKey(column)"
+                                    type="button"
+                                    class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                                    @click="emit('sort', sortKey(column)!)"
+                                >
+                                    {{ columnLabel(column) }}
+                                    <ArrowUp
+                                        v-if="
+                                            sort?.by === sortKey(column) &&
+                                            sort.direction === 'asc'
+                                        "
+                                        class="h-3 w-3 shrink-0"
+                                    />
+                                    <ArrowDown
+                                        v-else-if="sort?.by === sortKey(column)"
+                                        class="h-3 w-3 shrink-0"
+                                    />
+                                    <ArrowUpDown
+                                        v-else
+                                        class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
+                                    />
+                                </button>
+                                <span v-else>{{ columnLabel(column) }}</span>
+
+                                <button
+                                    v-if="showsFilterIcon(column)"
+                                    type="button"
+                                    class="cursor-pointer rounded p-0.5"
+                                    :class="
+                                        isFiltered(column)
+                                            ? 'text-blue-600 dark:text-blue-400'
+                                            : 'text-gray-300 hover:text-gray-500 dark:text-neutral-600 dark:hover:text-neutral-400'
+                                    "
+                                    :title="t('common.filteredColumn')"
+                                    :aria-expanded="
+                                        openFilterKey === filterKey(column)
+                                    "
+                                    :ref="
+                                        (el) =>
+                                            setTriggerRef(
+                                                el as Element | null,
+                                                filterKey(column)!,
+                                            )
+                                    "
+                                    @click="
+                                        toggleFilterPopover(
+                                            filterKey(column)!,
+                                            $event,
+                                        )
+                                    "
+                                >
+                                    <Filter class="h-3 w-3 shrink-0" />
+                                </button>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-neutral-800">
+                    <tr v-for="row in rows" :key="row.id">
+                        <slot name="row" :row="row" />
+                    </tr>
+                    <tr v-if="rows.length === 0">
+                        <td
+                            :colspan="columns.length"
+                            class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
+                        >
+                            <div class="flex flex-col items-center gap-2">
+                                <PackageSearch
+                                    class="h-6 w-6 text-gray-300 dark:text-neutral-700"
+                                />
+                                <span>{{ emptyMessage }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div
+            v-if="openFilterKey !== null"
+            ref="popoverRef"
+            class="absolute z-20 w-64 rounded-md border border-gray-300 bg-white p-3 font-normal text-gray-700 shadow-lg dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            :style="popoverStyle"
+        >
+            <slot name="column-filter" :filter-key="openFilterKey" />
+        </div>
     </div>
 </template>

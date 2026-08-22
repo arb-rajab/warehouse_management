@@ -134,6 +134,15 @@ describe('Users Index', () => {
         expect(roleCell.findComponent(ShieldCheck).exists()).toBe(false);
     });
 
+    it("links a user's view action to their actions page", () => {
+        const wrapper = mountPage([user({ id: 5 })]);
+
+        const viewLink = wrapper
+            .findAll('a')
+            .find((a) => a.text().includes(t('users.index.view')));
+        expect(viewLink?.attributes('href')).toBe('/admin/users/5');
+    });
+
     it("links a user's edit action to their edit page", () => {
         const wrapper = mountPage([user({ id: 5 })]);
 

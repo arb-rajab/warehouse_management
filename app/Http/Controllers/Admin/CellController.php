@@ -51,7 +51,7 @@ class CellController extends Controller
             'jumpToCell' => $matchedCell?->toLocationArray(),
             'searchError' => $searched && $matchedCell === null,
             'filterOptions' => [
-                'products' => Product::filterOptions(),
+                'products' => Product::selectedOptions($request->productIds() ?? []),
             ],
             'cellHighlightSamples' => $this->cellHighlightSamples(),
         ]);

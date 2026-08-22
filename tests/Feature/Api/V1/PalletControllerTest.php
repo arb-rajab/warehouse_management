@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\CellLogAction;
+use App\Enums\CellLogFlagReason;
 use App\Enums\CellState;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use Illuminate\Support\Carbon;
 
 test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
@@ -640,4 +642,82 @@ test('a pallet transfer only logs its own two cells, not another pallets', funct
     expect($logs)->toHaveCount(2);
     expect($logs->firstWhere('cell_id', $sourceCell->id)->related_cell_id)->toBe($destinationCell->id);
     expect($logs->firstWhere('cell_id', $destinationCell->id)->related_cell_id)->toBe($sourceCell->id);
+});
+
+test('storing and then quickly emptying a pallet in the same cell flags the emptied log as a quick flip', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+
+    $storeResponse = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ])->assertCreated();
+
+    Carbon::setTestNow('2026-08-01 12:00:30');
+    $this->postJson("/api/v1/pallets/{$storeResponse->json('id')}/empty")->assertNoContent();
+
+    $emptiedLog = CellStatusLog::query()->where('action', CellLogAction::Emptied->value)->sole();
+
+    expect($emptiedLog->flags()->where('reason', CellLogFlagReason::QuickFlip->value)->exists())->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('performing a pallet action outside working hours flags it as off-hours', function () {
+    Carbon::setTestNow('2026-08-01 23:00:00');
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+
+    $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ])->assertCreated();
+
+    $log = CellStatusLog::query()->sole();
+
+    expect($log->flags()->where('reason', CellLogFlagReason::OffHours->value)->exists())->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('performing many pallet actions quickly as the same user flags rapid actions past the configured threshold', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+
+    for ($i = 0; $i < 6; $i++) {
+        Carbon::setTestNow(now()->addSeconds(10));
+        $storeResponse = $this->postJson('/api/v1/pallets', [
+            'row_letter' => $row->letter,
+            'cell_number' => 1,
+            'flat_number' => 1,
+            'product_id' => $product->id,
+            'expiration_date' => now()->addMonth()->toDateString(),
+        ])->assertCreated();
+
+        Carbon::setTestNow(now()->addSeconds(10));
+        $this->postJson("/api/v1/pallets/{$storeResponse->json('id')}/empty")->assertNoContent();
+    }
+
+    $logs = CellStatusLog::query()->orderBy('id')->get();
+    expect($logs)->toHaveCount(12);
+
+    expect($logs[9]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeFalse();
+    expect($logs[10]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
+    expect($logs[11]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
+
+    Carbon::setTestNow();
 });

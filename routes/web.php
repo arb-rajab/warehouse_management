@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
@@ -41,10 +42,15 @@ Route::middleware('auth')->group(function () {
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
+        Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');
+
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');

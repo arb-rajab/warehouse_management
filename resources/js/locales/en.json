@@ -5,6 +5,7 @@
         "rows": "Rows",
         "map": "Map",
         "cellLog": "Cell Log",
+        "products": "Products",
         "users": "Users",
         "logout": "Log out",
         "confirmLogout": "Log out of your account?"
@@ -17,6 +18,7 @@
     "common": {
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
+        "filteredColumn": "Affected by an active filter",
         "duration": {
             "day": "d",
             "hour": "h",
@@ -84,6 +86,7 @@
             "columnRole": "Role",
             "columnActions": "Actions",
             "empty": "No users yet.",
+            "view": "View",
             "edit": "Edit",
             "delete": "Delete",
             "roleAdmin": "Admin",
@@ -98,6 +101,11 @@
             "title": "Edit {name}",
             "submit": "Save changes",
             "submitting": "Saving..."
+        },
+        "show": {
+            "title": "Actions by {name}",
+            "editUser": "Edit user",
+            "empty": "No actions yet."
         },
         "fields": {
             "name": "Name",
@@ -137,7 +145,19 @@
             "all": "All",
             "apply": "Apply filters",
             "clear": "Clear",
-            "palletHistory": "Showing history for pallet #{id}"
+            "searchPlaceholder": "Search products…",
+            "searching": "Searching…",
+            "noProductsFound": "No products found.",
+            "palletHistory": "Showing history for pallet #{id}",
+            "flaggedOnly": "Flagged only"
+        },
+        "flags": {
+            "acknowledge": "Acknowledge",
+            "reasons": {
+                "rapid_actions": "Rapid actions",
+                "off_hours": "Off-hours activity",
+                "quick_flip": "Quick store/empty"
+            }
         },
         "columns": {
             "cell": "Cell",
@@ -251,5 +271,23 @@
             "emptied": "Emptied",
             "transferred": "Transferred"
         }
+    },
+    "products": {
+        "title": "Products",
+        "filters": {
+            "sections": {
+                "occupancy": "Occupancy"
+            }
+        },
+        "columns": {
+            "product": "Product",
+            "full": "Full",
+            "opened": "Opened",
+            "expired": "Expired",
+            "expiringSoon": "Expiring ≤{days}d",
+            "activityToday": "Today",
+            "activityWeek": "This week"
+        },
+        "empty": "No products yet."
     }
 }

@@ -76,6 +76,11 @@ export interface ProductFilterOption {
     name: string;
 }
 
+/**
+ * Hydration data for a product filter's already-selected ids (see
+ * `FilterProductSelect.vue`'s `selected` prop) — not the full product
+ * catalog, which is fetched on demand via the search endpoint instead.
+ */
 export interface ProductFilterOptions {
     products: ProductFilterOption[];
 }
@@ -143,6 +148,14 @@ export interface CellMap3DBand {
 export type CellLogAction =
     'stored' | 'opened' | 'emptied' | 'transferred_out' | 'transferred_in';
 
+export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
+
+export interface CellStatusLogFlag {
+    id: number;
+    reason: CellLogFlagReason;
+    acknowledged: boolean;
+}
+
 export interface CellStatusLog {
     id: number;
     action: CellLogAction;
@@ -167,6 +180,8 @@ export interface CellStatusLog {
     created_at: string;
     next_log_at: string | null;
     duration_seconds: number;
+    flagged: boolean;
+    flags: CellStatusLogFlag[];
 }
 
 export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
@@ -186,9 +201,53 @@ export interface CellStatusLogFilters {
     expires_within_days?: number;
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
+    flagged?: boolean;
 }
 
 export interface CellStatusLogFilterOptions
+    extends RowAndColumnFilterOptions, ProductFilterOptions {
+    users: { id: number; name: string }[];
+    actions: CellLogAction[];
+}
+
+export interface ProductSummary {
+    id: number;
+    name: string;
+    image_url: string | null;
+    full_cells_count: number;
+    opened_cells_count: number;
+    expired_cells_count: number;
+    expiring_soon_count: number;
+    activity_today_count: number;
+    activity_week_count: number;
+}
+
+export type ProductSortBy =
+    | 'name'
+    | 'full_cells_count'
+    | 'opened_cells_count'
+    | 'expired_cells_count'
+    | 'expiring_soon_count'
+    | 'activity_today_count'
+    | 'activity_week_count';
+
+export interface ProductFilters {
+    row_id?: number;
+    column_number?: number;
+    state?: Cell['state'];
+    expired?: boolean;
+    expires_within_days?: number;
+    product_id?: number[];
+    user_id?: number[];
+    action?: CellLogAction[];
+    date_from?: string;
+    date_to?: string;
+    created_within_days?: number;
+    sort_by?: ProductSortBy;
+    sort_direction?: 'asc' | 'desc';
+}
+
+export interface ProductIndexFilterOptions
     extends RowAndColumnFilterOptions, ProductFilterOptions {
     users: { id: number; name: string }[];
     actions: CellLogAction[];
