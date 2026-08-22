@@ -8,6 +8,7 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
+import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
@@ -23,23 +24,11 @@ const props = withDefaults(
 );
 
 /**
- * Canonical per-state cell styling, mirrored by hand in the mobile app's
- * _getBgColor/_getBorderColor/_getStateIcon (Flutter, separate repo) — keep
- * both in sync when these values change: empty=gray/CircleDashed,
- * full=green/Inbox, opened=orange/PackageOpen.
+ * Per-state icons, mirrored by hand in the mobile app's _getStateIcon
+ * (Flutter, separate repo) — keep in sync: empty=CircleDashed, full=Inbox,
+ * opened=PackageOpen. The colors themselves live in lib/cellStateColor.ts,
+ * shared with CellMap3D.vue.
  */
-const stateClasses: Record<Cell['state'], string> = {
-    empty: 'bg-gray-100 dark:bg-neutral-900',
-    full: 'bg-green-50 dark:bg-green-950',
-    opened: 'bg-orange-50 dark:bg-orange-950',
-};
-
-const stateBorderClasses: Record<Cell['state'], string> = {
-    empty: 'border-gray-400 dark:border-neutral-700',
-    full: 'border-green-500 dark:border-green-700',
-    opened: 'border-orange-500 dark:border-orange-700',
-};
-
 const stateIcons: Record<Cell['state'], Component> = {
     empty: CircleDashed,
     full: Inbox,
@@ -52,7 +41,7 @@ const stateIcon = computed(() =>
 
 const borderClass = computed(() =>
     props.cell
-        ? `border ${stateBorderClasses[props.cell.state]}`
+        ? `border ${CELL_STATE_COLOR[props.cell.state].borderClass}`
         : 'border border-dashed border-gray-200 dark:border-neutral-800',
 );
 </script>
@@ -63,7 +52,7 @@ const borderClass = computed(() =>
         :data-slot-label="label"
         class="group relative flex h-28 w-32 shrink-0 flex-col justify-between rounded-md p-2 text-xs"
         :class="[
-            cell ? stateClasses[cell.state] : '',
+            cell ? CELL_STATE_COLOR[cell.state].backgroundClass : '',
             borderClass,
             highlighted
                 ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-neutral-950'
