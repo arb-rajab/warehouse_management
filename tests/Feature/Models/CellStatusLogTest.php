@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\CellLogAction;
+use App\Enums\CellLogFlagReason;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\CellStatusLogFlag;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\User;
@@ -76,6 +78,65 @@ test('a cell status log belongs to the user who performed it', function () {
 
     expect($log->user->id)->toBe($user->id);
     expect($log->user->id)->not->toBe($otherUser->id);
+});
+
+test('a cell status log has many flags, excluding another logs flags', function () {
+    $log = CellStatusLog::factory()->create();
+    $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id, 'reason' => CellLogFlagReason::OffHours]);
+
+    $otherLog = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $otherLog->id]);
+
+    expect($log->flags)->toHaveCount(1);
+    expect($log->flags->first()->id)->toBe($flag->id);
+});
+
+test('flagged is false when a log has no flags', function () {
+    $log = CellStatusLog::factory()->create();
+
+    expect($log->flagged)->toBeFalse();
+});
+
+test('flagged is true when a log has at least one flag, via a dedicated exists query when nothing is preloaded', function () {
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    expect($log->fresh()->flagged)->toBeTrue();
+});
+
+test('flagged reads an already-loaded flags relation instead of running another query', function () {
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $loaded = CellStatusLog::query()->with('flags')->find($log->id);
+
+    expect($loaded->relationLoaded('flags'))->toBeTrue();
+    expect($loaded->flagged)->toBeTrue();
+});
+
+test('flagged reads a flags_count alias when present, without a flags relation loaded', function () {
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $counted = CellStatusLog::query()->withCount('flags')->find($log->id);
+
+    expect($counted->relationLoaded('flags'))->toBeFalse();
+    expect($counted->flagged)->toBeTrue();
+});
+
+test('the filtered scope can filter by flagged, excluding unflagged logs', function () {
+    $flagged = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $flagged->id]);
+
+    CellStatusLog::factory()->create();
+
+    $request = Request::create('/', 'GET', ['flagged' => true]);
+
+    $results = CellStatusLog::query()->filtered($request)->get();
+
+    expect($results)->toHaveCount(1);
+    expect($results->first()->id)->toBe($flagged->id);
 });
 
 test('the action attribute is cast to a CellLogAction enum', function () {

@@ -4,13 +4,17 @@ namespace App\Models;
 
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Observers\CellStatusLogObserver;
 use Database\Factories\CellStatusLogFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -28,8 +32,10 @@ use Illuminate\Support\Collection;
  * @property string|null $note
  * @property-read Carbon|null $next_log_at
  * @property-read int $duration_seconds
+ * @property-read bool $flagged
  */
 #[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'user_id', 'note'])]
+#[ObservedBy(CellStatusLogObserver::class)]
 class CellStatusLog extends Model
 {
     /** @use HasFactory<CellStatusLogFactory> */
@@ -55,6 +61,7 @@ class CellStatusLog extends Model
         'product:id,name,image_url',
         'pallet:id,expiration_date',
         'user:id,name',
+        'flags:id,cell_status_log_id,reason,acknowledged_at',
     ];
 
     /**
@@ -114,6 +121,36 @@ class CellStatusLog extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return HasMany<CellStatusLogFlag, $this>
+     */
+    public function flags(): HasMany
+    {
+        return $this->hasMany(CellStatusLogFlag::class);
+    }
+
+    /**
+     * Whether this log has any rule-based flags. Prefers a `flags_count` alias
+     * (see RowResource.has_pallets for the same withCount-alias pattern) or an
+     * already-loaded `flags` relation over running a dedicated exists query.
+     *
+     * @return Attribute<bool, never>
+     */
+    protected function flagged(): Attribute
+    {
+        return Attribute::make(get: function (): bool {
+            if (array_key_exists('flags_count', $this->getAttributes())) {
+                return $this->flags_count > 0;
+            }
+
+            if ($this->relationLoaded('flags')) {
+                return $this->flags->isNotEmpty();
+            }
+
+            return $this->flags()->exists();
+        });
     }
 
     /**
@@ -190,7 +227,8 @@ class CellStatusLog extends Model
                 $cellQuery
                     ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
-            }));
+            }))
+            ->when($request->boolean('flagged'), fn (Builder $q) => $q->whereHas('flags'));
     }
 
     /**
