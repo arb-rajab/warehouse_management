@@ -11,7 +11,9 @@ Before planning or editing, find the row whose globs match the file's path and r
 | bootstrap/app.php,app/Http/Controllers/LoginController.php,resources/js/pages/Auth/Login.vue,routes/web.php | .ai/rules/auth.md |
 | bootstrap/app.php | .ai/rules/bootstrap.md |
 | resources/js/pages/Admin/CellStatusLogs/** | .ai/rules/cell-status-logs.md |
+| resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellMap3D.vue | .ai/rules/cells-js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue | .ai/rules/cells.md |
+| resources/js/components/CellSlot.vue,resources/js/components/CellMap3D.vue,resources/js/lib/cellStateColor.ts | .ai/rules/components-js-components-js-lib.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts | .ai/rules/components-js-lib.md |
 | resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts, resources/js/components/FilterMultiSelect.vue,resources/js/components/FilterMultiSelect.test.ts | .ai/rules/components.md |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
@@ -21,11 +23,13 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts,app/Http/Controllers/Admin/CellController.php | .ai/rules/controllers-admin.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | resources/js/pages/Admin/Dashboard/Index.vue | .ai/rules/dashboard.md |
+| tests/e2e/** | .ai/rules/e2e.md |
 | app/Enums/** | .ai/rules/enums.md |
 | app/Exceptions/** | .ai/rules/exceptions.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
 | app/Http/Requests/StoreRowRequest.php,app/Http/Requests/UpdateRowRequest.php | .ai/rules/http-requests.md |
-| resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue | .ai/rules/js-components.md |
+| resources/js/components/CellMap3D.vue,resources/js/lib/mapWalker.ts | .ai/rules/js-components-js-lib.md |
+| resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue, resources/js/components/CellMap3D.test.ts, resources/js/components/CellMap3D.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts,app/Http/Controllers/Admin/CellController.php,resources/js/types/admin.ts | .ai/rules/js-types.md |
 | resources/js/** | .ai/rules/js.md |

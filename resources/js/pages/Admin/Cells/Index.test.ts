@@ -5,6 +5,7 @@ import { formatSlot } from '@/lib/location';
 import type {
     CellHighlightSample,
     CellHighlightSeed,
+    CellMap3DBand,
     ProductFilterOptions,
     CellMapRow,
     CellSlotLocation,
@@ -12,10 +13,32 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
-    usePageMock: vi.fn(),
-    routerGetMock: vi.fn(),
-}));
+const { usePageMock, routerGetMock, cellMap3DFocusCell, cellMap3DResetView } =
+    vi.hoisted(() => ({
+        usePageMock: vi.fn(),
+        routerGetMock: vi.fn(),
+        cellMap3DFocusCell: vi.fn(),
+        cellMap3DResetView: vi.fn(),
+    }));
+
+vi.mock('@/components/CellMap3D.vue', async () => {
+    const { defineComponent, h } = await import('vue');
+
+    return {
+        default: defineComponent({
+            name: 'CellMap3DStub',
+            props: ['bands'],
+            setup(_props, { expose }) {
+                expose({
+                    focusCell: cellMap3DFocusCell,
+                    resetView: cellMap3DResetView,
+                });
+
+                return () => h('div', { 'data-testid': 'map-3d-stub' });
+            },
+        }),
+    };
+});
 
 vi.mock('@inertiajs/vue3', async () => {
     const { defineComponent, h } = await import('vue');
@@ -42,6 +65,24 @@ vi.mock('@inertiajs/vue3', async () => {
         Link: LinkStub,
         usePage: usePageMock,
         router: { get: routerGetMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.({
+                    data: products,
+                    meta: {
+                        current_page: 1,
+                        last_page: 1,
+                        per_page: 20,
+                        total: products.length,
+                        from: 1,
+                        to: products.length,
+                        links: [],
+                    },
+                }),
+        }),
     };
 });
 
@@ -154,6 +195,8 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 describe('Cells Index (warehouse map)', () => {
     beforeEach(() => {
         routerGetMock.mockClear();
+        cellMap3DFocusCell.mockClear();
+        cellMap3DResetView.mockClear();
     });
 
     it('shows the empty message when there are no rows', () => {
@@ -1022,5 +1065,227 @@ describe('Cells Index (warehouse map)', () => {
 
         const classes = wrapper.get('[data-testid="map-viewport"]').classes();
         expect(classes).toContain('select-none');
+    });
+
+    it('toggles the map into and out of full screen mode via the toolbar button', async () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(
+            wrapper.get('[data-testid="map-section"]').classes(),
+        ).not.toContain('fixed');
+
+        await wrapper
+            .get(`[title="${t('cells.map.fullscreen')}"]`)
+            .trigger('click');
+
+        expect(wrapper.get('[data-testid="map-section"]').classes()).toContain(
+            'fixed',
+        );
+
+        await wrapper
+            .get(`[title="${t('cells.map.exitFullscreen')}"]`)
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="map-section"]').classes(),
+        ).not.toContain('fixed');
+    });
+
+    it('exits full screen mode when Escape is pressed', async () => {
+        const wrapper = mountPage([row()], []);
+
+        await wrapper
+            .get(`[title="${t('cells.map.fullscreen')}"]`)
+            .trigger('click');
+        expect(wrapper.get('[data-testid="map-section"]').classes()).toContain(
+            'fixed',
+        );
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await flushPromises();
+
+        expect(
+            wrapper.get('[data-testid="map-section"]').classes(),
+        ).not.toContain('fixed');
+    });
+
+    describe('3D view toggle', () => {
+        it('toggles between the 2D and 3D map views, hiding 2D-only controls in 3D', async () => {
+            const wrapper = mountPage([row()], []);
+
+            expect(wrapper.find('[data-testid="map-viewport"]').exists()).toBe(
+                true,
+            );
+            expect(wrapper.find('[data-testid="map-3d-stub"]').exists()).toBe(
+                false,
+            );
+            expect(
+                wrapper.find(`[title="${t('cells.map.zoomIn')}"]`).exists(),
+            ).toBe(true);
+            expect(wrapper.find('[data-testid="flat-tab"]').exists()).toBe(
+                true,
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(wrapper.find('[data-testid="map-viewport"]').exists()).toBe(
+                false,
+            );
+            expect(wrapper.find('[data-testid="map-3d-stub"]').exists()).toBe(
+                true,
+            );
+            expect(
+                wrapper.find(`[title="${t('cells.map.zoomIn')}"]`).exists(),
+            ).toBe(false);
+            expect(wrapper.find('[data-testid="flat-tab"]').exists()).toBe(
+                false,
+            );
+
+            await wrapper.get('[data-testid="view-mode-2d"]').trigger('click');
+
+            expect(wrapper.find('[data-testid="map-viewport"]').exists()).toBe(
+                true,
+            );
+            expect(wrapper.find('[data-testid="map-3d-stub"]').exists()).toBe(
+                false,
+            );
+        });
+
+        it("passes every flat's cells to the 3D view with highlight/pulse flags applied", async () => {
+            const seed: CellHighlightSeed = {
+                state: 'full',
+                productIds: [],
+                expiresWithinDays: null,
+                expired: false,
+            };
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 2 })],
+                [],
+                {
+                    flatNumber: 1,
+                    maxFlatNumber: 2,
+                    initialHighlight: seed,
+                    cellHighlightSamples: [
+                        highlightSample({
+                            row_letter: 'A',
+                            cell_number: 1,
+                            flat_number: 1,
+                            state: 'full',
+                        }),
+                        highlightSample({
+                            row_letter: 'A',
+                            cell_number: 2,
+                            flat_number: 2,
+                            state: 'empty',
+                        }),
+                    ],
+                },
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const bands = stub.props('bands') as CellMap3DBand[];
+
+            expect(bands).toEqual([
+                {
+                    letter: 'A',
+                    items: [
+                        {
+                            cellNumber: 1,
+                            flatNumber: 1,
+                            state: 'full',
+                            highlighted: true,
+                            pulsing: false,
+                            pallet: null,
+                        },
+                        {
+                            cellNumber: 2,
+                            flatNumber: 2,
+                            state: 'empty',
+                            highlighted: false,
+                            pulsing: false,
+                            pallet: null,
+                        },
+                    ],
+                },
+            ]);
+        });
+
+        it('resets via the exposed 3D method instead of the 2D recenter, when in 3D mode', async () => {
+            const wrapper = mountPage([row()], []);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await wrapper
+                .get(`[title="${t('cells.map.resetView')}"]`)
+                .trigger('click');
+
+            expect(cellMap3DResetView).toHaveBeenCalled();
+        });
+
+        it('focuses the 3D camera on a cross-flat match without reloading, in 3D mode', async () => {
+            const seed: CellHighlightSeed = {
+                state: 'full',
+                productIds: [],
+                expiresWithinDays: null,
+                expired: false,
+            };
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 1 })],
+                [],
+                {
+                    flatNumber: 1,
+                    maxFlatNumber: 2,
+                    initialHighlight: seed,
+                    cellHighlightSamples: [
+                        highlightSample({
+                            row_letter: 'A',
+                            cell_number: 1,
+                            flat_number: 1,
+                            state: 'full',
+                        }),
+                        highlightSample({
+                            row_letter: 'A',
+                            cell_number: 1,
+                            flat_number: 2,
+                            state: 'full',
+                        }),
+                    ],
+                },
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            const next = () =>
+                wrapper
+                    .get(`[title="${t('cells.filters.nextMatch')}"]`)
+                    .trigger('click');
+
+            await next();
+            await next();
+
+            expect(cellMap3DFocusCell).toHaveBeenCalledWith('A', 1, 2);
+            expect(routerGetMock).not.toHaveBeenCalled();
+        });
+
+        it('focuses the 3D camera when the jumpToCell prop changes while in 3D mode', async () => {
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 2 })],
+                [],
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            cellMap3DFocusCell.mockClear();
+
+            await wrapper.setProps({
+                jumpToCell: {
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                },
+            });
+
+            expect(cellMap3DFocusCell).toHaveBeenCalledWith('A', 2, 1);
+        });
     });
 });
