@@ -76,3 +76,43 @@ export function columnNumberOptions(maxColumnNumber: number): number[] {
 export function countActive(flags: boolean[]): number {
     return flags.filter(Boolean).length;
 }
+
+/**
+ * Toggles a reactive filters object's `sort_by`/`sort_direction` for the
+ * clicked column key — ascending on a new column, otherwise flipping the
+ * current direction. Shared by every sortable admin listing
+ * (CellStatusLogs/Index.vue, Products/Index.vue); the caller re-applies the
+ * filters afterward (e.g. via `router.get`).
+ */
+export function toggleSort(
+    filters: { sort_by: string; sort_direction: string },
+    key: string,
+): void {
+    filters.sort_direction =
+        filters.sort_by === key && filters.sort_direction === 'asc'
+            ? 'desc'
+            : 'asc';
+    filters.sort_by = key;
+}
+
+/**
+ * Delays calling `fn` until `delayMs` have passed without another call —
+ * shared by FilterProductSelect.vue's search-as-you-type and the
+ * column-filter popovers' apply-on-change watchers (CellStatusLogs/Index.vue,
+ * Products/Index.vue), so free-typed text/number/date edits don't fire a
+ * request per keystroke.
+ */
+export function debounce<Args extends unknown[]>(
+    fn: (...args: Args) => void,
+    delayMs: number,
+): (...args: Args) => void {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    return (...args: Args) => {
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
+
+        timer = setTimeout(() => fn(...args), delayMs);
+    };
+}
