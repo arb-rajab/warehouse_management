@@ -1,4 +1,4 @@
-import { Check, Clock, X } from '@lucide/vue';
+import { Check, Clock, TriangleAlert, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
@@ -11,9 +11,10 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerPostMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -40,7 +41,25 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: defineComponent({ render: () => null }),
         Link: LinkStub,
         usePage: usePageMock,
-        router: { get: routerGetMock },
+        router: { get: routerGetMock, post: routerPostMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.({
+                    data: filterOptions.products,
+                    meta: {
+                        current_page: 1,
+                        last_page: 1,
+                        per_page: 20,
+                        total: filterOptions.products.length,
+                        from: 1,
+                        to: filterOptions.products.length,
+                        links: [],
+                    },
+                }),
+        }),
     };
 });
 
@@ -59,6 +78,8 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         created_at: '2026-08-01T10:00:00Z',
         next_log_at: null,
         duration_seconds: 3600,
+        flagged: false,
+        flags: [],
         ...overrides,
     };
 }
@@ -123,6 +144,7 @@ describe('CellStatusLogs Index', () => {
     beforeEach(() => {
         usePageMock.mockReset();
         routerGetMock.mockReset();
+        routerPostMock.mockReset();
     });
 
     it('renders every column header', () => {
@@ -219,6 +241,164 @@ describe('CellStatusLogs Index', () => {
                 button.text().includes(t('cellLog.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
+    });
+
+    function columnHeader(
+        wrapper: ReturnType<typeof mountPage>,
+        label: string,
+    ) {
+        const header = wrapper
+            .findAll('thead th')
+            .find((th) => th.text().includes(label));
+
+        if (!header) {
+            throw new Error(`Column header "${label}" not found`);
+        }
+
+        return header;
+    }
+
+    function isColumnActive(
+        wrapper: ReturnType<typeof mountPage>,
+        label: string,
+    ): boolean {
+        return columnHeader(wrapper, label)
+            .get('button[title]')
+            .classes()
+            .includes('text-blue-600');
+    }
+
+    it('shows a filter icon on every filterable column, none active, when no filters are active', () => {
+        const wrapper = mountPage([]);
+
+        for (const label of [
+            t('cellLog.columns.cell'),
+            t('cellLog.columns.action'),
+            t('cellLog.columns.product'),
+            t('cellLog.columns.pallet'),
+            t('cellLog.columns.doneBy'),
+            t('cellLog.columns.when'),
+        ]) {
+            expect(
+                columnHeader(wrapper, label).findComponent(Filter).exists(),
+            ).toBe(true);
+            expect(isColumnActive(wrapper, label)).toBe(false);
+        }
+
+        expect(
+            columnHeader(wrapper, t('cellLog.columns.note'))
+                .findComponent(Filter)
+                .exists(),
+        ).toBe(false);
+        expect(
+            columnHeader(wrapper, t('cellLog.columns.duration'))
+                .findComponent(Filter)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('marks the product column active when a product filter is applied', () => {
+        const wrapper = mountPage([], { product_id: [10] });
+
+        expect(isColumnActive(wrapper, t('cellLog.columns.product'))).toBe(
+            true,
+        );
+        expect(isColumnActive(wrapper, t('cellLog.columns.doneBy'))).toBe(
+            false,
+        );
+    });
+
+    it('marks the cell column active when a row filter is applied', () => {
+        const wrapper = mountPage([], { row_id: 1 });
+
+        expect(isColumnActive(wrapper, t('cellLog.columns.cell'))).toBe(true);
+    });
+
+    it('marks the pallet column active when an expiration filter is applied', () => {
+        const wrapper = mountPage([], { expires_within_days: 7 });
+
+        expect(isColumnActive(wrapper, t('cellLog.columns.pallet'))).toBe(true);
+        expect(isColumnActive(wrapper, t('cellLog.columns.when'))).toBe(false);
+    });
+
+    it('marks the when column active when a date filter is applied', () => {
+        const wrapper = mountPage([], { created_within_days: 7 });
+
+        expect(isColumnActive(wrapper, t('cellLog.columns.when'))).toBe(true);
+    });
+
+    async function openColumnPopover(
+        wrapper: ReturnType<typeof mountPage>,
+        label: string,
+    ): Promise<void> {
+        await columnHeader(wrapper, label)
+            .get('button[title]')
+            .trigger('click');
+    }
+
+    it('opens the location popover with row/column fields when the Cell column icon is clicked', async () => {
+        const wrapper = mountPage([]);
+
+        await openColumnPopover(wrapper, t('cellLog.columns.cell'));
+
+        expect(wrapper.find('#popover-filter-row').exists()).toBe(true);
+        expect(wrapper.find('#popover-filter-column').exists()).toBe(true);
+        expect(wrapper.find('#popover-filter-product').exists()).toBe(false);
+    });
+
+    it('opens the doneBy popover with the user select when the Done By column icon is clicked', async () => {
+        const wrapper = mountPage([]);
+
+        await openColumnPopover(wrapper, t('cellLog.columns.doneBy'));
+
+        expect(wrapper.find('#popover-filter-user').exists()).toBe(true);
+        expect(wrapper.find('#popover-filter-row').exists()).toBe(false);
+    });
+
+    it('opens the expiration popover with the pallet expiration fields when the Pallet column icon is clicked', async () => {
+        const wrapper = mountPage([]);
+
+        await openColumnPopover(wrapper, t('cellLog.columns.pallet'));
+
+        expect(
+            wrapper.find('#popover-filter-expiration-date-from').exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('#popover-filter-expires-within-days').exists(),
+        ).toBe(true);
+        expect(wrapper.find('#popover-filter-date-from').exists()).toBe(false);
+    });
+
+    it('auto-applies, debounced, when a field is changed inside an open column popover', async () => {
+        vi.useFakeTimers();
+        const wrapper = mountPage([]);
+
+        await openColumnPopover(wrapper, t('cellLog.columns.doneBy'));
+        await wrapper.get('#popover-filter-user').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(400);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ user_id: ['7'] }),
+            { preserveState: true, replace: true },
+        );
+        vi.useRealTimers();
+    });
+
+    it('does not auto-apply a change made in the main Filters dialog', async () => {
+        vi.useFakeTimers();
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-created-within-days').setValue('7');
+        vi.advanceTimersByTime(400);
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+        vi.useRealTimers();
     });
 
     it("populates the row and column filter select's options from filterOptions", async () => {
@@ -348,6 +528,139 @@ describe('CellStatusLogs Index', () => {
         expect(actionCell.text()).toContain(t('cellLog.actions.opened'));
         expect(actionCell.text()).toContain(t('cellLog.states.full'));
         expect(actionCell.text()).toContain(t('cellLog.states.opened'));
+    });
+
+    it('shows a flag badge for a flagged row and not for an unflagged one', () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 1,
+                flagged: true,
+                flags: [{ id: 1, reason: 'off_hours', acknowledged: true }],
+            }),
+            cellLog({ id: 2, flagged: false, flags: [] }),
+        ]);
+
+        expect(
+            rowCells(wrapper, 0)[1].findComponent(TriangleAlert).exists(),
+        ).toBe(true);
+        expect(
+            rowCells(wrapper, 1)[1].findComponent(TriangleAlert).exists(),
+        ).toBe(false);
+    });
+
+    it('shows the flag reason as visible text, not just an icon tooltip', () => {
+        const wrapper = mountPage([
+            cellLog({
+                flagged: true,
+                flags: [{ id: 1, reason: 'off_hours', acknowledged: true }],
+            }),
+        ]);
+
+        expect(rowCells(wrapper, 0)[1].text()).toContain(
+            t('cellLog.flags.reasons.off_hours'),
+        );
+    });
+
+    it('shows every reason badge when a row has more than one flag', () => {
+        const wrapper = mountPage([
+            cellLog({
+                flagged: true,
+                flags: [
+                    { id: 1, reason: 'off_hours', acknowledged: false },
+                    { id: 2, reason: 'quick_flip', acknowledged: false },
+                ],
+            }),
+        ]);
+
+        const actionCell = rowCells(wrapper, 0)[1];
+        expect(actionCell.text()).toContain(
+            t('cellLog.flags.reasons.off_hours'),
+        );
+        expect(actionCell.text()).toContain(
+            t('cellLog.flags.reasons.quick_flip'),
+        );
+    });
+
+    it('shows an Acknowledge button when a flag is unacknowledged, and hides it once every flag is acknowledged', () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 1,
+                flagged: true,
+                flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
+            }),
+            cellLog({
+                id: 2,
+                flagged: true,
+                flags: [{ id: 2, reason: 'off_hours', acknowledged: true }],
+            }),
+        ]);
+
+        expect(rowCells(wrapper, 0)[1].text()).toContain(
+            t('cellLog.flags.acknowledge'),
+        );
+        expect(rowCells(wrapper, 1)[1].text()).not.toContain(
+            t('cellLog.flags.acknowledge'),
+        );
+    });
+
+    it('posts to the acknowledge-flags endpoint when the Acknowledge button is clicked', async () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 42,
+                flagged: true,
+                flags: [
+                    { id: 1, reason: 'rapid_actions', acknowledged: false },
+                ],
+            }),
+        ]);
+
+        const acknowledgeButton = rowCells(wrapper, 0)[1]
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.flags.acknowledge')),
+            );
+        await acknowledgeButton?.trigger('click');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-logs/42/acknowledge-flags',
+            {},
+            { preserveScroll: true },
+        );
+    });
+
+    it('requests the flagged filter when the Flagged only checkbox is checked and submitted', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-flagged').setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ flagged: true }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('omits the flagged filter entirely when the checkbox is left unchecked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('form').trigger('submit');
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('flagged');
+    });
+
+    it('counts the flagged filter towards the active filter count', () => {
+        const wrapper = mountPage([], { flagged: true });
+
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.filters.title')),
+            );
+        expect(trigger?.get('span').text()).toBe('1');
     });
 
     it('merges a transferred_out/transferred_in pair into a single row', () => {

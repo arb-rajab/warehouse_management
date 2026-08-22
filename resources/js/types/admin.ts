@@ -148,6 +148,14 @@ export interface CellMap3DBand {
 export type CellLogAction =
     'stored' | 'opened' | 'emptied' | 'transferred_out' | 'transferred_in';
 
+export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
+
+export interface CellStatusLogFlag {
+    id: number;
+    reason: CellLogFlagReason;
+    acknowledged: boolean;
+}
+
 export interface CellStatusLog {
     id: number;
     action: CellLogAction;
@@ -172,6 +180,8 @@ export interface CellStatusLog {
     created_at: string;
     next_log_at: string | null;
     duration_seconds: number;
+    flagged: boolean;
+    flags: CellStatusLogFlag[];
 }
 
 export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
@@ -191,6 +201,7 @@ export interface CellStatusLogFilters {
     expires_within_days?: number;
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
+    flagged?: boolean;
 }
 
 export interface CellStatusLogFilterOptions

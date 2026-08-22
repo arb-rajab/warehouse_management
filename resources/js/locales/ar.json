@@ -142,7 +142,16 @@
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
-            "palletHistory": "عرض سجل الطبلية رقم #{id}"
+            "palletHistory": "عرض سجل الطبلية رقم #{id}",
+            "flaggedOnly": "المُعلَّمة فقط"
+        },
+        "flags": {
+            "acknowledge": "تأكيد المراجعة",
+            "reasons": {
+                "rapid_actions": "إجراءات متسارعة",
+                "off_hours": "نشاط خارج ساعات العمل",
+                "quick_flip": "تخزين وتفريغ سريع"
+            }
         },
         "columns": {
             "cell": "الخلية",

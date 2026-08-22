@@ -142,7 +142,16 @@
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found.",
-            "palletHistory": "Showing history for pallet #{id}"
+            "palletHistory": "Showing history for pallet #{id}",
+            "flaggedOnly": "Flagged only"
+        },
+        "flags": {
+            "acknowledge": "Acknowledge",
+            "reasons": {
+                "rapid_actions": "Rapid actions",
+                "off_hours": "Off-hours activity",
+                "quick_flip": "Quick store/empty"
+            }
         },
         "columns": {
             "cell": "Cell",
