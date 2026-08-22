@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
+        Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');

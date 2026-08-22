@@ -5,9 +5,11 @@ namespace App\Http\Resources;
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellStatusLogFlag;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -27,6 +29,8 @@ use Illuminate\Support\Carbon;
  * @property-read Carbon $created_at
  * @property-read Carbon|null $next_log_at
  * @property-read int $duration_seconds
+ * @property-read bool $flagged
+ * @property-read Collection<int, CellStatusLogFlag> $flags
  */
 class CellStatusLogResource extends JsonResource
 {
@@ -57,6 +61,12 @@ class CellStatusLogResource extends JsonResource
             'created_at' => $this->created_at->toIso8601String(),
             'next_log_at' => $this->next_log_at?->toIso8601String(),
             'duration_seconds' => $this->duration_seconds,
+            'flagged' => (bool) $this->flagged,
+            'flags' => $this->whenLoaded('flags', fn () => $this->flags->map(fn (CellStatusLogFlag $flag): array => [
+                'id' => $flag->id,
+                'reason' => $flag->reason->value,
+                'acknowledged' => $flag->acknowledged_at !== null,
+            ])->all()),
         ];
     }
 }

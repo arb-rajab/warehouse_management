@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\CellLogAction;
+use App\Enums\CellLogFlagReason;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\CellStatusLogFlag;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -80,6 +82,8 @@ test('an authenticated admin can view the cell log with every property the table
                 )
                 ->where('next_log_at', null)
                 ->where('duration_seconds', 0)
+                ->where('flagged', false)
+                ->where('flags', [])
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
@@ -87,6 +91,31 @@ test('an authenticated admin can view the cell log with every property the table
     );
 
     Carbon::setTestNow();
+});
+
+test('the cell log hydrates only the selected product ids for the product filter, not every product', function () {
+    actingAsAdmin();
+    $selected = Product::factory()->create(['name' => 'Widgets']);
+    Product::factory()->create(['name' => 'Unselected Gadgets']);
+
+    $response = $this->get("/admin/cell-logs?product_id[]={$selected->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0.id', $selected->id)
+            ->where('filterOptions.products.0.name', 'Widgets')
+    );
+});
+
+test('the cell log has no pre-selected products for the product filter when nothing is selected', function () {
+    actingAsAdmin();
+    Product::factory()->create(['name' => 'Widgets']);
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 0)
+    );
 });
 
 test('the cell log includes the next same-pallet log timestamp as next_log_at', function () {
@@ -523,4 +552,71 @@ test('the cell log can be sorted by pallet expiration date, with a direction, pl
             ->where('logs.data.1.id', $soon->id)
             ->where('logs.data.2.id', $noExpiration->id)
     );
+});
+
+test('the cell log can be filtered by flagged, excluding unflagged entries', function () {
+    actingAsAdmin();
+
+    $flagged = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $flagged->id]);
+
+    CellStatusLog::factory()->create();
+
+    $response = $this->get('/admin/cell-logs?flagged=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $flagged->id)
+    );
+});
+
+test('an authenticated admin can acknowledge every unacknowledged flag on a cell log', function () {
+    $admin = actingAsAdmin();
+    $log = CellStatusLog::factory()->create();
+    $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id, 'reason' => CellLogFlagReason::OffHours]);
+    $alreadyAcknowledged = CellStatusLogFlag::factory()->create([
+        'cell_status_log_id' => $log->id,
+        'reason' => CellLogFlagReason::QuickFlip,
+        'acknowledged_at' => '2026-08-01 00:00:00',
+        'acknowledged_by' => User::factory()->create()->id,
+    ]);
+
+    $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
+
+    $response->assertRedirect();
+    $freshFlag = $flag->fresh();
+    expect($freshFlag->acknowledged_at)->not->toBeNull();
+    expect($freshFlag->acknowledged_by)->toBe($admin->id);
+
+    // Already-acknowledged flags are left untouched, not re-stamped.
+    expect($alreadyAcknowledged->fresh()->acknowledged_at->toDateTimeString())->toBe('2026-08-01 00:00:00');
+});
+
+test('acknowledging flags on a non-existent cell log returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/cell-logs/999999/acknowledge-flags');
+
+    $response->assertNotFound();
+});
+
+test('a mobile app user cannot acknowledge cell log flags', function () {
+    $mobileUser = User::factory()->mobileUser()->create();
+    $log = CellStatusLog::factory()->create();
+    $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->actingAs($mobileUser)->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
+
+    $response->assertForbidden();
+    expect($flag->fresh()->acknowledged_at)->toBeNull();
+});
+
+test('an unauthenticated caller cannot acknowledge cell log flags', function () {
+    $log = CellStatusLog::factory()->create();
+    $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
+
+    $response->assertRedirect(route('login'));
+    expect($flag->fresh()->acknowledged_at)->toBeNull();
 });

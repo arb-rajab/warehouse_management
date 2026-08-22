@@ -40,6 +40,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellSlot.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellStatus.ts,resources/js/lib/cellHighlight.ts | .ai/rules/lib.md |
 | app/Http/Middleware/**, app/Http/Middleware/BlockMaliciousRequests.php,config/waf.php, app/Http/Middleware/RestrictToAllowedIps.php,config/telescope.php,config/pulse.php | .ai/rules/middleware.md |
 | database/migrations/**, database/migrations/2026_08_08_154136_create_products_table.php | .ai/rules/migrations.md |
+| app/Models/CellStatusLog.php,app/Observers/CellStatusLogObserver.php,config/cell_status_log_flags.php | .ai/rules/models-observers.md |
 | app/Models/*.php, app/Models/CellStatusLog.php, app/Models/Row.php, app/Models/Pallet.php | .ai/rules/models.md |
 | app/Observers/** | .ai/rules/observers.md |
 | resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/CellStatusLogs/Index.test.ts | .ai/rules/pages-admin-cell-status-logs.md |
@@ -47,7 +48,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Admin/FilterProductsRequest.php,resources/js/pages/Admin/Products/Index.vue | .ai/rules/products.md |
 | config/health.php,database/migrations/*health*,app/Providers/HealthServiceProvider.php | .ai/rules/providers.md |
 | app/Http/Requests/Admin/{FilterProductsRequest,ShowCellMapRequest}.php | .ai/rules/requests-admin.md |
-| app/Http/Requests/Concerns/NormalizesBooleanFilters.php,app/Http/Requests/Concerns/NormalizesExpiredFilter.php | .ai/rules/requests-concerns.md |
+| app/Http/Requests/Concerns/NormalizesBooleanFilters.php,app/Http/Requests/Concerns/NormalizesExpiredFilter.php,app/Http/Requests/Concerns/FiltersCellStatusLogs.php | .ai/rules/requests-concerns.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/**, app/Http/Resources/RowResource.php | .ai/rules/resources.md |
 | routes/web.php, routes/api.php, routes/console.php | .ai/rules/routes.md |

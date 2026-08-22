@@ -12,6 +12,13 @@ use Illuminate\Validation\Rule;
  */
 trait FiltersCellStatusLogs
 {
+    use NormalizesBooleanFilters;
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizeBooleanFilter('flagged');
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -51,6 +58,7 @@ trait FiltersCellStatusLogs
             'expires_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:expiration_date_from,expiration_date_to'],
             'sort_by' => ['nullable', 'in:created_at,expiration_date'],
             'sort_direction' => ['nullable', 'in:asc,desc'],
+            'flagged' => ['nullable', 'boolean'],
         ];
     }
 }
