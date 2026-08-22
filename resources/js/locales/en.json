@@ -86,6 +86,7 @@
             "columnRole": "Role",
             "columnActions": "Actions",
             "empty": "No users yet.",
+            "view": "View",
             "edit": "Edit",
             "delete": "Delete",
             "roleAdmin": "Admin",
@@ -100,6 +101,11 @@
             "title": "Edit {name}",
             "submit": "Save changes",
             "submitting": "Saving..."
+        },
+        "show": {
+            "title": "Actions by {name}",
+            "editUser": "Edit user",
+            "empty": "No actions yet."
         },
         "fields": {
             "name": "Name",

@@ -56,4 +56,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |
 | resources/js/types/admin.ts | .ai/rules/types.md |
+| resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/Users/Show.vue,resources/js/lib/cellStatusLogDisplay.ts | .ai/rules/users-js-lib.md |
 | resources/views/** | .ai/rules/views.md |

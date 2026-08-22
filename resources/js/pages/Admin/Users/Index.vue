@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
+import { Eye, Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
 import {
     create,
     destroy,
     edit,
+    show,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -73,6 +74,10 @@ const page = usePage();
                 </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">
+                        <TableActionLink :href="show(user)">
+                            <Eye class="h-3.5 w-3.5" />
+                            {{ t('users.index.view') }}
+                        </TableActionLink>
                         <TableActionLink :href="edit(user)">
                             <Pencil class="h-3.5 w-3.5" />
                             {{ t('users.index.edit') }}

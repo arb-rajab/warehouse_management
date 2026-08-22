@@ -86,6 +86,7 @@
             "columnRole": "الدور",
             "columnActions": "الإجراءات",
             "empty": "لا يوجد مستخدمون بعد.",
+            "view": "عرض",
             "edit": "تعديل",
             "delete": "حذف",
             "roleAdmin": "مسؤول",
@@ -100,6 +101,11 @@
             "title": "تعديل {name}",
             "submit": "حفظ التغييرات",
             "submitting": "جارٍ الحفظ..."
+        },
+        "show": {
+            "title": "إجراءات {name}",
+            "editUser": "تعديل المستخدم",
+            "empty": "لا يوجد إجراءات بعد."
         },
         "fields": {
             "name": "الاسم",
