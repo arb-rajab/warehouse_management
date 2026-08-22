@@ -200,7 +200,28 @@
             "zoomOut": "Zoom out",
             "rotateLeft": "Rotate left",
             "rotateRight": "Rotate right",
-            "resetView": "Reset view"
+            "resetView": "Reset view",
+            "fullscreen": "Full screen",
+            "exitFullscreen": "Exit full screen",
+            "view2d": "2D view",
+            "view3d": "3D view",
+            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, and drag to look around (including behind you).",
+            "walkHintTouch": "Drag to look around (including behind you), and use the on-screen buttons to move and fly between flats.",
+            "controls": {
+                "moveLabel": "Move: WASD or arrow keys",
+                "flyLabel": "Fly between flats:",
+                "up": "up",
+                "down": "down",
+                "lookLabel": "Look: drag to look around, even behind you",
+                "touch": {
+                    "forward": "Move forward",
+                    "backward": "Move backward",
+                    "left": "Strafe left",
+                    "right": "Strafe right",
+                    "up": "Fly up",
+                    "down": "Fly down"
+                }
+            }
         }
     },
     "dashboard": {

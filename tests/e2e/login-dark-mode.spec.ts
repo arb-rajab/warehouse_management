@@ -1,22 +1,5 @@
 import { expect, test } from '@playwright/test';
-
-function relativeLuminance([r, g, b]: number[]): number {
-    const channel = (c: number) => {
-        const s = c / 255;
-
-        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-    };
-
-    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-function contrastRatio(a: number[], b: number[]): number {
-    const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort(
-        (x, y) => y - x,
-    );
-
-    return (lighter + 0.05) / (darker + 0.05);
-}
+import { contrastRatio } from './support/contrast';
 
 test('login form text has readable contrast against its input background in dark mode', async ({
     page,

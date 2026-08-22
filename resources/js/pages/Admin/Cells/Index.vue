@@ -3,18 +3,31 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
 import {
     Ban,
+    Box,
     ChevronDown,
     ChevronUp,
+    LayoutGrid,
     LocateFixed,
+    Maximize2,
+    Minimize2,
     RotateCcw,
     RotateCw,
     Search,
     ZoomIn,
     ZoomOut,
 } from '@lucide/vue';
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+    watch,
+} from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
+import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
@@ -38,6 +51,7 @@ import {
 import type {
     CellHighlightSample,
     CellHighlightSeed,
+    CellMap3DBand,
     ProductFilterOptions,
     CellMapRow,
     CellSlotLocation,
@@ -142,10 +156,12 @@ watch(highlightFilters, () => {
 });
 
 /**
- * Jumps to the match at `index` (wrapping is the caller's job) — recentering
- * in place when it's already on the current flat, or reloading onto the
- * matching flat otherwise (reusing the location-search machinery so the
- * existing `jumpToCell` pulse-and-center watcher picks it up once loaded).
+ * Jumps to the match at `index` (wrapping is the caller's job). In 3D mode
+ * every flat is already rendered, so it always just moves/pitches the
+ * camera locally; in 2D it recenters in place when the match is already on
+ * the current flat, or reloads onto the matching flat otherwise (reusing
+ * the location-search machinery so the existing `jumpToCell` pulse-and-
+ * center watcher picks it up once loaded).
  */
 function focusMatchAt(index: number): void {
     const match = orderedMatches.value[index];
@@ -162,8 +178,13 @@ function focusMatchAt(index: number): void {
         match.flat_number,
     );
 
-    if (match.flat_number === props.flatNumber) {
-        pulseAndCenterLabel(label);
+    if (viewMode.value === '3d' || match.flat_number === props.flatNumber) {
+        pulseAndCenterLabel(
+            label,
+            match.row_letter,
+            match.cell_number,
+            match.flat_number,
+        );
 
         return;
     }
@@ -351,6 +372,26 @@ function onSearchSubmit(): void {
     );
 }
 
+const isMapFullscreen = ref(false);
+
+function toggleMapFullscreen(): void {
+    isMapFullscreen.value = !isMapFullscreen.value;
+}
+
+function onMapFullscreenKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && isMapFullscreen.value) {
+        isMapFullscreen.value = false;
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', onMapFullscreenKeydown);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('keydown', onMapFullscreenKeydown);
+});
+
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>
     viewportTransform(viewport.state),
@@ -360,13 +401,77 @@ const viewportZoomPercent = computed(() =>
 );
 const viewportEl = ref<HTMLElement | null>(null);
 
+const viewMode = ref<'2d' | '3d'>('2d');
+const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
+
+function setViewMode(mode: '2d' | '3d'): void {
+    viewMode.value = mode;
+}
+
 const pulsingLabel = ref<string | null>(null);
 let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
 
-/** Pulses and recenters the viewport on the cell at `label`, on the current flat. */
-function pulseAndCenterLabel(label: string): void {
+/**
+ * Every flat's cells, reshaped for the 3D view (CellMap3D.vue), which renders
+ * every flat at once rather than paging one at a time like the 2D grid.
+ * Built from `cellHighlightSamples` — already loaded for every flat, for the
+ * 2D map's per-flat match badges — reusing `matchesCellHighlight` exactly as
+ * `matchingSamples` does, so the two views can never disagree on what counts
+ * as a match.
+ */
+const map3DBands = computed<CellMap3DBand[]>(() => {
+    const itemsByRow = new Map<string, CellMap3DBand['items']>();
+
+    for (const row of props.rows) {
+        itemsByRow.set(row.letter, []);
+    }
+
+    for (const sample of props.cellHighlightSamples) {
+        const label = formatSlot(
+            sample.row_letter,
+            sample.cell_number,
+            sample.flat_number,
+        );
+
+        itemsByRow.get(sample.row_letter)?.push({
+            cellNumber: sample.cell_number,
+            flatNumber: sample.flat_number,
+            state: sample.state,
+            highlighted: matchesCellHighlight(
+                sample,
+                highlightFilters,
+                props.today,
+            ),
+            pulsing: pulsingLabel.value === label,
+            pallet: sample.pallet,
+        });
+    }
+
+    return props.rows.map((row) => ({
+        letter: row.letter,
+        items: itemsByRow.get(row.letter) ?? [],
+    }));
+});
+
+/**
+ * Pulses and focuses the cell at `label` — recentering the 2D viewport, or
+ * moving/pitching the 3D camera to face it (`rowLetter`/`cellNumber`/
+ * `flatNumber` are needed for the latter since the 3D view has no DOM nodes
+ * to measure).
+ */
+function pulseAndCenterLabel(
+    label: string,
+    rowLetter: string,
+    cellNumber: number,
+    flatNumber: number,
+): void {
     pulsingLabel.value = label;
-    centerLabelInViewport(label);
+
+    if (viewMode.value === '3d') {
+        map3DRef.value?.focusCell(rowLetter, cellNumber, flatNumber);
+    } else {
+        centerLabelInViewport(label);
+    }
 
     clearTimeout(pulseTimeout);
     pulseTimeout = setTimeout(() => {
@@ -440,6 +545,12 @@ async function rotateRightAndRecenter(): Promise<void> {
 }
 
 async function resetViewAndRecenter(): Promise<void> {
+    if (viewMode.value === '3d') {
+        map3DRef.value?.resetView();
+
+        return;
+    }
+
     await recenterInstantly(() => viewport.reset());
 }
 
@@ -456,6 +567,9 @@ watch(
                 jumpToCell.cell_number,
                 jumpToCell.flat_number,
             ),
+            jumpToCell.row_letter,
+            jumpToCell.cell_number,
+            jumpToCell.flat_number,
         );
     },
     { immediate: true, flush: 'post' },
@@ -529,245 +643,316 @@ watch(
 
         <template v-else>
             <div
-                class="mb-4 space-y-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
-            >
-                <div class="flex flex-wrap items-center gap-2">
-                    <form
-                        class="flex items-center gap-2"
-                        @submit.prevent="onSearchSubmit"
-                    >
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            :placeholder="t('cells.search.placeholder')"
-                            class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                        />
-                        <button
-                            type="submit"
-                            :aria-label="t('cells.search.submit')"
-                            class="cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                        >
-                            <Search class="h-4 w-4" />
-                        </button>
-                    </form>
-                    <span
-                        v-if="searchError"
-                        role="alert"
-                        aria-live="polite"
-                        class="text-sm text-red-600 dark:text-red-400"
-                    >
-                        {{ t('cells.search.notFound') }}
-                    </span>
-                </div>
-
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="n in flatNumberOptions"
-                        :key="n"
-                        type="button"
-                        data-testid="flat-tab"
-                        :aria-pressed="n === flatNumber"
-                        class="inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
-                        :class="
-                            n === flatNumber
-                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                                : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
-                        "
-                        @click="goToFlat(n)"
-                    >
-                        {{ t('rows.show.flat', { n }) }}
-                        <span
-                            v-if="
-                                hasActiveHighlight &&
-                                (flatMatchCounts.get(n) ?? 0) > 0
-                            "
-                            data-testid="flat-match-count"
-                            :class="countBadgeClass"
-                        >
-                            {{ flatMatchCounts.get(n) }}
-                        </span>
-                    </button>
-                </div>
-            </div>
-
-            <div
-                class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
-            >
-                <button
-                    type="button"
-                    :title="t('cells.map.zoomOut')"
-                    :class="mapToolbarButtonClass"
-                    @click="viewport.zoomOut"
-                >
-                    <ZoomOut class="h-4 w-4" />
-                </button>
-                <span
-                    data-testid="zoom-percent"
-                    class="w-12 text-center text-sm text-gray-500 dark:text-neutral-400"
-                    >{{ viewportZoomPercent }}%</span
-                >
-                <button
-                    type="button"
-                    :title="t('cells.map.zoomIn')"
-                    :class="mapToolbarButtonClass"
-                    @click="viewport.zoomIn"
-                >
-                    <ZoomIn class="h-4 w-4" />
-                </button>
-                <button
-                    type="button"
-                    :title="t('cells.map.rotateLeft')"
-                    :class="mapToolbarButtonClass"
-                    @click="rotateLeftAndRecenter"
-                >
-                    <RotateCcw class="h-4 w-4" />
-                </button>
-                <button
-                    type="button"
-                    :title="t('cells.map.rotateRight')"
-                    :class="mapToolbarButtonClass"
-                    @click="rotateRightAndRecenter"
-                >
-                    <RotateCw class="h-4 w-4" />
-                </button>
-                <button
-                    type="button"
-                    :title="t('cells.map.resetView')"
-                    :class="mapToolbarButtonClass"
-                    @click="resetViewAndRecenter"
-                >
-                    <LocateFixed class="h-4 w-4" />
-                </button>
-            </div>
-
-            <div
-                ref="viewportEl"
-                data-testid="map-viewport"
-                class="relative h-[32rem] cursor-grab touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 select-none active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950"
-                @wheel.prevent="viewport.onWheel"
-                @pointerdown="viewport.onPointerDown"
-                @pointermove="viewport.onPointerMove"
-                @pointerup="viewport.onPointerUp"
-                @pointercancel="viewport.onPointerUp"
-                @pointerleave="viewport.onPointerUp"
+                data-testid="map-section"
+                :class="
+                    isMapFullscreen
+                        ? 'fixed inset-0 z-50 flex flex-col overflow-auto bg-white p-4 dark:bg-neutral-950'
+                        : ''
+                "
             >
                 <div
-                    class="flex gap-6 p-2 ease-out"
-                    :class="[
-                        orientation.bandsAsColumns ? 'flex-row' : 'flex-col',
-                        suppressPanTransition
-                            ? ''
-                            : 'transition-transform duration-150',
-                    ]"
-                    :style="{
-                        transform: viewportTransformStyle,
-                        transformOrigin: 'center',
-                    }"
+                    class="mb-4 space-y-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
                 >
-                    <div
-                        v-if="
-                            !orientation.bandsAsColumns &&
-                            !orientation.bandLabelAtEnd
-                        "
-                        class="flex gap-2"
-                    >
-                        <div class="h-6 w-12 shrink-0"></div>
-                        <div
-                            v-for="item in itemAxisLabels"
-                            :key="item"
-                            data-testid="axis-header-item"
-                            class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                    <div class="flex flex-wrap items-center gap-2">
+                        <form
+                            class="flex items-center gap-2"
+                            @submit.prevent="onSearchSubmit"
                         >
-                            {{ item }}
-                        </div>
+                            <input
+                                v-model="searchQuery"
+                                type="text"
+                                :placeholder="t('cells.search.placeholder')"
+                                class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                            />
+                            <button
+                                type="submit"
+                                :aria-label="t('cells.search.submit')"
+                                class="cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            >
+                                <Search class="h-4 w-4" />
+                            </button>
+                        </form>
+                        <span
+                            v-if="searchError"
+                            role="alert"
+                            aria-live="polite"
+                            class="text-sm text-red-600 dark:text-red-400"
+                        >
+                            {{ t('cells.search.notFound') }}
+                        </span>
                     </div>
 
-                    <div
-                        v-for="band in displayBands"
-                        :key="band.key"
-                        data-testid="map-row"
-                        class="flex gap-2"
-                        :class="
-                            orientation.bandsAsColumns
-                                ? 'flex-col items-center'
-                                : 'flex-row items-start'
+                    <div v-if="viewMode === '2d'" class="flex flex-wrap gap-2">
+                        <button
+                            v-for="n in flatNumberOptions"
+                            :key="n"
+                            type="button"
+                            data-testid="flat-tab"
+                            :aria-pressed="n === flatNumber"
+                            class="inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+                            :class="
+                                n === flatNumber
+                                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
+                            "
+                            @click="goToFlat(n)"
+                        >
+                            {{ t('rows.show.flat', { n }) }}
+                            <span
+                                v-if="
+                                    hasActiveHighlight &&
+                                    (flatMatchCounts.get(n) ?? 0) > 0
+                                "
+                                data-testid="flat-match-count"
+                                :class="countBadgeClass"
+                            >
+                                {{ flatMatchCounts.get(n) }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <button
+                        type="button"
+                        :title="t('cells.map.view2d')"
+                        data-testid="view-mode-2d"
+                        :aria-pressed="viewMode === '2d'"
+                        :class="[
+                            mapToolbarButtonClass,
+                            viewMode === '2d'
+                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                : '',
+                        ]"
+                        @click="setViewMode('2d')"
+                    >
+                        <LayoutGrid class="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        :title="t('cells.map.view3d')"
+                        data-testid="view-mode-3d"
+                        :aria-pressed="viewMode === '3d'"
+                        :class="[
+                            mapToolbarButtonClass,
+                            viewMode === '3d'
+                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                : '',
+                        ]"
+                        @click="setViewMode('3d')"
+                    >
+                        <Box class="h-4 w-4" />
+                    </button>
+                    <template v-if="viewMode === '2d'">
+                        <button
+                            type="button"
+                            :title="t('cells.map.zoomOut')"
+                            :class="mapToolbarButtonClass"
+                            @click="viewport.zoomOut"
+                        >
+                            <ZoomOut class="h-4 w-4" />
+                        </button>
+                        <span
+                            data-testid="zoom-percent"
+                            class="w-12 text-center text-sm text-gray-500 dark:text-neutral-400"
+                            >{{ viewportZoomPercent }}%</span
+                        >
+                        <button
+                            type="button"
+                            :title="t('cells.map.zoomIn')"
+                            :class="mapToolbarButtonClass"
+                            @click="viewport.zoomIn"
+                        >
+                            <ZoomIn class="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            :title="t('cells.map.rotateLeft')"
+                            :class="mapToolbarButtonClass"
+                            @click="rotateLeftAndRecenter"
+                        >
+                            <RotateCcw class="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            :title="t('cells.map.rotateRight')"
+                            :class="mapToolbarButtonClass"
+                            @click="rotateRightAndRecenter"
+                        >
+                            <RotateCw class="h-4 w-4" />
+                        </button>
+                    </template>
+                    <button
+                        type="button"
+                        :title="t('cells.map.resetView')"
+                        :class="mapToolbarButtonClass"
+                        @click="resetViewAndRecenter"
+                    >
+                        <LocateFixed class="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        :title="
+                            isMapFullscreen
+                                ? t('cells.map.exitFullscreen')
+                                : t('cells.map.fullscreen')
                         "
+                        :class="mapToolbarButtonClass"
+                        @click="toggleMapFullscreen"
+                    >
+                        <Minimize2 v-if="isMapFullscreen" class="h-4 w-4" />
+                        <Maximize2 v-else class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div
+                    v-if="viewMode === '2d'"
+                    ref="viewportEl"
+                    data-testid="map-viewport"
+                    class="relative cursor-grab touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 select-none active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950"
+                    :class="isMapFullscreen ? 'min-h-0 flex-1' : 'h-[32rem]'"
+                    @wheel.prevent="viewport.onWheel"
+                    @pointerdown="viewport.onPointerDown"
+                    @pointermove="viewport.onPointerMove"
+                    @pointerup="viewport.onPointerUp"
+                    @pointercancel="viewport.onPointerUp"
+                    @pointerleave="viewport.onPointerUp"
+                >
+                    <div
+                        class="flex gap-6 p-2 ease-out"
+                        :class="[
+                            orientation.bandsAsColumns
+                                ? 'flex-row'
+                                : 'flex-col',
+                            suppressPanTransition
+                                ? ''
+                                : 'transition-transform duration-150',
+                        ]"
+                        :style="{
+                            transform: viewportTransformStyle,
+                            transformOrigin: 'center',
+                        }"
                     >
                         <div
-                            v-if="!orientation.bandLabelAtEnd"
-                            data-testid="band-label"
-                            class="flex shrink-0 items-center justify-center bg-gray-50 text-sm font-medium text-gray-500 dark:bg-neutral-950 dark:text-neutral-400"
-                            :class="
-                                orientation.bandsAsColumns
-                                    ? 'h-12 w-32'
-                                    : 'h-28 w-12'
+                            v-if="
+                                !orientation.bandsAsColumns &&
+                                !orientation.bandLabelAtEnd
                             "
+                            class="flex gap-2"
                         >
-                            {{ band.axisLabel }}
+                            <div class="h-6 w-12 shrink-0"></div>
+                            <div
+                                v-for="item in itemAxisLabels"
+                                :key="item"
+                                data-testid="axis-header-item"
+                                class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                            >
+                                {{ item }}
+                            </div>
                         </div>
 
                         <div
+                            v-for="band in displayBands"
+                            :key="band.key"
+                            data-testid="map-row"
                             class="flex gap-2"
                             :class="
                                 orientation.bandsAsColumns
-                                    ? 'flex-col'
-                                    : 'flex-row'
+                                    ? 'flex-col items-center'
+                                    : 'flex-row items-start'
                             "
                         >
-                            <template
-                                v-for="item in band.items"
-                                :key="item.key"
+                            <div
+                                v-if="!orientation.bandLabelAtEnd"
+                                data-testid="band-label"
+                                class="flex shrink-0 items-center justify-center bg-gray-50 text-sm font-medium text-gray-500 dark:bg-neutral-950 dark:text-neutral-400"
+                                :class="
+                                    orientation.bandsAsColumns
+                                        ? 'h-12 w-32'
+                                        : 'h-28 w-12'
+                                "
                             >
-                                <CellSlot
-                                    v-if="item.kind === 'cell'"
-                                    :cell="item.cell"
-                                    :label="item.label"
-                                    :highlighted="highlighted(item.cell)"
-                                    :pulsing="pulsingLabel === item.label"
-                                />
-                                <div
-                                    v-else-if="item.kind === 'flat-unavailable'"
-                                    data-testid="flat-not-available"
-                                    class="flex h-28 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-gray-200 bg-gray-50 p-2 text-center text-xs text-gray-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-600"
+                                {{ band.axisLabel }}
+                            </div>
+
+                            <div
+                                class="flex gap-2"
+                                :class="
+                                    orientation.bandsAsColumns
+                                        ? 'flex-col'
+                                        : 'flex-row'
+                                "
+                            >
+                                <template
+                                    v-for="item in band.items"
+                                    :key="item.key"
                                 >
-                                    <Ban class="h-4 w-4" />
-                                    {{ t('cells.flatNotAvailable') }}
-                                </div>
-                                <div v-else class="h-28 w-32 shrink-0"></div>
-                            </template>
+                                    <CellSlot
+                                        v-if="item.kind === 'cell'"
+                                        :cell="item.cell"
+                                        :label="item.label"
+                                        :highlighted="highlighted(item.cell)"
+                                        :pulsing="pulsingLabel === item.label"
+                                    />
+                                    <div
+                                        v-else-if="
+                                            item.kind === 'flat-unavailable'
+                                        "
+                                        data-testid="flat-not-available"
+                                        class="flex h-28 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-gray-200 bg-gray-50 p-2 text-center text-xs text-gray-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-600"
+                                    >
+                                        <Ban class="h-4 w-4" />
+                                        {{ t('cells.flatNotAvailable') }}
+                                    </div>
+                                    <div
+                                        v-else
+                                        class="h-28 w-32 shrink-0"
+                                    ></div>
+                                </template>
+                            </div>
+
+                            <div
+                                v-if="orientation.bandLabelAtEnd"
+                                data-testid="band-label"
+                                class="flex shrink-0 items-center justify-center bg-gray-50 text-sm font-medium text-gray-500 dark:bg-neutral-950 dark:text-neutral-400"
+                                :class="
+                                    orientation.bandsAsColumns
+                                        ? 'h-12 w-32'
+                                        : 'h-28 w-12'
+                                "
+                            >
+                                {{ band.axisLabel }}
+                            </div>
                         </div>
 
                         <div
-                            v-if="orientation.bandLabelAtEnd"
-                            data-testid="band-label"
-                            class="flex shrink-0 items-center justify-center bg-gray-50 text-sm font-medium text-gray-500 dark:bg-neutral-950 dark:text-neutral-400"
-                            :class="
-                                orientation.bandsAsColumns
-                                    ? 'h-12 w-32'
-                                    : 'h-28 w-12'
+                            v-if="
+                                !orientation.bandsAsColumns &&
+                                orientation.bandLabelAtEnd
                             "
+                            class="flex gap-2"
                         >
-                            {{ band.axisLabel }}
+                            <div class="h-6 w-12 shrink-0"></div>
+                            <div
+                                v-for="item in itemAxisLabels"
+                                :key="item"
+                                data-testid="axis-header-item"
+                                class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                            >
+                                {{ item }}
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div
-                        v-if="
-                            !orientation.bandsAsColumns &&
-                            orientation.bandLabelAtEnd
-                        "
-                        class="flex gap-2"
-                    >
-                        <div class="h-6 w-12 shrink-0"></div>
-                        <div
-                            v-for="item in itemAxisLabels"
-                            :key="item"
-                            data-testid="axis-header-item"
-                            class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
-                        >
-                            {{ item }}
-                        </div>
-                    </div>
+                <div
+                    v-else
+                    class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
+                    :class="isMapFullscreen ? 'min-h-0 flex-1' : 'h-[32rem]'"
+                >
+                    <CellMap3D ref="map3DRef" :bands="map3DBands" />
                 </div>
             </div>
         </template>

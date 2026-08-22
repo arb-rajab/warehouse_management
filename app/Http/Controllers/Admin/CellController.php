@@ -65,7 +65,7 @@ class CellController extends Controller
      * on the frontend needs. `row_letter`/`cell_number` are included so the
      * frontend can also order matches for next/previous-match navigation.
      *
-     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, expiration_date: string, added_at: string|null}|null}>
+     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null}|null}>
      */
     private function cellHighlightSamples(): array
     {
@@ -74,6 +74,7 @@ class CellController extends Controller
             ->with([
                 'row:id,letter',
                 'pallet:id,cell_id,product_id,expiration_date,created_at',
+                'pallet.product:id,name,image_url',
             ])
             ->orderedByCoordinates()
             ->get()
@@ -84,6 +85,8 @@ class CellController extends Controller
                 'state' => $cell->state->value,
                 'pallet' => $cell->pallet === null ? null : [
                     'product_id' => $cell->pallet->product_id,
+                    'product_name' => $cell->pallet->product->name,
+                    'product_image_url' => $cell->pallet->product->image_url,
                     'expiration_date' => $cell->pallet->expiration_date->toDateString(),
                     'added_at' => $cell->pallet->created_at?->toIso8601String(),
                 ],

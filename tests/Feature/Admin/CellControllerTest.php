@@ -68,6 +68,8 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('state', 'full')
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('product_id', $product->id)
+                    ->where('product_name', 'Widgets')
+                    ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
                 )

@@ -89,9 +89,10 @@ export interface CellHighlightSeed {
 
 /**
  * The minimal per-cell data the warehouse map loads for every flat (not just
- * the one on screen) to compute a highlight-match count per flat tab and to
- * order matches for next/previous-match navigation — narrower than `Cell`
- * since it doesn't need id/product name/image.
+ * the one on screen) to compute a highlight-match count per flat tab, order
+ * matches for next/previous-match navigation, and (via the 3D map's "faced
+ * cell" panel) show the same product/date detail the 2D grid shows — narrower
+ * than `Cell` only in that it skips the cell's own id.
  */
 export interface CellHighlightSample {
     row_letter: string;
@@ -100,7 +101,11 @@ export interface CellHighlightSample {
     state: Cell['state'];
     pallet: Pick<
         CellPallet,
-        'product_id' | 'expiration_date' | 'added_at'
+        | 'product_id'
+        | 'product_name'
+        | 'product_image_url'
+        | 'expiration_date'
+        | 'added_at'
     > | null;
 }
 
@@ -108,6 +113,31 @@ export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
     flat_number: number;
+}
+
+/**
+ * One cell's worth of data for the 3D warehouse map (CellMap3D.vue) — built
+ * from `CellHighlightSample` (all flats, already loaded for the 2D map's
+ * per-flat match badges) rather than the current-flat-only `Cell`/
+ * `CellWithLocation`, since the 3D view renders every flat at once. Carries
+ * the same pallet detail `CellSlot.vue` shows in 2D, for the 3D "faced cell"
+ * detail panel.
+ */
+export interface CellMap3DItem {
+    cellNumber: number;
+    flatNumber: number;
+    state: Cell['state'];
+    highlighted: boolean;
+    pulsing: boolean;
+    pallet: Pick<
+        CellPallet,
+        'product_name' | 'product_image_url' | 'expiration_date' | 'added_at'
+    > | null;
+}
+
+export interface CellMap3DBand {
+    letter: string;
+    items: CellMap3DItem[];
 }
 
 export type CellLogAction =
