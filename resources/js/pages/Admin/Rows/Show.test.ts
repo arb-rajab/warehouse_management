@@ -37,6 +37,24 @@ vi.mock('@inertiajs/vue3', async () => {
         Link: LinkStub,
         usePage: usePageMock,
         router: { get: routerGetMock, post: routerPostMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.({
+                    data: products,
+                    meta: {
+                        current_page: 1,
+                        last_page: 1,
+                        per_page: 20,
+                        total: products.length,
+                        from: 1,
+                        to: products.length,
+                        links: [],
+                    },
+                }),
+        }),
     };
 });
 
