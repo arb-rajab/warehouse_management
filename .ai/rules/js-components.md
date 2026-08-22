@@ -5,6 +5,7 @@ paths:
   - resources/js/components/UserFormFields.vue
   - resources/js/components/CellMap3D.test.ts
   - resources/js/components/CellMap3D.vue
+  - resources/js/components/DataTable.vue
 ---
 
 # Js Components
@@ -36,3 +37,16 @@ CellMap3D.vue's rack structure has three kinds of meshes in `cellGroup`, disting
 Drag-to-look already worked on touch (pointerdown/move/up are Pointer Events, which fire for touch too) — the actual gap was movement, since WASD/Space/Shift need a keyboard. Added an on-screen move D-pad + fly (up/down) button cluster (`onControlPointerDown`/`onControlPointerUp`, same `pressedDirections` Set the keyboard handlers use), shown only when `isTouchDevice` (set in `onMounted` via `window.matchMedia('(pointer: coarse)').matches`, guarded by `typeof window.matchMedia === 'function'` since jsdom doesn't implement it — tests must `vi.stubGlobal('matchMedia', ...)` and `await nextTick()` after mount, since the ref updates inside onMounted and the DOM flip is async).
 
 Trap: these buttons are native `<button>` elements inside the same container that clears `pressedDirections` on blur (`onFocusLost`). A plain click would focus the button, blurring the container, and instantly clearing the just-pressed direction. Both `@pointerdown.stop.prevent` (preventDefault on pointerdown suppresses the browser's default focus-on-click for that pointer) and `tabindex="-1"` are required on every pad button — don't drop either when touching this code.
+
+## DataTable columns support a `filtered` indicator icon
+`Column` accepts `{ label, sortKey?, filtered? }`. When `filtered` is true, DataTable renders a small `Filter` (lucide) icon next to the header label with a `title="common.filteredColumn"` tooltip. DataTable only renders this state — the parent page computes `filtered` per column from its own reactive filter object (same split of responsibility as the existing sort arrows). When adding filters to a page with a DataTable, compute a `computed(() => ...)` per column (or group of columns affected identically) and wire it into the `columns` array's `filtered` field, rather than leaving users to guess which filters affect which columns. See Products/Index.vue and CellStatusLogs/Index.vue for the pattern.
+
+## DataTable's column filter icon opens a quick popover, not just an indicator
+Superseded the earlier "passive indicator" design. `Column` now accepts `{ label, sortKey?, filtered?, filterKey? }`. Any column with `filterKey` set always renders a clickable Filter icon (gray when `filtered` is false, blue when true) — DataTable manages a `v-model:open-filter-key` (two-way, string|null) and toggles/closes it on icon click, outside click, or Escape (same click-outside/Escape pattern as FilterMultiSelect/FilterDialog). The popover's content comes from the `#column-filter="{ filterKey }"` scoped slot, rendered by the parent page.
+
+Multiple columns can share the same `filterKey` (e.g. Products' Full/Opened/Expired/Expiring-soon columns all use `'occupancy'`) when the backend applies those filters identically — clicking any of their icons opens the same popover.
+
+Popover fields reuse the exact same `filters.x` v-model bindings as the main Filters dialog (duplicated markup with `popover-` prefixed ids to avoid DOM id collisions), and apply automatically on change instead of needing an Apply button: the page adds `const debouncedApplyFilters = debounce(applyFilters, 400)` (from `lib/filters.ts`) and a `watch(filters, () => { if (openFilterKey.value !== null && !filtersOpen.value) debouncedApplyFilters() }, { deep: true })` — gated so editing the same fields from the main dialog doesn't also trigger a premature auto-apply. See Products/Index.vue and CellStatusLogs/Index.vue.
+
+## Column filter popover is positioned via JS, not CSS-anchored under the th
+The popover cannot live inside the table's `overflow-hidden` wrapper (that wrapper only exists to clip the header background to the rounded corners) — nesting it there clips the popover whenever the table is shorter than the popover's height. It renders instead as a sibling of that wrapper, inside an outer `position: relative` div, positioned via an inline `:style` computed from the clicked trigger's `getBoundingClientRect()` (see `positionPopover()`/`toggleFilterPopover()`). Outside-click detection checks both the trigger button (`triggerRefs` map) and the popover element (`popoverRef`) since they're no longer nested inside one shared container. Don't revert to a plain CSS `absolute` anchor under a per-column `relative` div — that's the exact bug this fixed.

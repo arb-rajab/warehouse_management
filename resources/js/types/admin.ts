@@ -76,6 +76,11 @@ export interface ProductFilterOption {
     name: string;
 }
 
+/**
+ * Hydration data for a product filter's already-selected ids (see
+ * `FilterProductSelect.vue`'s `selected` prop) — not the full product
+ * catalog, which is fetched on demand via the search endpoint instead.
+ */
 export interface ProductFilterOptions {
     products: ProductFilterOption[];
 }
@@ -189,6 +194,49 @@ export interface CellStatusLogFilters {
 }
 
 export interface CellStatusLogFilterOptions
+    extends RowAndColumnFilterOptions, ProductFilterOptions {
+    users: { id: number; name: string }[];
+    actions: CellLogAction[];
+}
+
+export interface ProductSummary {
+    id: number;
+    name: string;
+    image_url: string | null;
+    full_cells_count: number;
+    opened_cells_count: number;
+    expired_cells_count: number;
+    expiring_soon_count: number;
+    activity_today_count: number;
+    activity_week_count: number;
+}
+
+export type ProductSortBy =
+    | 'name'
+    | 'full_cells_count'
+    | 'opened_cells_count'
+    | 'expired_cells_count'
+    | 'expiring_soon_count'
+    | 'activity_today_count'
+    | 'activity_week_count';
+
+export interface ProductFilters {
+    row_id?: number;
+    column_number?: number;
+    state?: Cell['state'];
+    expired?: boolean;
+    expires_within_days?: number;
+    product_id?: number[];
+    user_id?: number[];
+    action?: CellLogAction[];
+    date_from?: string;
+    date_to?: string;
+    created_within_days?: number;
+    sort_by?: ProductSortBy;
+    sort_direction?: 'asc' | 'desc';
+}
+
+export interface ProductIndexFilterOptions
     extends RowAndColumnFilterOptions, ProductFilterOptions {
     users: { id: number; name: string }[];
     actions: CellLogAction[];

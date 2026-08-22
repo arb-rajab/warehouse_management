@@ -62,6 +62,7 @@ describe('AdminLayout', () => {
             '/admin/rows',
             '/admin/cells',
             '/admin/cell-logs',
+            '/admin/products',
             '/admin/users',
         ]);
     });
@@ -155,6 +156,21 @@ describe('AdminLayout', () => {
         );
 
         expect(cellLogLink?.attributes('aria-current')).toBe('page');
+        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+    });
+
+    it('marks the products section active when navigated to with a filter query string', () => {
+        const wrapper = mountLayout('/admin/products?row_id=1');
+
+        const links = wrapper.findAll('nav a');
+        const productsLink = links.find(
+            (link) => link.attributes('href') === '/admin/products',
+        );
+        const dashboardLink = links.find(
+            (link) => link.attributes('href') === '/admin',
+        );
+
+        expect(productsLink?.attributes('aria-current')).toBe('page');
         expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
     });
 

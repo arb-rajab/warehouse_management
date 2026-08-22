@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     LogOut,
     Map,
+    Package,
     Rows3,
     Users,
     Warehouse,
@@ -14,6 +15,7 @@ import { computed } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { destroy } from '@/actions/App/Http/Controllers/LoginController';
@@ -36,6 +38,7 @@ const navItems = computed(() => [
         href: cellLogsIndex().url,
         icon: ArrowLeftRight,
     },
+    { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
 ]);
 
