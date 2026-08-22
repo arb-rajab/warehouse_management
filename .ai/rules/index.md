@@ -47,6 +47,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Admin/FilterProductsRequest.php,resources/js/pages/Admin/Products/Index.vue | .ai/rules/products.md |
 | config/health.php,database/migrations/*health*,app/Providers/HealthServiceProvider.php | .ai/rules/providers.md |
 | app/Http/Requests/Admin/{FilterProductsRequest,ShowCellMapRequest}.php | .ai/rules/requests-admin.md |
+| app/Http/Requests/Concerns/NormalizesBooleanFilters.php,app/Http/Requests/Concerns/NormalizesExpiredFilter.php | .ai/rules/requests-concerns.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/**, app/Http/Resources/RowResource.php | .ai/rules/resources.md |
 | routes/web.php, routes/api.php, routes/console.php | .ai/rules/routes.md |
