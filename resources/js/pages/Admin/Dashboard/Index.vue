@@ -17,8 +17,8 @@ import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/Cel
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
-import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
+import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     filterApplyButtonClass,
@@ -129,18 +129,13 @@ function onProductIdsChange(ids: string[]): void {
         <div class="mb-6 flex items-center justify-between">
             <h1 class="text-xl font-semibold">{{ t('dashboard.title') }}</h1>
             <div class="flex items-center gap-4">
-                <FilterMultiSelect
+                <FilterProductSelect
                     id="dashboard-product"
                     :model-value="productIdStrings"
                     :label="t('cellLog.filters.product')"
                     :all-label="t('cellLog.filters.all')"
                     :selected-count-label="selectedCountLabel"
-                    :options="
-                        filterOptions.products.map((product) => ({
-                            value: product.id.toString(),
-                            label: product.name,
-                        }))
-                    "
+                    :selected="filterOptions.products"
                     @update:model-value="onProductIdsChange"
                 />
             </div>
