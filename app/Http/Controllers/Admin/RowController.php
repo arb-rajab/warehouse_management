@@ -54,7 +54,7 @@ class RowController extends Controller
             ),
             'today' => today()->toDateString(),
             'filterOptions' => [
-                'products' => Product::filterOptions(),
+                'products' => Product::selectedOptions(),
             ],
         ]);
     }

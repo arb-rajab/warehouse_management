@@ -20,12 +20,26 @@ class Product extends Model
     use HasFactory;
 
     /**
-     * The id/name list used to populate the admin product filter dropdowns.
+     * The id/name list used to populate the mobile app's product filter dropdown.
      *
      * @return Collection<int, Product>
      */
     public static function filterOptions(): Collection
     {
         return self::query()->select(['id', 'name'])->orderBy('name')->get();
+    }
+
+    /**
+     * The id/name pairs for the given product ids, used to hydrate an admin
+     * product filter's already-selected labels without loading every product
+     * (the admin filter fetches the searchable catalog on demand instead —
+     * see Admin\ProductController::search()).
+     *
+     * @param  list<int>  $ids
+     * @return Collection<int, Product>
+     */
+    public static function selectedOptions(array $ids = []): Collection
+    {
+        return self::query()->select(['id', 'name'])->whereIn('id', $ids)->orderBy('name')->get();
     }
 }

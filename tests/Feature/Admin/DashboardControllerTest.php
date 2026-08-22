@@ -196,15 +196,27 @@ test('a product filter narrows occupancy (empty forced to zero), expiring, and a
     Carbon::setTestNow();
 });
 
-test('the dashboard exposes the product list for the product filter', function () {
+test('the dashboard has no pre-selected products for the product filter when nothing is selected', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['name' => 'Widgets']);
+    Product::factory()->create(['name' => 'Widgets']);
 
     $response = $this->get('/admin');
 
     $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 0)
+    );
+});
+
+test('the dashboard hydrates only the selected product ids for the product filter, not every product', function () {
+    actingAsAdmin();
+    $selected = Product::factory()->create(['name' => 'Widgets']);
+    Product::factory()->create(['name' => 'Unselected Gadgets']);
+
+    $response = $this->get("/admin?product_id[]={$selected->id}");
+
+    $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0.id', $product->id)
+            ->where('filterOptions.products.0.id', $selected->id)
             ->where('filterOptions.products.0.name', 'Widgets')
     );
 });

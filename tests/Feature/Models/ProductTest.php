@@ -18,3 +18,19 @@ test('a product can be created without an image_url', function () {
 
     expect($product->fresh()->image_url)->toBeNull();
 });
+
+test('selectedOptions returns only the given ids, ordered by name, excluding an unselected product', function () {
+    $b = Product::factory()->create(['name' => 'Bravo']);
+    $a = Product::factory()->create(['name' => 'Alpha']);
+    Product::factory()->create(['name' => 'Unselected Charlie']);
+
+    $options = Product::selectedOptions([$a->id, $b->id]);
+
+    expect($options->pluck('name')->all())->toBe(['Alpha', 'Bravo']);
+});
+
+test('selectedOptions returns an empty collection when given no ids', function () {
+    Product::factory()->create();
+
+    expect(Product::selectedOptions())->toBeEmpty();
+});
