@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { cell, row } from '@/testing/factories';
 import type { Cell, Row } from '@/types/admin';
 import Show from './Show.vue';
 
@@ -13,28 +14,11 @@ const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock, post: routerPostMock },
         useHttp: () => ({
@@ -62,28 +46,6 @@ const products = [
     { id: 1, name: 'Widgets' },
     { id: 2, name: 'Gadgets' },
 ];
-
-function row(overrides: Partial<Row> = {}): Row {
-    return {
-        id: 1,
-        letter: 'A',
-        cells_count: 2,
-        flats_count: 2,
-        has_pallets: false,
-        ...overrides,
-    };
-}
-
-function cell(overrides: Partial<Cell> = {}): Cell {
-    return {
-        id: 1,
-        cell_number: 1,
-        flat_number: 1,
-        state: 'empty',
-        pallet: null,
-        ...overrides,
-    };
-}
 
 function pallet(
     overrides: Partial<Cell['pallet']> = {},

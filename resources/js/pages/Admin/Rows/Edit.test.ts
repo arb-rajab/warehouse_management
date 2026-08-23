@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RowFormFields from '@/components/RowFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
+import { row } from '@/testing/factories';
 import type { Row } from '@/types/admin';
 import Edit from './Edit.vue';
 
@@ -13,61 +14,17 @@ const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const FormStub = defineComponent({
-        props: ['action'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    'form',
-                    {
-                        'data-action-url':
-                            typeof props.action === 'string'
-                                ? props.action
-                                : props.action?.url,
-                    },
-                    slots.default?.(formSlotPropsMock()),
-                );
-        },
-    });
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createFormStub, createLinkStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Form: FormStub,
-        Link: LinkStub,
+        Head: headStub,
+        Form: createFormStub(formSlotPropsMock),
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { post: routerPostMock },
     };
 });
-
-function row(overrides: Partial<Row> = {}): Row {
-    return {
-        id: 1,
-        letter: 'A',
-        cells_count: 5,
-        flats_count: 7,
-        has_pallets: false,
-        ...overrides,
-    };
-}
 
 function mountPage(rowOverrides: Partial<Row> = {}) {
     usePageMock.mockReturnValue({

@@ -9,29 +9,12 @@ const { usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub } = await import('@/testing/inertiaStubs');
 
     return {
         usePage: usePageMock,
         router: { post: routerPostMock },
-        Link: LinkStub,
+        Link: createLinkStub(),
     };
 });
 

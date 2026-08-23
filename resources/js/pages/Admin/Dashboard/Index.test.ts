@@ -19,6 +19,7 @@ const { usePageMock, routerGetMock } = vi.hoisted(() => ({
 
 vi.mock('@inertiajs/vue3', async () => {
     const { defineComponent, h } = await import('vue');
+    const { headStub } = await import('@/testing/inertiaStubs');
 
     const LinkStub = defineComponent({
         props: ['href', 'data'],
@@ -36,7 +37,7 @@ vi.mock('@inertiajs/vue3', async () => {
     });
 
     return {
-        Head: defineComponent({ render: () => null }),
+        Head: headStub,
         Link: LinkStub,
         usePage: usePageMock,
         router: { get: routerGetMock },
