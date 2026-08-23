@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\FailsAuthenticationUniformly;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -10,10 +11,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    use FailsAuthenticationUniformly;
+
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::query()
@@ -22,9 +24,7 @@ class AuthController extends Controller
             ->first();
 
         if ($user === null || ! Hash::check($request->input('password'), $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => [__('auth.failed')],
-            ]);
+            $this->failAuthentication();
         }
 
         $token = $user->createToken('mobile');
