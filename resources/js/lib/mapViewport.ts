@@ -1,4 +1,6 @@
 import { reactive, readonly } from 'vue';
+import { distanceBetween, normalizeDegrees } from '@/lib/geometry';
+import type { Point } from '@/lib/geometry';
 
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 2.5;
@@ -24,9 +26,7 @@ export function clampZoom(zoom: number): number {
 /**
  * Wraps a rotation into [0, 360) — e.g. -90 becomes 270, 450 becomes 90.
  */
-export function normalizeRotation(degrees: number): number {
-    return ((degrees % 360) + 360) % 360;
-}
+export const normalizeRotation = normalizeDegrees;
 
 export function zoomFromWheelDelta(
     currentZoom: number,
@@ -91,15 +91,6 @@ const MAP_ORIENTATIONS: MapOrientation[] = [
 
 export function mapOrientation(rotationDegrees: number): MapOrientation {
     return MAP_ORIENTATIONS[normalizeRotation(rotationDegrees) / 90];
-}
-
-interface Point {
-    x: number;
-    y: number;
-}
-
-function distanceBetween(a: Point, b: Point): number {
-    return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 /**
