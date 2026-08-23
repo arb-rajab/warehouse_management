@@ -6,7 +6,6 @@ import {
     CalendarX,
     Check,
     CircleDashed,
-    Inbox,
     PackageOpen,
     SlidersHorizontal,
 } from '@lucide/vue';
@@ -20,6 +19,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import {
     filterApplyButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
@@ -151,21 +151,21 @@ function onProductIdsChange(ids: string[]): void {
                     :value="props.stats.occupancy.empty"
                     :href="cellsIndex().url"
                     :query="{ state: 'empty', ...productQuery }"
-                    :icon="CircleDashed"
+                    :icon="CELL_STATE_COLOR.empty.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
                     :value="props.stats.occupancy.full"
                     :href="cellsIndex().url"
                     :query="{ state: 'full', ...productQuery }"
-                    :icon="Inbox"
+                    :icon="CELL_STATE_COLOR.full.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
                     :value="props.stats.occupancy.opened"
                     :href="cellsIndex().url"
                     :query="{ state: 'opened', ...productQuery }"
-                    :icon="PackageOpen"
+                    :icon="CELL_STATE_COLOR.opened.icon"
                 />
             </div>
         </section>

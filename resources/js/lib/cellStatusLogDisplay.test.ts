@@ -3,7 +3,6 @@ import { t } from '@/lib/i18n';
 import type { CellStatusLog } from '@/types/admin';
 import {
     cellLogActionLabel,
-    cellLogStateLabel,
     flagReasonLabel,
     mergeTransferPairs,
     transferPair,
@@ -33,12 +32,6 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
 describe('cellLogActionLabel', () => {
     it('translates the action key', () => {
         expect(cellLogActionLabel('opened')).toBe(t('cellLog.actions.opened'));
-    });
-});
-
-describe('cellLogStateLabel', () => {
-    it('translates the state key', () => {
-        expect(cellLogStateLabel('full')).toBe(t('cellLog.states.full'));
     });
 });
 

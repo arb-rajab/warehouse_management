@@ -33,6 +33,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/components/CellMap3D.vue,resources/js/lib/mapWalker.ts | .ai/rules/js-components-js-lib.md |
 | resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue, resources/js/components/CellMap3D.test.ts, resources/js/components/CellMap3D.vue, resources/js/components/DataTable.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
+| resources/js/lib/cellStateColor.ts,resources/js/components/CellMap3D.vue,resources/js/components/CellHighlightFilters.vue,resources/js/pages/Admin/CellStatusLogs/Index.vue | .ai/rules/js-pages-admin-cell-status-logs.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts,app/Http/Controllers/Admin/CellController.php,resources/js/types/admin.ts | .ai/rules/js-types.md |
 | resources/js/** | .ai/rules/js.md |
 | lang/** | .ai/rules/lang.md |
