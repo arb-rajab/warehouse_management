@@ -26,6 +26,13 @@ class Cell extends Model
     use HasFactory;
 
     /**
+     * Columns needed by CellResource — shared by every listing (admin and API).
+     *
+     * @var list<string>
+     */
+    public const array SELECT_COLUMNS = ['id', 'row_id', 'cell_number', 'flat_number', 'state'];
+
+    /**
      * Eager loads needed to describe what a cell currently holds.
      *
      * @var list<string>

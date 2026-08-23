@@ -27,7 +27,7 @@ class RowController extends Controller
             Row::query()
                 ->select(['id', 'letter', 'cells_count', 'flats_count'])
                 ->with(['cells' => fn ($query) => $query
-                    ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+                    ->select(Cell::SELECT_COLUMNS)
                     ->with(Cell::WITH_CONTENTS)
                     ->orderedByCoordinates()])
                 ->orderBy('letter')

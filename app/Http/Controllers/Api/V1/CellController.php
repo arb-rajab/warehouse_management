@@ -16,7 +16,7 @@ class CellController extends Controller
     {
         return CellResource::collection(
             $row->cells()
-                ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+                ->select(Cell::SELECT_COLUMNS)
                 ->with(Cell::WITH_ROW_AND_CONTENTS)
                 ->orderedByCoordinates()
                 ->paginate(20)
@@ -26,7 +26,7 @@ class CellController extends Controller
     public function show(ShowCellRequest $request, Row $row, string $cellNumber, string $flatNumber): CellResource
     {
         $cell = Cell::query()
-            ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+            ->select(Cell::SELECT_COLUMNS)
             ->atCoordinates($row, (int) $cellNumber, (int) $flatNumber)
             ->with(Cell::WITH_ROW_AND_CONTENTS)
             ->first();

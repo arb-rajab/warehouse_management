@@ -47,7 +47,7 @@ class RowController extends Controller
             'row' => new RowResource($row),
             'cells' => CellResource::collection(
                 $row->cells()
-                    ->select(['id', 'cell_number', 'flat_number', 'state'])
+                    ->select(Cell::SELECT_COLUMNS)
                     ->with(Cell::WITH_CONTENTS)
                     ->orderedByCoordinates()
                     ->get()
