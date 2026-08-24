@@ -172,7 +172,6 @@ export function stepPitch(
     );
 }
 
-/** Wraps a degree value into [0, 360) — e.g. -10 becomes 350, 370 becomes 10. */
 export const normalizeYaw = normalizeDegrees;
 
 /**
