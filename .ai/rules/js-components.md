@@ -56,6 +56,8 @@ The popover cannot live inside the table's `overflow-hidden` wrapper (that wrapp
 
 Box geometry (`getBoxGeometry`/`getEdgesGeometry`) and materials (`boxMaterialForState` — one shared `MeshStandardMaterial` per state, not one per box; `outlineMaterialFor` — one shared material per highlight/pulse color) are lazily created ONCE and live for the component's whole lifetime in `sceneDisposables`, disposed only on unmount — NOT recreated/disposed on every rebuild like before. Don't reintroduce per-box `new THREE.MeshStandardMaterial(...)` — reuse `boxMaterialForState(state)`/`outlineMaterialFor(kind)` instead, and don't push them into the per-rebuild `cellDisposables` array (that's only for shelf/post geometry+materials, which genuinely are rebuilt from scratch since they depend on which cells exist).
 
+Also: `updateBounds()`/`addShelves()`/`addPosts()` use `maxOf`/`minOf` (mapWalker.ts) instead of `Math.max(...array)`/`Math.min(...array)` — spreading a huge array as call arguments can blow the engine's argument-count limit at warehouse scale; the loop-based helpers don't have that limit. Use these for any new min/max-over-array logic in this file instead of reintroducing a spread.
+
 ## Click-to-select works in both walk and orbit mode, not orbit-only
 Click-to-select (`selectAtScreenPoint`, wired via `onPointerUpOrCancel`'s `wasSinglePointerClick`) is no longer gated to `cameraMode === 'orbit'` — clicking/tapping a box now selects it in walk mode too. This was a deliberate override of the original design (see git history / earlier `.ai/rules` note and old test name "click-to-select is orbit-only") — don't reintroduce the mode gate without re-confirming with the user first.
 
