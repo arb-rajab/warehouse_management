@@ -48,6 +48,37 @@ export function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * Scale-safe max/min over a plain number array. `Math.max(fallback, ...numbers)`
+ * spreads the whole array as call arguments, which blows the engine's
+ * argument-count limit once a row/warehouse has tens of thousands of cells;
+ * a loop has no such limit. `fallback` doubles as both the empty-array
+ * default and a floor, matching `Math.max(fallback, ...numbers)`'s behavior.
+ */
+export function maxOf(numbers: number[], fallback: number = -Infinity): number {
+    let max = fallback;
+
+    for (const value of numbers) {
+        if (value > max) {
+            max = value;
+        }
+    }
+
+    return max;
+}
+
+export function minOf(numbers: number[], fallback: number = Infinity): number {
+    let min = fallback;
+
+    for (const value of numbers) {
+        if (value < min) {
+            min = value;
+        }
+    }
+
+    return min;
+}
+
 export interface WalkerPosition {
     x: number;
     y: number;
@@ -297,5 +328,205 @@ export function boundsForWarehouse(
         maxY: flatWorldY(Math.max(maxFlatNumber, 1)) + FLAT_SPACING,
         minZ: 0,
         maxZ: cellWorldZ(Math.max(maxCellsCount, 1)) + CELL_SPACING,
+    };
+}
+
+/**
+ * Overview/orbit camera math — a second camera mode alongside the
+ * first-person walker above, for seeing the whole warehouse (or a wide
+ * chunk of it) at once instead of walking it row by row. The camera orbits
+ * a fixed center point at a variable distance; unlike the walker it never
+ * moves via WASD, only via drag (orbit) and wheel/pinch (zoom).
+ */
+
+export const ORBIT_PITCH_MIN_DEGREES = 5;
+export const ORBIT_PITCH_MAX_DEGREES = 85;
+export const ORBIT_DEFAULT_YAW_DEGREES = 45;
+export const ORBIT_DEFAULT_PITCH_DEGREES = 35;
+export const ORBIT_MIN_DISTANCE = CELL_SPACING * 2;
+const ORBIT_WHEEL_ZOOM_SENSITIVITY = 0.001;
+
+export interface OrbitState {
+    yawDegrees: number;
+    pitchDegrees: number;
+    distance: number;
+}
+
+/**
+ * The fixed point the orbit camera looks at (the warehouse's own center) and
+ * the distance range it can zoom across, derived from the same bounds the
+ * walker is clamped to. `defaultDistance` is a heuristic "fits the whole
+ * warehouse" distance (the bounding box's diagonal), not an exact
+ * field-of-view fit — good enough for an overview, not a tight frame.
+ */
+export interface OrbitRange {
+    center: WalkerPosition;
+    minDistance: number;
+    maxDistance: number;
+    defaultDistance: number;
+}
+
+export function orbitRangeForBounds(bounds: WalkerBounds): OrbitRange {
+    const center = {
+        x: (bounds.minX + bounds.maxX) / 2,
+        y: (bounds.minY + bounds.maxY) / 2,
+        z: (bounds.minZ + bounds.maxZ) / 2,
+    };
+    const diagonal = Math.hypot(
+        bounds.maxX - bounds.minX,
+        bounds.maxY - bounds.minY,
+        bounds.maxZ - bounds.minZ,
+    );
+    const defaultDistance = Math.max(ORBIT_MIN_DISTANCE, diagonal);
+
+    return {
+        center,
+        minDistance: ORBIT_MIN_DISTANCE,
+        maxDistance: defaultDistance * 2.5,
+        defaultDistance,
+    };
+}
+
+/** The orbit's starting angle/distance whenever overview mode is (re)entered. */
+export function defaultOrbitState(range: OrbitRange): OrbitState {
+    return {
+        yawDegrees: ORBIT_DEFAULT_YAW_DEGREES,
+        pitchDegrees: ORBIT_DEFAULT_PITCH_DEGREES,
+        distance: range.defaultDistance,
+    };
+}
+
+/**
+ * Advances orbit pitch by a vertical drag delta, same convention as
+ * `stepPitch` (drag up looks/orbits up) but clamped to
+ * [ORBIT_PITCH_MIN_DEGREES, ORBIT_PITCH_MAX_DEGREES] instead of the walker's
+ * range — orbit pitch never reaches the poles (straight down/up), which
+ * would otherwise make yaw ill-defined and the view flip disorientingly.
+ */
+export function stepOrbitPitch(
+    currentPitchDegrees: number,
+    dragDeltaYPixels: number,
+    sensitivity: number = PITCH_DRAG_SENSITIVITY,
+): number {
+    return clamp(
+        currentPitchDegrees - dragDeltaYPixels * sensitivity,
+        ORBIT_PITCH_MIN_DEGREES,
+        ORBIT_PITCH_MAX_DEGREES,
+    );
+}
+
+/** Orbit yaw wraps freely all the way around, so it reuses `stepYaw` as-is. */
+
+const ORBIT_KEY_YAW_SPEED_DEGREES = 60;
+const ORBIT_KEY_PITCH_SPEED_DEGREES = 60;
+/** Exponential zoom rate per second for held-key zoom — always yields a positive distance, unlike an additive step. */
+const ORBIT_KEY_ZOOM_RATE_PER_SECOND = 1.5;
+
+/**
+ * Drives orbit yaw/pitch/distance from held keys instead of a pointer drag —
+ * the same `pressedDirections` set/keys `stepPosition` (walk mode) reads, so
+ * WASD/arrows and Space/Shift double as orbit controls without new bindings.
+ * forward/backward tilt pitch up/down, left/right yaw, up/down (Space/Shift)
+ * zoom in/out. Zoom is multiplicative (`Math.exp`), matching
+ * `stepOrbitDistance`'s multiplicative wheel-zoom style and always staying
+ * positive regardless of `deltaSeconds`.
+ */
+export function stepOrbitStateByKeys(
+    orbit: OrbitState,
+    pressedDirections: ReadonlySet<MoveDirection>,
+    deltaSeconds: number,
+    range: OrbitRange,
+): OrbitState {
+    let { yawDegrees, pitchDegrees, distance } = orbit;
+
+    if (pressedDirections.has('left')) {
+        yawDegrees -= ORBIT_KEY_YAW_SPEED_DEGREES * deltaSeconds;
+    }
+
+    if (pressedDirections.has('right')) {
+        yawDegrees += ORBIT_KEY_YAW_SPEED_DEGREES * deltaSeconds;
+    }
+
+    if (pressedDirections.has('forward')) {
+        pitchDegrees += ORBIT_KEY_PITCH_SPEED_DEGREES * deltaSeconds;
+    }
+
+    if (pressedDirections.has('backward')) {
+        pitchDegrees -= ORBIT_KEY_PITCH_SPEED_DEGREES * deltaSeconds;
+    }
+
+    if (pressedDirections.has('up')) {
+        distance *= Math.exp(-ORBIT_KEY_ZOOM_RATE_PER_SECOND * deltaSeconds);
+    }
+
+    if (pressedDirections.has('down')) {
+        distance *= Math.exp(ORBIT_KEY_ZOOM_RATE_PER_SECOND * deltaSeconds);
+    }
+
+    return {
+        yawDegrees: normalizeYaw(yawDegrees),
+        pitchDegrees: clamp(
+            pitchDegrees,
+            ORBIT_PITCH_MIN_DEGREES,
+            ORBIT_PITCH_MAX_DEGREES,
+        ),
+        distance: clamp(distance, range.minDistance, range.maxDistance),
+    };
+}
+
+/** Zooms by mouse wheel — positive `wheelDeltaY` (scrolling down) zooms out. */
+export function stepOrbitDistance(
+    currentDistance: number,
+    wheelDeltaY: number,
+    range: OrbitRange,
+    sensitivity: number = ORBIT_WHEEL_ZOOM_SENSITIVITY,
+): number {
+    return clamp(
+        currentDistance * (1 + wheelDeltaY * sensitivity),
+        range.minDistance,
+        range.maxDistance,
+    );
+}
+
+/**
+ * Zooms by two-finger pinch, mirroring `zoomFromPinch` in mapViewport.ts:
+ * fingers spreading apart (a bigger current gap than the pinch started with)
+ * zooms in (a smaller distance), so the ratio is inverted relative to the 2D
+ * viewport's zoom scalar (which grows, not shrinks, as the pinch widens).
+ */
+export function orbitDistanceFromPinch(
+    distanceAtPinchStart: number,
+    startPointerGap: number,
+    currentPointerGap: number,
+    range: OrbitRange,
+): number {
+    if (startPointerGap === 0) {
+        return clamp(
+            distanceAtPinchStart,
+            range.minDistance,
+            range.maxDistance,
+        );
+    }
+
+    return clamp(
+        distanceAtPinchStart * (startPointerGap / currentPointerGap),
+        range.minDistance,
+        range.maxDistance,
+    );
+}
+
+/** The orbit camera's world position, given where it's centered and its current angle/distance. */
+export function orbitCameraPosition(
+    range: OrbitRange,
+    orbit: OrbitState,
+): WalkerPosition {
+    const yawRadians = (orbit.yawDegrees * Math.PI) / 180;
+    const pitchRadians = (orbit.pitchDegrees * Math.PI) / 180;
+    const horizontalDistance = orbit.distance * Math.cos(pitchRadians);
+
+    return {
+        x: range.center.x + horizontalDistance * Math.sin(yawRadians),
+        y: range.center.y + orbit.distance * Math.sin(pitchRadians),
+        z: range.center.z + horizontalDistance * Math.cos(yawRadians),
     };
 }

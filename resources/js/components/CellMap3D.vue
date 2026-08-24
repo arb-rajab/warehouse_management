@@ -18,22 +18,40 @@ import {
     boundsForWarehouse,
     cellWorldZ,
     clamp,
+    defaultOrbitState,
     EYE_HEIGHT,
     facedGridCoordinate,
     flatWorldY,
     lookDirection,
+    maxOf,
+    minOf,
     moveDirectionForKey,
+    orbitCameraPosition,
+    orbitDistanceFromPinch,
+    orbitRangeForBounds,
     pitchToLookAt,
     rowWorldX,
+    stepOrbitDistance,
+    stepOrbitPitch,
+    stepOrbitStateByKeys,
     stepPitch,
     stepPosition,
     stepYaw,
 } from '@/lib/mapWalker';
-import type { MoveDirection, WalkerBounds } from '@/lib/mapWalker';
+import type {
+    MoveDirection,
+    OrbitRange,
+    OrbitState,
+    WalkerBounds,
+} from '@/lib/mapWalker';
 import type { Cell, CellMap3DBand, CellMap3DItem } from '@/types/admin';
 
 const props = defineProps<{
     bands: CellMap3DBand[];
+}>();
+
+const emit = defineEmits<{
+    'camera-mode-change': [mode: 'walk' | 'orbit'];
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -46,6 +64,14 @@ type Disposable = { dispose: () => void };
 interface FacedItem {
     rowLetter: string;
     item: CellMap3DItem;
+}
+
+/** Screen-space distance between two pointers, for orbit mode's two-finger pinch-to-zoom. */
+function distanceBetween(
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+): number {
+    return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 const BOX_SIZE = 1.4;
@@ -91,6 +117,27 @@ let lastFrameTime: number | null = null;
 let isDragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
+
+/**
+ * Overview mode: an orbit camera around the whole warehouse instead of a
+ * first-person walk. `orbitRange` (center/zoom limits) is derived from
+ * `bounds` in `updateBounds()`; `orbitState` (angle/distance) resets to a
+ * default overview every time orbit mode is (re)entered — see
+ * `setCameraMode`.
+ */
+const cameraMode = ref<'walk' | 'orbit'>('walk');
+let orbitRange: OrbitRange = {
+    center: { x: 0, y: 0, z: 0 },
+    minDistance: 0,
+    maxDistance: 0,
+    defaultDistance: 0,
+};
+let orbitState: OrbitState = { yawDegrees: 0, pitchDegrees: 0, distance: 0 };
+
+/** Multi-pointer tracking for orbit's two-finger pinch-to-zoom (touch). */
+const activePointers = new Map<number, { x: number; y: number }>();
+let pinchStartGap: number | null = null;
+let orbitDistanceAtPinchStart = 0;
 
 function disposeCellGroup(): void {
     if (cellGroup && scene) {
@@ -173,8 +220,8 @@ function addShelves(group: THREE.Group, bands: CellMap3DBand[]): void {
         }
 
         for (const [flatNumber, cellNumbers] of cellNumbersByFlat) {
-            const minCell = Math.min(...cellNumbers);
-            const maxCell = Math.max(...cellNumbers);
+            const minCell = minOf(cellNumbers);
+            const maxCell = maxOf(cellNumbers);
             const depth =
                 cellWorldZ(maxCell) -
                 cellWorldZ(minCell) +
@@ -217,9 +264,9 @@ function addPosts(group: THREE.Group, bands: CellMap3DBand[]): void {
 
         const cellNumbers = band.items.map((item) => item.cellNumber);
         const flatNumbers = band.items.map((item) => item.flatNumber);
-        const minCell = Math.min(...cellNumbers);
-        const maxCell = Math.max(...cellNumbers);
-        const postHeight = flatWorldY(Math.max(...flatNumbers)) + SHELF_MARGIN;
+        const minCell = minOf(cellNumbers);
+        const maxCell = maxOf(cellNumbers);
+        const postHeight = flatWorldY(maxOf(flatNumbers)) + SHELF_MARGIN;
 
         const postGeometry = new THREE.BoxGeometry(
             POST_SIZE,
@@ -249,10 +296,17 @@ function addPosts(group: THREE.Group, bands: CellMap3DBand[]): void {
 function updateBounds(): void {
     const rowCount = props.bands.length;
     const items = props.bands.flatMap((band) => band.items);
-    const maxCellsCount = Math.max(1, ...items.map((item) => item.cellNumber));
-    const maxFlatNumber = Math.max(1, ...items.map((item) => item.flatNumber));
+    const maxCellsCount = maxOf(
+        items.map((item) => item.cellNumber),
+        1,
+    );
+    const maxFlatNumber = maxOf(
+        items.map((item) => item.flatNumber),
+        1,
+    );
 
     bounds = boundsForWarehouse(rowCount, maxCellsCount, maxFlatNumber);
+    orbitRange = orbitRangeForBounds(bounds);
 }
 
 function facedKey(
@@ -333,7 +387,28 @@ function resetView(): void {
     yawDegrees = 0;
 }
 
-defineExpose({ focusCell, resetView });
+/**
+ * Switches between the first-person walk camera and the orbit/overview
+ * camera. Entering orbit mode always resets it to the default overview
+ * angle/distance rather than remembering where a previous orbit session
+ * left off, matching how `resetView` already re-anchors rather than
+ * persisting an arbitrary prior state.
+ */
+function setCameraMode(mode: 'walk' | 'orbit'): void {
+    if (mode === cameraMode.value) {
+        return;
+    }
+
+    cameraMode.value = mode;
+
+    if (mode === 'orbit') {
+        orbitState = defaultOrbitState(orbitRange);
+    }
+
+    emit('camera-mode-change', mode);
+}
+
+defineExpose({ focusCell, resetView, setCameraMode });
 
 /**
  * The cell the camera is currently facing — a point one cell-spacing ahead
@@ -363,11 +438,15 @@ function updateFacedItem(): void {
     facedItem.value = cellLookup.get(key) ?? null;
 }
 
-const walkHint = computed(() =>
-    isTouchDevice.value
+const walkHint = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return t('cells.map.orbitHint');
+    }
+
+    return isTouchDevice.value
         ? t('cells.map.walkHintTouch')
-        : t('cells.map.walkHint'),
-);
+        : t('cells.map.walkHint');
+});
 
 const facedLabel = computed(() =>
     facedItem.value
@@ -413,6 +492,18 @@ function updateCamera(): void {
         return;
     }
 
+    if (cameraMode.value === 'orbit') {
+        const orbitPosition = orbitCameraPosition(orbitRange, orbitState);
+        camera.position.set(orbitPosition.x, orbitPosition.y, orbitPosition.z);
+        camera.lookAt(
+            orbitRange.center.x,
+            orbitRange.center.y,
+            orbitRange.center.z,
+        );
+
+        return;
+    }
+
     camera.position.set(position.x, position.y, position.z);
 
     const direction = lookDirection(pitchDegrees, yawDegrees);
@@ -432,7 +523,7 @@ function animate(timeMs: number): void {
         lastFrameTime === null ? 0 : (timeMs - lastFrameTime) / 1000;
     lastFrameTime = timeMs;
 
-    if (pressedDirections.size > 0) {
+    if (cameraMode.value === 'walk' && pressedDirections.size > 0) {
         const next = stepPosition(
             position,
             pressedDirections,
@@ -442,15 +533,39 @@ function animate(timeMs: number): void {
         position.x = next.x;
         position.y = next.y;
         position.z = next.z;
+    } else if (cameraMode.value === 'orbit' && pressedDirections.size > 0) {
+        orbitState = stepOrbitStateByKeys(
+            orbitState,
+            pressedDirections,
+            deltaSeconds,
+            orbitRange,
+        );
     }
 
     updateCamera();
-    updateFacedItem();
+
+    if (cameraMode.value === 'walk') {
+        updateFacedItem();
+    }
+
     renderer.render(scene, camera);
     animationFrameId = requestAnimationFrame(animate);
 }
 
+/**
+ * WASD/arrows and Space/Shift drive both camera modes — `stepPosition`
+ * (walk) and `stepOrbitStateByKeys` (orbit) both read the same
+ * `pressedDirections` set from `animate()`, so key handling itself doesn't
+ * branch on `cameraMode`.
+ */
 function onKeyDown(event: KeyboardEvent): void {
+    if (event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        setCameraMode(cameraMode.value === 'walk' ? 'orbit' : 'walk');
+
+        return;
+    }
+
     const direction = moveDirectionForKey(event.key);
 
     if (direction) {
@@ -470,16 +585,52 @@ function onKeyUp(event: KeyboardEvent): void {
 function onFocusLost(): void {
     pressedDirections.clear();
     isDragging = false;
+    activePointers.clear();
+    pinchStartGap = null;
 }
 
 function onPointerDown(event: PointerEvent): void {
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    containerRef.value?.setPointerCapture?.(event.pointerId);
+
+    if (activePointers.size === 2 && cameraMode.value === 'orbit') {
+        isDragging = false;
+        const [a, b] = [...activePointers.values()];
+        pinchStartGap = distanceBetween(a, b);
+        orbitDistanceAtPinchStart = orbitState.distance;
+
+        return;
+    }
+
     isDragging = true;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
-    containerRef.value?.setPointerCapture?.(event.pointerId);
 }
 
 function onPointerMove(event: PointerEvent): void {
+    if (activePointers.has(event.pointerId)) {
+        activePointers.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY,
+        });
+    }
+
+    if (
+        activePointers.size === 2 &&
+        pinchStartGap !== null &&
+        cameraMode.value === 'orbit'
+    ) {
+        const [a, b] = [...activePointers.values()];
+        orbitState.distance = orbitDistanceFromPinch(
+            orbitDistanceAtPinchStart,
+            pinchStartGap,
+            distanceBetween(a, b),
+            orbitRange,
+        );
+
+        return;
+    }
+
     if (!isDragging) {
         return;
     }
@@ -488,16 +639,47 @@ function onPointerMove(event: PointerEvent): void {
     const deltaY = event.clientY - lastPointerY;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
+
+    if (cameraMode.value === 'orbit') {
+        orbitState.yawDegrees = stepYaw(orbitState.yawDegrees, deltaX);
+        orbitState.pitchDegrees = stepOrbitPitch(
+            orbitState.pitchDegrees,
+            deltaY,
+        );
+
+        return;
+    }
+
     pitchDegrees = stepPitch(pitchDegrees, deltaY);
     yawDegrees = stepYaw(yawDegrees, deltaX);
 }
 
 function onPointerUpOrCancel(event: PointerEvent): void {
-    isDragging = false;
+    activePointers.delete(event.pointerId);
+
+    if (activePointers.size < 2) {
+        pinchStartGap = null;
+    }
 
     if (containerRef.value?.hasPointerCapture?.(event.pointerId)) {
         containerRef.value.releasePointerCapture(event.pointerId);
     }
+
+    isDragging = false;
+}
+
+/** Orbit-only zoom for desktop mouse wheel — pinch (above) covers touch. */
+function onWheel(event: WheelEvent): void {
+    if (cameraMode.value !== 'orbit') {
+        return;
+    }
+
+    event.preventDefault();
+    orbitState.distance = stepOrbitDistance(
+        orbitState.distance,
+        event.deltaY,
+        orbitRange,
+    );
 }
 
 /**
@@ -639,6 +821,7 @@ onBeforeUnmount(() => {
         @pointerup="onPointerUpOrCancel"
         @pointercancel="onPointerUpOrCancel"
         @pointerleave="onPointerUpOrCancel"
+        @wheel="onWheel"
     >
         <div
             v-if="facedItem"
@@ -655,7 +838,28 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-            v-if="isTouchDevice"
+            v-if="cameraMode === 'orbit'"
+            class="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-2"
+        >
+            <div
+                data-testid="map-3d-orbit-legend"
+                class="flex flex-col items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-center text-xs text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+                <p>{{ t('cells.map.controls.orbit.rotateLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.zoomLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.keyboardLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.selectLabel') }}</p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{
+                        t('cells.map.controls.cameraModeToggleLabel')
+                    }}</span>
+                    <kbd :class="kbdClass">O</kbd>
+                </p>
+            </div>
+        </div>
+
+        <div
+            v-else-if="isTouchDevice"
             class="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex items-end justify-between px-3"
         >
             <div
@@ -767,6 +971,12 @@ onBeforeUnmount(() => {
                     <span>{{ t('cells.map.controls.down') }}</span>
                 </p>
                 <p>{{ t('cells.map.controls.lookLabel') }}</p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{
+                        t('cells.map.controls.cameraModeToggleLabel')
+                    }}</span>
+                    <kbd :class="kbdClass">O</kbd>
+                </p>
             </div>
         </div>
     </div>

@@ -4,22 +4,36 @@ import {
     CELL_SPACING,
     cellWorldZ,
     clamp,
+    defaultOrbitState,
     EYE_HEIGHT,
     facedGridCoordinate,
     FLAT_SPACING,
     flatWorldY,
     lookDirection,
+    maxOf,
     MIN_EYE_HEIGHT,
+    minOf,
     moveDirectionForKey,
     nearestCellNumber,
     nearestFlatNumber,
     nearestRowIndex,
     normalizeYaw,
+    orbitCameraPosition,
+    orbitDistanceFromPinch,
+    ORBIT_DEFAULT_PITCH_DEGREES,
+    ORBIT_DEFAULT_YAW_DEGREES,
+    ORBIT_MIN_DISTANCE,
+    ORBIT_PITCH_MAX_DEGREES,
+    ORBIT_PITCH_MIN_DEGREES,
+    orbitRangeForBounds,
     PITCH_MAX_DEGREES,
     PITCH_MIN_DEGREES,
     pitchToLookAt,
     ROW_SPACING,
     rowWorldX,
+    stepOrbitDistance,
+    stepOrbitPitch,
+    stepOrbitStateByKeys,
     stepPitch,
     stepPosition,
     stepYaw,
@@ -54,6 +68,30 @@ describe('clamp', () => {
         expect(clamp(5, 0, 10)).toBe(5);
         expect(clamp(-5, 0, 10)).toBe(0);
         expect(clamp(15, 0, 10)).toBe(10);
+    });
+});
+
+describe('maxOf / minOf', () => {
+    it('finds the max/min of a plain array, matching Math.max/Math.min', () => {
+        expect(maxOf([3, 1, 4, 1, 5, 9])).toBe(9);
+        expect(minOf([3, 1, 4, 1, 5, 9])).toBe(1);
+    });
+
+    it('applies the fallback as a floor/ceiling even when the array is non-empty', () => {
+        expect(maxOf([1, 2, 3], 10)).toBe(10);
+        expect(minOf([1, 2, 3], -10)).toBe(-10);
+    });
+
+    it('returns the fallback for an empty array', () => {
+        expect(maxOf([], 1)).toBe(1);
+        expect(minOf([], 1)).toBe(1);
+    });
+
+    it('handles arrays too large to spread as call arguments without throwing', () => {
+        const huge = Array.from({ length: 200_000 }, (_, i) => i + 1);
+
+        expect(maxOf(huge, 1)).toBe(200_000);
+        expect(minOf(huge)).toBe(1);
     });
 });
 
@@ -341,5 +379,260 @@ describe('lookDirection', () => {
     it('adds a positive Y component when pitched up', () => {
         expect(lookDirection(45, 0).y).toBeGreaterThan(0);
         expect(lookDirection(-45, 0).y).toBeLessThan(0);
+    });
+});
+
+describe('orbitRangeForBounds', () => {
+    it('centers on the middle of the given bounds', () => {
+        const range = orbitRangeForBounds({
+            minX: 0,
+            maxX: 10,
+            minY: 2,
+            maxY: 6,
+            minZ: -4,
+            maxZ: 4,
+        });
+
+        expect(range.center).toEqual({ x: 5, y: 4, z: 0 });
+    });
+
+    it("uses the bounds' diagonal as the default distance, at least the minimum", () => {
+        const wide = orbitRangeForBounds({
+            minX: 0,
+            maxX: 30,
+            minY: 0,
+            maxY: 10,
+            minZ: 0,
+            maxZ: 40,
+        });
+        expect(wide.defaultDistance).toBeCloseTo(Math.hypot(30, 10, 40));
+        expect(wide.maxDistance).toBeGreaterThan(wide.defaultDistance);
+
+        const tiny = orbitRangeForBounds({
+            minX: 0,
+            maxX: 0.1,
+            minY: 0,
+            maxY: 0.1,
+            minZ: 0,
+            maxZ: 0.1,
+        });
+        expect(tiny.defaultDistance).toBe(ORBIT_MIN_DISTANCE);
+    });
+});
+
+describe('defaultOrbitState', () => {
+    it("starts at the standard three-quarter angle, at the range's default distance", () => {
+        const range = orbitRangeForBounds({
+            minX: 0,
+            maxX: 10,
+            minY: 0,
+            maxY: 10,
+            minZ: 0,
+            maxZ: 10,
+        });
+
+        expect(defaultOrbitState(range)).toEqual({
+            yawDegrees: ORBIT_DEFAULT_YAW_DEGREES,
+            pitchDegrees: ORBIT_DEFAULT_PITCH_DEGREES,
+            distance: range.defaultDistance,
+        });
+    });
+});
+
+describe('stepOrbitPitch', () => {
+    it('pitches up when dragging up, like stepPitch', () => {
+        expect(stepOrbitPitch(45, -10, 1)).toBe(55);
+    });
+
+    it('clamps to the orbit-specific range, never reaching the poles', () => {
+        expect(stepOrbitPitch(80, -100, 1)).toBe(ORBIT_PITCH_MAX_DEGREES);
+        expect(stepOrbitPitch(10, 100, 1)).toBe(ORBIT_PITCH_MIN_DEGREES);
+    });
+});
+
+describe('stepOrbitDistance', () => {
+    const range = orbitRangeForBounds({
+        minX: 0,
+        maxX: 10,
+        minY: 0,
+        maxY: 10,
+        minZ: 0,
+        maxZ: 10,
+    });
+
+    it('zooms out on a positive wheel delta (scrolling down)', () => {
+        expect(stepOrbitDistance(10, 10, range, 0.01)).toBeCloseTo(11);
+    });
+
+    it('zooms in on a negative wheel delta (scrolling up)', () => {
+        expect(stepOrbitDistance(10, -10, range, 0.01)).toBeCloseTo(9);
+    });
+
+    it('clamps to the range', () => {
+        expect(stepOrbitDistance(range.minDistance, -1000, range, 0.01)).toBe(
+            range.minDistance,
+        );
+        expect(stepOrbitDistance(range.maxDistance, 1000, range, 0.01)).toBe(
+            range.maxDistance,
+        );
+    });
+});
+
+describe('orbitDistanceFromPinch', () => {
+    const range = orbitRangeForBounds({
+        minX: 0,
+        maxX: 10,
+        minY: 0,
+        maxY: 10,
+        minZ: 0,
+        maxZ: 10,
+    });
+
+    it('zooms in (shrinks distance) as fingers spread further apart', () => {
+        const result = orbitDistanceFromPinch(20, 100, 200, range);
+        expect(result).toBeCloseTo(10);
+    });
+
+    it('zooms out (grows distance) as fingers pinch closer together', () => {
+        const result = orbitDistanceFromPinch(10, 200, 100, range);
+        expect(result).toBeCloseTo(20);
+    });
+
+    it('is a no-op guard against division by zero when the pinch started at zero gap', () => {
+        expect(orbitDistanceFromPinch(15, 0, 50, range)).toBe(15);
+    });
+
+    it('clamps to the range', () => {
+        expect(
+            orbitDistanceFromPinch(range.minDistance, 200, 1000, range),
+        ).toBe(range.minDistance);
+    });
+});
+
+describe('orbitCameraPosition', () => {
+    it('sits directly in front of the center (along +Z) at yaw 0, pitch 0', () => {
+        const range = orbitRangeForBounds({
+            minX: -5,
+            maxX: 5,
+            minY: -5,
+            maxY: 5,
+            minZ: -5,
+            maxZ: 5,
+        });
+
+        const position = orbitCameraPosition(range, {
+            yawDegrees: 0,
+            pitchDegrees: 0,
+            distance: 10,
+        });
+
+        expect(position.x).toBeCloseTo(range.center.x);
+        expect(position.y).toBeCloseTo(range.center.y);
+        expect(position.z).toBeCloseTo(range.center.z + 10);
+    });
+
+    it('rises above the center as pitch increases toward looking straight down', () => {
+        const range = orbitRangeForBounds({
+            minX: -5,
+            maxX: 5,
+            minY: -5,
+            maxY: 5,
+            minZ: -5,
+            maxZ: 5,
+        });
+
+        const low = orbitCameraPosition(range, {
+            yawDegrees: 0,
+            pitchDegrees: 10,
+            distance: 10,
+        });
+        const high = orbitCameraPosition(range, {
+            yawDegrees: 0,
+            pitchDegrees: 80,
+            distance: 10,
+        });
+
+        expect(high.y).toBeGreaterThan(low.y);
+    });
+
+    it('stays at the same distance from center regardless of yaw', () => {
+        const range = orbitRangeForBounds({
+            minX: -5,
+            maxX: 5,
+            minY: -5,
+            maxY: 5,
+            minZ: -5,
+            maxZ: 5,
+        });
+        const orbit = { yawDegrees: 130, pitchDegrees: 20, distance: 15 };
+        const position = orbitCameraPosition(range, orbit);
+
+        const distanceFromCenter = Math.hypot(
+            position.x - range.center.x,
+            position.y - range.center.y,
+            position.z - range.center.z,
+        );
+        expect(distanceFromCenter).toBeCloseTo(15);
+    });
+});
+
+describe('stepOrbitStateByKeys', () => {
+    const range = orbitRangeForBounds({
+        minX: 0,
+        maxX: 10,
+        minY: 0,
+        maxY: 10,
+        minZ: 0,
+        maxZ: 10,
+    });
+    const orbit = { yawDegrees: 0, pitchDegrees: 45, distance: 10 };
+
+    it('yaws right/left on the right/left keys, mirroring drag-to-orbit', () => {
+        const right = stepOrbitStateByKeys(orbit, new Set(['right']), 1, range);
+        expect(right.yawDegrees).toBeGreaterThan(0);
+
+        // Left decreases yaw, wrapping negative values into [0, 360).
+        const left = stepOrbitStateByKeys(orbit, new Set(['left']), 1, range);
+        expect(left.yawDegrees).toBeGreaterThan(270);
+        expect(left.yawDegrees).toBeLessThan(360);
+    });
+
+    it('pitches up/down on the forward/backward keys, clamped to the orbit pitch range', () => {
+        const up = stepOrbitStateByKeys(orbit, new Set(['forward']), 1, range);
+        expect(up.pitchDegrees).toBeGreaterThan(orbit.pitchDegrees);
+
+        const clamped = stepOrbitStateByKeys(
+            orbit,
+            new Set(['forward']),
+            100,
+            range,
+        );
+        expect(clamped.pitchDegrees).toBe(ORBIT_PITCH_MAX_DEGREES);
+    });
+
+    it('zooms in/out on the up/down keys, clamped to the range and always positive', () => {
+        const zoomedIn = stepOrbitStateByKeys(orbit, new Set(['up']), 1, range);
+        expect(zoomedIn.distance).toBeLessThan(orbit.distance);
+        expect(zoomedIn.distance).toBeGreaterThan(0);
+
+        const zoomedOut = stepOrbitStateByKeys(
+            orbit,
+            new Set(['down']),
+            1,
+            range,
+        );
+        expect(zoomedOut.distance).toBeGreaterThan(orbit.distance);
+
+        const clamped = stepOrbitStateByKeys(
+            orbit,
+            new Set(['up']),
+            100,
+            range,
+        );
+        expect(clamped.distance).toBe(range.minDistance);
+    });
+
+    it('does not change anything when no direction is held', () => {
+        expect(stepOrbitStateByKeys(orbit, new Set(), 1, range)).toEqual(orbit);
     });
 });

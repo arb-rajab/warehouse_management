@@ -5,9 +5,11 @@ import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
+    boundsForWarehouse,
     cellWorldZ,
     EYE_HEIGHT,
     flatWorldY,
+    orbitRangeForBounds,
     rowWorldX,
     WALK_SPEED,
     YAW_DRAG_SENSITIVITY,
@@ -185,8 +187,13 @@ type Registry = {
     cameras: Array<{
         position: { x: number; y: number; z: number };
         lookAt: ReturnType<typeof vi.fn>;
+        aspect: number;
+        updateProjectionMatrix: ReturnType<typeof vi.fn>;
     }>;
-    renderers: Array<{ dispose: ReturnType<typeof vi.fn> }>;
+    renderers: Array<{
+        dispose: ReturnType<typeof vi.fn>;
+        setSize: ReturnType<typeof vi.fn>;
+    }>;
     meshes: Array<{
         name: string;
         position: { x: number; y: number; z: number };
@@ -205,7 +212,39 @@ function lastCamera() {
     return cameras[cameras.length - 1];
 }
 
+/** Reproduces the component's own `updateBounds()`/orbit-range derivation, to compute an expected orbit center for a given set of bands. */
+function orbitCenterFor(bands: CellMap3DBand[]) {
+    const items = bands.flatMap((band) => band.items);
+    const maxCellsCount = Math.max(
+        1,
+        ...items.map((entry) => entry.cellNumber),
+    );
+    const maxFlatNumber = Math.max(
+        1,
+        ...items.map((entry) => entry.flatNumber),
+    );
+    const bounds = boundsForWarehouse(
+        bands.length,
+        maxCellsCount,
+        maxFlatNumber,
+    );
+
+    return orbitRangeForBounds(bounds).center;
+}
+
+function distanceFromCenter(
+    position: { x: number; y: number; z: number },
+    center: { x: number; y: number; z: number },
+) {
+    return Math.hypot(
+        position.x - center.x,
+        position.y - center.y,
+        position.z - center.z,
+    );
+}
+
 let rafCallback: ((time: number) => void) | null = null;
+let resizeCallback: (() => void) | null = null;
 
 function item(overrides: Partial<CellMap3DItem> = {}): CellMap3DItem {
     return {
@@ -229,6 +268,7 @@ function band(overrides: Partial<CellMap3DBand> = {}): CellMap3DBand {
 
 beforeEach(() => {
     rafCallback = null;
+    resizeCallback = null;
     registry().cameras = [];
     registry().renderers = [];
     registry().meshes = [];
@@ -245,6 +285,10 @@ beforeEach(() => {
     vi.stubGlobal(
         'ResizeObserver',
         class {
+            constructor(callback: () => void) {
+                resizeCallback = callback;
+            }
+
             observe() {}
             disconnect() {}
         },
@@ -264,15 +308,18 @@ describe('CellMap3D', () => {
         expect(wrapper.find('canvas').exists()).toBe(true);
     });
 
-    it('shows a controls legend explaining movement, flying between flats, and looking', () => {
+    it('shows a controls legend explaining movement, flying between flats, looking, and toggling camera mode', () => {
         const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
 
         expect(wrapper.text()).toContain(t('cells.map.controls.moveLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.flyLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.lookLabel'));
+        expect(wrapper.text()).toContain(
+            t('cells.map.controls.cameraModeToggleLabel'),
+        );
 
         const keyCaps = wrapper.findAll('kbd').map((kbd) => kbd.text());
-        expect(keyCaps).toEqual(['Space', 'Shift']);
+        expect(keyCaps).toEqual(['Space', 'Shift', 'O']);
     });
 
     it('positions the camera at row A, cell 1, flat 1 by default', () => {
@@ -958,6 +1005,243 @@ describe('CellMap3D', () => {
             const afterDirectionZ = (afterCall?.[2] ?? 0) - camera.position.z;
 
             expect(afterDirectionZ).toBeCloseTo(beforeDirectionZ);
+        });
+    });
+
+    describe('overview / orbit camera mode', () => {
+        function setCameraMode(
+            wrapper: ReturnType<typeof mount>,
+            mode: 'walk' | 'orbit',
+        ) {
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode(mode);
+        }
+
+        it('emits camera-mode-change when switching to orbit and back', () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+
+            setCameraMode(wrapper, 'orbit');
+            setCameraMode(wrapper, 'walk');
+
+            expect(wrapper.emitted('camera-mode-change')).toEqual([
+                ['orbit'],
+                ['walk'],
+            ]);
+        });
+
+        it('toggles walk/orbit via the O key, without needing the toolbar button', () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'o' });
+            expect(wrapper.emitted('camera-mode-change')).toEqual([['orbit']]);
+
+            viewport.trigger('keydown', { key: 'O' });
+            expect(wrapper.emitted('camera-mode-change')).toEqual([
+                ['orbit'],
+                ['walk'],
+            ]);
+        });
+
+        it('positions the camera away from the warehouse center, looking at it', () => {
+            const bands = [band({ letter: 'A' }), band({ letter: 'B' })];
+            const wrapper = mount(CellMap3D, { props: { bands } });
+
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(0);
+
+            const center = orbitCenterFor(bands);
+            const camera = lastCamera();
+            expect(distanceFromCenter(camera.position, center)).toBeGreaterThan(
+                0,
+            );
+            expect(camera.lookAt).toHaveBeenLastCalledWith(
+                center.x,
+                center.y,
+                center.z,
+            );
+        });
+
+        it('orbits (does not walk) on WASD/arrow keys, and zooms on Space/Shift', () => {
+            const bands = [band()];
+            const wrapper = mount(CellMap3D, { props: { bands } });
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(0);
+            const center = orbitCenterFor(bands);
+            const before = { ...lastCamera().position };
+            const startDistance = distanceFromCenter(before, center);
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            // Orbiting via keyboard moves the camera (unlike walk mode's
+            // stepPosition), and the position changes — not staying still the
+            // way a no-op would.
+            viewport.trigger('keydown', { key: 'd' });
+            rafCallback?.(1000);
+            expect(lastCamera().position).not.toEqual(before);
+            viewport.trigger('keyup', { key: 'd' });
+
+            const afterYaw = { ...lastCamera().position };
+
+            // Space zooms in (shrinks the distance from center) rather than
+            // flying up like it does in walk mode.
+            viewport.trigger('keydown', { key: ' ' });
+            rafCallback?.(2000);
+            const zoomedInDistance = distanceFromCenter(
+                lastCamera().position,
+                center,
+            );
+            expect(zoomedInDistance).toBeLessThan(
+                distanceFromCenter(afterYaw, center),
+            );
+            expect(zoomedInDistance).toBeLessThan(startDistance);
+        });
+
+        it('orbits the camera around the center when dragging', () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(0);
+            const before = { ...lastCamera().position };
+
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
+            );
+            element.dispatchEvent(
+                new MouseEvent('pointermove', { clientX: 120, clientY: 0 }),
+            );
+            rafCallback?.(16);
+
+            expect(lastCamera().position).not.toEqual(before);
+        });
+
+        it('zooms out on wheel scroll down and in on scroll up', () => {
+            const bands = [band()];
+            const wrapper = mount(CellMap3D, { props: { bands } });
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(0);
+            const center = orbitCenterFor(bands);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            const startDistance = distanceFromCenter(
+                lastCamera().position,
+                center,
+            );
+
+            element.dispatchEvent(new WheelEvent('wheel', { deltaY: 100 }));
+            rafCallback?.(16);
+            const zoomedOut = distanceFromCenter(lastCamera().position, center);
+            expect(zoomedOut).toBeGreaterThan(startDistance);
+
+            element.dispatchEvent(new WheelEvent('wheel', { deltaY: -200 }));
+            rafCallback?.(32);
+            const zoomedIn = distanceFromCenter(lastCamera().position, center);
+            expect(zoomedIn).toBeLessThan(zoomedOut);
+        });
+
+        it('does not zoom on wheel scroll while walking', () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            rafCallback?.(0);
+            const before = { ...lastCamera().position };
+
+            wrapper
+                .get('[data-testid="map-3d-viewport"]')
+                .element.dispatchEvent(
+                    new WheelEvent('wheel', { deltaY: 500 }),
+                );
+            rafCallback?.(16);
+
+            expect(lastCamera().position).toEqual(before);
+        });
+
+        it('zooms in as a two-finger pinch spreads apart', () => {
+            const bands = [band()];
+            const wrapper = mount(CellMap3D, { props: { bands } });
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(0);
+            const center = orbitCenterFor(bands);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            const startDistance = distanceFromCenter(
+                lastCamera().position,
+                center,
+            );
+
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 100,
+                    clientY: 100,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 2,
+                    clientX: 200,
+                    clientY: 100,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 100,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 2,
+                    clientX: 250,
+                    clientY: 100,
+                }),
+            );
+            rafCallback?.(16);
+
+            const zoomedIn = distanceFromCenter(lastCamera().position, center);
+            expect(zoomedIn).toBeLessThan(startDistance);
+        });
+    });
+
+    describe('resizing', () => {
+        it("resizes the renderer and updates the camera's aspect when the container size changes", () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            const container = wrapper.get('[data-testid="map-3d-viewport"]')
+                .element as HTMLElement;
+            Object.defineProperty(container, 'clientWidth', {
+                value: 800,
+                configurable: true,
+            });
+            Object.defineProperty(container, 'clientHeight', {
+                value: 400,
+                configurable: true,
+            });
+
+            resizeCallback?.();
+
+            expect(lastCamera().aspect).toBe(2);
+            expect(lastCamera().updateProjectionMatrix).toHaveBeenCalled();
+            expect(registry().renderers.at(-1)?.setSize).toHaveBeenCalledWith(
+                800,
+                400,
+            );
+        });
+
+        it('ignores a resize while the container still reports zero size', () => {
+            mount(CellMap3D, { props: { bands: [band()] } });
+            const renderer = registry().renderers.at(-1) as {
+                setSize: ReturnType<typeof vi.fn>;
+            };
+            renderer.setSize.mockClear();
+
+            resizeCallback?.();
+
+            expect(renderer.setSize).not.toHaveBeenCalled();
         });
     });
 });
