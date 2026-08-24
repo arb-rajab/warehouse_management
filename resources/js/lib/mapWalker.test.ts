@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     boundsForWarehouse,
+    CAMERA_FOV_DEGREES,
     CELL_SPACING,
     cellWorldZ,
     clamp,
@@ -12,6 +13,11 @@ import {
     lookDirection,
     maxOf,
     MIN_EYE_HEIGHT,
+    miniMapHeadingDegrees,
+    miniMapPercentX,
+    miniMapPercentZ,
+    miniMapPosition,
+    miniMapRowLeftPercents,
     minOf,
     moveDirectionForKey,
     nearestCellNumber,
@@ -31,12 +37,14 @@ import {
     pitchToLookAt,
     ROW_SPACING,
     rowWorldX,
+    SPRINT_MULTIPLIER,
     stepOrbitDistance,
     stepOrbitPitch,
     stepOrbitStateByKeys,
     stepPitch,
     stepPosition,
     stepYaw,
+    worldPointToScreenPercent,
 } from './mapWalker';
 
 describe('moveDirectionForKey', () => {
@@ -331,6 +339,91 @@ describe('facedGridCoordinate', () => {
     });
 });
 
+describe('worldPointToScreenPercent', () => {
+    it('centers a point straight ahead at eye height', () => {
+        const result = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 0, y: EYE_HEIGHT, z: 10 },
+        );
+
+        expect(result.visible).toBe(true);
+        expect(result.leftPercent).toBeCloseTo(50);
+        expect(result.topPercent).toBeCloseTo(50);
+    });
+
+    it('places a point to the world-left of straight-ahead on the left half of the screen', () => {
+        // Screen-left is world +X (see stepPosition's handedness note).
+        const result = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 5, y: EYE_HEIGHT, z: 10 },
+        );
+
+        expect(result.leftPercent).toBeLessThan(50);
+    });
+
+    it('places a point above eye height on the top half of the screen', () => {
+        const result = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 0, y: EYE_HEIGHT + 5, z: 10 },
+        );
+
+        expect(result.topPercent).toBeLessThan(50);
+    });
+
+    it('is not visible for a point behind the camera', () => {
+        const result = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 0, y: EYE_HEIGHT, z: -10 },
+        );
+
+        expect(result.visible).toBe(false);
+    });
+
+    it('follows yaw — a point behind becomes visible once turned to face it', () => {
+        const position = { x: 0, y: EYE_HEIGHT, z: 0 };
+        const point = { x: 0, y: EYE_HEIGHT, z: -10 };
+
+        expect(
+            worldPointToScreenPercent(position, 0, 0, 1, point).visible,
+        ).toBe(false);
+        expect(
+            worldPointToScreenPercent(position, 0, 180, 1, point).visible,
+        ).toBe(true);
+    });
+
+    it('defaults the vertical FOV to CAMERA_FOV_DEGREES', () => {
+        const withDefault = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 3, y: EYE_HEIGHT, z: 10 },
+        );
+        const withExplicit = worldPointToScreenPercent(
+            { x: 0, y: EYE_HEIGHT, z: 0 },
+            0,
+            0,
+            1,
+            { x: 3, y: EYE_HEIGHT, z: 10 },
+            CAMERA_FOV_DEGREES,
+        );
+
+        expect(withDefault).toEqual(withExplicit);
+    });
+});
+
 describe('normalizeYaw', () => {
     it('wraps into [0, 360)', () => {
         expect(normalizeYaw(-10)).toBe(350);
@@ -576,6 +669,12 @@ describe('orbitCameraPosition', () => {
     });
 });
 
+describe('SPRINT_MULTIPLIER', () => {
+    it('is greater than 1, so sprinting is actually faster than WALK_SPEED', () => {
+        expect(SPRINT_MULTIPLIER).toBeGreaterThan(1);
+    });
+});
+
 describe('stepOrbitStateByKeys', () => {
     const range = orbitRangeForBounds({
         minX: 0,
@@ -634,5 +733,70 @@ describe('stepOrbitStateByKeys', () => {
 
     it('does not change anything when no direction is held', () => {
         expect(stepOrbitStateByKeys(orbit, new Set(), 1, range)).toEqual(orbit);
+    });
+});
+
+describe('miniMapPercentX / miniMapPercentZ / miniMapPosition', () => {
+    const bounds = {
+        minX: 0,
+        maxX: 10,
+        minY: 0,
+        maxY: 10,
+        minZ: 0,
+        maxZ: 20,
+    };
+
+    it('maps X directly onto [0, 100]', () => {
+        expect(miniMapPercentX(0, bounds)).toBe(0);
+        expect(miniMapPercentX(10, bounds)).toBe(100);
+        expect(miniMapPercentX(5, bounds)).toBe(50);
+    });
+
+    it('maps Z onto [0, 100] inverted — a larger Z is a smaller percent ("up")', () => {
+        expect(miniMapPercentZ(0, bounds)).toBe(100);
+        expect(miniMapPercentZ(20, bounds)).toBe(0);
+        expect(miniMapPercentZ(10, bounds)).toBe(50);
+    });
+
+    it('clamps out-of-bounds positions instead of overflowing [0, 100]', () => {
+        expect(miniMapPercentX(-5, bounds)).toBe(0);
+        expect(miniMapPercentX(50, bounds)).toBe(100);
+    });
+
+    it('combines both axes into a single leftPercent/topPercent position', () => {
+        expect(miniMapPosition({ x: 5, y: 0, z: 10 }, bounds)).toEqual({
+            leftPercent: 50,
+            topPercent: 50,
+        });
+    });
+});
+
+describe('miniMapRowLeftPercents', () => {
+    it('returns one left% per row, spaced along the X axis like rowWorldX', () => {
+        const bounds = boundsForWarehouse(3, 5, 1);
+
+        const percents = miniMapRowLeftPercents(3, bounds);
+
+        expect(percents).toHaveLength(3);
+        expect(percents[0]).toBeLessThan(percents[1]);
+        expect(percents[1]).toBeLessThan(percents[2]);
+    });
+
+    it('returns an empty array for zero rows', () => {
+        const bounds = boundsForWarehouse(0, 1, 1);
+
+        expect(miniMapRowLeftPercents(0, bounds)).toEqual([]);
+    });
+});
+
+describe('miniMapHeadingDegrees', () => {
+    it('points "up" (0deg) at yaw 0, matching the default +Z look direction', () => {
+        expect(miniMapHeadingDegrees(0)).toBe(0);
+    });
+
+    it('is the negation of yaw, wrapped into [0, 360)', () => {
+        expect(miniMapHeadingDegrees(90)).toBe(270);
+        expect(miniMapHeadingDegrees(270)).toBe(90);
+        expect(miniMapHeadingDegrees(180)).toBe(180);
     });
 });

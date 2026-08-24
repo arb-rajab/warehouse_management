@@ -461,19 +461,26 @@ describe('CellMap3D', () => {
         expect(wrapper.find('canvas').exists()).toBe(true);
     });
 
-    it('shows a controls legend explaining movement, flying between flats, looking, selecting, and toggling camera mode', () => {
+    it('shows a state-color legend labelling every cell state, on both touch and non-touch devices', () => {
+        const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+
+        const legend = wrapper.get('[data-testid="map-3d-state-legend"]');
+        expect(legend.text()).toContain(t('cellLog.states.empty'));
+        expect(legend.text()).toContain(t('cellLog.states.full'));
+        expect(legend.text()).toContain(t('cellLog.states.opened'));
+    });
+
+    it('shows a controls legend explaining movement, flying between flats, looking, and selecting', () => {
         const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
 
         expect(wrapper.text()).toContain(t('cells.map.controls.moveLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.flyLabel'));
+        expect(wrapper.text()).toContain(t('cells.map.controls.sprintLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.lookLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.selectLabel'));
-        expect(wrapper.text()).toContain(
-            t('cells.map.controls.cameraModeToggleLabel'),
-        );
 
         const keyCaps = wrapper.findAll('kbd').map((kbd) => kbd.text());
-        expect(keyCaps).toEqual(['Space', 'Shift', 'O']);
+        expect(keyCaps).toEqual(['Space', 'Shift', 'Ctrl', 'O']);
     });
 
     it('positions the camera at row A, cell 1, flat 1 by default', () => {
@@ -997,6 +1004,55 @@ describe('CellMap3D', () => {
         expect(renderer.dispose).toHaveBeenCalled();
     });
 
+    describe('location indicator', () => {
+        it("shows the camera's standing location by default (row A, cell 1, flat 1)", async () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-location-indicator"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+        });
+
+        it('updates as the camera walks, independent of whether a cell actually exists there', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 1 })] }),
+                    ],
+                },
+            });
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'w' });
+            rafCallback?.(0);
+            rafCallback?.(3000);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-location-indicator"]').text(),
+            ).not.toContain(formatSlot('A', 1, 1));
+        });
+
+        it('hides while orbiting', async () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            await wrapper.vm.$nextTick();
+
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper
+                    .find('[data-testid="map-3d-location-indicator"]')
+                    .exists(),
+            ).toBe(false);
+        });
+    });
+
     describe('faced-cell detail panel', () => {
         it('shows the same detail as the 2D grid for the default-faced cell (row A, cell 1, flat 1)', async () => {
             const wrapper = mount(CellMap3D, {
@@ -1444,7 +1500,7 @@ describe('CellMap3D', () => {
     });
 
     describe('aria-live announcement', () => {
-        it('announces facing while walking', async () => {
+        it('announces standing-near + facing while walking', async () => {
             const wrapper = mount(CellMap3D, {
                 props: {
                     bands: [
@@ -1514,6 +1570,334 @@ describe('CellMap3D', () => {
             expect(
                 wrapper.get('[data-testid="map-3d-announcement"]').text(),
             ).toContain(formatSlot('A', 5, 1));
+        });
+    });
+
+    describe('mini-map (walk mode orientation aid)', () => {
+        it('only renders while walking, not while orbiting', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.find('[data-testid="map-3d-mini-map"]').exists(),
+            ).toBe(true);
+
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.find('[data-testid="map-3d-mini-map"]').exists(),
+            ).toBe(false);
+        });
+
+        it('draws one line per configured row', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-mini-map"]').findAll('line'),
+            ).toHaveLength(3);
+        });
+
+        it('highlights the line for the row the camera currently stands in', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const linesBefore = wrapper
+                .get('[data-testid="map-3d-mini-map"]')
+                .findAll('line');
+            expect(linesBefore[0].classes()).toContain('stroke-blue-400');
+            expect(linesBefore[1].classes()).not.toContain('stroke-blue-400');
+
+            (
+                wrapper.vm as unknown as {
+                    focusCell: (r: string, c: number, f: number) => void;
+                }
+            ).focusCell('B', 1, 1);
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            const linesAfter = wrapper
+                .get('[data-testid="map-3d-mini-map"]')
+                .findAll('line');
+            expect(linesAfter[0].classes()).not.toContain('stroke-blue-400');
+            expect(linesAfter[1].classes()).toContain('stroke-blue-400');
+        });
+
+        it('moves the position marker as the camera moves (e.g. via focusCell)', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            const before = wrapper
+                .get('[data-testid="map-3d-mini-map-marker"]')
+                .attributes('style');
+
+            (
+                wrapper.vm as unknown as {
+                    focusCell: (r: string, c: number, f: number) => void;
+                }
+            ).focusCell('B', 5, 1);
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            const after = wrapper
+                .get('[data-testid="map-3d-mini-map-marker"]')
+                .attributes('style');
+            expect(after).not.toBe(before);
+        });
+    });
+
+    describe('row-label floor signage', () => {
+        /** `updateRowLabels()` bails out on a zero-size container, same guard `onResize` uses — stub a real size so its screen projection actually runs. */
+        function stubViewportClientSize(
+            wrapper: ReturnType<typeof mount>,
+            width = 500,
+            height = 500,
+        ): void {
+            const element = wrapper.get('[data-testid="map-3d-viewport"]')
+                .element as HTMLElement;
+            Object.defineProperty(element, 'clientWidth', {
+                value: width,
+                configurable: true,
+            });
+            Object.defineProperty(element, 'clientHeight', {
+                value: height,
+                configurable: true,
+            });
+        }
+
+        it('shows one label per row while walking, and none while orbiting', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            stubViewportClientSize(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const labels = wrapper.findAll('[data-testid="map-3d-row-label"]');
+            expect(labels.map((label) => label.text()).sort()).toEqual([
+                'A',
+                'B',
+            ]);
+
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.findAll('[data-testid="map-3d-row-label"]'),
+            ).toHaveLength(0);
+        });
+
+        it('hides a row label once you turn to face away from it', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [band({ letter: 'A' })] },
+            });
+            stubViewportClientSize(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.findAll('[data-testid="map-3d-row-label"]'),
+            ).toHaveLength(1);
+
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new MouseEvent('pointerdown', { clientX: 0 }),
+            );
+            element.dispatchEvent(
+                new MouseEvent('pointermove', {
+                    clientX: 180 / YAW_DRAG_SENSITIVITY,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.findAll('[data-testid="map-3d-row-label"]'),
+            ).toHaveLength(0);
+        });
+
+        it('moves a row label further from center as the camera walks past it', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [band({ letter: 'A' })] },
+            });
+            stubViewportClientSize(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            const before = wrapper
+                .get('[data-testid="map-3d-row-label"]')
+                .attributes('style');
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'w',
+            });
+            rafCallback?.(1000);
+            await wrapper.vm.$nextTick();
+
+            const after = wrapper.find('[data-testid="map-3d-row-label"]');
+
+            // Walking forward past the sign eventually puts it behind the
+            // camera (out of frame) — either the position changed, or it
+            // disappeared outright, but it can't be unaffected by walking.
+            if (after.exists()) {
+                expect(after.attributes('style')).not.toBe(before);
+            } else {
+                expect(after.exists()).toBe(false);
+            }
+        });
+    });
+
+    describe('sprint', () => {
+        // A band with plenty of depth so movement never clamps against the
+        // warehouse bounds mid-test, which would otherwise mask the speed
+        // difference these tests are asserting on.
+        function spaciousBand() {
+            return band({ items: [item({ cellNumber: 100 })] });
+        }
+
+        it('covers more distance per frame while Ctrl is held', () => {
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'Control' });
+            viewport.trigger('keydown', { key: 'w' });
+            rafCallback?.(0);
+            rafCallback?.(1000);
+
+            expect(lastCamera().position.z).toBeGreaterThan(WALK_SPEED);
+        });
+
+        it('drops back to normal speed once Ctrl is released', () => {
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'Control' });
+            viewport.trigger('keydown', { key: 'w' });
+            rafCallback?.(0);
+            rafCallback?.(1000);
+            viewport.trigger('keyup', { key: 'Control' });
+            const sprintedZ = lastCamera().position.z;
+
+            rafCallback?.(2000);
+
+            expect(lastCamera().position.z - sprintedZ).toBeCloseTo(WALK_SPEED);
+        });
+
+        it('resets the held-Ctrl sprint on blur, like other held keys', () => {
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'Control' });
+            viewport.trigger('blur');
+            viewport.trigger('keydown', { key: 'w' });
+            rafCallback?.(0);
+            rafCallback?.(1000);
+
+            expect(lastCamera().position.z).toBe(WALK_SPEED);
+        });
+
+        function stubTouchDeviceForSprint() {
+            vi.stubGlobal('matchMedia', () => ({
+                matches: true,
+                media: '',
+                addEventListener: () => {},
+                removeEventListener: () => {},
+            }));
+        }
+
+        it('tapping the touch sprint button boosts speed without needing Ctrl', async () => {
+            stubTouchDeviceForSprint();
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            await wrapper.vm.$nextTick();
+
+            await wrapper
+                .get('[data-testid="touch-sprint-toggle"]')
+                .trigger('click');
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'w',
+            });
+            rafCallback?.(0);
+            rafCallback?.(1000);
+
+            expect(lastCamera().position.z).toBeGreaterThan(WALK_SPEED);
+        });
+
+        it('labels the sprint toggle for assistive tech', async () => {
+            stubTouchDeviceForSprint();
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper
+                    .get('[data-testid="touch-sprint-toggle"]')
+                    .attributes('aria-label'),
+            ).toBe(t('cells.map.controls.touch.sprint'));
+        });
+
+        it('toggles back off on a second tap', async () => {
+            stubTouchDeviceForSprint();
+            const wrapper = mount(CellMap3D, {
+                props: { bands: [spaciousBand()] },
+            });
+            await wrapper.vm.$nextTick();
+            const toggle = wrapper.get('[data-testid="touch-sprint-toggle"]');
+
+            await toggle.trigger('click');
+            expect(toggle.attributes('aria-pressed')).toBe('true');
+
+            await toggle.trigger('click');
+            expect(toggle.attributes('aria-pressed')).toBe('false');
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'w',
+            });
+            rafCallback?.(0);
+            rafCallback?.(1000);
+
+            expect(lastCamera().position.z).toBe(WALK_SPEED);
         });
     });
 
@@ -1699,6 +2083,9 @@ describe('CellMap3D', () => {
                     .get('[data-testid="map-3d-viewport"]')
                     .attributes('aria-label'),
             ).toBe(t('cells.map.walkHintTouch'));
+            expect(
+                wrapper.find('[data-testid="map-3d-state-legend"]').exists(),
+            ).toBe(true);
         });
 
         it('keeps the keyboard legend and hides touch buttons on non-touch devices', async () => {

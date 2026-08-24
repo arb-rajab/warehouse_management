@@ -6,20 +6,31 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronUp,
+    Navigation,
+    Zap,
 } from '@lucide/vue';
 import * as THREE from 'three';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+    watch,
+} from 'vue';
 import CellSlot from '@/components/CellSlot.vue';
 import {
     CELL_STATES,
     CELL_STATE_COLOR,
     cellStateLabel,
 } from '@/lib/cellStateColor';
-import { mapToolbarButtonClass } from '@/lib/filters';
+import { mapToolbarButtonClass, selectedToggleClass } from '@/lib/filters';
+import { distanceBetween } from '@/lib/geometry';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
     boundsForWarehouse,
+    CAMERA_FOV_DEGREES,
     cellWorldZ,
     clamp,
     defaultOrbitState,
@@ -28,19 +39,28 @@ import {
     flatWorldY,
     lookDirection,
     maxOf,
+    miniMapHeadingDegrees,
+    miniMapPosition,
+    miniMapRowLeftPercents,
     minOf,
     moveDirectionForKey,
+    nearestCellNumber,
+    nearestFlatNumber,
+    nearestRowIndex,
     orbitCameraPosition,
     orbitDistanceFromPinch,
     orbitRangeForBounds,
     pitchToLookAt,
     rowWorldX,
+    SPRINT_MULTIPLIER,
     stepOrbitDistance,
     stepOrbitPitch,
     stepOrbitStateByKeys,
     stepPitch,
     stepPosition,
     stepYaw,
+    WALK_SPEED,
+    worldPointToScreenPercent,
 } from '@/lib/mapWalker';
 import type {
     FacedGridCoordinate,
@@ -71,14 +91,6 @@ interface FacedItem {
     item: CellMap3DItem;
 }
 
-/** Screen-space distance between two pointers, for orbit mode's two-finger pinch-to-zoom. */
-function distanceBetween(
-    a: { x: number; y: number },
-    b: { x: number; y: number },
-): number {
-    return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
 const BOX_SIZE = 1.4;
 const VIEW_DISTANCE = cellWorldZ(1);
 const HIGHLIGHT_COLOR = 0x3b82f6;
@@ -87,6 +99,23 @@ const SELECT_COLOR = 0x8b5cf6;
 const SELECT_OUTLINE_SCALE = 1.15;
 /** Orbit-mode hover outline — same weight as highlight/pulse outlines, just a distinct neutral color. */
 const HOVER_COLOR = 0xffffff;
+/** Walk-mode mini-map: below this delta the reactive mirror isn't updated, to avoid a reactive write on every animation frame. */
+const MINI_MAP_UPDATE_EPSILON = 0.05;
+const MINI_MAP_UPDATE_EPSILON_DEGREES = 1;
+/** Row-label overlay: below this screen-percent delta the reactive mirror isn't updated, same rationale as MINI_MAP_UPDATE_EPSILON. */
+const ROW_LABEL_UPDATE_EPSILON_PERCENT = 0.5;
+/** How far above a row's topmost shelf its floor-aisle-sign label floats. */
+const ROW_LABEL_HEIGHT_ABOVE_SHELVES = 1;
+/**
+ * How far into the aisle (in cell-spacings) a row's sign is anchored, rather
+ * than right at the entrance (Z=0/half a cell in) — high enough above the
+ * shelves and close enough to the entrance that a sign right overhead would
+ * need an unrealistically steep look-up angle to stay in frame at the
+ * default straight-ahead pitch; anchoring a couple of cells further down
+ * the aisle keeps the look-up angle within the camera's vertical FOV for
+ * the default standing-at-the-entrance view.
+ */
+const ROW_LABEL_DEPTH_IN_CELLS = 2;
 const SKY_COLOR = 0xe5e7eb;
 const SHELF_COLOR = 0x64748b;
 const SHELF_THICKNESS = 0.15;
@@ -101,6 +130,10 @@ const POST_OFFSET = BOX_SIZE / 2 + SHELF_MARGIN;
 /** Key-cap badge for the controls legend (e.g. the `Space`/`Shift` keys). */
 const kbdClass =
     'rounded border border-gray-400 bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200';
+
+function stateHexColor(state: Cell['state']): string {
+    return `#${CELL_STATE_COLOR[state].hex.toString(16).padStart(6, '0')}`;
+}
 
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
@@ -191,6 +224,19 @@ let dragStartY = 0;
 let dragMoved = false;
 
 /**
+ * Sprint (fixes WALK_SPEED being a flat constant regardless of warehouse
+ * size). `isSprinting` is a held-key state (Ctrl on desktop) read directly
+ * in `animate()` like `position`/`pitchDegrees` — no reactivity needed since
+ * nothing in the template reflects it — and reset on blur like
+ * `pressedDirections`. `touchSprintEnabled` is a deliberate tap-to-toggle
+ * setting for touch (no "hold Ctrl" equivalent gesture there), so it IS a
+ * ref (the toggle button's pressed state reads it) and is NOT reset on
+ * blur.
+ */
+let isSprinting = false;
+const touchSprintEnabled = ref(false);
+
+/**
  * Overview mode: an orbit camera around the whole warehouse instead of a
  * first-person walk. `orbitRange` (center/zoom limits) is derived from
  * `bounds` in `updateBounds()`; `orbitState` (angle/distance) resets to a
@@ -223,6 +269,99 @@ const pointerNdc = new THREE.Vector2();
 let hoveredKey: string | null = null;
 let hoverOutline: THREE.LineSegments | null = null;
 const isHoveringSelectable = ref(false);
+
+/**
+ * Walk-mode mini-map: a reactive mirror of `position.x`/`position.z`/
+ * `yawDegrees` (all otherwise-plain, per-frame-mutated values), updated only
+ * past MINI_MAP_UPDATE_EPSILON so a small overlay doesn't trigger a reactive
+ * write on every single animation frame.
+ */
+const miniMap = reactive({ x: 0, y: 0, z: 0, yawDegrees: 0 });
+
+/**
+ * Floor-aisle-sign labels — floating row-letter signage over the 3D scene
+ * itself (not just the walk-mode mini-map), so a row is identifiable at a
+ * glance while walking without flying up to a cell and reading the faced-
+ * cell panel or checking the mini-map. Only rendered/updated in walk mode,
+ * like the mini-map and location indicator (`updateMiniMap`,
+ * `updateCurrentLocation`) — an orbit overview already sees every row at
+ * once. Each entry is a live projection (`worldPointToScreenPercent`) of the
+ * row's anchor point (`rowLabelWorldPosition`) onto the walk camera's
+ * screen, refreshed every frame but only written past
+ * ROW_LABEL_UPDATE_EPSILON_PERCENT to avoid a reactive write every frame.
+ */
+interface RowLabel {
+    letter: string;
+    leftPercent: number;
+    topPercent: number;
+    visible: boolean;
+}
+
+const rowLabels = reactive<RowLabel[]>([]);
+
+/**
+ * A row's floor sign floats above its own topmost shelf, halfway into the
+ * aisle entrance (not exactly at Z=0, the near edge of `bounds`) — the
+ * default walk position stands exactly at Z=0 facing forward
+ * (`resetView`/`focusCell`), where a sign coplanar with the camera would sit
+ * at an undefined/zero depth instead of visibly ahead of it.
+ */
+function rowLabelWorldPosition(
+    rowIndex: number,
+    band: CellMap3DBand,
+): { x: number; y: number; z: number } {
+    const topFlat = maxOf(
+        band.items.map((item) => item.flatNumber),
+        1,
+    );
+
+    return {
+        x: rowWorldX(rowIndex),
+        y: flatWorldY(topFlat) + SHELF_MARGIN + ROW_LABEL_HEIGHT_ABOVE_SHELVES,
+        z: cellWorldZ(ROW_LABEL_DEPTH_IN_CELLS),
+    };
+}
+
+function updateRowLabels(): void {
+    const container = containerRef.value;
+
+    if (!container || container.clientWidth === 0) {
+        return;
+    }
+
+    const aspect = container.clientWidth / (container.clientHeight || 1);
+
+    props.bands.forEach((band, rowIndex) => {
+        const projected = worldPointToScreenPercent(
+            position,
+            pitchDegrees,
+            yawDegrees,
+            aspect,
+            rowLabelWorldPosition(rowIndex, band),
+        );
+        const existing: RowLabel | undefined = rowLabels[rowIndex];
+
+        if (
+            existing &&
+            existing.letter === band.letter &&
+            existing.visible === projected.visible &&
+            Math.abs(existing.leftPercent - projected.leftPercent) <
+                ROW_LABEL_UPDATE_EPSILON_PERCENT &&
+            Math.abs(existing.topPercent - projected.topPercent) <
+                ROW_LABEL_UPDATE_EPSILON_PERCENT
+        ) {
+            return;
+        }
+
+        rowLabels[rowIndex] = { letter: band.letter, ...projected };
+    });
+
+    rowLabels.length = props.bands.length;
+}
+
+const visibleRowLabels = computed(() =>
+    rowLabels.filter((label) => label.visible),
+);
 
 function getBoxGeometry(): THREE.BoxGeometry {
     if (!sharedBoxGeometry) {
@@ -778,6 +917,50 @@ function updateFacedItem(): void {
 }
 
 /**
+ * The row/cell/flat the camera is currently *standing* at (not "facing" —
+ * unlike `facedItem`, this always has a value, even over an aisle gap with
+ * no cell), so walk mode always shows an orientation anchor even far from
+ * the nearest box. Rounded straight from `position`, not the look-ahead
+ * probe `facedGridCoordinate` uses. Only refreshed (and only re-rendered)
+ * when the rounded grid coordinate actually changes.
+ */
+const currentLocationLabel = ref('');
+let lastLocationKey: string | null = null;
+
+function updateCurrentLocation(): void {
+    const rowIndex = nearestRowIndex(position.x);
+    const cellNumber = nearestCellNumber(position.z);
+    const flatNumber = nearestFlatNumber(position.y);
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+
+    if (key === lastLocationKey) {
+        return;
+    }
+
+    lastLocationKey = key;
+    const band = props.bands[rowIndex];
+    currentLocationLabel.value = band
+        ? formatSlot(band.letter, cellNumber, flatNumber)
+        : '';
+}
+
+/** Refreshes the mini-map's reactive position/heading mirror, skipping small deltas (see MINI_MAP_UPDATE_EPSILON). */
+function updateMiniMap(): void {
+    if (
+        Math.abs(position.x - miniMap.x) < MINI_MAP_UPDATE_EPSILON &&
+        Math.abs(position.z - miniMap.z) < MINI_MAP_UPDATE_EPSILON &&
+        Math.abs(yawDegrees - miniMap.yawDegrees) <
+            MINI_MAP_UPDATE_EPSILON_DEGREES
+    ) {
+        return;
+    }
+
+    miniMap.x = position.x;
+    miniMap.z = position.z;
+    miniMap.yawDegrees = yawDegrees;
+}
+
+/**
  * The click-selected cell. In orbit mode it's the only source of detail
  * (orbiting far above the warehouse has no meaningful "camera is facing this
  * cell" probe); in walk mode it takes priority over the continuously-tracked
@@ -958,16 +1141,21 @@ function clearHover(): void {
 }
 
 /**
- * Refreshes/invalidates the faced-cell panel, click-selection, and orbit
- * hover after `cellLookup` changes — shared by `rebuildCellLookup` (full
- * rebuild) and `updateCellStatesAndLookup` (in-place update) so the two
- * paths can't drift out of sync on the next edit.
+ * Refreshes/invalidates the faced-cell panel, location indicator,
+ * click-selection, and orbit hover after `cellLookup` changes — shared by
+ * `rebuildCellLookup` (full rebuild) and `updateCellStatesAndLookup`
+ * (in-place update) so the two paths can't drift out of sync on the next
+ * edit.
  */
 function invalidateAfterCellDataChange(): void {
     // Force the next frame to refresh the faced-cell panel even if the
     // camera hasn't moved — the underlying item (highlight/pulse/pallet)
     // may have changed even when its grid coordinate didn't.
     lastFacedKey = null;
+
+    // The row/rowIndex mapping (band order) can shift even when the camera
+    // hasn't moved, so force the location indicator to relabel too.
+    lastLocationKey = null;
 
     // The click-selected cell (orbit mode) can't rely on a per-frame probe
     // to refresh it, so it's refreshed/invalidated here explicitly whenever
@@ -1052,6 +1240,17 @@ const displayedLabel = computed(() =>
         : '',
 );
 
+/** Mini-map position/heading (walk mode only — see the `miniMap` reactive mirror). */
+const miniMapPlayerPosition = computed(() => miniMapPosition(miniMap, bounds));
+const miniMapHeading = computed(() =>
+    miniMapHeadingDegrees(miniMap.yawDegrees),
+);
+const miniMapRowPositions = computed(() =>
+    miniMapRowLeftPercents(props.bands.length, bounds),
+);
+/** Which row's mini-map line to highlight as "the row you're in". */
+const miniMapActiveRowIndex = computed(() => nearestRowIndex(miniMap.x));
+
 /** A short "{label}: {state} — {product}" summary shared by the visual panel's label and the aria-live announcement below. */
 function describeItem(display: FacedItem): string {
     const label = formatSlot(
@@ -1069,9 +1268,9 @@ function describeItem(display: FacedItem): string {
 
 /**
  * A visually-hidden `aria-live` announcement of what the visual faced-cell
- * panel already shows sighted users, since that panel is purely visual
- * (`pointer-events-none`, conditionally rendered) and gives screen-reader
- * users no equivalent feedback while walking/orbiting.
+ * panel/location-indicator already show sighted users, since those are
+ * purely visual (`pointer-events-none`, conditionally rendered) and give
+ * screen-reader users no equivalent feedback while walking/orbiting.
  */
 const mapAnnouncement = computed(() => {
     if (cameraMode.value === 'orbit') {
@@ -1082,13 +1281,17 @@ const mapAnnouncement = computed(() => {
             : '';
     }
 
+    const standing = t('cells.map.standingNear', {
+        location: currentLocationLabel.value,
+    });
+
     if (!displayedItem.value) {
-        return '';
+        return standing;
     }
 
-    return t('cells.map.announcements.facing', {
+    return `${standing} ${t('cells.map.announcements.facing', {
         detail: describeItem(displayedItem.value),
-    });
+    })}`;
 });
 
 /** Adapts the displayed item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
@@ -1157,11 +1360,16 @@ function animate(timeMs: number): void {
     lastFrameTime = timeMs;
 
     if (cameraMode.value === 'walk' && pressedDirections.size > 0) {
+        const speed =
+            isSprinting || touchSprintEnabled.value
+                ? WALK_SPEED * SPRINT_MULTIPLIER
+                : WALK_SPEED;
         const next = stepPosition(
             position,
             pressedDirections,
             deltaSeconds,
             bounds,
+            speed,
         );
         position.x = next.x;
         position.y = next.y;
@@ -1179,6 +1387,9 @@ function animate(timeMs: number): void {
 
     if (cameraMode.value === 'walk') {
         updateFacedItem();
+        updateCurrentLocation();
+        updateMiniMap();
+        updateRowLabels();
     }
 
     renderer.render(scene, camera);
@@ -1186,18 +1397,21 @@ function animate(timeMs: number): void {
 }
 
 /**
- * WASD/arrows and Space/Shift drive both camera modes — `stepPosition`
+ * WASD/arrows and Space/Shift drive both camera modes now — `stepPosition`
  * (walk) and `stepOrbitStateByKeys` (orbit) both read the same
- * `pressedDirections` set from `animate()`, so key handling itself doesn't
- * branch on `cameraMode`. Enter selects the currently-faced cell in walk
+ * `pressedDirections` set from `animate()`, so key handling itself no longer
+ * branches on `cameraMode`. Enter selects the currently-faced cell in walk
  * mode (the keyboard equivalent of click-to-select, which otherwise
  * requires a pointer) — orbit has no "facing" concept, so there Enter
- * instead selects whatever's centered in the viewport
- * (`selectCenteredCell`), giving keyboard-only users a way to select in
- * orbit mode too, since hover-outline feedback there otherwise only ever
- * reaches a pointer.
+ * instead selects whatever's centered in the viewport (`selectCenteredCell`),
+ * giving keyboard-only users a way to select in orbit mode too, since
+ * hover-outline feedback there otherwise only ever reaches a pointer.
  */
 function onKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Control') {
+        isSprinting = true;
+    }
+
     if (event.key.toLowerCase() === 'o') {
         event.preventDefault();
         setCameraMode(cameraMode.value === 'walk' ? 'orbit' : 'walk');
@@ -1239,6 +1453,10 @@ function onKeyDown(event: KeyboardEvent): void {
 }
 
 function onKeyUp(event: KeyboardEvent): void {
+    if (event.key === 'Control') {
+        isSprinting = false;
+    }
+
     const direction = moveDirectionForKey(event.key);
 
     if (direction) {
@@ -1248,6 +1466,7 @@ function onKeyUp(event: KeyboardEvent): void {
 
 function onFocusLost(): void {
     pressedDirections.clear();
+    isSprinting = false;
     isDragging = false;
     activePointers.clear();
     pinchStartGap = null;
@@ -1402,6 +1621,11 @@ function onControlPointerUp(
     }
 }
 
+/** Touch has no "hold Ctrl" gesture, so sprint is a persistent tap-to-toggle there instead of a held modifier. */
+function toggleTouchSprint(): void {
+    touchSprintEnabled.value = !touchSprintEnabled.value;
+}
+
 function onResize(): void {
     const container = containerRef.value;
 
@@ -1426,7 +1650,7 @@ function setupScene(container: HTMLElement): void {
 
     const { clientWidth, clientHeight } = container;
     camera = new THREE.PerspectiveCamera(
-        70,
+        CAMERA_FOV_DEGREES,
         clientWidth / (clientHeight || 1),
         0.1,
         500,
@@ -1455,6 +1679,7 @@ function setupScene(container: HTMLElement): void {
 
     rebuildCells();
     resetView();
+    updateCurrentLocation();
 }
 
 watch(() => props.bands, rebuildCells);
@@ -1517,12 +1742,104 @@ onBeforeUnmount(() => {
         @wheel="onWheel"
     >
         <div
+            class="pointer-events-none absolute start-2 top-2 z-10 flex flex-col gap-2"
+        >
+            <div
+                data-testid="map-3d-state-legend"
+                class="flex flex-col gap-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+                <div
+                    v-for="state in CELL_STATES"
+                    :key="state"
+                    class="flex items-center gap-1.5"
+                >
+                    <span
+                        class="h-2.5 w-2.5 shrink-0 rounded-sm"
+                        :style="{ backgroundColor: stateHexColor(state) }"
+                    ></span>
+                    <component
+                        :is="CELL_STATE_COLOR[state].icon"
+                        class="h-3 w-3 shrink-0"
+                    />
+                    <span>{{ cellStateLabel(state) }}</span>
+                </div>
+            </div>
+
+            <div
+                v-if="cameraMode === 'walk'"
+                data-testid="map-3d-mini-map"
+                aria-hidden="true"
+                class="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+            >
+                <svg
+                    class="absolute inset-0 h-full w-full"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                >
+                    <line
+                        v-for="(leftPercent, rowIndex) in miniMapRowPositions"
+                        :key="rowIndex"
+                        :x1="leftPercent"
+                        y1="0"
+                        :x2="leftPercent"
+                        y2="100"
+                        vector-effect="non-scaling-stroke"
+                        stroke-width="1.5"
+                        :class="
+                            rowIndex === miniMapActiveRowIndex
+                                ? 'stroke-blue-400 dark:stroke-blue-500'
+                                : 'stroke-gray-300 dark:stroke-neutral-700'
+                        "
+                    />
+                </svg>
+                <Navigation
+                    data-testid="map-3d-mini-map-marker"
+                    class="absolute h-4 w-4 text-blue-600 dark:text-blue-400"
+                    :style="{
+                        left: `${miniMapPlayerPosition.leftPercent}%`,
+                        top: `${miniMapPlayerPosition.topPercent}%`,
+                        transform: `translate(-50%, -50%) rotate(${miniMapHeading}deg)`,
+                    }"
+                />
+            </div>
+        </div>
+
+        <div
+            v-if="cameraMode === 'walk'"
+            aria-hidden="true"
+            class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+        >
+            <div
+                v-for="label in visibleRowLabels"
+                :key="label.letter"
+                data-testid="map-3d-row-label"
+                class="absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+                :style="{
+                    left: `${label.leftPercent}%`,
+                    top: `${label.topPercent}%`,
+                }"
+            >
+                {{ label.letter }}
+            </div>
+        </div>
+
+        <div
             class="sr-only"
             role="status"
             aria-live="polite"
             data-testid="map-3d-announcement"
         >
             {{ mapAnnouncement }}
+        </div>
+
+        <div
+            v-if="cameraMode === 'walk'"
+            data-testid="map-3d-location-indicator"
+            class="pointer-events-none absolute end-2 top-2 z-10 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+        >
+            {{
+                t('cells.map.standingNear', { location: currentLocationLabel })
+            }}
         </div>
 
         <div
@@ -1654,6 +1971,20 @@ onBeforeUnmount(() => {
                 >
                     <ArrowDown class="h-4 w-4" />
                 </button>
+                <button
+                    type="button"
+                    tabindex="-1"
+                    data-testid="touch-sprint-toggle"
+                    :aria-pressed="touchSprintEnabled"
+                    :aria-label="t('cells.map.controls.touch.sprint')"
+                    :class="[
+                        mapToolbarButtonClass,
+                        touchSprintEnabled ? selectedToggleClass : '',
+                    ]"
+                    @click="toggleTouchSprint"
+                >
+                    <Zap class="h-4 w-4" />
+                </button>
             </div>
         </div>
         <div
@@ -1671,6 +2002,10 @@ onBeforeUnmount(() => {
                     <span>{{ t('cells.map.controls.up') }}</span>
                     <kbd :class="kbdClass">Shift</kbd>
                     <span>{{ t('cells.map.controls.down') }}</span>
+                </p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{ t('cells.map.controls.sprintLabel') }}</span>
+                    <kbd :class="kbdClass">Ctrl</kbd>
                 </p>
                 <p>{{ t('cells.map.controls.lookLabel') }}</p>
                 <p>{{ t('cells.map.controls.selectLabel') }}</p>

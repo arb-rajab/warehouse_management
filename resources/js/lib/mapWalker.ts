@@ -9,6 +9,7 @@
  * camera can fly freely along Y (Space/Shift) to view other flats directly,
  * in addition to pitching to look up/down without moving.
  */
+import { normalizeDegrees } from '@/lib/geometry';
 
 export const ROW_SPACING = 4;
 export const CELL_SPACING = 3;
@@ -17,6 +18,11 @@ export const EYE_HEIGHT = 1.7;
 export const MIN_EYE_HEIGHT = 0.5;
 
 export const WALK_SPEED = 4;
+/** Multiplier applied to WALK_SPEED while sprinting (Ctrl held on desktop, toggled on touch). */
+export const SPRINT_MULTIPLIER = 2.5;
+
+/** Vertical field of view of the walk/orbit `THREE.PerspectiveCamera` — shared with `worldPointToScreenPercent` so the row-label projection matches what the real camera actually shows. */
+export const CAMERA_FOV_DEGREES = 70;
 
 export const PITCH_MIN_DEGREES = -75;
 export const PITCH_MAX_DEGREES = 75;
@@ -167,9 +173,7 @@ export function stepPitch(
 }
 
 /** Wraps a degree value into [0, 360) — e.g. -10 becomes 350, 370 becomes 10. */
-export function normalizeYaw(degrees: number): number {
-    return ((degrees % 360) + 360) % 360;
-}
+export const normalizeYaw = normalizeDegrees;
 
 /**
  * Advances the camera's yaw (look left/right, including all the way around
@@ -289,6 +293,86 @@ export function facedGridCoordinate(
         cellNumber: nearestCellNumber(position.z + direction.z * probeDistance),
         flatNumber: nearestFlatNumber(position.y + direction.y * probeDistance),
     };
+}
+
+export interface ScreenPercentPosition {
+    leftPercent: number;
+    topPercent: number;
+    /** False once the point is behind the camera or far enough outside the frame that it shouldn't be drawn. */
+    visible: boolean;
+}
+
+/**
+ * Projects a world point onto the walk camera's screen, as a left%/top%
+ * position over the viewport — used to draw an HTML-overlay label (row
+ * signage) at a 3D position without touching three.js/WebGL, so this stays
+ * unit-testable like the rest of this module. Reimplements the same
+ * right-handed lookAt basis `stepPosition`'s doc comment derives (`right = up
+ * × back`) rather than depending on the real camera object, then a standard
+ * symmetric-frustum perspective divide using the camera's vertical FOV and
+ * the viewport's aspect ratio.
+ */
+export function worldPointToScreenPercent(
+    position: WalkerPosition,
+    pitchDegrees: number,
+    yawDegrees: number,
+    aspect: number,
+    point: WalkerPosition,
+    fovYDegrees: number = CAMERA_FOV_DEGREES,
+): ScreenPercentPosition {
+    const forward = lookDirection(pitchDegrees, yawDegrees);
+    const back = { x: -forward.x, y: -forward.y, z: -forward.z };
+    const worldUp = { x: 0, y: 1, z: 0 };
+    const right = normalize(cross(worldUp, back));
+    const up = cross(back, right);
+
+    const relative = {
+        x: point.x - position.x,
+        y: point.y - position.y,
+        z: point.z - position.z,
+    };
+
+    const viewX = dot(relative, right);
+    const viewY = dot(relative, up);
+    const depthInFront = -dot(relative, back);
+
+    if (depthInFront <= 0.001) {
+        return { leftPercent: 50, topPercent: 50, visible: false };
+    }
+
+    const tanHalfFovY = Math.tan((fovYDegrees * Math.PI) / 180 / 2);
+    const ndcX = viewX / (depthInFront * tanHalfFovY * aspect);
+    const ndcY = viewY / (depthInFront * tanHalfFovY);
+
+    return {
+        leftPercent: ((ndcX + 1) / 2) * 100,
+        topPercent: ((1 - ndcY) / 2) * 100,
+        visible: Math.abs(ndcX) <= 1.2 && Math.abs(ndcY) <= 1.2,
+    };
+}
+
+interface Vector3Like {
+    x: number;
+    y: number;
+    z: number;
+}
+
+function cross(a: Vector3Like, b: Vector3Like): Vector3Like {
+    return {
+        x: a.y * b.z - a.z * b.y,
+        y: a.z * b.x - a.x * b.z,
+        z: a.x * b.y - a.y * b.x,
+    };
+}
+
+function dot(a: Vector3Like, b: Vector3Like): number {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function normalize(v: Vector3Like): Vector3Like {
+    const length = Math.hypot(v.x, v.y, v.z) || 1;
+
+    return { x: v.x / length, y: v.y / length, z: v.z / length };
 }
 
 /**
@@ -529,4 +613,68 @@ export function orbitCameraPosition(
         y: range.center.y + orbit.distance * Math.sin(pitchRadians),
         z: range.center.z + horizontalDistance * Math.cos(yawRadians),
     };
+}
+
+/**
+ * Top-down mini-map math for the walk-mode orientation aid (CellMap3D.vue) —
+ * a small overlay showing the warehouse's row/aisle layout, the player's
+ * position, and which way they're facing, since walking a large warehouse
+ * row-by-row with only a text "standing near" label gives no sense of where
+ * you are relative to the whole building the way orbit mode's overview does.
+ *
+ * Screen convention: X (row axis) maps directly to left% (increasing X =
+ * further right); Z (cell-number/depth axis) maps to top% *inverted*
+ * (increasing Z = smaller top%, i.e. "up") so that facing yaw 0 — the default
+ * look direction, +Z — reads as "facing up" on the mini-map, matching the
+ * everyday convention of an up-pointing arrow meaning "forward".
+ */
+export function miniMapPercentX(worldX: number, bounds: WalkerBounds): number {
+    const width = bounds.maxX - bounds.minX || 1;
+
+    return clamp(((worldX - bounds.minX) / width) * 100, 0, 100);
+}
+
+export function miniMapPercentZ(worldZ: number, bounds: WalkerBounds): number {
+    const depth = bounds.maxZ - bounds.minZ || 1;
+
+    return clamp(100 - ((worldZ - bounds.minZ) / depth) * 100, 0, 100);
+}
+
+export interface MiniMapPosition {
+    leftPercent: number;
+    topPercent: number;
+}
+
+export function miniMapPosition(
+    position: WalkerPosition,
+    bounds: WalkerBounds,
+): MiniMapPosition {
+    return {
+        leftPercent: miniMapPercentX(position.x, bounds),
+        topPercent: miniMapPercentZ(position.z, bounds),
+    };
+}
+
+/** One left% per row (its `rowWorldX`), for drawing an aisle line per row on the mini-map. */
+export function miniMapRowLeftPercents(
+    rowCount: number,
+    bounds: WalkerBounds,
+): number[] {
+    return Array.from({ length: rowCount }, (_, rowIndex) =>
+        miniMapPercentX(rowWorldX(rowIndex), bounds),
+    );
+}
+
+/**
+ * The CSS rotation (degrees) for a default-"pointing up" heading arrow, given
+ * the walker's yaw. Derived from `lookDirection`'s (x, z) = (-sin(yaw),
+ * cos(yaw)): at yaw 0 the direction is +Z, which under this module's
+ * top-down screen convention (above) is "up" — matching the arrow's
+ * default orientation, so no rotation is needed (0deg). Turning right
+ * (increasing yaw) should swing the arrow toward -X, which is left on
+ * screen; CSS `rotate()` is clockwise-positive, so that requires the
+ * *negative* of yaw, not yaw itself.
+ */
+export function miniMapHeadingDegrees(yawDegrees: number): number {
+    return normalizeYaw(-yawDegrees);
 }

@@ -226,14 +226,16 @@
             "view2d": "2D view",
             "view3d": "3D view",
             "overview": "Overview (orbit) camera",
-            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
-            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between flats, and tap a cell to inspect it.",
+            "standingNear": "Standing near {location}",
+            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, hold Ctrl to sprint, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
+            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between flats, tap the sprint button to move faster, and tap a cell to inspect it.",
             "orbitHint": "Drag to orbit around the warehouse, scroll or pinch to zoom, or use WASD/arrow keys and Space/Shift on the keyboard, and click a cell — or press Enter to select the cell centered in view — to inspect it.",
             "controls": {
                 "moveLabel": "Move: WASD or arrow keys",
                 "flyLabel": "Fly between flats:",
                 "up": "up",
                 "down": "down",
+                "sprintLabel": "Sprint:",
                 "lookLabel": "Look: drag to look around, even behind you",
                 "selectLabel": "Click a cell to inspect it",
                 "cameraModeToggleLabel": "Toggle walk/overview:",
@@ -243,7 +245,8 @@
                     "left": "Strafe left",
                     "right": "Strafe right",
                     "up": "Fly up",
-                    "down": "Fly down"
+                    "down": "Fly down",
+                    "sprint": "Toggle sprint"
                 },
                 "orbit": {
                     "rotateLabel": "Orbit: drag to rotate the view",
