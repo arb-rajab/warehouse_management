@@ -44,6 +44,8 @@ vi.mock('three', () => {
         position = new Vector3();
         rotation = { x: 0, y: 0, z: 0 };
         name = '';
+        visible = true;
+        userData: Record<string, unknown> = {};
         children: Object3D[] = [];
 
         add(...items: Object3D[]) {
@@ -57,6 +59,27 @@ vi.mock('three', () => {
         traverse(callback: (obj: Object3D) => void) {
             callback(this);
             this.children.forEach((c) => c.traverse(callback));
+        }
+    }
+
+    class Vector2 {
+        x: number;
+        y: number;
+
+        constructor(x = 0, y = 0) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    class Raycaster {
+        setFromCamera = vi.fn();
+        intersectObjects = vi.fn(
+            () => [] as Array<{ object: Object3D; instanceId?: number }>,
+        );
+
+        constructor() {
+            registry.raycasters.push(this);
         }
     }
 
@@ -87,6 +110,51 @@ vi.mock('three', () => {
             this.geometry = geometry;
             this.material = material;
             registry.lineSegments.push(this);
+        }
+    }
+
+    class Matrix4 {
+        x = 0;
+        y = 0;
+        z = 0;
+
+        makeTranslation(x: number, y: number, z: number) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+
+            return this;
+        }
+    }
+
+    class InstancedMesh extends Object3D {
+        geometry: unknown;
+        material: unknown;
+        count: number;
+        instanceMatrix = { needsUpdate: false };
+        matrices: Matrix4[];
+
+        constructor(geometry: unknown, material: unknown, count: number) {
+            super();
+            this.geometry = geometry;
+            this.material = material;
+            this.count = count;
+            this.matrices = new Array(count);
+            registry.instancedMeshes.push(this);
+        }
+
+        setMatrixAt(index: number, matrix: Matrix4) {
+            this.matrices[index] = matrix;
+        }
+
+        getMatrixAt(index: number, target: Matrix4) {
+            const matrix = this.matrices[index];
+
+            if (matrix) {
+                target.x = matrix.x;
+                target.y = matrix.y;
+                target.z = matrix.z;
+            }
         }
     }
 
@@ -162,7 +230,16 @@ vi.mock('three', () => {
         renderers: WebGLRenderer[];
         meshes: Mesh[];
         lineSegments: LineSegments[];
-    } = { cameras: [], renderers: [], meshes: [], lineSegments: [] };
+        instancedMeshes: InstancedMesh[];
+        raycasters: Raycaster[];
+    } = {
+        cameras: [],
+        renderers: [],
+        meshes: [],
+        lineSegments: [],
+        instancedMeshes: [],
+        raycasters: [],
+    };
 
     return {
         __registry: registry,
@@ -170,6 +247,8 @@ vi.mock('three', () => {
         Group,
         Mesh,
         LineSegments,
+        InstancedMesh,
+        Matrix4,
         AmbientLight,
         DirectionalLight,
         Color,
@@ -180,6 +259,8 @@ vi.mock('three', () => {
         EdgesGeometry,
         MeshStandardMaterial,
         LineBasicMaterial,
+        Vector2,
+        Raycaster,
     };
 });
 
@@ -198,8 +279,24 @@ type Registry = {
         name: string;
         position: { x: number; y: number; z: number };
         material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
+        userData: Record<string, unknown>;
     }>;
-    lineSegments: Array<{ material: { color: unknown } }>;
+    lineSegments: Array<{
+        name: string;
+        position: { x: number; y: number; z: number };
+        visible: boolean;
+        material: { color: unknown };
+    }>;
+    instancedMeshes: Array<{
+        name: string;
+        count: number;
+        matrices: Array<{ x: number; y: number; z: number }>;
+        material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
+    }>;
+    raycasters: Array<{
+        setFromCamera: ReturnType<typeof vi.fn>;
+        intersectObjects: ReturnType<typeof vi.fn>;
+    }>;
 };
 
 function registry(): Registry {
@@ -210,6 +307,60 @@ function lastCamera() {
     const cameras = registry().cameras;
 
     return cameras[cameras.length - 1];
+}
+
+function lastRaycaster() {
+    const raycasters = registry().raycasters;
+
+    return raycasters[raycasters.length - 1];
+}
+
+/**
+ * A raycaster-intersection-shaped hit for the given cell — cell boxes are
+ * `THREE.InstancedMesh` instances (one per state, not one per cell), so a
+ * "hit" is the state's mesh plus the `instanceId` slot that cell currently
+ * occupies (identified by its world Y/Z, since all tests below stand it in
+ * row A / world X 0). Every test below stubs `intersectObjects` to return
+ * `[cellBoxMesh(n)]` directly, matching what a real raycast hit looks like.
+ */
+function cellBoxMesh(
+    cellNumber: number,
+    flatNumber = 1,
+): { object: unknown; instanceId: number } {
+    const targetY = flatWorldY(flatNumber);
+    const targetZ = cellWorldZ(cellNumber);
+
+    for (const mesh of registry().instancedMeshes) {
+        if (mesh.name !== 'cell-box') {
+            continue;
+        }
+
+        const instanceId = mesh.matrices.findIndex(
+            (matrix) => matrix && matrix.y === targetY && matrix.z === targetZ,
+        );
+
+        if (instanceId !== -1) {
+            return { object: mesh, instanceId };
+        }
+    }
+
+    throw new Error(`No cell-box instance found for cell ${cellNumber}`);
+}
+
+/** jsdom's default getBoundingClientRect is all zeros, which selectAtScreenPoint treats as "not laid out yet" and bails on — stub a real size so click-to-select's NDC math runs. */
+function stubViewportRect(wrapper: ReturnType<typeof mount>): void {
+    const element = wrapper.get('[data-testid="map-3d-viewport"]').element;
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+        width: 500,
+        height: 500,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+    });
 }
 
 /** Reproduces the component's own `updateBounds()`/orbit-range derivation, to compute an expected orbit center for a given set of bands. */
@@ -273,6 +424,8 @@ beforeEach(() => {
     registry().renderers = [];
     registry().meshes = [];
     registry().lineSegments = [];
+    registry().instancedMeshes = [];
+    registry().raycasters = [];
 
     vi.stubGlobal('requestAnimationFrame', (cb: (time: number) => void) => {
         rafCallback = cb;
@@ -308,12 +461,13 @@ describe('CellMap3D', () => {
         expect(wrapper.find('canvas').exists()).toBe(true);
     });
 
-    it('shows a controls legend explaining movement, flying between flats, looking, and toggling camera mode', () => {
+    it('shows a controls legend explaining movement, flying between flats, looking, selecting, and toggling camera mode', () => {
         const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
 
         expect(wrapper.text()).toContain(t('cells.map.controls.moveLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.flyLabel'));
         expect(wrapper.text()).toContain(t('cells.map.controls.lookLabel'));
+        expect(wrapper.text()).toContain(t('cells.map.controls.selectLabel'));
         expect(wrapper.text()).toContain(
             t('cells.map.controls.cameraModeToggleLabel'),
         );
@@ -551,7 +705,14 @@ describe('CellMap3D', () => {
         expect(lastCamera().position).toEqual({ x: 0, y: EYE_HEIGHT, z: 0 });
     });
 
-    it('colors each cell mesh by state and outlines only highlighted/pulsing cells', () => {
+    /** Cell boxes are one `THREE.InstancedMesh` per state (see CellMap3D.vue), not one mesh per cell. */
+    function cellBoxInstancedMeshes() {
+        return registry().instancedMeshes.filter(
+            (mesh) => mesh.name === 'cell-box',
+        );
+    }
+
+    it("colors each per-state instanced mesh, sized to that state's cell count, and outlines only highlighted/pulsing cells", () => {
         mount(CellMap3D, {
             props: {
                 bands: [
@@ -575,19 +736,15 @@ describe('CellMap3D', () => {
             },
         });
 
-        // Only cell boxes (not the floor or the shelf platforms) carry the
-        // per-state color.
-        const meshColors = registry()
-            .meshes.filter((mesh) => mesh.name === 'cell-box')
-            .map((mesh) => mesh.material.color);
-        expect(meshColors).toEqual([
-            CELL_STATE_COLOR.full.hex,
-            CELL_STATE_COLOR.empty.hex,
-            CELL_STATE_COLOR.opened.hex,
-        ]);
+        const meshesByColor = new Map(
+            cellBoxInstancedMeshes().map((mesh) => [mesh.material.color, mesh]),
+        );
+        expect(meshesByColor.get(CELL_STATE_COLOR.full.hex)?.count).toBe(1);
+        expect(meshesByColor.get(CELL_STATE_COLOR.empty.hex)?.count).toBe(1);
+        expect(meshesByColor.get(CELL_STATE_COLOR.opened.hex)?.count).toBe(1);
 
-        // Only the highlighted cell (index 0) and the pulsing cell (index 2)
-        // get an outline; the plain empty cell (index 1) does not.
+        // Only the highlighted cell (cell 1) and the pulsing cell (cell 3)
+        // get an outline; the plain empty cell (cell 2) does not.
         expect(registry().lineSegments).toHaveLength(2);
         const outlineColors = registry().lineSegments.map(
             (line) => line.material.color,
@@ -614,18 +771,11 @@ describe('CellMap3D', () => {
         const shelves = registry().meshes.filter(
             (mesh) => mesh.name === 'shelf',
         );
-        const boxFlatYs = [
-            ...new Set(
-                registry()
-                    .meshes.filter((mesh) => mesh.name === 'cell-box')
-                    .map((mesh) => mesh.position.y),
-            ),
-        ].sort((a, b) => a - b);
+        const boxFlatYs = [flatWorldY(1), flatWorldY(2)];
 
         // One shelf per distinct flat level in the row, not one per cell —
         // this row has 3 boxes across 2 flat levels.
         expect(shelves).toHaveLength(2);
-        expect(boxFlatYs).toEqual([flatWorldY(1), flatWorldY(2)]);
 
         const shelfYs = shelves
             .map((shelf) => shelf.position.y)
@@ -649,11 +799,6 @@ describe('CellMap3D', () => {
         });
 
         const posts = registry().meshes.filter((mesh) => mesh.name === 'post');
-        const boxXs = new Set(
-            registry()
-                .meshes.filter((mesh) => mesh.name === 'cell-box')
-                .map((mesh) => mesh.position.x),
-        );
 
         // One set of 4 corner posts per row.
         expect(posts).toHaveLength(8);
@@ -663,10 +808,11 @@ describe('CellMap3D', () => {
         );
         expect(rowAPosts).toHaveLength(4);
 
-        // Posts stand to the side of the boxes (never at the exact box X), and
+        // Posts stand to the side of the boxes (never at a row's own X), and
         // reach up to cover the topmost flat.
         posts.forEach((post) => {
-            expect(boxXs.has(post.position.x)).toBe(false);
+            expect(post.position.x).not.toBe(rowWorldX(0));
+            expect(post.position.x).not.toBe(rowWorldX(1));
             expect(post.position.y).toBeGreaterThan(0);
         });
 
@@ -678,7 +824,28 @@ describe('CellMap3D', () => {
         expect(rowAZs.size).toBe(2);
     });
 
-    it('disposes the previous meshes/materials when the bands prop changes', async () => {
+    it('uses a single instanced mesh (not one mesh per box) for every cell sharing a state', () => {
+        mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        items: [
+                            item({ cellNumber: 1, state: 'full' }),
+                            item({ cellNumber: 2, state: 'full' }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const fullMeshes = cellBoxInstancedMeshes().filter(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        );
+        expect(fullMeshes).toHaveLength(1);
+        expect(fullMeshes[0].count).toBe(2);
+    });
+
+    it("moves a cell to a different state's instanced mesh in place — no rebuild, no material dispose — when only its state changes", async () => {
         const wrapper = mount(CellMap3D, {
             props: {
                 bands: [
@@ -689,11 +856,10 @@ describe('CellMap3D', () => {
             },
         });
 
-        function cellBoxes() {
-            return registry().meshes.filter((mesh) => mesh.name === 'cell-box');
-        }
-
-        const firstMaterial = cellBoxes()[0].material;
+        const meshesBefore = cellBoxInstancedMeshes();
+        const fullMaterialBefore = meshesBefore.find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        )?.material;
 
         await wrapper.setProps({
             bands: [
@@ -703,10 +869,121 @@ describe('CellMap3D', () => {
             ],
         });
 
-        expect(firstMaterial.dispose).toHaveBeenCalled();
-        expect(cellBoxes().at(-1)?.material.color).toBe(
-            CELL_STATE_COLOR.opened.hex,
+        // Reused, not disposed — the previous "full" material is shared and
+        // stays alive for the next box that needs it — and the instanced
+        // meshes themselves aren't recreated (no structural rebuild): still
+        // exactly one instanced mesh per cell state, the same objects as
+        // before (by reference).
+        expect(fullMaterialBefore?.dispose).not.toHaveBeenCalled();
+        const meshesAfter = cellBoxInstancedMeshes();
+        expect(meshesAfter).toHaveLength(meshesBefore.length);
+        meshesAfter.forEach((mesh, index) => {
+            expect(mesh).toBe(meshesBefore[index]);
+        });
+
+        const fullMesh = meshesBefore.find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
         );
+        const openedMesh = meshesBefore.find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.opened.hex,
+        );
+        expect(fullMesh?.count).toBe(0);
+        expect(openedMesh?.count).toBe(1);
+    });
+
+    it('updates an outline in place — same instance, new color — rather than creating a new one when a cell switches from highlighted to pulsing', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        items: [
+                            item({
+                                cellNumber: 1,
+                                highlighted: true,
+                                pulsing: false,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        expect(registry().lineSegments).toHaveLength(1);
+        const outlineBefore = registry().lineSegments[0];
+        const colorBefore = outlineBefore.material.color;
+
+        await wrapper.setProps({
+            bands: [
+                band({
+                    items: [
+                        item({
+                            cellNumber: 1,
+                            highlighted: false,
+                            pulsing: true,
+                        }),
+                    ],
+                }),
+            ],
+        });
+
+        expect(registry().lineSegments).toHaveLength(1);
+        expect(registry().lineSegments[0]).toBe(outlineBefore);
+        expect(outlineBefore.material.color).not.toBe(colorBefore);
+    });
+
+    it('fully rebuilds the cell group (fresh instanced meshes) when the set of cells changes, not just their state', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({ items: [item({ cellNumber: 1, state: 'full' })] }),
+                ],
+            },
+        });
+
+        const fullMaterialBefore = cellBoxInstancedMeshes().find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        )?.material;
+        const instancedMeshCountBefore = cellBoxInstancedMeshes().length;
+
+        await wrapper.setProps({
+            bands: [
+                band({
+                    items: [
+                        item({ cellNumber: 1, state: 'full' }),
+                        item({ cellNumber: 2, state: 'empty' }),
+                    ],
+                }),
+            ],
+        });
+
+        // The shared "full" material is persistent regardless of which path
+        // rebuilt the group, so it's still never disposed here. The mock's
+        // registry only ever grows (it doesn't model real disposal), so a
+        // structural rebuild is asserted by a brand-new set of per-state
+        // instanced meshes being created (CELL_STATES.length more of them),
+        // not by an exact/shrinking total count.
+        expect(fullMaterialBefore?.dispose).not.toHaveBeenCalled();
+        expect(cellBoxInstancedMeshes().length).toBeGreaterThan(
+            instancedMeshCountBefore,
+        );
+    });
+
+    it('disposes the shared per-state box materials on unmount', () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({ items: [item({ cellNumber: 1, state: 'full' })] }),
+                ],
+            },
+        });
+
+        const material = cellBoxInstancedMeshes().find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        )?.material;
+
+        wrapper.unmount();
+
+        expect(material?.dispose).toHaveBeenCalled();
     });
 
     it('disposes the renderer on unmount', () => {
@@ -885,6 +1162,511 @@ describe('CellMap3D', () => {
                     )
                     .classes(),
             ).toContain('ring-blue-500');
+        });
+    });
+
+    describe('click-to-select while walking', () => {
+        it('selects a cell by clicking it, pinning the panel even as facedItem keeps tracking elsewhere', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1, state: 'full' }),
+                                item({ cellNumber: 5, state: 'opened' }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const cameraBefore = { ...lastCamera().position };
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+            // Selecting inspects the cell, it doesn't teleport the camera.
+            expect(lastCamera().position).toEqual(cameraBefore);
+
+            // Walking further keeps the selection pinned instead of reverting
+            // to whatever facedItem is now tracking.
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'w',
+            });
+            rafCallback?.(1016);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+        });
+
+        it('clears the selection by clicking empty space, reverting to the continuously-tracked faced cell', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 5 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            const click = () => {
+                element.dispatchEvent(
+                    new PointerEvent('pointerdown', {
+                        pointerId: 1,
+                        clientX: 50,
+                        clientY: 50,
+                    }),
+                );
+                element.dispatchEvent(
+                    new PointerEvent('pointerup', {
+                        pointerId: 1,
+                        clientX: 50,
+                        clientY: 50,
+                    }),
+                );
+            };
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            click();
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+
+            lastRaycaster().intersectObjects.mockReturnValue([]);
+            click();
+            rafCallback?.(32);
+            await wrapper.vm.$nextTick();
+
+            // Falls back to facedItem (still row A, cell 1, where the camera
+            // stands) instead of hiding the panel the way orbit mode would.
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+        });
+
+        it('does not select when the pointer drags past the click threshold — still just looks around', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 5 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 90,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 90,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(lastRaycaster().intersectObjects).not.toHaveBeenCalled();
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+        });
+    });
+
+    describe('keyboard select (Enter) while walking', () => {
+        it('selects the currently-faced cell by pressing Enter', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1, state: 'full' }),
+                                item({ cellNumber: 5, state: 'opened' }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            const cameraBefore = { ...lastCamera().position };
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'Enter',
+            });
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            // Enter inspects the faced cell (row A, cell 1 by default), it
+            // doesn't teleport the camera — same contract as click-to-select.
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+            expect(lastCamera().position).toEqual(cameraBefore);
+
+            // The selection is pinned even as the camera keeps walking, just
+            // like a mouse-click selection.
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'w',
+            });
+            rafCallback?.(1016);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+        });
+
+        it('clears any existing selection when pressing Enter over empty space', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1 })],
+                        }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            const viewport = wrapper.get('[data-testid="map-3d-viewport"]');
+
+            viewport.trigger('keydown', { key: 'Enter' });
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 1, 1));
+
+            // Walk forward past the only cell so nothing is faced any more.
+            viewport.trigger('keydown', { key: 'w' });
+            rafCallback?.(3000);
+            await wrapper.vm.$nextTick();
+
+            viewport.trigger('keydown', { key: 'Enter' });
+            rafCallback?.(3016);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(false);
+        });
+
+        it('does not move the camera when pressing Enter in orbit mode (see "overview / orbit camera mode" for its keyboard-select behavior)', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 1 })] }),
+                    ],
+                },
+            });
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            rafCallback?.(0);
+            const before = { ...lastCamera().position };
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'Enter',
+            });
+            rafCallback?.(16);
+
+            expect(lastCamera().position).toEqual(before);
+        });
+    });
+
+    describe('aria-live announcement', () => {
+        it('announces facing while walking', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1, state: 'full' })],
+                        }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const announcement = wrapper.get(
+                '[data-testid="map-3d-announcement"]',
+            );
+            expect(announcement.attributes('aria-live')).toBe('polite');
+            expect(announcement.attributes('role')).toBe('status');
+            expect(announcement.text()).toContain(formatSlot('A', 1, 1));
+        });
+
+        it('is empty while orbiting with nothing selected, and announces the selection once one is clicked', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 5, state: 'full' })],
+                        }),
+                    ],
+                },
+            });
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-announcement"]').text(),
+            ).toBe('');
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-announcement"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+        });
+    });
+
+    describe('orbit-mode hover', () => {
+        it('shows a hover outline over a box before it is clicked', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            expect(registry().lineSegments).toHaveLength(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+
+            expect(registry().lineSegments).toHaveLength(1);
+            expect(registry().lineSegments[0].visible).toBe(true);
+        });
+
+        it('clears the hover outline when the pointer moves off the box', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            expect(registry().lineSegments[0].visible).toBe(true);
+
+            lastRaycaster().intersectObjects.mockReturnValue([]);
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 200,
+                    clientY: 200,
+                }),
+            );
+
+            expect(registry().lineSegments[0].visible).toBe(false);
+        });
+
+        it('clears a stale hover outline when the hovered cell is removed by a data change', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 5 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode('orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+
+            const hoverOutline = () =>
+                registry().lineSegments.find(
+                    (line) => line.name === 'hover-outline',
+                );
+            expect(hoverOutline()?.visible).toBe(true);
+
+            await wrapper.setProps({
+                bands: [
+                    band({ letter: 'A', items: [item({ cellNumber: 1 })] }),
+                ],
+            });
+
+            expect(hoverOutline()?.visible).toBe(false);
+        });
+
+        it('never shows a hover outline while walking', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+
+            expect(registry().lineSegments).toHaveLength(0);
+            expect(lastRaycaster().intersectObjects).not.toHaveBeenCalled();
         });
     });
 
@@ -1205,6 +1987,322 @@ describe('CellMap3D', () => {
 
             const zoomedIn = distanceFromCenter(lastCamera().position, center);
             expect(zoomedIn).toBeLessThan(startDistance);
+        });
+
+        it('hides the panel on entering orbit mode until a cell is clicked', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 1 })] }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(true);
+
+            setCameraMode(wrapper, 'orbit');
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(false);
+        });
+
+        it('selects the clicked cell into the panel without moving the camera', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 5, state: 'full' })],
+                        }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const cameraBefore = { ...lastCamera().position };
+
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+            expect(lastCamera().position).toEqual(cameraBefore);
+        });
+
+        it('clears the selection when clicking empty space', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            const click = () => {
+                element.dispatchEvent(
+                    new PointerEvent('pointerdown', {
+                        pointerId: 1,
+                        clientX: 50,
+                        clientY: 50,
+                    }),
+                );
+                element.dispatchEvent(
+                    new PointerEvent('pointerup', {
+                        pointerId: 1,
+                        clientX: 50,
+                        clientY: 50,
+                    }),
+                );
+            };
+
+            click();
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(true);
+
+            lastRaycaster().intersectObjects.mockReturnValue([]);
+            click();
+            rafCallback?.(32);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(false);
+        });
+
+        it('does not select when the pointer drags past the click threshold', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointermove', {
+                    pointerId: 1,
+                    clientX: 90,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 90,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(lastRaycaster().intersectObjects).not.toHaveBeenCalled();
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(false);
+        });
+
+        it('clears the selection when switching back to walk mode', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 5 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const element = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+            element.dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            element.dispatchEvent(
+                new PointerEvent('pointerup', {
+                    pointerId: 1,
+                    clientX: 50,
+                    clientY: 50,
+                }),
+            );
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(true);
+
+            setCameraMode(wrapper, 'walk');
+            rafCallback?.(32);
+            await wrapper.vm.$nextTick();
+
+            // Walking resumes its own auto-tracked faced cell (row A, cell 1,
+            // where the walk camera has stood the whole time) instead of the
+            // orbit-clicked cell 5.
+            const panelText = wrapper
+                .get('[data-testid="map-3d-faced-cell"]')
+                .text();
+            expect(panelText).toContain(formatSlot('A', 1, 1));
+            expect(panelText).not.toContain(formatSlot('A', 5, 1));
+        });
+
+        it('shows the orbit legend instead of the walk controls/touch pad while orbiting', async () => {
+            const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+            await wrapper.vm.$nextTick();
+
+            setCameraMode(wrapper, 'orbit');
+            await wrapper.vm.$nextTick();
+
+            const legend = wrapper.get('[data-testid="map-3d-orbit-legend"]');
+            expect(legend.text()).toContain(
+                t('cells.map.controls.orbit.rotateLabel'),
+            );
+            expect(legend.text()).toContain(
+                t('cells.map.controls.orbit.zoomLabel'),
+            );
+            expect(legend.text()).toContain(
+                t('cells.map.controls.orbit.keyboardLabel'),
+            );
+            expect(legend.text()).toContain(
+                t('cells.map.controls.orbit.selectLabel'),
+            );
+            expect(
+                wrapper.find('[data-testid="map-3d-controls-legend"]').exists(),
+            ).toBe(false);
+            expect(
+                wrapper
+                    .get('[data-testid="map-3d-viewport"]')
+                    .attributes('aria-label'),
+            ).toBe(t('cells.map.orbitHint'));
+        });
+
+        it('selects the cell centered in the viewport when pressing Enter, the keyboard equivalent of click-to-select', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 5, state: 'full' })],
+                        }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            const cameraBefore = { ...lastCamera().position };
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'Enter',
+            });
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+            ).toContain(formatSlot('A', 5, 1));
+            // Selecting inspects the cell, it doesn't teleport the camera.
+            expect(lastCamera().position).toEqual(cameraBefore);
+        });
+
+        it('clears the selection when pressing Enter over empty space', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A', items: [item({ cellNumber: 5 })] }),
+                    ],
+                },
+            });
+            setCameraMode(wrapper, 'orbit');
+            stubViewportRect(wrapper);
+            rafCallback?.(0);
+
+            lastRaycaster().intersectObjects.mockReturnValue([cellBoxMesh(5)]);
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'Enter',
+            });
+            rafCallback?.(16);
+            await wrapper.vm.$nextTick();
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(true);
+
+            lastRaycaster().intersectObjects.mockReturnValue([]);
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'Enter',
+            });
+            rafCallback?.(32);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
+            ).toBe(false);
         });
     });
 

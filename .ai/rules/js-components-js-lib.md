@@ -21,3 +21,9 @@ CellMap3D.vue shows full 2D-parity cell detail (label, state icon, product image
 
 ## Orbit camera mode reuses the walk key-handling plumbing
 WASD/arrows and Space/Shift now drive BOTH camera modes — `onKeyDown`/`onKeyUp` no longer gate on `cameraMode`; `animate()` branches instead, calling `stepPosition` (walk) or the new `stepOrbitStateByKeys` (orbit: forward/backward=pitch, left/right=yaw, up/down=zoom via `Math.exp`). Don't reintroduce a walk-only key gate without re-adding a separate orbit control scheme.
+
+Enter selects the currently-faced cell in walk mode (`onKeyDown`, reuses `facedGridCoordinate`/`selectCell`/`clearSelection`). Orbit has no "facing" concept, but Enter there is no longer a no-op either — see js-components.md for orbit's screen-center keyboard-select behavior.
+
+Click-to-select's raycast was extracted into `cellBoxAtScreenPoint()` — reused by both `selectAtScreenPoint` (click) and the new orbit-only `updateHoverAtScreenPoint` (pointermove hover outline, `HOVER_COLOR`, reuses `getEdgesGeometry()`). Hover is cleared on pointerdown/up/cancel/blur and on leaving orbit mode.
+
+An always-mounted (never `v-if`'d) `role="status" aria-live="polite"` `sr-only` div announces facing/selected text for screen readers, since the visual faced-cell panel is `pointer-events-none`/conditionally rendered and gives AT users no equivalent feedback.

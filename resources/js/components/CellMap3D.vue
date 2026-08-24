@@ -10,7 +10,11 @@ import {
 import * as THREE from 'three';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CellSlot from '@/components/CellSlot.vue';
-import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
+import {
+    CELL_STATES,
+    CELL_STATE_COLOR,
+    cellStateLabel,
+} from '@/lib/cellStateColor';
 import { mapToolbarButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -39,6 +43,7 @@ import {
     stepYaw,
 } from '@/lib/mapWalker';
 import type {
+    FacedGridCoordinate,
     MoveDirection,
     OrbitRange,
     OrbitState,
@@ -78,9 +83,15 @@ const BOX_SIZE = 1.4;
 const VIEW_DISTANCE = cellWorldZ(1);
 const HIGHLIGHT_COLOR = 0x3b82f6;
 const PULSE_COLOR = 0x10b981;
+const SELECT_COLOR = 0x8b5cf6;
+const SELECT_OUTLINE_SCALE = 1.15;
+/** Orbit-mode hover outline — same weight as highlight/pulse outlines, just a distinct neutral color. */
+const HOVER_COLOR = 0xffffff;
 const SKY_COLOR = 0xe5e7eb;
 const SHELF_COLOR = 0x64748b;
 const SHELF_THICKNESS = 0.15;
+/** A pointer that moved less than this while held counts as a click, not a drag. */
+const CLICK_MOVE_THRESHOLD_PIXELS = 4;
 /** How far a shelf platform overhangs the outermost box it carries, on every side. */
 const SHELF_MARGIN = BOX_SIZE * 0.3;
 const POST_SIZE = 0.15;
@@ -101,6 +112,64 @@ let cellDisposables: Disposable[] = [];
 const sceneDisposables: Disposable[] = [];
 let cellLookup = new Map<string, FacedItem>();
 
+interface InstanceSlot {
+    state: Cell['state'];
+    index: number;
+}
+
+interface StateInstances {
+    mesh: THREE.InstancedMesh;
+    /** `keys[instanceId]` — the cell key currently occupying that instance slot. */
+    keys: string[];
+}
+
+/**
+ * One `THREE.InstancedMesh` per cell state (rather than one `THREE.Mesh` per
+ * cell) — hundreds/thousands of individual boxes sharing geometry/material
+ * were still one draw call each; instancing collapses all boxes of a given
+ * state into a single draw call. Each mesh is allocated at the *total* cell
+ * count (not just that state's current count) so any cell can move into any
+ * state in place (`placeCellInstance`/`removeCellInstance`) without ever
+ * needing to reallocate — `.count` tracks how many of the allocated slots are
+ * actually in use.
+ */
+let instancesByState = new Map<Cell['state'], StateInstances>();
+
+/**
+ * Flattened `instancesByState` meshes, rebuilt only alongside
+ * `instancesByState` itself (`disposeCellGroup`/`buildCellGroup`) rather than
+ * re-derived on every call — `cellBoxAtScreenPoint` reads this on every
+ * orbit-mode `pointermove`, so it shouldn't allocate a fresh array per hover
+ * frame.
+ */
+let cellInstanceMeshes: THREE.InstancedMesh[] = [];
+
+/**
+ * Every currently-built cell's instance slot, keyed by `facedKey`. Lets
+ * `rebuildCells` update an existing cell's state/outline in place
+ * (`updateCellStatesAndLookup`) instead of tearing down and rebuilding the
+ * whole group whenever the *set* of cells hasn't actually changed (e.g. a
+ * highlight-filter toggle or a single cell's state changing).
+ */
+let instanceSlotByKey = new Map<string, InstanceSlot>();
+let cellOutlineLookup = new Map<string, THREE.LineSegments>();
+
+/**
+ * Box geometry and per-state/per-outline-color materials are identical
+ * across every rebuild (fixed box size, only 3 states, 2 outline colors) —
+ * built once lazily and reused (disposed only on unmount via
+ * `sceneDisposables`) instead of one new geometry/material instance per box
+ * on every rebuild.
+ */
+let sharedBoxGeometry: THREE.BoxGeometry | null = null;
+let sharedEdgesGeometry: THREE.EdgesGeometry | null = null;
+const boxMaterialsByState = new Map<
+    Cell['state'],
+    THREE.MeshStandardMaterial
+>();
+let highlightOutlineMaterial: THREE.LineBasicMaterial | null = null;
+let pulseOutlineMaterial: THREE.LineBasicMaterial | null = null;
+
 const pressedDirections = new Set<MoveDirection>();
 const position = { x: 0, y: EYE_HEIGHT, z: 0 };
 let pitchDegrees = 0;
@@ -117,6 +186,9 @@ let lastFrameTime: number | null = null;
 let isDragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragMoved = false;
 
 /**
  * Overview mode: an orbit camera around the whole warehouse instead of a
@@ -139,6 +211,81 @@ const activePointers = new Map<number, { x: number; y: number }>();
 let pinchStartGap: number | null = null;
 let orbitDistanceAtPinchStart = 0;
 
+const raycaster = new THREE.Raycaster();
+const pointerNdc = new THREE.Vector2();
+
+/**
+ * Orbit-mode hover: shows which box the pointer is over before clicking, so
+ * selection isn't blind-clicking. `hoveredKey` mirrors the `lastFacedKey`/
+ * `selectedKey` key-diffing style; `isHoveringSelectable` is the reactive
+ * mirror the template reads to show a pointer cursor.
+ */
+let hoveredKey: string | null = null;
+let hoverOutline: THREE.LineSegments | null = null;
+const isHoveringSelectable = ref(false);
+
+function getBoxGeometry(): THREE.BoxGeometry {
+    if (!sharedBoxGeometry) {
+        sharedBoxGeometry = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
+        sceneDisposables.push(sharedBoxGeometry);
+    }
+
+    return sharedBoxGeometry;
+}
+
+function getEdgesGeometry(): THREE.EdgesGeometry {
+    if (!sharedEdgesGeometry) {
+        sharedEdgesGeometry = new THREE.EdgesGeometry(
+            new THREE.BoxGeometry(
+                BOX_SIZE * 1.05,
+                BOX_SIZE * 1.05,
+                BOX_SIZE * 1.05,
+            ),
+        );
+        sceneDisposables.push(sharedEdgesGeometry);
+    }
+
+    return sharedEdgesGeometry;
+}
+
+function boxMaterialForState(state: Cell['state']): THREE.MeshStandardMaterial {
+    let material = boxMaterialsByState.get(state);
+
+    if (!material) {
+        material = new THREE.MeshStandardMaterial({
+            color: CELL_STATE_COLOR[state].hex,
+        });
+        boxMaterialsByState.set(state, material);
+        sceneDisposables.push(material);
+    }
+
+    return material;
+}
+
+function outlineMaterialFor(
+    kind: 'highlight' | 'pulse',
+): THREE.LineBasicMaterial {
+    if (kind === 'pulse') {
+        if (!pulseOutlineMaterial) {
+            pulseOutlineMaterial = new THREE.LineBasicMaterial({
+                color: PULSE_COLOR,
+            });
+            sceneDisposables.push(pulseOutlineMaterial);
+        }
+
+        return pulseOutlineMaterial;
+    }
+
+    if (!highlightOutlineMaterial) {
+        highlightOutlineMaterial = new THREE.LineBasicMaterial({
+            color: HIGHLIGHT_COLOR,
+        });
+        sceneDisposables.push(highlightOutlineMaterial);
+    }
+
+    return highlightOutlineMaterial;
+}
+
 function disposeCellGroup(): void {
     if (cellGroup && scene) {
         scene.remove(cellGroup);
@@ -147,48 +294,122 @@ function disposeCellGroup(): void {
     cellDisposables.forEach((disposable) => disposable.dispose());
     cellDisposables = [];
     cellGroup = null;
+    instancesByState = new Map();
+    cellInstanceMeshes = [];
+    instanceSlotByKey = new Map();
+    cellOutlineLookup = new Map();
+}
+
+/**
+ * Occupies the next free instance slot for `state` with a box at
+ * (x, y, z), recording it in `instanceSlotByKey` — shared by the initial
+ * build (`buildCellGroup`) and by `updateCellStatesAndLookup` when an
+ * existing cell moves to a different state in place.
+ */
+function placeCellInstance(
+    key: string,
+    state: Cell['state'],
+    x: number,
+    y: number,
+    z: number,
+): void {
+    const stateEntry = instancesByState.get(state);
+
+    if (!stateEntry) {
+        return;
+    }
+
+    const index = stateEntry.mesh.count;
+    stateEntry.mesh.setMatrixAt(
+        index,
+        new THREE.Matrix4().makeTranslation(x, y, z),
+    );
+    stateEntry.mesh.count = index + 1;
+    stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    stateEntry.keys[index] = key;
+    instanceSlotByKey.set(key, { state, index });
+}
+
+/**
+ * Frees `key`'s instance slot via swap-remove (move the last-occupied slot's
+ * matrix/key into the freed slot, then shrink `.count` by one) rather than
+ * leaving a gap — `THREE.InstancedMesh` only ever renders its first `.count`
+ * instances, so a gap in the middle would either hide a real box or require
+ * a full re-pack anyway.
+ */
+function removeCellInstance(key: string): void {
+    const slot = instanceSlotByKey.get(key);
+
+    if (!slot) {
+        return;
+    }
+
+    const stateEntry = instancesByState.get(slot.state);
+
+    if (!stateEntry) {
+        return;
+    }
+
+    const lastIndex = stateEntry.mesh.count - 1;
+
+    if (slot.index !== lastIndex) {
+        const movedMatrix = new THREE.Matrix4();
+        stateEntry.mesh.getMatrixAt(lastIndex, movedMatrix);
+        stateEntry.mesh.setMatrixAt(slot.index, movedMatrix);
+
+        const movedKey = stateEntry.keys[lastIndex];
+        stateEntry.keys[slot.index] = movedKey;
+        instanceSlotByKey.set(movedKey, {
+            state: slot.state,
+            index: slot.index,
+        });
+    }
+
+    stateEntry.keys.pop();
+    stateEntry.mesh.count = lastIndex;
+    stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    instanceSlotByKey.delete(key);
 }
 
 function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
     const group = new THREE.Group();
-    const boxGeometry = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
-    const edgesGeometry = new THREE.EdgesGeometry(
-        new THREE.BoxGeometry(
-            BOX_SIZE * 1.05,
-            BOX_SIZE * 1.05,
-            BOX_SIZE * 1.05,
-        ),
-    );
-    cellDisposables.push(boxGeometry, edgesGeometry);
+    const boxGeometry = getBoxGeometry();
+    const edgesGeometry = getEdgesGeometry();
+    const totalCells = bands.reduce((sum, band) => sum + band.items.length, 0);
+    instancesByState = new Map();
+    cellInstanceMeshes = [];
+    instanceSlotByKey = new Map();
+    cellOutlineLookup = new Map();
+
+    for (const state of CELL_STATES) {
+        const mesh = new THREE.InstancedMesh(
+            boxGeometry,
+            boxMaterialForState(state),
+            Math.max(totalCells, 1),
+        );
+        mesh.name = 'cell-box';
+        mesh.count = 0;
+        group.add(mesh);
+        instancesByState.set(state, { mesh, keys: [] });
+        cellInstanceMeshes.push(mesh);
+    }
 
     bands.forEach((band, rowIndex) => {
         for (const item of band.items) {
-            const material = new THREE.MeshStandardMaterial({
-                color: CELL_STATE_COLOR[item.state].hex,
-            });
-            cellDisposables.push(material);
-
-            const mesh = new THREE.Mesh(boxGeometry, material);
-            mesh.name = 'cell-box';
-            mesh.position.set(
-                rowWorldX(rowIndex),
-                flatWorldY(item.flatNumber),
-                cellWorldZ(item.cellNumber),
-            );
-            group.add(mesh);
+            const key = facedKey(rowIndex, item.cellNumber, item.flatNumber);
+            const x = rowWorldX(rowIndex);
+            const y = flatWorldY(item.flatNumber);
+            const z = cellWorldZ(item.cellNumber);
+            placeCellInstance(key, item.state, x, y, z);
 
             if (item.highlighted || item.pulsing) {
-                const outlineMaterial = new THREE.LineBasicMaterial({
-                    color: item.pulsing ? PULSE_COLOR : HIGHLIGHT_COLOR,
-                });
-                cellDisposables.push(outlineMaterial);
-
                 const outline = new THREE.LineSegments(
                     edgesGeometry,
-                    outlineMaterial,
+                    outlineMaterialFor(item.pulsing ? 'pulse' : 'highlight'),
                 );
-                outline.position.copy(mesh.position);
+                outline.position.set(x, y, z);
                 group.add(outline);
+                cellOutlineLookup.set(key, outline);
             }
         }
     });
@@ -329,14 +550,124 @@ function rebuildCellLookup(bands: CellMap3DBand[]): void {
         }
     });
 
-    // Force the next frame to refresh the faced-cell panel even if the
-    // camera hasn't moved — the underlying item (highlight/pulse/pallet)
-    // may have changed even when its grid coordinate didn't.
-    lastFacedKey = null;
+    invalidateAfterCellDataChange();
+}
+
+function bandsCellKeys(bands: CellMap3DBand[]): Set<string> {
+    const keys = new Set<string>();
+
+    bands.forEach((band, rowIndex) => {
+        for (const item of band.items) {
+            keys.add(facedKey(rowIndex, item.cellNumber, item.flatNumber));
+        }
+    });
+
+    return keys;
+}
+
+function sameCellKeys(a: Set<string>, b: Set<string>): boolean {
+    if (a.size !== b.size) {
+        return false;
+    }
+
+    for (const key of a) {
+        if (!b.has(key)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Updates every existing cell's state/outline in place AND rebuilds
+ * `cellLookup` in the SAME pass over `bands`/items — used whenever the *set*
+ * of cells hasn't changed (see `rebuildCells`), so a highlight-filter toggle
+ * or a single cell's state changing doesn't flicker/rebuild the entire
+ * warehouse, and doesn't walk every band/item twice (this used to be two
+ * separate full passes — `updateCellStates` then `rebuildCellLookup`).
+ * Shelves/posts are untouched here since they only depend on which cells
+ * exist, not their state/highlight/pulse.
+ */
+function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
+    if (!cellGroup) {
+        return;
+    }
+
+    const group = cellGroup;
+    const newLookup = new Map<string, FacedItem>();
+
+    bands.forEach((band, rowIndex) => {
+        for (const item of band.items) {
+            const key = facedKey(rowIndex, item.cellNumber, item.flatNumber);
+            newLookup.set(key, { rowLetter: band.letter, item });
+
+            const slot = instanceSlotByKey.get(key);
+
+            if (!slot) {
+                continue;
+            }
+
+            if (slot.state !== item.state) {
+                removeCellInstance(key);
+                placeCellInstance(
+                    key,
+                    item.state,
+                    rowWorldX(rowIndex),
+                    flatWorldY(item.flatNumber),
+                    cellWorldZ(item.cellNumber),
+                );
+            }
+
+            const existingOutline = cellOutlineLookup.get(key);
+            const wantsOutline = item.highlighted || item.pulsing;
+
+            if (!wantsOutline) {
+                if (existingOutline) {
+                    group.remove(existingOutline);
+                    cellOutlineLookup.delete(key);
+                }
+
+                continue;
+            }
+
+            const outlineMaterial = outlineMaterialFor(
+                item.pulsing ? 'pulse' : 'highlight',
+            );
+
+            if (existingOutline) {
+                existingOutline.material = outlineMaterial;
+            } else {
+                const outline = new THREE.LineSegments(
+                    getEdgesGeometry(),
+                    outlineMaterial,
+                );
+                outline.position.set(
+                    rowWorldX(rowIndex),
+                    flatWorldY(item.flatNumber),
+                    cellWorldZ(item.cellNumber),
+                );
+                group.add(outline);
+                cellOutlineLookup.set(key, outline);
+            }
+        }
+    });
+
+    cellLookup = newLookup;
+
+    invalidateAfterCellDataChange();
 }
 
 function rebuildCells(): void {
     if (!scene) {
+        return;
+    }
+
+    const newKeys = bandsCellKeys(props.bands);
+
+    if (cellGroup && sameCellKeys(newKeys, new Set(instanceSlotByKey.keys()))) {
+        updateCellStatesAndLookup(props.bands);
+
         return;
     }
 
@@ -392,7 +723,8 @@ function resetView(): void {
  * camera. Entering orbit mode always resets it to the default overview
  * angle/distance rather than remembering where a previous orbit session
  * left off, matching how `resetView` already re-anchors rather than
- * persisting an arbitrary prior state.
+ * persisting an arbitrary prior state. Any click-selected cell is cleared
+ * on every switch, since it's only ever shown while orbiting.
  */
 function setCameraMode(mode: 'walk' | 'orbit'): void {
     if (mode === cameraMode.value) {
@@ -400,6 +732,8 @@ function setCameraMode(mode: 'walk' | 'orbit'): void {
     }
 
     cameraMode.value = mode;
+    clearSelection();
+    clearHover();
 
     if (mode === 'orbit') {
         orbitState = defaultOrbitState(orbitRange);
@@ -421,13 +755,18 @@ defineExpose({ focusCell, resetView, setCameraMode });
 const facedItem = ref<FacedItem | null>(null);
 let lastFacedKey: string | null = null;
 
-function updateFacedItem(): void {
-    const faced = facedGridCoordinate(
+/** The row/cell/flat the camera is currently looking at (`facedGridCoordinate`), keyed the same way `cellLookup` is — shared by `updateFacedItem` (per-frame, walk mode) and the Enter-to-select handler (`onKeyDown`, walk mode). */
+function currentFacedCoordinate() {
+    return facedGridCoordinate(
         position,
         pitchDegrees,
         VIEW_DISTANCE,
         yawDegrees,
     );
+}
+
+function updateFacedItem(): void {
+    const faced = currentFacedCoordinate();
     const key = facedKey(faced.rowIndex, faced.cellNumber, faced.flatNumber);
 
     if (key === lastFacedKey) {
@@ -437,6 +776,261 @@ function updateFacedItem(): void {
     lastFacedKey = key;
     facedItem.value = cellLookup.get(key) ?? null;
 }
+
+/**
+ * The click-selected cell. In orbit mode it's the only source of detail
+ * (orbiting far above the warehouse has no meaningful "camera is facing this
+ * cell" probe); in walk mode it takes priority over the continuously-tracked
+ * `facedItem` once set, letting you click a box to pin its detail while you
+ * keep walking/looking around, without needing to stand still facing it.
+ * Only ever set by clicking a cell box (`selectAtScreenPoint`); nothing
+ * updates it every frame.
+ */
+const selectedItem = ref<FacedItem | null>(null);
+let selectedKey: string | null = null;
+let selectionOutline: THREE.LineSegments | null = null;
+
+function ensureSelectionOutline(): THREE.LineSegments {
+    if (selectionOutline) {
+        return selectionOutline;
+    }
+
+    const geometry = new THREE.EdgesGeometry(
+        new THREE.BoxGeometry(
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+        ),
+    );
+    const material = new THREE.LineBasicMaterial({ color: SELECT_COLOR });
+    sceneDisposables.push(geometry, material);
+
+    selectionOutline = new THREE.LineSegments(geometry, material);
+    selectionOutline.name = 'selection-outline';
+    selectionOutline.visible = false;
+    scene?.add(selectionOutline);
+
+    return selectionOutline;
+}
+
+function selectCell(
+    rowIndex: number,
+    cellNumber: number,
+    flatNumber: number,
+): void {
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+    selectedKey = key;
+    selectedItem.value = cellLookup.get(key) ?? null;
+
+    const outline = ensureSelectionOutline();
+    outline.position.set(
+        rowWorldX(rowIndex),
+        flatWorldY(flatNumber),
+        cellWorldZ(cellNumber),
+    );
+    outline.visible = true;
+}
+
+function clearSelection(): void {
+    selectedKey = null;
+    selectedItem.value = null;
+
+    if (selectionOutline) {
+        selectionOutline.visible = false;
+    }
+}
+
+/**
+ * Raycasts from a screen point through the cell boxes, returning the
+ * row/cell/flat of whichever instance is hit (or null on a miss) — shared by
+ * click-to-select (`selectAtScreenPoint`) and orbit-mode hover
+ * (`updateHoverAtScreenPoint`). Raycasts against `cellInstanceMeshes`, the
+ * per-state `THREE.InstancedMesh`es (one per state, not one per cell) cached
+ * alongside `instancesByState`, then resolves the hit's `instanceId` back to
+ * a cell key via that state's `keys` array — this runs on every orbit-mode
+ * pointermove, so avoiding both a fresh scene-graph scan AND a fresh mesh
+ * array per call matters at warehouse scale.
+ */
+function cellBoxAtScreenPoint(
+    clientX: number,
+    clientY: number,
+): FacedGridCoordinate | null {
+    const container = containerRef.value;
+
+    if (!camera || !cellGroup || !container) {
+        return null;
+    }
+
+    const rect = container.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+        return null;
+    }
+
+    pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+
+    raycaster.setFromCamera(pointerNdc, camera);
+    const intersections = raycaster.intersectObjects(cellInstanceMeshes);
+
+    if (intersections.length === 0) {
+        return null;
+    }
+
+    const hit = intersections[0];
+
+    for (const entry of instancesByState.values()) {
+        if (entry.mesh !== hit.object || hit.instanceId == null) {
+            continue;
+        }
+
+        const key = entry.keys[hit.instanceId];
+
+        if (!key) {
+            return null;
+        }
+
+        const [rowIndex, cellNumber, flatNumber] = key.split(':').map(Number);
+
+        return { rowIndex, cellNumber, flatNumber };
+    }
+
+    return null;
+}
+
+/**
+ * A click/tap that didn't drag selects whichever cell box is under it, or
+ * clears the selection on a miss.
+ */
+function selectAtScreenPoint(clientX: number, clientY: number): void {
+    const hit = cellBoxAtScreenPoint(clientX, clientY);
+
+    if (!hit) {
+        clearSelection();
+
+        return;
+    }
+
+    selectCell(hit.rowIndex, hit.cellNumber, hit.flatNumber);
+}
+
+/**
+ * The keyboard equivalent of click-to-select for orbit mode, where there's
+ * no "facing" concept (see `onKeyDown`) and hover-outline feedback only ever
+ * reaches keyboard-only users via a pointer. Raycasts through whatever's
+ * centered in the viewport instead — the screen-center point a user would
+ * naturally orbit a cell into before selecting it.
+ */
+function selectCenteredCell(): void {
+    const container = containerRef.value;
+
+    if (!container) {
+        return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    selectAtScreenPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function ensureHoverOutline(): THREE.LineSegments {
+    if (hoverOutline) {
+        return hoverOutline;
+    }
+
+    const material = new THREE.LineBasicMaterial({ color: HOVER_COLOR });
+    sceneDisposables.push(material);
+
+    hoverOutline = new THREE.LineSegments(getEdgesGeometry(), material);
+    hoverOutline.name = 'hover-outline';
+    hoverOutline.visible = false;
+    scene?.add(hoverOutline);
+
+    return hoverOutline;
+}
+
+function clearHover(): void {
+    hoveredKey = null;
+    isHoveringSelectable.value = false;
+
+    if (hoverOutline) {
+        hoverOutline.visible = false;
+    }
+}
+
+/**
+ * Refreshes/invalidates the faced-cell panel, click-selection, and orbit
+ * hover after `cellLookup` changes — shared by `rebuildCellLookup` (full
+ * rebuild) and `updateCellStatesAndLookup` (in-place update) so the two
+ * paths can't drift out of sync on the next edit.
+ */
+function invalidateAfterCellDataChange(): void {
+    // Force the next frame to refresh the faced-cell panel even if the
+    // camera hasn't moved — the underlying item (highlight/pulse/pallet)
+    // may have changed even when its grid coordinate didn't.
+    lastFacedKey = null;
+
+    // The click-selected cell (orbit mode) can't rely on a per-frame probe
+    // to refresh it, so it's refreshed/invalidated here explicitly whenever
+    // the underlying data changes.
+    if (selectedKey !== null) {
+        selectedItem.value = cellLookup.get(selectedKey) ?? null;
+
+        if (!selectedItem.value) {
+            clearSelection();
+        }
+    }
+
+    // Same for orbit-mode hover: it's only ever refreshed by a pointermove,
+    // so a hovered cell removed by a data change would otherwise leave a
+    // stale outline pointing at a now-empty spot until the pointer moves
+    // again.
+    if (hoveredKey !== null && !cellLookup.has(hoveredKey)) {
+        clearHover();
+    }
+}
+
+/**
+ * Orbit-mode-only hover feedback: raycasts under the pointer on every move
+ * (not just on click) so a box is visibly outlined before you commit to
+ * selecting it — mirrors `selectAtScreenPoint`'s hit test but shows/clears an
+ * outline instead of selecting.
+ */
+function updateHoverAtScreenPoint(clientX: number, clientY: number): void {
+    const hit = cellBoxAtScreenPoint(clientX, clientY);
+
+    if (!hit) {
+        clearHover();
+
+        return;
+    }
+
+    const { rowIndex, cellNumber, flatNumber } = hit;
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+
+    if (key === hoveredKey) {
+        return;
+    }
+
+    hoveredKey = key;
+    isHoveringSelectable.value = true;
+    const outline = ensureHoverOutline();
+    outline.position.set(
+        rowWorldX(rowIndex),
+        flatWorldY(flatNumber),
+        cellWorldZ(cellNumber),
+    );
+    outline.visible = true;
+}
+
+const displayedItem = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return selectedItem.value;
+    }
+
+    // A click-selected cell pins the panel even as facedItem keeps tracking
+    // whatever the camera is currently looking at in the background.
+    return selectedItem.value ?? facedItem.value;
+});
 
 const walkHint = computed(() => {
     if (cameraMode.value === 'orbit') {
@@ -448,25 +1042,64 @@ const walkHint = computed(() => {
         : t('cells.map.walkHint');
 });
 
-const facedLabel = computed(() =>
-    facedItem.value
+const displayedLabel = computed(() =>
+    displayedItem.value
         ? formatSlot(
-              facedItem.value.rowLetter,
-              facedItem.value.item.cellNumber,
-              facedItem.value.item.flatNumber,
+              displayedItem.value.rowLetter,
+              displayedItem.value.item.cellNumber,
+              displayedItem.value.item.flatNumber,
           )
         : '',
 );
 
-/** Adapts the faced item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
-const facedCellForSlot = computed<Cell | null>(() => {
-    const faced = facedItem.value;
+/** A short "{label}: {state} — {product}" summary shared by the visual panel's label and the aria-live announcement below. */
+function describeItem(display: FacedItem): string {
+    const label = formatSlot(
+        display.rowLetter,
+        display.item.cellNumber,
+        display.item.flatNumber,
+    );
+    const state = cellStateLabel(display.item.state);
+    const product = display.item.pallet
+        ? ` — ${display.item.pallet.product_name}`
+        : '';
 
-    if (!faced) {
+    return `${label}: ${state}${product}`;
+}
+
+/**
+ * A visually-hidden `aria-live` announcement of what the visual faced-cell
+ * panel already shows sighted users, since that panel is purely visual
+ * (`pointer-events-none`, conditionally rendered) and gives screen-reader
+ * users no equivalent feedback while walking/orbiting.
+ */
+const mapAnnouncement = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return selectedItem.value
+            ? t('cells.map.announcements.selected', {
+                  detail: describeItem(selectedItem.value),
+              })
+            : '';
+    }
+
+    if (!displayedItem.value) {
+        return '';
+    }
+
+    return t('cells.map.announcements.facing', {
+        detail: describeItem(displayedItem.value),
+    });
+});
+
+/** Adapts the displayed item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
+const displayedCellForSlot = computed<Cell | null>(() => {
+    const displayed = displayedItem.value;
+
+    if (!displayed) {
         return null;
     }
 
-    const { item } = faced;
+    const { item } = displayed;
 
     return {
         id: 0,
@@ -556,12 +1189,43 @@ function animate(timeMs: number): void {
  * WASD/arrows and Space/Shift drive both camera modes — `stepPosition`
  * (walk) and `stepOrbitStateByKeys` (orbit) both read the same
  * `pressedDirections` set from `animate()`, so key handling itself doesn't
- * branch on `cameraMode`.
+ * branch on `cameraMode`. Enter selects the currently-faced cell in walk
+ * mode (the keyboard equivalent of click-to-select, which otherwise
+ * requires a pointer) — orbit has no "facing" concept, so there Enter
+ * instead selects whatever's centered in the viewport
+ * (`selectCenteredCell`), giving keyboard-only users a way to select in
+ * orbit mode too, since hover-outline feedback there otherwise only ever
+ * reaches a pointer.
  */
 function onKeyDown(event: KeyboardEvent): void {
     if (event.key.toLowerCase() === 'o') {
         event.preventDefault();
         setCameraMode(cameraMode.value === 'walk' ? 'orbit' : 'walk');
+
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+
+        if (cameraMode.value === 'orbit') {
+            selectCenteredCell();
+
+            return;
+        }
+
+        const faced = currentFacedCoordinate();
+        const key = facedKey(
+            faced.rowIndex,
+            faced.cellNumber,
+            faced.flatNumber,
+        );
+
+        if (cellLookup.has(key)) {
+            selectCell(faced.rowIndex, faced.cellNumber, faced.flatNumber);
+        } else {
+            clearSelection();
+        }
 
         return;
     }
@@ -590,6 +1254,7 @@ function onFocusLost(): void {
 }
 
 function onPointerDown(event: PointerEvent): void {
+    clearHover();
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     containerRef.value?.setPointerCapture?.(event.pointerId);
 
@@ -603,6 +1268,9 @@ function onPointerDown(event: PointerEvent): void {
     }
 
     isDragging = true;
+    dragMoved = false;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
 }
@@ -632,6 +1300,10 @@ function onPointerMove(event: PointerEvent): void {
     }
 
     if (!isDragging) {
+        if (cameraMode.value === 'orbit') {
+            updateHoverAtScreenPoint(event.clientX, event.clientY);
+        }
+
         return;
     }
 
@@ -639,6 +1311,13 @@ function onPointerMove(event: PointerEvent): void {
     const deltaY = event.clientY - lastPointerY;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
+
+    if (
+        Math.abs(event.clientX - dragStartX) > CLICK_MOVE_THRESHOLD_PIXELS ||
+        Math.abs(event.clientY - dragStartY) > CLICK_MOVE_THRESHOLD_PIXELS
+    ) {
+        dragMoved = true;
+    }
 
     if (cameraMode.value === 'orbit') {
         orbitState.yawDegrees = stepYaw(orbitState.yawDegrees, deltaX);
@@ -655,6 +1334,12 @@ function onPointerMove(event: PointerEvent): void {
 }
 
 function onPointerUpOrCancel(event: PointerEvent): void {
+    // Click-to-select works in both camera modes — pinchStartGap is only
+    // ever set in orbit mode (walk mode has no pinch-zoom), so this can't
+    // misfire mid-pinch there.
+    const wasSinglePointerClick =
+        activePointers.size === 1 && pinchStartGap === null && !dragMoved;
+
     activePointers.delete(event.pointerId);
 
     if (activePointers.size < 2) {
@@ -665,6 +1350,11 @@ function onPointerUpOrCancel(event: PointerEvent): void {
         containerRef.value.releasePointerCapture(event.pointerId);
     }
 
+    if (wasSinglePointerClick) {
+        selectAtScreenPoint(event.clientX, event.clientY);
+    }
+
+    clearHover();
     isDragging = false;
 }
 
@@ -813,6 +1503,9 @@ onBeforeUnmount(() => {
         :aria-label="walkHint"
         data-testid="map-3d-viewport"
         class="relative h-full w-full touch-none outline-none select-none"
+        :class="{
+            'cursor-pointer': cameraMode === 'orbit' && isHoveringSelectable,
+        }"
         @keydown="onKeyDown"
         @keyup="onKeyUp"
         @blur="onFocusLost"
@@ -824,15 +1517,24 @@ onBeforeUnmount(() => {
         @wheel="onWheel"
     >
         <div
-            v-if="facedItem"
+            class="sr-only"
+            role="status"
+            aria-live="polite"
+            data-testid="map-3d-announcement"
+        >
+            {{ mapAnnouncement }}
+        </div>
+
+        <div
+            v-if="displayedItem"
             data-testid="map-3d-faced-cell"
             class="pointer-events-none absolute inset-x-0 top-2 z-10 flex justify-center"
         >
             <CellSlot
-                :cell="facedCellForSlot"
-                :label="facedLabel"
-                :highlighted="facedItem.item.highlighted"
-                :pulsing="facedItem.item.pulsing"
+                :cell="displayedCellForSlot"
+                :label="displayedLabel"
+                :highlighted="displayedItem.item.highlighted"
+                :pulsing="displayedItem.item.pulsing"
                 class="shadow-lg"
             />
         </div>
@@ -971,6 +1673,7 @@ onBeforeUnmount(() => {
                     <span>{{ t('cells.map.controls.down') }}</span>
                 </p>
                 <p>{{ t('cells.map.controls.lookLabel') }}</p>
+                <p>{{ t('cells.map.controls.selectLabel') }}</p>
                 <p class="flex items-center gap-1.5">
                     <span>{{
                         t('cells.map.controls.cameraModeToggleLabel')

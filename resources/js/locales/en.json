@@ -226,8 +226,8 @@
             "view2d": "2D view",
             "view3d": "3D view",
             "overview": "Overview (orbit) camera",
-            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, and drag to look around (including behind you).",
-            "walkHintTouch": "Drag to look around (including behind you), and use the on-screen buttons to move and fly between flats.",
+            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
+            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between flats, and tap a cell to inspect it.",
             "orbitHint": "Drag to orbit around the warehouse, scroll or pinch to zoom, or use WASD/arrow keys and Space/Shift on the keyboard, and click a cell — or press Enter to select the cell centered in view — to inspect it.",
             "controls": {
                 "moveLabel": "Move: WASD or arrow keys",
@@ -235,6 +235,7 @@
                 "up": "up",
                 "down": "down",
                 "lookLabel": "Look: drag to look around, even behind you",
+                "selectLabel": "Click a cell to inspect it",
                 "cameraModeToggleLabel": "Toggle walk/overview:",
                 "touch": {
                     "forward": "Move forward",
@@ -250,6 +251,10 @@
                     "keyboardLabel": "Keyboard: WASD/arrows to rotate, Space/Shift to zoom",
                     "selectLabel": "Click a cell, or press Enter to select the centered cell"
                 }
+            },
+            "announcements": {
+                "facing": "Facing {detail}",
+                "selected": "Selected {detail}"
             }
         }
     },
