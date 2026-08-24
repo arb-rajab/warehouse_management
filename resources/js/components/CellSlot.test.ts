@@ -3,19 +3,8 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import type { Cell } from '@/types/admin';
+import { cell } from '@/testing/factories';
 import CellSlot from './CellSlot.vue';
-
-function cell(overrides: Partial<Cell> = {}): Cell {
-    return {
-        id: 1,
-        cell_number: 1,
-        flat_number: 1,
-        state: 'empty',
-        pallet: null,
-        ...overrides,
-    };
-}
 
 function mountSlot(
     props: Partial<InstanceType<typeof CellSlot>['$props']> = {},

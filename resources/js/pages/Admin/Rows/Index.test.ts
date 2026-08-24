@@ -2,7 +2,8 @@ import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
-import type { Paginated, Row } from '@/types/admin';
+import { paginated, row } from '@/testing/factories';
+import type { Row } from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -11,58 +12,15 @@ const { usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { post: routerPostMock },
     };
 });
-
-function row(overrides: Partial<Row> = {}): Row {
-    return {
-        id: 1,
-        letter: 'A',
-        cells_count: 5,
-        flats_count: 7,
-        has_pallets: false,
-        ...overrides,
-    };
-}
-
-function paginatedRows(rows: Row[]): Paginated<Row> {
-    return {
-        data: rows,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 25,
-            total: rows.length,
-            from: rows.length ? 1 : null,
-            to: rows.length,
-            links: [],
-        },
-    };
-}
 
 function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
     usePageMock.mockReturnValue({
@@ -74,7 +32,7 @@ function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
         },
     });
 
-    return mount(Index, { props: { rows: paginatedRows(rows) } });
+    return mount(Index, { props: { rows: paginated(rows) } });
 }
 
 describe('Rows Index', () => {

@@ -3,11 +3,11 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { paginated } from '@/testing/factories';
 import type {
     CellStatusLog,
     CellStatusLogFilterOptions,
     CellStatusLogFilters,
-    Paginated,
 } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -18,28 +18,11 @@ const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock, post: routerPostMock },
         useHttp: () => ({
@@ -84,21 +67,6 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
     };
 }
 
-function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
-    return {
-        data: logs,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 25,
-            total: logs.length,
-            from: logs.length ? 1 : null,
-            to: logs.length,
-            links: [],
-        },
-    };
-}
-
 const filterOptions: CellStatusLogFilterOptions = {
     rows: [
         { id: 1, letter: 'A' },
@@ -123,7 +91,7 @@ function mountPage(logs: CellStatusLog[], filters: CellStatusLogFilters = {}) {
     });
 
     return mount(Index, {
-        props: { logs: paginatedLogs(logs), filters, filterOptions },
+        props: { logs: paginated(logs), filters, filterOptions },
     });
 }
 

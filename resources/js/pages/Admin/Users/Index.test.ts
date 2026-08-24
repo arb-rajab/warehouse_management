@@ -2,7 +2,8 @@ import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
-import type { Paginated, User } from '@/types/admin';
+import { paginated } from '@/testing/factories';
+import type { User } from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -11,28 +12,11 @@ const { usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { post: routerPostMock },
     };
@@ -48,21 +32,6 @@ function user(overrides: Partial<User> = {}): User {
     };
 }
 
-function paginatedUsers(users: User[]): Paginated<User> {
-    return {
-        data: users,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 25,
-            total: users.length,
-            from: users.length ? 1 : null,
-            to: users.length,
-            links: [],
-        },
-    };
-}
-
 function mountPage(users: User[], currentUserId = 7) {
     usePageMock.mockReturnValue({
         url: '/admin/users',
@@ -72,7 +41,7 @@ function mountPage(users: User[], currentUserId = 7) {
         },
     });
 
-    return mount(Index, { props: { users: paginatedUsers(users) } });
+    return mount(Index, { props: { users: paginated(users) } });
 }
 
 describe('Users Index', () => {

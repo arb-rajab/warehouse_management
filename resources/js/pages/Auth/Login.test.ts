@@ -12,28 +12,11 @@ const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const FormStub = defineComponent({
-        props: ['action'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    'form',
-                    {
-                        'data-action-url':
-                            typeof props.action === 'string'
-                                ? props.action
-                                : props.action?.url,
-                    },
-                    slots.default?.(formSlotPropsMock()),
-                );
-        },
-    });
+    const { createFormStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Form: FormStub,
+        Head: headStub,
+        Form: createFormStub(formSlotPropsMock),
         usePage: usePageMock,
         router: { post: routerPostMock },
     };
