@@ -28,7 +28,7 @@ class CellController extends Controller
             : min(max($request->integer('flat_number', 1), 1), max($maxFlatNumber, 1));
 
         $cells = Cell::query()
-            ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+            ->select(Cell::SELECT_COLUMNS)
             ->where('flat_number', $flatNumber)
             ->with(Cell::WITH_ROW_AND_CONTENTS)
             ->orderedByCoordinates()
@@ -70,7 +70,7 @@ class CellController extends Controller
     private function cellHighlightSamples(): array
     {
         return Cell::query()
-            ->select(['id', 'row_id', 'cell_number', 'flat_number', 'state'])
+            ->select(Cell::SELECT_COLUMNS)
             ->with([
                 'row:id,letter',
                 'pallet:id,cell_id,product_id,expiration_date,created_at',
