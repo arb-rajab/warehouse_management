@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { paginated } from '@/testing/factories';
 import type {
     CellHighlightSample,
     CellHighlightSeed,
@@ -52,47 +53,18 @@ vi.mock('@/components/CellMap3D.vue', async () => {
 });
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: products.length,
-                        from: 1,
-                        to: products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(products, 20)),
         }),
     };
 });
@@ -208,6 +180,7 @@ describe('Cells Index (warehouse map)', () => {
         routerGetMock.mockClear();
         cellMap3DFocusCell.mockClear();
         cellMap3DResetView.mockClear();
+        cellMap3DSetCameraMode.mockClear();
     });
 
     it('shows the empty message when there are no rows', () => {
