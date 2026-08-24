@@ -2,14 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Controllers\Concerns\FailsAuthenticationUniformly;
 use App\Http\Requests\Concerns\ValidatesLoginCredentials;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    use FailsAuthenticationUniformly;
     use ValidatesLoginCredentials;
 
     /**
@@ -29,16 +30,5 @@ class LoginRequest extends FormRequest
 
             $this->failAuthentication();
         }
-    }
-
-    /**
-     * Reject the attempt with a message that reveals neither which credential was
-     * wrong nor that the account exists but lacks admin access.
-     */
-    private function failAuthentication(): never
-    {
-        throw ValidationException::withMessages([
-            'email' => [__('auth.failed')],
-        ]);
     }
 }
