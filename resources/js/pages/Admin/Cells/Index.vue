@@ -10,6 +10,7 @@ import {
     LocateFixed,
     Maximize2,
     Minimize2,
+    Orbit,
     RotateCcw,
     RotateCw,
     Search,
@@ -40,6 +41,7 @@ import {
     columnNumberOptions,
     countBadgeClass,
     mapToolbarButtonClass,
+    selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -406,6 +408,28 @@ const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
 
 function setViewMode(mode: '2d' | '3d'): void {
     viewMode.value = mode;
+
+    // A fresh CellMap3D always mounts in walk mode (it owns cameraMode
+    // internally and doesn't persist across unmounts) — resetting the
+    // mirror here keeps this toggle button's pressed-state from showing a
+    // stale "orbit" left over from a previous time in the 3D view.
+    if (mode === '3d') {
+        cameraDisplayMode.value = 'walk';
+    }
+}
+
+/**
+ * A read-only mirror of CellMap3D's own `cameraMode`, kept in sync via its
+ * `camera-mode-change` emit — only needed so this toolbar button can show
+ * which camera mode is active. `setCameraMode` (exposed by the child) is
+ * the one source of truth; this ref never drives the camera itself.
+ */
+const cameraDisplayMode = ref<'walk' | 'orbit'>('walk');
+
+function toggleCameraMode(): void {
+    map3DRef.value?.setCameraMode(
+        cameraDisplayMode.value === 'walk' ? 'orbit' : 'walk',
+    );
 }
 
 const pulsingLabel = ref<string | null>(null);
@@ -692,7 +716,7 @@ watch(
                             class="inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
                             :class="
                                 n === flatNumber
-                                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                    ? selectedToggleClass
                                     : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
                             "
                             @click="goToFlat(n)"
@@ -722,9 +746,7 @@ watch(
                         :aria-pressed="viewMode === '2d'"
                         :class="[
                             mapToolbarButtonClass,
-                            viewMode === '2d'
-                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                                : '',
+                            viewMode === '2d' ? selectedToggleClass : '',
                         ]"
                         @click="setViewMode('2d')"
                     >
@@ -737,13 +759,27 @@ watch(
                         :aria-pressed="viewMode === '3d'"
                         :class="[
                             mapToolbarButtonClass,
-                            viewMode === '3d'
-                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                                : '',
+                            viewMode === '3d' ? selectedToggleClass : '',
                         ]"
                         @click="setViewMode('3d')"
                     >
                         <Box class="h-4 w-4" />
+                    </button>
+                    <button
+                        v-if="viewMode === '3d'"
+                        type="button"
+                        :title="t('cells.map.overview')"
+                        data-testid="camera-mode-orbit"
+                        :aria-pressed="cameraDisplayMode === 'orbit'"
+                        :class="[
+                            mapToolbarButtonClass,
+                            cameraDisplayMode === 'orbit'
+                                ? selectedToggleClass
+                                : '',
+                        ]"
+                        @click="toggleCameraMode"
+                    >
+                        <Orbit class="h-4 w-4" />
                     </button>
                     <template v-if="viewMode === '2d'">
                         <button
@@ -952,7 +988,13 @@ watch(
                     class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
                     :class="isMapFullscreen ? 'min-h-0 flex-1' : 'h-[32rem]'"
                 >
-                    <CellMap3D ref="map3DRef" :bands="map3DBands" />
+                    <CellMap3D
+                        ref="map3DRef"
+                        :bands="map3DBands"
+                        @camera-mode-change="
+                            (mode) => (cameraDisplayMode = mode)
+                        "
+                    />
                 </div>
             </div>
         </template>

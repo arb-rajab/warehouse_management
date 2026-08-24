@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { paginated } from '@/testing/factories';
 import type {
     CellHighlightSample,
     CellHighlightSeed,
@@ -13,13 +14,19 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerGetMock, cellMap3DFocusCell, cellMap3DResetView } =
-    vi.hoisted(() => ({
-        usePageMock: vi.fn(),
-        routerGetMock: vi.fn(),
-        cellMap3DFocusCell: vi.fn(),
-        cellMap3DResetView: vi.fn(),
-    }));
+const {
+    usePageMock,
+    routerGetMock,
+    cellMap3DFocusCell,
+    cellMap3DResetView,
+    cellMap3DSetCameraMode,
+} = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+    routerGetMock: vi.fn(),
+    cellMap3DFocusCell: vi.fn(),
+    cellMap3DResetView: vi.fn(),
+    cellMap3DSetCameraMode: vi.fn(),
+}));
 
 vi.mock('@/components/CellMap3D.vue', async () => {
     const { defineComponent, h } = await import('vue');
@@ -28,10 +35,15 @@ vi.mock('@/components/CellMap3D.vue', async () => {
         default: defineComponent({
             name: 'CellMap3DStub',
             props: ['bands'],
-            setup(_props, { expose }) {
+            emits: ['camera-mode-change'],
+            setup(_props, { expose, emit }) {
                 expose({
                     focusCell: cellMap3DFocusCell,
                     resetView: cellMap3DResetView,
+                    setCameraMode: (mode: 'walk' | 'orbit') => {
+                        cellMap3DSetCameraMode(mode);
+                        emit('camera-mode-change', mode);
+                    },
                 });
 
                 return () => h('div', { 'data-testid': 'map-3d-stub' });
@@ -41,47 +53,18 @@ vi.mock('@/components/CellMap3D.vue', async () => {
 });
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: products.length,
-                        from: 1,
-                        to: products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(products, 20)),
         }),
     };
 });
@@ -197,6 +180,7 @@ describe('Cells Index (warehouse map)', () => {
         routerGetMock.mockClear();
         cellMap3DFocusCell.mockClear();
         cellMap3DResetView.mockClear();
+        cellMap3DSetCameraMode.mockClear();
     });
 
     it('shows the empty message when there are no rows', () => {
@@ -1149,6 +1133,69 @@ describe('Cells Index (warehouse map)', () => {
             expect(wrapper.find('[data-testid="map-3d-stub"]').exists()).toBe(
                 false,
             );
+        });
+
+        it('shows the overview/orbit toggle only in 3D mode, and only once entering 3D', async () => {
+            const wrapper = mountPage([row()], []);
+
+            expect(
+                wrapper.find('[data-testid="camera-mode-orbit"]').exists(),
+            ).toBe(false);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(
+                wrapper.find('[data-testid="camera-mode-orbit"]').exists(),
+            ).toBe(true);
+
+            await wrapper.get('[data-testid="view-mode-2d"]').trigger('click');
+
+            expect(
+                wrapper.find('[data-testid="camera-mode-orbit"]').exists(),
+            ).toBe(false);
+        });
+
+        it('toggles the 3D camera between walk and orbit, tracking the pressed state via the emitted mode', async () => {
+            const wrapper = mountPage([row()], []);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            const toggle = () =>
+                wrapper.get('[data-testid="camera-mode-orbit"]');
+
+            expect(toggle().attributes('aria-pressed')).toBe('false');
+
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenCalledWith('orbit');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenCalledWith('walk');
+            expect(toggle().attributes('aria-pressed')).toBe('false');
+        });
+
+        it('resets the orbit toggle back to walk every time 3D mode is freshly entered', async () => {
+            const wrapper = mountPage([row()], []);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await wrapper
+                .get('[data-testid="camera-mode-orbit"]')
+                .trigger('click');
+            expect(
+                wrapper
+                    .get('[data-testid="camera-mode-orbit"]')
+                    .attributes('aria-pressed'),
+            ).toBe('true');
+
+            await wrapper.get('[data-testid="view-mode-2d"]').trigger('click');
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(
+                wrapper
+                    .get('[data-testid="camera-mode-orbit"]')
+                    .attributes('aria-pressed'),
+            ).toBe('false');
         });
 
         it("passes every flat's cells to the 3D view with highlight/pulse flags applied", async () => {

@@ -6,34 +6,77 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronUp,
+    Navigation,
+    Zap,
 } from '@lucide/vue';
 import * as THREE from 'three';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+    watch,
+} from 'vue';
 import CellSlot from '@/components/CellSlot.vue';
-import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
-import { mapToolbarButtonClass } from '@/lib/filters';
+import {
+    CELL_STATES,
+    CELL_STATE_COLOR,
+    cellStateLabel,
+} from '@/lib/cellStateColor';
+import { mapToolbarButtonClass, selectedToggleClass } from '@/lib/filters';
+import { distanceBetween } from '@/lib/geometry';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
     boundsForWarehouse,
+    CAMERA_FOV_DEGREES,
     cellWorldZ,
     clamp,
+    defaultOrbitState,
     EYE_HEIGHT,
     facedGridCoordinate,
     flatWorldY,
     lookDirection,
+    maxOf,
+    miniMapHeadingDegrees,
+    miniMapPosition,
+    miniMapRowLeftPercents,
+    minOf,
     moveDirectionForKey,
+    nearestCellNumber,
+    nearestFlatNumber,
+    nearestRowIndex,
+    orbitCameraPosition,
+    orbitDistanceFromPinch,
+    orbitRangeForBounds,
     pitchToLookAt,
     rowWorldX,
+    SPRINT_MULTIPLIER,
+    stepOrbitDistance,
+    stepOrbitPitch,
+    stepOrbitStateByKeys,
     stepPitch,
     stepPosition,
     stepYaw,
+    WALK_SPEED,
+    worldPointToScreenPercent,
 } from '@/lib/mapWalker';
-import type { MoveDirection, WalkerBounds } from '@/lib/mapWalker';
+import type {
+    FacedGridCoordinate,
+    MoveDirection,
+    OrbitRange,
+    OrbitState,
+    WalkerBounds,
+} from '@/lib/mapWalker';
 import type { Cell, CellMap3DBand, CellMap3DItem } from '@/types/admin';
 
 const props = defineProps<{
     bands: CellMap3DBand[];
+}>();
+
+const emit = defineEmits<{
+    'camera-mode-change': [mode: 'walk' | 'orbit'];
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -52,9 +95,32 @@ const BOX_SIZE = 1.4;
 const VIEW_DISTANCE = cellWorldZ(1);
 const HIGHLIGHT_COLOR = 0x3b82f6;
 const PULSE_COLOR = 0x10b981;
+const SELECT_COLOR = 0x8b5cf6;
+const SELECT_OUTLINE_SCALE = 1.15;
+/** Orbit-mode hover outline — same weight as highlight/pulse outlines, just a distinct neutral color. */
+const HOVER_COLOR = 0xffffff;
+/** Walk-mode mini-map: below this delta the reactive mirror isn't updated, to avoid a reactive write on every animation frame. */
+const MINI_MAP_UPDATE_EPSILON = 0.05;
+const MINI_MAP_UPDATE_EPSILON_DEGREES = 1;
+/** Row-label overlay: below this screen-percent delta the reactive mirror isn't updated, same rationale as MINI_MAP_UPDATE_EPSILON. */
+const ROW_LABEL_UPDATE_EPSILON_PERCENT = 0.5;
+/** How far above a row's topmost shelf its floor-aisle-sign label floats. */
+const ROW_LABEL_HEIGHT_ABOVE_SHELVES = 1;
+/**
+ * How far into the aisle (in cell-spacings) a row's sign is anchored, rather
+ * than right at the entrance (Z=0/half a cell in) — high enough above the
+ * shelves and close enough to the entrance that a sign right overhead would
+ * need an unrealistically steep look-up angle to stay in frame at the
+ * default straight-ahead pitch; anchoring a couple of cells further down
+ * the aisle keeps the look-up angle within the camera's vertical FOV for
+ * the default standing-at-the-entrance view.
+ */
+const ROW_LABEL_DEPTH_IN_CELLS = 2;
 const SKY_COLOR = 0xe5e7eb;
 const SHELF_COLOR = 0x64748b;
 const SHELF_THICKNESS = 0.15;
+/** A pointer that moved less than this while held counts as a click, not a drag. */
+const CLICK_MOVE_THRESHOLD_PIXELS = 4;
 /** How far a shelf platform overhangs the outermost box it carries, on every side. */
 const SHELF_MARGIN = BOX_SIZE * 0.3;
 const POST_SIZE = 0.15;
@@ -65,6 +131,10 @@ const POST_OFFSET = BOX_SIZE / 2 + SHELF_MARGIN;
 const kbdClass =
     'rounded border border-gray-400 bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200';
 
+function stateHexColor(state: Cell['state']): string {
+    return `#${CELL_STATE_COLOR[state].hex.toString(16).padStart(6, '0')}`;
+}
+
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
@@ -74,6 +144,64 @@ let cellGroup: THREE.Group | null = null;
 let cellDisposables: Disposable[] = [];
 const sceneDisposables: Disposable[] = [];
 let cellLookup = new Map<string, FacedItem>();
+
+interface InstanceSlot {
+    state: Cell['state'];
+    index: number;
+}
+
+interface StateInstances {
+    mesh: THREE.InstancedMesh;
+    /** `keys[instanceId]` — the cell key currently occupying that instance slot. */
+    keys: string[];
+}
+
+/**
+ * One `THREE.InstancedMesh` per cell state (rather than one `THREE.Mesh` per
+ * cell) — hundreds/thousands of individual boxes sharing geometry/material
+ * were still one draw call each; instancing collapses all boxes of a given
+ * state into a single draw call. Each mesh is allocated at the *total* cell
+ * count (not just that state's current count) so any cell can move into any
+ * state in place (`placeCellInstance`/`removeCellInstance`) without ever
+ * needing to reallocate — `.count` tracks how many of the allocated slots are
+ * actually in use.
+ */
+let instancesByState = new Map<Cell['state'], StateInstances>();
+
+/**
+ * Flattened `instancesByState` meshes, rebuilt only alongside
+ * `instancesByState` itself (`disposeCellGroup`/`buildCellGroup`) rather than
+ * re-derived on every call — `cellBoxAtScreenPoint` reads this on every
+ * orbit-mode `pointermove`, so it shouldn't allocate a fresh array per hover
+ * frame.
+ */
+let cellInstanceMeshes: THREE.InstancedMesh[] = [];
+
+/**
+ * Every currently-built cell's instance slot, keyed by `facedKey`. Lets
+ * `rebuildCells` update an existing cell's state/outline in place
+ * (`updateCellStatesAndLookup`) instead of tearing down and rebuilding the
+ * whole group whenever the *set* of cells hasn't actually changed (e.g. a
+ * highlight-filter toggle or a single cell's state changing).
+ */
+let instanceSlotByKey = new Map<string, InstanceSlot>();
+let cellOutlineLookup = new Map<string, THREE.LineSegments>();
+
+/**
+ * Box geometry and per-state/per-outline-color materials are identical
+ * across every rebuild (fixed box size, only 3 states, 2 outline colors) —
+ * built once lazily and reused (disposed only on unmount via
+ * `sceneDisposables`) instead of one new geometry/material instance per box
+ * on every rebuild.
+ */
+let sharedBoxGeometry: THREE.BoxGeometry | null = null;
+let sharedEdgesGeometry: THREE.EdgesGeometry | null = null;
+const boxMaterialsByState = new Map<
+    Cell['state'],
+    THREE.MeshStandardMaterial
+>();
+let highlightOutlineMaterial: THREE.LineBasicMaterial | null = null;
+let pulseOutlineMaterial: THREE.LineBasicMaterial | null = null;
 
 const pressedDirections = new Set<MoveDirection>();
 const position = { x: 0, y: EYE_HEIGHT, z: 0 };
@@ -91,6 +219,211 @@ let lastFrameTime: number | null = null;
 let isDragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragMoved = false;
+
+/**
+ * Sprint (fixes WALK_SPEED being a flat constant regardless of warehouse
+ * size). `isSprinting` is a held-key state (Ctrl on desktop) read directly
+ * in `animate()` like `position`/`pitchDegrees` — no reactivity needed since
+ * nothing in the template reflects it — and reset on blur like
+ * `pressedDirections`. `touchSprintEnabled` is a deliberate tap-to-toggle
+ * setting for touch (no "hold Ctrl" equivalent gesture there), so it IS a
+ * ref (the toggle button's pressed state reads it) and is NOT reset on
+ * blur.
+ */
+let isSprinting = false;
+const touchSprintEnabled = ref(false);
+
+/**
+ * Overview mode: an orbit camera around the whole warehouse instead of a
+ * first-person walk. `orbitRange` (center/zoom limits) is derived from
+ * `bounds` in `updateBounds()`; `orbitState` (angle/distance) resets to a
+ * default overview every time orbit mode is (re)entered — see
+ * `setCameraMode`.
+ */
+const cameraMode = ref<'walk' | 'orbit'>('walk');
+let orbitRange: OrbitRange = {
+    center: { x: 0, y: 0, z: 0 },
+    minDistance: 0,
+    maxDistance: 0,
+    defaultDistance: 0,
+};
+let orbitState: OrbitState = { yawDegrees: 0, pitchDegrees: 0, distance: 0 };
+
+/** Multi-pointer tracking for orbit's two-finger pinch-to-zoom (touch). */
+const activePointers = new Map<number, { x: number; y: number }>();
+let pinchStartGap: number | null = null;
+let orbitDistanceAtPinchStart = 0;
+
+const raycaster = new THREE.Raycaster();
+const pointerNdc = new THREE.Vector2();
+
+/**
+ * Orbit-mode hover: shows which box the pointer is over before clicking, so
+ * selection isn't blind-clicking. `hoveredKey` mirrors the `lastFacedKey`/
+ * `selectedKey` key-diffing style; `isHoveringSelectable` is the reactive
+ * mirror the template reads to show a pointer cursor.
+ */
+let hoveredKey: string | null = null;
+let hoverOutline: THREE.LineSegments | null = null;
+const isHoveringSelectable = ref(false);
+
+/**
+ * Walk-mode mini-map: a reactive mirror of `position.x`/`position.z`/
+ * `yawDegrees` (all otherwise-plain, per-frame-mutated values), updated only
+ * past MINI_MAP_UPDATE_EPSILON so a small overlay doesn't trigger a reactive
+ * write on every single animation frame.
+ */
+const miniMap = reactive({ x: 0, y: 0, z: 0, yawDegrees: 0 });
+
+/**
+ * Floor-aisle-sign labels — floating row-letter signage over the 3D scene
+ * itself (not just the walk-mode mini-map), so a row is identifiable at a
+ * glance while walking without flying up to a cell and reading the faced-
+ * cell panel or checking the mini-map. Only rendered/updated in walk mode,
+ * like the mini-map and location indicator (`updateMiniMap`,
+ * `updateCurrentLocation`) — an orbit overview already sees every row at
+ * once. Each entry is a live projection (`worldPointToScreenPercent`) of the
+ * row's anchor point (`rowLabelWorldPosition`) onto the walk camera's
+ * screen, refreshed every frame but only written past
+ * ROW_LABEL_UPDATE_EPSILON_PERCENT to avoid a reactive write every frame.
+ */
+interface RowLabel {
+    letter: string;
+    leftPercent: number;
+    topPercent: number;
+    visible: boolean;
+}
+
+const rowLabels = reactive<RowLabel[]>([]);
+
+/**
+ * A row's floor sign floats above its own topmost shelf, halfway into the
+ * aisle entrance (not exactly at Z=0, the near edge of `bounds`) — the
+ * default walk position stands exactly at Z=0 facing forward
+ * (`resetView`/`focusCell`), where a sign coplanar with the camera would sit
+ * at an undefined/zero depth instead of visibly ahead of it.
+ */
+function rowLabelWorldPosition(
+    rowIndex: number,
+    band: CellMap3DBand,
+): { x: number; y: number; z: number } {
+    const topFlat = maxOf(
+        band.items.map((item) => item.flatNumber),
+        1,
+    );
+
+    return {
+        x: rowWorldX(rowIndex),
+        y: flatWorldY(topFlat) + SHELF_MARGIN + ROW_LABEL_HEIGHT_ABOVE_SHELVES,
+        z: cellWorldZ(ROW_LABEL_DEPTH_IN_CELLS),
+    };
+}
+
+function updateRowLabels(): void {
+    const container = containerRef.value;
+
+    if (!container || container.clientWidth === 0) {
+        return;
+    }
+
+    const aspect = container.clientWidth / (container.clientHeight || 1);
+
+    props.bands.forEach((band, rowIndex) => {
+        const projected = worldPointToScreenPercent(
+            position,
+            pitchDegrees,
+            yawDegrees,
+            aspect,
+            rowLabelWorldPosition(rowIndex, band),
+        );
+        const existing: RowLabel | undefined = rowLabels[rowIndex];
+
+        if (
+            existing &&
+            existing.letter === band.letter &&
+            existing.visible === projected.visible &&
+            Math.abs(existing.leftPercent - projected.leftPercent) <
+                ROW_LABEL_UPDATE_EPSILON_PERCENT &&
+            Math.abs(existing.topPercent - projected.topPercent) <
+                ROW_LABEL_UPDATE_EPSILON_PERCENT
+        ) {
+            return;
+        }
+
+        rowLabels[rowIndex] = { letter: band.letter, ...projected };
+    });
+
+    rowLabels.length = props.bands.length;
+}
+
+const visibleRowLabels = computed(() =>
+    rowLabels.filter((label) => label.visible),
+);
+
+function getBoxGeometry(): THREE.BoxGeometry {
+    if (!sharedBoxGeometry) {
+        sharedBoxGeometry = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
+        sceneDisposables.push(sharedBoxGeometry);
+    }
+
+    return sharedBoxGeometry;
+}
+
+function getEdgesGeometry(): THREE.EdgesGeometry {
+    if (!sharedEdgesGeometry) {
+        sharedEdgesGeometry = new THREE.EdgesGeometry(
+            new THREE.BoxGeometry(
+                BOX_SIZE * 1.05,
+                BOX_SIZE * 1.05,
+                BOX_SIZE * 1.05,
+            ),
+        );
+        sceneDisposables.push(sharedEdgesGeometry);
+    }
+
+    return sharedEdgesGeometry;
+}
+
+function boxMaterialForState(state: Cell['state']): THREE.MeshStandardMaterial {
+    let material = boxMaterialsByState.get(state);
+
+    if (!material) {
+        material = new THREE.MeshStandardMaterial({
+            color: CELL_STATE_COLOR[state].hex,
+        });
+        boxMaterialsByState.set(state, material);
+        sceneDisposables.push(material);
+    }
+
+    return material;
+}
+
+function outlineMaterialFor(
+    kind: 'highlight' | 'pulse',
+): THREE.LineBasicMaterial {
+    if (kind === 'pulse') {
+        if (!pulseOutlineMaterial) {
+            pulseOutlineMaterial = new THREE.LineBasicMaterial({
+                color: PULSE_COLOR,
+            });
+            sceneDisposables.push(pulseOutlineMaterial);
+        }
+
+        return pulseOutlineMaterial;
+    }
+
+    if (!highlightOutlineMaterial) {
+        highlightOutlineMaterial = new THREE.LineBasicMaterial({
+            color: HIGHLIGHT_COLOR,
+        });
+        sceneDisposables.push(highlightOutlineMaterial);
+    }
+
+    return highlightOutlineMaterial;
+}
 
 function disposeCellGroup(): void {
     if (cellGroup && scene) {
@@ -100,48 +433,122 @@ function disposeCellGroup(): void {
     cellDisposables.forEach((disposable) => disposable.dispose());
     cellDisposables = [];
     cellGroup = null;
+    instancesByState = new Map();
+    cellInstanceMeshes = [];
+    instanceSlotByKey = new Map();
+    cellOutlineLookup = new Map();
+}
+
+/**
+ * Occupies the next free instance slot for `state` with a box at
+ * (x, y, z), recording it in `instanceSlotByKey` — shared by the initial
+ * build (`buildCellGroup`) and by `updateCellStatesAndLookup` when an
+ * existing cell moves to a different state in place.
+ */
+function placeCellInstance(
+    key: string,
+    state: Cell['state'],
+    x: number,
+    y: number,
+    z: number,
+): void {
+    const stateEntry = instancesByState.get(state);
+
+    if (!stateEntry) {
+        return;
+    }
+
+    const index = stateEntry.mesh.count;
+    stateEntry.mesh.setMatrixAt(
+        index,
+        new THREE.Matrix4().makeTranslation(x, y, z),
+    );
+    stateEntry.mesh.count = index + 1;
+    stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    stateEntry.keys[index] = key;
+    instanceSlotByKey.set(key, { state, index });
+}
+
+/**
+ * Frees `key`'s instance slot via swap-remove (move the last-occupied slot's
+ * matrix/key into the freed slot, then shrink `.count` by one) rather than
+ * leaving a gap — `THREE.InstancedMesh` only ever renders its first `.count`
+ * instances, so a gap in the middle would either hide a real box or require
+ * a full re-pack anyway.
+ */
+function removeCellInstance(key: string): void {
+    const slot = instanceSlotByKey.get(key);
+
+    if (!slot) {
+        return;
+    }
+
+    const stateEntry = instancesByState.get(slot.state);
+
+    if (!stateEntry) {
+        return;
+    }
+
+    const lastIndex = stateEntry.mesh.count - 1;
+
+    if (slot.index !== lastIndex) {
+        const movedMatrix = new THREE.Matrix4();
+        stateEntry.mesh.getMatrixAt(lastIndex, movedMatrix);
+        stateEntry.mesh.setMatrixAt(slot.index, movedMatrix);
+
+        const movedKey = stateEntry.keys[lastIndex];
+        stateEntry.keys[slot.index] = movedKey;
+        instanceSlotByKey.set(movedKey, {
+            state: slot.state,
+            index: slot.index,
+        });
+    }
+
+    stateEntry.keys.pop();
+    stateEntry.mesh.count = lastIndex;
+    stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    instanceSlotByKey.delete(key);
 }
 
 function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
     const group = new THREE.Group();
-    const boxGeometry = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
-    const edgesGeometry = new THREE.EdgesGeometry(
-        new THREE.BoxGeometry(
-            BOX_SIZE * 1.05,
-            BOX_SIZE * 1.05,
-            BOX_SIZE * 1.05,
-        ),
-    );
-    cellDisposables.push(boxGeometry, edgesGeometry);
+    const boxGeometry = getBoxGeometry();
+    const edgesGeometry = getEdgesGeometry();
+    const totalCells = bands.reduce((sum, band) => sum + band.items.length, 0);
+    instancesByState = new Map();
+    cellInstanceMeshes = [];
+    instanceSlotByKey = new Map();
+    cellOutlineLookup = new Map();
+
+    for (const state of CELL_STATES) {
+        const mesh = new THREE.InstancedMesh(
+            boxGeometry,
+            boxMaterialForState(state),
+            Math.max(totalCells, 1),
+        );
+        mesh.name = 'cell-box';
+        mesh.count = 0;
+        group.add(mesh);
+        instancesByState.set(state, { mesh, keys: [] });
+        cellInstanceMeshes.push(mesh);
+    }
 
     bands.forEach((band, rowIndex) => {
         for (const item of band.items) {
-            const material = new THREE.MeshStandardMaterial({
-                color: CELL_STATE_COLOR[item.state].hex,
-            });
-            cellDisposables.push(material);
-
-            const mesh = new THREE.Mesh(boxGeometry, material);
-            mesh.name = 'cell-box';
-            mesh.position.set(
-                rowWorldX(rowIndex),
-                flatWorldY(item.flatNumber),
-                cellWorldZ(item.cellNumber),
-            );
-            group.add(mesh);
+            const key = facedKey(rowIndex, item.cellNumber, item.flatNumber);
+            const x = rowWorldX(rowIndex);
+            const y = flatWorldY(item.flatNumber);
+            const z = cellWorldZ(item.cellNumber);
+            placeCellInstance(key, item.state, x, y, z);
 
             if (item.highlighted || item.pulsing) {
-                const outlineMaterial = new THREE.LineBasicMaterial({
-                    color: item.pulsing ? PULSE_COLOR : HIGHLIGHT_COLOR,
-                });
-                cellDisposables.push(outlineMaterial);
-
                 const outline = new THREE.LineSegments(
                     edgesGeometry,
-                    outlineMaterial,
+                    outlineMaterialFor(item.pulsing ? 'pulse' : 'highlight'),
                 );
-                outline.position.copy(mesh.position);
+                outline.position.set(x, y, z);
                 group.add(outline);
+                cellOutlineLookup.set(key, outline);
             }
         }
     });
@@ -173,8 +580,8 @@ function addShelves(group: THREE.Group, bands: CellMap3DBand[]): void {
         }
 
         for (const [flatNumber, cellNumbers] of cellNumbersByFlat) {
-            const minCell = Math.min(...cellNumbers);
-            const maxCell = Math.max(...cellNumbers);
+            const minCell = minOf(cellNumbers);
+            const maxCell = maxOf(cellNumbers);
             const depth =
                 cellWorldZ(maxCell) -
                 cellWorldZ(minCell) +
@@ -217,9 +624,9 @@ function addPosts(group: THREE.Group, bands: CellMap3DBand[]): void {
 
         const cellNumbers = band.items.map((item) => item.cellNumber);
         const flatNumbers = band.items.map((item) => item.flatNumber);
-        const minCell = Math.min(...cellNumbers);
-        const maxCell = Math.max(...cellNumbers);
-        const postHeight = flatWorldY(Math.max(...flatNumbers)) + SHELF_MARGIN;
+        const minCell = minOf(cellNumbers);
+        const maxCell = maxOf(cellNumbers);
+        const postHeight = flatWorldY(maxOf(flatNumbers)) + SHELF_MARGIN;
 
         const postGeometry = new THREE.BoxGeometry(
             POST_SIZE,
@@ -249,10 +656,17 @@ function addPosts(group: THREE.Group, bands: CellMap3DBand[]): void {
 function updateBounds(): void {
     const rowCount = props.bands.length;
     const items = props.bands.flatMap((band) => band.items);
-    const maxCellsCount = Math.max(1, ...items.map((item) => item.cellNumber));
-    const maxFlatNumber = Math.max(1, ...items.map((item) => item.flatNumber));
+    const maxCellsCount = maxOf(
+        items.map((item) => item.cellNumber),
+        1,
+    );
+    const maxFlatNumber = maxOf(
+        items.map((item) => item.flatNumber),
+        1,
+    );
 
     bounds = boundsForWarehouse(rowCount, maxCellsCount, maxFlatNumber);
+    orbitRange = orbitRangeForBounds(bounds);
 }
 
 function facedKey(
@@ -275,14 +689,124 @@ function rebuildCellLookup(bands: CellMap3DBand[]): void {
         }
     });
 
-    // Force the next frame to refresh the faced-cell panel even if the
-    // camera hasn't moved — the underlying item (highlight/pulse/pallet)
-    // may have changed even when its grid coordinate didn't.
-    lastFacedKey = null;
+    invalidateAfterCellDataChange();
+}
+
+function bandsCellKeys(bands: CellMap3DBand[]): Set<string> {
+    const keys = new Set<string>();
+
+    bands.forEach((band, rowIndex) => {
+        for (const item of band.items) {
+            keys.add(facedKey(rowIndex, item.cellNumber, item.flatNumber));
+        }
+    });
+
+    return keys;
+}
+
+function sameCellKeys(a: Set<string>, b: Set<string>): boolean {
+    if (a.size !== b.size) {
+        return false;
+    }
+
+    for (const key of a) {
+        if (!b.has(key)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Updates every existing cell's state/outline in place AND rebuilds
+ * `cellLookup` in the SAME pass over `bands`/items — used whenever the *set*
+ * of cells hasn't changed (see `rebuildCells`), so a highlight-filter toggle
+ * or a single cell's state changing doesn't flicker/rebuild the entire
+ * warehouse, and doesn't walk every band/item twice (this used to be two
+ * separate full passes — `updateCellStates` then `rebuildCellLookup`).
+ * Shelves/posts are untouched here since they only depend on which cells
+ * exist, not their state/highlight/pulse.
+ */
+function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
+    if (!cellGroup) {
+        return;
+    }
+
+    const group = cellGroup;
+    const newLookup = new Map<string, FacedItem>();
+
+    bands.forEach((band, rowIndex) => {
+        for (const item of band.items) {
+            const key = facedKey(rowIndex, item.cellNumber, item.flatNumber);
+            newLookup.set(key, { rowLetter: band.letter, item });
+
+            const slot = instanceSlotByKey.get(key);
+
+            if (!slot) {
+                continue;
+            }
+
+            if (slot.state !== item.state) {
+                removeCellInstance(key);
+                placeCellInstance(
+                    key,
+                    item.state,
+                    rowWorldX(rowIndex),
+                    flatWorldY(item.flatNumber),
+                    cellWorldZ(item.cellNumber),
+                );
+            }
+
+            const existingOutline = cellOutlineLookup.get(key);
+            const wantsOutline = item.highlighted || item.pulsing;
+
+            if (!wantsOutline) {
+                if (existingOutline) {
+                    group.remove(existingOutline);
+                    cellOutlineLookup.delete(key);
+                }
+
+                continue;
+            }
+
+            const outlineMaterial = outlineMaterialFor(
+                item.pulsing ? 'pulse' : 'highlight',
+            );
+
+            if (existingOutline) {
+                existingOutline.material = outlineMaterial;
+            } else {
+                const outline = new THREE.LineSegments(
+                    getEdgesGeometry(),
+                    outlineMaterial,
+                );
+                outline.position.set(
+                    rowWorldX(rowIndex),
+                    flatWorldY(item.flatNumber),
+                    cellWorldZ(item.cellNumber),
+                );
+                group.add(outline);
+                cellOutlineLookup.set(key, outline);
+            }
+        }
+    });
+
+    cellLookup = newLookup;
+
+    invalidateAfterCellDataChange();
 }
 
 function rebuildCells(): void {
     if (!scene) {
+        return;
+    }
+
+    const newKeys = bandsCellKeys(props.bands);
+
+    if (cellGroup && sameCellKeys(newKeys, new Set(instanceSlotByKey.keys()))) {
+        updateCellStatesAndLookup(props.bands);
+
         return;
     }
 
@@ -333,7 +857,31 @@ function resetView(): void {
     yawDegrees = 0;
 }
 
-defineExpose({ focusCell, resetView });
+/**
+ * Switches between the first-person walk camera and the orbit/overview
+ * camera. Entering orbit mode always resets it to the default overview
+ * angle/distance rather than remembering where a previous orbit session
+ * left off, matching how `resetView` already re-anchors rather than
+ * persisting an arbitrary prior state. Any click-selected cell is cleared
+ * on every switch, since it's only ever shown while orbiting.
+ */
+function setCameraMode(mode: 'walk' | 'orbit'): void {
+    if (mode === cameraMode.value) {
+        return;
+    }
+
+    cameraMode.value = mode;
+    clearSelection();
+    clearHover();
+
+    if (mode === 'orbit') {
+        orbitState = defaultOrbitState(orbitRange);
+    }
+
+    emit('camera-mode-change', mode);
+}
+
+defineExpose({ focusCell, resetView, setCameraMode });
 
 /**
  * The cell the camera is currently facing — a point one cell-spacing ahead
@@ -346,13 +894,18 @@ defineExpose({ focusCell, resetView });
 const facedItem = ref<FacedItem | null>(null);
 let lastFacedKey: string | null = null;
 
-function updateFacedItem(): void {
-    const faced = facedGridCoordinate(
+/** The row/cell/flat the camera is currently looking at (`facedGridCoordinate`), keyed the same way `cellLookup` is — shared by `updateFacedItem` (per-frame, walk mode) and the Enter-to-select handler (`onKeyDown`, walk mode). */
+function currentFacedCoordinate() {
+    return facedGridCoordinate(
         position,
         pitchDegrees,
         VIEW_DISTANCE,
         yawDegrees,
     );
+}
+
+function updateFacedItem(): void {
+    const faced = currentFacedCoordinate();
     const key = facedKey(faced.rowIndex, faced.cellNumber, faced.flatNumber);
 
     if (key === lastFacedKey) {
@@ -363,31 +916,393 @@ function updateFacedItem(): void {
     facedItem.value = cellLookup.get(key) ?? null;
 }
 
-const walkHint = computed(() =>
-    isTouchDevice.value
-        ? t('cells.map.walkHintTouch')
-        : t('cells.map.walkHint'),
-);
+/**
+ * The row/cell/flat the camera is currently *standing* at (not "facing" —
+ * unlike `facedItem`, this always has a value, even over an aisle gap with
+ * no cell), so walk mode always shows an orientation anchor even far from
+ * the nearest box. Rounded straight from `position`, not the look-ahead
+ * probe `facedGridCoordinate` uses. Only refreshed (and only re-rendered)
+ * when the rounded grid coordinate actually changes.
+ */
+const currentLocationLabel = ref('');
+let lastLocationKey: string | null = null;
 
-const facedLabel = computed(() =>
-    facedItem.value
+function updateCurrentLocation(): void {
+    const rowIndex = nearestRowIndex(position.x);
+    const cellNumber = nearestCellNumber(position.z);
+    const flatNumber = nearestFlatNumber(position.y);
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+
+    if (key === lastLocationKey) {
+        return;
+    }
+
+    lastLocationKey = key;
+    const band = props.bands[rowIndex];
+    currentLocationLabel.value = band
+        ? formatSlot(band.letter, cellNumber, flatNumber)
+        : '';
+}
+
+/** Refreshes the mini-map's reactive position/heading mirror, skipping small deltas (see MINI_MAP_UPDATE_EPSILON). */
+function updateMiniMap(): void {
+    if (
+        Math.abs(position.x - miniMap.x) < MINI_MAP_UPDATE_EPSILON &&
+        Math.abs(position.z - miniMap.z) < MINI_MAP_UPDATE_EPSILON &&
+        Math.abs(yawDegrees - miniMap.yawDegrees) <
+            MINI_MAP_UPDATE_EPSILON_DEGREES
+    ) {
+        return;
+    }
+
+    miniMap.x = position.x;
+    miniMap.z = position.z;
+    miniMap.yawDegrees = yawDegrees;
+}
+
+/**
+ * The click-selected cell. In orbit mode it's the only source of detail
+ * (orbiting far above the warehouse has no meaningful "camera is facing this
+ * cell" probe); in walk mode it takes priority over the continuously-tracked
+ * `facedItem` once set, letting you click a box to pin its detail while you
+ * keep walking/looking around, without needing to stand still facing it.
+ * Only ever set by clicking a cell box (`selectAtScreenPoint`); nothing
+ * updates it every frame.
+ */
+const selectedItem = ref<FacedItem | null>(null);
+let selectedKey: string | null = null;
+let selectionOutline: THREE.LineSegments | null = null;
+
+function ensureSelectionOutline(): THREE.LineSegments {
+    if (selectionOutline) {
+        return selectionOutline;
+    }
+
+    const geometry = new THREE.EdgesGeometry(
+        new THREE.BoxGeometry(
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+            BOX_SIZE * SELECT_OUTLINE_SCALE,
+        ),
+    );
+    const material = new THREE.LineBasicMaterial({ color: SELECT_COLOR });
+    sceneDisposables.push(geometry, material);
+
+    selectionOutline = new THREE.LineSegments(geometry, material);
+    selectionOutline.name = 'selection-outline';
+    selectionOutline.visible = false;
+    scene?.add(selectionOutline);
+
+    return selectionOutline;
+}
+
+function selectCell(
+    rowIndex: number,
+    cellNumber: number,
+    flatNumber: number,
+): void {
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+    selectedKey = key;
+    selectedItem.value = cellLookup.get(key) ?? null;
+
+    const outline = ensureSelectionOutline();
+    outline.position.set(
+        rowWorldX(rowIndex),
+        flatWorldY(flatNumber),
+        cellWorldZ(cellNumber),
+    );
+    outline.visible = true;
+}
+
+function clearSelection(): void {
+    selectedKey = null;
+    selectedItem.value = null;
+
+    if (selectionOutline) {
+        selectionOutline.visible = false;
+    }
+}
+
+/**
+ * Raycasts from a screen point through the cell boxes, returning the
+ * row/cell/flat of whichever instance is hit (or null on a miss) — shared by
+ * click-to-select (`selectAtScreenPoint`) and orbit-mode hover
+ * (`updateHoverAtScreenPoint`). Raycasts against `cellInstanceMeshes`, the
+ * per-state `THREE.InstancedMesh`es (one per state, not one per cell) cached
+ * alongside `instancesByState`, then resolves the hit's `instanceId` back to
+ * a cell key via that state's `keys` array — this runs on every orbit-mode
+ * pointermove, so avoiding both a fresh scene-graph scan AND a fresh mesh
+ * array per call matters at warehouse scale.
+ */
+function cellBoxAtScreenPoint(
+    clientX: number,
+    clientY: number,
+): FacedGridCoordinate | null {
+    const container = containerRef.value;
+
+    if (!camera || !cellGroup || !container) {
+        return null;
+    }
+
+    const rect = container.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+        return null;
+    }
+
+    pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+
+    raycaster.setFromCamera(pointerNdc, camera);
+    const intersections = raycaster.intersectObjects(cellInstanceMeshes);
+
+    if (intersections.length === 0) {
+        return null;
+    }
+
+    const hit = intersections[0];
+
+    for (const entry of instancesByState.values()) {
+        if (entry.mesh !== hit.object || hit.instanceId == null) {
+            continue;
+        }
+
+        const key = entry.keys[hit.instanceId];
+
+        if (!key) {
+            return null;
+        }
+
+        const [rowIndex, cellNumber, flatNumber] = key.split(':').map(Number);
+
+        return { rowIndex, cellNumber, flatNumber };
+    }
+
+    return null;
+}
+
+/**
+ * A click/tap that didn't drag selects whichever cell box is under it, or
+ * clears the selection on a miss.
+ */
+function selectAtScreenPoint(clientX: number, clientY: number): void {
+    const hit = cellBoxAtScreenPoint(clientX, clientY);
+
+    if (!hit) {
+        clearSelection();
+
+        return;
+    }
+
+    selectCell(hit.rowIndex, hit.cellNumber, hit.flatNumber);
+}
+
+/**
+ * The keyboard equivalent of click-to-select for orbit mode, where there's
+ * no "facing" concept (see `onKeyDown`) and hover-outline feedback only ever
+ * reaches keyboard-only users via a pointer. Raycasts through whatever's
+ * centered in the viewport instead — the screen-center point a user would
+ * naturally orbit a cell into before selecting it.
+ */
+function selectCenteredCell(): void {
+    const container = containerRef.value;
+
+    if (!container) {
+        return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    selectAtScreenPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function ensureHoverOutline(): THREE.LineSegments {
+    if (hoverOutline) {
+        return hoverOutline;
+    }
+
+    const material = new THREE.LineBasicMaterial({ color: HOVER_COLOR });
+    sceneDisposables.push(material);
+
+    hoverOutline = new THREE.LineSegments(getEdgesGeometry(), material);
+    hoverOutline.name = 'hover-outline';
+    hoverOutline.visible = false;
+    scene?.add(hoverOutline);
+
+    return hoverOutline;
+}
+
+function clearHover(): void {
+    hoveredKey = null;
+    isHoveringSelectable.value = false;
+
+    if (hoverOutline) {
+        hoverOutline.visible = false;
+    }
+}
+
+/**
+ * Refreshes/invalidates the faced-cell panel, location indicator,
+ * click-selection, and orbit hover after `cellLookup` changes — shared by
+ * `rebuildCellLookup` (full rebuild) and `updateCellStatesAndLookup`
+ * (in-place update) so the two paths can't drift out of sync on the next
+ * edit.
+ */
+function invalidateAfterCellDataChange(): void {
+    // Force the next frame to refresh the faced-cell panel even if the
+    // camera hasn't moved — the underlying item (highlight/pulse/pallet)
+    // may have changed even when its grid coordinate didn't.
+    lastFacedKey = null;
+
+    // The row/rowIndex mapping (band order) can shift even when the camera
+    // hasn't moved, so force the location indicator to relabel too.
+    lastLocationKey = null;
+
+    // The click-selected cell (orbit mode) can't rely on a per-frame probe
+    // to refresh it, so it's refreshed/invalidated here explicitly whenever
+    // the underlying data changes.
+    if (selectedKey !== null) {
+        selectedItem.value = cellLookup.get(selectedKey) ?? null;
+
+        if (!selectedItem.value) {
+            clearSelection();
+        }
+    }
+
+    // Same for orbit-mode hover: it's only ever refreshed by a pointermove,
+    // so a hovered cell removed by a data change would otherwise leave a
+    // stale outline pointing at a now-empty spot until the pointer moves
+    // again.
+    if (hoveredKey !== null && !cellLookup.has(hoveredKey)) {
+        clearHover();
+    }
+}
+
+/**
+ * Orbit-mode-only hover feedback: raycasts under the pointer on every move
+ * (not just on click) so a box is visibly outlined before you commit to
+ * selecting it — mirrors `selectAtScreenPoint`'s hit test but shows/clears an
+ * outline instead of selecting.
+ */
+function updateHoverAtScreenPoint(clientX: number, clientY: number): void {
+    const hit = cellBoxAtScreenPoint(clientX, clientY);
+
+    if (!hit) {
+        clearHover();
+
+        return;
+    }
+
+    const { rowIndex, cellNumber, flatNumber } = hit;
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+
+    if (key === hoveredKey) {
+        return;
+    }
+
+    hoveredKey = key;
+    isHoveringSelectable.value = true;
+    const outline = ensureHoverOutline();
+    outline.position.set(
+        rowWorldX(rowIndex),
+        flatWorldY(flatNumber),
+        cellWorldZ(cellNumber),
+    );
+    outline.visible = true;
+}
+
+const displayedItem = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return selectedItem.value;
+    }
+
+    // A click-selected cell pins the panel even as facedItem keeps tracking
+    // whatever the camera is currently looking at in the background.
+    return selectedItem.value ?? facedItem.value;
+});
+
+const walkHint = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return t('cells.map.orbitHint');
+    }
+
+    return isTouchDevice.value
+        ? t('cells.map.walkHintTouch')
+        : t('cells.map.walkHint');
+});
+
+const displayedLabel = computed(() =>
+    displayedItem.value
         ? formatSlot(
-              facedItem.value.rowLetter,
-              facedItem.value.item.cellNumber,
-              facedItem.value.item.flatNumber,
+              displayedItem.value.rowLetter,
+              displayedItem.value.item.cellNumber,
+              displayedItem.value.item.flatNumber,
           )
         : '',
 );
 
-/** Adapts the faced item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
-const facedCellForSlot = computed<Cell | null>(() => {
-    const faced = facedItem.value;
+/** Mini-map position/heading (walk mode only — see the `miniMap` reactive mirror). */
+const miniMapPlayerPosition = computed(() => miniMapPosition(miniMap, bounds));
+const miniMapHeading = computed(() =>
+    miniMapHeadingDegrees(miniMap.yawDegrees),
+);
+const miniMapRowPositions = computed(() =>
+    miniMapRowLeftPercents(props.bands.length, bounds),
+);
+/** Which row's mini-map line to highlight as "the row you're in". */
+const miniMapActiveRowIndex = computed(() => nearestRowIndex(miniMap.x));
 
-    if (!faced) {
+/** A short "{label}: {state} — {product}" summary shared by the visual panel's label and the aria-live announcement below. */
+function describeItem(display: FacedItem): string {
+    const label = formatSlot(
+        display.rowLetter,
+        display.item.cellNumber,
+        display.item.flatNumber,
+    );
+    const state = cellStateLabel(display.item.state);
+    const product = display.item.pallet
+        ? ` — ${display.item.pallet.product_name}`
+        : '';
+
+    return `${label}: ${state}${product}`;
+}
+
+/**
+ * A visually-hidden `aria-live` announcement of what the visual faced-cell
+ * panel/location-indicator already show sighted users, since those are
+ * purely visual (`pointer-events-none`, conditionally rendered) and give
+ * screen-reader users no equivalent feedback while walking/orbiting.
+ */
+const mapAnnouncement = computed(() => {
+    if (cameraMode.value === 'orbit') {
+        return selectedItem.value
+            ? t('cells.map.announcements.selected', {
+                  detail: describeItem(selectedItem.value),
+              })
+            : '';
+    }
+
+    const standing = t('cells.map.standingNear', {
+        location: currentLocationLabel.value,
+    });
+
+    if (!displayedItem.value) {
+        return standing;
+    }
+
+    return `${standing} ${t('cells.map.announcements.facing', {
+        detail: describeItem(displayedItem.value),
+    })}`;
+});
+
+/** Adapts the displayed item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
+const displayedCellForSlot = computed<Cell | null>(() => {
+    const displayed = displayedItem.value;
+
+    if (!displayed) {
         return null;
     }
 
-    const { item } = faced;
+    const { item } = displayed;
 
     return {
         id: 0,
@@ -413,6 +1328,18 @@ function updateCamera(): void {
         return;
     }
 
+    if (cameraMode.value === 'orbit') {
+        const orbitPosition = orbitCameraPosition(orbitRange, orbitState);
+        camera.position.set(orbitPosition.x, orbitPosition.y, orbitPosition.z);
+        camera.lookAt(
+            orbitRange.center.x,
+            orbitRange.center.y,
+            orbitRange.center.z,
+        );
+
+        return;
+    }
+
     camera.position.set(position.x, position.y, position.z);
 
     const direction = lookDirection(pitchDegrees, yawDegrees);
@@ -432,25 +1359,91 @@ function animate(timeMs: number): void {
         lastFrameTime === null ? 0 : (timeMs - lastFrameTime) / 1000;
     lastFrameTime = timeMs;
 
-    if (pressedDirections.size > 0) {
+    if (cameraMode.value === 'walk' && pressedDirections.size > 0) {
+        const speed =
+            isSprinting || touchSprintEnabled.value
+                ? WALK_SPEED * SPRINT_MULTIPLIER
+                : WALK_SPEED;
         const next = stepPosition(
             position,
             pressedDirections,
             deltaSeconds,
             bounds,
+            speed,
         );
         position.x = next.x;
         position.y = next.y;
         position.z = next.z;
+    } else if (cameraMode.value === 'orbit' && pressedDirections.size > 0) {
+        orbitState = stepOrbitStateByKeys(
+            orbitState,
+            pressedDirections,
+            deltaSeconds,
+            orbitRange,
+        );
     }
 
     updateCamera();
-    updateFacedItem();
+
+    if (cameraMode.value === 'walk') {
+        updateFacedItem();
+        updateCurrentLocation();
+        updateMiniMap();
+        updateRowLabels();
+    }
+
     renderer.render(scene, camera);
     animationFrameId = requestAnimationFrame(animate);
 }
 
+/**
+ * WASD/arrows and Space/Shift drive both camera modes now — `stepPosition`
+ * (walk) and `stepOrbitStateByKeys` (orbit) both read the same
+ * `pressedDirections` set from `animate()`, so key handling itself no longer
+ * branches on `cameraMode`. Enter selects the currently-faced cell in walk
+ * mode (the keyboard equivalent of click-to-select, which otherwise
+ * requires a pointer) — orbit has no "facing" concept, so there Enter
+ * instead selects whatever's centered in the viewport (`selectCenteredCell`),
+ * giving keyboard-only users a way to select in orbit mode too, since
+ * hover-outline feedback there otherwise only ever reaches a pointer.
+ */
 function onKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Control') {
+        isSprinting = true;
+    }
+
+    if (event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        setCameraMode(cameraMode.value === 'walk' ? 'orbit' : 'walk');
+
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+
+        if (cameraMode.value === 'orbit') {
+            selectCenteredCell();
+
+            return;
+        }
+
+        const faced = currentFacedCoordinate();
+        const key = facedKey(
+            faced.rowIndex,
+            faced.cellNumber,
+            faced.flatNumber,
+        );
+
+        if (cellLookup.has(key)) {
+            selectCell(faced.rowIndex, faced.cellNumber, faced.flatNumber);
+        } else {
+            clearSelection();
+        }
+
+        return;
+    }
+
     const direction = moveDirectionForKey(event.key);
 
     if (direction) {
@@ -460,6 +1453,10 @@ function onKeyDown(event: KeyboardEvent): void {
 }
 
 function onKeyUp(event: KeyboardEvent): void {
+    if (event.key === 'Control') {
+        isSprinting = false;
+    }
+
     const direction = moveDirectionForKey(event.key);
 
     if (direction) {
@@ -469,18 +1466,63 @@ function onKeyUp(event: KeyboardEvent): void {
 
 function onFocusLost(): void {
     pressedDirections.clear();
+    isSprinting = false;
     isDragging = false;
+    activePointers.clear();
+    pinchStartGap = null;
 }
 
 function onPointerDown(event: PointerEvent): void {
+    clearHover();
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    containerRef.value?.setPointerCapture?.(event.pointerId);
+
+    if (activePointers.size === 2 && cameraMode.value === 'orbit') {
+        isDragging = false;
+        const [a, b] = [...activePointers.values()];
+        pinchStartGap = distanceBetween(a, b);
+        orbitDistanceAtPinchStart = orbitState.distance;
+
+        return;
+    }
+
     isDragging = true;
+    dragMoved = false;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
-    containerRef.value?.setPointerCapture?.(event.pointerId);
 }
 
 function onPointerMove(event: PointerEvent): void {
+    if (activePointers.has(event.pointerId)) {
+        activePointers.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY,
+        });
+    }
+
+    if (
+        activePointers.size === 2 &&
+        pinchStartGap !== null &&
+        cameraMode.value === 'orbit'
+    ) {
+        const [a, b] = [...activePointers.values()];
+        orbitState.distance = orbitDistanceFromPinch(
+            orbitDistanceAtPinchStart,
+            pinchStartGap,
+            distanceBetween(a, b),
+            orbitRange,
+        );
+
+        return;
+    }
+
     if (!isDragging) {
+        if (cameraMode.value === 'orbit') {
+            updateHoverAtScreenPoint(event.clientX, event.clientY);
+        }
+
         return;
     }
 
@@ -488,16 +1530,65 @@ function onPointerMove(event: PointerEvent): void {
     const deltaY = event.clientY - lastPointerY;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
+
+    if (
+        Math.abs(event.clientX - dragStartX) > CLICK_MOVE_THRESHOLD_PIXELS ||
+        Math.abs(event.clientY - dragStartY) > CLICK_MOVE_THRESHOLD_PIXELS
+    ) {
+        dragMoved = true;
+    }
+
+    if (cameraMode.value === 'orbit') {
+        orbitState.yawDegrees = stepYaw(orbitState.yawDegrees, deltaX);
+        orbitState.pitchDegrees = stepOrbitPitch(
+            orbitState.pitchDegrees,
+            deltaY,
+        );
+
+        return;
+    }
+
     pitchDegrees = stepPitch(pitchDegrees, deltaY);
     yawDegrees = stepYaw(yawDegrees, deltaX);
 }
 
 function onPointerUpOrCancel(event: PointerEvent): void {
-    isDragging = false;
+    // Click-to-select works in both camera modes — pinchStartGap is only
+    // ever set in orbit mode (walk mode has no pinch-zoom), so this can't
+    // misfire mid-pinch there.
+    const wasSinglePointerClick =
+        activePointers.size === 1 && pinchStartGap === null && !dragMoved;
+
+    activePointers.delete(event.pointerId);
+
+    if (activePointers.size < 2) {
+        pinchStartGap = null;
+    }
 
     if (containerRef.value?.hasPointerCapture?.(event.pointerId)) {
         containerRef.value.releasePointerCapture(event.pointerId);
     }
+
+    if (wasSinglePointerClick) {
+        selectAtScreenPoint(event.clientX, event.clientY);
+    }
+
+    clearHover();
+    isDragging = false;
+}
+
+/** Orbit-only zoom for desktop mouse wheel — pinch (above) covers touch. */
+function onWheel(event: WheelEvent): void {
+    if (cameraMode.value !== 'orbit') {
+        return;
+    }
+
+    event.preventDefault();
+    orbitState.distance = stepOrbitDistance(
+        orbitState.distance,
+        event.deltaY,
+        orbitRange,
+    );
 }
 
 /**
@@ -530,6 +1621,11 @@ function onControlPointerUp(
     }
 }
 
+/** Touch has no "hold Ctrl" gesture, so sprint is a persistent tap-to-toggle there instead of a held modifier. */
+function toggleTouchSprint(): void {
+    touchSprintEnabled.value = !touchSprintEnabled.value;
+}
+
 function onResize(): void {
     const container = containerRef.value;
 
@@ -554,7 +1650,7 @@ function setupScene(container: HTMLElement): void {
 
     const { clientWidth, clientHeight } = container;
     camera = new THREE.PerspectiveCamera(
-        70,
+        CAMERA_FOV_DEGREES,
         clientWidth / (clientHeight || 1),
         0.1,
         500,
@@ -583,6 +1679,7 @@ function setupScene(container: HTMLElement): void {
 
     rebuildCells();
     resetView();
+    updateCurrentLocation();
 }
 
 watch(() => props.bands, rebuildCells);
@@ -631,6 +1728,9 @@ onBeforeUnmount(() => {
         :aria-label="walkHint"
         data-testid="map-3d-viewport"
         class="relative h-full w-full touch-none outline-none select-none"
+        :class="{
+            'cursor-pointer': cameraMode === 'orbit' && isHoveringSelectable,
+        }"
         @keydown="onKeyDown"
         @keyup="onKeyUp"
         @blur="onFocusLost"
@@ -639,23 +1739,146 @@ onBeforeUnmount(() => {
         @pointerup="onPointerUpOrCancel"
         @pointercancel="onPointerUpOrCancel"
         @pointerleave="onPointerUpOrCancel"
+        @wheel="onWheel"
     >
         <div
-            v-if="facedItem"
+            class="pointer-events-none absolute start-2 top-2 z-10 flex flex-col gap-2"
+        >
+            <div
+                data-testid="map-3d-state-legend"
+                class="flex flex-col gap-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+                <div
+                    v-for="state in CELL_STATES"
+                    :key="state"
+                    class="flex items-center gap-1.5"
+                >
+                    <span
+                        class="h-2.5 w-2.5 shrink-0 rounded-sm"
+                        :style="{ backgroundColor: stateHexColor(state) }"
+                    ></span>
+                    <component
+                        :is="CELL_STATE_COLOR[state].icon"
+                        class="h-3 w-3 shrink-0"
+                    />
+                    <span>{{ cellStateLabel(state) }}</span>
+                </div>
+            </div>
+
+            <div
+                v-if="cameraMode === 'walk'"
+                data-testid="map-3d-mini-map"
+                aria-hidden="true"
+                class="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+            >
+                <svg
+                    class="absolute inset-0 h-full w-full"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                >
+                    <line
+                        v-for="(leftPercent, rowIndex) in miniMapRowPositions"
+                        :key="rowIndex"
+                        :x1="leftPercent"
+                        y1="0"
+                        :x2="leftPercent"
+                        y2="100"
+                        vector-effect="non-scaling-stroke"
+                        stroke-width="1.5"
+                        :class="
+                            rowIndex === miniMapActiveRowIndex
+                                ? 'stroke-blue-400 dark:stroke-blue-500'
+                                : 'stroke-gray-300 dark:stroke-neutral-700'
+                        "
+                    />
+                </svg>
+                <Navigation
+                    data-testid="map-3d-mini-map-marker"
+                    class="absolute h-4 w-4 text-blue-600 dark:text-blue-400"
+                    :style="{
+                        left: `${miniMapPlayerPosition.leftPercent}%`,
+                        top: `${miniMapPlayerPosition.topPercent}%`,
+                        transform: `translate(-50%, -50%) rotate(${miniMapHeading}deg)`,
+                    }"
+                />
+            </div>
+        </div>
+
+        <div
+            v-if="cameraMode === 'walk'"
+            aria-hidden="true"
+            class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+        >
+            <div
+                v-for="label in visibleRowLabels"
+                :key="label.letter"
+                data-testid="map-3d-row-label"
+                class="absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+                :style="{
+                    left: `${label.leftPercent}%`,
+                    top: `${label.topPercent}%`,
+                }"
+            >
+                {{ label.letter }}
+            </div>
+        </div>
+
+        <div
+            class="sr-only"
+            role="status"
+            aria-live="polite"
+            data-testid="map-3d-announcement"
+        >
+            {{ mapAnnouncement }}
+        </div>
+
+        <div
+            v-if="cameraMode === 'walk'"
+            data-testid="map-3d-location-indicator"
+            class="pointer-events-none absolute end-2 top-2 z-10 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+        >
+            {{
+                t('cells.map.standingNear', { location: currentLocationLabel })
+            }}
+        </div>
+
+        <div
+            v-if="displayedItem"
             data-testid="map-3d-faced-cell"
             class="pointer-events-none absolute inset-x-0 top-2 z-10 flex justify-center"
         >
             <CellSlot
-                :cell="facedCellForSlot"
-                :label="facedLabel"
-                :highlighted="facedItem.item.highlighted"
-                :pulsing="facedItem.item.pulsing"
+                :cell="displayedCellForSlot"
+                :label="displayedLabel"
+                :highlighted="displayedItem.item.highlighted"
+                :pulsing="displayedItem.item.pulsing"
                 class="shadow-lg"
             />
         </div>
 
         <div
-            v-if="isTouchDevice"
+            v-if="cameraMode === 'orbit'"
+            class="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-2"
+        >
+            <div
+                data-testid="map-3d-orbit-legend"
+                class="flex flex-col items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-center text-xs text-gray-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+                <p>{{ t('cells.map.controls.orbit.rotateLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.zoomLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.keyboardLabel') }}</p>
+                <p>{{ t('cells.map.controls.orbit.selectLabel') }}</p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{
+                        t('cells.map.controls.cameraModeToggleLabel')
+                    }}</span>
+                    <kbd :class="kbdClass">O</kbd>
+                </p>
+            </div>
+        </div>
+
+        <div
+            v-else-if="isTouchDevice"
             class="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex items-end justify-between px-3"
         >
             <div
@@ -748,6 +1971,20 @@ onBeforeUnmount(() => {
                 >
                     <ArrowDown class="h-4 w-4" />
                 </button>
+                <button
+                    type="button"
+                    tabindex="-1"
+                    data-testid="touch-sprint-toggle"
+                    :aria-pressed="touchSprintEnabled"
+                    :aria-label="t('cells.map.controls.touch.sprint')"
+                    :class="[
+                        mapToolbarButtonClass,
+                        touchSprintEnabled ? selectedToggleClass : '',
+                    ]"
+                    @click="toggleTouchSprint"
+                >
+                    <Zap class="h-4 w-4" />
+                </button>
             </div>
         </div>
         <div
@@ -766,7 +2003,18 @@ onBeforeUnmount(() => {
                     <kbd :class="kbdClass">Shift</kbd>
                     <span>{{ t('cells.map.controls.down') }}</span>
                 </p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{ t('cells.map.controls.sprintLabel') }}</span>
+                    <kbd :class="kbdClass">Ctrl</kbd>
+                </p>
                 <p>{{ t('cells.map.controls.lookLabel') }}</p>
+                <p>{{ t('cells.map.controls.selectLabel') }}</p>
+                <p class="flex items-center gap-1.5">
+                    <span>{{
+                        t('cells.map.controls.cameraModeToggleLabel')
+                    }}</span>
+                    <kbd :class="kbdClass">O</kbd>
+                </p>
             </div>
         </div>
     </div>

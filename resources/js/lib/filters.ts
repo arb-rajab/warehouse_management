@@ -40,6 +40,14 @@ export const mapToolbarButtonClass =
     'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 /**
+ * The "this toggle is the active one" variant applied on top of a toggle
+ * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) in
+ * Cells/Index.vue and CellMap3D.vue.
+ */
+export const selectedToggleClass =
+    'bg-gray-900 text-white dark:bg-white dark:text-gray-900';
+
+/**
  * The filter-dialog "Apply" submit button shared by CellStatusLogs/Index.vue
  * and Dashboard/Index.vue's custom-expiring-days dialog.
  */

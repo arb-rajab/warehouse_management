@@ -1,13 +1,6 @@
 <script setup lang="ts">
-import {
-    CalendarPlus,
-    CalendarX,
-    CircleDashed,
-    Inbox,
-    PackageOpen,
-} from '@lucide/vue';
+import { CalendarPlus, CalendarX } from '@lucide/vue';
 import { computed } from 'vue';
-import type { Component } from 'vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -23,20 +16,8 @@ const props = withDefaults(
     { pulsing: false },
 );
 
-/**
- * Per-state icons, mirrored by hand in the mobile app's _getStateIcon
- * (Flutter, separate repo) — keep in sync: empty=CircleDashed, full=Inbox,
- * opened=PackageOpen. The colors themselves live in lib/cellStateColor.ts,
- * shared with CellMap3D.vue.
- */
-const stateIcons: Record<Cell['state'], Component> = {
-    empty: CircleDashed,
-    full: Inbox,
-    opened: PackageOpen,
-};
-
 const stateIcon = computed(() =>
-    props.cell ? stateIcons[props.cell.state] : null,
+    props.cell ? CELL_STATE_COLOR[props.cell.state].icon : null,
 );
 
 const borderClass = computed(() =>

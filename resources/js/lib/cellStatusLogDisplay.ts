@@ -7,10 +7,6 @@ export function cellLogActionLabel(action: CellStatusLog['action']): string {
     return t(`cellLog.actions.${action}`);
 }
 
-export function cellLogStateLabel(state: CellStatusLog['from_state']): string {
-    return t(`cellLog.states.${state}`);
-}
-
 export function flagReasonLabel(
     reason: CellStatusLog['flags'][number]['reason'],
 ): string {

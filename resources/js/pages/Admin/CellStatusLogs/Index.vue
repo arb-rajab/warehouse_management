@@ -28,9 +28,9 @@ import FilterSelect from '@/components/FilterSelect.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { cellStateLabel } from '@/lib/cellStateColor';
 import {
     cellLogActionLabel,
-    cellLogStateLabel,
     mergeTransferPairs,
     transferPair,
 } from '@/lib/cellStatusLogDisplay';
@@ -679,10 +679,10 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         />
                     </div>
                     <div class="text-xs text-gray-500 dark:text-neutral-400">
-                        {{ cellLogStateLabel(log.from_state) }}
+                        {{ cellStateLabel(log.from_state) }}
                         <template v-if="!log.pairedIn">
                             <span class="inline-block rtl:rotate-180">→</span>
-                            {{ cellLogStateLabel(log.to_state) }}
+                            {{ cellStateLabel(log.to_state) }}
                         </template>
                     </div>
                     <CellLogFlagBadges :flags="log.flags" />

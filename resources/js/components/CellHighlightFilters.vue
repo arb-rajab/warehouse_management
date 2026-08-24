@@ -10,6 +10,7 @@ import {
     emptyCellHighlightFilters,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
+import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import {
     countBadgeClass,
     filterClearButtonClass,
@@ -17,7 +18,6 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { Cell } from '@/types/admin';
 
 defineProps<{
     products: { id: number; name: string }[];
@@ -29,12 +29,6 @@ defineProps<{
 // no `update:modelValue` is ever emitted; the parent sees changes because
 // it's the same reactive object, not because of an event round-trip.
 const filters = defineModel<CellHighlightFiltersValue>({ required: true });
-
-const cellStates: Cell['state'][] = ['empty', 'full', 'opened'];
-
-function stateLabel(state: Cell['state']): string {
-    return t(`cellLog.states.${state}`);
-}
 
 const open = ref(false);
 
@@ -74,9 +68,9 @@ function clear(): void {
                     :all-label="t('cellLog.filters.all')"
                     :selected-count-label="selectedCountLabel"
                     :options="
-                        cellStates.map((state) => ({
+                        CELL_STATES.map((state) => ({
                             value: state,
-                            label: stateLabel(state),
+                            label: cellStateLabel(state),
                         }))
                     "
                 />
