@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
  */
 trait FiltersCellStatusLogs
 {
+    use FiltersByProductIds;
     use NormalizesBooleanFilters;
 
     protected function prepareForValidation(): void
@@ -35,8 +36,7 @@ trait FiltersCellStatusLogs
     protected function cellStatusLogFilterRules(): array
     {
         return [
-            'product_id' => ['nullable', 'array'],
-            'product_id.*' => ['integer', 'exists:products,id'],
+            ...$this->productIdsFilterRules(),
             // No `exists:pallets,id` — a pallet is hard-deleted once emptied, but its
             // logs (and this filter) must keep working against its old id.
             'pallet_id' => ['nullable', 'integer'],
