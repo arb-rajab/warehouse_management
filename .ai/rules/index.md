@@ -14,6 +14,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/pages/Admin/CellStatusLogs/** | .ai/rules/cell-status-logs.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellMap3D.vue | .ai/rules/cells-js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue | .ai/rules/cells.md |
+| app/Http/Middleware/EnsureMinimumAppVersion.php,app/Console/Commands/SetMinimumAppVersionCommand.php,app/Models/MobileAppVersionRequirement.php | .ai/rules/commands-models.md |
 | resources/js/components/CellSlot.vue,resources/js/components/CellMap3D.vue,resources/js/lib/cellStateColor.ts | .ai/rules/components-js-components-js-lib.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts | .ai/rules/components-js-lib.md |
 | resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts, resources/js/components/FilterMultiSelect.vue,resources/js/components/FilterMultiSelect.test.ts | .ai/rules/components.md |
@@ -49,7 +50,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Admin/FilterProductsRequest.php,resources/js/pages/Admin/Products/Index.vue | .ai/rules/products.md |
 | config/health.php,database/migrations/*health*,app/Providers/HealthServiceProvider.php | .ai/rules/providers.md |
 | app/Http/Requests/Admin/{FilterProductsRequest,ShowCellMapRequest}.php | .ai/rules/requests-admin.md |
-| app/Http/Requests/Concerns/NormalizesBooleanFilters.php,app/Http/Requests/Concerns/NormalizesExpiredFilter.php,app/Http/Requests/Concerns/FiltersCellStatusLogs.php | .ai/rules/requests-concerns.md |
+| app/Http/Requests/Concerns/NormalizesBooleanFilters.php, app/Http/Requests/Concerns/NormalizesExpiredFilter.php, app/Http/Requests/Concerns/FiltersCellStatusLogs.php | .ai/rules/requests-concerns.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/**, app/Http/Resources/RowResource.php | .ai/rules/resources.md |
 | routes/web.php, routes/api.php, routes/console.php | .ai/rules/routes.md |

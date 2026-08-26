@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\BlockMaliciousRequests;
+use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
@@ -37,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->api(append: [SetLocaleFromHeader::class]);
+        $middleware->api(append: [SetLocaleFromHeader::class, EnsureMinimumAppVersion::class]);
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
