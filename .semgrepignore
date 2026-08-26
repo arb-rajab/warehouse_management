@@ -1,0 +1,9 @@
+vendor/
+node_modules/
+storage/
+bootstrap/cache/
+bootstrap/ssr/
+public/build/
+resources/js/actions/
+resources/js/routes/
+resources/js/wayfinder/
