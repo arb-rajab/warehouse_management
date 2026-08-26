@@ -12,6 +12,9 @@ use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
+
+uses(SeedsCellStatusLogFixtures::class);
 
 test('an authenticated admin can view the cell log with every property the table renders', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
@@ -161,8 +164,7 @@ test('the cell log skips the paired transferred-in log when computing next_log_a
 
 test('the cell log paginates instead of returning everything at once', function () {
     actingAsAdmin();
-
-    CellStatusLog::factory()->count(30)->create();
+    $this->seedPaginationOverflowFixture(perPage: 25);
 
     $response = $this->get('/admin/cell-logs');
 
@@ -230,11 +232,7 @@ test('an unauthenticated caller is redirected to login', function () {
 
 test('the cell log can be filtered by product, excluding entries for other products', function () {
     actingAsAdmin();
-    $product = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['product_id' => $product->id]);
-    CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
+    ['product' => $product, 'matching' => $matching] = $this->seedProductFilterFixture();
 
     $response = $this->get("/admin/cell-logs?product_id[]={$product->id}");
 
@@ -246,13 +244,12 @@ test('the cell log can be filtered by product, excluding entries for other produ
 
 test('the cell log can be filtered by multiple products at once, excluding entries for the remaining product', function () {
     actingAsAdmin();
-    $product = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-    $thirdProduct = Product::factory()->create();
-
-    $matchingA = CellStatusLog::factory()->create(['product_id' => $product->id]);
-    $matchingB = CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
-    CellStatusLog::factory()->create(['product_id' => $thirdProduct->id]);
+    [
+        'product' => $product,
+        'otherProduct' => $otherProduct,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleProductFilterFixture();
 
     $response = $this->get("/admin/cell-logs?product_id[]={$product->id}&product_id[]={$otherProduct->id}");
 
@@ -291,14 +288,7 @@ test('the cell log shows a pallet id with a null expiration date once the pallet
 
 test('the cell log can be filtered by pallet, excluding entries for other pallets, even after the pallet is deleted', function () {
     actingAsAdmin();
-    $pallet = Pallet::factory()->create();
-    $palletId = $pallet->id;
-    $otherPallet = Pallet::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $palletId]);
-    CellStatusLog::factory()->create(['pallet_id' => $otherPallet->id]);
-
-    $pallet->delete();
+    ['palletId' => $palletId, 'matching' => $matching] = $this->seedPalletFilterFixture();
 
     $response = $this->get("/admin/cell-logs?pallet_id={$palletId}");
 
@@ -310,13 +300,7 @@ test('the cell log can be filtered by pallet, excluding entries for other pallet
 
 test('the cell log can be filtered by row, excluding entries for other rows', function () {
     actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    $otherCell = $otherRow->cells()->first();
-
-    $matching = CellStatusLog::factory()->create(['cell_id' => $cell->id]);
-    CellStatusLog::factory()->create(['cell_id' => $otherCell->id]);
+    ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
     $response = $this->get("/admin/cell-logs?row_id={$row->id}");
 
@@ -328,12 +312,7 @@ test('the cell log can be filtered by row, excluding entries for other rows', fu
 
 test('the cell log can be filtered by column number, excluding entries for other columns', function () {
     actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $matching = CellStatusLog::factory()->create(['cell_id' => $columnOneCell->id]);
-    CellStatusLog::factory()->create(['cell_id' => $columnTwoCell->id]);
+    ['matching' => $matching] = $this->seedColumnFilterFixture();
 
     $response = $this->get('/admin/cell-logs?column_number=1');
 
@@ -345,11 +324,7 @@ test('the cell log can be filtered by column number, excluding entries for other
 
 test('the cell log can be filtered by who did it, excluding entries by other users', function () {
     actingAsAdmin();
-    $mover = User::factory()->create();
-    $otherMover = User::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['user_id' => $mover->id]);
-    CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
+    ['mover' => $mover, 'matching' => $matching] = $this->seedUserFilterFixture();
 
     $response = $this->get("/admin/cell-logs?user_id[]={$mover->id}");
 
@@ -361,13 +336,12 @@ test('the cell log can be filtered by who did it, excluding entries by other use
 
 test('the cell log can be filtered by multiple users at once, excluding entries by the remaining user', function () {
     actingAsAdmin();
-    $mover = User::factory()->create();
-    $otherMover = User::factory()->create();
-    $thirdMover = User::factory()->create();
-
-    $matchingA = CellStatusLog::factory()->create(['user_id' => $mover->id]);
-    $matchingB = CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
-    CellStatusLog::factory()->create(['user_id' => $thirdMover->id]);
+    [
+        'mover' => $mover,
+        'otherMover' => $otherMover,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleUserFilterFixture();
 
     $response = $this->get("/admin/cell-logs?user_id[]={$mover->id}&user_id[]={$otherMover->id}");
 
@@ -380,9 +354,7 @@ test('the cell log can be filtered by multiple users at once, excluding entries 
 
 test('the cell log can be filtered by status change, excluding entries for other actions', function () {
     actingAsAdmin();
-
-    $matching = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
-    CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
+    ['matching' => $matching] = $this->seedActionFilterFixture();
 
     $response = $this->get('/admin/cell-logs?action[]=opened');
 
@@ -394,10 +366,7 @@ test('the cell log can be filtered by status change, excluding entries for other
 
 test('the cell log can be filtered by multiple status changes at once, excluding entries for the remaining action', function () {
     actingAsAdmin();
-
-    $opened = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
-    $emptied = CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
-    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+    ['opened' => $opened, 'emptied' => $emptied] = $this->seedMultipleActionFilterFixture();
 
     $response = $this->get('/admin/cell-logs?action[]=opened&action[]=emptied');
 
@@ -410,12 +379,7 @@ test('the cell log can be filtered by multiple status changes at once, excluding
 
 test('the cell log can be filtered by a date range, excluding entries outside it', function () {
     actingAsAdmin();
-
-    $matching = CellStatusLog::factory()->create();
-    $matching->forceFill(['created_at' => '2026-06-15'])->save();
-
-    $outOfRange = CellStatusLog::factory()->create();
-    $outOfRange->forceFill(['created_at' => '2026-01-01'])->save();
+    ['matching' => $matching] = $this->seedDateRangeFilterFixture();
 
     $response = $this->get('/admin/cell-logs?date_from=2026-06-01&date_to=2026-06-30');
 
@@ -428,9 +392,7 @@ test('the cell log can be filtered by a date range, excluding entries outside it
 test('the cell log can be filtered by created_within_days, excluding entries older than that window', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();
-
-    $withinWindow = backdate(CellStatusLog::factory()->create(), '2026-08-10 00:00:00');
-    backdate(CellStatusLog::factory()->create(), '2026-08-01 00:00:00');
+    ['withinWindow' => $withinWindow] = $this->seedCreatedWithinDaysFixture();
 
     $response = $this->get('/admin/cell-logs?created_within_days=7');
 
@@ -452,12 +414,7 @@ test('filtering the cell log by created_within_days together with a date range i
 
 test('the cell log can be filtered by pallet expiration date range, excluding entries outside it', function () {
     actingAsAdmin();
-
-    $matchingPallet = Pallet::factory()->create(['expiration_date' => '2026-06-15']);
-    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-01-01']);
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $matchingPallet->id]);
-    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+    ['matching' => $matching] = $this->seedPalletExpirationRangeFixture();
 
     $response = $this->get('/admin/cell-logs?expiration_date_from=2026-06-01&expiration_date_to=2026-06-30');
 
@@ -470,12 +427,7 @@ test('the cell log can be filtered by pallet expiration date range, excluding en
 test('the cell log can be filtered by expires_within_days, excluding pallets expiring after that window', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();
-
-    $withinWindowPallet = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
-    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-09-01']);
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $withinWindowPallet->id]);
-    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+    ['matching' => $matching] = $this->seedExpiresWithinDaysFixture();
 
     $response = $this->get('/admin/cell-logs?expires_within_days=7');
 
@@ -497,9 +449,7 @@ test('filtering the cell log by expires_within_days together with an expiration 
 
 test('the cell log defaults to newest-first when no sort is requested', function () {
     actingAsAdmin();
-
-    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
-    $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+    ['older' => $older, 'newer' => $newer] = $this->seedCreatedAtOrderFixture();
 
     $response = $this->get('/admin/cell-logs');
 
@@ -512,9 +462,7 @@ test('the cell log defaults to newest-first when no sort is requested', function
 
 test('the cell log can be sorted by log date ascending', function () {
     actingAsAdmin();
-
-    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
-    $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+    ['older' => $older, 'newer' => $newer] = $this->seedCreatedAtOrderFixture();
 
     $response = $this->get('/admin/cell-logs?sort_by=created_at&sort_direction=asc');
 
@@ -528,12 +476,8 @@ test('the cell log can be sorted by log date ascending', function () {
 test('the cell log can be sorted by pallet expiration date, with a direction, placing null expiration dates first ascending', function () {
     actingAsAdmin();
 
-    $soonPallet = Pallet::factory()->create(['expiration_date' => '2026-06-01']);
-    $latePallet = Pallet::factory()->create(['expiration_date' => '2026-12-01']);
-
     $noExpiration = CellStatusLog::factory()->create(['pallet_id' => null]);
-    $soon = CellStatusLog::factory()->create(['pallet_id' => $soonPallet->id]);
-    $late = CellStatusLog::factory()->create(['pallet_id' => $latePallet->id]);
+    ['soon' => $soon, 'late' => $late] = $this->seedExpirationDateOrderFixture();
 
     $response = $this->get('/admin/cell-logs?sort_by=expiration_date&sort_direction=asc');
 

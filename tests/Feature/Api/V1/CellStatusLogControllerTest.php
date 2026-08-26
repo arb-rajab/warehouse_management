@@ -9,6 +9,9 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
+
+uses(SeedsCellStatusLogFixtures::class);
 
 test('an authenticated worker can list cell logs with every property the app reads', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
@@ -146,8 +149,7 @@ test('the cell log listing shows a pallet id with a null expiration date once th
 
 test('the cell log listing paginates instead of returning everything at once', function () {
     actingAsMobileUser();
-
-    CellStatusLog::factory()->count(25)->create();
+    $this->seedPaginationOverflowFixture(perPage: 20);
 
     $response = $this->getJson('/api/v1/cell-logs');
 
@@ -203,11 +205,7 @@ test('an unauthenticated caller cannot list cell logs', function () {
 
 test('the cell log listing can be filtered by product, excluding entries for other products', function () {
     actingAsMobileUser();
-    $product = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['product_id' => $product->id]);
-    CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
+    ['product' => $product, 'matching' => $matching] = $this->seedProductFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?product_id[]={$product->id}");
 
@@ -218,13 +216,12 @@ test('the cell log listing can be filtered by product, excluding entries for oth
 
 test('the cell log listing can be filtered by multiple products at once, excluding entries for the remaining product', function () {
     actingAsMobileUser();
-    $product = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-    $thirdProduct = Product::factory()->create();
-
-    $matchingA = CellStatusLog::factory()->create(['product_id' => $product->id]);
-    $matchingB = CellStatusLog::factory()->create(['product_id' => $otherProduct->id]);
-    CellStatusLog::factory()->create(['product_id' => $thirdProduct->id]);
+    [
+        'product' => $product,
+        'otherProduct' => $otherProduct,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleProductFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?product_id[]={$product->id}&product_id[]={$otherProduct->id}");
 
@@ -235,14 +232,7 @@ test('the cell log listing can be filtered by multiple products at once, excludi
 
 test('the cell log listing can be filtered by pallet, excluding entries for other pallets, even after the pallet is deleted', function () {
     actingAsMobileUser();
-    $pallet = Pallet::factory()->create();
-    $palletId = $pallet->id;
-    $otherPallet = Pallet::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $palletId]);
-    CellStatusLog::factory()->create(['pallet_id' => $otherPallet->id]);
-
-    $pallet->delete();
+    ['palletId' => $palletId, 'matching' => $matching] = $this->seedPalletFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?pallet_id={$palletId}");
 
@@ -253,13 +243,7 @@ test('the cell log listing can be filtered by pallet, excluding entries for othe
 
 test('the cell log listing can be filtered by row, excluding entries for other rows', function () {
     actingAsMobileUser();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    $otherCell = $otherRow->cells()->first();
-
-    $matching = CellStatusLog::factory()->create(['cell_id' => $cell->id]);
-    CellStatusLog::factory()->create(['cell_id' => $otherCell->id]);
+    ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?row_id={$row->id}");
 
@@ -270,12 +254,7 @@ test('the cell log listing can be filtered by row, excluding entries for other r
 
 test('the cell log listing can be filtered by column number, excluding entries for other columns', function () {
     actingAsMobileUser();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $matching = CellStatusLog::factory()->create(['cell_id' => $columnOneCell->id]);
-    CellStatusLog::factory()->create(['cell_id' => $columnTwoCell->id]);
+    ['matching' => $matching] = $this->seedColumnFilterFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?column_number=1');
 
@@ -286,11 +265,7 @@ test('the cell log listing can be filtered by column number, excluding entries f
 
 test('the cell log listing can be filtered by who did it, excluding entries by other users', function () {
     actingAsMobileUser();
-    $mover = User::factory()->create();
-    $otherMover = User::factory()->create();
-
-    $matching = CellStatusLog::factory()->create(['user_id' => $mover->id]);
-    CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
+    ['mover' => $mover, 'matching' => $matching] = $this->seedUserFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?user_id[]={$mover->id}");
 
@@ -301,13 +276,12 @@ test('the cell log listing can be filtered by who did it, excluding entries by o
 
 test('the cell log listing can be filtered by multiple users at once, excluding entries by the remaining user', function () {
     actingAsMobileUser();
-    $mover = User::factory()->create();
-    $otherMover = User::factory()->create();
-    $thirdMover = User::factory()->create();
-
-    $matchingA = CellStatusLog::factory()->create(['user_id' => $mover->id]);
-    $matchingB = CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
-    CellStatusLog::factory()->create(['user_id' => $thirdMover->id]);
+    [
+        'mover' => $mover,
+        'otherMover' => $otherMover,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleUserFilterFixture();
 
     $response = $this->getJson("/api/v1/cell-logs?user_id[]={$mover->id}&user_id[]={$otherMover->id}");
 
@@ -318,9 +292,7 @@ test('the cell log listing can be filtered by multiple users at once, excluding 
 
 test('the cell log listing can be filtered by status change, excluding entries for other actions', function () {
     actingAsMobileUser();
-
-    $matching = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
-    CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
+    ['matching' => $matching] = $this->seedActionFilterFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?action[]=opened');
 
@@ -331,10 +303,7 @@ test('the cell log listing can be filtered by status change, excluding entries f
 
 test('the cell log listing can be filtered by multiple status changes at once, excluding entries for the remaining action', function () {
     actingAsMobileUser();
-
-    $opened = CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
-    $emptied = CellStatusLog::factory()->create(['action' => CellLogAction::Emptied]);
-    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+    ['opened' => $opened, 'emptied' => $emptied] = $this->seedMultipleActionFilterFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?action[]=opened&action[]=emptied');
 
@@ -345,12 +314,7 @@ test('the cell log listing can be filtered by multiple status changes at once, e
 
 test('the cell log listing can be filtered by a date range, excluding entries outside it', function () {
     actingAsMobileUser();
-
-    $matching = CellStatusLog::factory()->create();
-    $matching->forceFill(['created_at' => '2026-06-15'])->save();
-
-    $outOfRange = CellStatusLog::factory()->create();
-    $outOfRange->forceFill(['created_at' => '2026-01-01'])->save();
+    ['matching' => $matching] = $this->seedDateRangeFilterFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?date_from=2026-06-01&date_to=2026-06-30');
 
@@ -370,9 +334,7 @@ test('filtering cell logs with an invalid date range is rejected', function () {
 test('the cell log listing can be filtered by created_within_days, excluding entries older than that window', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsMobileUser();
-
-    $withinWindow = backdate(CellStatusLog::factory()->create(), '2026-08-10 00:00:00');
-    backdate(CellStatusLog::factory()->create(), '2026-08-01 00:00:00');
+    ['withinWindow' => $withinWindow] = $this->seedCreatedWithinDaysFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?created_within_days=7');
 
@@ -393,12 +355,7 @@ test('filtering cell logs by created_within_days together with a date range is r
 
 test('the cell log listing can be filtered by pallet expiration date range, excluding entries outside it', function () {
     actingAsMobileUser();
-
-    $matchingPallet = Pallet::factory()->create(['expiration_date' => '2026-06-15']);
-    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-01-01']);
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $matchingPallet->id]);
-    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+    ['matching' => $matching] = $this->seedPalletExpirationRangeFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?expiration_date_from=2026-06-01&expiration_date_to=2026-06-30');
 
@@ -418,12 +375,7 @@ test('filtering cell logs with an invalid expiration date range is rejected', fu
 test('the cell log listing can be filtered by expires_within_days, excluding pallets expiring after that window', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsMobileUser();
-
-    $withinWindowPallet = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
-    $outOfRangePallet = Pallet::factory()->create(['expiration_date' => '2026-09-01']);
-
-    $matching = CellStatusLog::factory()->create(['pallet_id' => $withinWindowPallet->id]);
-    CellStatusLog::factory()->create(['pallet_id' => $outOfRangePallet->id]);
+    ['matching' => $matching] = $this->seedExpiresWithinDaysFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?expires_within_days=7');
 
@@ -444,9 +396,7 @@ test('filtering cell logs by expires_within_days together with an expiration dat
 
 test('the cell log listing can be sorted by log date ascending', function () {
     actingAsMobileUser();
-
-    $older = backdate(CellStatusLog::factory()->create(), '2026-08-01 10:00:00');
-    $newer = backdate(CellStatusLog::factory()->create(), '2026-08-01 12:00:00');
+    ['older' => $older, 'newer' => $newer] = $this->seedCreatedAtOrderFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?sort_by=created_at&sort_direction=asc');
 
@@ -456,12 +406,7 @@ test('the cell log listing can be sorted by log date ascending', function () {
 
 test('the cell log listing can be sorted by pallet expiration date', function () {
     actingAsMobileUser();
-
-    $soonPallet = Pallet::factory()->create(['expiration_date' => '2026-06-01']);
-    $latePallet = Pallet::factory()->create(['expiration_date' => '2026-12-01']);
-
-    $soon = CellStatusLog::factory()->create(['pallet_id' => $soonPallet->id]);
-    $late = CellStatusLog::factory()->create(['pallet_id' => $latePallet->id]);
+    ['soon' => $soon, 'late' => $late] = $this->seedExpirationDateOrderFixture();
 
     $response = $this->getJson('/api/v1/cell-logs?sort_by=expiration_date&sort_direction=asc');
 
