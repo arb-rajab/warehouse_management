@@ -10,4 +10,5 @@ return [
     'slot_not_empty' => 'The requested slot is not empty.',
     'pallet_not_full' => 'Only a full pallet can be opened.',
     'destination_not_empty' => 'The destination slot is not empty.',
+    'app_version_outdated' => 'This app version is no longer supported. Please update to continue.',
 ];
