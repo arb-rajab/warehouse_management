@@ -1,18 +1,14 @@
 <?php
 
-use App\Enums\CellLogAction;
-use App\Enums\CellState;
-use App\Models\Cell;
-use App\Models\CellStatusLog;
-use App\Models\Pallet;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
+use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
+
+uses(SeedsCellStatusLogFixtures::class);
 
 test('the mobile dashboard shows cell occupancy counts by state', function () {
     actingAsMobileUser();
-    Cell::factory()->count(2)->create(['state' => CellState::Empty]);
-    Cell::factory()->create(['state' => CellState::Opened]);
-    Pallet::factory()->create();
+    $this->seedOccupancyFixture();
 
     $response = $this->getJson('/api/v1/dashboard');
 
@@ -27,10 +23,7 @@ test('the mobile dashboard shows cell occupancy counts by state', function () {
 test('the mobile dashboard shows expired and per-window expiring-soon pallet counts, excluding pallets outside each window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
-
-    Pallet::factory()->create(['expiration_date' => '2026-08-12']);
-    Pallet::factory()->create(['expiration_date' => '2026-08-16']);
-    Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+    $this->seedExpiringWindowsFixture();
 
     $response = $this->getJson('/api/v1/dashboard');
 
@@ -54,8 +47,7 @@ test('the mobile dashboard shows expired and per-window expiring-soon pallet cou
 test('a caller-chosen expiring_days widens or narrows the mobile dashboard custom expiring-soon window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
-
-    Pallet::factory()->create(['expiration_date' => '2026-08-25']);
+    $this->seedCustomExpiringWindowFixture();
 
     $narrow = $this->getJson('/api/v1/dashboard?expiring_days=7');
     $narrow->assertOk();
@@ -101,21 +93,7 @@ test('an invalid expiring_days is rejected on the mobile dashboard', function ()
 test("the mobile dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
-
-    $cell = Cell::factory()->create();
-    $pallet = Pallet::factory()->create();
-    $sourceCell = Cell::factory()->create();
-    $destinationCell = Cell::factory()->create();
-
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Stored]);
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Opened]);
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Emptied]);
-    createTransferPair($pallet, $sourceCell, $destinationCell, '2026-08-13 11:00:00', '2026-08-13 11:00:01');
-
-    // Earlier this week (2026-08-13 is a Thursday; week start is Monday 2026-08-10).
-    backdate(CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Stored]), '2026-08-11 09:00:00');
-    // Last week — must be excluded from both today's and this week's counts.
-    backdate(CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Opened]), '2026-08-06 09:00:00');
+    $this->seedActivityWindowsFixture();
 
     $response = $this->getJson('/api/v1/dashboard');
 
@@ -141,16 +119,7 @@ test('a product filter narrows the mobile dashboard occupancy (empty forced to z
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
 
-    $matchingProduct = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-
-    Pallet::factory()->create(['product_id' => $matchingProduct->id, 'expiration_date' => '2026-08-14']);
-    Pallet::factory()->opened()->create(['product_id' => $matchingProduct->id]);
-    Pallet::factory()->create(['product_id' => $otherProduct->id, 'expiration_date' => '2026-08-14']);
-    Cell::factory()->create(['state' => CellState::Empty]);
-
-    CellStatusLog::factory()->create(['product_id' => $matchingProduct->id, 'action' => CellLogAction::Stored]);
-    CellStatusLog::factory()->create(['product_id' => $otherProduct->id, 'action' => CellLogAction::Stored]);
+    ['matchingProduct' => $matchingProduct] = $this->seedDashboardProductFilterFixture();
 
     $response = $this->getJson("/api/v1/dashboard?product_id[]={$matchingProduct->id}");
 

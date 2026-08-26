@@ -1,20 +1,17 @@
 <?php
 
-use App\Enums\CellLogAction;
-use App\Enums\CellState;
-use App\Models\Cell;
-use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
+
+uses(SeedsCellStatusLogFixtures::class);
 
 test('the dashboard shows cell occupancy counts by state', function () {
     actingAsAdmin();
-    Cell::factory()->count(2)->create(['state' => CellState::Empty]);
-    Cell::factory()->create(['state' => CellState::Opened]);
-    Pallet::factory()->create();
+    $this->seedOccupancyFixture();
 
     $response = $this->get('/admin');
 
@@ -29,10 +26,7 @@ test('the dashboard shows cell occupancy counts by state', function () {
 test('the dashboard shows expired and per-window expiring-soon pallet counts, excluding pallets outside each window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
-
-    Pallet::factory()->create(['expiration_date' => '2026-08-12']);
-    Pallet::factory()->create(['expiration_date' => '2026-08-16']);
-    Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+    $this->seedExpiringWindowsFixture();
 
     $response = $this->get('/admin');
 
@@ -85,8 +79,7 @@ test('the expired count excludes a pallet expiring today, but the 7-day window i
 test('a caller-chosen expiring_days widens or narrows the custom expiring-soon window, independent of the fixed windows', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
-
-    Pallet::factory()->create(['expiration_date' => '2026-08-25']);
+    $this->seedCustomExpiringWindowFixture();
 
     $narrow = $this->get('/admin?expiring_days=7');
     $narrow->assertOk()->assertInertia(
@@ -131,21 +124,7 @@ test('an invalid expiring_days is rejected', function () {
 test("the dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
-
-    $cell = Cell::factory()->create();
-    $pallet = Pallet::factory()->create();
-    $sourceCell = Cell::factory()->create();
-    $destinationCell = Cell::factory()->create();
-
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Stored]);
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Opened]);
-    CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Emptied]);
-    createTransferPair($pallet, $sourceCell, $destinationCell, '2026-08-13 11:00:00', '2026-08-13 11:00:01');
-
-    // Earlier this week (2026-08-13 is a Thursday; week start is Monday 2026-08-10).
-    backdate(CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Stored]), '2026-08-11 09:00:00');
-    // Last week — must be excluded from both today's and this week's counts.
-    backdate(CellStatusLog::factory()->create(['cell_id' => $cell->id, 'action' => CellLogAction::Opened]), '2026-08-06 09:00:00');
+    $this->seedActivityWindowsFixture();
 
     $response = $this->get('/admin');
 
@@ -168,16 +147,7 @@ test('a product filter narrows occupancy (empty forced to zero), expiring, and a
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
-    $matchingProduct = Product::factory()->create();
-    $otherProduct = Product::factory()->create();
-
-    $matchingPallet = Pallet::factory()->create(['product_id' => $matchingProduct->id, 'expiration_date' => '2026-08-14']);
-    Pallet::factory()->opened()->create(['product_id' => $matchingProduct->id]);
-    Pallet::factory()->create(['product_id' => $otherProduct->id, 'expiration_date' => '2026-08-14']);
-    Cell::factory()->create(['state' => CellState::Empty]);
-
-    CellStatusLog::factory()->create(['product_id' => $matchingProduct->id, 'action' => CellLogAction::Stored]);
-    CellStatusLog::factory()->create(['product_id' => $otherProduct->id, 'action' => CellLogAction::Stored]);
+    ['matchingProduct' => $matchingProduct, 'matchingPallet' => $matchingPallet] = $this->seedDashboardProductFilterFixture();
 
     $response = $this->get("/admin?product_id[]={$matchingProduct->id}");
 
