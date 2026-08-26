@@ -1,0 +1,46 @@
+name: sast
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.155.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Semgrep (full report)
+        run: >
+          semgrep scan
+          --config p/security-audit
+          --config p/owasp-top-ten
+          --config p/secrets
+          --config p/php
+          --config p/javascript
+          --config p/typescript
+        continue-on-error: true
+
+      - name: Run Semgrep (fail on ERROR severity)
+        run: >
+          semgrep scan
+          --config p/security-audit
+          --config p/owasp-top-ten
+          --config p/secrets
+          --config p/php
+          --config p/javascript
+          --config p/typescript
+          --severity ERROR
+          --error
