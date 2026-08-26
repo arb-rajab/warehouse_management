@@ -15,27 +15,18 @@ concurrency:
 jobs:
   deploy:
     if: github.event.workflow_run.head_branch == 'develop' && github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows]
     environment: staging
+    defaults:
+      run:
+        shell: cmd
+        working-directory: C:\sites\warehouse_management
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
-        with:
-          php-version: '8.5'
-          tools: composer:v2
-          coverage: none
-
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '22'
+      - name: Sync repository to tested commit
+        run: |
+          git fetch origin develop
+          git reset --hard ${{ github.event.workflow_run.head_sha }}
 
       - name: Install PHP dependencies (production)
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
@@ -46,54 +37,17 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Build release archive
+      - name: Run database migrations
+        run: php artisan migrate --force
+
+      - name: Refresh application caches
         run: |
-          mkdir -p /tmp/release-payload
-          zip -rq /tmp/release-payload/payload.zip . \
-            -x '.git/*' '.github/*' '.ai/*' 'node_modules/*' 'tests/*' \
-               'storage/*' '*.sqlite' '.env' '.env.example'
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
 
-      - name: Upload release archive over FTPS
-        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
-        with:
-          server: ${{ secrets.STAGING_FTP_SERVER }}
-          username: ${{ secrets.STAGING_FTP_USERNAME }}
-          password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          server-dir: ${{ secrets.STAGING_FTP_SERVER_DIR }}/storage/app/deploy/
-          protocol: ftps
-          local-dir: /tmp/release-payload/
-          state-name: .deploy-payload-sync-state.json
+      - name: Ensure storage symlink exists
+        run: php artisan storage:link
 
-      - name: Trigger remote extraction and deploy
-        run: |
-          max_attempts=4
-          delay=20
-
-          for attempt in $(seq 1 "$max_attempts"); do
-            response_file=$(mktemp)
-            http_code=$(curl --show-error --silent --max-time 300 \
-              -X POST \
-              -H "X-Deploy-Token: ${{ secrets.STAGING_DEPLOY_TOKEN }}" \
-              -o "$response_file" \
-              -w '%{http_code}' \
-              "${{ secrets.STAGING_APP_URL }}/deploy-hook.php")
-
-            body=$(cat "$response_file")
-            status=$(echo "$body" | jq -r '.status // empty' 2>/dev/null || echo '')
-
-            echo "Attempt $attempt/$max_attempts - HTTP status: $http_code"
-            echo "Response body: $body"
-
-            if [ "$http_code" = "200" ] && [ "$status" = "ok" ]; then
-              exit 0
-            fi
-
-            if [ "$attempt" -lt "$max_attempts" ]; then
-              echo "::warning::deploy-hook.php did not report success (http=$http_code, status=$status). Retrying in ${delay}s - the response may be a firewall/bot-challenge page rather than the deploy script's own output."
-              sleep "$delay"
-              delay=$((delay * 2))
-            fi
-          done
-
-          echo "::error::deploy-hook.php did not report a successful deploy after $max_attempts attempts (http=$http_code, status=$status). The response body may be a firewall/bot-challenge page rather than the deploy script's own output."
-          exit 1
+      - name: Restart queue workers
+        run: php artisan queue:restart
