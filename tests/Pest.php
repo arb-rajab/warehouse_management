@@ -58,6 +58,20 @@ function actingAsAdmin(): User
 }
 
 /**
+ * Authenticate a mobile app user against the admin panel's session guard, to
+ * assert that panel routes reject a non-admin caller. Returns the user for
+ * tests that assert on who performed the action.
+ */
+function actingAsMobilePanelUser(): User
+{
+    $mobileUser = User::factory()->mobileUser()->create();
+
+    test()->actingAs($mobileUser);
+
+    return $mobileUser;
+}
+
+/**
  * Set a model's `created_at` to a specific timestamp after creation — needed
  * because `created_at` is never mass-assignable, so factories can't set it
  * via `create()`.

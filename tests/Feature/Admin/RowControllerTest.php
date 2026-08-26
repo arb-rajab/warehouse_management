@@ -3,7 +3,6 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
-use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -53,9 +52,9 @@ test('the row list paginates instead of returning everything at once', function 
 });
 
 test('a mobile app user cannot view the row list', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/rows');
+    $response = $this->get('/admin/rows');
 
     $response->assertForbidden();
 });
@@ -77,9 +76,9 @@ test('an authenticated user can view the create row page', function () {
 });
 
 test('a mobile app user cannot view the create row page', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/rows/create');
+    $response = $this->get('/admin/rows/create');
 
     $response->assertForbidden();
 });
@@ -175,9 +174,9 @@ test('creating a row with a letter longer than 2 characters is rejected and noth
 });
 
 test('a mobile app user cannot create a row and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->post('/admin/rows', [
+    $response = $this->post('/admin/rows', [
         'letter' => 'Z',
         'cells_count' => 3,
         'flats_count' => 2,
@@ -277,10 +276,10 @@ test('a rows cell grid has no pre-selected products for the highlight filter, si
 });
 
 test('a mobile app user cannot view a rows cell grid', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z']);
 
-    $response = $this->actingAs($mobileUser)->get("/admin/rows/{$row->letter}");
+    $response = $this->get("/admin/rows/{$row->letter}");
 
     $response->assertForbidden();
 });
@@ -312,10 +311,10 @@ test('an authenticated user can view the edit row page with every property the f
 });
 
 test('a mobile app user cannot view the edit row page', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z']);
 
-    $response = $this->actingAs($mobileUser)->get("/admin/rows/{$row->letter}/edit");
+    $response = $this->get("/admin/rows/{$row->letter}/edit");
 
     $response->assertForbidden();
 });
@@ -458,10 +457,10 @@ test('updating a row with a letter longer than 2 characters is rejected and noth
 });
 
 test('a mobile app user cannot update a row and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
 
-    $response = $this->actingAs($mobileUser)->put("/admin/rows/{$row->letter}", [
+    $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Y',
         'cells_count' => 4,
         'flats_count' => 3,
@@ -524,10 +523,10 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
 });
 
 test('a mobile app user cannot delete a row and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
 
-    $response = $this->actingAs($mobileUser)->delete("/admin/rows/{$row->letter}");
+    $response = $this->delete("/admin/rows/{$row->letter}");
 
     $response->assertForbidden();
     $this->assertDatabaseHas('rows', ['id' => $row->id]);

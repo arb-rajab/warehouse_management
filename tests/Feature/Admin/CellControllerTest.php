@@ -3,7 +3,6 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
-use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -321,9 +320,9 @@ test('the warehouse map lists rows ordered by letter', function () {
 });
 
 test('a mobile app user cannot view the warehouse map', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/cells');
+    $response = $this->get('/admin/cells');
 
     $response->assertForbidden();
 });
