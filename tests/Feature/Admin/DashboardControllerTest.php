@@ -2,7 +2,6 @@
 
 use App\Models\Pallet;
 use App\Models\Product;
-use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
@@ -206,9 +205,9 @@ test("the dashboard exposes today's date and the week start", function () {
 });
 
 test('a mobile app user cannot view the dashboard', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin');
+    $response = $this->get('/admin');
 
     $response->assertForbidden();
 });

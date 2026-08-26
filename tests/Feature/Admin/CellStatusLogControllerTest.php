@@ -217,9 +217,9 @@ test('next_log_at is found even when the next log for the same pallet is exclude
 });
 
 test('a mobile app user cannot view the cell log', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/cell-logs');
+    $response = $this->get('/admin/cell-logs');
 
     $response->assertForbidden();
 });
@@ -545,11 +545,11 @@ test('acknowledging flags on a non-existent cell log returns a 404', function ()
 });
 
 test('a mobile app user cannot acknowledge cell log flags', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $log = CellStatusLog::factory()->create();
     $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
 
-    $response = $this->actingAs($mobileUser)->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
+    $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
 
     $response->assertForbidden();
     expect($flag->fresh()->acknowledged_at)->toBeNull();

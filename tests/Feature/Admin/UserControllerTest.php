@@ -42,9 +42,9 @@ test('the user list paginates instead of returning everything at once', function
 });
 
 test('a mobile app user cannot view the user list', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/users');
+    $response = $this->get('/admin/users');
 
     $response->assertForbidden();
 });
@@ -66,9 +66,9 @@ test('an authenticated admin can view the create user page', function () {
 });
 
 test('a mobile app user cannot view the create user page', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/users/create');
+    $response = $this->get('/admin/users/create');
 
     $response->assertForbidden();
 });
@@ -148,10 +148,10 @@ test('a users action history defaults to newest-first', function () {
 });
 
 test('a mobile app user cannot view a users action history', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $target = User::factory()->mobileUser()->create();
 
-    $response = $this->actingAs($mobileUser)->get("/admin/users/{$target->id}");
+    $response = $this->get("/admin/users/{$target->id}");
 
     $response->assertForbidden();
 });
@@ -239,9 +239,9 @@ test('creating a user with mismatched password confirmation is rejected and noth
 });
 
 test('a mobile app user cannot create a user and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->post('/admin/users', [
+    $response = $this->post('/admin/users', [
         'name' => 'Jane Doe',
         'email' => 'jane@example.com',
         'password' => 'password123',
@@ -312,10 +312,10 @@ test('the edit user page exposes an admin target as an admin', function () {
 });
 
 test('a mobile app user cannot view the edit user page', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $target = User::factory()->mobileUser()->create();
 
-    $response = $this->actingAs($mobileUser)->get("/admin/users/{$target->id}/edit");
+    $response = $this->get("/admin/users/{$target->id}/edit");
 
     $response->assertForbidden();
 });
@@ -453,10 +453,10 @@ test('updating a user with a duplicate email is rejected and nothing changes', f
 });
 
 test('a mobile app user cannot update a user and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $target = User::factory()->mobileUser()->create(['name' => 'Old Name']);
 
-    $response = $this->actingAs($mobileUser)->put("/admin/users/{$target->id}", [
+    $response = $this->put("/admin/users/{$target->id}", [
         'name' => 'New Name',
         'email' => $target->email,
         'password' => '',
@@ -518,10 +518,10 @@ test('an admin cannot delete their own account and nothing changes', function ()
 });
 
 test('a mobile app user cannot delete a user and nothing changes', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
     $target = User::factory()->mobileUser()->create();
 
-    $response = $this->actingAs($mobileUser)->delete("/admin/users/{$target->id}");
+    $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertForbidden();
     $this->assertDatabaseHas('users', ['id' => $target->id]);

@@ -400,9 +400,9 @@ test('the products index can be sorted by the full cells count', function () {
 });
 
 test('a mobile app user cannot view the products index', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->get('/admin/products');
+    $response = $this->get('/admin/products');
 
     $response->assertForbidden();
 });
@@ -459,9 +459,9 @@ test('the product search filters by name, excluding a non-matching product', fun
 });
 
 test('a non-admin user cannot search products', function () {
-    $mobileUser = User::factory()->mobileUser()->create();
+    actingAsMobilePanelUser();
 
-    $response = $this->actingAs($mobileUser)->getJson('/admin/products/search');
+    $response = $this->getJson('/admin/products/search');
 
     $response->assertForbidden();
 });
