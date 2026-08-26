@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue';
-import type { ComponentPublicInstance } from 'vue';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { fieldLabelClass } from '@/lib/filters';
+import {
+    useDismissibleListbox,
+    useMultiSelectToggle,
+} from '@/lib/useDismissibleListbox';
 
 const props = defineProps<{
     id: string;
@@ -14,44 +16,9 @@ const props = defineProps<{
 
 const model = defineModel<string[]>({ required: true });
 
-const open = ref(false);
-const containerRef = ref<HTMLElement | null>(null);
-const optionRefs = ref<(HTMLInputElement | null)[]>([]);
-
-function setOptionRef(
-    el: Element | ComponentPublicInstance | null,
-    index: number,
-): void {
-    optionRefs.value[index] = el as HTMLInputElement | null;
-}
-
-function onOptionKeydown(event: KeyboardEvent, index: number): void {
-    const count = props.options.length;
-
-    if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        optionRefs.value[(index + 1) % count]?.focus();
-    } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        optionRefs.value[(index - 1 + count) % count]?.focus();
-    } else if (event.key === 'Home') {
-        event.preventDefault();
-        optionRefs.value[0]?.focus();
-    } else if (event.key === 'End') {
-        event.preventDefault();
-        optionRefs.value[count - 1]?.focus();
-    }
-}
-
-function isChecked(value: string): boolean {
-    return model.value.includes(value);
-}
-
-function toggleValue(value: string): void {
-    model.value = isChecked(value)
-        ? model.value.filter((selected) => selected !== value)
-        : [...model.value, value];
-}
+const { open, containerRef, setOptionRef, onOptionKeydown } =
+    useDismissibleListbox(() => props.options.length);
+const { isChecked, toggleValue } = useMultiSelectToggle(model);
 
 function buttonLabel(): string {
     if (model.value.length === 0) {
@@ -67,31 +34,6 @@ function buttonLabel(): string {
 
     return props.selectedCountLabel(model.value.length);
 }
-
-function onDocumentClick(event: MouseEvent): void {
-    if (
-        containerRef.value &&
-        !containerRef.value.contains(event.target as Node)
-    ) {
-        open.value = false;
-    }
-}
-
-function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-        open.value = false;
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('click', onDocumentClick);
-    document.addEventListener('keydown', onKeydown);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocumentClick);
-    document.removeEventListener('keydown', onKeydown);
-});
 </script>
 
 <template>
