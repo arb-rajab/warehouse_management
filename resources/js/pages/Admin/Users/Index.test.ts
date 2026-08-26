@@ -2,6 +2,7 @@ import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
+import { rowCells } from '@/testing/dom';
 import { paginated } from '@/testing/factories';
 import type { User } from '@/types/admin';
 import Index from './Index.vue';
@@ -82,7 +83,7 @@ describe('Users Index', () => {
             user({ id: 2, name: 'John Smith', email: 'john@example.com' }),
         ]);
 
-        const cells = wrapper.findAll('tbody tr')[0].findAll('td');
+        const cells = rowCells(wrapper);
         expect(cells[0].text()).toBe('John Smith');
         expect(cells[1].text()).toBe('john@example.com');
     });
@@ -90,7 +91,7 @@ describe('Users Index', () => {
     it('shows the admin badge with a shield icon for an admin user', () => {
         const wrapper = mountPage([user({ id: 2, is_admin: true })]);
 
-        const roleCell = wrapper.findAll('tbody tr')[0].findAll('td')[2];
+        const roleCell = rowCells(wrapper)[2];
         expect(roleCell.text()).toBe(t('users.index.roleAdmin'));
         expect(roleCell.findComponent(ShieldCheck).exists()).toBe(true);
     });
@@ -98,7 +99,7 @@ describe('Users Index', () => {
     it('shows the mobile-user badge with no shield icon for a non-admin user', () => {
         const wrapper = mountPage([user({ id: 2, is_admin: false })]);
 
-        const roleCell = wrapper.findAll('tbody tr')[0].findAll('td')[2];
+        const roleCell = rowCells(wrapper)[2];
         expect(roleCell.text()).toBe(t('users.index.roleMobile'));
         expect(roleCell.findComponent(ShieldCheck).exists()).toBe(false);
     });

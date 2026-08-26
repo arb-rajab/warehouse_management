@@ -2,6 +2,8 @@ import { Check, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
+import { rowCells } from '@/testing/dom';
+import { paginated } from '@/testing/factories';
 import type {
     Paginated,
     ProductFilters,
@@ -16,47 +18,18 @@ const { usePageMock, routerGetMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'as'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    props.as ?? 'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
-        Head: defineComponent({ render: () => null }),
-        Link: LinkStub,
+        Head: headStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: filterOptions.products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: filterOptions.products.length,
-                        from: 1,
-                        to: filterOptions.products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(filterOptions.products, 20)),
         }),
     };
 });
@@ -134,10 +107,6 @@ function mountPage(
             filterOptions,
         },
     });
-}
-
-function rowCells(wrapper: ReturnType<typeof mountPage>, rowIndex = 0) {
-    return wrapper.findAll('tbody tr')[rowIndex].findAll('td');
 }
 
 async function openFilters(

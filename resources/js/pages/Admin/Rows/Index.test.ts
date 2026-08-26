@@ -2,6 +2,7 @@ import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
+import { rowCells } from '@/testing/dom';
 import { paginated, row } from '@/testing/factories';
 import type { Row } from '@/types/admin';
 import Index from './Index.vue';
@@ -73,7 +74,7 @@ describe('Rows Index', () => {
             row({ letter: 'B', cells_count: 3, flats_count: 4 }),
         ]);
 
-        const cells = wrapper.findAll('tbody tr')[0].findAll('td');
+        const cells = rowCells(wrapper);
         expect(cells[0].text()).toBe('B');
         expect(cells[1].text()).toBe('3');
         expect(cells[2].text()).toBe('4');
