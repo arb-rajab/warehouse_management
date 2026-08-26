@@ -14,7 +14,7 @@ class RowController extends Controller
     public function index(): AnonymousResourceCollection
     {
         return RowResource::collection(
-            Row::query()->select(['id', 'letter', 'cells_count', 'flats_count'])->paginate(20)
+            Row::query()->select(Row::SELECT_COLUMNS)->paginate(20)
         );
     }
 
@@ -25,7 +25,7 @@ class RowController extends Controller
     {
         return RowResource::collection(
             Row::query()
-                ->select(['id', 'letter', 'cells_count', 'flats_count'])
+                ->select(Row::SELECT_COLUMNS)
                 ->with(['cells' => fn ($query) => $query
                     ->select(Cell::SELECT_COLUMNS)
                     ->with(Cell::WITH_CONTENTS)

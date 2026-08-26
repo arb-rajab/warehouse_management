@@ -27,6 +27,13 @@ class Row extends Model
     use HasFactory;
 
     /**
+     * Columns needed by RowResource — shared by every listing (admin and API).
+     *
+     * @var list<string>
+     */
+    public const array SELECT_COLUMNS = ['id', 'letter', 'cells_count', 'flats_count'];
+
+    /**
      * @return HasMany<Cell, $this>
      */
     public function cells(): HasMany

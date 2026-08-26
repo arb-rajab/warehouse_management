@@ -22,7 +22,7 @@ class RowController extends Controller
         return Inertia::render('Admin/Rows/Index', [
             'rows' => $this->paginated(RowResource::collection(
                 Row::query()
-                    ->select(['id', 'letter', 'cells_count', 'flats_count'])
+                    ->select(Row::SELECT_COLUMNS)
                     ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
                     ->paginate(20)
             )),
