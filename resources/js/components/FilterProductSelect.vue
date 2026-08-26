@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { useHttp } from '@inertiajs/vue3';
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import type { ComponentPublicInstance } from 'vue';
-import {
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    reactive,
-    ref,
-    watch,
-} from 'vue';
+import { nextTick, reactive, ref, watch } from 'vue';
 import { search as searchProducts } from '@/actions/App/Http/Controllers/Admin/ProductController';
-import { fieldLabelClass } from '@/lib/filters';
+import { debounce, fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import {
+    useDismissibleListbox,
+    useMultiSelectToggle,
+} from '@/lib/useDismissibleListbox';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 
 const props = defineProps<{
@@ -25,18 +21,14 @@ const props = defineProps<{
 
 const model = defineModel<string[]>({ required: true });
 
-const open = ref(false);
-const containerRef = ref<HTMLElement | null>(null);
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const optionsListRef = ref<HTMLElement | null>(null);
-const optionRefs = ref<(HTMLInputElement | null)[]>([]);
 
 const query = ref('');
 const results = ref<ProductFilterOption[]>([]);
 const page = ref<Paginated<ProductFilterOption> | null>(null);
 const loading = ref(false);
 let requestSeq = 0;
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Only ever grows — a selected id must keep resolving to its name even once
 // it scrolls out of `results` (a new search replaces the visible page, but
@@ -50,6 +42,10 @@ function rememberNames(products: ProductFilterOption[]): void {
 }
 
 watch(() => props.selected, rememberNames, { immediate: true });
+
+const { open, containerRef, setOptionRef, onOptionKeydown } =
+    useDismissibleListbox(() => results.value.length);
+const { isChecked, toggleValue } = useMultiSelectToggle(model);
 
 const http = useHttp({});
 
@@ -78,19 +74,9 @@ function fetchPage(pageNumber: number, replace: boolean): void {
     );
 }
 
-watch(query, () => {
-    if (debounceTimer) {
-        clearTimeout(debounceTimer);
-    }
+const debouncedSearch = debounce(() => fetchPage(1, true), 300);
 
-    debounceTimer = setTimeout(() => fetchPage(1, true), 300);
-});
-
-onBeforeUnmount(() => {
-    if (debounceTimer) {
-        clearTimeout(debounceTimer);
-    }
-});
+watch(query, debouncedSearch);
 
 function onOptionsScroll(): void {
     const el = optionsListRef.value;
@@ -123,41 +109,6 @@ function toggleOpen(): void {
     }
 }
 
-function setOptionRef(
-    el: Element | ComponentPublicInstance | null,
-    index: number,
-): void {
-    optionRefs.value[index] = el as HTMLInputElement | null;
-}
-
-function onOptionKeydown(event: KeyboardEvent, index: number): void {
-    const count = results.value.length;
-
-    if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        optionRefs.value[(index + 1) % count]?.focus();
-    } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        optionRefs.value[(index - 1 + count) % count]?.focus();
-    } else if (event.key === 'Home') {
-        event.preventDefault();
-        optionRefs.value[0]?.focus();
-    } else if (event.key === 'End') {
-        event.preventDefault();
-        optionRefs.value[count - 1]?.focus();
-    }
-}
-
-function isChecked(value: string): boolean {
-    return model.value.includes(value);
-}
-
-function toggleValue(value: string): void {
-    model.value = isChecked(value)
-        ? model.value.filter((selected) => selected !== value)
-        : [...model.value, value];
-}
-
 function buttonLabel(): string {
     if (model.value.length === 0) {
         return props.allLabel;
@@ -169,31 +120,6 @@ function buttonLabel(): string {
 
     return props.selectedCountLabel(model.value.length);
 }
-
-function onDocumentClick(event: MouseEvent): void {
-    if (
-        containerRef.value &&
-        !containerRef.value.contains(event.target as Node)
-    ) {
-        open.value = false;
-    }
-}
-
-function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-        open.value = false;
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('click', onDocumentClick);
-    document.addEventListener('keydown', onKeydown);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocumentClick);
-    document.removeEventListener('keydown', onKeydown);
-});
 </script>
 
 <template>
