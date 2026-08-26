@@ -24,7 +24,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
-import FilterSelect from '@/components/FilterSelect.vue';
+import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -36,10 +36,10 @@ import {
 } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import {
-    columnNumberOptions,
     countActive,
     countBadgeClass,
     debounce,
+    exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
@@ -76,8 +76,6 @@ function acknowledgeFlags(log: CellStatusLog): void {
     );
 }
 
-const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
-
 const filters = reactive({
     product_id: (props.filters.product_id ?? []).map(String),
     pallet_id: props.filters.pallet_id?.toString() ?? '',
@@ -95,13 +93,6 @@ const filters = reactive({
     sort_direction: props.filters.sort_direction ?? '',
     flagged: props.filters.flagged ?? false,
 });
-
-function exclusivePair(rangeFilled: () => boolean, daysFilled: () => boolean) {
-    return {
-        rangeDisabled: computed(daysFilled),
-        daysDisabled: computed(rangeFilled),
-    };
-}
 
 const {
     rangeDisabled: dateRangeDisabled,
@@ -268,33 +259,14 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
                     </h3>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FilterSelect
-                            id="filter-row"
-                            v-model="filters.row_id"
-                            :label="t('cellLog.filters.row')"
-                            :all-label="t('cellLog.filters.all')"
-                            :options="
-                                filterOptions.rows.map((row) => ({
-                                    value: row.id,
-                                    label: row.letter,
-                                }))
-                            "
-                        />
-
-                        <FilterSelect
-                            id="filter-column"
-                            v-model="filters.column_number"
-                            :label="t('cellLog.filters.column')"
-                            :all-label="t('cellLog.filters.all')"
-                            :options="
-                                columnNumbers.map((columnNumber) => ({
-                                    value: columnNumber,
-                                    label: String(columnNumber),
-                                }))
-                            "
-                        />
-                    </div>
+                    <LocationFilterFields
+                        id-prefix="filter"
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        v-model:row-id="filters.row_id"
+                        v-model:column-number="filters.column_number"
+                        :rows="filterOptions.rows"
+                        :max-column-number="filterOptions.maxColumnNumber"
+                    />
                 </div>
 
                 <div
@@ -505,33 +477,15 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             @sort="onSort"
         >
             <template #column-filter="{ filterKey: key }">
-                <div v-if="key === 'location'" class="space-y-3">
-                    <FilterSelect
-                        id="popover-filter-row"
-                        v-model="filters.row_id"
-                        :label="t('cellLog.filters.row')"
-                        :all-label="t('cellLog.filters.all')"
-                        :options="
-                            filterOptions.rows.map((row) => ({
-                                value: row.id,
-                                label: row.letter,
-                            }))
-                        "
-                    />
-
-                    <FilterSelect
-                        id="popover-filter-column"
-                        v-model="filters.column_number"
-                        :label="t('cellLog.filters.column')"
-                        :all-label="t('cellLog.filters.all')"
-                        :options="
-                            columnNumbers.map((columnNumber) => ({
-                                value: columnNumber,
-                                label: String(columnNumber),
-                            }))
-                        "
-                    />
-                </div>
+                <LocationFilterFields
+                    v-if="key === 'location'"
+                    id-prefix="popover-filter"
+                    class="space-y-3"
+                    v-model:row-id="filters.row_id"
+                    v-model:column-number="filters.column_number"
+                    :rows="filterOptions.rows"
+                    :max-column-number="filterOptions.maxColumnNumber"
+                />
 
                 <div v-else-if="key === 'product'">
                     <FilterProductSelect

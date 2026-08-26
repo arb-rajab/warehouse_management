@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\CellLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
+use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class FilterProductsRequest extends FormRequest
 {
-    use FiltersByProductIds, NormalizesExpiredFilter;
+    use FiltersByProductIds, FiltersByRowAndColumn, NormalizesExpiredFilter;
 
     protected function prepareForValidation(): void
     {
@@ -26,8 +27,7 @@ class FilterProductsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'row_id' => ['nullable', 'integer', 'exists:rows,id'],
-            'column_number' => ['nullable', 'integer', 'min:1'],
+            ...$this->rowAndColumnFilterRules(),
             // No `empty` option here (unlike the cells map) — an empty cell
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
