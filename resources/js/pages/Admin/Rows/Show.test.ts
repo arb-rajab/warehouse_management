@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
-import { cell, row } from '@/testing/factories';
+import { cell, paginated, row } from '@/testing/factories';
 import type { Cell, Row } from '@/types/admin';
 import Show from './Show.vue';
 
@@ -25,19 +25,7 @@ vi.mock('@inertiajs/vue3', async () => {
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: products.length,
-                        from: 1,
-                        to: products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(products, 20)),
         }),
     };
 });

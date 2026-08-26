@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { rowCells } from '@/testing/dom';
 import { paginated } from '@/testing/factories';
 import type {
     CellStatusLog,
@@ -29,19 +30,7 @@ vi.mock('@inertiajs/vue3', async () => {
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: filterOptions.products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: filterOptions.products.length,
-                        from: 1,
-                        to: filterOptions.products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(filterOptions.products, 20)),
         }),
     };
 });
@@ -93,10 +82,6 @@ function mountPage(logs: CellStatusLog[], filters: CellStatusLogFilters = {}) {
     return mount(Index, {
         props: { logs: paginated(logs), filters, filterOptions },
     });
-}
-
-function rowCells(wrapper: ReturnType<typeof mountPage>, rowIndex = 0) {
-    return wrapper.findAll('tbody tr')[rowIndex].findAll('td');
 }
 
 async function openFilters(

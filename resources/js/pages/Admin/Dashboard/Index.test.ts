@@ -10,6 +10,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import { t } from '@/lib/i18n';
+import { paginated } from '@/testing/factories';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -45,19 +46,7 @@ vi.mock('@inertiajs/vue3', async () => {
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: products,
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: products.length,
-                        from: 1,
-                        to: products.length,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated(products, 20)),
         }),
     };
 });
