@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
+import { reactive } from 'vue';
 import {
     columnNumberOptions,
     countActive,
     debounce,
+    exclusivePair,
     toggleSort,
 } from './filters';
 
@@ -62,6 +64,59 @@ describe('toggleSort', () => {
             sort_by: 'expiration_date',
             sort_direction: 'asc',
         });
+    });
+});
+
+describe('exclusivePair', () => {
+    it('disables neither side when both are empty', () => {
+        const filters = reactive({ range: '', days: '' });
+        const { rangeDisabled, daysDisabled } = exclusivePair(
+            () => filters.range !== '',
+            () => filters.days !== '',
+        );
+
+        expect(rangeDisabled.value).toBe(false);
+        expect(daysDisabled.value).toBe(false);
+    });
+
+    it('disables the range fields once the days field is filled', () => {
+        const filters = reactive({ range: '', days: '' });
+        const { rangeDisabled, daysDisabled } = exclusivePair(
+            () => filters.range !== '',
+            () => filters.days !== '',
+        );
+
+        filters.days = '7';
+
+        expect(rangeDisabled.value).toBe(true);
+        expect(daysDisabled.value).toBe(false);
+    });
+
+    it('disables the days field once a range field is filled', () => {
+        const filters = reactive({ range: '', days: '' });
+        const { rangeDisabled, daysDisabled } = exclusivePair(
+            () => filters.range !== '',
+            () => filters.days !== '',
+        );
+
+        filters.range = '2026-01-01';
+
+        expect(rangeDisabled.value).toBe(false);
+        expect(daysDisabled.value).toBe(true);
+    });
+
+    it('re-enables both sides once the filled field is cleared', () => {
+        const filters = reactive({ range: '', days: '' });
+        const { rangeDisabled, daysDisabled } = exclusivePair(
+            () => filters.range !== '',
+            () => filters.days !== '',
+        );
+
+        filters.days = '7';
+        filters.days = '';
+
+        expect(rangeDisabled.value).toBe(false);
+        expect(daysDisabled.value).toBe(false);
     });
 });
 

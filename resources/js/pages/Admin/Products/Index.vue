@@ -13,14 +13,15 @@ import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
+import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
-    columnNumberOptions,
     countActive,
     countBadgeClass,
     debounce,
+    exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
     filterSectionHeadingClass as sectionHeadingClass,
@@ -56,7 +57,6 @@ function stateLabel(state: Cell['state']): string {
     return t(`cellLog.states.${state}`);
 }
 
-const columnNumbers = columnNumberOptions(props.filterOptions.maxColumnNumber);
 // No `empty` option here (unlike the cells map) — an empty cell never holds
 // a product, so filtering to it would always zero out every column.
 const occupiedCellStates: Extract<Cell['state'], 'full' | 'opened'>[] = [
@@ -84,9 +84,12 @@ const filters = reactive({
     sort_direction: props.filters.sort_direction ?? '',
 });
 
-const dateRangeDisabled = computed(() => filters.created_within_days !== '');
-const createdWithinDaysDisabled = computed(
+const {
+    rangeDisabled: dateRangeDisabled,
+    daysDisabled: createdWithinDaysDisabled,
+} = exclusivePair(
     () => filters.date_from !== '' || filters.date_to !== '',
+    () => filters.created_within_days !== '',
 );
 
 const filtersOpen = ref(false);
@@ -290,33 +293,14 @@ function activityHref(
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
                     </h3>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FilterSelect
-                            id="filter-row"
-                            v-model="filters.row_id"
-                            :label="t('cellLog.filters.row')"
-                            :all-label="t('cellLog.filters.all')"
-                            :options="
-                                filterOptions.rows.map((row) => ({
-                                    value: row.id,
-                                    label: row.letter,
-                                }))
-                            "
-                        />
-
-                        <FilterSelect
-                            id="filter-column"
-                            v-model="filters.column_number"
-                            :label="t('cellLog.filters.column')"
-                            :all-label="t('cellLog.filters.all')"
-                            :options="
-                                columnNumbers.map((columnNumber) => ({
-                                    value: columnNumber,
-                                    label: String(columnNumber),
-                                }))
-                            "
-                        />
-                    </div>
+                    <LocationFilterFields
+                        id-prefix="filter"
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        v-model:row-id="filters.row_id"
+                        v-model:column-number="filters.column_number"
+                        :rows="filterOptions.rows"
+                        :max-column-number="filterOptions.maxColumnNumber"
+                    />
                 </div>
 
                 <div

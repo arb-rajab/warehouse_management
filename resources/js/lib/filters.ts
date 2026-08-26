@@ -1,3 +1,5 @@
+import { computed } from 'vue';
+import type { ComputedRef } from 'vue';
 import { t } from '@/lib/i18n';
 
 /**
@@ -110,6 +112,23 @@ export function toggleSort(
  * Products/Index.vue), so free-typed text/number/date edits don't fire a
  * request per keystroke.
  */
+/**
+ * Enforces mutual exclusion between a date-range filter pair and a
+ * day-count filter pair — filling one disables the other. Shared by
+ * CellStatusLogs/Index.vue (date/created_within_days,
+ * expiration_date/expires_within_days) and Products/Index.vue
+ * (date/created_within_days).
+ */
+export function exclusivePair(
+    rangeFilled: () => boolean,
+    daysFilled: () => boolean,
+): { rangeDisabled: ComputedRef<boolean>; daysDisabled: ComputedRef<boolean> } {
+    return {
+        rangeDisabled: computed(daysFilled),
+        daysDisabled: computed(rangeFilled),
+    };
+}
+
 export function debounce<Args extends unknown[]>(
     fn: (...args: Args) => void,
     delayMs: number,
