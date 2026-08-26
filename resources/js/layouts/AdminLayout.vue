@@ -6,12 +6,14 @@ import {
     LayoutDashboard,
     LogOut,
     Map,
+    Menu,
     Package,
     Rows3,
     Users,
     Warehouse,
+    X,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
@@ -24,6 +26,8 @@ import { confirmLogout } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 
 const page = usePage();
+
+const isMobileMenuOpen = ref(false);
 
 const navItems = computed(() => [
     {
@@ -61,6 +65,24 @@ function isActive(href: string): boolean {
         (item) => item.href.length > href.length && matches(item.href),
     );
 }
+
+function navLinkStateClass(href: string): string[] {
+    return isActive(href)
+        ? [
+              'border-gray-900',
+              'font-medium',
+              'text-gray-900',
+              'dark:border-white',
+              'dark:text-white',
+          ]
+        : [
+              'border-transparent',
+              'text-gray-600',
+              'hover:text-gray-900',
+              'dark:text-neutral-400',
+              'dark:hover:text-white',
+          ];
+}
 </script>
 
 <template>
@@ -71,7 +93,7 @@ function isActive(href: string): boolean {
             class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
         >
             <div
-                class="mx-auto flex max-w-6xl items-center justify-between px-6"
+                class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6"
             >
                 <div class="flex items-center gap-6">
                     <span
@@ -80,23 +102,23 @@ function isActive(href: string): boolean {
                         <Warehouse class="h-5 w-5 shrink-0" />
                         {{ t('nav.brand') }}
                     </span>
-                    <Link
-                        v-for="item in navItems"
-                        :key="item.labelKey"
-                        :href="item.href"
-                        :aria-current="isActive(item.href) ? 'page' : undefined"
-                        class="inline-flex items-center gap-1.5 border-b-2 py-3 text-sm transition-colors"
-                        :class="
-                            isActive(item.href)
-                                ? 'border-gray-900 font-medium text-gray-900 dark:border-white dark:text-white'
-                                : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white'
-                        "
-                    >
-                        <component :is="item.icon" class="h-4 w-4" />
-                        {{ t(item.labelKey) }}
-                    </Link>
+                    <div class="hidden items-center gap-6 xl:flex">
+                        <Link
+                            v-for="item in navItems"
+                            :key="item.labelKey"
+                            :href="item.href"
+                            :aria-current="
+                                isActive(item.href) ? 'page' : undefined
+                            "
+                            class="inline-flex items-center gap-1.5 border-b-2 py-3 text-sm transition-colors"
+                            :class="navLinkStateClass(item.href)"
+                        >
+                            <component :is="item.icon" class="h-4 w-4" />
+                            {{ t(item.labelKey) }}
+                        </Link>
+                    </div>
                 </div>
-                <div class="flex items-center gap-4 text-sm">
+                <div class="hidden items-center gap-4 text-sm xl:flex">
                     <LanguageSwitcher />
                     <span
                         class="inline-flex items-center gap-1.5 text-gray-600 dark:text-neutral-400"
@@ -114,9 +136,69 @@ function isActive(href: string): boolean {
                         {{ t('nav.logout') }}
                     </Link>
                 </div>
+                <button
+                    type="button"
+                    class="cursor-pointer rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 xl:hidden dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                    :aria-label="
+                        t(isMobileMenuOpen ? 'nav.closeMenu' : 'nav.openMenu')
+                    "
+                    aria-controls="admin-mobile-menu"
+                    :aria-expanded="isMobileMenuOpen"
+                    @click="isMobileMenuOpen = !isMobileMenuOpen"
+                >
+                    <component
+                        :is="isMobileMenuOpen ? X : Menu"
+                        class="h-5 w-5"
+                    />
+                </button>
+            </div>
+            <div
+                v-if="isMobileMenuOpen"
+                id="admin-mobile-menu"
+                class="border-t border-gray-200 xl:hidden dark:border-neutral-800"
+            >
+                <div class="flex flex-col gap-1 px-4 py-3">
+                    <Link
+                        v-for="item in navItems"
+                        :key="item.labelKey"
+                        :href="item.href"
+                        :aria-current="isActive(item.href) ? 'page' : undefined"
+                        class="flex items-center gap-2 rounded-md border-l-4 px-3 py-2 text-sm transition-colors"
+                        :class="navLinkStateClass(item.href)"
+                        @click="isMobileMenuOpen = false"
+                    >
+                        <component :is="item.icon" class="h-4 w-4" />
+                        {{ t(item.labelKey) }}
+                    </Link>
+                </div>
+                <div
+                    class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
+                >
+                    <LanguageSwitcher />
+                </div>
+                <div
+                    class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
+                >
+                    <span
+                        class="inline-flex items-center gap-1.5 text-gray-600 dark:text-neutral-400"
+                    >
+                        <CircleUser class="h-4 w-4 shrink-0" />
+                        {{ page.props.auth.user?.name }}
+                    </span>
+                    <Link
+                        :href="destroy()"
+                        as="button"
+                        :on-before="confirmLogout"
+                        class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                        @click="isMobileMenuOpen = false"
+                    >
+                        <LogOut class="h-4 w-4" />
+                        {{ t('nav.logout') }}
+                    </Link>
+                </div>
             </div>
         </nav>
-        <main class="mx-auto max-w-6xl px-6 py-8">
+        <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
             <slot />
         </main>
     </div>
