@@ -15,7 +15,7 @@ class CellController extends Controller
 {
     public function index(ShowCellMapRequest $request): Response
     {
-        $rows = Row::query()->select(['id', 'letter', 'cells_count', 'flats_count'])->orderBy('letter')->get();
+        $rows = Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get();
         $maxFlatNumber = (int) (Row::query()->max('flats_count') ?? 0);
 
         $today = today();
