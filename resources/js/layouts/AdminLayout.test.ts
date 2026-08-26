@@ -203,4 +203,90 @@ describe('AdminLayout', () => {
 
         expect(wrapper.get('main').text()).toContain('Page content');
     });
+
+    it('hides the mobile menu panel by default and expands it via the toggle button', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+
+        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+
+        await toggle.trigger('click');
+
+        const panel = wrapper.get('#admin-mobile-menu');
+        expect(toggle.attributes('aria-expanded')).toBe('true');
+        expect(
+            panel.findAll('a').map((link) => link.attributes('href')),
+        ).toEqual([
+            '/admin',
+            '/admin/rows',
+            '/admin/cells',
+            '/admin/cell-logs',
+            '/admin/products',
+            '/admin/users',
+        ]);
+
+        await toggle.trigger('click');
+
+        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+    });
+
+    it('keeps every mobile nav link active/icon behavior in sync with the desktop nav', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+        await toggle.trigger('click');
+
+        const panel = wrapper.get('#admin-mobile-menu');
+        const rowsLink = panel
+            .findAll('a')
+            .find((link) => link.attributes('href') === '/admin/rows');
+        const usersLink = panel
+            .findAll('a')
+            .find((link) => link.attributes('href') === '/admin/users');
+
+        expect(rowsLink?.attributes('aria-current')).toBe('page');
+        expect(rowsLink?.classes()).toContain('border-gray-900');
+        expect(usersLink?.attributes('aria-current')).toBeUndefined();
+        expect(usersLink?.classes()).not.toContain('border-gray-900');
+    });
+
+    it('closes the mobile menu when a nav link is clicked', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+        await toggle.trigger('click');
+
+        const rowsLink = wrapper
+            .get('#admin-mobile-menu')
+            .findAll('a')
+            .find((link) => link.attributes('href') === '/admin/rows');
+        await rowsLink?.trigger('click');
+
+        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
+    });
+
+    it('closes the mobile menu when logout is clicked', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+        await toggle.trigger('click');
+
+        const logoutLink = wrapper
+            .get('#admin-mobile-menu')
+            .findAll('a,button')
+            .find((el) => el.attributes('href') === '/logout');
+        await logoutLink?.trigger('click');
+
+        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
+    });
+
+    it('renders the language switcher and signed-in user inside the mobile menu', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+        await toggle.trigger('click');
+
+        const panel = wrapper.get('#admin-mobile-menu');
+        expect(panel.text()).toContain('Jane Doe');
+        expect(panel.text()).toContain('English');
+        expect(panel.text()).toContain('Arabic');
+    });
 });

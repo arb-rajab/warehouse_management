@@ -8,7 +8,9 @@
         "products": "Products",
         "users": "Users",
         "logout": "Log out",
-        "confirmLogout": "Log out of your account?"
+        "confirmLogout": "Log out of your account?",
+        "openMenu": "Open menu",
+        "closeMenu": "Close menu"
     },
     "language": {
         "label": "Language",
