@@ -26,7 +26,7 @@ export const CAMERA_FOV_DEGREES = 70;
 
 export const PITCH_MIN_DEGREES = -75;
 export const PITCH_MAX_DEGREES = 75;
-export const PITCH_DRAG_SENSITIVITY = 0.15;
+const PITCH_DRAG_SENSITIVITY = 0.15;
 export const YAW_DRAG_SENSITIVITY = 0.15;
 
 export type MoveDirection =
