@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
-    Paginated,
     ProductFilters,
     ProductIndexFilterOptions,
     ProductSummary,
@@ -49,23 +49,6 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     };
 }
 
-function paginatedProducts(
-    products: ProductSummary[],
-): Paginated<ProductSummary> {
-    return {
-        data: products,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 25,
-            total: products.length,
-            from: products.length ? 1 : null,
-            to: products.length,
-            links: [],
-        },
-    };
-}
-
 const filterOptions: ProductIndexFilterOptions = {
     rows: [
         { id: 1, letter: 'A' },
@@ -94,12 +77,12 @@ function mountPage(
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/products',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Index, {
         props: {
-            products: paginatedProducts(products),
+            products: paginated(products),
             today: overrides.today ?? '2026-08-13',
             weekStart: overrides.weekStart ?? '2026-08-10',
             expiringSoonDays: overrides.expiringSoonDays ?? 45,
@@ -120,8 +103,7 @@ async function openFilters(
 
 describe('Products Index', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerGetMock.mockReset();
+        resetMocks({ usePageMock, routerGetMock });
     });
 
     it('renders every column header', () => {
