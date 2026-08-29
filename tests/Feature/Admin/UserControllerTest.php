@@ -508,6 +508,15 @@ test('an admin can delete another user', function () {
     $this->assertDatabaseMissing('users', ['id' => $target->id]);
 });
 
+test('deleting a user redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $response = $this->delete("/admin/users/{$target->id}?page=2");
+
+    $response->assertRedirect(route('admin.users.index', ['page' => 2]));
+});
+
 test('an admin cannot delete their own account and nothing changes', function () {
     $admin = actingAsAdmin();
 
