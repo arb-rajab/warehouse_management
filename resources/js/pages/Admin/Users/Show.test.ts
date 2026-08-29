@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
+import { cellLog, user } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { CellStatusLog, Paginated, User } from '@/types/admin';
 import Show from './Show.vue';
 
@@ -23,38 +25,6 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function user(overrides: Partial<User> = {}): User {
-    return {
-        id: 7,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-        is_admin: false,
-        ...overrides,
-    };
-}
-
-function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
-    return {
-        id: 1,
-        action: 'stored',
-        from_state: 'empty',
-        to_state: 'full',
-        note: 'Handle with care',
-        boxes_count: null,
-        cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
-        related_cell: null,
-        product: { id: 10, name: 'Widgets', image_url: null, boxes_count: 10 },
-        pallet: { id: 55, expiration_date: '2026-09-01' },
-        user: { id: 7, name: 'Jane Doe' },
-        created_at: '2026-08-01T10:00:00Z',
-        next_log_at: null,
-        duration_seconds: 3600,
-        flagged: false,
-        flags: [],
-        ...overrides,
-    };
-}
-
 function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
     return {
         data: logs,
@@ -73,7 +43,7 @@ function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
 function mountPage(logs: CellStatusLog[], userOverrides: Partial<User> = {}) {
     usePageMock.mockReturnValue({
         url: '/admin/users/7',
-        props: { locale: 'en', auth: { user: { name: 'Admin', id: 1 } } },
+        props: defaultAuthProps({ auth: { user: { name: 'Admin', id: 1 } } }),
     });
 
     return mount(Show, {
@@ -83,8 +53,7 @@ function mountPage(logs: CellStatusLog[], userOverrides: Partial<User> = {}) {
 
 describe('Users Show', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerGetMock.mockReset();
+        resetMocks({ usePageMock, routerGetMock });
     });
 
     it('shows the users name in the title', () => {
@@ -115,7 +84,6 @@ describe('Users Show', () => {
             t('cellLog.columns.pallet'),
             t('cellLog.columns.note'),
             t('cellLog.columns.when'),
-            t('cellLog.columns.duration'),
         ]);
     });
 
@@ -125,12 +93,13 @@ describe('Users Show', () => {
         expect(wrapper.text()).toContain(t('users.show.empty'));
     });
 
-    it('renders the cell, action, product, pallet, note, when, and duration for an entry', () => {
+    it('renders the cell, action, product, pallet, boxes, note, when, and duration for an entry', () => {
         const wrapper = mountPage([
             cellLog({
                 action: 'opened',
                 from_state: 'full',
                 to_state: 'opened',
+                boxes_count: 6,
             }),
         ]);
 
@@ -139,9 +108,20 @@ describe('Users Show', () => {
         expect(cells[1].text()).toContain(t('cellLog.actions.opened'));
         expect(cells[2].text()).toContain('Widgets');
         expect(cells[3].text()).toContain('#55');
+        expect(cells[3].text()).toContain('6');
         expect(cells[4].text()).toBe('Handle with care');
-        expect(cells[5].text()).toBe(formatDateTime('2026-08-01T10:00:00Z'));
-        expect(cells[6].text()).toContain('1h');
+        expect(cells[5].text()).toContain(
+            formatDateTime('2026-08-01T10:00:00Z'),
+        );
+        expect(cells[5].text()).toContain('1h');
+    });
+
+    it('shows a dash when the entry has no boxes_count', () => {
+        const wrapper = mountPage([cellLog({ boxes_count: null })]);
+
+        expect(rowCells(wrapper)[3].text()).not.toContain(
+            t('cellLog.columns.boxes'),
+        );
     });
 
     it('shows a flag badge for a flagged entry and not for an unflagged one', () => {
