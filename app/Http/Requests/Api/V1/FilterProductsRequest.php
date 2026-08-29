@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Admin;
+namespace App\Http\Requests\Api\V1;
 
 use App\Http\Requests\Concerns\SearchesProductsByName;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class SearchProductsRequest extends FormRequest
+class FilterProductsRequest extends FormRequest
 {
     use SearchesProductsByName;
 
