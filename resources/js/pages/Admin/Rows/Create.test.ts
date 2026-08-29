@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RowFormFields from '@/components/RowFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Create from './Create.vue';
 
 const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -27,7 +28,7 @@ vi.mock('@inertiajs/vue3', async () => {
 function mountPage() {
     usePageMock.mockReturnValue({
         url: '/admin/rows/create',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Create);
@@ -35,10 +36,8 @@ function mountPage() {
 
 describe('Rows Create', () => {
     beforeEach(() => {
-        formSlotPropsMock.mockReset();
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
     });
 
     it('renders the page title', () => {
