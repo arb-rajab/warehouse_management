@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
+use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
@@ -13,8 +14,6 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
-use App\Models\Row;
-use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -24,12 +23,7 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
-    /**
-     * The "expiring soon" column's default day count when `expires_within_days`
-     * isn't filled in — mirrors the dashboard's own custom-window default
-     * (see `BuildsDashboardStats::DEFAULT_CUSTOM_EXPIRING_DAYS`).
-     */
-    private const int DEFAULT_EXPIRING_SOON_DAYS = 45;
+    use BuildsCellLogFilterOptions;
 
     /**
      * @var list<string>
@@ -45,7 +39,7 @@ class ProductController extends Controller
         $weekStart = $today->copy()->startOfWeek();
         $expiringSoonDays = $request->filled('expires_within_days')
             ? $request->integer('expires_within_days')
-            : self::DEFAULT_EXPIRING_SOON_DAYS;
+            : ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
 
         $historyFiltersActive = $request->filled('user_id')
             || $request->filled('action')
@@ -96,12 +90,7 @@ class ProductController extends Controller
                 'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                 'sort_by', 'sort_direction',
             ]),
-            'filterOptions' => [
-                ...Row::filterOptions(),
-                'products' => Product::selectedOptions($request->productIds() ?? []),
-                'users' => User::query()->select(['id', 'name'])->orderBy('name')->get(),
-                'actions' => array_column(CellLogAction::cases(), 'value'),
-            ],
+            'filterOptions' => $this->productRowUserActionFilterOptions($request->productIds()),
         ]);
     }
 
@@ -194,10 +183,7 @@ class ProductController extends Controller
     {
         $query
             ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
-            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', array_map(
-                fn (CellLogAction $action): string => $action->value,
-                $request->enums('action', CellLogAction::class),
-            )))
+            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', CellStatusLog::actionValuesFromRequest($request)))
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
             ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))

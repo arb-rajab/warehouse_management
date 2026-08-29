@@ -26,9 +26,10 @@ trait BuildsDashboardStats
 
     /**
      * The custom card's default day count — distinct from the 7-day fixed card already in
-     * EXPIRING_WINDOW_DAYS.
+     * EXPIRING_WINDOW_DAYS. Defined on ExpiringSoonDefaults (not here) so
+     * Admin\ProductController's "expiring soon" column can share it without using this trait.
      */
-    private const int DEFAULT_CUSTOM_EXPIRING_DAYS = 45;
+    public const int DEFAULT_CUSTOM_EXPIRING_DAYS = ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
 
     /**
      * @param  list<int>|null  $productIds
