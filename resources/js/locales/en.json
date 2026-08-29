@@ -277,18 +277,10 @@
             "soon": "Expiring within {days} days"
         },
         "activityToday": {
-            "title": "Today's activity",
-            "stored": "Stored",
-            "opened": "Opened",
-            "emptied": "Emptied",
-            "transferred": "Transferred"
+            "title": "Today's activity"
         },
         "activityWeek": {
-            "title": "This week's activity",
-            "stored": "Stored",
-            "opened": "Opened",
-            "emptied": "Emptied",
-            "transferred": "Transferred"
+            "title": "This week's activity"
         }
     },
     "products": {

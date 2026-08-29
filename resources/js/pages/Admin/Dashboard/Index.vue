@@ -277,7 +277,7 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
-                    :label="t(`dashboard.activityToday.${action.key}`)"
+                    :label="t(`cellLog.actions.${action.key}`)"
                     :value="props.stats.activity_today[action.key]"
                     :href="cellLogsIndex().url"
                     :query="{
@@ -299,7 +299,7 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
-                    :label="t(`dashboard.activityWeek.${action.key}`)"
+                    :label="t(`cellLog.actions.${action.key}`)"
                     :value="props.stats.activity_week[action.key]"
                     :href="cellLogsIndex().url"
                     :query="{

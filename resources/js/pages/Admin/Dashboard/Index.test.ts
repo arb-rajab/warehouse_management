@@ -265,7 +265,7 @@ describe('Dashboard Index', () => {
 
         const stored = tileByLabelAndQuery(
             wrapper,
-            t('dashboard.activityToday.stored'),
+            t('cellLog.actions.stored'),
             {
                 action: ['stored'],
                 date_from: '2026-08-13',
@@ -278,7 +278,7 @@ describe('Dashboard Index', () => {
 
         const transferred = tileByLabelAndQuery(
             wrapper,
-            t('dashboard.activityToday.transferred'),
+            t('cellLog.actions.transferred'),
             {
                 action: ['transferred_out', 'transferred_in'],
                 date_from: '2026-08-13',
@@ -294,7 +294,7 @@ describe('Dashboard Index', () => {
 
         const stored = tileByLabelAndQuery(
             wrapper,
-            t('dashboard.activityWeek.stored'),
+            t('cellLog.actions.stored'),
             {
                 action: ['stored'],
                 date_from: '2026-08-10',
@@ -306,7 +306,7 @@ describe('Dashboard Index', () => {
 
         const emptied = tileByLabelAndQuery(
             wrapper,
-            t('dashboard.activityWeek.emptied'),
+            t('cellLog.actions.emptied'),
             {
                 action: ['emptied'],
                 date_from: '2026-08-10',
@@ -322,7 +322,7 @@ describe('Dashboard Index', () => {
 
         const stored = tileByLabelAndQuery(
             wrapper,
-            t('dashboard.activityToday.stored'),
+            t('cellLog.actions.stored'),
             {
                 action: ['stored'],
                 date_from: '2026-08-13',
