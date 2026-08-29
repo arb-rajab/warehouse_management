@@ -2,25 +2,24 @@
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
 import { Check, SlidersHorizontal, X } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
-import FilterDateField from '@/components/FilterDateField.vue';
+import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
-import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
-import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
-import FilterSelect from '@/components/FilterSelect.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActive,
     countBadgeClass,
-    debounce,
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
@@ -28,11 +27,10 @@ import {
     filterTriggerButtonClass,
     selectedCountLabel,
     toggleSort,
+    useColumnFilterPopover,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type {
-    Cell,
-    CellLogAction,
     Paginated,
     ProductFilters,
     ProductIndexFilterOptions,
@@ -48,25 +46,6 @@ const props = defineProps<{
     filters: ProductFilters;
     filterOptions: ProductIndexFilterOptions;
 }>();
-
-function actionLabel(action: CellLogAction): string {
-    return t(`cellLog.actions.${action}`);
-}
-
-function stateLabel(state: Cell['state']): string {
-    return t(`cellLog.states.${state}`);
-}
-
-// No `empty` option here (unlike the cells map) — an empty cell never holds
-// a product, so filtering to it would always zero out every column.
-const occupiedCellStates: Extract<Cell['state'], 'full' | 'opened'>[] = [
-    'full',
-    'opened',
-];
-
-// Mirrors the dashboard's fixed expiring-soon windows, as a quick-pick
-// shortcut for this field instead of typing a day count every time.
-const expiringSoonQuickPicks = [7, 14, 30, 60];
 
 const filters = reactive({
     row_id: props.filters.row_id?.toString() ?? '',
@@ -159,29 +138,10 @@ function applyFilters(): void {
     filtersOpen.value = false;
 }
 
-/**
- * Which column's quick filter popover is open, if any — bound two-way to
- * DataTable so a change made inside it can auto-apply below.
- */
-const openFilterKey = ref<string | null>(null);
-
-const debouncedApplyFilters = debounce(applyFilters, 400);
-
-/**
- * A column popover applies on every change instead of needing its own
- * Apply button — gated on a popover actually being open (and the full
- * dialog being closed) so editing the same `filters.x` fields from the
- * main dialog doesn't also trigger a premature navigation before its own
- * Apply is clicked.
- */
-watch(
+const { openFilterKey } = useColumnFilterPopover(
     filters,
-    () => {
-        if (openFilterKey.value !== null && !filtersOpen.value) {
-            debouncedApplyFilters();
-        }
-    },
-    { deep: true },
+    filtersOpen,
+    applyFilters,
 );
 
 function clearFilters(): void {
@@ -268,8 +228,7 @@ function activityHref(
     <Head :title="t('products.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('products.title') }}</h1>
+        <PageHeader :title="t('products.title')">
             <button
                 type="button"
                 :class="filterTriggerButtonClass"
@@ -281,7 +240,7 @@ function activityHref(
                     {{ activeFilterCount }}
                 </span>
             </button>
-        </div>
+        </PageHeader>
 
         <FilterDialog
             v-model:open="filtersOpen"
@@ -310,64 +269,24 @@ function activityHref(
                         {{ t('products.filters.sections.occupancy') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FilterSelect
-                            id="filter-state"
-                            v-model="filters.state"
-                            :label="t('cells.filters.state')"
-                            :all-label="t('cellLog.filters.all')"
-                            :options="
-                                occupiedCellStates.map((state) => ({
-                                    value: state,
-                                    label: stateLabel(state),
-                                }))
+                        <ProductOccupancyFilterFields
+                            id-prefix="filter"
+                            v-model:state="filters.state"
+                            v-model:expired="filters.expired"
+                            v-model:expires-within-days="
+                                filters.expires_within_days
                             "
-                        />
-
-                        <FilterProductSelect
-                            id="filter-product"
-                            v-model="filters.product_id"
-                            :label="t('cellLog.filters.product')"
-                            :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="selectedCountLabel"
-                            :selected="filterOptions.products"
-                        />
-
-                        <div>
-                            <FilterNumberField
-                                id="filter-expires-within-days"
-                                v-model="filters.expires_within_days"
-                                :label="t('cellHighlight.expiresWithinDays')"
-                                :placeholder="String(expiringSoonDays)"
+                            :expiring-soon-days="expiringSoonDays"
+                        >
+                            <FilterProductSelect
+                                id="filter-product"
+                                v-model="filters.product_id"
+                                :label="t('cellLog.filters.product')"
+                                :all-label="t('cellLog.filters.all')"
+                                :selected-count-label="selectedCountLabel"
+                                :selected="filterOptions.products"
                             />
-                            <div class="mt-1 flex gap-1">
-                                <button
-                                    v-for="days in expiringSoonQuickPicks"
-                                    :key="days"
-                                    type="button"
-                                    class="cursor-pointer rounded-md border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
-                                    @click="
-                                        filters.expires_within_days =
-                                            String(days)
-                                    "
-                                >
-                                    {{ days }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <input
-                                id="filter-expired"
-                                v-model="filters.expired"
-                                type="checkbox"
-                                class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
-                            />
-                            <label
-                                for="filter-expired"
-                                class="text-sm text-gray-700 dark:text-neutral-300"
-                                >{{ t('cellHighlight.expired') }}</label
-                            >
-                        </div>
+                        </ProductOccupancyFilterFields>
                     </div>
                 </div>
 
@@ -378,53 +297,26 @@ function activityHref(
                         {{ t('cellLog.filters.sections.activity') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <FilterMultiSelect
-                            id="filter-action"
-                            v-model="filters.action"
-                            :label="t('cellLog.filters.statusChange')"
-                            :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="selectedCountLabel"
-                            :options="
-                                filterOptions.actions.map((action) => ({
-                                    value: action,
-                                    label: actionLabel(action),
-                                }))
-                            "
+                        <CellLogActivityFilterFields
+                            id-prefix="filter"
+                            v-model:action="filters.action"
+                            v-model:user-id="filters.user_id"
+                            :actions="filterOptions.actions"
+                            :users="filterOptions.users"
                         />
 
-                        <FilterMultiSelect
-                            id="filter-user"
-                            v-model="filters.user_id"
-                            :label="t('cellLog.filters.doneBy')"
-                            :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="selectedCountLabel"
-                            :options="
-                                filterOptions.users.map((user) => ({
-                                    value: user.id.toString(),
-                                    label: user.name,
-                                }))
-                            "
-                        />
-
-                        <FilterDateField
-                            id="filter-date-from"
-                            v-model="filters.date_from"
-                            :label="t('cellLog.filters.from')"
-                            :disabled="dateRangeDisabled"
-                        />
-
-                        <FilterDateField
-                            id="filter-date-to"
-                            v-model="filters.date_to"
-                            :label="t('cellLog.filters.to')"
-                            :disabled="dateRangeDisabled"
-                        />
-
-                        <FilterNumberField
-                            id="filter-created-within-days"
-                            v-model="filters.created_within_days"
-                            :label="t('cellLog.filters.withinDays')"
-                            :disabled="createdWithinDaysDisabled"
+                        <DateRangeFilterFields
+                            from-id="filter-date-from"
+                            to-id="filter-date-to"
+                            within-days-id="filter-created-within-days"
+                            :from-label="t('cellLog.filters.from')"
+                            :to-label="t('cellLog.filters.to')"
+                            :within-days-label="t('cellLog.filters.withinDays')"
+                            v-model:from="filters.date_from"
+                            v-model:to="filters.date_to"
+                            v-model:within-days="filters.created_within_days"
+                            :range-disabled="dateRangeDisabled"
+                            :days-disabled="createdWithinDaysDisabled"
                         />
                     </div>
                 </div>
@@ -525,104 +417,38 @@ function activityHref(
                 </div>
 
                 <div v-else-if="key === 'occupancy'" class="space-y-3">
-                    <FilterSelect
-                        id="popover-filter-state"
-                        v-model="filters.state"
-                        :label="t('cells.filters.state')"
-                        :all-label="t('cellLog.filters.all')"
-                        :options="
-                            occupiedCellStates.map((state) => ({
-                                value: state,
-                                label: stateLabel(state),
-                            }))
+                    <ProductOccupancyFilterFields
+                        id-prefix="popover-filter"
+                        v-model:state="filters.state"
+                        v-model:expired="filters.expired"
+                        v-model:expires-within-days="
+                            filters.expires_within_days
                         "
+                        :expiring-soon-days="expiringSoonDays"
                     />
-
-                    <div class="flex items-center gap-2">
-                        <input
-                            id="popover-filter-expired"
-                            v-model="filters.expired"
-                            type="checkbox"
-                            class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
-                        />
-                        <label
-                            for="popover-filter-expired"
-                            class="text-sm text-gray-700 dark:text-neutral-300"
-                            >{{ t('cellHighlight.expired') }}</label
-                        >
-                    </div>
-
-                    <div>
-                        <FilterNumberField
-                            id="popover-filter-expires-within-days"
-                            v-model="filters.expires_within_days"
-                            :label="t('cellHighlight.expiresWithinDays')"
-                            :placeholder="String(expiringSoonDays)"
-                        />
-                        <div class="mt-1 flex gap-1">
-                            <button
-                                v-for="days in expiringSoonQuickPicks"
-                                :key="days"
-                                type="button"
-                                class="cursor-pointer rounded-md border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
-                                @click="
-                                    filters.expires_within_days = String(days)
-                                "
-                            >
-                                {{ days }}
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <div v-else-if="key === 'activity'" class="space-y-3">
-                    <FilterMultiSelect
-                        id="popover-filter-action"
-                        v-model="filters.action"
-                        :label="t('cellLog.filters.statusChange')"
-                        :all-label="t('cellLog.filters.all')"
-                        :selected-count-label="selectedCountLabel"
-                        :options="
-                            filterOptions.actions.map((action) => ({
-                                value: action,
-                                label: actionLabel(action),
-                            }))
-                        "
+                    <CellLogActivityFilterFields
+                        id-prefix="popover-filter"
+                        v-model:action="filters.action"
+                        v-model:user-id="filters.user_id"
+                        :actions="filterOptions.actions"
+                        :users="filterOptions.users"
                     />
 
-                    <FilterMultiSelect
-                        id="popover-filter-user"
-                        v-model="filters.user_id"
-                        :label="t('cellLog.filters.doneBy')"
-                        :all-label="t('cellLog.filters.all')"
-                        :selected-count-label="selectedCountLabel"
-                        :options="
-                            filterOptions.users.map((user) => ({
-                                value: user.id.toString(),
-                                label: user.name,
-                            }))
-                        "
-                    />
-
-                    <FilterDateField
-                        id="popover-filter-date-from"
-                        v-model="filters.date_from"
-                        :label="t('cellLog.filters.from')"
-                        :disabled="dateRangeDisabled"
-                    />
-
-                    <FilterDateField
-                        id="popover-filter-date-to"
-                        v-model="filters.date_to"
-                        :label="t('cellLog.filters.to')"
-                        :disabled="dateRangeDisabled"
-                    />
-
-                    <FilterNumberField
-                        id="popover-filter-created-within-days"
-                        v-model="filters.created_within_days"
-                        :label="t('cellLog.filters.withinDays')"
-                        :disabled="createdWithinDaysDisabled"
+                    <DateRangeFilterFields
+                        from-id="popover-filter-date-from"
+                        to-id="popover-filter-date-to"
+                        within-days-id="popover-filter-created-within-days"
+                        :from-label="t('cellLog.filters.from')"
+                        :to-label="t('cellLog.filters.to')"
+                        :within-days-label="t('cellLog.filters.withinDays')"
+                        v-model:from="filters.date_from"
+                        v-model:to="filters.date_to"
+                        v-model:within-days="filters.created_within_days"
+                        :range-disabled="dateRangeDisabled"
+                        :days-disabled="createdWithinDaysDisabled"
                     />
                 </div>
             </template>
