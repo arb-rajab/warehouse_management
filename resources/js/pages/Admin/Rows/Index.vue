@@ -10,6 +10,7 @@ import {
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -30,10 +31,9 @@ const deleteError = computed(
     <Head :title="t('rows.index.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('rows.index.title') }}</h1>
+        <PageHeader :title="t('rows.index.title')">
             <AddResourceLink :href="create()" :label="t('rows.index.addRow')" />
-        </div>
+        </PageHeader>
 
         <ActionErrorBanner :message="deleteError" />
 

@@ -1,5 +1,5 @@
-import { computed } from 'vue';
-import type { ComputedRef } from 'vue';
+import { computed, ref, watch } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
 import { t } from '@/lib/i18n';
 
 /**
@@ -40,6 +40,14 @@ export const filterClearButtonClass =
  */
 export const mapToolbarButtonClass =
     'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
+
+/**
+ * The highlight-match previous/next nav buttons shared by Cells/Index.vue —
+ * same look as mapToolbarButtonClass but at the smaller p-1.5 size used
+ * alongside the match-count label.
+ */
+export const matchNavButtonClass =
+    'cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 /**
  * The "this toggle is the active one" variant applied on top of a toggle
@@ -142,4 +150,34 @@ export function debounce<Args extends unknown[]>(
 
         timer = setTimeout(() => fn(...args), delayMs);
     };
+}
+
+/**
+ * The column-filter-popover auto-apply wiring shared by CellStatusLogs/Index.vue
+ * and Products/Index.vue: which column's popover is open (bound two-way to
+ * DataTable), and a debounced re-apply triggered only while a popover — not
+ * the full filter dialog — is open, so editing the same `filters` fields
+ * from the main dialog doesn't also trigger a premature navigation before
+ * its own Apply is clicked. `filtersOpen` stays owned by the caller since it
+ * also gates the main dialog's own open/close state.
+ */
+export function useColumnFilterPopover(
+    filters: object,
+    filtersOpen: Ref<boolean>,
+    applyFilters: () => void,
+): { openFilterKey: Ref<string | null> } {
+    const openFilterKey = ref<string | null>(null);
+    const debouncedApplyFilters = debounce(applyFilters, 400);
+
+    watch(
+        filters,
+        () => {
+            if (openFilterKey.value !== null && !filtersOpen.value) {
+                debouncedApplyFilters();
+            }
+        },
+        { deep: true },
+    );
+
+    return { openFilterKey };
 }

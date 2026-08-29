@@ -7,6 +7,7 @@ import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowControl
 import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellLogFlagBadges from '@/components/CellLogFlagBadges.vue';
 import DataTable from '@/components/DataTable.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -37,10 +38,7 @@ function viewPalletHistory(palletId: number): void {
     <Head :title="t('users.show.title', { name: user.name })" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">
-                {{ t('users.show.title', { name: user.name }) }}
-            </h1>
+        <PageHeader :title="t('users.show.title', { name: user.name })">
             <Link
                 :href="editUser(user)"
                 class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
@@ -48,7 +46,7 @@ function viewPalletHistory(palletId: number): void {
                 <Pencil class="h-3.5 w-3.5" />
                 {{ t('users.show.editUser') }}
             </Link>
-        </div>
+        </PageHeader>
 
         <DataTable
             :columns="[
