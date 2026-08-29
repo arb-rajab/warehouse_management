@@ -44,11 +44,7 @@ test('the row list paginates instead of returning everything at once', function 
 
     $response = $this->get('/admin/rows');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Rows/Index')
-            ->has('rows.data', 20)
-            ->where('rows.meta.total', 25)
-    );
+    assertInertiaPaginates($response, 'rows', 20, 25, 'Admin/Rows/Index');
 });
 
 test('a mobile app user cannot view the row list', function () {

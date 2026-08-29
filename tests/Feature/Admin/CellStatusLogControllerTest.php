@@ -172,11 +172,7 @@ test('the cell log paginates instead of returning everything at once', function 
 
     $response = $this->get('/admin/cell-logs');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/CellStatusLogs/Index')
-            ->has('logs.data', 25)
-            ->where('logs.meta.total', 30)
-    );
+    assertInertiaPaginates($response, 'logs', 25, 30, 'Admin/CellStatusLogs/Index');
 });
 
 test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {

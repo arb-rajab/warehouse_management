@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated, row } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { Row } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -26,11 +27,7 @@ vi.mock('@inertiajs/vue3', async () => {
 function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
     usePageMock.mockReturnValue({
         url: '/admin/rows',
-        props: {
-            locale: 'en',
-            auth: { user: { name: 'Jane Doe', id: 7 } },
-            errors,
-        },
+        props: defaultAuthProps({ errors }),
     });
 
     return mount(Index, { props: { rows: paginated(rows) } });
@@ -38,8 +35,7 @@ function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
 
 describe('Rows Index', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
+        resetMocks({ usePageMock, routerPostMock });
     });
 
     it('renders every column header', () => {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
+import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type {
     CellHighlightSample,
     CellHighlightSeed,
@@ -134,7 +135,7 @@ function mountPage(
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/cells',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Index, {

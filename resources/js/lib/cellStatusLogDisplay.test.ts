@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { t } from '@/lib/i18n';
+import { cellLog as cellLogFixture } from '@/testing/factories';
 import type { CellStatusLog } from '@/types/admin';
 import {
     cellLogActionLabel,
@@ -9,25 +10,13 @@ import {
 } from './cellStatusLogDisplay';
 
 function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
-    return {
-        id: 1,
-        action: 'stored',
-        from_state: 'empty',
-        to_state: 'full',
+    return cellLogFixture({
         note: null,
-        boxes_count: null,
-        cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
-        related_cell: null,
         product: null,
         pallet: null,
-        user: { id: 7, name: 'Jane Doe' },
-        created_at: '2026-08-01T10:00:00Z',
-        next_log_at: null,
         duration_seconds: 0,
-        flagged: false,
-        flags: [],
         ...overrides,
-    };
+    });
 }
 
 describe('cellLogActionLabel', () => {
