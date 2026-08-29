@@ -44,6 +44,6 @@ class CellStatusLogController extends Controller
             'acknowledged_by' => $request->user()->id,
         ]);
 
-        return back();
+        return redirect()->route('admin.cell-logs.index', $request->query());
     }
 }
