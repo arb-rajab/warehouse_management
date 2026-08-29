@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import { t } from '@/lib/i18n';
 import { paginated } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -79,7 +80,7 @@ function mountPage(
 ) {
     usePageMock.mockReturnValue({
         url: '/admin',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Index, {
@@ -120,8 +121,7 @@ async function openCustomExpiringDaysDialog(
 
 describe('Dashboard Index', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerGetMock.mockReset();
+        resetMocks({ usePageMock, routerGetMock });
     });
 
     it('renders every occupancy tile with its count, linking to the cells map with a matching highlight filter', () => {

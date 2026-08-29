@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SubmitButton from '@/components/SubmitButton.vue';
 import UserFormFields from '@/components/UserFormFields.vue';
 import { t } from '@/lib/i18n';
+import { user as userFixture } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { User } from '@/types/admin';
 import Edit from './Edit.vue';
 
@@ -26,22 +28,20 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 function user(overrides: Partial<User> = {}): User {
-    return {
+    return userFixture({
         id: 5,
         name: 'John Smith',
         email: 'john@example.com',
-        is_admin: false,
         ...overrides,
-    };
+    });
 }
 
 function mountPage(userOverrides: Partial<User> = {}, currentUserId = 7) {
     usePageMock.mockReturnValue({
         url: '/admin/users/5/edit',
-        props: {
-            locale: 'en',
+        props: defaultAuthProps({
             auth: { user: { name: 'Current User', id: currentUserId } },
-        },
+        }),
     });
 
     return mount(Edit, { props: { user: user(userOverrides) } });
@@ -49,10 +49,8 @@ function mountPage(userOverrides: Partial<User> = {}, currentUserId = 7) {
 
 describe('Users Edit', () => {
     beforeEach(() => {
-        formSlotPropsMock.mockReset();
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
     });
 
     it("renders the page title with the user's name", () => {

@@ -30,9 +30,7 @@ test('the product listing paginates instead of returning everything at once', fu
 
     $response = $this->getJson('/api/v1/products');
 
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(20);
-    expect($response->json('meta.total'))->toBe(25);
+    assertJsonListingPaginates($response, total: 25);
 });
 
 test('an unauthenticated caller cannot list products', function () {
