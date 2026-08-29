@@ -12,8 +12,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $name
  * @property string|null $image_url
+ * @property int $boxes_count
  */
-#[Fillable(['name', 'image_url'])]
+#[Fillable(['name', 'image_url', 'boxes_count'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */

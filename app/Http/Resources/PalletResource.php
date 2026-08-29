@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property-read int $id
  * @property-read CellState $state
  * @property-read Carbon $expiration_date
+ * @property-read int $remaining_boxes
  * @property-read Product $product
  * @property-read Cell $cell
  */
@@ -29,6 +30,8 @@ class PalletResource extends JsonResource
             'id' => $this->id,
             'state' => $this->state->value,
             'expiration_date' => $this->expiration_date->toDateString(),
+            'remaining_boxes' => $this->remaining_boxes,
+            'boxes_depleted_message' => $this->remaining_boxes === 0 ? __('messages.pallet_boxes_depleted') : null,
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
             'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
         ];

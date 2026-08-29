@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
         Route::post('pallets', [PalletController::class, 'store']);
         Route::get('pallets/{pallet}', [PalletController::class, 'show']);
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open']);
+        Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes']);
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty']);
         Route::post('pallets/{pallet}/transfer', [PalletController::class, 'transfer']);
 

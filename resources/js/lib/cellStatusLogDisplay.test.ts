@@ -15,6 +15,7 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         from_state: 'empty',
         to_state: 'full',
         note: null,
+        boxes_count: null,
         cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         related_cell: null,
         product: null,

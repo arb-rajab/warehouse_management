@@ -21,6 +21,7 @@ class ProductFactory extends Factory
         return [
             'name' => Str::title(fake()->unique()->word().' '.fake()->word()),
             'image_url' => fake()->imageUrl(),
+            'boxes_count' => fake()->numberBetween(1, 50),
         ];
     }
 }

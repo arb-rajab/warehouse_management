@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property-read Cell|null $relatedCell
  * @property-read Product|null $product
  * @property-read int|null $pallet_id
+ * @property-read int|null $boxes_count
  * @property-read Pallet|null $pallet
  * @property-read User $user
  * @property-read Carbon $created_at
@@ -47,6 +48,7 @@ class CellStatusLogResource extends JsonResource
             'from_state' => $this->from_state->value,
             'to_state' => $this->to_state->value,
             'note' => $this->note,
+            'boxes_count' => $this->boxes_count,
             'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
             'related_cell' => $this->whenLoaded('relatedCell', fn () => $this->relatedCell?->toLocationArray()),
             'product' => $this->whenLoaded('product', fn () => $this->product === null ? null : new ProductResource($this->product)),

@@ -24,6 +24,7 @@ class PalletFactory extends Factory
             'product_id' => Product::factory(),
             'cell_id' => Cell::factory(),
             'expiration_date' => fake()->dateTimeBetween('now', '+1 year'),
+            'remaining_boxes' => fn (array $attributes): int => Product::query()->findOrFail((int) $attributes['product_id'])->boxes_count,
         ];
     }
 

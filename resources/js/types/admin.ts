@@ -146,7 +146,12 @@ export interface CellMap3DBand {
 }
 
 export type CellLogAction =
-    'stored' | 'opened' | 'emptied' | 'transferred_out' | 'transferred_in';
+    | 'stored'
+    | 'opened'
+    | 'boxes_removed'
+    | 'emptied'
+    | 'transferred_out'
+    | 'transferred_in';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 
@@ -162,12 +167,14 @@ export interface CellStatusLog {
     from_state: Cell['state'];
     to_state: Cell['state'];
     note: string | null;
+    boxes_count: number | null;
     cell: CellSlotLocation;
     related_cell: CellSlotLocation | null;
     product: {
         id: number;
         name: string;
         image_url: string | null;
+        boxes_count: number;
     } | null;
     pallet: {
         id: number;

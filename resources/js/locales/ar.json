@@ -168,15 +168,16 @@
             "pallet": "الطبلية",
             "expires": "تنتهي في",
             "viewPalletHistory": "عرض كل سجلات هذه الطبلية",
+            "boxes": "الصناديق",
             "note": "ملاحظة",
             "doneBy": "بواسطة",
             "when": "الوقت",
-            "duration": "المدة",
             "ongoing": "مستمر"
         },
         "actions": {
             "stored": "تم التخزين",
             "opened": "تم الفتح",
+            "boxes_removed": "تمت إزالة صناديق",
             "emptied": "تم التفريغ",
             "transferred_out": "تم النقل منها",
             "transferred_in": "تم النقل إليها",

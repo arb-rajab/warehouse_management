@@ -16,6 +16,12 @@ test('a pallet belongs to its product', function () {
     expect($pallet->product->id)->not->toBe($otherProduct->id);
 });
 
+test('a pallet can be created with its fillable remaining_boxes attribute', function () {
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 6]);
+
+    expect($pallet->fresh()->remaining_boxes)->toBe(6);
+});
+
 test('a pallet belongs to its cell', function () {
     $cell = Cell::factory()->create();
     $otherCell = Cell::factory()->create();
