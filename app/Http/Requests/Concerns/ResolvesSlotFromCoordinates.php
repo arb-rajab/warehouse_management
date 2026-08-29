@@ -24,7 +24,7 @@ trait ResolvesSlotFromCoordinates
     protected function coordinateRules(string $prefix = ''): array
     {
         return [
-            $prefix.'row_letter' => ['required', 'string', 'max:4', 'exists:rows,letter'],
+            $prefix.'row_letter' => ['required', 'string', 'max:2', 'exists:rows,letter'],
             $prefix.'cell_number' => ['required', 'integer', 'min:1'],
             $prefix.'flat_number' => ['required', 'integer', 'min:1'],
         ];
