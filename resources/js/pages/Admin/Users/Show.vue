@@ -58,7 +58,6 @@ function viewPalletHistory(palletId: number): void {
                 t('cellLog.columns.pallet'),
                 t('cellLog.columns.note'),
                 t('cellLog.columns.when'),
-                t('cellLog.columns.duration'),
             ]"
             :rows="displayLogs"
             :empty-message="t('users.show.empty')"
@@ -156,6 +155,13 @@ function viewPalletHistory(palletId: number): void {
                             <History class="h-3 w-3 shrink-0" />
                         </button>
                         <div
+                            v-if="log.boxes_count !== null"
+                            class="text-xs text-gray-500 dark:text-neutral-400"
+                        >
+                            {{ t('cellLog.columns.boxes') }}:
+                            {{ log.boxes_count }}
+                        </div>
+                        <div
                             v-if="log.pallet.expiration_date"
                             class="text-xs text-gray-500 dark:text-neutral-400"
                         >
@@ -173,13 +179,13 @@ function viewPalletHistory(palletId: number): void {
                 >
                     {{ log.note ?? '—' }}
                 </td>
-                <td class="px-4 py-2 text-gray-500 dark:text-neutral-400">
-                    {{ formatDateTime(log.created_at) }}
-                </td>
                 <td class="px-4 py-2">
                     <div
                         class="font-medium text-gray-900 dark:text-neutral-100"
                     >
+                        {{ formatDateTime(log.created_at) }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-neutral-400">
                         {{ formatDuration(log.duration_seconds) }}
                     </div>
                     <div
