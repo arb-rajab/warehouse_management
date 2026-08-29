@@ -254,8 +254,4 @@ export interface ProductFilters {
     sort_direction?: 'asc' | 'desc';
 }
 
-export interface ProductIndexFilterOptions
-    extends RowAndColumnFilterOptions, ProductFilterOptions {
-    users: { id: number; name: string }[];
-    actions: CellLogAction[];
-}
+export type ProductIndexFilterOptions = CellStatusLogFilterOptions;

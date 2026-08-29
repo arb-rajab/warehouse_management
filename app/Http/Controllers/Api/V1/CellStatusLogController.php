@@ -13,8 +13,7 @@ class CellStatusLogController extends Controller
     public function index(FilterCellStatusLogsRequest $request): AnonymousResourceCollection
     {
         $logs = CellStatusLog::query()
-            ->select(CellStatusLog::SELECT_COLUMNS)
-            ->with(CellStatusLog::WITH_DETAILS)
+            ->forListing()
             ->filtered($request)
             ->sorted($request)
             ->paginate(20);

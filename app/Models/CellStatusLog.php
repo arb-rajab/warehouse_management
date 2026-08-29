@@ -66,6 +66,18 @@ class CellStatusLog extends Model
     ];
 
     /**
+     * The select()/with() preamble shared by every listing (admin and API) —
+     * see SELECT_COLUMNS/WITH_DETAILS above.
+     *
+     * @param  Builder<CellStatusLog>  $query
+     */
+    #[Scope]
+    protected function forListing(Builder $query): void
+    {
+        $query->select(self::SELECT_COLUMNS)->with(self::WITH_DETAILS);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -197,6 +209,22 @@ class CellStatusLog extends Model
     }
 
     /**
+     * The string values of the `action` filter field on a request — shared by
+     * this model's own `filtered()` scope and by `ProductController`'s
+     * separate cell-log history filter, so the two `action` filters can't
+     * silently drift out of sync.
+     *
+     * @return list<string>
+     */
+    public static function actionValuesFromRequest(Request $request, string $field = 'action'): array
+    {
+        return array_values(array_map(
+            fn (CellLogAction $action): string => $action->value,
+            $request->enums($field, CellLogAction::class),
+        ));
+    }
+
+    /**
      * Scope a query by the product/pallet/row/column/user/action/date-range filters
      * shared by the admin and mobile API listings. Reads straight off the request
      * (not `$request->validated()`) so an absent filter is skipped rather than
@@ -211,10 +239,7 @@ class CellStatusLog extends Model
             ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))))
             ->when($request->filled('pallet_id'), fn (Builder $q) => $q->where('pallet_id', $request->integer('pallet_id')))
             ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
-            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', array_map(
-                fn (CellLogAction $action): string => $action->value,
-                $request->enums('action', CellLogAction::class),
-            )))
+            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', static::actionValuesFromRequest($request)))
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
             ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))

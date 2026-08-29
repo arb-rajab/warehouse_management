@@ -37,8 +37,7 @@ class UserController extends Controller
     public function show(Request $request, User $user): Response
     {
         $logs = CellStatusLog::query()
-            ->select(CellStatusLog::SELECT_COLUMNS)
-            ->with(CellStatusLog::WITH_DETAILS)
+            ->forListing()
             ->where('user_id', $user->id)
             ->sorted($request)
             ->paginate(25)
