@@ -157,9 +157,7 @@ test('the cell log listing paginates instead of returning everything at once', f
 
     $response = $this->getJson('/api/v1/cell-logs');
 
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(20);
-    expect($response->json('meta.total'))->toBe(25);
+    assertJsonListingPaginates($response, total: 25);
 });
 
 test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {

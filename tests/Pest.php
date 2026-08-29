@@ -7,6 +7,8 @@ use App\Models\Pallet;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -112,4 +114,37 @@ function createTransferPair(Pallet $pallet, Cell $source, Cell $destination, str
     ]), $inAt);
 
     return [$transferredOut, $transferredIn];
+}
+
+/**
+ * Assert that a mobile API JSON listing response paginates instead of
+ * returning every row at once — `data` has exactly `$perPage` entries and
+ * `meta.total` matches the full row count.
+ */
+function assertJsonListingPaginates(TestResponse $response, int $total, int $perPage = 20): void
+{
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount($perPage);
+    expect($response->json('meta.total'))->toBe($total);
+}
+
+/**
+ * Assert that an admin Inertia index response paginates a prop instead of
+ * returning every row at once — the `{$prop}.data` count matches the page
+ * size and `{$prop}.meta.total` matches the full row count. Pass `$component`
+ * to also assert which page rendered (skip it when an earlier assertion in
+ * the same test already covers that).
+ */
+function assertInertiaPaginates(
+    TestResponse $response,
+    string $prop,
+    int $dataCount,
+    int $total,
+    ?string $component = null,
+): void {
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => ($component !== null ? $page->component($component) : $page)
+            ->has("{$prop}.data", $dataCount)
+            ->where("{$prop}.meta.total", $total)
+    );
 }

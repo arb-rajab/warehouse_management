@@ -1,4 +1,4 @@
-import type { Cell, Paginated, Row } from '@/types/admin';
+import type { Cell, CellStatusLog, Paginated, Row, User } from '@/types/admin';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -37,6 +37,38 @@ export function cell(overrides: Partial<Cell> = {}): Cell {
         flat_number: 1,
         state: 'empty',
         pallet: null,
+        ...overrides,
+    };
+}
+
+export function user(overrides: Partial<User> = {}): User {
+    return {
+        id: 7,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        is_admin: false,
+        ...overrides,
+    };
+}
+
+export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
+    return {
+        id: 1,
+        action: 'stored',
+        from_state: 'empty',
+        to_state: 'full',
+        note: 'Handle with care',
+        boxes_count: null,
+        cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+        related_cell: null,
+        product: { id: 10, name: 'Widgets', image_url: null, boxes_count: 10 },
+        pallet: { id: 55, expiration_date: '2026-09-01' },
+        user: { id: 7, name: 'Jane Doe' },
+        created_at: '2026-08-01T10:00:00Z',
+        next_log_at: null,
+        duration_seconds: 3600,
+        flagged: false,
+        flags: [],
         ...overrides,
     };
 }
