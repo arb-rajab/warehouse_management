@@ -16,9 +16,10 @@ use Illuminate\Support\Carbon;
  * @property int $product_id
  * @property int $cell_id
  * @property Carbon $expiration_date
+ * @property int $remaining_boxes
  * @property-read CellState $state
  */
-#[Fillable(['product_id', 'cell_id', 'expiration_date'])]
+#[Fillable(['product_id', 'cell_id', 'expiration_date', 'remaining_boxes'])]
 class Pallet extends Model
 {
     /** @use HasFactory<PalletFactory> */

@@ -28,13 +28,14 @@ use Illuminate\Support\Collection;
  * @property CellState $to_state
  * @property int|null $product_id
  * @property int|null $pallet_id
+ * @property int|null $boxes_count
  * @property int $user_id
  * @property string|null $note
  * @property-read Carbon|null $next_log_at
  * @property-read int $duration_seconds
  * @property-read bool $flagged
  */
-#[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'user_id', 'note'])]
+#[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note'])]
 #[ObservedBy(CellStatusLogObserver::class)]
 class CellStatusLog extends Model
 {
@@ -46,7 +47,7 @@ class CellStatusLog extends Model
      *
      * @var list<string>
      */
-    public const array SELECT_COLUMNS = ['id', 'cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'user_id', 'note', 'created_at'];
+    public const array SELECT_COLUMNS = ['id', 'cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note', 'created_at'];
 
     /**
      * Eager loads needed by CellStatusLogResource — shared by every listing (admin and API).
@@ -58,7 +59,7 @@ class CellStatusLog extends Model
         'cell.row:id,letter',
         'relatedCell:id,row_id,cell_number,flat_number',
         'relatedCell.row:id,letter',
-        'product:id,name,image_url',
+        'product:id,name,image_url,boxes_count',
         'pallet:id,expiration_date',
         'user:id,name',
         'flags:id,cell_status_log_id,reason,acknowledged_at',

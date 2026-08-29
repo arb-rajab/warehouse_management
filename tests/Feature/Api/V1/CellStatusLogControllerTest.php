@@ -26,6 +26,7 @@ test('an authenticated worker can list cell logs with every property the app rea
     $product = Product::factory()->create([
         'name' => 'Widgets',
         'image_url' => 'https://cdn.example.com/widgets.png',
+        'boxes_count' => 10,
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
@@ -41,6 +42,7 @@ test('an authenticated worker can list cell logs with every property the app rea
         'to_state' => CellState::Empty,
         'product_id' => $product->id,
         'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
         'user_id' => $mover->id,
         'note' => 'Consolidating stock.',
     ]);
@@ -54,6 +56,7 @@ test('an authenticated worker can list cell logs with every property the app rea
         'from_state' => 'full',
         'to_state' => 'empty',
         'note' => 'Consolidating stock.',
+        'boxes_count' => 7,
         'cell' => [
             'row_letter' => 'A',
             'cell_number' => 1,
@@ -68,6 +71,7 @@ test('an authenticated worker can list cell logs with every property the app rea
             'id' => $product->id,
             'name' => 'Widgets',
             'image_url' => 'https://cdn.example.com/widgets.png',
+            'boxes_count' => 10,
         ],
         'pallet' => [
             'id' => $pallet->id,

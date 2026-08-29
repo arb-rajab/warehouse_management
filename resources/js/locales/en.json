@@ -168,15 +168,16 @@
             "pallet": "Pallet",
             "expires": "Expires",
             "viewPalletHistory": "View all logs for this pallet",
+            "boxes": "Boxes",
             "note": "Note",
             "doneBy": "Done by",
             "when": "When",
-            "duration": "Duration",
             "ongoing": "Ongoing"
         },
         "actions": {
             "stored": "Stored",
             "opened": "Opened",
+            "boxes_removed": "Boxes removed",
             "emptied": "Emptied",
             "transferred_out": "Transferred out",
             "transferred_in": "Transferred in",

@@ -29,6 +29,7 @@ test('an authenticated admin can view the cell log with every property the table
     $product = Product::factory()->create([
         'name' => 'Widgets',
         'image_url' => 'https://cdn.example.com/widgets.png',
+        'boxes_count' => 10,
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
@@ -44,6 +45,7 @@ test('an authenticated admin can view the cell log with every property the table
         'to_state' => CellState::Empty,
         'product_id' => $product->id,
         'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
         'user_id' => $mover->id,
         'note' => 'Consolidating stock.',
     ]);
@@ -59,6 +61,7 @@ test('an authenticated admin can view the cell log with every property the table
                 ->where('from_state', 'full')
                 ->where('to_state', 'empty')
                 ->where('note', 'Consolidating stock.')
+                ->where('boxes_count', 7)
                 ->where('created_at', $log->created_at->toIso8601String())
                 ->has('cell', fn (Assert $cell) => $cell
                     ->where('row_letter', 'A')
@@ -74,6 +77,7 @@ test('an authenticated admin can view the cell log with every property the table
                     ->where('id', $product->id)
                     ->where('name', 'Widgets')
                     ->where('image_url', 'https://cdn.example.com/widgets.png')
+                    ->where('boxes_count', 10)
                 )
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)
@@ -90,7 +94,7 @@ test('an authenticated admin can view the cell log with every property the table
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
-            ->has('filterOptions.actions', 5)
+            ->has('filterOptions.actions', 6)
     );
 
     Carbon::setTestNow();

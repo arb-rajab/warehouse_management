@@ -7,7 +7,7 @@ use App\Http\Requests\Concerns\ValidatesOptionalNote;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class OpenPalletRequest extends FormRequest
+class RemovePalletBoxesRequest extends FormRequest
 {
     use ValidatesBoxesCount, ValidatesOptionalNote;
 

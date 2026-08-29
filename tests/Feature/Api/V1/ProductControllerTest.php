@@ -18,6 +18,7 @@ test('an authenticated worker can list products with every property the app read
         'id' => $product->id,
         'name' => 'Widget',
         'image_url' => 'https://cdn.example.com/widget.png',
+        'boxes_count' => null,
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
