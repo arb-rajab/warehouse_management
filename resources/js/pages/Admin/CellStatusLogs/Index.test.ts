@@ -113,7 +113,6 @@ describe('CellStatusLogs Index', () => {
             t('cellLog.columns.note'),
             t('cellLog.columns.doneBy'),
             t('cellLog.columns.when'),
-            t('cellLog.columns.duration'),
         ]);
     });
 
@@ -241,11 +240,6 @@ describe('CellStatusLogs Index', () => {
 
         expect(
             columnHeader(wrapper, t('cellLog.columns.note'))
-                .findComponent(Filter)
-                .exists(),
-        ).toBe(false);
-        expect(
-            columnHeader(wrapper, t('cellLog.columns.duration'))
                 .findComponent(Filter)
                 .exists(),
         ).toBe(false);
@@ -762,6 +756,22 @@ describe('CellStatusLogs Index', () => {
         expect(rowCells(wrapper)[3].text()).toBe('—');
     });
 
+    it('renders the boxes_count alongside the pallet', () => {
+        const wrapper = mountPage([cellLog({ boxes_count: 6 })]);
+
+        const palletCell = rowCells(wrapper)[3];
+        expect(palletCell.text()).toContain(t('cellLog.columns.boxes'));
+        expect(palletCell.text()).toContain('6');
+    });
+
+    it('omits the boxes line when the log has no boxes_count', () => {
+        const wrapper = mountPage([cellLog({ boxes_count: null })]);
+
+        expect(rowCells(wrapper)[3].text()).not.toContain(
+            t('cellLog.columns.boxes'),
+        );
+    });
+
     it('requests the filtered history for that pallet when its history button is clicked', async () => {
         const wrapper = mountPage([
             cellLog({ pallet: { id: 55, expiration_date: null } }),
@@ -803,7 +813,7 @@ describe('CellStatusLogs Index', () => {
             cellLog({ created_at: '2026-08-01T10:00:00Z' }),
         ]);
 
-        expect(rowCells(wrapper)[6].text()).toBe(
+        expect(rowCells(wrapper)[6].text()).toContain(
             formatDateTime('2026-08-01T10:00:00Z'),
         );
     });
@@ -816,9 +826,9 @@ describe('CellStatusLogs Index', () => {
             }),
         ]);
 
-        const durationCell = rowCells(wrapper)[7];
-        expect(durationCell.text()).toContain('1h 1m');
-        expect(durationCell.text()).not.toContain(t('cellLog.columns.ongoing'));
+        const whenCell = rowCells(wrapper)[6];
+        expect(whenCell.text()).toContain('1h 1m');
+        expect(whenCell.text()).not.toContain(t('cellLog.columns.ongoing'));
     });
 
     it('shows the ongoing label alongside the duration when there is no next log', () => {
@@ -826,10 +836,10 @@ describe('CellStatusLogs Index', () => {
             cellLog({ next_log_at: null, duration_seconds: 90 }),
         ]);
 
-        const durationCell = rowCells(wrapper)[7];
-        expect(durationCell.text()).toContain(t('cellLog.columns.ongoing'));
-        expect(durationCell.text()).toContain('1m');
-        expect(durationCell.findComponent(Clock).exists()).toBe(true);
+        const whenCell = rowCells(wrapper)[6];
+        expect(whenCell.text()).toContain(t('cellLog.columns.ongoing'));
+        expect(whenCell.text()).toContain('1m');
+        expect(whenCell.findComponent(Clock).exists()).toBe(true);
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {
