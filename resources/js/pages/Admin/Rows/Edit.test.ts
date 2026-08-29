@@ -4,6 +4,7 @@ import RowFormFields from '@/components/RowFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
 import { row } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { Row } from '@/types/admin';
 import Edit from './Edit.vue';
 
@@ -29,7 +30,7 @@ vi.mock('@inertiajs/vue3', async () => {
 function mountPage(rowOverrides: Partial<Row> = {}) {
     usePageMock.mockReturnValue({
         url: '/admin/rows/A/edit',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Edit, { props: { row: row(rowOverrides) } });
@@ -37,10 +38,8 @@ function mountPage(rowOverrides: Partial<Row> = {}) {
 
 describe('Rows Edit', () => {
     beforeEach(() => {
-        formSlotPropsMock.mockReset();
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
     });
 
     it('renders the page title with the row letter', () => {

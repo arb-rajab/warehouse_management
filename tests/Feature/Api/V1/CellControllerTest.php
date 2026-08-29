@@ -88,9 +88,7 @@ test('a row cell listing paginates instead of returning everything at once', fun
 
     $response = $this->getJson("/api/v1/rows/{$row->letter}/cells");
 
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(20);
-    expect($response->json('meta.total'))->toBe(25);
+    assertJsonListingPaginates($response, total: 25);
 });
 
 test('an unauthenticated caller cannot list a row cells', function () {

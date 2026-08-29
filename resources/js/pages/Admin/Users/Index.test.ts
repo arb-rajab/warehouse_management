@@ -3,7 +3,8 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
-import { paginated } from '@/testing/factories';
+import { paginated, user } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { User } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -23,23 +24,12 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function user(overrides: Partial<User> = {}): User {
-    return {
-        id: 1,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-        is_admin: false,
-        ...overrides,
-    };
-}
-
 function mountPage(users: User[], currentUserId = 7) {
     usePageMock.mockReturnValue({
         url: '/admin/users',
-        props: {
-            locale: 'en',
+        props: defaultAuthProps({
             auth: { user: { name: 'Current User', id: currentUserId } },
-        },
+        }),
     });
 
     return mount(Index, { props: { users: paginated(users) } });
@@ -47,8 +37,7 @@ function mountPage(users: User[], currentUserId = 7) {
 
 describe('Users Index', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
+        resetMocks({ usePageMock, routerPostMock });
     });
 
     it('renders every column header', () => {

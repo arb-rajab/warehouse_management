@@ -34,11 +34,7 @@ test('the user list paginates instead of returning everything at once', function
 
     $response = $this->get('/admin/users');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Users/Index')
-            ->has('users.data', 20)
-            ->where('users.meta.total', 26)
-    );
+    assertInertiaPaginates($response, 'users', 20, 26, 'Admin/Users/Index');
 });
 
 test('a mobile app user cannot view the user list', function () {
@@ -125,10 +121,7 @@ test('a users action history paginates instead of returning everything at once',
 
     $response = $this->get("/admin/users/{$target->id}");
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('logs.data', 25)
-            ->where('logs.meta.total', 30)
-    );
+    assertInertiaPaginates($response, 'logs', 25, 30);
 });
 
 test('a users action history defaults to newest-first', function () {

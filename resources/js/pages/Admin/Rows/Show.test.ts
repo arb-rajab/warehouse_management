@@ -4,6 +4,7 @@ import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
+import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type { Cell, Row } from '@/types/admin';
 import Show from './Show.vue';
 
@@ -57,7 +58,7 @@ function mountPage(
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/rows/A',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Show, {

@@ -59,10 +59,7 @@ test('the products index paginates instead of returning every product at once', 
 
     $response = $this->get('/admin/products');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('products.data', 25)
-            ->where('products.meta.total', 30)
-    );
+    assertInertiaPaginates($response, 'products', 25, 30);
 });
 
 test('the products index hydrates only the selected product ids for the product filter, not every product', function () {
