@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { SlidersHorizontal, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
@@ -84,19 +85,11 @@ function clear(): void {
                     "
                 />
 
-                <div class="flex items-center gap-2">
-                    <input
-                        id="highlight-expired"
-                        v-model="filters.expired"
-                        type="checkbox"
-                        class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
-                    />
-                    <label
-                        for="highlight-expired"
-                        class="text-sm text-gray-700 dark:text-neutral-300"
-                        >{{ t('cellHighlight.expired') }}</label
-                    >
-                </div>
+                <FilterCheckbox
+                    id="highlight-expired"
+                    v-model="filters.expired"
+                    :label="t('cellHighlight.expired')"
+                />
 
                 <FilterProductSelect
                     id="highlight-product"

@@ -5,6 +5,7 @@ import { computed, reactive } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     emptyCellHighlightFilters,
@@ -59,10 +60,7 @@ const cellNumbers = computed(() =>
     <Head :title="t('rows.show.title', { letter: props.row.letter })" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">
-                {{ t('rows.show.title', { letter: props.row.letter }) }}
-            </h1>
+        <PageHeader :title="t('rows.show.title', { letter: props.row.letter })">
             <div class="flex items-center gap-4">
                 <CellHighlightFilters
                     :model-value="highlightFilters"
@@ -76,7 +74,7 @@ const cellNumbers = computed(() =>
                     {{ t('rows.show.editRow') }}
                 </Link>
             </div>
-        </div>
+        </PageHeader>
 
         <div class="overflow-x-auto pb-2">
             <div class="flex flex-col gap-2">

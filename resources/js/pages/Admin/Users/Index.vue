@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -27,13 +28,12 @@ const page = usePage();
     <Head :title="t('users.index.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('users.index.title') }}</h1>
+        <PageHeader :title="t('users.index.title')">
             <AddResourceLink
                 :href="create()"
                 :label="t('users.index.addUser')"
             />
-        </div>
+        </PageHeader>
 
         <DataTable
             :columns="[

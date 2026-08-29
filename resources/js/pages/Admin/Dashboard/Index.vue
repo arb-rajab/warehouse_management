@@ -18,6 +18,7 @@ import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import {
@@ -126,8 +127,7 @@ function onProductIdsChange(ids: string[]): void {
     <Head :title="t('dashboard.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('dashboard.title') }}</h1>
+        <PageHeader :title="t('dashboard.title')">
             <div class="flex items-center gap-4">
                 <FilterProductSelect
                     id="dashboard-product"
@@ -139,7 +139,7 @@ function onProductIdsChange(ids: string[]): void {
                     @update:model-value="onProductIdsChange"
                 />
             </div>
-        </div>
+        </PageHeader>
 
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">

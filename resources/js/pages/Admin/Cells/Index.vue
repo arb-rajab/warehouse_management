@@ -30,6 +30,7 @@ import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellCo
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActiveCellHighlightFilters,
@@ -41,6 +42,7 @@ import {
     columnNumberOptions,
     countBadgeClass,
     mapToolbarButtonClass,
+    matchNavButtonClass,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -604,8 +606,7 @@ watch(
     <Head :title="t('cells.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('cells.title') }}</h1>
+        <PageHeader :title="t('cells.title')">
             <div class="flex items-center gap-4">
                 <div v-if="hasActiveHighlight" class="flex items-center gap-2">
                     <span
@@ -623,7 +624,7 @@ watch(
                             type="button"
                             :title="t('cells.filters.previousMatch')"
                             data-testid="previous-match"
-                            class="cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            :class="matchNavButtonClass"
                             @click="jumpToPreviousMatch"
                         >
                             <ChevronUp class="h-4 w-4" />
@@ -644,7 +645,7 @@ watch(
                             type="button"
                             :title="t('cells.filters.nextMatch')"
                             data-testid="next-match"
-                            class="cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                            :class="matchNavButtonClass"
                             @click="jumpToNextMatch"
                         >
                             <ChevronDown class="h-4 w-4" />
@@ -656,7 +657,7 @@ watch(
                     :products="filterOptions.products"
                 />
             </div>
-        </div>
+        </PageHeader>
 
         <div
             v-if="rows.length === 0"
@@ -691,7 +692,7 @@ watch(
                             <button
                                 type="submit"
                                 :aria-label="t('cells.search.submit')"
-                                class="cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                                :class="mapToolbarButtonClass"
                             >
                                 <Search class="h-4 w-4" />
                             </button>

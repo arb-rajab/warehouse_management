@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { reactive } from 'vue';
+import { nextTick, reactive, ref } from 'vue';
 import {
     columnNumberOptions,
     countActive,
     debounce,
     exclusivePair,
     toggleSort,
+    useColumnFilterPopover,
 } from './filters';
 
 describe('columnNumberOptions', () => {
@@ -117,6 +118,66 @@ describe('exclusivePair', () => {
 
         expect(rangeDisabled.value).toBe(false);
         expect(daysDisabled.value).toBe(false);
+    });
+});
+
+describe('useColumnFilterPopover', () => {
+    it('does not apply when a filter field changes and no popover is open', async () => {
+        vi.useFakeTimers();
+        const filters = reactive({ state: '' });
+        const filtersOpen = ref(false);
+        const applyFilters = vi.fn();
+        useColumnFilterPopover(filters, filtersOpen, applyFilters);
+
+        filters.state = 'full';
+        await nextTick();
+        vi.advanceTimersByTime(400);
+
+        expect(applyFilters).not.toHaveBeenCalled();
+        vi.useRealTimers();
+    });
+
+    it('debounces and applies once a popover is open and a filter field changes', async () => {
+        vi.useFakeTimers();
+        const filters = reactive({ state: '' });
+        const filtersOpen = ref(false);
+        const applyFilters = vi.fn();
+        const { openFilterKey } = useColumnFilterPopover(
+            filters,
+            filtersOpen,
+            applyFilters,
+        );
+
+        openFilterKey.value = 'state';
+        filters.state = 'full';
+        filters.state = 'opened';
+        await nextTick();
+        expect(applyFilters).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(400);
+
+        expect(applyFilters).toHaveBeenCalledTimes(1);
+        vi.useRealTimers();
+    });
+
+    it('does not apply while the full filter dialog is open', async () => {
+        vi.useFakeTimers();
+        const filters = reactive({ state: '' });
+        const filtersOpen = ref(true);
+        const applyFilters = vi.fn();
+        const { openFilterKey } = useColumnFilterPopover(
+            filters,
+            filtersOpen,
+            applyFilters,
+        );
+
+        openFilterKey.value = 'state';
+        filters.state = 'full';
+        await nextTick();
+        vi.advanceTimersByTime(400);
+
+        expect(applyFilters).not.toHaveBeenCalled();
+        vi.useRealTimers();
     });
 });
 
