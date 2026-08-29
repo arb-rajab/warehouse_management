@@ -527,13 +527,25 @@ test('an authenticated admin can acknowledge every unacknowledged flag on a cell
 
     $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
 
-    $response->assertRedirect();
+    // Always returns to the log list itself, never a fallback route
+    // (e.g. the dashboard/map) driven by session/referrer state.
+    $response->assertRedirect(route('admin.cell-logs.index'));
     $freshFlag = $flag->fresh();
     expect($freshFlag->acknowledged_at)->not->toBeNull();
     expect($freshFlag->acknowledged_by)->toBe($admin->id);
 
     // Already-acknowledged flags are left untouched, not re-stamped.
     expect($alreadyAcknowledged->fresh()->acknowledged_at->toDateTimeString())->toBe('2026-08-01 00:00:00');
+});
+
+test('acknowledging flags redirects back with the current filters preserved', function () {
+    actingAsAdmin();
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags?flagged=true");
+
+    $response->assertRedirect(route('admin.cell-logs.index', ['flagged' => 'true']));
 });
 
 test('acknowledging flags on a non-existent cell log returns a 404', function () {

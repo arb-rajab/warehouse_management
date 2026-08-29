@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
-import { paginated } from '@/testing/factories';
+import { cellLog, paginated } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
     CellStatusLog,
     CellStatusLogFilterOptions,
@@ -35,28 +36,6 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
-    return {
-        id: 1,
-        action: 'stored',
-        from_state: 'empty',
-        to_state: 'full',
-        note: 'Handle with care',
-        boxes_count: null,
-        cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
-        related_cell: null,
-        product: { id: 10, name: 'Widgets', image_url: null, boxes_count: 10 },
-        pallet: { id: 55, expiration_date: '2026-09-01' },
-        user: { id: 7, name: 'Jane Doe' },
-        created_at: '2026-08-01T10:00:00Z',
-        next_log_at: null,
-        duration_seconds: 3600,
-        flagged: false,
-        flags: [],
-        ...overrides,
-    };
-}
-
 const filterOptions: CellStatusLogFilterOptions = {
     rows: [
         { id: 1, letter: 'A' },
@@ -77,7 +56,7 @@ const filterOptions: CellStatusLogFilterOptions = {
 function mountPage(logs: CellStatusLog[], filters: CellStatusLogFilters = {}) {
     usePageMock.mockReturnValue({
         url: '/admin/cell-logs',
-        props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
+        props: defaultAuthProps(),
     });
 
     return mount(Index, {
@@ -96,9 +75,7 @@ async function openFilters(
 
 describe('CellStatusLogs Index', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerGetMock.mockReset();
-        routerPostMock.mockReset();
+        resetMocks({ usePageMock, routerGetMock, routerPostMock });
     });
 
     it('renders every column header', () => {
@@ -574,6 +551,39 @@ describe('CellStatusLogs Index', () => {
             {},
             { preserveScroll: true },
         );
+    });
+
+    it('preserves the current page and filters when acknowledging a flag', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/cell-logs?page=6&flagged=true',
+        );
+
+        const wrapper = mountPage([
+            cellLog({
+                id: 42,
+                flagged: true,
+                flags: [
+                    { id: 1, reason: 'rapid_actions', acknowledged: false },
+                ],
+            }),
+        ]);
+
+        const acknowledgeButton = rowCells(wrapper, 0)[1]
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.flags.acknowledge')),
+            );
+        await acknowledgeButton?.trigger('click');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-logs/42/acknowledge-flags?page=6&flagged=true',
+            {},
+            { preserveScroll: true },
+        );
+
+        window.history.pushState({}, '', '/');
     });
 
     it('requests the flagged filter when the Flagged only checkbox is checked and submitted', async () => {

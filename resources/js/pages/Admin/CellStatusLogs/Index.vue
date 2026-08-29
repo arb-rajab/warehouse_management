@@ -10,21 +10,23 @@ import {
     TriangleAlert,
     X,
 } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import {
     acknowledgeFlags as acknowledgeFlagsAction,
     index as cellLogsIndex,
 } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellLogFlagBadges from '@/components/CellLogFlagBadges.vue';
 import DataTable from '@/components/DataTable.vue';
-import FilterDateField from '@/components/FilterDateField.vue';
+import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
+import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
-import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -38,7 +40,6 @@ import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import {
     countActive,
     countBadgeClass,
-    debounce,
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
@@ -46,6 +47,7 @@ import {
     filterTriggerButtonClass,
     selectedCountLabel,
     toggleSort,
+    useColumnFilterPopover,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -68,7 +70,8 @@ function hasUnacknowledgedFlags(log: CellStatusLog): boolean {
 
 function acknowledgeFlags(log: CellStatusLog): void {
     router.post(
-        acknowledgeFlagsAction({ cellStatusLog: log.id }).url,
+        acknowledgeFlagsAction({ cellStatusLog: log.id }, { mergeQuery: {} })
+            .url,
         {},
         {
             preserveScroll: true,
@@ -170,29 +173,10 @@ function applyFilters(): void {
     filtersOpen.value = false;
 }
 
-/**
- * Which column's quick filter popover is open, if any — bound two-way to
- * DataTable so a change made inside it can auto-apply below.
- */
-const openFilterKey = ref<string | null>(null);
-
-const debouncedApplyFilters = debounce(applyFilters, 400);
-
-/**
- * A column popover applies on every change instead of needing its own
- * Apply button — gated on a popover actually being open (and the full
- * dialog being closed) so editing the same `filters.x` fields from the
- * main dialog doesn't also trigger a premature navigation before its own
- * Apply is clicked.
- */
-watch(
+const { openFilterKey } = useColumnFilterPopover(
     filters,
-    () => {
-        if (openFilterKey.value !== null && !filtersOpen.value) {
-            debouncedApplyFilters();
-        }
-    },
-    { deep: true },
+    filtersOpen,
+    applyFilters,
 );
 
 function clearFilters(): void {
@@ -234,8 +218,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
     <Head :title="t('cellLog.title')" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ t('cellLog.title') }}</h1>
+        <PageHeader :title="t('cellLog.title')">
             <button
                 type="button"
                 :class="filterTriggerButtonClass"
@@ -247,7 +230,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     {{ activeFilterCount }}
                 </span>
             </button>
-        </div>
+        </PageHeader>
 
         <FilterDialog
             v-model:open="filtersOpen"
@@ -285,48 +268,21 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                             :selected="filterOptions.products"
                         />
 
-                        <FilterMultiSelect
-                            id="filter-action"
-                            v-model="filters.action"
-                            :label="t('cellLog.filters.statusChange')"
-                            :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="selectedCountLabel"
-                            :options="
-                                filterOptions.actions.map((action) => ({
-                                    value: action,
-                                    label: cellLogActionLabel(action),
-                                }))
-                            "
-                        />
-
-                        <FilterMultiSelect
-                            id="filter-user"
-                            v-model="filters.user_id"
-                            :label="t('cellLog.filters.doneBy')"
-                            :all-label="t('cellLog.filters.all')"
-                            :selected-count-label="selectedCountLabel"
-                            :options="
-                                filterOptions.users.map((user) => ({
-                                    value: user.id.toString(),
-                                    label: user.name,
-                                }))
-                            "
+                        <CellLogActivityFilterFields
+                            id-prefix="filter"
+                            v-model:action="filters.action"
+                            v-model:user-id="filters.user_id"
+                            :actions="filterOptions.actions"
+                            :users="filterOptions.users"
                         />
                     </div>
 
-                    <div class="mt-4 flex items-center gap-2">
-                        <input
-                            id="filter-flagged"
-                            v-model="filters.flagged"
-                            type="checkbox"
-                            class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
-                        />
-                        <label
-                            for="filter-flagged"
-                            class="text-sm text-gray-700 dark:text-neutral-300"
-                            >{{ t('cellLog.filters.flaggedOnly') }}</label
-                        >
-                    </div>
+                    <FilterCheckbox
+                        id="filter-flagged"
+                        v-model="filters.flagged"
+                        class="mt-4"
+                        :label="t('cellLog.filters.flaggedOnly')"
+                    />
                 </div>
 
                 <div
@@ -336,25 +292,18 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         {{ t('cellLog.filters.sections.date') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <FilterDateField
-                            id="filter-date-from"
-                            v-model="filters.date_from"
-                            :label="t('cellLog.filters.from')"
-                            :disabled="dateRangeDisabled"
-                        />
-
-                        <FilterDateField
-                            id="filter-date-to"
-                            v-model="filters.date_to"
-                            :label="t('cellLog.filters.to')"
-                            :disabled="dateRangeDisabled"
-                        />
-
-                        <FilterNumberField
-                            id="filter-created-within-days"
-                            v-model="filters.created_within_days"
-                            :label="t('cellLog.filters.withinDays')"
-                            :disabled="createdWithinDaysDisabled"
+                        <DateRangeFilterFields
+                            from-id="filter-date-from"
+                            to-id="filter-date-to"
+                            within-days-id="filter-created-within-days"
+                            :from-label="t('cellLog.filters.from')"
+                            :to-label="t('cellLog.filters.to')"
+                            :within-days-label="t('cellLog.filters.withinDays')"
+                            v-model:from="filters.date_from"
+                            v-model:to="filters.date_to"
+                            v-model:within-days="filters.created_within_days"
+                            :range-disabled="dateRangeDisabled"
+                            :days-disabled="createdWithinDaysDisabled"
                         />
                     </div>
                 </div>
@@ -366,25 +315,20 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         {{ t('cellLog.filters.sections.expiration') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <FilterDateField
-                            id="filter-expiration-date-from"
-                            v-model="filters.expiration_date_from"
-                            :label="t('cellLog.filters.expirationFrom')"
-                            :disabled="expirationRangeDisabled"
-                        />
-
-                        <FilterDateField
-                            id="filter-expiration-date-to"
-                            v-model="filters.expiration_date_to"
-                            :label="t('cellLog.filters.expirationTo')"
-                            :disabled="expirationRangeDisabled"
-                        />
-
-                        <FilterNumberField
-                            id="filter-expires-within-days"
-                            v-model="filters.expires_within_days"
-                            :label="t('cellLog.filters.expiresWithinDays')"
-                            :disabled="expiresWithinDaysDisabled"
+                        <DateRangeFilterFields
+                            from-id="filter-expiration-date-from"
+                            to-id="filter-expiration-date-to"
+                            within-days-id="filter-expires-within-days"
+                            :from-label="t('cellLog.filters.expirationFrom')"
+                            :to-label="t('cellLog.filters.expirationTo')"
+                            :within-days-label="
+                                t('cellLog.filters.expiresWithinDays')
+                            "
+                            v-model:from="filters.expiration_date_from"
+                            v-model:to="filters.expiration_date_to"
+                            v-model:within-days="filters.expires_within_days"
+                            :range-disabled="expirationRangeDisabled"
+                            :days-disabled="expiresWithinDaysDisabled"
                         />
                     </div>
                 </div>
@@ -530,48 +474,36 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                 </div>
 
                 <div v-else-if="key === 'when'" class="space-y-3">
-                    <FilterDateField
-                        id="popover-filter-date-from"
-                        v-model="filters.date_from"
-                        :label="t('cellLog.filters.from')"
-                        :disabled="dateRangeDisabled"
-                    />
-
-                    <FilterDateField
-                        id="popover-filter-date-to"
-                        v-model="filters.date_to"
-                        :label="t('cellLog.filters.to')"
-                        :disabled="dateRangeDisabled"
-                    />
-
-                    <FilterNumberField
-                        id="popover-filter-created-within-days"
-                        v-model="filters.created_within_days"
-                        :label="t('cellLog.filters.withinDays')"
-                        :disabled="createdWithinDaysDisabled"
+                    <DateRangeFilterFields
+                        from-id="popover-filter-date-from"
+                        to-id="popover-filter-date-to"
+                        within-days-id="popover-filter-created-within-days"
+                        :from-label="t('cellLog.filters.from')"
+                        :to-label="t('cellLog.filters.to')"
+                        :within-days-label="t('cellLog.filters.withinDays')"
+                        v-model:from="filters.date_from"
+                        v-model:to="filters.date_to"
+                        v-model:within-days="filters.created_within_days"
+                        :range-disabled="dateRangeDisabled"
+                        :days-disabled="createdWithinDaysDisabled"
                     />
                 </div>
 
                 <div v-else-if="key === 'expiration'" class="space-y-3">
-                    <FilterDateField
-                        id="popover-filter-expiration-date-from"
-                        v-model="filters.expiration_date_from"
-                        :label="t('cellLog.filters.expirationFrom')"
-                        :disabled="expirationRangeDisabled"
-                    />
-
-                    <FilterDateField
-                        id="popover-filter-expiration-date-to"
-                        v-model="filters.expiration_date_to"
-                        :label="t('cellLog.filters.expirationTo')"
-                        :disabled="expirationRangeDisabled"
-                    />
-
-                    <FilterNumberField
-                        id="popover-filter-expires-within-days"
-                        v-model="filters.expires_within_days"
-                        :label="t('cellLog.filters.expiresWithinDays')"
-                        :disabled="expiresWithinDaysDisabled"
+                    <DateRangeFilterFields
+                        from-id="popover-filter-expiration-date-from"
+                        to-id="popover-filter-expiration-date-to"
+                        within-days-id="popover-filter-expires-within-days"
+                        :from-label="t('cellLog.filters.expirationFrom')"
+                        :to-label="t('cellLog.filters.expirationTo')"
+                        :within-days-label="
+                            t('cellLog.filters.expiresWithinDays')
+                        "
+                        v-model:from="filters.expiration_date_from"
+                        v-model:to="filters.expiration_date_to"
+                        v-model:within-days="filters.expires_within_days"
+                        :range-disabled="expirationRangeDisabled"
+                        :days-disabled="expiresWithinDaysDisabled"
                     />
                 </div>
             </template>
