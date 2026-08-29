@@ -278,18 +278,10 @@
             "soon": "تنتهي خلال {days} أيام"
         },
         "activityToday": {
-            "title": "نشاط اليوم",
-            "stored": "تم التخزين",
-            "opened": "تم الفتح",
-            "emptied": "تم التفريغ",
-            "transferred": "تم النقل"
+            "title": "نشاط اليوم"
         },
         "activityWeek": {
-            "title": "نشاط هذا الأسبوع",
-            "stored": "تم التخزين",
-            "opened": "تم الفتح",
-            "emptied": "تم التفريغ",
-            "transferred": "تم النقل"
+            "title": "نشاط هذا الأسبوع"
         }
     },
     "products": {
