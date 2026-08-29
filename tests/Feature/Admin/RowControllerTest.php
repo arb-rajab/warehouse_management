@@ -509,6 +509,15 @@ test('an admin can delete a row with no pallets in it', function () {
     $this->assertDatabaseHas('rows', ['id' => $otherRow->id]);
 });
 
+test('deleting a row redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->delete("/admin/rows/{$row->letter}?page=2");
+
+    $response->assertRedirect(route('admin.rows.index', ['page' => 2]));
+});
+
 test('deleting a row that has a pallet is rejected and nothing changes', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);

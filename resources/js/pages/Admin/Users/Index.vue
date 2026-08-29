@@ -84,7 +84,7 @@ const page = usePage();
                         </TableActionLink>
                         <TableActionLink
                             v-if="user.id !== page.props.auth.user?.id"
-                            :href="destroy(user)"
+                            :href="destroy(user, { mergeQuery: {} })"
                             variant="danger"
                             method="delete"
                             as="button"

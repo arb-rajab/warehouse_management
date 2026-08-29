@@ -11,6 +11,7 @@ use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -84,16 +85,16 @@ class RowController extends Controller
         });
     }
 
-    public function destroy(Row $row): RedirectResponse
+    public function destroy(Request $request, Row $row): RedirectResponse
     {
-        return DB::transaction(function () use ($row) {
+        return DB::transaction(function () use ($request, $row) {
             if ($this->lockedRowHasPallets($row)) {
                 return back()->withErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
             }
 
             $row->delete();
 
-            return redirect()->route('admin.rows.index');
+            return redirect()->route('admin.rows.index', $request->query());
         });
     }
 

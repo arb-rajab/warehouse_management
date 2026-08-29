@@ -64,7 +64,7 @@ const deleteError = computed(
                         </TableActionLink>
                         <TableActionLink
                             v-if="!row.has_pallets"
-                            :href="destroy(row)"
+                            :href="destroy(row, { mergeQuery: {} })"
                             variant="danger"
                             method="delete"
                             as="button"
