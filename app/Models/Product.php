@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -42,5 +44,21 @@ class Product extends Model
     public static function selectedOptions(array $ids = []): Collection
     {
         return self::query()->select(['id', 'name'])->whereIn('id', $ids)->orderBy('name')->get();
+    }
+
+    /**
+     * Scope a query to products whose name contains the given search term.
+     * A blank/null term is a no-op, matching every product.
+     *
+     * @param  Builder<Product>  $query
+     */
+    #[Scope]
+    protected function searchByName(Builder $query, ?string $term): void
+    {
+        if (blank($term)) {
+            return;
+        }
+
+        $query->where('name', 'like', '%'.$term.'%');
     }
 }
