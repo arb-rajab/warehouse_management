@@ -70,4 +70,22 @@ class Pallet extends Model
     {
         return $this->created_at->lte(now()->subDays($days));
     }
+
+    /**
+     * The pallet fields shown on the admin cell map — its own CellResource entry and the
+     * warehouse-wide cellHighlightSamples() summary both build on this shared shape so a
+     * field can't be renamed/dropped in one without the other.
+     *
+     * @return array{product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null}
+     */
+    public function toMapSummaryArray(): array
+    {
+        return [
+            'product_id' => $this->product_id,
+            'product_name' => $this->product->name,
+            'product_image_url' => $this->product->image_url,
+            'expiration_date' => $this->expiration_date->toDateString(),
+            'added_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
 }

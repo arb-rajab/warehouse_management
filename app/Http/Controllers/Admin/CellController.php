@@ -71,11 +71,7 @@ class CellController extends Controller
     {
         return Cell::query()
             ->select(Cell::SELECT_COLUMNS)
-            ->with([
-                'row:id,letter',
-                'pallet:id,cell_id,product_id,expiration_date,created_at',
-                'pallet.product:id,name,image_url',
-            ])
+            ->with(Cell::WITH_ROW_AND_CONTENTS)
             ->orderedByCoordinates()
             ->get()
             ->map(fn (Cell $cell) => [
@@ -83,13 +79,7 @@ class CellController extends Controller
                 'cell_number' => $cell->cell_number,
                 'flat_number' => $cell->flat_number,
                 'state' => $cell->state->value,
-                'pallet' => $cell->pallet === null ? null : [
-                    'product_id' => $cell->pallet->product_id,
-                    'product_name' => $cell->pallet->product->name,
-                    'product_image_url' => $cell->pallet->product->image_url,
-                    'expiration_date' => $cell->pallet->expiration_date->toDateString(),
-                    'added_at' => $cell->pallet->created_at?->toIso8601String(),
-                ],
+                'pallet' => $cell->pallet?->toMapSummaryArray(),
             ])
             ->all();
     }
