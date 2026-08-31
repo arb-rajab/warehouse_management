@@ -76,7 +76,7 @@ jobs:
               -H "X-Deploy-Token: ${{ secrets.STAGING_DEPLOY_TOKEN }}" \
               -o "$response_file" \
               -w '%{http_code}' \
-              "${{ secrets.STAGING_APP_URL }}/deploy-hook.php")
+              "${{ secrets.STAGING_APP_URL }}/deploy-hook.php") || http_code=000
 
             body=$(cat "$response_file")
             status=$(echo "$body" | jq -r '.status // empty' 2>/dev/null || echo '')
