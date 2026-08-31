@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
+use Smalot\PdfParser\Parser as PdfParser;
 
 test('an authenticated user can view the row list with every property the table renders', function () {
     actingAsAdmin();
@@ -551,6 +553,50 @@ test('deleting a non-existent row returns a 404', function () {
     actingAsAdmin();
 
     $response = $this->delete('/admin/rows/ZZ');
+
+    $response->assertNotFound();
+});
+
+test('an authenticated user can export QR codes for every cell in a row', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+    // A PDF with 4 real QR codes drawn is meaningfully larger than one with just
+    // labels (~1.1KB) — regression guard for the QR silently failing to render
+    // (dompdf doesn't support inline <svg>, only an <img> referencing an image source).
+    expect(strlen($response->getContent()))->toBeGreaterThan(2500);
+
+    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
+    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
+        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
+    }
+});
+
+test('a mobile app user cannot export QR codes for a row', function () {
+    actingAsMobilePanelUser();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when exporting QR codes for a row', function () {
+    $row = Row::factory()->create();
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('exporting QR codes for a non-existent row returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/rows/ZZ/export-qr-codes');
 
     $response->assertNotFound();
 });

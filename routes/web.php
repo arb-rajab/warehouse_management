@@ -46,8 +46,10 @@ Route::middleware('auth')->group(function () {
         Route::get('rows/{row}/edit', [RowController::class, 'edit'])->name('rows.edit');
         Route::put('rows/{row}', [RowController::class, 'update'])->name('rows.update');
         Route::delete('rows/{row}', [RowController::class, 'destroy'])->name('rows.destroy');
+        Route::get('rows/{row}/export-qr-codes', [RowController::class, 'exportQrCodes'])->name('rows.export-qr-codes');
 
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
+        Route::get('cells/{cell}/export-qr', [CellController::class, 'exportQr'])->name('cells.export-qr');
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
         Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');
