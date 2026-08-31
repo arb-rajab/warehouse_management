@@ -14,4 +14,6 @@ return [
     'insufficient_boxes_remaining' => 'Not enough boxes remaining on this pallet.',
     'pallet_boxes_depleted' => 'All boxes have been removed — this pallet should now be emptied.',
     'app_version_outdated' => 'This app version is no longer supported. Please update to continue.',
+    'open_in_app' => 'Open in app',
+    'qr_label_description' => 'Row :row · Cell :cell · Flat :flat',
 ];

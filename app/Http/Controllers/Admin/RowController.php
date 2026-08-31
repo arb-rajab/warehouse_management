@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRowRequest;
 use App\Http\Requests\UpdateRowRequest;
@@ -10,14 +11,18 @@ use App\Http\Resources\RowResource;
 use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RowController extends Controller
 {
+    use BuildsCellQrLabels;
+
     public function index(): Response
     {
         return Inertia::render('Admin/Rows/Index', [
@@ -65,6 +70,23 @@ class RowController extends Controller
         return Inertia::render('Admin/Rows/Edit', [
             'row' => new RowResource($row),
         ]);
+    }
+
+    public function exportQrCodes(Row $row): HttpResponse
+    {
+        // No upper bound on cells_count/flats_count is enforced, so an unusually
+        // large row could still take a while to render even with SVG-rendered QRs
+        // (see BuildsCellQrLabels) — buy headroom beyond PHP's default 30s limit.
+        set_time_limit(300);
+
+        $cells = $row->cells()
+            ->select(['id', 'cell_number', 'flat_number'])
+            ->orderedByCoordinates()
+            ->get();
+
+        return Pdf::loadView('pdf.cell-qr-labels', [
+            'labels' => $this->cellQrLabels($row->letter, $cells),
+        ])->download("row-{$row->letter}-qr-codes.pdf");
     }
 
     public function update(UpdateRowRequest $request, Row $row): RedirectResponse

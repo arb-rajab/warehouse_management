@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ShowCellMapRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CellController extends Controller
 {
+    use BuildsCellQrLabels;
+
     public function index(ShowCellMapRequest $request): Response
     {
         $rows = Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get();
@@ -55,6 +60,15 @@ class CellController extends Controller
             ],
             'cellHighlightSamples' => $this->cellHighlightSamples(),
         ]);
+    }
+
+    public function exportQr(Cell $cell): HttpResponse
+    {
+        $cell->loadMissing('row:id,letter');
+
+        return Pdf::loadView('pdf.cell-qr-labels', [
+            'labels' => $this->cellQrLabels($cell->row->letter, collect([$cell])),
+        ])->download("cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr-code.pdf");
     }
 
     /**

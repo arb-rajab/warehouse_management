@@ -29,6 +29,7 @@ return [
         'telescope*',
         '_boost*',
         'up',
+        '.well-known/*',
     ],
 
     /*

@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "barryvdh/laravel-dompdf": "*",
         "bepsvpt/secure-headers": "^9.1",
         "dedoc/scramble": "^0.13.39",
         "inertiajs/inertia-laravel": "^3.0",
@@ -19,6 +20,7 @@
         "laravel/telescope": "^5.22",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "simplesoftwareio/simple-qrcode": "*",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-health": "^1.40",
         "spatie/laravel-honeypot": "^4.7",
@@ -36,7 +38,8 @@
         "nunomaduro/collision": "^8.9.3",
         "pestphp/pest": "^5.0",
         "pestphp/pest-plugin-laravel": "^5.0",
-        "roave/security-advisories": "dev-latest"
+        "roave/security-advisories": "dev-latest",
+        "smalot/pdfparser": "^2.12"
     },
     "autoload": {
         "psr-4": {

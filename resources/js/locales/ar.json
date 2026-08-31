@@ -47,6 +47,7 @@
             "columnAction": "الإجراء",
             "empty": "لا توجد صفوف بعد.",
             "view": "عرض",
+            "exportQrCodes": "تصدير رموز QR",
             "delete": "حذف",
             "rowLabel": "الصف {letter}",
             "hasPallets": "يحتوي على منصات",
@@ -65,6 +66,7 @@
         "show": {
             "title": "الصف {letter}",
             "editRow": "تعديل الصف",
+            "reprintQr": "إعادة طباعة رمز QR",
             "column": "العمود {n}",
             "flat": "الطبقة {n}",
             "empty": "فارغ",

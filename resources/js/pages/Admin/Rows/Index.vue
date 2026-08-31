@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { Eye, Trash2, TriangleAlert } from '@lucide/vue';
+import { Eye, QrCode, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     create,
     destroy,
+    exportQrCodes,
     show,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
@@ -14,6 +15,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import type { Paginated, Row } from '@/types/admin';
@@ -62,6 +64,13 @@ const deleteError = computed(
                             <Eye class="h-3.5 w-3.5" />
                             {{ t('rows.index.view') }}
                         </TableActionLink>
+                        <a
+                            :href="exportQrCodes.url(row)"
+                            :class="[pillLinkClass, primaryPillVariantClass]"
+                        >
+                            <QrCode class="h-3.5 w-3.5" />
+                            {{ t('rows.index.exportQrCodes') }}
+                        </a>
                         <TableActionLink
                             v-if="!row.has_pallets"
                             :href="destroy(row, { mergeQuery: {} })"
