@@ -51,6 +51,11 @@ test('toLocationArray describes the cell by its row letter, cell number, and fla
     expect($cell->toLocationArray()['row_letter'])->not->toBe($otherRow->letter);
 });
 
+test('slotLabel formats the row letter, cell number, and flat number as the printed QR label', function () {
+    expect(Cell::slotLabel('A', 1, 2))->toBe('A1·2');
+    expect(Cell::slotLabel('BC', 12, 3))->toBe('BC12·3');
+});
+
 test('the atCoordinates scope finds the exact matching cell', function () {
     $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 2]);
 

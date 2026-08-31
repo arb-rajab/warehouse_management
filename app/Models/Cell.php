@@ -91,6 +91,15 @@ class Cell extends Model
     }
 
     /**
+     * The human-readable "A1·2" label printed on QR-export PDFs and shown on
+     * the page a scanned QR code redirects to — both must stay in lockstep.
+     */
+    public static function slotLabel(string $rowLetter, int $cellNumber, int $flatNumber): string
+    {
+        return "{$rowLetter}{$cellNumber}·{$flatNumber}";
+    }
+
+    /**
      * Scope a query to the single cell identified by a row's human-readable coordinates.
      *
      * @param  Builder<Cell>  $query
