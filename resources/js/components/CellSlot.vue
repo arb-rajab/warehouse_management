@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { CalendarPlus, CalendarX } from '@lucide/vue';
+import { CalendarPlus, CalendarX, QrCode } from '@lucide/vue';
 import { computed } from 'vue';
+import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -31,7 +32,7 @@ const borderClass = computed(() =>
     <div
         data-testid="cell-slot"
         :data-slot-label="label"
-        class="group relative flex h-28 w-32 shrink-0 flex-col justify-between rounded-md p-2 text-xs"
+        class="relative flex h-28 w-32 shrink-0 flex-col justify-between rounded-md p-2 text-xs"
         :class="[
             cell ? CELL_STATE_COLOR[cell.state].backgroundClass : '',
             borderClass,
@@ -53,6 +54,15 @@ const borderClass = computed(() =>
             />
             {{ label }}
         </span>
+
+        <a
+            v-if="cell"
+            :href="exportQr.url(cell.id)"
+            :title="t('rows.show.reprintQr')"
+            class="absolute end-1 top-1"
+        >
+            <QrCode class="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
+        </a>
 
         <template v-if="cell?.pallet">
             <img

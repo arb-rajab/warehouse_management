@@ -47,6 +47,7 @@
             "columnAction": "Action",
             "empty": "No rows yet.",
             "view": "View",
+            "exportQrCodes": "Export QR codes",
             "delete": "Delete",
             "rowLabel": "row {letter}",
             "hasPallets": "Has pallets",
@@ -65,6 +66,7 @@
         "show": {
             "title": "Row {letter}",
             "editRow": "Edit row",
+            "reprintQr": "Reprint QR code",
             "column": "Column {n}",
             "flat": "Flat {n}",
             "empty": "Empty",

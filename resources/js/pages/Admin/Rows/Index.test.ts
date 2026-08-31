@@ -85,6 +85,17 @@ describe('Rows Index', () => {
         expect(viewLink?.attributes('href')).toBe('/admin/rows/C');
     });
 
+    it("links a row's export action to its QR-codes PDF download", () => {
+        const wrapper = mountPage([row({ letter: 'C' })]);
+
+        const exportLink = wrapper
+            .findAll('a')
+            .find((a) => a.text().includes(t('rows.index.exportQrCodes')));
+        expect(exportLink?.attributes('href')).toBe(
+            '/admin/rows/C/export-qr-codes',
+        );
+    });
+
     it('shows a delete action for a row with no pallets', () => {
         const wrapper = mountPage([row({ letter: 'D', has_pallets: false })]);
 

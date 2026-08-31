@@ -135,4 +135,25 @@ describe('CellSlot', () => {
             'ring-blue-500',
         );
     });
+
+    it('always shows the QR reprint link for an existing cell, not just on hover, since touch devices have no hover state', () => {
+        const wrapper = mountSlot({ cell: cell({ id: 7 }) });
+
+        const link = wrapper.find(
+            'a[title="' + t('rows.show.reprintQr') + '"]',
+        );
+        expect(link.exists()).toBe(true);
+        expect(link.classes()).not.toContain('opacity-0');
+        expect(link.attributes('href')).toContain('/7/');
+    });
+
+    it('does not show a QR reprint link when there is no cell record', () => {
+        const wrapper = mountSlot({ cell: null });
+
+        expect(
+            wrapper
+                .find('a[title="' + t('rows.show.reprintQr') + '"]')
+                .exists(),
+        ).toBe(false);
+    });
 });
