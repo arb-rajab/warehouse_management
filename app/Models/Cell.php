@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $cell_number
  * @property int $flat_number
  * @property CellState $state
+ * @property bool $is_active
  */
-#[Fillable(['row_id', 'cell_number', 'flat_number', 'state'])]
+#[Fillable(['row_id', 'cell_number', 'flat_number', 'state', 'is_active'])]
 class Cell extends Model
 {
     /** @use HasFactory<CellFactory> */
@@ -30,7 +31,7 @@ class Cell extends Model
      *
      * @var list<string>
      */
-    public const array SELECT_COLUMNS = ['id', 'row_id', 'cell_number', 'flat_number', 'state'];
+    public const array SELECT_COLUMNS = ['id', 'row_id', 'cell_number', 'flat_number', 'state', 'is_active'];
 
     /**
      * Eager loads needed to describe what a cell currently holds.
@@ -56,6 +57,7 @@ class Cell extends Model
     {
         return [
             'state' => CellState::class,
+            'is_active' => 'boolean',
         ];
     }
 

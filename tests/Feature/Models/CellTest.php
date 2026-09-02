@@ -37,6 +37,18 @@ test('the state attribute is cast to a CellState enum', function () {
     expect($cell->fresh()->state)->toBe(CellState::Opened);
 });
 
+test('a cell defaults to active', function () {
+    $cell = Cell::factory()->create();
+
+    expect($cell->fresh()->is_active)->toBeTrue();
+});
+
+test('the is_active attribute is cast to a boolean', function () {
+    $cell = Cell::factory()->inactive()->create();
+
+    expect($cell->fresh()->is_active)->toBeFalse();
+});
+
 test('toLocationArray describes the cell by its row letter, cell number, and flat number', function () {
     $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
     $otherRow = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);

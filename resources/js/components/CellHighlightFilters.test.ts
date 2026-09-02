@@ -30,6 +30,7 @@ describe('CellHighlightFilters', () => {
             true,
         );
         expect(wrapper.find('#highlight-expired').exists()).toBe(true);
+        expect(wrapper.find('#highlight-inactive').exists()).toBe(true);
         expect(wrapper.find('#highlight-product').exists()).toBe(true);
         expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
@@ -44,6 +45,7 @@ describe('CellHighlightFilters', () => {
                     expiresWithinDays: '',
                     productIds: ['1'],
                     staleAfterDays: '',
+                    inactive: false,
                 },
             },
         });
@@ -61,6 +63,18 @@ describe('CellHighlightFilters', () => {
         await wrapper.get('#highlight-expired').setValue(true);
 
         expect(modelValue.expired).toBe(true);
+    });
+
+    it('updates the model when the inactive checkbox is toggled', async () => {
+        const modelValue = emptyCellHighlightFilters();
+        const wrapper = mount(CellHighlightFilters, {
+            props: { products, modelValue },
+        });
+        await wrapper.get('button').trigger('click');
+
+        await wrapper.get('#highlight-inactive').setValue(true);
+
+        expect(modelValue.inactive).toBe(true);
     });
 
     it('updates the model when the state filter changes, allowing more than one selection', async () => {
@@ -85,6 +99,7 @@ describe('CellHighlightFilters', () => {
             expiresWithinDays: '3',
             productIds: ['1'],
             staleAfterDays: '5',
+            inactive: true,
         };
         const wrapper = mount(CellHighlightFilters, {
             props: { products, modelValue },

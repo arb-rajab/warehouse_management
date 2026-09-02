@@ -186,7 +186,9 @@
             "emptied": "تم التفريغ",
             "transferred_out": "تم النقل منها",
             "transferred_in": "تم النقل إليها",
-            "transferred": "تم النقل"
+            "transferred": "تم النقل",
+            "deactivated": "تم التعطيل",
+            "reactivated": "تمت إعادة التفعيل"
         },
         "states": {
             "empty": "فارغ",
@@ -200,7 +202,8 @@
         "staleAfterDaysPlaceholder": "مثال: 5",
         "expiresWithinDays": "تنتهي خلال (أيام)",
         "expiresWithinDaysPlaceholder": "مثال: 7",
-        "expired": "منتهية الصلاحية"
+        "expired": "منتهية الصلاحية",
+        "inactive": "غير نشطة فقط"
     },
     "expiringWindow": {
         "label": "فترة الاقتراب من الانتهاء",
@@ -218,6 +221,20 @@
         },
         "empty": "لم تتم إضافة أي صفوف بعد.",
         "flatNotAvailable": "هذا المسار غير موجود لهذا الصف",
+        "inactiveBadge": "غير نشطة",
+        "toggleActive": {
+            "deactivateLabel": "تعطيل الخلية",
+            "reactivateLabel": "إعادة تفعيل الخلية",
+            "deactivateTitle": "تعطيل الخلية {location}",
+            "reactivateTitle": "إعادة تفعيل الخلية {location}",
+            "deactivateConfirm": "سيؤدي هذا إلى تعليم الخلية {location} كغير نشطة. لن يمكن استخدامها للتخزين أو الفتح أو إزالة الصناديق أو التفريغ أو النقل حتى تتم إعادة تفعيلها.",
+            "reactivateConfirm": "سيؤدي هذا إلى تعليم الخلية {location} كنشطة مرة أخرى، مما يعيد استخدامها الطبيعي.",
+            "noteLabel": "ملاحظة (اختياري)",
+            "notePlaceholder": "سبب هذا التغيير…",
+            "submitDeactivate": "تعطيل",
+            "submitReactivate": "إعادة تفعيل",
+            "submitting": "جارٍ الحفظ…"
+        },
         "search": {
             "placeholder": "ابحث عن موضع الخلية (A12·3)…",
             "submit": "بحث",

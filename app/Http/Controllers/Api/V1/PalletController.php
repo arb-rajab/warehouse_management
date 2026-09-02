@@ -28,11 +28,19 @@ class PalletController extends Controller
 
     /**
      * Read a cell inside the surrounding transaction, holding a row lock on it so
-     * concurrent requests cannot act on the same slot at the same time.
+     * concurrent requests cannot act on the same slot at the same time. Rejects an
+     * inactive (corrupted / out of service) cell so every pallet action on either
+     * side of a transfer is blocked while a cell is deactivated.
      */
     private function lockCell(int $cellId): Cell
     {
-        return Cell::query()->lockForUpdate()->findOrFail($cellId);
+        $cell = Cell::query()->lockForUpdate()->findOrFail($cellId);
+
+        if (! $cell->is_active) {
+            throw new InvalidSlotStateException('slot_inactive', __('messages.slot_inactive'));
+        }
+
+        return $cell;
     }
 
     /**
@@ -146,6 +154,7 @@ class PalletController extends Controller
     }
 
     #[DocumentedResponse(409, description: 'The requested slot is not empty (`error_code`: `slot_not_empty`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The requested slot is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     public function store(StorePalletRequest $request): JsonResponse
     {
         /** @var User $user */
@@ -196,6 +205,7 @@ class PalletController extends Controller
 
     #[DocumentedResponse(409, description: 'Only a full pallet can be opened (`error_code`: `pallet_not_full`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The requested boxes_count exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     public function open(OpenPalletRequest $request, Pallet $pallet): PalletResource|JsonResponse
     {
         /** @var User $user */
@@ -242,6 +252,7 @@ class PalletController extends Controller
 
     #[DocumentedResponse(409, description: 'Boxes can only be removed from an opened pallet (`error_code`: `pallet_not_opened`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The requested boxes_count exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     public function removeBoxes(RemovePalletBoxesRequest $request, Pallet $pallet): PalletResource|JsonResponse
     {
         /** @var User $user */
@@ -284,6 +295,7 @@ class PalletController extends Controller
         return new PalletResource($pallet->refresh()->load(self::EAGER_LOAD));
     }
 
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     public function empty(EmptyPalletRequest $request, Pallet $pallet): JsonResponse
     {
         /** @var User $user */
@@ -300,6 +312,7 @@ class PalletController extends Controller
     }
 
     #[DocumentedResponse(409, description: 'The destination slot is not empty (`error_code`: `destination_not_empty`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The source or destination cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     public function transfer(TransferPalletRequest $request, Pallet $pallet): PalletResource
     {
         /** @var User $user */

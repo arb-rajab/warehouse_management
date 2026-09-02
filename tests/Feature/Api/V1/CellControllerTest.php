@@ -25,6 +25,7 @@ test('an authenticated worker can list a row cells with every property the app r
         'cell_number' => 1,
         'flat_number' => 1,
         'state' => 'full',
+        'is_active' => true,
         'pallet' => [
             'id' => $pallet->id,
             'product_id' => $product->id,
@@ -41,6 +42,7 @@ test('an authenticated worker can list a row cells with every property the app r
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'empty',
+        'is_active' => true,
         'pallet' => null,
     ]);
 });
@@ -119,6 +121,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'full',
+        'is_active' => true,
         'pallet' => [
             'id' => $pallet->id,
             'product_id' => $product->id,
@@ -180,4 +183,19 @@ test('an unauthenticated caller cannot look up a cell', function () {
     $response = $this->getJson("/api/v1/rows/{$row->letter}/cells/1/flats/1");
 
     $response->assertUnauthorized();
+});
+
+test('an inactive cell is reported as such by the lookup and listing endpoints', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
+    $cell->update(['is_active' => false]);
+
+    $lookup = $this->getJson("/api/v1/rows/{$row->letter}/cells/1/flats/1");
+    $lookup->assertOk()->assertJsonPath('is_active', false);
+
+    $listing = $this->getJson("/api/v1/rows/{$row->letter}/cells");
+    $listing->assertOk();
+    expect(collect($listing->json('data'))->firstWhere('id', $cell->id)['is_active'])->toBeFalse();
 });

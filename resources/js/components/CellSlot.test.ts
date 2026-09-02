@@ -156,4 +156,53 @@ describe('CellSlot', () => {
                 .exists(),
         ).toBe(false);
     });
+
+    it('marks an inactive cell with a red border, dimmed opacity, and an inactive badge, regardless of its occupancy', () => {
+        const inactiveFull = mountSlot({
+            cell: cell({ state: 'full', is_active: false }),
+        });
+        expect(inactiveFull.classes()).toContain('border-red-500');
+        expect(inactiveFull.classes()).toContain('opacity-60');
+        expect(
+            inactiveFull.find(`[title="${t('cells.inactiveBadge')}"]`).exists(),
+        ).toBe(true);
+
+        const active = mountSlot({ cell: cell({ state: 'full' }) });
+        expect(active.classes()).not.toContain('border-red-500');
+        expect(active.classes()).not.toContain('opacity-60');
+        expect(
+            active.find(`[title="${t('cells.inactiveBadge')}"]`).exists(),
+        ).toBe(false);
+    });
+
+    it('does not show a toggle-active button unless toggleable is set', () => {
+        const wrapper = mountSlot({ cell: cell() });
+
+        expect(
+            wrapper.find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`).exists(),
+        ).toBe(false);
+    });
+
+    it('shows a toggle-active button with a label matching the cells current status when toggleable', () => {
+        const active = mountSlot({ cell: cell({ is_active: true }), toggleable: true });
+        expect(
+            active.find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`).exists(),
+        ).toBe(true);
+
+        const inactive = mountSlot({ cell: cell({ is_active: false }), toggleable: true });
+        expect(
+            inactive.find(`[title="${t('cells.toggleActive.reactivateLabel')}"]`).exists(),
+        ).toBe(true);
+    });
+
+    it('emits toggle-active with the cell when the toggle button is clicked', async () => {
+        const targetCell = cell({ id: 42, is_active: true });
+        const wrapper = mountSlot({ cell: targetCell, toggleable: true });
+
+        await wrapper
+            .find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+            .trigger('click');
+
+        expect(wrapper.emitted('toggle-active')).toEqual([[targetCell]]);
+    });
 });

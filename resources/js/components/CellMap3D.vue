@@ -95,6 +95,8 @@ const BOX_SIZE = 1.4;
 const VIEW_DISTANCE = cellWorldZ(1);
 const HIGHLIGHT_COLOR = 0x3b82f6;
 const PULSE_COLOR = 0x10b981;
+/** Outline drawn on an inactive (corrupted) cell — same red as CELL_STATE_COLOR's overlay badge. */
+const INACTIVE_COLOR = 0xef4444;
 const SELECT_COLOR = 0x8b5cf6;
 const SELECT_OUTLINE_SCALE = 1.15;
 /** Orbit-mode hover outline — same weight as highlight/pulse outlines, just a distinct neutral color. */
@@ -189,8 +191,9 @@ let cellOutlineLookup = new Map<string, THREE.LineSegments>();
 
 /**
  * Box geometry and per-state/per-outline-color materials are identical
- * across every rebuild (fixed box size, only 3 states, 2 outline colors) —
- * built once lazily and reused (disposed only on unmount via
+ * across every rebuild (fixed box size, one draw call per occupancy state,
+ * one outline color per highlight/pulse/inactive kind) — built once lazily
+ * and reused (disposed only on unmount via
  * `sceneDisposables`) instead of one new geometry/material instance per box
  * on every rebuild.
  */
@@ -202,6 +205,7 @@ const boxMaterialsByState = new Map<
 >();
 let highlightOutlineMaterial: THREE.LineBasicMaterial | null = null;
 let pulseOutlineMaterial: THREE.LineBasicMaterial | null = null;
+let inactiveOutlineMaterial: THREE.LineBasicMaterial | null = null;
 
 const pressedDirections = new Set<MoveDirection>();
 const position = { x: 0, y: EYE_HEIGHT, z: 0 };
@@ -402,7 +406,7 @@ function boxMaterialForState(state: Cell['state']): THREE.MeshStandardMaterial {
 }
 
 function outlineMaterialFor(
-    kind: 'highlight' | 'pulse',
+    kind: 'highlight' | 'pulse' | 'inactive',
 ): THREE.LineBasicMaterial {
     if (kind === 'pulse') {
         if (!pulseOutlineMaterial) {
@@ -415,6 +419,17 @@ function outlineMaterialFor(
         return pulseOutlineMaterial;
     }
 
+    if (kind === 'inactive') {
+        if (!inactiveOutlineMaterial) {
+            inactiveOutlineMaterial = new THREE.LineBasicMaterial({
+                color: INACTIVE_COLOR,
+            });
+            sceneDisposables.push(inactiveOutlineMaterial);
+        }
+
+        return inactiveOutlineMaterial;
+    }
+
     if (!highlightOutlineMaterial) {
         highlightOutlineMaterial = new THREE.LineBasicMaterial({
             color: HIGHLIGHT_COLOR,
@@ -423,6 +438,30 @@ function outlineMaterialFor(
     }
 
     return highlightOutlineMaterial;
+}
+
+/**
+ * Which outline (if any) a cell should draw — pulse/highlight take priority
+ * over the inactive marker since they're a deliberate, momentary user focus
+ * (search match, jump target) that shouldn't be visually crowded out by the
+ * more persistent inactive-cell indicator.
+ */
+function outlineKindFor(
+    item: CellMap3DItem,
+): 'highlight' | 'pulse' | 'inactive' | null {
+    if (item.pulsing) {
+        return 'pulse';
+    }
+
+    if (item.highlighted) {
+        return 'highlight';
+    }
+
+    if (!item.isActive) {
+        return 'inactive';
+    }
+
+    return null;
 }
 
 function disposeCellGroup(): void {
@@ -541,10 +580,12 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
             const z = cellWorldZ(item.cellNumber);
             placeCellInstance(key, item.state, x, y, z);
 
-            if (item.highlighted || item.pulsing) {
+            const outlineKind = outlineKindFor(item);
+
+            if (outlineKind) {
                 const outline = new THREE.LineSegments(
                     edgesGeometry,
-                    outlineMaterialFor(item.pulsing ? 'pulse' : 'highlight'),
+                    outlineMaterialFor(outlineKind),
                 );
                 outline.position.set(x, y, z);
                 group.add(outline);
@@ -759,9 +800,9 @@ function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
             }
 
             const existingOutline = cellOutlineLookup.get(key);
-            const wantsOutline = item.highlighted || item.pulsing;
+            const outlineKind = outlineKindFor(item);
 
-            if (!wantsOutline) {
+            if (!outlineKind) {
                 if (existingOutline) {
                     group.remove(existingOutline);
                     cellOutlineLookup.delete(key);
@@ -770,9 +811,7 @@ function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
                 continue;
             }
 
-            const outlineMaterial = outlineMaterialFor(
-                item.pulsing ? 'pulse' : 'highlight',
-            );
+            const outlineMaterial = outlineMaterialFor(outlineKind);
 
             if (existingOutline) {
                 existingOutline.material = outlineMaterial;
@@ -1309,6 +1348,7 @@ const displayedCellForSlot = computed<Cell | null>(() => {
         cell_number: item.cellNumber,
         flat_number: item.flatNumber,
         state: item.state,
+        is_active: item.isActive,
         pallet: item.pallet
             ? {
                   id: 0,

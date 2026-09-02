@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ShowCellMapRequest;
+use App\Http\Requests\Admin\ToggleCellActiveRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Product;
 use App\Models\Row;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -52,6 +57,7 @@ class CellController extends Controller
                     ? $request->integer('expires_within_days')
                     : null,
                 'expired' => $request->boolean('expired'),
+                'inactive' => $request->filled('is_active') && ! $request->boolean('is_active'),
             ],
             'jumpToCell' => $matchedCell?->toLocationArray(),
             'searchError' => $searched && $matchedCell === null,
@@ -72,6 +78,37 @@ class CellController extends Controller
     }
 
     /**
+     * Toggle a cell's active status — deactivating flags it as corrupted/out of
+     * service (regardless of its current occupancy), reactivating restores it.
+     * Occupancy (`state`) is never touched by this action.
+     */
+    public function toggleActive(ToggleCellActiveRequest $request, Cell $cell): RedirectResponse
+    {
+        return DB::transaction(function () use ($request, $cell) {
+            /** @var Cell $lockedCell */
+            $lockedCell = Cell::query()->with('pallet:id,cell_id,product_id')->lockForUpdate()->findOrFail($cell->id);
+
+            $activating = ! $lockedCell->is_active;
+            $lockedCell->update(['is_active' => $activating]);
+
+            CellStatusLog::create([
+                'cell_id' => $lockedCell->id,
+                'related_cell_id' => null,
+                'action' => $activating ? CellLogAction::Reactivated : CellLogAction::Deactivated,
+                'from_state' => $lockedCell->state,
+                'to_state' => $lockedCell->state,
+                'product_id' => $lockedCell->pallet?->product_id,
+                'pallet_id' => $lockedCell->pallet?->id,
+                'boxes_count' => null,
+                'user_id' => $request->user()->id,
+                'note' => $request->input('note'),
+            ]);
+
+            return redirect()->route('admin.cells.index', $request->query());
+        });
+    }
+
+    /**
      * The minimal per-cell data needed to compute a highlight-match count for
      * every flat (not just the one currently on screen) — the map only ever
      * loads one flat's full cell/row/pallet.product data at a time, so this
@@ -79,7 +116,7 @@ class CellController extends Controller
      * on the frontend needs. `row_letter`/`cell_number` are included so the
      * frontend can also order matches for next/previous-match navigation.
      *
-     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', pallet: array{product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null}|null}>
+     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null}|null}>
      */
     private function cellHighlightSamples(): array
     {
@@ -93,6 +130,7 @@ class CellController extends Controller
                 'cell_number' => $cell->cell_number,
                 'flat_number' => $cell->flat_number,
                 'state' => $cell->state->value,
+                'is_active' => $cell->is_active,
                 'pallet' => $cell->pallet?->toMapSummaryArray(),
             ])
             ->all();

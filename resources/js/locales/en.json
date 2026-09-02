@@ -186,7 +186,9 @@
             "emptied": "Emptied",
             "transferred_out": "Transferred out",
             "transferred_in": "Transferred in",
-            "transferred": "Transferred"
+            "transferred": "Transferred",
+            "deactivated": "Deactivated",
+            "reactivated": "Reactivated"
         },
         "states": {
             "empty": "Empty",
@@ -200,7 +202,8 @@
         "staleAfterDaysPlaceholder": "e.g. 5",
         "expiresWithinDays": "Expires within (days)",
         "expiresWithinDaysPlaceholder": "e.g. 7",
-        "expired": "Expired"
+        "expired": "Expired",
+        "inactive": "Inactive only"
     },
     "expiringWindow": {
         "label": "Expiring soon window",
@@ -218,6 +221,20 @@
         },
         "empty": "No rows have been added yet.",
         "flatNotAvailable": "This level doesn't exist for this row",
+        "inactiveBadge": "Inactive",
+        "toggleActive": {
+            "deactivateLabel": "Deactivate cell",
+            "reactivateLabel": "Reactivate cell",
+            "deactivateTitle": "Deactivate cell {location}",
+            "reactivateTitle": "Reactivate cell {location}",
+            "deactivateConfirm": "This will mark cell {location} as inactive. It can no longer be used to store, open, remove boxes from, empty, or transfer pallets until it's reactivated.",
+            "reactivateConfirm": "This will mark cell {location} as active again, restoring normal use.",
+            "noteLabel": "Note (optional)",
+            "notePlaceholder": "Reason for this change…",
+            "submitDeactivate": "Deactivate",
+            "submitReactivate": "Reactivate",
+            "submitting": "Saving…"
+        },
         "search": {
             "placeholder": "Search cell position (A12·3)…",
             "submit": "Search",

@@ -31,6 +31,7 @@ import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActiveCellHighlightFilters,
@@ -53,6 +54,7 @@ import {
     viewportTransform,
 } from '@/lib/mapViewport';
 import type {
+    Cell,
     CellHighlightSample,
     CellHighlightSeed,
     CellMap3DBand,
@@ -84,6 +86,7 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
             ? String(props.initialHighlight.expiresWithinDays)
             : '',
     expired: props.initialHighlight.expired,
+    inactive: props.initialHighlight.inactive,
 });
 
 function highlighted(cell: CellWithLocation | null): boolean {
@@ -248,6 +251,10 @@ function highlightQuery(): Record<string, FormDataConvertible> {
         query.expired = true;
     }
 
+    if (highlightFilters.inactive) {
+        query.is_active = false;
+    }
+
     return query;
 }
 
@@ -396,6 +403,20 @@ onBeforeUnmount(() => {
     document.removeEventListener('keydown', onMapFullscreenKeydown);
 });
 
+const toggleActiveDialogOpen = ref(false);
+const toggleActiveCell = ref<Cell | null>(null);
+const toggleActiveLabel = ref('');
+
+function openToggleActiveDialog(cell: Cell | null, label: string): void {
+    if (!cell) {
+        return;
+    }
+
+    toggleActiveCell.value = cell;
+    toggleActiveLabel.value = label;
+    toggleActiveDialogOpen.value = true;
+}
+
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>
     viewportTransform(viewport.state),
@@ -463,6 +484,7 @@ const map3DBands = computed<CellMap3DBand[]>(() => {
             cellNumber: sample.cell_number,
             flatNumber: sample.flat_number,
             state: sample.state,
+            isActive: sample.is_active,
             highlighted: matchesCellHighlight(
                 sample,
                 highlightFilters,
@@ -932,6 +954,13 @@ watch(
                                         :label="item.label"
                                         :highlighted="highlighted(item.cell)"
                                         :pulsing="pulsingLabel === item.label"
+                                        toggleable
+                                        @toggle-active="
+                                            openToggleActiveDialog(
+                                                item.cell,
+                                                item.label,
+                                            )
+                                        "
                                     />
                                     <div
                                         v-else-if="
@@ -999,5 +1028,11 @@ watch(
                 </div>
             </div>
         </template>
+
+        <ToggleCellActiveDialog
+            v-model:open="toggleActiveDialogOpen"
+            :cell="toggleActiveCell"
+            :label="toggleActiveLabel"
+        />
     </AdminLayout>
 </template>

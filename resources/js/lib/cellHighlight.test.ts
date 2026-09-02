@@ -16,6 +16,7 @@ function cell(
         cell_number: 1,
         flat_number: 1,
         state: 'full',
+        is_active: true,
         pallet: pallet
             ? {
                   id: 1,
@@ -48,9 +49,10 @@ describe('countActiveCellHighlightFilters', () => {
             expiresWithinDays: '7',
             productIds: ['1'],
             staleAfterDays: '5',
+            inactive: true,
         };
 
-        expect(countActiveCellHighlightFilters(filters)).toBe(5);
+        expect(countActiveCellHighlightFilters(filters)).toBe(6);
     });
 });
 
@@ -188,6 +190,17 @@ describe('matchesCellHighlight', () => {
         ).toBe(false);
     });
 
+    it('matches by inactive, regardless of occupancy state', () => {
+        const filters = { ...emptyCellHighlightFilters(), inactive: true };
+
+        expect(
+            matchesCellHighlight(cell({ is_active: true }), filters, today),
+        ).toBe(false);
+        expect(
+            matchesCellHighlight(cell({ is_active: false }), filters, today),
+        ).toBe(true);
+    });
+
     it('requires every active filter to match at once', () => {
         const filters: CellHighlightFiltersValue = {
             state: ['full'],
@@ -195,6 +208,7 @@ describe('matchesCellHighlight', () => {
             expiresWithinDays: '',
             productIds: ['1'],
             staleAfterDays: '',
+            inactive: false,
         };
 
         expect(

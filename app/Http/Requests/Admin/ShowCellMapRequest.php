@@ -3,17 +3,19 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\FiltersByProductIds;
+use App\Http\Requests\Concerns\NormalizesBooleanFilters;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ShowCellMapRequest extends FormRequest
 {
-    use FiltersByProductIds, NormalizesExpiredFilter;
+    use FiltersByProductIds, NormalizesBooleanFilters, NormalizesExpiredFilter;
 
     protected function prepareForValidation(): void
     {
         $this->normalizeExpiredFilter();
+        $this->normalizeBooleanFilter('is_active');
     }
 
     /**
@@ -26,6 +28,7 @@ class ShowCellMapRequest extends FormRequest
         return [
             'flat_number' => ['nullable', 'integer', 'min:1'],
             'state' => ['nullable', 'string', 'in:empty,full,opened'],
+            'is_active' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'expired' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),

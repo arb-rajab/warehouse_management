@@ -27,6 +27,17 @@ class CellFactory extends Factory
             'cell_number' => fake()->unique()->numberBetween(1, 999),
             'flat_number' => fake()->numberBetween(1, 10),
             'state' => CellState::Empty,
+            'is_active' => true,
         ];
+    }
+
+    /**
+     * Mark the cell as inactive (corrupted / out of service).
+     *
+     * @return static
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
     }
 }
