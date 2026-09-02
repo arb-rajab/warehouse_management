@@ -33,8 +33,6 @@ class CellFactory extends Factory
 
     /**
      * Mark the cell as inactive (corrupted / out of service).
-     *
-     * @return static
      */
     public function inactive(): static
     {
