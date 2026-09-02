@@ -4,6 +4,7 @@ use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use ArPHP\I18N\Arabic;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -593,6 +594,35 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
         expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
     }
+});
+
+test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {
+    app()->setLocale('ar');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+
+    $rawDescription = __('messages.qr_label_description', [
+        'row' => $row->letter,
+        'cell' => $cell->cell_number,
+        'flat' => $cell->flat_number,
+    ]);
+    // Mirrors BuildsCellQrLabels::shapeArabicForPdf() — dompdf has no Arabic
+    // shaping/bidi engine of its own, so the trait pre-shapes the string into
+    // joined presentation-form glyphs in final display order before dompdf
+    // ever sees it.
+    $shapedDescription = (new Arabic)->utf8Glyphs($rawDescription, max_chars: 1000, hindo: false, forcertl: true);
+
+    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
+    expect($pdfText)->toContain($shapedDescription);
+    // Regression guard: the un-shaped translation string must never reach the
+    // PDF verbatim — that produces disconnected, logical-order Arabic letters.
+    expect($pdfText)->not->toContain($rawDescription);
 });
 
 test('a mobile app user cannot export QR codes for a row', function () {
