@@ -418,7 +418,7 @@ test('an authenticated admin can deactivate a cell regardless of its occupancy',
 
     $response = $this->post("/admin/cells/{$cell->id}/toggle-active", ['note' => 'Sensor malfunction']);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect();
     expect($cell->fresh()->is_active)->toBeFalse();
     expect($cell->fresh()->state)->toBe(CellState::Full);
 
@@ -451,11 +451,11 @@ test('an authenticated admin can reactivate a cell, and its occupancy state is n
         'user_id' => $admin->id,
     ]);
 
-    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect(route('admin.cells.index'));
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect();
     expect($cell->fresh()->is_active)->toBeFalse();
     expect($cell->fresh()->state)->toBe(CellState::Opened);
 
-    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect(route('admin.cells.index'));
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect();
 
     expect($cell->fresh()->is_active)->toBeTrue();
     expect($cell->fresh()->state)->toBe(CellState::Opened);
@@ -493,4 +493,14 @@ test('toggling the active status of a non-existent cell returns a 404', function
     $response = $this->post('/admin/cells/999999/toggle-active');
 
     $response->assertNotFound();
+});
+
+test('toggling a cells active status redirects back to whichever page it was triggered from', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/cells/{$cell->id}/toggle-active");
+
+    $response->assertRedirect("/admin/rows/{$row->letter}");
 });

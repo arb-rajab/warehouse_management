@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     emptyCellHighlightFilters,
@@ -54,6 +55,20 @@ const flatNumbers = computed(() =>
 const cellNumbers = computed(() =>
     Array.from({ length: props.row.cells_count }, (_, i) => i + 1),
 );
+
+const toggleActiveDialogOpen = ref(false);
+const toggleActiveCell = ref<Cell | null>(null);
+const toggleActiveLabel = ref('');
+
+function openToggleActiveDialog(cell: Cell | null, label: string): void {
+    if (!cell) {
+        return;
+    }
+
+    toggleActiveCell.value = cell;
+    toggleActiveLabel.value = label;
+    toggleActiveDialogOpen.value = true;
+}
 </script>
 
 <template>
@@ -122,10 +137,27 @@ const cellNumbers = computed(() =>
                                 )
                             "
                             :highlighted="highlighted(entry.cell)"
+                            toggleable
+                            @toggle-active="
+                                openToggleActiveDialog(
+                                    entry.cell,
+                                    formatSlot(
+                                        props.row.letter,
+                                        cellIndex + 1,
+                                        entry.flatNumber,
+                                    ),
+                                )
+                            "
                         />
                     </div>
                 </div>
             </div>
         </div>
+
+        <ToggleCellActiveDialog
+            v-model:open="toggleActiveDialogOpen"
+            :cell="toggleActiveCell"
+            :label="toggleActiveLabel"
+        />
     </AdminLayout>
 </template>
