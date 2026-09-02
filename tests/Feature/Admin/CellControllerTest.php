@@ -54,6 +54,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
                     ->where('is_stale', null)
+                    ->where('remaining_boxes', $pallet->remaining_boxes)
                 )
             )
             ->where('today', '2026-08-01')

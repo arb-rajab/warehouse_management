@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     Ban,
     Box,
@@ -27,10 +27,12 @@ import {
     watch,
 } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
@@ -417,6 +419,27 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
     toggleActiveDialogOpen.value = true;
 }
 
+const palletActionsDialogOpen = ref(false);
+const palletActionsCell = ref<CellWithLocation | null>(null);
+const palletActionsLabel = ref('');
+
+function openPalletActionsDialog(
+    cell: CellWithLocation | null,
+    label: string,
+): void {
+    if (!cell) {
+        return;
+    }
+
+    palletActionsCell.value = cell;
+    palletActionsLabel.value = label;
+    palletActionsDialogOpen.value = true;
+}
+
+const palletActionError = computed(
+    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
+);
+
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>
     viewportTransform(viewport.state),
@@ -680,6 +703,8 @@ watch(
                 />
             </div>
         </PageHeader>
+
+        <ActionErrorBanner :message="palletActionError" />
 
         <div
             v-if="rows.length === 0"
@@ -955,8 +980,15 @@ watch(
                                         :highlighted="highlighted(item.cell)"
                                         :pulsing="pulsingLabel === item.label"
                                         toggleable
+                                        manageable
                                         @toggle-active="
                                             openToggleActiveDialog(
+                                                item.cell,
+                                                item.label,
+                                            )
+                                        "
+                                        @manage-pallet="
+                                            openPalletActionsDialog(
                                                 item.cell,
                                                 item.label,
                                             )
@@ -1033,6 +1065,13 @@ watch(
             v-model:open="toggleActiveDialogOpen"
             :cell="toggleActiveCell"
             :label="toggleActiveLabel"
+        />
+
+        <PalletActionsDialog
+            v-model:open="palletActionsDialogOpen"
+            :cell="palletActionsCell"
+            :label="palletActionsLabel"
+            :rows="rows"
         />
     </AdminLayout>
 </template>

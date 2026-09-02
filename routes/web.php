@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
@@ -43,6 +44,12 @@ Route::middleware('auth')->group(function () {
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
         Route::get('cells/{cell}/export-qr', [CellController::class, 'exportQr'])->name('cells.export-qr');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
+
+        Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
+        Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('pallets.open');
+        Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('pallets.remove-boxes');
+        Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('pallets.empty');
+        Route::post('pallets/{pallet}/transfer', [PalletController::class, 'transfer'])->name('pallets.transfer');
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
         Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');

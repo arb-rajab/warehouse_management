@@ -18,6 +18,7 @@ function cell(pallet: Partial<Cell['pallet']> | null): Cell {
                   expiration_date: '2026-09-01',
                   added_at: '2026-08-01T00:00:00Z',
                   is_stale: null,
+                  remaining_boxes: 10,
                   ...pallet,
               }
             : null,

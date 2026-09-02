@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Ban, CalendarPlus, CalendarX, QrCode } from '@lucide/vue';
+import {
+    Ban,
+    CalendarPlus,
+    CalendarX,
+    PackageSearch,
+    QrCode,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -14,12 +20,14 @@ const props = withDefaults(
         highlighted: boolean;
         pulsing?: boolean;
         toggleable?: boolean;
+        manageable?: boolean;
     }>(),
-    { pulsing: false, toggleable: false },
+    { pulsing: false, toggleable: false, manageable: false },
 );
 
 const emit = defineEmits<{
     'toggle-active': [cell: Cell];
+    'manage-pallet': [cell: Cell];
 }>();
 
 const stateIcon = computed(() =>
@@ -45,6 +53,12 @@ const toggleActiveLabel = computed(() =>
 function onToggleActive(): void {
     if (props.cell) {
         emit('toggle-active', props.cell);
+    }
+}
+
+function onManagePallet(): void {
+    if (props.cell) {
+        emit('manage-pallet', props.cell);
     }
 }
 </script>
@@ -104,6 +118,17 @@ function onToggleActive(): void {
         >
             <QrCode class="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
         </a>
+
+        <button
+            v-if="cell && manageable && cell.is_active"
+            type="button"
+            :title="t('cells.palletActions.triggerLabel')"
+            :aria-label="t('cells.palletActions.triggerLabel')"
+            class="absolute end-1 bottom-1 cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+            @click="onManagePallet"
+        >
+            <PackageSearch class="h-3.5 w-3.5" />
+        </button>
 
         <template v-if="cell?.pallet">
             <img

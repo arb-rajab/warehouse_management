@@ -39,7 +39,7 @@ class Cell extends Model
      * @var list<string>
      */
     public const array WITH_CONTENTS = [
-        'pallet:id,cell_id,product_id,expiration_date,created_at',
+        'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
         'pallet.product:id,name,image_url',
     ];
 
