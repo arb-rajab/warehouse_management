@@ -46,7 +46,7 @@
             "addRow": "إضافة صف",
             "columnLetter": "الحرف",
             "columnCells": "الخلايا",
-            "columnFlats": "الطبقات",
+            "columnFlats": "المسارات",
             "columnAction": "الإجراء",
             "empty": "لا توجد صفوف بعد.",
             "view": "عرض",
@@ -71,7 +71,7 @@
             "editRow": "تعديل الصف",
             "reprintQr": "إعادة طباعة رمز QR",
             "column": "العمود {n}",
-            "flat": "الطبقة {n}",
+            "flat": "المسار {n}",
             "empty": "فارغ",
             "highlight": {
                 "button": "تمييز الخلايا"
@@ -79,8 +79,8 @@
         },
         "fields": {
             "letter": "الحرف",
-            "cellsPerFlat": "الخلايا في كل طبقة",
-            "flats": "الطبقات",
+            "cellsPerFlat": "الخلايا في كل مسار",
+            "flats": "المسارات",
             "dimensionsLocked": "يحتوي هذا الصف على منصات نقالة، لذا لا يمكن تغيير أبعاده."
         }
     },
@@ -217,7 +217,7 @@
             "matchPosition": "{current} من {total}"
         },
         "empty": "لم تتم إضافة أي صفوف بعد.",
-        "flatNotAvailable": "هذه الطبقة غير موجودة لهذا الصف",
+        "flatNotAvailable": "هذا المسار غير موجود لهذا الصف",
         "search": {
             "placeholder": "ابحث عن موضع الخلية (A12·3)…",
             "submit": "بحث",

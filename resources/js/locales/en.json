@@ -46,7 +46,7 @@
             "addRow": "Add row",
             "columnLetter": "Letter",
             "columnCells": "Cells",
-            "columnFlats": "Flats",
+            "columnFlats": "Levels",
             "columnAction": "Action",
             "empty": "No rows yet.",
             "view": "View",
@@ -71,7 +71,7 @@
             "editRow": "Edit row",
             "reprintQr": "Reprint QR code",
             "column": "Column {n}",
-            "flat": "Flat {n}",
+            "flat": "Level {n}",
             "empty": "Empty",
             "highlight": {
                 "button": "Highlight cells"
@@ -79,8 +79,8 @@
         },
         "fields": {
             "letter": "Letter",
-            "cellsPerFlat": "Cells per flat",
-            "flats": "Flats",
+            "cellsPerFlat": "Cells per level",
+            "flats": "Levels",
             "dimensionsLocked": "This row has pallets stored in it, so its dimensions can't be changed."
         }
     },
@@ -217,7 +217,7 @@
             "matchPosition": "{current} of {total}"
         },
         "empty": "No rows have been added yet.",
-        "flatNotAvailable": "This flat doesn't exist for this row",
+        "flatNotAvailable": "This level doesn't exist for this row",
         "search": {
             "placeholder": "Search cell position (A12·3)…",
             "submit": "Search",
@@ -235,12 +235,12 @@
             "view3d": "3D view",
             "overview": "Overview (orbit) camera",
             "standingNear": "Standing near {location}",
-            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between flats, hold Ctrl to sprint, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
-            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between flats, tap the sprint button to move faster, and tap a cell to inspect it.",
+            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between levels, hold Ctrl to sprint, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
+            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between levels, tap the sprint button to move faster, and tap a cell to inspect it.",
             "orbitHint": "Drag to orbit around the warehouse, scroll or pinch to zoom, or use WASD/arrow keys and Space/Shift on the keyboard, and click a cell — or press Enter to select the cell centered in view — to inspect it.",
             "controls": {
                 "moveLabel": "Move: WASD or arrow keys",
-                "flyLabel": "Fly between flats:",
+                "flyLabel": "Fly between levels:",
                 "up": "up",
                 "down": "down",
                 "sprintLabel": "Sprint:",
