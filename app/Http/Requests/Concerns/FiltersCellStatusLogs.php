@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Concerns;
 
 use App\Enums\CellLogAction;
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
@@ -45,7 +46,7 @@ trait FiltersCellStatusLogs
             'expiration_date_from' => ['nullable', 'date'],
             'expiration_date_to' => ['nullable', 'date', 'after_or_equal:expiration_date_from'],
             'user_id' => ['nullable', 'array'],
-            'user_id.*' => ['integer', 'exists:users,id'],
+            'user_id.*' => ['integer', Rule::exists(User::class, 'id')],
             'action' => ['nullable', 'array'],
             'action.*' => [Rule::enum(CellLogAction::class)],
             'date_from' => ['nullable', 'date'],
