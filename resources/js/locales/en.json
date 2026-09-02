@@ -254,13 +254,13 @@
             "open": {
                 "boxesCountLabel": "Boxes to remove",
                 "remainingBoxesHint": "{count} boxes remaining",
-                "confirmEmptyLabel": "This exceeds what remains — empty the pallet instead",
+                "confirmEmptyLabel": "This would empty the pallet — check to confirm",
                 "submit": "Open pallet"
             },
             "removeBoxes": {
                 "boxesCountLabel": "Boxes to remove",
                 "remainingBoxesHint": "{count} boxes remaining",
-                "confirmEmptyLabel": "This exceeds what remains — empty the pallet instead",
+                "confirmEmptyLabel": "This would empty the pallet — check to confirm",
                 "submit": "Remove boxes"
             },
             "empty": {
