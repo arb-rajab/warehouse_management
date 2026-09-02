@@ -79,10 +79,10 @@ watch(selectedAction, resetFields);
 
 const remainingBoxes = computed(() => props.cell?.pallet?.remaining_boxes ?? 0);
 
-const boxesExceedRemaining = computed(() => {
+const boxesWouldEmptyPallet = computed(() => {
     const count = Number(boxesCount.value);
 
-    return count > 0 && count > remainingBoxes.value;
+    return count > 0 && count >= remainingBoxes.value;
 });
 
 function noteOrNull(): string | null {
@@ -279,7 +279,7 @@ const submitLabel = computed(() => {
                     />
                 </div>
                 <label
-                    v-if="boxesExceedRemaining"
+                    v-if="boxesWouldEmptyPallet"
                     class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
                 >
                     <input

@@ -254,13 +254,13 @@
             "open": {
                 "boxesCountLabel": "عدد الصناديق المراد إزالتها",
                 "remainingBoxesHint": "{count} صندوق متبقٍ",
-                "confirmEmptyLabel": "هذا يتجاوز ما تبقى — قم بتفريغ الطبلية النقالة بدلاً من ذلك",
+                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ الطبلية النقالة — حدد للتأكيد",
                 "submit": "فتح الطبلية النقالة"
             },
             "removeBoxes": {
                 "boxesCountLabel": "عدد الصناديق المراد إزالتها",
                 "remainingBoxesHint": "{count} صندوق متبقٍ",
-                "confirmEmptyLabel": "هذا يتجاوز ما تبقى — قم بتفريغ الطبلية النقالة بدلاً من ذلك",
+                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ الطبلية النقالة — حدد للتأكيد",
                 "submit": "إزالة الصناديق"
             },
             "empty": {

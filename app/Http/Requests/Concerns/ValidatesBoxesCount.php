@@ -23,10 +23,11 @@ trait ValidatesBoxesCount
 
     /**
      * The confirm_empty field's rules, for requests that merge it with other rules.
-     * When boxes_count exceeds what remains on the pallet, the caller re-sends the
-     * same request with this set to empty the pallet instead of failing with a
-     * 409 — the mobile app is expected to prompt for this confirmation itself
-     * (it already knows remaining_boxes), not rely on the 409 to learn the count.
+     * When boxes_count meets or exceeds what remains on the pallet, the caller
+     * re-sends the same request with this set to empty the pallet instead of
+     * failing with a 409 — the mobile app is expected to prompt for this
+     * confirmation itself (it already knows remaining_boxes), not rely on the 409
+     * to learn the count.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
