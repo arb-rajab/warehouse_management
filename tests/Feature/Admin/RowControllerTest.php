@@ -245,6 +245,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                 ->where('cell_number', 1)
                 ->where('flat_number', 1)
                 ->where('state', 'full')
+                ->where('is_active', true)
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
@@ -260,6 +261,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                 ->where('cell_number', 2)
                 ->where('flat_number', 1)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
     );

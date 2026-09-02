@@ -18,6 +18,7 @@ export interface CellHighlightFiltersValue {
     expiresWithinDays: string;
     productIds: string[];
     staleAfterDays: string;
+    inactive: boolean;
 }
 
 export function emptyCellHighlightFilters(): CellHighlightFiltersValue {
@@ -27,6 +28,7 @@ export function emptyCellHighlightFilters(): CellHighlightFiltersValue {
         expiresWithinDays: '',
         productIds: [],
         staleAfterDays: '',
+        inactive: false,
     };
 }
 
@@ -39,6 +41,7 @@ export function countActiveCellHighlightFilters(
         filters.expiresWithinDays !== '',
         filters.productIds.length > 0,
         filters.staleAfterDays !== '',
+        filters.inactive,
     ]);
 }
 
@@ -57,6 +60,10 @@ export function matchesCellHighlight(
     }
 
     if (filters.state.length > 0 && !filters.state.includes(cell.state)) {
+        return false;
+    }
+
+    if (filters.inactive && cell.is_active) {
         return false;
     }
 

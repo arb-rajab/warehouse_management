@@ -58,6 +58,7 @@ export interface Cell {
     cell_number: number;
     flat_number: number;
     state: 'empty' | 'full' | 'opened';
+    is_active: boolean;
     pallet: CellPallet | null;
 }
 
@@ -101,6 +102,7 @@ export interface CellHighlightSeed {
     productIds: number[];
     expiresWithinDays: number | null;
     expired: boolean;
+    inactive: boolean;
 }
 
 /**
@@ -115,6 +117,7 @@ export interface CellHighlightSample {
     cell_number: number;
     flat_number: number;
     state: Cell['state'];
+    is_active: boolean;
     pallet: Pick<
         CellPallet,
         | 'product_id'
@@ -143,6 +146,7 @@ export interface CellMap3DItem {
     cellNumber: number;
     flatNumber: number;
     state: Cell['state'];
+    isActive: boolean;
     highlighted: boolean;
     pulsing: boolean;
     pallet: Pick<
@@ -162,7 +166,9 @@ export type CellLogAction =
     | 'boxes_removed'
     | 'emptied'
     | 'transferred_out'
-    | 'transferred_in';
+    | 'transferred_in'
+    | 'deactivated'
+    | 'reactivated';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 

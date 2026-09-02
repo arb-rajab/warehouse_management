@@ -13,6 +13,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int $cell_number
  * @property-read int $flat_number
  * @property-read CellState $state
+ * @property-read bool $is_active
  * @property-read Row $row
  * @property-read Pallet|null $pallet
  */
@@ -34,6 +35,7 @@ class CellResource extends JsonResource
             'cell_number' => $this->cell_number,
             'flat_number' => $this->flat_number,
             'state' => $this->state->value,
+            'is_active' => $this->is_active,
             'pallet' => $this->when($palletLoaded, fn () => $pallet === null ? null : [
                 'id' => $pallet->id,
                 ...$pallet->toMapSummaryArray(),

@@ -3,6 +3,7 @@
 use App\Models\Cell;
 use App\Models\Row;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Schema;
 
 test('a cell coordinate must be unique within its row', function () {
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
@@ -24,4 +25,13 @@ test('deleting a row cascades to delete its cells', function () {
 
     expect(Cell::whereIn('id', $cellIds)->count())->toBe(0);
     expect($otherRow->cells()->count())->toBe(2);
+});
+
+test('the cells table has an is_active column defaulting to true', function () {
+    expect(Schema::hasColumn('cells', 'is_active'))->toBeTrue();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    expect($cell->is_active)->toBeTrue();
 });

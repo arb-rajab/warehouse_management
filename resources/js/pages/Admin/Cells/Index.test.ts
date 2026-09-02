@@ -86,6 +86,7 @@ function cell(overrides: Partial<CellWithLocation> = {}): CellWithLocation {
         cell_number: 1,
         flat_number: 1,
         state: 'empty',
+        is_active: true,
         pallet: null,
         ...overrides,
     };
@@ -114,6 +115,7 @@ function highlightSample(
         cell_number: 1,
         flat_number: 1,
         state: 'empty',
+        is_active: true,
         pallet: null,
         ...overrides,
     };
@@ -150,6 +152,7 @@ function mountPage(
                 productIds: [],
                 expiresWithinDays: null,
                 expired: false,
+                inactive: false,
             },
             jumpToCell: overrides.jumpToCell ?? null,
             searchError: overrides.searchError ?? false,
@@ -294,6 +297,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row()], [], {
             flatNumber: 1,
@@ -318,6 +322,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row()], [], {
             flatNumber: 1,
@@ -357,6 +362,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row()], [], {
             flatNumber: 1,
@@ -393,6 +399,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row()], [], {
             initialHighlight: seed,
@@ -411,6 +418,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
             flatNumber: 1,
@@ -468,6 +476,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
             flatNumber: 1,
@@ -505,6 +514,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage([row({ letter: 'A', cells_count: 1 })], [], {
             flatNumber: 1,
@@ -562,6 +572,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
@@ -597,6 +608,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: 7,
             expired: false,
+            inactive: false,
         };
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
@@ -633,6 +645,7 @@ describe('Cells Index (warehouse map)', () => {
             productIds: [],
             expiresWithinDays: null,
             expired: true,
+            inactive: false,
         };
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
@@ -670,6 +683,7 @@ describe('Cells Index (warehouse map)', () => {
                 productIds: [1, 2],
                 expiresWithinDays: 7,
                 expired: false,
+                inactive: false,
             },
         });
 
@@ -693,6 +707,7 @@ describe('Cells Index (warehouse map)', () => {
                 productIds: [],
                 expiresWithinDays: null,
                 expired: true,
+                inactive: false,
             },
         });
 
@@ -1205,6 +1220,7 @@ describe('Cells Index (warehouse map)', () => {
                 productIds: [],
                 expiresWithinDays: null,
                 expired: false,
+                inactive: false,
             };
             const wrapper = mountPage(
                 [row({ letter: 'A', cells_count: 2 })],
@@ -1277,6 +1293,7 @@ describe('Cells Index (warehouse map)', () => {
                 productIds: [],
                 expiresWithinDays: null,
                 expired: false,
+                inactive: false,
             };
             const wrapper = mountPage(
                 [row({ letter: 'A', cells_count: 1 })],

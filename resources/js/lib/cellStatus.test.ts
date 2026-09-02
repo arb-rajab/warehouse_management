@@ -8,6 +8,7 @@ function cell(pallet: Partial<Cell['pallet']> | null): Cell {
         cell_number: 1,
         flat_number: 1,
         state: pallet ? 'full' : 'empty',
+        is_active: true,
         pallet: pallet
             ? {
                   id: 1,

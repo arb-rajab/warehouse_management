@@ -13,6 +13,7 @@ return [
     'pallet_not_opened' => 'Boxes can only be removed from an opened pallet.',
     'insufficient_boxes_remaining' => 'Not enough boxes remaining on this pallet.',
     'pallet_boxes_depleted' => 'All boxes have been removed — this pallet should now be emptied.',
+    'slot_inactive' => 'This slot is inactive and cannot be used.',
     'app_version_outdated' => 'This app version is no longer supported. Please update to continue.',
     'qr_label_description' => 'Row :row · Cell :cell · Level :flat',
 ];

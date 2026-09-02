@@ -8,6 +8,7 @@ import type { Cell, CellPallet } from '@/types/admin';
  */
 export interface MatchableCell {
     state: Cell['state'];
+    is_active: boolean;
     pallet: Pick<
         CellPallet,
         'product_id' | 'expiration_date' | 'added_at'

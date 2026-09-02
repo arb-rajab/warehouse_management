@@ -91,6 +91,12 @@ function clear(): void {
                     :label="t('cellHighlight.expired')"
                 />
 
+                <FilterCheckbox
+                    id="highlight-inactive"
+                    v-model="filters.inactive"
+                    :label="t('cellHighlight.inactive')"
+                />
+
                 <FilterProductSelect
                     id="highlight-product"
                     v-model="filters.productIds"

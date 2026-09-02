@@ -36,6 +36,7 @@ export function cell(overrides: Partial<Cell> = {}): Cell {
         cell_number: 1,
         flat_number: 1,
         state: 'empty',
+        is_active: true,
         pallet: null,
         ...overrides,
     };

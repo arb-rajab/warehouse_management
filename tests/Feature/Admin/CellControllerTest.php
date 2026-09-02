@@ -1,6 +1,9 @@
 <?php
 
+use App\Enums\CellLogAction;
+use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -42,6 +45,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 1)
                 ->where('flat_number', 1)
                 ->where('state', 'full')
+                ->where('is_active', true)
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
@@ -57,6 +61,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('initialHighlight.productIds', [])
             ->where('initialHighlight.expiresWithinDays', null)
             ->where('initialHighlight.expired', false)
+            ->where('initialHighlight.inactive', false)
             ->where('jumpToCell', null)
             ->where('searchError', false)
             ->has('filterOptions.products', 0)
@@ -66,6 +71,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 1)
                 ->where('flat_number', 1)
                 ->where('state', 'full')
+                ->where('is_active', true)
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
@@ -79,6 +85,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 1)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
@@ -86,6 +93,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 2)
                 ->where('flat_number', 1)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
@@ -93,6 +101,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 2)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
     );
@@ -376,6 +385,112 @@ test('exporting a QR code for a non-existent cell returns a 404', function () {
     actingAsAdmin();
 
     $response = $this->get('/admin/cells/999999/export-qr');
+
+    $response->assertNotFound();
+});
+
+test('is_active=0 passed from the dashboard seeds the initial highlight filter as inactive-only', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?is_active=0');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.inactive', true)
+    );
+});
+
+test('an invalid is_active value passed from the dashboard is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cells?is_active=bogus');
+
+    $response->assertInvalid(['is_active']);
+});
+
+test('an authenticated admin can deactivate a cell regardless of its occupancy', function () {
+    $admin = actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $cell->id]);
+    $cell->update(['state' => CellState::Full]);
+
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active", ['note' => 'Sensor malfunction']);
+
+    $response->assertRedirect(route('admin.cells.index'));
+    expect($cell->fresh()->is_active)->toBeFalse();
+    expect($cell->fresh()->state)->toBe(CellState::Full);
+
+    $log = CellStatusLog::query()->latest('id')->first();
+    expect($log->cell_id)->toBe($cell->id);
+    expect($log->action)->toBe(CellLogAction::Deactivated);
+    expect($log->from_state)->toBe(CellState::Full);
+    expect($log->to_state)->toBe(CellState::Full);
+    expect($log->user_id)->toBe($admin->id);
+    expect($log->note)->toBe('Sensor malfunction');
+    expect($log->product_id)->toBe($product->id);
+    expect($log->pallet_id)->toBe($pallet->id);
+});
+
+test('an authenticated admin can reactivate a cell, and its occupancy state is never touched by either toggle', function () {
+    $admin = actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $cell->id]);
+    $cell->update(['state' => CellState::Opened]);
+
+    CellStatusLog::create([
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Opened,
+        'from_state' => CellState::Full,
+        'to_state' => CellState::Opened,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
+    ]);
+
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect(route('admin.cells.index'));
+    expect($cell->fresh()->is_active)->toBeFalse();
+    expect($cell->fresh()->state)->toBe(CellState::Opened);
+
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect(route('admin.cells.index'));
+
+    expect($cell->fresh()->is_active)->toBeTrue();
+    expect($cell->fresh()->state)->toBe(CellState::Opened);
+
+    $log = CellStatusLog::query()->latest('id')->first();
+    expect($log->action)->toBe(CellLogAction::Reactivated);
+    expect($log->from_state)->toBe(CellState::Opened);
+    expect($log->to_state)->toBe(CellState::Opened);
+});
+
+test('a mobile app user cannot toggle a cells active status', function () {
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    actingAsMobilePanelUser();
+
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active");
+
+    $response->assertForbidden();
+    expect($cell->fresh()->is_active)->toBeTrue();
+});
+
+test('an unauthenticated caller cannot toggle a cells active status', function () {
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active");
+
+    $response->assertRedirect(route('login'));
+    expect($cell->fresh()->is_active)->toBeTrue();
+});
+
+test('toggling the active status of a non-existent cell returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/cells/999999/toggle-active');
 
     $response->assertNotFound();
 });

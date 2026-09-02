@@ -402,6 +402,7 @@ function item(overrides: Partial<CellMap3DItem> = {}): CellMap3DItem {
         cellNumber: 1,
         flatNumber: 1,
         state: 'empty',
+        isActive: true,
         highlighted: false,
         pulsing: false,
         pallet: null,
@@ -757,6 +758,41 @@ describe('CellMap3D', () => {
             (line) => line.material.color,
         );
         expect(new Set(outlineColors).size).toBe(2); // highlight vs pulse use distinct colors
+    });
+
+    it('outlines an inactive cell, but highlighted/pulsing take priority over the inactive outline', () => {
+        mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [
+                            item({
+                                cellNumber: 1,
+                                state: 'full',
+                                isActive: false,
+                            }),
+                            item({ cellNumber: 2, state: 'empty' }),
+                            item({
+                                cellNumber: 3,
+                                state: 'full',
+                                isActive: false,
+                                highlighted: true,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        // Cell 1 (inactive only) gets an outline; cell 2 (active, not
+        // highlighted/pulsing) does not; cell 3 (inactive AND highlighted)
+        // gets the highlight outline color, not a separate inactive one.
+        expect(registry().lineSegments).toHaveLength(2);
+        const outlineColors = registry().lineSegments.map(
+            (line) => line.material.color,
+        );
+        expect(new Set(outlineColors).size).toBe(2);
     });
 
     it("adds one shelf platform per flat level, sitting just under that flat's boxes", () => {

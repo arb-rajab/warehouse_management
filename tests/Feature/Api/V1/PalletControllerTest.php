@@ -1007,3 +1007,113 @@ test('performing many pallet actions quickly as the same user flags rapid action
 
     Carbon::setTestNow();
 });
+
+test('adding a pallet to an inactive slot is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $cell->update(['is_active' => false]);
+    $product = Product::factory()->create();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    $this->assertDatabaseCount('pallets', 0);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('opening a pallet in an inactive cell is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 10]);
+    $pallet->cell->update(['is_active' => false]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+});
+
+test('removing boxes from a pallet in an inactive cell is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->opened()->create(['remaining_boxes' => 10]);
+    $pallet->cell->update(['is_active' => false]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+});
+
+test('emptying a pallet in an inactive cell is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create();
+    $pallet->cell->update(['is_active' => false]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/empty");
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('transferring a pallet out of an inactive source cell is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $sourceCell->update(['is_active' => false]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('transferring a pallet into an inactive destination cell is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $destinationCell = $destinationRow->cells()->first();
+    $destinationCell->update(['is_active' => false]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
