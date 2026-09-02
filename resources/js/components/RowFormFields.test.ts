@@ -8,8 +8,8 @@ describe('RowFormFields', () => {
         const wrapper = mount(RowFormFields, { props: { errors: {} } });
 
         expect(wrapper.text()).toContain('Letter');
-        expect(wrapper.text()).toContain('Cells per flat');
-        expect(wrapper.text()).toContain('Flats');
+        expect(wrapper.text()).toContain('Cells per level');
+        expect(wrapper.text()).toContain('Levels');
     });
 
     it('shows validation error messages', () => {
