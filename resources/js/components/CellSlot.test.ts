@@ -179,19 +179,31 @@ describe('CellSlot', () => {
         const wrapper = mountSlot({ cell: cell() });
 
         expect(
-            wrapper.find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`).exists(),
+            wrapper
+                .find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .exists(),
         ).toBe(false);
     });
 
     it('shows a toggle-active button with a label matching the cells current status when toggleable', () => {
-        const active = mountSlot({ cell: cell({ is_active: true }), toggleable: true });
+        const active = mountSlot({
+            cell: cell({ is_active: true }),
+            toggleable: true,
+        });
         expect(
-            active.find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`).exists(),
+            active
+                .find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .exists(),
         ).toBe(true);
 
-        const inactive = mountSlot({ cell: cell({ is_active: false }), toggleable: true });
+        const inactive = mountSlot({
+            cell: cell({ is_active: false }),
+            toggleable: true,
+        });
         expect(
-            inactive.find(`[title="${t('cells.toggleActive.reactivateLabel')}"]`).exists(),
+            inactive
+                .find(`[title="${t('cells.toggleActive.reactivateLabel')}"]`)
+                .exists(),
         ).toBe(true);
     });
 
