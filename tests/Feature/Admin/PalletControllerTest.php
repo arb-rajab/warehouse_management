@@ -153,6 +153,34 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
 
+test('opening a pallet with a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create(['boxes_count' => 5]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $cell = $pallet->cell;
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open", [
+        'boxes_count' => 5,
+        'confirm_empty' => true,
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+    $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('opening a pallet with a boxes_count equal to what remains, without confirm_empty, is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create(['boxes_count' => 5]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 5]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->remaining_boxes)->toBe(5);
+});
+
 test('opening a pallet with more boxes than remain, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
     $product = Product::factory()->create(['boxes_count' => 5]);
@@ -209,6 +237,35 @@ test('an authenticated admin can remove more boxes from an already-opened pallet
         'pallet_id' => $pallet->id,
         'user_id' => $admin->id,
     ]);
+});
+
+test('removing a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create(['boxes_count' => 10]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 4]);
+    $cell = $pallet->cell;
+    $cell->update(['state' => CellState::Opened]);
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", [
+        'boxes_count' => 4,
+        'confirm_empty' => true,
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+    $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('removing a boxes_count equal to what remains, without confirm_empty, is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create(['boxes_count' => 10]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 4]);
+    $pallet->cell->update(['state' => CellState::Opened]);
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
+    expect($pallet->refresh()->remaining_boxes)->toBe(4);
 });
 
 test('removing boxes from a full (not yet opened) pallet is rejected with a non-field action error', function () {
