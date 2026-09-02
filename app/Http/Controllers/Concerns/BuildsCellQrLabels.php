@@ -33,11 +33,9 @@ trait BuildsCellQrLabels
                     'cell' => $cell->cell_number,
                     'flat' => $cell->flat_number,
                 ])),
-                'qrImage' => $this->qrImageDataUri(route('cell.redirect', [
-                    'row_letter' => $rowLetter,
-                    'cell_number' => $cell->cell_number,
-                    'flat_number' => $cell->flat_number,
-                ])),
+                // The mobile app's custom URL scheme, encoded directly — no web
+                // redirect page in between. Only the app itself can open this link.
+                'qrImage' => $this->qrImageDataUri("warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}"),
             ])
             ->all();
     }

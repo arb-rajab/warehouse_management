@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\CellRedirectController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
 use App\Http\Middleware\RestrictToAllowedIps;
@@ -20,13 +19,6 @@ Route::post('locale/{locale}', [LocaleController::class, 'update'])->name('local
 Route::get('health', HealthCheckResultsController::class)
     ->middleware(['can:viewHealth', RestrictToAllowedIps::class.':health.allowed_ips'])
     ->name('health');
-
-// Scanned from a printed cell QR label — a Universal/App Link that redirects
-// into the mobile app's custom scheme, with this page as the browser fallback.
-Route::get('cell/{row_letter}/{cell_number}/{flat_number}', CellRedirectController::class)->name('cell.redirect');
-
-Route::get('.well-known/apple-app-site-association', fn () => response()->json(config('deeplink.apple_app_site_association')));
-Route::get('.well-known/assetlinks.json', fn () => response()->json(config('deeplink.assetlinks')));
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
