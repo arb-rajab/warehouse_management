@@ -47,11 +47,15 @@ class PalletActionService
     }
 
     /**
-     * Whether a pallet currently has at least the given number of boxes left on it.
+     * Whether a pallet currently has more boxes left on it than the given amount.
+     * A boxes_count equal to remaining_boxes would empty the pallet, so it's treated
+     * the same as exceeding it — routed through the confirm_empty flow rather than
+     * silently emptied, in case the worker meant to remove some boxes rather than all
+     * of them and just mistyped the exact remaining count.
      */
     private function hasEnoughBoxes(Pallet $pallet, int $boxesCount): bool
     {
-        return $boxesCount <= $pallet->remaining_boxes;
+        return $boxesCount < $pallet->remaining_boxes;
     }
 
     /**

@@ -300,18 +300,48 @@ test('an authenticated worker can open a full pallet, removing boxes at the same
     expect($pallet->refresh()->remaining_boxes)->toBe(7);
 });
 
-test('opening a pallet that takes the last boxes returns a boxes_depleted_message', function () {
+test('opening a pallet with a boxes_count equal to what remains is rejected and nothing changes', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 1]);
+    $product = Product::factory()->create(['boxes_count' => 5]);
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
-        'boxes_count' => 1,
+        'boxes_count' => 5,
     ]);
 
-    $response->assertOk()->assertJsonPath('remaining_boxes', 0);
-    $response->assertJsonPath('boxes_depleted_message', __('messages.pallet_boxes_depleted'));
+    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->remaining_boxes)->toBe(5);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('opening a pallet with a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
+    $user = actingAsMobileUser();
+
+    $product = Product::factory()->create(['boxes_count' => 5]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $cell = $pallet->cell;
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
+        'boxes_count' => 5,
+        'confirm_empty' => true,
+    ]);
+
+    $response->assertNoContent();
+    $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Emptied->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Empty->value,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 5,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('opening a pallet logs the status change, with an optional note', function () {
@@ -474,7 +504,7 @@ test('an authenticated worker can remove more boxes from an already-opened palle
     expect($pallet->refresh()->remaining_boxes)->toBe(2);
 });
 
-test('removing the last boxes from an opened pallet returns a boxes_depleted_message', function () {
+test('removing a boxes_count equal to what remains from an opened pallet is rejected and nothing changes', function () {
     actingAsMobileUser();
 
     $product = Product::factory()->create(['boxes_count' => 10]);
@@ -485,8 +515,38 @@ test('removing the last boxes from an opened pallet returns a boxes_depleted_mes
         'boxes_count' => 2,
     ]);
 
-    $response->assertOk()->assertJsonPath('remaining_boxes', 0);
-    $response->assertJsonPath('boxes_depleted_message', __('messages.pallet_boxes_depleted'));
+    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    expect($pallet->refresh()->remaining_boxes)->toBe(2);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('removing a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
+    $user = actingAsMobileUser();
+
+    $product = Product::factory()->create(['boxes_count' => 10]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 2]);
+    $cell = $pallet->cell;
+    $cell->update(['state' => CellState::Opened]);
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", [
+        'boxes_count' => 2,
+        'confirm_empty' => true,
+    ]);
+
+    $response->assertNoContent();
+    $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Emptied->value,
+        'from_state' => CellState::Opened->value,
+        'to_state' => CellState::Empty->value,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 2,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('removing boxes logs the status change, with an optional note', function () {
