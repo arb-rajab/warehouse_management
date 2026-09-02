@@ -94,7 +94,7 @@ test('an authenticated admin can view the cell log with every property the table
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
-            ->has('filterOptions.actions', 6)
+            ->has('filterOptions.actions', 8)
     );
 
     Carbon::setTestNow();

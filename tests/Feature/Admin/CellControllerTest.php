@@ -85,6 +85,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 1)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
@@ -92,6 +93,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 2)
                 ->where('flat_number', 1)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
@@ -99,6 +101,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('cell_number', 2)
                 ->where('flat_number', 2)
                 ->where('state', 'empty')
+                ->where('is_active', true)
                 ->where('pallet', null)
             )
     );

@@ -69,6 +69,7 @@ test('an authenticated worker can list every row with its cells and their pallet
         'cell_number' => 1,
         'flat_number' => 1,
         'state' => 'full',
+        'is_active' => true,
         'pallet' => [
             'id' => $pallet->id,
             'product_id' => $product->id,
@@ -84,6 +85,7 @@ test('an authenticated worker can list every row with its cells and their pallet
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'empty',
+        'is_active' => true,
         'pallet' => null,
     ]);
 });
