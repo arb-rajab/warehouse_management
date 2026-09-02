@@ -235,6 +235,48 @@
             "submitReactivate": "Reactivate",
             "submitting": "Saving…"
         },
+        "palletActions": {
+            "triggerLabel": "Manage pallet",
+            "title": "Manage pallet — {location}",
+            "tabs": {
+                "store": "Store",
+                "open": "Open",
+                "removeBoxes": "Remove boxes",
+                "empty": "Empty",
+                "transfer": "Transfer"
+            },
+            "store": {
+                "productLabel": "Product",
+                "productPlaceholder": "Select a product…",
+                "expirationLabel": "Expiration date",
+                "submit": "Store pallet"
+            },
+            "open": {
+                "boxesCountLabel": "Boxes to remove",
+                "remainingBoxesHint": "{count} boxes remaining",
+                "confirmEmptyLabel": "This exceeds what remains — empty the pallet instead",
+                "submit": "Open pallet"
+            },
+            "removeBoxes": {
+                "boxesCountLabel": "Boxes to remove",
+                "remainingBoxesHint": "{count} boxes remaining",
+                "confirmEmptyLabel": "This exceeds what remains — empty the pallet instead",
+                "submit": "Remove boxes"
+            },
+            "empty": {
+                "confirmText": "This will remove the pallet from {location} and free the cell.",
+                "submit": "Empty pallet"
+            },
+            "transfer": {
+                "rowLabel": "Destination row",
+                "cellNumberLabel": "Destination cell number",
+                "flatNumberLabel": "Destination level",
+                "submit": "Transfer pallet"
+            },
+            "noteLabel": "Note (optional)",
+            "notePlaceholder": "Reason for this change…",
+            "submitting": "Saving…"
+        },
         "search": {
             "placeholder": "Search cell position (A12·3)…",
             "submit": "Search",

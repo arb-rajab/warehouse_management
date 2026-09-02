@@ -34,6 +34,7 @@ test('an authenticated worker can list a row cells with every property the app r
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
             'is_stale' => null,
+            'remaining_boxes' => $pallet->remaining_boxes,
         ],
     ]);
     expect(collect($response->json('data'))->firstWhere('id', $emptyCell->id))->toEqual([
@@ -130,6 +131,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
             'is_stale' => null,
+            'remaining_boxes' => $pallet->remaining_boxes,
         ],
     ]);
 });

@@ -254,6 +254,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                     ->where('expiration_date', $pallet->expiration_date->toDateString())
                     ->where('added_at', $pallet->created_at->toIso8601String())
                     ->where('is_stale', null)
+                    ->where('remaining_boxes', $pallet->remaining_boxes)
                 )
             )
             ->has('cells.1', fn (Assert $cell) => $cell

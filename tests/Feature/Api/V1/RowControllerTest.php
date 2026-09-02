@@ -78,6 +78,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
             'is_stale' => null,
+            'remaining_boxes' => $pallet->remaining_boxes,
         ],
     ]);
     expect(collect($rowPayload['cells'])->firstWhere('id', $emptyCell->id))->toEqual([

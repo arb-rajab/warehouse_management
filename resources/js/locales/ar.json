@@ -235,6 +235,48 @@
             "submitReactivate": "إعادة تفعيل",
             "submitting": "جارٍ الحفظ…"
         },
+        "palletActions": {
+            "triggerLabel": "إدارة الطبلية النقالة",
+            "title": "إدارة الطبلية النقالة — {location}",
+            "tabs": {
+                "store": "تخزين",
+                "open": "فتح",
+                "removeBoxes": "إزالة صناديق",
+                "empty": "تفريغ",
+                "transfer": "نقل"
+            },
+            "store": {
+                "productLabel": "المنتج",
+                "productPlaceholder": "اختر منتجًا…",
+                "expirationLabel": "تاريخ انتهاء الصلاحية",
+                "submit": "تخزين الطبلية النقالة"
+            },
+            "open": {
+                "boxesCountLabel": "عدد الصناديق المراد إزالتها",
+                "remainingBoxesHint": "{count} صندوق متبقٍ",
+                "confirmEmptyLabel": "هذا يتجاوز ما تبقى — قم بتفريغ الطبلية النقالة بدلاً من ذلك",
+                "submit": "فتح الطبلية النقالة"
+            },
+            "removeBoxes": {
+                "boxesCountLabel": "عدد الصناديق المراد إزالتها",
+                "remainingBoxesHint": "{count} صندوق متبقٍ",
+                "confirmEmptyLabel": "هذا يتجاوز ما تبقى — قم بتفريغ الطبلية النقالة بدلاً من ذلك",
+                "submit": "إزالة الصناديق"
+            },
+            "empty": {
+                "confirmText": "سيؤدي هذا إلى إزالة الطبلية النقالة من {location} وتحرير الخلية.",
+                "submit": "تفريغ الطبلية النقالة"
+            },
+            "transfer": {
+                "rowLabel": "صف الوجهة",
+                "cellNumberLabel": "رقم خلية الوجهة",
+                "flatNumberLabel": "مستوى الوجهة",
+                "submit": "نقل الطبلية النقالة"
+            },
+            "noteLabel": "ملاحظة (اختياري)",
+            "notePlaceholder": "سبب هذا التغيير…",
+            "submitting": "جارٍ الحفظ…"
+        },
         "search": {
             "placeholder": "ابحث عن موضع الخلية (A12·3)…",
             "submit": "بحث",

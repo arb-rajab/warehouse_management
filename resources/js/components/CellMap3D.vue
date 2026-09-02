@@ -1358,6 +1358,7 @@ const displayedCellForSlot = computed<Cell | null>(() => {
                   expiration_date: item.pallet.expiration_date,
                   added_at: item.pallet.added_at,
                   is_stale: null,
+                  remaining_boxes: 0,
               }
             : null,
     };

@@ -51,6 +51,7 @@ export interface CellPallet {
     expiration_date: string;
     added_at: string;
     is_stale: boolean | null;
+    remaining_boxes: number;
 }
 
 export interface Cell {

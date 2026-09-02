@@ -93,6 +93,7 @@ describe('CellSlot', () => {
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
                     is_stale: null,
+                    remaining_boxes: 10,
                 },
             }),
         });
@@ -118,6 +119,7 @@ describe('CellSlot', () => {
                     expiration_date: '2026-08-01',
                     added_at: '2026-07-01T10:00:00Z',
                     is_stale: null,
+                    remaining_boxes: 10,
                 },
             }),
         });

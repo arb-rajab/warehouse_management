@@ -42,6 +42,7 @@ class CellResource extends JsonResource
                 'is_stale' => $request->filled('stale_after_days')
                     ? $pallet->isStaleAfter($request->integer('stale_after_days'))
                     : null,
+                'remaining_boxes' => $pallet->remaining_boxes,
             ]),
         ];
     }
