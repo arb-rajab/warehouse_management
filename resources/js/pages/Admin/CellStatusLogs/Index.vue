@@ -95,6 +95,7 @@ const filters = reactive({
     sort_by: props.filters.sort_by ?? '',
     sort_direction: props.filters.sort_direction ?? '',
     flagged: props.filters.flagged ?? false,
+    per_page: props.filters.per_page ?? 20,
 });
 
 const {
@@ -195,11 +196,20 @@ function clearFilters(): void {
     filters.sort_by = '';
     filters.sort_direction = '';
     filters.flagged = false;
-    router.get(cellLogsIndex().url, {}, { preserveState: true, replace: true });
+    router.get(
+        cellLogsIndex().url,
+        { per_page: filters.per_page },
+        { preserveState: true, replace: true },
+    );
 }
 
 function onSort(key: string): void {
     toggleSort(filters, key);
+    applyFilters();
+}
+
+function onPerPageChange(perPage: number): void {
+    filters.per_page = perPage;
     applyFilters();
 }
 
@@ -659,6 +669,10 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             </template>
         </DataTable>
 
-        <Pagination :links="logs.meta.links" />
+        <Pagination
+            :links="logs.meta.links"
+            :per-page="filters.per_page"
+            @update:per-page="onPerPageChange"
+        />
     </AdminLayout>
 </template>

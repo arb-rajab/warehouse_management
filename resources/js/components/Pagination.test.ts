@@ -81,6 +81,43 @@ describe('Pagination', () => {
         expect(firstLink?.attributes('href')).toBe('/admin/rows?page=1');
     });
 
+    it('renders no per-page selector when perPage is not given, even with more than 3 links', () => {
+        const wrapper = mount(Pagination, {
+            props: { links: [link(), link(), link(), link()] },
+        });
+
+        expect(wrapper.find('select').exists()).toBe(false);
+    });
+
+    it('renders the per-page selector, with 3 or fewer links, when perPage is given', () => {
+        const wrapper = mount(Pagination, {
+            props: { links: [link(), link(), link()], perPage: 25 },
+        });
+
+        expect(wrapper.find('nav').exists()).toBe(false);
+        expect(wrapper.find('select').exists()).toBe(true);
+    });
+
+    it('preselects the current perPage value', () => {
+        const wrapper = mount(Pagination, {
+            props: { links: [], perPage: 50 },
+        });
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('emits update:perPage with the selected value when changed', async () => {
+        const wrapper = mount(Pagination, {
+            props: { links: [], perPage: 20 },
+        });
+
+        await wrapper.get('select').setValue('50');
+
+        expect(wrapper.emitted('update:perPage')).toEqual([[50]]);
+    });
+
     it('shows a previous chevron on the first link and a next chevron on the last link only', () => {
         const wrapper = mount(Pagination, {
             props: {

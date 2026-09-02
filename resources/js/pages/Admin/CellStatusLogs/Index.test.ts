@@ -927,7 +927,7 @@ describe('CellStatusLogs Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/cell-logs',
-            {},
+            { per_page: 20 },
             { preserveState: true, replace: true },
         );
         expect(
@@ -1215,7 +1215,27 @@ describe('CellStatusLogs Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/cell-logs',
-            {},
+            { per_page: 20 },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('preselects the current per-page value in the page-size selector', () => {
+        const wrapper = mountPage([], { per_page: 50 });
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('requests the new page size when the selector changes', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cell-logs',
+            expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );
     });

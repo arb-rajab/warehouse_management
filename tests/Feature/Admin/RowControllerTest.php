@@ -49,6 +49,25 @@ test('the row list paginates instead of returning everything at once', function 
     assertInertiaPaginates($response, 'rows', 20, 25, 'Admin/Rows/Index');
 });
 
+test('the row list respects a per_page query parameter', function () {
+    actingAsAdmin();
+    Row::factory()->count(25)->create();
+
+    $response = $this->get('/admin/rows?per_page=10');
+
+    assertInertiaPaginates($response, 'rows', 10, 25, 'Admin/Rows/Index');
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
+});
+
+test('an out-of-range per_page value falls back to the default page size', function () {
+    actingAsAdmin();
+    Row::factory()->count(25)->create();
+
+    $response = $this->get('/admin/rows?per_page=999');
+
+    assertInertiaPaginates($response, 'rows', 20, 25, 'Admin/Rows/Index');
+});
+
 test('a mobile app user cannot view the row list', function () {
     actingAsMobilePanelUser();
 

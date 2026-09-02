@@ -4,7 +4,10 @@ import { ArrowRight, Clock, History, Pencil, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
-import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import {
+    edit as editUser,
+    show as showUser,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellLogFlagBadges from '@/components/CellLogFlagBadges.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -20,17 +23,33 @@ import {
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
-import type { CellStatusLog, Paginated, User } from '@/types/admin';
+import type {
+    CellStatusLog,
+    Paginated,
+    PerPageFilters,
+    User,
+} from '@/types/admin';
 
 const props = defineProps<{
     user: User;
     logs: Paginated<CellStatusLog>;
+    filters: PerPageFilters;
 }>();
 
 const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
+const currentPerPage = computed(() => props.filters.per_page ?? 20);
+
 function viewPalletHistory(palletId: number): void {
     router.get(cellLogsIndex().url, { pallet_id: palletId });
+}
+
+function onPerPageChange(perPage: number): void {
+    router.get(
+        showUser({ id: props.user.id }).url,
+        { per_page: perPage },
+        { preserveState: true, replace: true },
+    );
 }
 </script>
 
@@ -197,6 +216,10 @@ function viewPalletHistory(palletId: number): void {
             </template>
         </DataTable>
 
-        <Pagination :links="logs.meta.links" />
+        <Pagination
+            :links="logs.meta.links"
+            :per-page="currentPerPage"
+            @update:per-page="onPerPageChange"
+        />
     </AdminLayout>
 </template>

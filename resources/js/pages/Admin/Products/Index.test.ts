@@ -719,7 +719,7 @@ describe('Products Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/products',
-            {},
+            { per_page: 20 },
             { preserveState: true, replace: true },
         );
         expect(
@@ -815,6 +815,26 @@ describe('Products Index', () => {
                 sort_by: 'full_cells_count',
                 sort_direction: 'desc',
             }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('preselects the current per-page value in the page-size selector', () => {
+        const wrapper = mountPage([], { per_page: 50 });
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('requests the new page size when the selector changes', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );
     });

@@ -59,7 +59,26 @@ test('the products index paginates instead of returning every product at once', 
 
     $response = $this->get('/admin/products');
 
-    assertInertiaPaginates($response, 'products', 25, 30);
+    assertInertiaPaginates($response, 'products', 20, 30);
+});
+
+test('the products index respects a per_page query parameter', function () {
+    actingAsAdmin();
+
+    Product::factory()->count(30)->create();
+
+    $response = $this->get('/admin/products?per_page=10');
+
+    assertInertiaPaginates($response, 'products', 10, 30);
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
+});
+
+test('the products index rejects a per_page value outside the allowed options', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/products?per_page=999');
+
+    $response->assertSessionHasErrors('per_page');
 });
 
 test('the products index hydrates only the selected product ids for the product filter, not every product', function () {

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Eye, QrCode, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     create,
     destroy,
     exportQrCodes,
+    index as rowsIndex,
     show,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
@@ -18,15 +19,26 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
-import type { Paginated, Row } from '@/types/admin';
+import type { Paginated, PerPageFilters, Row } from '@/types/admin';
 
-defineProps<{
+const props = defineProps<{
     rows: Paginated<Row>;
+    filters: PerPageFilters;
 }>();
 
 const deleteError = computed(
     () => (usePage().props.errors as Partial<Record<'row', string>>)?.row,
 );
+
+const currentPerPage = computed(() => props.filters.per_page ?? 20);
+
+function onPerPageChange(perPage: number): void {
+    router.get(
+        rowsIndex().url,
+        { per_page: perPage },
+        { preserveState: true, replace: true },
+    );
+}
 </script>
 
 <template>
@@ -102,6 +114,10 @@ const deleteError = computed(
             </template>
         </DataTable>
 
-        <Pagination :links="rows.meta.links" />
+        <Pagination
+            :links="rows.meta.links"
+            :per-page="currentPerPage"
+            @update:per-page="onPerPageChange"
+        />
     </AdminLayout>
 </template>

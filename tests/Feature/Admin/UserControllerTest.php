@@ -37,6 +37,25 @@ test('the user list paginates instead of returning everything at once', function
     assertInertiaPaginates($response, 'users', 20, 26, 'Admin/Users/Index');
 });
 
+test('the user list respects a per_page query parameter', function () {
+    actingAsAdmin();
+    User::factory()->count(25)->mobileUser()->create();
+
+    $response = $this->get('/admin/users?per_page=10');
+
+    assertInertiaPaginates($response, 'users', 10, 26, 'Admin/Users/Index');
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
+});
+
+test('an out-of-range per_page value falls back to the default page size for the user list', function () {
+    actingAsAdmin();
+    User::factory()->count(25)->mobileUser()->create();
+
+    $response = $this->get('/admin/users?per_page=999');
+
+    assertInertiaPaginates($response, 'users', 20, 26, 'Admin/Users/Index');
+});
+
 test('a mobile app user cannot view the user list', function () {
     actingAsMobilePanelUser();
 
@@ -121,7 +140,28 @@ test('a users action history paginates instead of returning everything at once',
 
     $response = $this->get("/admin/users/{$target->id}");
 
-    assertInertiaPaginates($response, 'logs', 25, 30);
+    assertInertiaPaginates($response, 'logs', 20, 30);
+});
+
+test('a users action history respects a per_page query parameter', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id]);
+
+    $response = $this->get("/admin/users/{$target->id}?per_page=10");
+
+    assertInertiaPaginates($response, 'logs', 10, 30);
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
+});
+
+test('an out-of-range per_page value falls back to the default page size for a users action history', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id]);
+
+    $response = $this->get("/admin/users/{$target->id}?per_page=999");
+
+    assertInertiaPaginates($response, 'logs', 20, 30);
 });
 
 test('a users action history defaults to newest-first', function () {

@@ -21,6 +21,9 @@
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
         "cancel": "إلغاء",
         "filteredColumn": "متأثر بفلتر نشط",
+        "pagination": {
+            "perPage": "لكل صفحة"
+        },
         "duration": {
             "day": "ي",
             "hour": "س",

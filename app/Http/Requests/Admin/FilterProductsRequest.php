@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Enums\CellLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
 use App\Http\Requests\Concerns\FiltersByRowAndColumn;
+use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class FilterProductsRequest extends FormRequest
 {
-    use FiltersByProductIds, FiltersByRowAndColumn, NormalizesExpiredFilter;
+    use FiltersByProductIds, FiltersByRowAndColumn, FiltersPerPage, NormalizesExpiredFilter;
 
     protected function prepareForValidation(): void
     {
@@ -44,6 +45,7 @@ class FilterProductsRequest extends FormRequest
             'created_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:date_from,date_to'],
             'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count,activity_today_count,activity_week_count'],
             'sort_direction' => ['nullable', 'in:asc,desc'],
+            ...$this->perPageRules(),
         ];
     }
 }

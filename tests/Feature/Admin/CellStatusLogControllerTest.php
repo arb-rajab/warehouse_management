@@ -168,11 +168,29 @@ test('the cell log skips the paired transferred-in log when computing next_log_a
 
 test('the cell log paginates instead of returning everything at once', function () {
     actingAsAdmin();
-    $this->seedPaginationOverflowFixture(perPage: 25);
+    $this->seedPaginationOverflowFixture(perPage: 20);
 
     $response = $this->get('/admin/cell-logs');
 
-    assertInertiaPaginates($response, 'logs', 25, 30, 'Admin/CellStatusLogs/Index');
+    assertInertiaPaginates($response, 'logs', 20, 25, 'Admin/CellStatusLogs/Index');
+});
+
+test('the cell log respects a per_page query parameter', function () {
+    actingAsAdmin();
+    $this->seedPaginationOverflowFixture(perPage: 20);
+
+    $response = $this->get('/admin/cell-logs?per_page=10');
+
+    assertInertiaPaginates($response, 'logs', 10, 25, 'Admin/CellStatusLogs/Index');
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
+});
+
+test('the cell log rejects a per_page value outside the allowed options', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cell-logs?per_page=999');
+
+    $response->assertSessionHasErrors('per_page');
 });
 
 test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {
@@ -182,10 +200,10 @@ test('next_log_at is found even when the next log for the same pallet falls on a
     $older = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 08:00:00');
     $newer = backdate(CellStatusLog::factory()->create(['pallet_id' => $pallet->id]), '2026-08-01 09:00:00');
 
-    // 24 unrelated logs, all newer than $newer, so the listing (ordered by
-    // latest()) puts $newer plus these 24 on page 1 (25 rows) and pushes
+    // 19 unrelated logs, all newer than $newer, so the listing (ordered by
+    // latest()) puts $newer plus these 19 on page 1 (20 rows) and pushes
     // $older, the single oldest row, onto page 2 by itself.
-    collect(range(1, 24))->each(function (int $i) {
+    collect(range(1, 19))->each(function (int $i) {
         backdate(CellStatusLog::factory()->create(), sprintf('2026-08-01 10:%02d:00', $i));
     });
 

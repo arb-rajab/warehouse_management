@@ -8,9 +8,10 @@ import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { User } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerPostMock } = vi.hoisted(() => ({
+const { usePageMock, routerPostMock, routerGetMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerPostMock: vi.fn(),
+    routerGetMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -20,11 +21,11 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { post: routerPostMock },
+        router: { post: routerPostMock, get: routerGetMock },
     };
 });
 
-function mountPage(users: User[], currentUserId = 7) {
+function mountPage(users: User[], currentUserId = 7, perPage = 20) {
     usePageMock.mockReturnValue({
         url: '/admin/users',
         props: defaultAuthProps({
@@ -32,12 +33,14 @@ function mountPage(users: User[], currentUserId = 7) {
         }),
     });
 
-    return mount(Index, { props: { users: paginated(users) } });
+    return mount(Index, {
+        props: { users: paginated(users), filters: { per_page: perPage } },
+    });
 }
 
 describe('Users Index', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerPostMock });
+        resetMocks({ usePageMock, routerPostMock, routerGetMock });
     });
 
     it('renders every column header', () => {
@@ -127,5 +130,25 @@ describe('Users Index', () => {
             .findAll('button')
             .find((b) => b.text().includes(t('users.index.delete')));
         expect(deleteButton).toBeUndefined();
+    });
+
+    it('preselects the current per-page value in the page-size selector', () => {
+        const wrapper = mountPage([], 7, 50);
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('requests the new page size when the selector changes', async () => {
+        const wrapper = mountPage([], 7, 20);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/users',
+            { per_page: 50 },
+            { preserveState: true, replace: true },
+        );
     });
 });

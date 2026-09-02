@@ -31,7 +31,7 @@ function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
         meta: {
             current_page: 1,
             last_page: 1,
-            per_page: 25,
+            per_page: 20,
             total: logs.length,
             from: logs.length ? 1 : null,
             to: logs.length,
@@ -40,14 +40,22 @@ function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
     };
 }
 
-function mountPage(logs: CellStatusLog[], userOverrides: Partial<User> = {}) {
+function mountPage(
+    logs: CellStatusLog[],
+    userOverrides: Partial<User> = {},
+    perPage = 20,
+) {
     usePageMock.mockReturnValue({
         url: '/admin/users/7',
         props: defaultAuthProps({ auth: { user: { name: 'Admin', id: 1 } } }),
     });
 
     return mount(Show, {
-        props: { user: user(userOverrides), logs: paginatedLogs(logs) },
+        props: {
+            user: user(userOverrides),
+            logs: paginatedLogs(logs),
+            filters: { per_page: perPage },
+        },
     });
 }
 
@@ -217,5 +225,25 @@ describe('Users Show', () => {
         ]);
 
         expect(rowCells(wrapper)[3].text()).toContain(formatDate('2026-09-01'));
+    });
+
+    it('preselects the current per-page value in the page-size selector', () => {
+        const wrapper = mountPage([], { id: 7 }, 50);
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('requests the new page size when the selector changes', async () => {
+        const wrapper = mountPage([], { id: 7 }, 25);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/users/7',
+            { per_page: 50 },
+            { preserveState: true, replace: true },
+        );
     });
 });

@@ -61,6 +61,7 @@ const filters = reactive({
     created_within_days: props.filters.created_within_days?.toString() ?? '',
     sort_by: props.filters.sort_by ?? '',
     sort_direction: props.filters.sort_direction ?? '',
+    per_page: props.filters.per_page ?? 20,
 });
 
 const {
@@ -158,7 +159,16 @@ function clearFilters(): void {
     filters.created_within_days = '';
     filters.sort_by = '';
     filters.sort_direction = '';
-    router.get(productsIndex().url, {}, { preserveState: true, replace: true });
+    router.get(
+        productsIndex().url,
+        { per_page: filters.per_page },
+        { preserveState: true, replace: true },
+    );
+}
+
+function onPerPageChange(perPage: number): void {
+    filters.per_page = perPage;
+    applyFilters();
 }
 
 function onSort(key: string): void {
@@ -512,6 +522,10 @@ function activityHref(
             </template>
         </DataTable>
 
-        <Pagination :links="products.meta.links" />
+        <Pagination
+            :links="products.meta.links"
+            :per-page="filters.per_page"
+            @update:per-page="onPerPageChange"
+        />
     </AdminLayout>
 </template>

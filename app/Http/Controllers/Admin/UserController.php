@@ -16,16 +16,20 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $perPage = $this->resolvePerPage($request, 20);
+
         return Inertia::render('Admin/Users/Index', [
             'users' => $this->paginated(UserResource::collection(
                 User::query()
                     ->select(['id', 'name', 'email'])
                     ->with('roles:id,name')
                     ->orderBy('name')
-                    ->paginate(20)
+                    ->paginate($perPage)
+                    ->withQueryString()
             )),
+            'filters' => ['per_page' => $perPage],
         ]);
     }
 
@@ -36,11 +40,13 @@ class UserController extends Controller
 
     public function show(Request $request, User $user): Response
     {
+        $perPage = $this->resolvePerPage($request, 20);
+
         $logs = CellStatusLog::query()
             ->forListing()
             ->where('user_id', $user->id)
             ->sorted($request)
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
 
         CellStatusLog::attachNextLogs($logs->getCollection());
@@ -48,6 +54,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Show', [
             'user' => new UserResource($user->loadMissing('roles:id,name')),
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
+            'filters' => ['per_page' => $perPage],
         ]);
     }
 

@@ -51,6 +51,7 @@ class ProductController extends Controller
         $sortBy = in_array($request->string('sort_by')->value(), self::SORTABLE_COLUMNS, true)
             ? $request->string('sort_by')->value()
             : 'name';
+        $perPage = $this->resolvePerPage($request, 20);
 
         $products = Product::query()
             ->select(['id', 'name', 'image_url'])
@@ -77,7 +78,7 @@ class ProductController extends Controller
             })
             ->orderBy($sortBy, $direction)
             ->orderBy('id', $direction)
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Admin/Products/Index', [
@@ -85,11 +86,17 @@ class ProductController extends Controller
             'today' => $today->toDateString(),
             'weekStart' => $weekStart->toDateString(),
             'expiringSoonDays' => $expiringSoonDays,
-            'filters' => $request->only([
-                'row_id', 'column_number', 'state', 'expired', 'expires_within_days', 'product_id',
-                'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
-                'sort_by', 'sort_direction',
-            ]),
+            'filters' => [
+                ...$request->only([
+                    'row_id', 'column_number', 'state', 'expired', 'expires_within_days', 'product_id',
+                    'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
+                    'sort_by', 'sort_direction',
+                ]),
+                // The resolved value (not the raw request), so the per-page
+                // selector always reflects the actual page size, including
+                // the default when no `per_page` param was sent.
+                'per_page' => $perPage,
+            ],
             'filterOptions' => $this->productRowUserActionFilterOptions($request->productIds()),
         ]);
     }

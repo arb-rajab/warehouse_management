@@ -21,6 +21,9 @@
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
         "filteredColumn": "Affected by an active filter",
+        "pagination": {
+            "perPage": "Per page"
+        },
         "duration": {
             "day": "d",
             "hour": "h",

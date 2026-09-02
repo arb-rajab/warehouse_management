@@ -8,9 +8,10 @@ import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { Row } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerPostMock } = vi.hoisted(() => ({
+const { usePageMock, routerPostMock, routerGetMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerPostMock: vi.fn(),
+    routerGetMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -20,22 +21,28 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { post: routerPostMock },
+        router: { post: routerPostMock, get: routerGetMock },
     };
 });
 
-function mountPage(rows: Row[], errors: Partial<Record<'row', string>> = {}) {
+function mountPage(
+    rows: Row[],
+    errors: Partial<Record<'row', string>> = {},
+    perPage = 20,
+) {
     usePageMock.mockReturnValue({
         url: '/admin/rows',
         props: defaultAuthProps({ errors }),
     });
 
-    return mount(Index, { props: { rows: paginated(rows) } });
+    return mount(Index, {
+        props: { rows: paginated(rows), filters: { per_page: perPage } },
+    });
 }
 
 describe('Rows Index', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerPostMock });
+        resetMocks({ usePageMock, routerPostMock, routerGetMock });
     });
 
     it('renders every column header', () => {
@@ -130,6 +137,26 @@ describe('Rows Index', () => {
 
         expect(wrapper.get('[role="alert"]').text()).toBe(
             'Cannot delete a row that has pallets in it.',
+        );
+    });
+
+    it('preselects the current per-page value in the page-size selector', () => {
+        const wrapper = mountPage([], {}, 50);
+
+        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
+            '50',
+        );
+    });
+
+    it('requests the new page size when the selector changes', async () => {
+        const wrapper = mountPage([], {}, 20);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/rows',
+            { per_page: 50 },
+            { preserveState: true, replace: true },
         );
     });
 });

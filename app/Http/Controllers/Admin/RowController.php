@@ -23,15 +23,19 @@ class RowController extends Controller
 {
     use BuildsCellQrLabels;
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $perPage = $this->resolvePerPage($request, 20);
+
         return Inertia::render('Admin/Rows/Index', [
             'rows' => $this->paginated(RowResource::collection(
                 Row::query()
                     ->select(Row::SELECT_COLUMNS)
                     ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
-                    ->paginate(20)
+                    ->paginate($perPage)
+                    ->withQueryString()
             )),
+            'filters' => ['per_page' => $perPage],
         ]);
     }
 

@@ -18,18 +18,23 @@ class CellStatusLogController extends Controller
 
     public function index(FilterCellStatusLogsRequest $request): Response
     {
+        $perPage = $this->resolvePerPage($request, 20);
+
         $logs = CellStatusLog::query()
             ->forListing()
             ->filtered($request)
             ->sorted($request)
-            ->paginate(25)
+            ->paginate($perPage)
             ->withQueryString();
 
         CellStatusLog::attachNextLogs($logs->getCollection());
 
         return Inertia::render('Admin/CellStatusLogs/Index', [
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
-            'filters' => $request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'expires_within_days', 'sort_by', 'sort_direction', 'flagged']),
+            'filters' => [
+                ...$request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'expires_within_days', 'sort_by', 'sort_direction', 'flagged']),
+                'per_page' => $perPage,
+            ],
             'filterOptions' => $this->productRowUserActionFilterOptions($request->productIds()),
         ]);
     }

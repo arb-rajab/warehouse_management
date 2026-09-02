@@ -32,6 +32,17 @@ export interface Row {
     has_pallets: boolean;
 }
 
+/**
+ * The `filters` prop shape for an admin listing whose only server-driven
+ * state is its page size — Rows/Index.vue, Users/Index.vue, Users/Show.vue.
+ * A listing with its own filters/sort embeds `per_page` directly into its
+ * own filters interface (see ProductFilters, CellStatusLogFilters) instead
+ * of extending this.
+ */
+export interface PerPageFilters {
+    per_page?: number;
+}
+
 export interface CellPallet {
     id: number;
     product_id: number;
@@ -209,6 +220,7 @@ export interface CellStatusLogFilters {
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
     flagged?: boolean;
+    per_page?: number;
 }
 
 export interface CellStatusLogFilterOptions
@@ -252,6 +264,7 @@ export interface ProductFilters {
     created_within_days?: number;
     sort_by?: ProductSortBy;
     sort_direction?: 'asc' | 'desc';
+    per_page?: number;
 }
 
 export type ProductIndexFilterOptions = CellStatusLogFilterOptions;

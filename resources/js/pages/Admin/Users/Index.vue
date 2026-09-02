@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
     edit,
+    index as usersIndex,
     show,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
@@ -15,13 +17,24 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
-import type { Paginated, User } from '@/types/admin';
+import type { Paginated, PerPageFilters, User } from '@/types/admin';
 
-defineProps<{
+const props = defineProps<{
     users: Paginated<User>;
+    filters: PerPageFilters;
 }>();
 
 const page = usePage();
+
+const currentPerPage = computed(() => props.filters.per_page ?? 20);
+
+function onPerPageChange(perPage: number): void {
+    router.get(
+        usersIndex().url,
+        { per_page: perPage },
+        { preserveState: true, replace: true },
+    );
+}
 </script>
 
 <template>
@@ -98,6 +111,10 @@ const page = usePage();
             </template>
         </DataTable>
 
-        <Pagination :links="users.meta.links" />
+        <Pagination
+            :links="users.meta.links"
+            :per-page="currentPerPage"
+            @update:per-page="onPerPageChange"
+        />
     </AdminLayout>
 </template>
