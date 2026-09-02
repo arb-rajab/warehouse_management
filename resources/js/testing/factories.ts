@@ -4,7 +4,7 @@ import type { Cell, CellStatusLog, Paginated, Row, User } from '@/types/admin';
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
  * table built this `meta` shape independently before this existed.
  */
-export function paginated<T>(data: T[], perPage = 25): Paginated<T> {
+export function paginated<T>(data: T[], perPage = 20): Paginated<T> {
     return {
         data,
         meta: {
