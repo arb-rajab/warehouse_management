@@ -253,7 +253,7 @@ test('creating a user with a duplicate email is rejected and nothing changes', f
     ]);
 
     $response->assertSessionHasErrors('email');
-    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('wms_users', 2);
 });
 
 test('creating a user with mismatched password confirmation is rejected and nothing changes', function () {
@@ -268,7 +268,7 @@ test('creating a user with mismatched password confirmation is rejected and noth
     ]);
 
     $response->assertSessionHasErrors('password');
-    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('wms_users', 1);
 });
 
 test('a mobile app user cannot create a user and nothing changes', function () {
@@ -283,7 +283,7 @@ test('a mobile app user cannot create a user and nothing changes', function () {
     ]);
 
     $response->assertForbidden();
-    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('wms_users', 1);
 });
 
 test('an unauthenticated caller cannot create a user and nothing changes', function () {
@@ -296,7 +296,7 @@ test('an unauthenticated caller cannot create a user and nothing changes', funct
     ]);
 
     $response->assertRedirect(route('login'));
-    $this->assertDatabaseCount('users', 0);
+    $this->assertDatabaseCount('wms_users', 0);
 });
 
 test('creating a user with an overly long password is rejected and nothing changes', function () {
@@ -312,7 +312,7 @@ test('creating a user with an overly long password is rejected and nothing chang
     ]);
 
     $response->assertSessionHasErrors('password');
-    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('wms_users', 1);
 });
 
 test('an authenticated admin can view the edit user page with every property the form needs', function () {
@@ -538,7 +538,7 @@ test('an admin can delete another user', function () {
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertRedirect(route('admin.users.index'));
-    $this->assertDatabaseMissing('users', ['id' => $target->id]);
+    $this->assertDatabaseMissing('wms_users', ['id' => $target->id]);
 });
 
 test('deleting a user redirects back with the current page preserved', function () {
@@ -556,7 +556,7 @@ test('an admin cannot delete their own account and nothing changes', function ()
     $response = $this->delete("/admin/users/{$admin->id}");
 
     $response->assertForbidden();
-    $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    $this->assertDatabaseHas('wms_users', ['id' => $admin->id]);
 });
 
 test('a mobile app user cannot delete a user and nothing changes', function () {
@@ -566,7 +566,7 @@ test('a mobile app user cannot delete a user and nothing changes', function () {
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertForbidden();
-    $this->assertDatabaseHas('users', ['id' => $target->id]);
+    $this->assertDatabaseHas('wms_users', ['id' => $target->id]);
 });
 
 test('an unauthenticated caller cannot delete a user and nothing changes', function () {
@@ -575,7 +575,7 @@ test('an unauthenticated caller cannot delete a user and nothing changes', funct
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertRedirect(route('login'));
-    $this->assertDatabaseHas('users', ['id' => $target->id]);
+    $this->assertDatabaseHas('wms_users', ['id' => $target->id]);
 });
 
 test('deleting a non-existent user returns a 404', function () {

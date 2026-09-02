@@ -30,6 +30,8 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
+    protected $table = 'wms_users';
+
     /**
      * Get the attributes that should be cast.
      *
