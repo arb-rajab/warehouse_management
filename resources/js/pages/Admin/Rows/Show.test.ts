@@ -388,4 +388,46 @@ describe('Rows Show', () => {
             t('cellLog.filters.all'),
         );
     });
+
+    it('opens the toggle-active dialog for the clicked cell and posts the toggle on submit', async () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({
+                id: 42,
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                is_active: true,
+            }),
+        ]);
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        const toggleButton = wrapper.find(
+            `[title="${t('cells.toggleActive.deactivateLabel')}"]`,
+        );
+        expect(toggleButton.exists()).toBe(true);
+        await toggleButton.trigger('click');
+
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(dialog.text()).toContain(formatSlot('A', 1, 1));
+
+        await dialog.get('textarea').setValue('Sensor malfunction');
+        await dialog.get('form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cells/42/toggle-active',
+            { note: 'Sensor malfunction' },
+            expect.objectContaining({ preserveScroll: true }),
+        );
+    });
+
+    it('does not show a toggle-active button for a coordinate with no cell record', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, []);
+
+        expect(
+            wrapper
+                .find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .exists(),
+        ).toBe(false);
+    });
 });

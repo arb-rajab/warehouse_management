@@ -104,7 +104,7 @@ class CellController extends Controller
                 'note' => $request->input('note'),
             ]);
 
-            return redirect()->route('admin.cells.index', $request->query());
+            return redirect()->back();
         });
     }
 
