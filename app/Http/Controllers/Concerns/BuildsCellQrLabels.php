@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Cell;
+use ArPHP\I18N\Arabic;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -27,11 +28,11 @@ trait BuildsCellQrLabels
                 // worker which digit is the cell and which is the flat once the
                 // sticker is torn off the sheet and stuck on a shelf with no app
                 // around it for context.
-                'description' => __('messages.qr_label_description', [
+                'description' => $this->shapeArabicForPdf(__('messages.qr_label_description', [
                     'row' => $rowLetter,
                     'cell' => $cell->cell_number,
                     'flat' => $cell->flat_number,
-                ]),
+                ])),
                 'qrImage' => $this->qrImageDataUri(route('cell.redirect', [
                     'row_letter' => $rowLetter,
                     'cell_number' => $cell->cell_number,
@@ -39,6 +40,29 @@ trait BuildsCellQrLabels
                 ])),
             ])
             ->all();
+    }
+
+    /**
+     * dompdf's text layout has no Arabic contextual shaping or bidi reordering
+     * (see FIXME RTL markers throughout dompdf's FrameReflower/Style code) — it
+     * only draws each character's isolated-form glyph in logical (storage)
+     * order, which renders Arabic as disconnected letters read left-to-right.
+     * `utf8Glyphs()` pre-shapes the string into joined presentation-form
+     * glyphs already reordered into final left-to-right *display* order, so a
+     * naive LTR-drawing engine like dompdf's still renders it correctly. The
+     * font referenced in cell-qr-labels.blade.php must carry glyphs for the
+     * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
+     *
+     * $hindo is false to keep Western digits, matching how the same
+     * translation string renders un-shaped in the Vue/Inertia UI.
+     */
+    private function shapeArabicForPdf(string $text): string
+    {
+        if (! app()->isLocale('ar')) {
+            return $text;
+        }
+
+        return (new Arabic)->utf8Glyphs($text, max_chars: 1000, hindo: false, forcertl: true);
     }
 
     /**

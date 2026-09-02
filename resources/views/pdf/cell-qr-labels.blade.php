@@ -1,8 +1,17 @@
 <!doctype html>
-<html>
+<html dir="{{ app()->isLocale('ar') ? 'rtl' : 'ltr' }}" lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <style>
+        @if (app()->isLocale('ar'))
+            @font-face {
+                font-family: 'NotoNaskhArabic';
+                src: url('{{ resource_path('fonts/NotoNaskhArabic-Regular.ttf') }}');
+                font-weight: normal;
+                font-style: normal;
+            }
+        @endif
+
         body {
             margin: 0;
             font-family: sans-serif;
@@ -35,6 +44,14 @@
             font-size: 10px;
             color: #555;
         }
+
+        @if (app()->isLocale('ar'))
+            .description {
+                font-family: 'NotoNaskhArabic', sans-serif;
+                direction: rtl;
+                text-align: right;
+            }
+        @endif
     </style>
 </head>
 <body>
