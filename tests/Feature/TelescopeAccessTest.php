@@ -55,7 +55,7 @@ test('the telescope user tag never forces a fresh auth lookup', function () {
 
     // The exact state that caused infinite recursion in production: the session
     // already identifies a user, but the guard hasn't resolved a User model for
-    // it yet. The old tag closure called Auth::check(), which queries "users" to
+    // it yet. The old tag closure called Auth::check(), which queries "wms_users" to
     // resolve the guard — and Telescope then tries to tag *that* query too,
     // re-entering this closure before the first lookup finishes, recursing until
     // PHP's max_execution_time kills the request.

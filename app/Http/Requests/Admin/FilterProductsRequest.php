@@ -7,6 +7,7 @@ use App\Http\Requests\Concerns\FiltersByProductIds;
 use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,7 +38,7 @@ class FilterProductsRequest extends FormRequest
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             ...$this->productIdsFilterRules(),
             'user_id' => ['nullable', 'array'],
-            'user_id.*' => ['integer', 'exists:users,id'],
+            'user_id.*' => ['integer', Rule::exists(User::class, 'id')],
             'action' => ['nullable', 'array'],
             'action.*' => [Rule::enum(CellLogAction::class)],
             'date_from' => ['nullable', 'date'],
