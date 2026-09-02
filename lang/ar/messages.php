@@ -14,6 +14,5 @@ return [
     'insufficient_boxes_remaining' => 'لا توجد صناديق كافية متبقية في هذه الطبلية النقالة.',
     'pallet_boxes_depleted' => 'تمت إزالة جميع الصناديق — يجب إفراغ هذه الطبلية النقالة الآن.',
     'app_version_outdated' => 'هذا الإصدار من التطبيق لم يعد مدعومًا. يرجى التحديث للمتابعة.',
-    'open_in_app' => 'افتح في التطبيق',
     'qr_label_description' => 'الصف :row · الخلية :cell · المسار :flat',
 ];
