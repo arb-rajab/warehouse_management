@@ -1935,6 +1935,7 @@ onBeforeUnmount(() => {
                 toggleable
                 manageable
                 class="pointer-events-auto shadow-lg"
+                @pointerdown.stop
                 @toggle-active="emit('toggle-active', $event, displayedLabel)"
                 @manage-pallet="emit('manage-pallet', $event, displayedLabel)"
             />
