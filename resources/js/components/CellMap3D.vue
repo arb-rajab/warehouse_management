@@ -103,6 +103,14 @@ const SELECT_COLOR = 0x8b5cf6;
 const SELECT_OUTLINE_SCALE = 1.15;
 /** Orbit-mode hover outline — same weight as highlight/pulse outlines, just a distinct neutral color. */
 const HOVER_COLOR = 0xffffff;
+/**
+ * Empty cells still render a faint box (rather than being fully invisible)
+ * so an empty slot reads as an obvious gap in the shelf, matching how the 2D
+ * grid (CellSlot.vue) already shows empty cells as a visible, lightly
+ * colored tile rather than blank space — and so a highlight/pulse outline on
+ * an empty cell has an actual box to frame instead of floating in open air.
+ */
+const EMPTY_CELL_OPACITY = 0.18;
 /** Walk-mode mini-map: below this delta the reactive mirror isn't updated, to avoid a reactive write on every animation frame. */
 const MINI_MAP_UPDATE_EPSILON = 0.05;
 const MINI_MAP_UPDATE_EPSILON_DEGREES = 1;
@@ -213,14 +221,22 @@ const pressedDirections = new Set<MoveDirection>();
 const position = { x: 0, y: EYE_HEIGHT, z: 0 };
 let pitchDegrees = 0;
 let yawDegrees = 0;
-let bounds: WalkerBounds = {
+/**
+ * Reactive (not a plain `let`) because the mini-map's row-line positions
+ * (`miniMapRowPositions`) are derived from it in a `computed` — a plain
+ * reassigned variable wouldn't be tracked, so `updateBounds()` mutating a
+ * plain object left that computed permanently cached at its pre-mount
+ * all-zero default (rows all clamped to the mini-map's edges, effectively
+ * invisible) even after the real bounds were computed on mount.
+ */
+const bounds: WalkerBounds = reactive({
     minX: 0,
     maxX: 0,
     minY: 0,
     maxY: 0,
     minZ: 0,
     maxZ: 0,
-};
+});
 let lastFrameTime: number | null = null;
 let isDragging = false;
 let lastPointerX = 0;
@@ -400,10 +416,12 @@ function boxMaterialForState(state: Cell['state']): THREE.MeshStandardMaterial {
         material = new THREE.MeshStandardMaterial({
             color: CELL_STATE_COLOR[state].hex,
             // Empty cells stay raycastable (click/hover/facing still work on
-            // them) but render invisible — a solid gray box wrongly reads as
-            // "something is stored here" when the slot is actually empty.
+            // them) and render as a faint placeholder box (EMPTY_CELL_OPACITY)
+            // — a full-opacity gray box would wrongly read as "something is
+            // stored here" when the slot is actually empty, but leaving it
+            // fully invisible (opacity 0) left no visible shelf slot at all.
             transparent: state === 'empty',
-            opacity: state === 'empty' ? 0 : 1,
+            opacity: state === 'empty' ? EMPTY_CELL_OPACITY : 1,
         });
         boxMaterialsByState.set(state, material);
         sceneDisposables.push(material);
@@ -713,7 +731,10 @@ function updateBounds(): void {
         1,
     );
 
-    bounds = boundsForWarehouse(rowCount, maxCellsCount, maxFlatNumber);
+    Object.assign(
+        bounds,
+        boundsForWarehouse(rowCount, maxCellsCount, maxFlatNumber),
+    );
     orbitRange = orbitRangeForBounds(bounds);
 }
 
@@ -1296,6 +1317,15 @@ const miniMapRowPositions = computed(() =>
 );
 /** Which row's mini-map line to highlight as "the row you're in". */
 const miniMapActiveRowIndex = computed(() => nearestRowIndex(miniMap.x));
+/**
+ * Which rows currently contain at least one active highlight/filter match
+ * (`item.highlighted`, the same flag driving the 3D box outlines — see
+ * `outlineKindFor`) — lets the mini-map flag "a match is somewhere in this
+ * row" at a glance, not just which row you're currently standing in.
+ */
+const miniMapRowHasMatch = computed(() =>
+    props.bands.map((band) => band.items.some((item) => item.highlighted)),
+);
 
 /** A short "{label}: {state} — {product}" summary shared by the visual panel's label and the aria-live announcement below. */
 function describeItem(display: FacedItem): string {
@@ -1838,11 +1868,13 @@ onBeforeUnmount(() => {
                         :x2="leftPercent"
                         y2="100"
                         vector-effect="non-scaling-stroke"
-                        stroke-width="1.5"
+                        stroke-width="2"
                         :class="
                             rowIndex === miniMapActiveRowIndex
-                                ? 'stroke-blue-400 dark:stroke-blue-500'
-                                : 'stroke-gray-300 dark:stroke-neutral-700'
+                                ? 'stroke-blue-500 dark:stroke-blue-400'
+                                : miniMapRowHasMatch[rowIndex]
+                                  ? 'stroke-emerald-500 dark:stroke-emerald-400'
+                                  : 'stroke-gray-500 dark:stroke-neutral-400'
                         "
                     />
                 </svg>
