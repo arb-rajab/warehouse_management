@@ -2,7 +2,7 @@
     "nav": {
         "brand": "إدارة المستودع",
         "dashboard": "لوحة التحكم",
-        "rows": "الصفوف",
+        "rows": "الممرات",
         "map": "الخريطة",
         "cellLog": "سجل الخلايا",
         "products": "المنتجات",
@@ -42,36 +42,36 @@
     },
     "rows": {
         "index": {
-            "title": "الصفوف",
-            "addRow": "إضافة صف",
+            "title": "الممرات",
+            "addRow": "إضافة ممر",
             "columnLetter": "الحرف",
             "columnCells": "الخلايا",
-            "columnFlats": "المسارات",
+            "columnFlats": "المستويات",
             "columnAction": "الإجراء",
-            "empty": "لا توجد صفوف بعد.",
+            "empty": "لا توجد ممرات بعد.",
             "view": "عرض",
             "exportQrCodes": "تصدير رموز QR",
             "delete": "حذف",
-            "rowLabel": "الصف {letter}",
+            "rowLabel": "الممر {letter}",
             "hasPallets": "يحتوي على منصات",
-            "hasPalletsTitle": "يحتوي هذا الصف على منصات نقالة، لذا لا يمكن حذفه."
+            "hasPalletsTitle": "يحتوي هذا الممر على منصات نقالة، لذا لا يمكن حذفه."
         },
         "create": {
-            "title": "إضافة صف",
-            "submit": "إنشاء الصف",
+            "title": "إضافة ممر",
+            "submit": "إنشاء الممر",
             "submitting": "جارٍ الإنشاء..."
         },
         "edit": {
-            "title": "تعديل الصف {letter}",
+            "title": "تعديل الممر {letter}",
             "submit": "حفظ التغييرات",
             "submitting": "جارٍ الحفظ..."
         },
         "show": {
-            "title": "الصف {letter}",
-            "editRow": "تعديل الصف",
+            "title": "الممر {letter}",
+            "editRow": "تعديل الممر",
             "reprintQr": "إعادة طباعة رمز QR",
             "column": "العمود {n}",
-            "flat": "المسار {n}",
+            "flat": "المستوى {n}",
             "empty": "فارغ",
             "highlight": {
                 "button": "تمييز الخلايا"
@@ -79,9 +79,9 @@
         },
         "fields": {
             "letter": "الحرف",
-            "cellsPerFlat": "الخلايا في كل مسار",
-            "flats": "المسارات",
-            "dimensionsLocked": "يحتوي هذا الصف على منصات نقالة، لذا لا يمكن تغيير أبعاده."
+            "cellsPerFlat": "الخلايا في كل مستوى",
+            "flats": "المستويات",
+            "dimensionsLocked": "يحتوي هذا الممر على منصات نقالة، لذا لا يمكن تغيير أبعاده."
         }
     },
     "users": {
@@ -138,7 +138,7 @@
                 "expiration": "الانتهاء"
             },
             "product": "المنتج",
-            "row": "الصف",
+            "row": "الممر",
             "column": "العمود",
             "doneBy": "بواسطة",
             "statusChange": "تغيير الحالة",
@@ -219,8 +219,8 @@
             "nextMatch": "المطابقة التالية",
             "matchPosition": "{current} من {total}"
         },
-        "empty": "لم تتم إضافة أي صفوف بعد.",
-        "flatNotAvailable": "هذا المسار غير موجود لهذا الصف",
+        "empty": "لم تتم إضافة أي ممرات بعد.",
+        "flatNotAvailable": "هذا المستوى غير موجود لهذا الممر",
         "inactiveBadge": "غير نشطة",
         "toggleActive": {
             "deactivateLabel": "تعطيل الخلية",
@@ -268,7 +268,7 @@
                 "submit": "تفريغ الطبلية النقالة"
             },
             "transfer": {
-                "rowLabel": "صف الوجهة",
+                "rowLabel": "ممر الوجهة",
                 "cellNumberLabel": "رقم خلية الوجهة",
                 "flatNumberLabel": "مستوى الوجهة",
                 "submit": "نقل الطبلية النقالة"
