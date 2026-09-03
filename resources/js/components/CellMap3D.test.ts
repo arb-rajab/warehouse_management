@@ -299,7 +299,12 @@ type Registry = {
         name: string;
         count: number;
         matrices: Array<{ x: number; y: number; z: number }>;
-        material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
+        material: {
+            color: unknown;
+            transparent: unknown;
+            opacity: unknown;
+            dispose: ReturnType<typeof vi.fn>;
+        };
     }>;
     raycasters: Array<{
         setFromCamera: ReturnType<typeof vi.fn>;
@@ -763,12 +768,10 @@ describe('CellMap3D', () => {
         // Empty cells stay instanced (still raycastable for click/hover/facing)
         // but render invisible, so they no longer look like a physical box.
         const emptyMesh = meshesByColor.get(CELL_STATE_COLOR.empty.hex);
-        expect((emptyMesh?.material as { opacity: unknown })?.opacity).toBe(0);
-        expect(
-            (emptyMesh?.material as { transparent: unknown })?.transparent,
-        ).toBe(true);
+        expect(emptyMesh?.material.opacity).toBe(0);
+        expect(emptyMesh?.material.transparent).toBe(true);
         const fullMesh = meshesByColor.get(CELL_STATE_COLOR.full.hex);
-        expect((fullMesh?.material as { opacity: unknown })?.opacity).toBe(1);
+        expect(fullMesh?.material.opacity).toBe(1);
 
         // Only the highlighted cell (cell 1) and the pulsing cell (cell 3)
         // get an outline; the plain empty cell (cell 2) does not.
