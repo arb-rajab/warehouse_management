@@ -77,6 +77,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     'camera-mode-change': [mode: 'walk' | 'orbit'];
+    'manage-pallet': [cell: Cell, label: string];
+    'toggle-active': [cell: Cell, label: string];
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -1333,7 +1335,13 @@ const mapAnnouncement = computed(() => {
     })}`;
 });
 
-/** Adapts the displayed item's pallet-sample shape into the full `Cell` shape CellSlot.vue expects. */
+/**
+ * Adapts the displayed item's pallet-sample shape into the full `Cell` shape
+ * CellSlot.vue expects — using the item's real `cellId`/`pallet.id`/
+ * `pallet.remaining_boxes` (not placeholders) so the faced-cell panel's
+ * manage-pallet/toggle-active buttons act on the real cell, not a synthetic
+ * one.
+ */
 const displayedCellForSlot = computed<Cell | null>(() => {
     const displayed = displayedItem.value;
 
@@ -1344,21 +1352,21 @@ const displayedCellForSlot = computed<Cell | null>(() => {
     const { item } = displayed;
 
     return {
-        id: 0,
+        id: item.cellId,
         cell_number: item.cellNumber,
         flat_number: item.flatNumber,
         state: item.state,
         is_active: item.isActive,
         pallet: item.pallet
             ? {
-                  id: 0,
-                  product_id: 0,
+                  id: item.pallet.id,
+                  product_id: item.pallet.product_id,
                   product_name: item.pallet.product_name,
                   product_image_url: item.pallet.product_image_url,
                   expiration_date: item.pallet.expiration_date,
                   added_at: item.pallet.added_at,
                   is_stale: null,
-                  remaining_boxes: 0,
+                  remaining_boxes: item.pallet.remaining_boxes,
               }
             : null,
     };
@@ -1893,7 +1901,11 @@ onBeforeUnmount(() => {
                 :label="displayedLabel"
                 :highlighted="displayedItem.item.highlighted"
                 :pulsing="displayedItem.item.pulsing"
-                class="shadow-lg"
+                toggleable
+                manageable
+                class="pointer-events-auto shadow-lg"
+                @toggle-active="emit('toggle-active', $event, displayedLabel)"
+                @manage-pallet="emit('manage-pallet', $event, displayedLabel)"
             />
         </div>
 

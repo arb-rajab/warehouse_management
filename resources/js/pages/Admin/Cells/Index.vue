@@ -420,13 +420,10 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
 }
 
 const palletActionsDialogOpen = ref(false);
-const palletActionsCell = ref<CellWithLocation | null>(null);
+const palletActionsCell = ref<Cell | null>(null);
 const palletActionsLabel = ref('');
 
-function openPalletActionsDialog(
-    cell: CellWithLocation | null,
-    label: string,
-): void {
+function openPalletActionsDialog(cell: Cell | null, label: string): void {
     if (!cell) {
         return;
     }
@@ -504,6 +501,7 @@ const map3DBands = computed<CellMap3DBand[]>(() => {
         );
 
         itemsByRow.get(sample.row_letter)?.push({
+            cellId: sample.cell_id,
             cellNumber: sample.cell_number,
             flatNumber: sample.flat_number,
             state: sample.state,
@@ -1055,6 +1053,13 @@ watch(
                         :bands="map3DBands"
                         @camera-mode-change="
                             (mode) => (cameraDisplayMode = mode)
+                        "
+                        @manage-pallet="
+                            (cell, label) =>
+                                openPalletActionsDialog(cell, label)
+                        "
+                        @toggle-active="
+                            (cell, label) => openToggleActiveDialog(cell, label)
                         "
                     />
                 </div>

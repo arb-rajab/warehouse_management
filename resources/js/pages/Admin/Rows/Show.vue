@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
@@ -14,10 +16,16 @@ import {
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
-import type { Cell, ProductFilterOptions, Row } from '@/types/admin';
+import type {
+    Cell,
+    CellMapRow,
+    ProductFilterOptions,
+    Row,
+} from '@/types/admin';
 
 const props = defineProps<{
     row: Row;
+    rows: CellMapRow[];
     cells: Cell[];
     today: string;
     filterOptions: ProductFilterOptions;
@@ -60,6 +68,10 @@ const toggleActiveDialogOpen = ref(false);
 const toggleActiveCell = ref<Cell | null>(null);
 const toggleActiveLabel = ref('');
 
+function slotLabel(cellIndex: number, flatNumber: number): string {
+    return formatSlot(props.row.letter, cellIndex + 1, flatNumber);
+}
+
 function openToggleActiveDialog(cell: Cell | null, label: string): void {
     if (!cell) {
         return;
@@ -69,6 +81,24 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
     toggleActiveLabel.value = label;
     toggleActiveDialogOpen.value = true;
 }
+
+const palletActionsDialogOpen = ref(false);
+const palletActionsCell = ref<Cell | null>(null);
+const palletActionsLabel = ref('');
+
+function openPalletActionsDialog(cell: Cell | null, label: string): void {
+    if (!cell) {
+        return;
+    }
+
+    palletActionsCell.value = cell;
+    palletActionsLabel.value = label;
+    palletActionsDialogOpen.value = true;
+}
+
+const palletActionError = computed(
+    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
+);
 </script>
 
 <template>
@@ -90,6 +120,8 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
                 </Link>
             </div>
         </PageHeader>
+
+        <ActionErrorBanner :message="palletActionError" />
 
         <div class="overflow-x-auto pb-2">
             <div class="flex flex-col gap-2">
@@ -129,23 +161,20 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
                             v-for="entry in flatColumn"
                             :key="entry.flatNumber"
                             :cell="entry.cell"
-                            :label="
-                                formatSlot(
-                                    props.row.letter,
-                                    cellIndex + 1,
-                                    entry.flatNumber,
-                                )
-                            "
+                            :label="slotLabel(cellIndex, entry.flatNumber)"
                             :highlighted="highlighted(entry.cell)"
                             toggleable
+                            manageable
                             @toggle-active="
                                 openToggleActiveDialog(
                                     entry.cell,
-                                    formatSlot(
-                                        props.row.letter,
-                                        cellIndex + 1,
-                                        entry.flatNumber,
-                                    ),
+                                    slotLabel(cellIndex, entry.flatNumber),
+                                )
+                            "
+                            @manage-pallet="
+                                openPalletActionsDialog(
+                                    entry.cell,
+                                    slotLabel(cellIndex, entry.flatNumber),
                                 )
                             "
                         />
@@ -158,6 +187,13 @@ function openToggleActiveDialog(cell: Cell | null, label: string): void {
             v-model:open="toggleActiveDialogOpen"
             :cell="toggleActiveCell"
             :label="toggleActiveLabel"
+        />
+
+        <PalletActionsDialog
+            v-model:open="palletActionsDialogOpen"
+            :cell="palletActionsCell"
+            :label="palletActionsLabel"
+            :rows="rows"
         />
     </AdminLayout>
 </template>

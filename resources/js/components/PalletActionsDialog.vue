@@ -13,14 +13,10 @@ import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { fieldLabelClass, selectedToggleClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type {
-    CellMapRow,
-    CellWithLocation,
-    ProductFilterOption,
-} from '@/types/admin';
+import type { Cell, CellMapRow, ProductFilterOption } from '@/types/admin';
 
 const props = defineProps<{
-    cell: CellWithLocation | null;
+    cell: Cell | null;
     label: string;
     rows: CellMapRow[];
 }>();

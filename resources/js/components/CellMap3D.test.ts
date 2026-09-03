@@ -399,6 +399,7 @@ let resizeCallback: (() => void) | null = null;
 
 function item(overrides: Partial<CellMap3DItem> = {}): CellMap3DItem {
     return {
+        cellId: 1,
         cellNumber: 1,
         flatNumber: 1,
         state: 'empty',
@@ -1101,10 +1102,13 @@ describe('CellMap3D', () => {
                                     cellNumber: 1,
                                     state: 'full',
                                     pallet: {
+                                        id: 9,
+                                        product_id: 3,
                                         product_name: 'Widgets',
                                         product_image_url: null,
                                         expiration_date: '2026-09-01',
                                         added_at: '2026-07-01T10:00:00Z',
+                                        remaining_boxes: 5,
                                     },
                                 }),
                             ],
@@ -1254,6 +1258,78 @@ describe('CellMap3D', () => {
                     )
                     .classes(),
             ).toContain('ring-blue-500');
+        });
+
+        it("emits manage-pallet with the real cell/pallet ids when the panel's manage button is clicked", async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellId: 42,
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: {
+                                        id: 9,
+                                        product_id: 3,
+                                        product_name: 'Widgets',
+                                        product_image_url: null,
+                                        expiration_date: '2026-09-01',
+                                        added_at: '2026-07-01T10:00:00Z',
+                                        remaining_boxes: 5,
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            await wrapper
+                .get(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+                .trigger('click');
+
+            expect(wrapper.emitted('manage-pallet')).toEqual([
+                [
+                    expect.objectContaining({
+                        id: 42,
+                        pallet: expect.objectContaining({
+                            id: 9,
+                            remaining_boxes: 5,
+                        }),
+                    }),
+                    formatSlot('A', 1, 1),
+                ],
+            ]);
+        });
+
+        it("emits toggle-active with the real cell id when the panel's toggle button is clicked", async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellId: 42, cellNumber: 1 })],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            await wrapper
+                .get(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .trigger('click');
+
+            expect(wrapper.emitted('toggle-active')).toEqual([
+                [expect.objectContaining({ id: 42 }), formatSlot('A', 1, 1)],
+            ]);
         });
     });
 

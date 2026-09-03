@@ -5,6 +5,7 @@ import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type {
+    Cell,
     CellHighlightSample,
     CellHighlightSeed,
     CellMap3DBand,
@@ -36,7 +37,7 @@ vi.mock('@/components/CellMap3D.vue', async () => {
         default: defineComponent({
             name: 'CellMap3DStub',
             props: ['bands'],
-            emits: ['camera-mode-change'],
+            emits: ['camera-mode-change', 'manage-pallet', 'toggle-active'],
             setup(_props, { expose, emit }) {
                 expose({
                     focusCell: cellMap3DFocusCell,
@@ -112,6 +113,7 @@ function highlightSample(
     overrides: Partial<CellHighlightSample> = {},
 ): CellHighlightSample {
     return {
+        cell_id: 1,
         row_letter: 'A',
         cell_number: 1,
         flat_number: 1,
@@ -1257,17 +1259,21 @@ describe('Cells Index (warehouse map)', () => {
                     letter: 'A',
                     items: [
                         {
+                            cellId: 1,
                             cellNumber: 1,
                             flatNumber: 1,
                             state: 'full',
+                            isActive: true,
                             highlighted: true,
                             pulsing: false,
                             pallet: null,
                         },
                         {
+                            cellId: 1,
                             cellNumber: 2,
                             flatNumber: 2,
                             state: 'empty',
+                            isActive: true,
                             highlighted: false,
                             pulsing: false,
                             pallet: null,
@@ -1275,6 +1281,60 @@ describe('Cells Index (warehouse map)', () => {
                     ],
                 },
             ]);
+        });
+
+        it('opens the pallet-actions dialog when the 3D faced-cell panel emits manage-pallet', async () => {
+            const wrapper = mountPage([row({ letter: 'A' })], []);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const cellFromPanel: Cell = {
+                id: 42,
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                is_active: true,
+                pallet: null,
+            };
+            stub.vm.$emit(
+                'manage-pallet',
+                cellFromPanel,
+                formatSlot('A', 1, 1),
+            );
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.get('[role="dialog"]').text()).toContain(
+                formatSlot('A', 1, 1),
+            );
+        });
+
+        it('opens the toggle-active dialog when the 3D faced-cell panel emits toggle-active', async () => {
+            const wrapper = mountPage([row({ letter: 'A' })], []);
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const cellFromPanel: Cell = {
+                id: 42,
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                is_active: true,
+                pallet: null,
+            };
+            stub.vm.$emit(
+                'toggle-active',
+                cellFromPanel,
+                formatSlot('A', 1, 1),
+            );
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.get('[role="dialog"]').text()).toContain(
+                formatSlot('A', 1, 1),
+            );
         });
 
         it('resets via the exposed 3D method instead of the 2D recenter, when in 3D mode', async () => {

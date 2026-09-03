@@ -25,7 +25,7 @@ class CellController extends Controller
 
     public function index(ShowCellMapRequest $request): Response
     {
-        $rows = Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get();
+        $rows = Row::mapOptions();
         $maxFlatNumber = (int) (Row::query()->max('flats_count') ?? 0);
 
         $today = today();
@@ -115,8 +115,12 @@ class CellController extends Controller
      * covers the rest with the fewest columns that `matchesCellHighlight()`
      * on the frontend needs. `row_letter`/`cell_number` are included so the
      * frontend can also order matches for next/previous-match navigation.
+     * `cell_id`/`pallet.id`/`pallet.remaining_boxes` are included so the 3D
+     * map's faced-cell panel (built from this same data — see `map3DBands` in
+     * Cells/Index.vue) can drive real pallet actions/toggle-active, not just
+     * display detail.
      *
-     * @return array<int, array{row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null}|null}>
+     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null, remaining_boxes: int}|null}>
      */
     private function cellHighlightSamples(): array
     {
@@ -126,12 +130,17 @@ class CellController extends Controller
             ->orderedByCoordinates()
             ->get()
             ->map(fn (Cell $cell) => [
+                'cell_id' => $cell->id,
                 'row_letter' => $cell->row->letter,
                 'cell_number' => $cell->cell_number,
                 'flat_number' => $cell->flat_number,
                 'state' => $cell->state->value,
                 'is_active' => $cell->is_active,
-                'pallet' => $cell->pallet?->toMapSummaryArray(),
+                'pallet' => $cell->pallet === null ? null : [
+                    'id' => $cell->pallet->id,
+                    ...$cell->pallet->toMapSummaryArray(),
+                    'remaining_boxes' => $cell->pallet->remaining_boxes,
+                ],
             ])
             ->all();
     }

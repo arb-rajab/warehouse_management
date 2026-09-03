@@ -5,7 +5,7 @@ import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
-import type { Cell, Row } from '@/types/admin';
+import type { Cell, CellMapRow, Row } from '@/types/admin';
 import Show from './Show.vue';
 
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
@@ -55,18 +55,28 @@ function pallet(
 function mountPage(
     rowOverrides: Partial<Row>,
     cells: Cell[],
-    dateOverrides: { today?: string } = {},
+    overrides: { today?: string; rows?: CellMapRow[] } = {},
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/rows/A',
         props: defaultAuthProps(),
     });
 
+    const shownRow = row(rowOverrides);
+
     return mount(Show, {
         props: {
-            row: row(rowOverrides),
+            row: shownRow,
+            rows: overrides.rows ?? [
+                {
+                    id: shownRow.id,
+                    letter: shownRow.letter,
+                    cells_count: shownRow.cells_count,
+                    flats_count: shownRow.flats_count,
+                },
+            ],
             cells,
-            today: dateOverrides.today ?? '2026-08-13',
+            today: overrides.today ?? '2026-08-13',
             filterOptions: { products },
         },
     });
@@ -428,6 +438,47 @@ describe('Rows Show', () => {
         expect(
             wrapper
                 .find(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('opens the pallet-actions dialog for the clicked cell and posts a box removal on submit', async () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({
+                cell_number: 1,
+                flat_number: 1,
+                state: 'full',
+                pallet: pallet({ id: 9 }),
+            }),
+        ]);
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        const manageButton = wrapper.find(
+            `[title="${t('cells.palletActions.triggerLabel')}"]`,
+        );
+        expect(manageButton.exists()).toBe(true);
+        await manageButton.trigger('click');
+
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(dialog.text()).toContain(formatSlot('A', 1, 1));
+
+        await dialog.get('#pallet-action-boxes-count').setValue('3');
+        await dialog.get('form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/pallets/9/open',
+            expect.objectContaining({ boxes_count: '3' }),
+            expect.objectContaining({ preserveScroll: true }),
+        );
+    });
+
+    it('does not show a manage-pallet button for a coordinate with no cell record', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, []);
+
+        expect(
+            wrapper
+                .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
                 .exists(),
         ).toBe(false);
     });
