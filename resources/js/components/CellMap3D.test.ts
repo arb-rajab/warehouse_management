@@ -763,9 +763,7 @@ describe('CellMap3D', () => {
         // Empty cells stay instanced (still raycastable for click/hover/facing)
         // but render invisible, so they no longer look like a physical box.
         const emptyMesh = meshesByColor.get(CELL_STATE_COLOR.empty.hex);
-        expect(
-            (emptyMesh?.material as { opacity: unknown })?.opacity,
-        ).toBe(0);
+        expect((emptyMesh?.material as { opacity: unknown })?.opacity).toBe(0);
         expect(
             (emptyMesh?.material as { transparent: unknown })?.transparent,
         ).toBe(true);
