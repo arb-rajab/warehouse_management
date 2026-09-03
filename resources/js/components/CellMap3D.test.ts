@@ -9,6 +9,7 @@ import {
     cellWorldZ,
     EYE_HEIGHT,
     flatWorldY,
+    miniMapRowLeftPercents,
     orbitRangeForBounds,
     rowWorldX,
     WALK_SPEED,
@@ -396,6 +397,26 @@ function orbitCenterFor(bands: CellMap3DBand[]) {
     return orbitRangeForBounds(bounds).center;
 }
 
+/** Reproduces the component's own `updateBounds()`, to compute the mini-map's expected row-line left% positions for a given set of bands. */
+function expectedMiniMapRowPercents(bands: CellMap3DBand[]): number[] {
+    const items = bands.flatMap((band) => band.items);
+    const maxCellsCount = Math.max(
+        1,
+        ...items.map((entry) => entry.cellNumber),
+    );
+    const maxFlatNumber = Math.max(
+        1,
+        ...items.map((entry) => entry.flatNumber),
+    );
+    const bounds = boundsForWarehouse(
+        bands.length,
+        maxCellsCount,
+        maxFlatNumber,
+    );
+
+    return miniMapRowLeftPercents(bands.length, bounds);
+}
+
 function distanceFromCenter(
     position: { x: number; y: number; z: number },
     center: { x: number; y: number; z: number },
@@ -766,9 +787,12 @@ describe('CellMap3D', () => {
         expect(meshesByColor.get(CELL_STATE_COLOR.opened.hex)?.count).toBe(1);
 
         // Empty cells stay instanced (still raycastable for click/hover/facing)
-        // but render invisible, so they no longer look like a physical box.
+        // and render as a faint placeholder box (not full opacity, so they
+        // don't look like a physical box, but not invisible either, so an
+        // empty slot still reads as an obvious gap in the shelf).
         const emptyMesh = meshesByColor.get(CELL_STATE_COLOR.empty.hex);
-        expect(emptyMesh?.material.opacity).toBe(0);
+        expect(emptyMesh?.material.opacity).toBeGreaterThan(0);
+        expect(emptyMesh?.material.opacity).toBeLessThan(1);
         expect(emptyMesh?.material.transparent).toBe(true);
         const fullMesh = meshesByColor.get(CELL_STATE_COLOR.full.hex);
         expect(fullMesh?.material.opacity).toBe(1);
@@ -1747,6 +1771,64 @@ describe('CellMap3D', () => {
             ).toHaveLength(3);
         });
 
+        it('positions each row line using the real warehouse bounds, not the pre-mount zero default', async () => {
+            // Regression test: the row-line positions used to be derived
+            // from a plain (non-reactive) `bounds` variable, so the
+            // mini-map's `computed` cached its pre-mount all-zero bounds
+            // forever — every row line collapsed onto the container's edges
+            // (0% or clamped to 100%) instead of spreading across it.
+            const bands = [
+                band({ letter: 'A' }),
+                band({ letter: 'B' }),
+                band({ letter: 'C' }),
+            ];
+            const wrapper = mount(CellMap3D, { props: { bands } });
+            await wrapper.vm.$nextTick();
+
+            const lines = wrapper
+                .get('[data-testid="map-3d-mini-map"]')
+                .findAll('line');
+            const actualPercents = lines.map((line) =>
+                Number(line.attributes('x1')),
+            );
+
+            expect(actualPercents).toEqual(expectedMiniMapRowPercents(bands));
+            // With 3 evenly-spaced rows, the middle row must sit strictly
+            // between the edges — not collapsed onto them like the bug did.
+            expect(actualPercents[1]).toBeGreaterThan(0);
+            expect(actualPercents[1]).toBeLessThan(100);
+        });
+
+        it('flags rows containing an active highlight match, distinct from the current-row line', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({
+                            letter: 'B',
+                            items: [item({ cellNumber: 1, highlighted: true })],
+                        }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const lines = wrapper
+                .get('[data-testid="map-3d-mini-map"]')
+                .findAll('line');
+
+            expect(lines[0].classes()).not.toContain('stroke-emerald-500');
+            expect(lines[1].classes()).toContain('stroke-emerald-500');
+            expect(lines[2].classes()).not.toContain('stroke-emerald-500');
+            // The camera starts standing in row A, not the matched row B, so
+            // the "current row" styling and the "has a match" styling stay
+            // visually distinct here.
+            expect(lines[0].classes()).toContain('stroke-blue-500');
+            expect(lines[1].classes()).not.toContain('stroke-blue-500');
+        });
+
         it('highlights the line for the row the camera currently stands in', async () => {
             const wrapper = mount(CellMap3D, {
                 props: {
@@ -1759,8 +1841,8 @@ describe('CellMap3D', () => {
             const linesBefore = wrapper
                 .get('[data-testid="map-3d-mini-map"]')
                 .findAll('line');
-            expect(linesBefore[0].classes()).toContain('stroke-blue-400');
-            expect(linesBefore[1].classes()).not.toContain('stroke-blue-400');
+            expect(linesBefore[0].classes()).toContain('stroke-blue-500');
+            expect(linesBefore[1].classes()).not.toContain('stroke-blue-500');
 
             (
                 wrapper.vm as unknown as {
@@ -1773,8 +1855,8 @@ describe('CellMap3D', () => {
             const linesAfter = wrapper
                 .get('[data-testid="map-3d-mini-map"]')
                 .findAll('line');
-            expect(linesAfter[0].classes()).not.toContain('stroke-blue-400');
-            expect(linesAfter[1].classes()).toContain('stroke-blue-400');
+            expect(linesAfter[0].classes()).not.toContain('stroke-blue-500');
+            expect(linesAfter[1].classes()).toContain('stroke-blue-500');
         });
 
         it('moves the position marker as the camera moves (e.g. via focusCell)', async () => {
