@@ -29,6 +29,7 @@ import { distanceBetween } from '@/lib/geometry';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
+    BOX_SIZE,
     boundsForWarehouse,
     CAMERA_FOV_DEGREES,
     cellWorldZ,
@@ -36,6 +37,7 @@ import {
     defaultOrbitState,
     EYE_HEIGHT,
     facedGridCoordinate,
+    facedKey,
     flatWorldY,
     lookDirection,
     maxOf,
@@ -93,7 +95,6 @@ interface FacedItem {
     item: CellMap3DItem;
 }
 
-const BOX_SIZE = 1.4;
 const VIEW_DISTANCE = cellWorldZ(1);
 const HIGHLIGHT_COLOR = 0x3b82f6;
 const PULSE_COLOR = 0x10b981;
@@ -736,14 +737,6 @@ function updateBounds(): void {
         boundsForWarehouse(rowCount, maxCellsCount, maxFlatNumber),
     );
     orbitRange = orbitRangeForBounds(bounds);
-}
-
-function facedKey(
-    rowIndex: number,
-    cellNumber: number,
-    flatNumber: number,
-): string {
-    return `${rowIndex}:${cellNumber}:${flatNumber}`;
 }
 
 function rebuildCellLookup(bands: CellMap3DBand[]): void {
@@ -1454,6 +1447,7 @@ function animate(timeMs: number): void {
             deltaSeconds,
             bounds,
             speed,
+            instanceSlotByKey,
         );
         position.x = next.x;
         position.y = next.y;

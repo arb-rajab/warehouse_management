@@ -17,6 +17,19 @@ export const FLAT_SPACING = 2.5;
 export const EYE_HEIGHT = 1.7;
 export const MIN_EYE_HEIGHT = 0.5;
 
+/** Side length of a cell's shelf box (CellMap3D.vue's render geometry) — also the collision volume's base size, so a cell blocks walking exactly where it visually sits. */
+export const BOX_SIZE = 1.4;
+/** Extra clearance added around a cell's box for collision, so the camera stops at the box's edge rather than clipping into a corner of it. */
+export const PLAYER_COLLISION_RADIUS = 0.25;
+/**
+ * Half-extent of a cell's collision volume along each axis. Must stay well
+ * under half of the smallest grid spacing (FLAT_SPACING / 2 = 1.25) so a
+ * candidate position can only ever be within range of a single grid point
+ * per axis — `collidesWithOccupiedCell` relies on that to do an O(1)
+ * nearest-cell lookup instead of scanning every occupied cell.
+ */
+const CELL_COLLISION_HALF_EXTENT = BOX_SIZE / 2 + PLAYER_COLLISION_RADIUS;
+
 export const WALK_SPEED = 4;
 /** Multiplier applied to WALK_SPEED while sprinting (Ctrl held on desktop, toggled on touch). */
 export const SPRINT_MULTIPLIER = 2.5;
@@ -100,6 +113,9 @@ export interface WalkerBounds {
     maxZ: number;
 }
 
+/** Shared empty occupancy set for callers that don't pass one — avoids allocating a fresh `Set` per call when `stepPosition` is invoked without collision (e.g. existing tests, orbit-mode-only code paths). */
+const NO_OCCUPIED_CELLS: CellOccupancyLookup = new Set<string>();
+
 /**
  * Advances a walking position by `deltaSeconds` given the currently held
  * movement directions, clamped to the warehouse's bounds. Forward/backward
@@ -112,6 +128,21 @@ export interface WalkerBounds {
  * (-1,0,0)`. So pressing the "right" key must DECREASE world X to move
  * toward what actually appears on the right of the screen (and "left"
  * increases it) — get this backwards and left/right visually swap.
+ *
+ * `occupiedCellKeys` (optional — omitting it disables collision entirely,
+ * e.g. for orbit mode or tests that don't care) blocks the camera from
+ * entering an occupied cell's shelf box (`collidingCellKey`), one axis at a
+ * time: each of Z, then X, then Y is only applied if the resulting position
+ * — combined with whichever of the *other* axes has already been resolved
+ * this call — doesn't newly collide, so a step that's blocked on one axis
+ * still lets you slide along an unblocked one (e.g. holding forward+left
+ * with a box directly ahead still lets you strafe left) instead of stopping
+ * dead the instant any single axis is blocked. "Newly" matters: if the
+ * camera already started this step inside an occupied cell's box (e.g.
+ * `focusCell` deliberately stands you exactly where the previous cell's box
+ * is), movement that stays within *that same* cell's collision volume is
+ * still allowed, so a spawn-in-box position can be walked back out of
+ * instead of trapping the camera there permanently.
  */
 export function stepPosition(
     position: WalkerPosition,
@@ -119,6 +150,7 @@ export function stepPosition(
     deltaSeconds: number,
     bounds: WalkerBounds,
     speed: number = WALK_SPEED,
+    occupiedCellKeys: CellOccupancyLookup = NO_OCCUPIED_CELLS,
 ): WalkerPosition {
     let { x, y, z } = position;
     const distance = speed * deltaSeconds;
@@ -147,10 +179,50 @@ export function stepPosition(
         y -= distance;
     }
 
+    let resolvedX = position.x;
+    let resolvedY = position.y;
+    let resolvedZ = position.z;
+
+    // `focusCell` (and search/jump navigation built on it) deliberately
+    // stands the camera exactly where the previous cell's box sits, so the
+    // camera can legitimately start a step already overlapping an occupied
+    // cell — e.g. right after jumping to it. Only block a step that would
+    // enter a *different* occupied cell than the one (if any) the camera is
+    // already standing in, so a spawn-in-box position can still be walked
+    // out of instead of trapping the camera forever.
+    const startCollisionKey = collidingCellKey(position, occupiedCellKeys);
+
+    function entersNewOccupiedCell(candidate: WalkerPosition): boolean {
+        const hitKey = collidingCellKey(candidate, occupiedCellKeys);
+
+        return hitKey !== null && hitKey !== startCollisionKey;
+    }
+
+    if (
+        z !== position.z &&
+        !entersNewOccupiedCell({ x: resolvedX, y: resolvedY, z })
+    ) {
+        resolvedZ = z;
+    }
+
+    if (
+        x !== position.x &&
+        !entersNewOccupiedCell({ x, y: resolvedY, z: resolvedZ })
+    ) {
+        resolvedX = x;
+    }
+
+    if (
+        y !== position.y &&
+        !entersNewOccupiedCell({ x: resolvedX, y, z: resolvedZ })
+    ) {
+        resolvedY = y;
+    }
+
     return {
-        x: clamp(x, bounds.minX, bounds.maxX),
-        y: clamp(y, bounds.minY, bounds.maxY),
-        z: clamp(z, bounds.minZ, bounds.maxZ),
+        x: clamp(resolvedX, bounds.minX, bounds.maxX),
+        y: clamp(resolvedY, bounds.minY, bounds.maxY),
+        z: clamp(resolvedZ, bounds.minZ, bounds.maxZ),
     };
 }
 
@@ -234,6 +306,60 @@ export function nearestFlatNumber(
     spacing: number = FLAT_SPACING,
 ): number {
     return Math.max(1, Math.round(worldY / spacing));
+}
+
+/** The lookup key for a grid cell — shared by CellMap3D.vue's `cellLookup`/`instanceSlotByKey` and the collision check below, so a cell only ever needs to be keyed one way. */
+export function facedKey(
+    rowIndex: number,
+    cellNumber: number,
+    flatNumber: number,
+): string {
+    return `${rowIndex}:${cellNumber}:${flatNumber}`;
+}
+
+/** Anything that can answer "is this cell key occupied?" in O(1) — both `Set<string>` and CellMap3D.vue's `instanceSlotByKey` (a `Map`) satisfy this structurally, so the caller doesn't need to allocate a fresh Set every frame just to pass one in. */
+export interface CellOccupancyLookup {
+    has(key: string): boolean;
+}
+
+/**
+ * The occupied cell key `position` sits inside (or within
+ * `PLAYER_COLLISION_RADIUS` of), or `null` if it's in the clear. Only checks
+ * the single nearest grid coordinate per axis (not every occupied cell) —
+ * safe because `CELL_COLLISION_HALF_EXTENT` is kept well under half the
+ * smallest grid spacing, so a position can only ever be in range of one grid
+ * point per axis at a time.
+ */
+export function collidingCellKey(
+    position: WalkerPosition,
+    occupiedKeys: CellOccupancyLookup,
+): string | null {
+    const rowIndex = nearestRowIndex(position.x);
+    const cellNumber = nearestCellNumber(position.z);
+    const flatNumber = nearestFlatNumber(position.y);
+    const key = facedKey(rowIndex, cellNumber, flatNumber);
+
+    if (!occupiedKeys.has(key)) {
+        return null;
+    }
+
+    const colliding =
+        Math.abs(position.x - rowWorldX(rowIndex)) <
+            CELL_COLLISION_HALF_EXTENT &&
+        Math.abs(position.y - flatWorldY(flatNumber)) <
+            CELL_COLLISION_HALF_EXTENT &&
+        Math.abs(position.z - cellWorldZ(cellNumber)) <
+            CELL_COLLISION_HALF_EXTENT;
+
+    return colliding ? key : null;
+}
+
+/** Whether `position` collides with any occupied cell's shelf box — see `collidingCellKey`. */
+export function collidesWithOccupiedCell(
+    position: WalkerPosition,
+    occupiedKeys: CellOccupancyLookup,
+): boolean {
+    return collidingCellKey(position, occupiedKeys) !== null;
 }
 
 export interface LookDirection {
@@ -621,16 +747,22 @@ export function orbitCameraPosition(
  * row-by-row with only a text "standing near" label gives no sense of where
  * you are relative to the whole building the way orbit mode's overview does.
  *
- * Screen convention: X (row axis) maps directly to left% (increasing X =
- * further right); Z (cell-number/depth axis) maps to top% *inverted*
- * (increasing Z = smaller top%, i.e. "up") so that facing yaw 0 — the default
- * look direction, +Z — reads as "facing up" on the mini-map, matching the
- * everyday convention of an up-pointing arrow meaning "forward".
+ * Screen convention: X (row axis) maps to left% *inverted* (increasing X =
+ * further LEFT); Z (cell-number/depth axis) maps to top% inverted the same
+ * way (increasing Z = smaller top%, i.e. "up") so that facing yaw 0 — the
+ * default look direction, +Z — reads as "facing up" on the mini-map, matching
+ * the everyday convention of an up-pointing arrow meaning "forward". X is
+ * mirrored (not mapped directly) because the walk camera's own screen-right
+ * is world -X (see `stepPosition`'s "Handedness trap" doc comment) — mapping
+ * +X straight to "further right" here would put the mini-map's left/right
+ * backwards relative to what the player actually sees while walking (e.g.
+ * strafing right, which decreases world X, would move the marker toward the
+ * mini-map's left instead of its right).
  */
 export function miniMapPercentX(worldX: number, bounds: WalkerBounds): number {
     const width = bounds.maxX - bounds.minX || 1;
 
-    return clamp(((worldX - bounds.minX) / width) * 100, 0, 100);
+    return clamp(100 - ((worldX - bounds.minX) / width) * 100, 0, 100);
 }
 
 export function miniMapPercentZ(worldZ: number, bounds: WalkerBounds): number {
@@ -670,10 +802,12 @@ export function miniMapRowLeftPercents(
  * cos(yaw)): at yaw 0 the direction is +Z, which under this module's
  * top-down screen convention (above) is "up" — matching the arrow's
  * default orientation, so no rotation is needed (0deg). Turning right
- * (increasing yaw) should swing the arrow toward -X, which is left on
- * screen; CSS `rotate()` is clockwise-positive, so that requires the
- * *negative* of yaw, not yaw itself.
+ * (increasing yaw) swings the look direction toward -X, which is now the
+ * mini-map's RIGHT side (`miniMapPercentX` mirrors X — see its doc comment);
+ * CSS `rotate()` is clockwise-positive, so pointing the arrow toward the
+ * mini-map's right on a right turn just needs +yaw directly, not its
+ * negation.
  */
 export function miniMapHeadingDegrees(yawDegrees: number): number {
-    return normalizeYaw(-yawDegrees);
+    return normalizeYaw(yawDegrees);
 }

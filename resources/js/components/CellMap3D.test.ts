@@ -543,6 +543,57 @@ describe('CellMap3D', () => {
         expect(lastCamera().position.z).toBe(WALK_SPEED);
     });
 
+    it('blocks walking forward through an occupied cell instead of passing through it', () => {
+        // Default band() has a cell at cellNumber 1 (flat 1), directly ahead
+        // of the default starting position (row A, cell 1, flat 1 — see
+        // "positions the camera at row A, cell 1, flat 1 by default" above).
+        const wrapper = mount(CellMap3D, { props: { bands: [band()] } });
+
+        wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+            key: 'w',
+        });
+
+        rafCallback?.(0);
+        // Advance in small steps (not one big jump) so the per-frame
+        // collision check can't tunnel straight through the box the way a
+        // single huge frame delta could.
+        let timeMs = 0;
+
+        for (let i = 0; i < 30; i += 1) {
+            timeMs += 50;
+            rafCallback?.(timeMs);
+        }
+
+        // Cell 1's box sits at cellWorldZ(1); the camera must stop short of
+        // it, never reaching or passing through its position.
+        expect(lastCamera().position.z).toBeLessThan(cellWorldZ(1));
+
+        // Confirm it actually advanced (i.e. this isn't just bounds-clamped
+        // at the origin) before being stopped by the cell.
+        expect(lastCamera().position.z).toBeGreaterThan(0);
+    });
+
+    it('still allows walking backward away from an occupied cell', () => {
+        const wrapper = mount(CellMap3D, {
+            props: { bands: [band({ letter: 'A' }), band({ letter: 'B' })] },
+        });
+
+        (
+            wrapper.vm as unknown as {
+                focusCell: (r: string, c: number, f: number) => void;
+            }
+        ).focusCell('A', 2, 1);
+        rafCallback?.(0);
+        const startZ = lastCamera().position.z;
+
+        wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+            key: 's',
+        });
+        rafCallback?.(16);
+
+        expect(lastCamera().position.z).toBeLessThan(startZ);
+    });
+
     it('looks forward (ahead of the camera) by default', () => {
         mount(CellMap3D, { props: { bands: [band()] } });
 
@@ -1883,6 +1934,47 @@ describe('CellMap3D', () => {
                 .get('[data-testid="map-3d-mini-map-marker"]')
                 .attributes('style');
             expect(after).not.toBe(before);
+        });
+
+        it("moves the marker toward the mini-map's right side while strafing toward screen-right (D)", async () => {
+            // Regression test: the marker used to move opposite to the
+            // strafe key actually pressed (world -X, which D moves the
+            // camera toward — see the "strafes toward screen-right" test
+            // above — used to map to a *smaller* left%, i.e. the mini-map's
+            // left side, contradicting what the player just pressed).
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+
+            (
+                wrapper.vm as unknown as {
+                    focusCell: (r: string, c: number, f: number) => void;
+                }
+            ).focusCell('B', 1, 1);
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+            const before = Number(
+                wrapper
+                    .get('[data-testid="map-3d-mini-map-marker"]')
+                    .attributes('style')
+                    ?.match(/left:\s*([\d.]+)%/)?.[1],
+            );
+
+            wrapper.get('[data-testid="map-3d-viewport"]').trigger('keydown', {
+                key: 'd',
+            });
+            rafCallback?.(1000);
+            await wrapper.vm.$nextTick();
+            const after = Number(
+                wrapper
+                    .get('[data-testid="map-3d-mini-map-marker"]')
+                    .attributes('style')
+                    ?.match(/left:\s*([\d.]+)%/)?.[1],
+            );
+
+            expect(after).toBeGreaterThan(before);
         });
     });
 
