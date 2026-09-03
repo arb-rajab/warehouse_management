@@ -1427,6 +1427,46 @@ describe('CellMap3D', () => {
                 [expect.objectContaining({ id: 42 }), formatSlot('A', 1, 1)],
             ]);
         });
+
+        it("does not let a pointerdown on the panel's buttons bubble into the viewport's click-to-select handling", async () => {
+            // Regression test: the viewport container captures the pointer
+            // (setPointerCapture) on every pointerdown that reaches it, which
+            // in a real browser retargets the resulting click event away
+            // from whatever was actually pressed — silently swallowing
+            // clicks on the panel's toggle-active/export-qr/manage-pallet
+            // controls. `@pointerdown.stop` on the panel's CellSlot must
+            // keep that pointerdown from ever reaching the container.
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellId: 42, cellNumber: 1 })],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const viewportElement = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element as HTMLElement & { setPointerCapture?: () => void };
+            const setPointerCaptureSpy = vi.fn();
+            viewportElement.setPointerCapture = setPointerCaptureSpy;
+
+            wrapper
+                .get(`[title="${t('cells.toggleActive.deactivateLabel')}"]`)
+                .element.dispatchEvent(
+                    new PointerEvent('pointerdown', {
+                        pointerId: 1,
+                        bubbles: true,
+                    }),
+                );
+
+            expect(setPointerCaptureSpy).not.toHaveBeenCalled();
+        });
     });
 
     describe('click-to-select while walking', () => {
