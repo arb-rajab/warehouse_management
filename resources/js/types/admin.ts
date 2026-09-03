@@ -110,10 +110,12 @@ export interface CellHighlightSeed {
  * The minimal per-cell data the warehouse map loads for every flat (not just
  * the one on screen) to compute a highlight-match count per flat tab, order
  * matches for next/previous-match navigation, and (via the 3D map's "faced
- * cell" panel) show the same product/date detail the 2D grid shows — narrower
- * than `Cell` only in that it skips the cell's own id.
+ * cell" panel) show the same product/date detail the 2D grid shows, and let
+ * that panel drive real pallet actions/toggle-active via `cell_id`/
+ * `pallet.id`/`pallet.remaining_boxes`.
  */
 export interface CellHighlightSample {
+    cell_id: number;
     row_letter: string;
     cell_number: number;
     flat_number: number;
@@ -121,11 +123,13 @@ export interface CellHighlightSample {
     is_active: boolean;
     pallet: Pick<
         CellPallet,
+        | 'id'
         | 'product_id'
         | 'product_name'
         | 'product_image_url'
         | 'expiration_date'
         | 'added_at'
+        | 'remaining_boxes'
     > | null;
 }
 
@@ -141,9 +145,12 @@ export interface CellSlotLocation {
  * per-flat match badges) rather than the current-flat-only `Cell`/
  * `CellWithLocation`, since the 3D view renders every flat at once. Carries
  * the same pallet detail `CellSlot.vue` shows in 2D, for the 3D "faced cell"
- * detail panel.
+ * detail panel — including `cellId`/`pallet.id`/`pallet.remaining_boxes` so
+ * that panel's manage-pallet/toggle-active buttons can drive the same
+ * `PalletActionsDialog`/`ToggleCellActiveDialog` the 2D grid uses.
  */
 export interface CellMap3DItem {
+    cellId: number;
     cellNumber: number;
     flatNumber: number;
     state: Cell['state'];
@@ -152,7 +159,13 @@ export interface CellMap3DItem {
     pulsing: boolean;
     pallet: Pick<
         CellPallet,
-        'product_name' | 'product_image_url' | 'expiration_date' | 'added_at'
+        | 'id'
+        | 'product_id'
+        | 'product_name'
+        | 'product_image_url'
+        | 'expiration_date'
+        | 'added_at'
+        | 'remaining_boxes'
     > | null;
 }
 

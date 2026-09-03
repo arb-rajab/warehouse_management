@@ -34,6 +34,19 @@ class Row extends Model
     public const array SELECT_COLUMNS = ['id', 'letter', 'cells_count', 'flats_count'];
 
     /**
+     * Every row's id/letter/cells_count/flats_count, ordered by letter — the
+     * cell-map's row list (flat-tab layout, transfer/pallet-action destination
+     * dropdown), shared by CellController::index() and RowController::show()
+     * so both render the same set of rows a pallet can be transferred into.
+     *
+     * @return Collection<int, self>
+     */
+    public static function mapOptions(): Collection
+    {
+        return self::query()->select(self::SELECT_COLUMNS)->orderBy('letter')->get();
+    }
+
+    /**
      * @return HasMany<Cell, $this>
      */
     public function cells(): HasMany

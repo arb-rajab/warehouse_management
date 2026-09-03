@@ -55,6 +55,7 @@ class RowController extends Controller
     {
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row),
+            'rows' => Row::mapOptions(),
             'cells' => CellResource::collection(
                 $row->cells()
                     ->select(Cell::SELECT_COLUMNS)

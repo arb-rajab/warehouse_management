@@ -68,20 +68,24 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->has('filterOptions.products', 0)
             ->has('cellHighlightSamples', 4)
             ->has('cellHighlightSamples.0', fn (Assert $sampleProp) => $sampleProp
+                ->where('cell_id', $cell->id)
                 ->where('row_letter', 'A')
                 ->where('cell_number', 1)
                 ->where('flat_number', 1)
                 ->where('state', 'full')
                 ->where('is_active', true)
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
+                    ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
+                    ->where('remaining_boxes', $pallet->remaining_boxes)
                 )
             )
             ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
+                ->where('cell_id', fn (int $cellId) => $cellId > 0)
                 ->where('row_letter', 'A')
                 ->where('cell_number', 1)
                 ->where('flat_number', 2)
@@ -90,6 +94,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
+                ->where('cell_id', fn (int $cellId) => $cellId > 0)
                 ->where('row_letter', 'A')
                 ->where('cell_number', 2)
                 ->where('flat_number', 1)
@@ -98,6 +103,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                 ->where('pallet', null)
             )
             ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
+                ->where('cell_id', fn (int $cellId) => $cellId > 0)
                 ->where('row_letter', 'A')
                 ->where('cell_number', 2)
                 ->where('flat_number', 2)

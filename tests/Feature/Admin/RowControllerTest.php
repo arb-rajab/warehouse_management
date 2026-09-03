@@ -239,6 +239,9 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                 ->where('flats_count', 1)
                 ->where('has_pallets', true)
             )
+            ->has('rows', 2)
+            ->where('rows.0.letter', 'B')
+            ->where('rows.1.letter', 'C')
             ->has('cells', 2)
             ->has('cells.0', fn (Assert $cell) => $cell
                 ->where('id', $occupiedCell->id)
