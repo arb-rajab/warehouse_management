@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->api(append: [SetLocaleFromHeader::class, EnsureMinimumAppVersion::class]);
+        $middleware->throttleApi();
 
         $middleware->alias([
             'role' => RoleMiddleware::class,

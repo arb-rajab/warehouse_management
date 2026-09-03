@@ -7,6 +7,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
+use App\Services\DashboardStatsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -42,14 +43,19 @@ trait BuildsDashboardStats
      */
     private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, ?array $productIds): array
     {
-        $startOfWeek = $this->dashboardWeekStart($today);
+        return DashboardStatsCache::remember(
+            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'productIds' => $productIds],
+            function () use ($today, $customExpiringDays, $productIds): array {
+                $startOfWeek = $this->dashboardWeekStart($today);
 
-        return [
-            'occupancy' => $this->occupancy($productIds),
-            'expiring' => $this->expiring($today, $customExpiringDays, $productIds),
-            'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds),
-            'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds),
-        ];
+                return [
+                    'occupancy' => $this->occupancy($productIds),
+                    'expiring' => $this->expiring($today, $customExpiringDays, $productIds),
+                    'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds),
+                    'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds),
+                ];
+            },
+        );
     }
 
     private function dashboardWeekStart(CarbonImmutable $today): CarbonImmutable

@@ -5,12 +5,15 @@ namespace App\Observers;
 use App\Enums\CellLogAction;
 use App\Enums\CellLogFlagReason;
 use App\Models\CellStatusLog;
+use App\Services\DashboardStatsCache;
 
 /**
  * Evaluates the rule-based auto-flagging thresholds (config/cell_status_log_flags.php)
  * against every newly created cell status log, regardless of which mobile-user action
  * (store/open/empty/transfer) produced it — CellStatusLog::create() is the single choke
- * point for all of them (see PalletController::logCellStatus()).
+ * point for all of them (see PalletController::logCellStatus()). This is also the single
+ * choke point for every occupancy/activity-changing pallet action, so it doubles as the
+ * dashboard stats cache's invalidation trigger (see DashboardStatsCache, RowObserver).
  */
 class CellStatusLogObserver
 {
@@ -19,6 +22,8 @@ class CellStatusLogObserver
         foreach ($this->matchingReasons($log) as $reason) {
             $log->flags()->create(['reason' => $reason]);
         }
+
+        DashboardStatsCache::flush();
     }
 
     /**
