@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+    BOX_SIZE,
     boundsForWarehouse,
     CAMERA_FOV_DEGREES,
     CELL_SPACING,
     cellWorldZ,
     clamp,
+    collidesWithOccupiedCell,
     defaultOrbitState,
     EYE_HEIGHT,
     facedGridCoordinate,
+    facedKey,
     FLAT_SPACING,
     flatWorldY,
     lookDirection,
@@ -184,6 +187,174 @@ describe('stepPosition', () => {
         );
 
         expect(next).toEqual({ x: 1, y: 2, z: 2 });
+    });
+
+    describe('with collision (occupiedCellKeys)', () => {
+        // Row 0, cell 2, flat 1 is "occupied" throughout this block —
+        // standing at cellWorldZ(1) facing forward (+Z), the box sits
+        // exactly one step ahead.
+        const occupied = new Set([facedKey(0, 2, 1)]);
+        const start = { x: rowWorldX(0), y: flatWorldY(1), z: cellWorldZ(1) };
+
+        it('blocks moving into an occupied cell instead of passing through it', () => {
+            const next = stepPosition(
+                start,
+                new Set(['forward']),
+                1,
+                bounds,
+                CELL_SPACING,
+                occupied,
+            );
+
+            expect(next).toEqual(start);
+        });
+
+        it('leaves an unoccupied aisle fully walkable', () => {
+            const next = stepPosition(
+                start,
+                new Set(['backward']),
+                1,
+                bounds,
+                CELL_SPACING,
+                occupied,
+            );
+
+            expect(next).toEqual({ ...start, z: start.z - CELL_SPACING });
+        });
+
+        it('slides along an unblocked axis when another axis is blocked (diagonal movement)', () => {
+            const next = stepPosition(
+                start,
+                new Set(['forward', 'left']),
+                1,
+                bounds,
+                CELL_SPACING,
+                occupied,
+            );
+
+            // Forward is blocked by the occupied cell; strafing left (world
+            // +X) is unobstructed and still applies.
+            expect(next.z).toBe(start.z);
+            expect(next.x).toBe(start.x + CELL_SPACING);
+        });
+
+        it('does not block movement when no occupancy set is passed (backward compatible)', () => {
+            const next = stepPosition(
+                start,
+                new Set(['forward']),
+                1,
+                bounds,
+                CELL_SPACING,
+            );
+
+            expect(next).toEqual({ ...start, z: start.z + CELL_SPACING });
+        });
+
+        it('lets the camera move back out of a cell it already started inside (e.g. right after focusCell)', () => {
+            // focusCell deliberately stands the camera exactly on top of the
+            // *previous* cell's box, so a step can legitimately start already
+            // overlapping an occupied cell — that must not trap it there.
+            const insideOccupiedCell = {
+                x: rowWorldX(0),
+                y: flatWorldY(1),
+                z: cellWorldZ(2),
+            };
+            const tinyStepBack = stepPosition(
+                insideOccupiedCell,
+                new Set(['backward']),
+                0.05,
+                bounds,
+                CELL_SPACING,
+                occupied,
+            );
+
+            expect(tinyStepBack.z).toBeLessThan(insideOccupiedCell.z);
+        });
+
+        it('still blocks moving from inside one occupied cell straight into a different occupied cell', () => {
+            const twoOccupied = new Set([facedKey(0, 1, 1), facedKey(0, 2, 1)]);
+            const insideCell1 = {
+                x: rowWorldX(0),
+                y: flatWorldY(1),
+                z: cellWorldZ(1),
+            };
+
+            const next = stepPosition(
+                insideCell1,
+                new Set(['forward']),
+                1,
+                bounds,
+                CELL_SPACING,
+                twoOccupied,
+            );
+
+            expect(next).toEqual(insideCell1);
+        });
+    });
+});
+
+describe('collidesWithOccupiedCell', () => {
+    it('is false when the nearest grid cell is not in the occupied set', () => {
+        const position = {
+            x: rowWorldX(0),
+            y: flatWorldY(1),
+            z: cellWorldZ(2),
+        };
+
+        expect(collidesWithOccupiedCell(position, new Set())).toBe(false);
+    });
+
+    it("is true exactly at an occupied cell's grid position", () => {
+        const position = {
+            x: rowWorldX(1),
+            y: flatWorldY(2),
+            z: cellWorldZ(3),
+        };
+        const occupied = new Set([facedKey(1, 3, 2)]);
+
+        expect(collidesWithOccupiedCell(position, occupied)).toBe(true);
+    });
+
+    it("stops colliding once far enough from the occupied cell's box, even on the same grid coordinate's near side", () => {
+        const occupied = new Set([facedKey(0, 1, 1)]);
+        const halfExtent = BOX_SIZE / 2 + 0.25;
+
+        const justInside = {
+            x: rowWorldX(0),
+            y: flatWorldY(1),
+            z: cellWorldZ(1) + halfExtent - 0.01,
+        };
+        const justOutside = {
+            x: rowWorldX(0),
+            y: flatWorldY(1),
+            z: cellWorldZ(1) + halfExtent + 0.01,
+        };
+
+        expect(collidesWithOccupiedCell(justInside, occupied)).toBe(true);
+        expect(collidesWithOccupiedCell(justOutside, occupied)).toBe(false);
+    });
+
+    it('does not collide with a neighboring row/cell/flat that is not itself occupied', () => {
+        const occupied = new Set([facedKey(0, 1, 1)]);
+        const neighborRow = {
+            x: rowWorldX(1),
+            y: flatWorldY(1),
+            z: cellWorldZ(1),
+        };
+        const neighborCell = {
+            x: rowWorldX(0),
+            y: flatWorldY(1),
+            z: cellWorldZ(2),
+        };
+        const neighborFlat = {
+            x: rowWorldX(0),
+            y: flatWorldY(2),
+            z: cellWorldZ(1),
+        };
+
+        expect(collidesWithOccupiedCell(neighborRow, occupied)).toBe(false);
+        expect(collidesWithOccupiedCell(neighborCell, occupied)).toBe(false);
+        expect(collidesWithOccupiedCell(neighborFlat, occupied)).toBe(false);
     });
 });
 
@@ -746,9 +917,9 @@ describe('miniMapPercentX / miniMapPercentZ / miniMapPosition', () => {
         maxZ: 20,
     };
 
-    it('maps X directly onto [0, 100]', () => {
-        expect(miniMapPercentX(0, bounds)).toBe(0);
-        expect(miniMapPercentX(10, bounds)).toBe(100);
+    it('maps X onto [0, 100] mirrored — screen-right is world -X, matching the walk camera (see stepPosition)', () => {
+        expect(miniMapPercentX(0, bounds)).toBe(100);
+        expect(miniMapPercentX(10, bounds)).toBe(0);
         expect(miniMapPercentX(5, bounds)).toBe(50);
     });
 
@@ -759,8 +930,8 @@ describe('miniMapPercentX / miniMapPercentZ / miniMapPosition', () => {
     });
 
     it('clamps out-of-bounds positions instead of overflowing [0, 100]', () => {
-        expect(miniMapPercentX(-5, bounds)).toBe(0);
-        expect(miniMapPercentX(50, bounds)).toBe(100);
+        expect(miniMapPercentX(-5, bounds)).toBe(100);
+        expect(miniMapPercentX(50, bounds)).toBe(0);
     });
 
     it('combines both axes into a single leftPercent/topPercent position', () => {
@@ -772,14 +943,17 @@ describe('miniMapPercentX / miniMapPercentZ / miniMapPosition', () => {
 });
 
 describe('miniMapRowLeftPercents', () => {
-    it('returns one left% per row, spaced along the X axis like rowWorldX', () => {
+    it('returns one left% per row, spaced along the (mirrored) X axis like rowWorldX', () => {
         const bounds = boundsForWarehouse(3, 5, 1);
 
         const percents = miniMapRowLeftPercents(3, bounds);
 
         expect(percents).toHaveLength(3);
-        expect(percents[0]).toBeLessThan(percents[1]);
-        expect(percents[1]).toBeLessThan(percents[2]);
+        // rowWorldX increases with row index, but miniMapPercentX mirrors X
+        // (screen-right is world -X, matching the walk camera), so later
+        // rows sit at a *smaller* left% than earlier ones.
+        expect(percents[0]).toBeGreaterThan(percents[1]);
+        expect(percents[1]).toBeGreaterThan(percents[2]);
     });
 
     it('returns an empty array for zero rows', () => {
@@ -794,9 +968,32 @@ describe('miniMapHeadingDegrees', () => {
         expect(miniMapHeadingDegrees(0)).toBe(0);
     });
 
-    it('is the negation of yaw, wrapped into [0, 360)', () => {
-        expect(miniMapHeadingDegrees(90)).toBe(270);
-        expect(miniMapHeadingDegrees(270)).toBe(90);
+    it('matches yaw directly (wrapped into [0, 360)) since the mini-map mirrors X the same way the walk camera does', () => {
+        expect(miniMapHeadingDegrees(90)).toBe(90);
+        expect(miniMapHeadingDegrees(270)).toBe(270);
         expect(miniMapHeadingDegrees(180)).toBe(180);
+    });
+
+    it('is consistent with miniMapPercentX: turning right (increasing yaw) points the arrow toward the mini-map side that strafing right actually moves the marker to', () => {
+        // Facing yaw 0 and strafing right decreases world X (stepPosition's
+        // documented handedness), which miniMapPercentX now maps to a
+        // *larger* left% (mirrored) — i.e. strafing right moves the marker
+        // toward the mini-map's right side, matching a small right turn
+        // rotating the heading arrow toward that same side (degrees > 0,
+        // clockwise, within the first quadrant).
+        const bounds = {
+            minX: -10,
+            maxX: 10,
+            minY: 0,
+            maxY: 0,
+            minZ: 0,
+            maxZ: 0,
+        };
+        const centerLeftPercent = miniMapPercentX(0, bounds);
+        const strafedRightLeftPercent = miniMapPercentX(-1, bounds);
+
+        expect(strafedRightLeftPercent).toBeGreaterThan(centerLeftPercent);
+        expect(miniMapHeadingDegrees(10)).toBeGreaterThan(0);
+        expect(miniMapHeadingDegrees(10)).toBeLessThan(90);
     });
 });
