@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Row;
+use App\Services\DashboardStatsCache;
 
 class RowObserver
 {
@@ -14,6 +15,8 @@ class RowObserver
     public function created(Row $row): void
     {
         $this->generateCells($row);
+
+        DashboardStatsCache::flush();
     }
 
     /**
@@ -31,6 +34,18 @@ class RowObserver
         $row->cells()->delete();
 
         $this->generateCells($row);
+
+        DashboardStatsCache::flush();
+    }
+
+    /**
+     * Handle the Row "deleted" event — its cells (all Empty; deletion is
+     * blocked while any hold a pallet, see RowController::destroy) go with it,
+     * which changes the dashboard's occupancy.empty count.
+     */
+    public function deleted(Row $row): void
+    {
+        DashboardStatsCache::flush();
     }
 
     /**
