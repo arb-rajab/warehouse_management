@@ -19,9 +19,11 @@ class DashboardStatsCache
     private const string VERSION_KEY = 'dashboard-stats:version';
 
     /**
+     * @template TReturn of array<string, mixed>
+     *
      * @param  array<string, mixed>  $keyParts
-     * @param  Closure(): array<string, mixed>  $callback
-     * @return array<string, mixed>
+     * @param  Closure(): TReturn  $callback
+     * @return TReturn
      */
     public static function remember(array $keyParts, Closure $callback): array
     {
