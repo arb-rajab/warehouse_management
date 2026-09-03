@@ -399,6 +399,11 @@ function boxMaterialForState(state: Cell['state']): THREE.MeshStandardMaterial {
     if (!material) {
         material = new THREE.MeshStandardMaterial({
             color: CELL_STATE_COLOR[state].hex,
+            // Empty cells stay raycastable (click/hover/facing still work on
+            // them) but render invisible — a solid gray box wrongly reads as
+            // "something is stored here" when the slot is actually empty.
+            transparent: state === 'empty',
+            opacity: state === 'empty' ? 0 : 1,
         });
         boxMaterialsByState.set(state, material);
         sceneDisposables.push(material);

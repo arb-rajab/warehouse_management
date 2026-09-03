@@ -180,10 +180,18 @@ vi.mock('three', () => {
 
     class MeshStandardMaterial {
         color: unknown;
+        transparent: unknown;
+        opacity: unknown;
         dispose = vi.fn();
 
-        constructor(options?: { color?: unknown }) {
+        constructor(options?: {
+            color?: unknown;
+            transparent?: unknown;
+            opacity?: unknown;
+        }) {
             this.color = options?.color;
+            this.transparent = options?.transparent;
+            this.opacity = options?.opacity;
         }
     }
 
@@ -751,6 +759,18 @@ describe('CellMap3D', () => {
         expect(meshesByColor.get(CELL_STATE_COLOR.full.hex)?.count).toBe(1);
         expect(meshesByColor.get(CELL_STATE_COLOR.empty.hex)?.count).toBe(1);
         expect(meshesByColor.get(CELL_STATE_COLOR.opened.hex)?.count).toBe(1);
+
+        // Empty cells stay instanced (still raycastable for click/hover/facing)
+        // but render invisible, so they no longer look like a physical box.
+        const emptyMesh = meshesByColor.get(CELL_STATE_COLOR.empty.hex);
+        expect(
+            (emptyMesh?.material as { opacity: unknown })?.opacity,
+        ).toBe(0);
+        expect(
+            (emptyMesh?.material as { transparent: unknown })?.transparent,
+        ).toBe(true);
+        const fullMesh = meshesByColor.get(CELL_STATE_COLOR.full.hex);
+        expect((fullMesh?.material as { opacity: unknown })?.opacity).toBe(1);
 
         // Only the highlighted cell (cell 1) and the pulsing cell (cell 3)
         // get an outline; the plain empty cell (cell 2) does not.
