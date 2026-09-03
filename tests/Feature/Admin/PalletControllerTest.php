@@ -54,6 +54,20 @@ test('storing a pallet preserves the current map query on redirect', function ()
     $response->assertRedirect('/admin/cells?flat_number=2');
 });
 
+test('storing a pallet from a row page redirects back to that row page instead of the cell map', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+
+    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertRedirect("/admin/rows/{$row->letter}");
+});
+
 test('storing a pallet into a non-empty cell is rejected with a non-field action error and nothing changes', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
@@ -191,6 +205,20 @@ test('opening a pallet with more boxes than remain, without confirm_empty, is re
     $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(5);
+});
+
+test('opening a pallet from a row page redirects back to that row page instead of the cell map', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create(['boxes_count' => 10]);
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
+
+    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/pallets/{$pallet->id}/open", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertRedirect("/admin/rows/{$row->letter}");
 });
 
 test('opening an already-opened pallet is rejected with a non-field action error', function () {
@@ -380,6 +408,24 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
         'user_id' => $admin->id,
         'note' => 'Consolidating.',
     ]);
+});
+
+test('transferring a pallet from a row page redirects back to the source row page instead of the cell map', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $destinationCell = $destinationRow->cells()->first();
+
+    $response = $this->from("/admin/rows/{$sourceRow->letter}")->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => $destinationRow->letter,
+        'cell_number' => $destinationCell->cell_number,
+        'flat_number' => $destinationCell->flat_number,
+    ]);
+
+    $response->assertRedirect("/admin/rows/{$sourceRow->letter}");
 });
 
 test('transferring to a non-empty destination is rejected with a non-field action error and nothing changes', function () {
