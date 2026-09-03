@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('cells', function (Blueprint $table) {
+            $table->index('flat_number');
+            $table->index('state');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('cells', function (Blueprint $table) {
+            $table->dropIndex(['flat_number']);
+            $table->dropIndex(['state']);
+        });
+    }
+};
