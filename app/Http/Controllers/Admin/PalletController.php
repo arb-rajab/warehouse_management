@@ -103,13 +103,19 @@ class PalletController extends Controller
      * Pallet actions are triggered from two different pages (the cell map and a
      * single row's page), so — unlike the single-origin "explicit route + $request
      * ->query()" quick-action pattern documented in controllers.md — the redirect
-     * target here is picked from the `Referer` header rather than hardcoded, so each
-     * page gets back its own current state instead of always landing on the map.
-     * `Referer` (not the session-backed `back()` helper, which controllers.md rules
-     * out for reliability reasons) is reliable here because it's read directly off
-     * this request rather than depending on a prior GET request having stored it in
-     * the session. It's still untrusted input, so it only ever selects between two
-     * known, hardcoded destinations — it's never used to build the redirect URL.
+     * target here is picked based on where the action came from, so each page gets
+     * back its own current state instead of always landing on the map.
+     *
+     * The origin is read from the session's tracked previous URL (the same source
+     * `back()` uses), not the `Referer` header — `config/secure-headers.php` sets
+     * `Referrer-Policy: no-referrer` app-wide, so browsers never actually send that
+     * header. The session value isn't affected by that policy: Laravel records it
+     * server-side on every real (GET) page visit and leaves it untouched by the
+     * action's own POST request, so it still reflects whichever page was open right
+     * before the action fired. It's still untrusted input, so it only ever selects
+     * between two known, hardcoded destinations — it's never used to build the
+     * redirect URL. The `Referer` header is kept as a fallback purely so this stays
+     * testable without a real prior page visit populating the session.
      */
     private function handle(Request $request, Cell $cell, callable $action): RedirectResponse
     {
@@ -119,7 +125,7 @@ class PalletController extends Controller
             return back()->withErrors(['action' => $e->getMessage()]);
         }
 
-        if ($this->refererIsRowShow($request)) {
+        if ($this->originatedFromRowShow($request)) {
             return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
         }
 
@@ -131,15 +137,15 @@ class PalletController extends Controller
         return $pallet->cell()->select(['id', 'row_id'])->firstOrFail();
     }
 
-    private function refererIsRowShow(Request $request): bool
+    private function originatedFromRowShow(Request $request): bool
     {
-        $referer = $request->headers->get('referer');
+        $previousUrl = $request->session()->previousUrl() ?? $request->headers->get('referer');
 
-        if ($referer === null) {
+        if ($previousUrl === null) {
             return false;
         }
 
-        $path = parse_url($referer, PHP_URL_PATH);
+        $path = parse_url($previousUrl, PHP_URL_PATH);
 
         return is_string($path) && preg_match('#^/admin/rows/[^/]+$#', $path) === 1;
     }
