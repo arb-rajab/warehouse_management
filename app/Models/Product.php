@@ -61,7 +61,9 @@ class Product extends Model
             return;
         }
 
-        foreach (preg_split('/\s+/', trim($term)) as $word) {
+        $words = preg_split('/\s+/', trim($term)) ?: [];
+
+        foreach ($words as $word) {
             $query->where('name', 'like', '%'.$word.'%');
         }
     }
