@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowRight, Clock, History, Pencil, TriangleAlert } from '@lucide/vue';
+import {
+    ArrowRight,
+    Check,
+    Clock,
+    History,
+    Pencil,
+    TriangleAlert,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -16,7 +23,9 @@ import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import {
+    acknowledgeFlags,
     cellLogActionLabel,
+    hasUnacknowledgedFlags,
     mergeTransferPairs,
     transferPair,
 } from '@/lib/cellStatusLogDisplay';
@@ -142,6 +151,15 @@ function onPerPageChange(perPage: number): void {
                         </template>
                     </div>
                     <CellLogFlagBadges :flags="log.flags" />
+                    <button
+                        v-if="hasUnacknowledgedFlags(log)"
+                        type="button"
+                        class="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                        @click="acknowledgeFlags(log, 'user')"
+                    >
+                        <Check class="h-3 w-3 shrink-0" />
+                        {{ t('cellLog.flags.acknowledge') }}
+                    </button>
                 </td>
                 <td class="px-4 py-2">
                     <div

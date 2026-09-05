@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AcknowledgeCellStatusLogFlagsRequest;
 use App\Http\Requests\Admin\FilterCellStatusLogsRequest;
 use App\Http\Resources\CellStatusLogResource;
 use App\Models\CellStatusLog;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -42,12 +42,29 @@ class CellStatusLogController extends Controller
     /**
      * Acknowledge every currently-unacknowledged rule-based flag on a log entry.
      */
-    public function acknowledgeFlags(Request $request, CellStatusLog $cellStatusLog): RedirectResponse
+    public function acknowledgeFlags(AcknowledgeCellStatusLogFlagsRequest $request, CellStatusLog $cellStatusLog): RedirectResponse
     {
         $cellStatusLog->flags()->whereNull('acknowledged_at')->update([
             'acknowledged_at' => now(),
             'acknowledged_by' => $request->user()->id,
         ]);
+
+        return $this->redirectAfterAcknowledge($request, $cellStatusLog);
+    }
+
+    /**
+     * Triggered from both CellStatusLogs/Index.vue (the default) and
+     * Users/Show.vue ('return_to' => 'user') — the Referer header/session
+     * can't reliably tell the two apart (see PalletController::redirectFor
+     * for the same pattern), so the frontend sends it explicitly. The user
+     * page redirected back to is always the log's own actor: Users/Show
+     * only ever lists that one user's actions.
+     */
+    private function redirectAfterAcknowledge(AcknowledgeCellStatusLogFlagsRequest $request, CellStatusLog $cellStatusLog): RedirectResponse
+    {
+        if ($request->input('return_to') === 'user') {
+            return redirect()->route('admin.users.show', ['user' => $cellStatusLog->user_id, ...$request->query()]);
+        }
 
         return redirect()->route('admin.cell-logs.index', $request->query());
     }

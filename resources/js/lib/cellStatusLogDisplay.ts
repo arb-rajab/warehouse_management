@@ -1,3 +1,5 @@
+import { router } from '@inertiajs/vue3';
+import { acknowledgeFlags as acknowledgeFlagsAction } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { t } from '@/lib/i18n';
 import type { CellSlotLocation, CellStatusLog } from '@/types/admin';
 
@@ -11,6 +13,25 @@ export function flagReasonLabel(
     reason: CellStatusLog['flags'][number]['reason'],
 ): string {
     return t(`cellLog.flags.reasons.${reason}`);
+}
+
+export function hasUnacknowledgedFlags(log: CellStatusLog): boolean {
+    return log.flags.some((flag) => !flag.acknowledged);
+}
+
+/**
+ * `returnTo` tells the backend which page to redirect back to — this action is
+ * triggered from both CellStatusLogs/Index.vue (the default, omitted) and
+ * Users/Show.vue ('user'), which the Referer header/session can't reliably
+ * distinguish (see AcknowledgeCellStatusLogFlagsRequest).
+ */
+export function acknowledgeFlags(log: CellStatusLog, returnTo?: 'user'): void {
+    router.post(
+        acknowledgeFlagsAction({ cellStatusLog: log.id }, { mergeQuery: {} })
+            .url,
+        { return_to: returnTo ?? null },
+        { preserveScroll: true },
+    );
 }
 
 export function transferPair(log: CellStatusLog): {

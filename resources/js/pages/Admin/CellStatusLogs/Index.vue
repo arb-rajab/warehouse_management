@@ -11,10 +11,7 @@ import {
     X,
 } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
-import {
-    acknowledgeFlags as acknowledgeFlagsAction,
-    index as cellLogsIndex,
-} from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
@@ -32,7 +29,9 @@ import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import {
+    acknowledgeFlags,
     cellLogActionLabel,
+    hasUnacknowledgedFlags,
     mergeTransferPairs,
     transferPair,
 } from '@/lib/cellStatusLogDisplay';
@@ -63,21 +62,6 @@ const props = defineProps<{
     filters: CellStatusLogFilters;
     filterOptions: CellStatusLogFilterOptions;
 }>();
-
-function hasUnacknowledgedFlags(log: CellStatusLog): boolean {
-    return log.flags.some((flag) => !flag.acknowledged);
-}
-
-function acknowledgeFlags(log: CellStatusLog): void {
-    router.post(
-        acknowledgeFlagsAction({ cellStatusLog: log.id }, { mergeQuery: {} })
-            .url,
-        {},
-        {
-            preserveScroll: true,
-        },
-    );
-}
 
 const filters = reactive({
     product_id: (props.filters.product_id ?? []).map(String),
