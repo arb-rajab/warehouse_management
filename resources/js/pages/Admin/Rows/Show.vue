@@ -187,6 +187,7 @@ const palletActionError = computed(
             v-model:open="toggleActiveDialogOpen"
             :cell="toggleActiveCell"
             :label="toggleActiveLabel"
+            return-to="row"
         />
 
         <PalletActionsDialog
@@ -194,6 +195,7 @@ const palletActionError = computed(
             :cell="palletActionsCell"
             :label="palletActionsLabel"
             :rows="rows"
+            return-to="row"
         />
     </AdminLayout>
 </template>

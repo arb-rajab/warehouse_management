@@ -3,12 +3,13 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
+use App\Http\Requests\Concerns\ValidatesReturnTo;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePalletRequest extends FormRequest
 {
-    use ValidatesOptionalNote;
+    use ValidatesOptionalNote, ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.
@@ -19,6 +20,7 @@ class StorePalletRequest extends FormRequest
     {
         return [
             ...$this->noteRules(),
+            ...$this->returnToRules(),
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'expiration_date' => ['required', 'date', 'after_or_equal:today'],
         ];
