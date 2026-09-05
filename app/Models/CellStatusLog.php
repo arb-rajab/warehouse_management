@@ -62,7 +62,8 @@ class CellStatusLog extends Model
         'product:id,name,image_url,boxes_count',
         'pallet:id,expiration_date',
         'user:id,name',
-        'flags:id,cell_status_log_id,reason,acknowledged_at',
+        'flags:id,cell_status_log_id,reason,acknowledged_at,acknowledged_by',
+        'flags.acknowledgedBy:id,name',
     ];
 
     /**

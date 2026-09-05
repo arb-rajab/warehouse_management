@@ -38,4 +38,26 @@ describe('CellLogFlagBadges', () => {
         expect(badges[1].classes()).toContain('bg-gray-100');
         expect(badges[0].classes()).not.toEqual(badges[1].classes());
     });
+
+    it('shows who acknowledged a flag, and nothing for an unacknowledged one', () => {
+        const wrapper = mountBadges([
+            {
+                id: 1,
+                reason: 'off_hours',
+                acknowledged: true,
+                acknowledged_by: { id: 9, name: 'Alice Admin' },
+            },
+            { id: 2, reason: 'quick_flip', acknowledged: false },
+        ]);
+
+        const acknowledgedByText = t('cellLog.flags.acknowledgedBy', {
+            name: 'Alice Admin',
+        });
+        expect(wrapper.text()).toContain(acknowledgedByText);
+        expect(
+            wrapper
+                .findAll('span')
+                .filter((span) => span.text() === acknowledgedByText),
+        ).toHaveLength(1);
+    });
 });

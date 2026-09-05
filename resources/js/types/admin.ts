@@ -190,6 +190,7 @@ export interface CellStatusLogFlag {
     id: number;
     reason: CellLogFlagReason;
     acknowledged: boolean;
+    acknowledged_by?: { id: number; name: string } | null;
 }
 
 export interface CellStatusLog {
