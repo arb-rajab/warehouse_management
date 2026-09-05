@@ -548,7 +548,7 @@ describe('CellStatusLogs Index', () => {
 
         expect(routerPostMock).toHaveBeenCalledWith(
             '/admin/cell-logs/42/acknowledge-flags',
-            {},
+            { return_to: null },
             { preserveScroll: true },
         );
     });
@@ -579,7 +579,7 @@ describe('CellStatusLogs Index', () => {
 
         expect(routerPostMock).toHaveBeenCalledWith(
             '/admin/cell-logs/42/acknowledge-flags?page=6&flagged=true',
-            {},
+            { return_to: null },
             { preserveScroll: true },
         );
 

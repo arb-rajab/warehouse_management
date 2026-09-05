@@ -569,8 +569,7 @@ test('an authenticated admin can acknowledge every unacknowledged flag on a cell
 
     $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags");
 
-    // Always returns to the log list itself, never a fallback route
-    // (e.g. the dashboard/map) driven by session/referrer state.
+    // Returns to the log list by default (no return_to sent).
     $response->assertRedirect(route('admin.cell-logs.index'));
     $freshFlag = $flag->fresh();
     expect($freshFlag->acknowledged_at)->not->toBeNull();
@@ -588,6 +587,17 @@ test('acknowledging flags redirects back with the current filters preserved', fu
     $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags?flagged=true");
 
     $response->assertRedirect(route('admin.cell-logs.index', ['flagged' => 'true']));
+});
+
+test('acknowledging flags with return_to=user redirects to that user\'s action history instead', function () {
+    actingAsAdmin();
+    $mover = User::factory()->mobileUser()->create();
+    $log = CellStatusLog::factory()->create(['user_id' => $mover->id]);
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->post("/admin/cell-logs/{$log->id}/acknowledge-flags?per_page=50", ['return_to' => 'user']);
+
+    $response->assertRedirect(route('admin.users.show', ['user' => $mover->id, 'per_page' => '50']));
 });
 
 test('acknowledging flags on a non-existent cell log returns a 404', function () {

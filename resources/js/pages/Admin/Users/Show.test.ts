@@ -9,9 +9,10 @@ import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { CellStatusLog, Paginated, User } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerPostMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -21,7 +22,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { get: routerGetMock },
+        router: { get: routerGetMock, post: routerPostMock },
     };
 });
 
@@ -61,7 +62,7 @@ function mountPage(
 
 describe('Users Show', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock });
+        resetMocks({ usePageMock, routerGetMock, routerPostMock });
     });
 
     it('shows the users name in the title', () => {
@@ -163,15 +164,51 @@ describe('Users Show', () => {
         );
     });
 
-    it('does not show an Acknowledge action, even for an unacknowledged flag', () => {
+    it('shows an Acknowledge button when a flag is unacknowledged, and hides it once every flag is acknowledged', () => {
         const wrapper = mountPage([
             cellLog({
+                id: 1,
                 flagged: true,
                 flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
             }),
+            cellLog({
+                id: 2,
+                flagged: true,
+                flags: [{ id: 2, reason: 'off_hours', acknowledged: true }],
+            }),
         ]);
 
-        expect(wrapper.text()).not.toContain(t('cellLog.flags.acknowledge'));
+        expect(rowCells(wrapper, 0)[1].text()).toContain(
+            t('cellLog.flags.acknowledge'),
+        );
+        expect(rowCells(wrapper, 1)[1].text()).not.toContain(
+            t('cellLog.flags.acknowledge'),
+        );
+    });
+
+    it('posts to the acknowledge-flags endpoint with return_to=user when the Acknowledge button is clicked', async () => {
+        const wrapper = mountPage([
+            cellLog({
+                id: 42,
+                flagged: true,
+                flags: [
+                    { id: 1, reason: 'rapid_actions', acknowledged: false },
+                ],
+            }),
+        ]);
+
+        const acknowledgeButton = rowCells(wrapper, 0)[1]
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('cellLog.flags.acknowledge')),
+            );
+        await acknowledgeButton?.trigger('click');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-logs/42/acknowledge-flags',
+            { return_to: 'user' },
+            { preserveScroll: true },
+        );
     });
 
     it('merges a transferred_out/transferred_in pair into a single row', () => {
