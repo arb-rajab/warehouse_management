@@ -68,6 +68,9 @@ class CellStatusLogResource extends JsonResource
                 'id' => $flag->id,
                 'reason' => $flag->reason->value,
                 'acknowledged' => $flag->acknowledged_at !== null,
+                'acknowledged_by' => $flag->relationLoaded('acknowledgedBy') && $flag->acknowledgedBy !== null
+                    ? ['id' => $flag->acknowledgedBy->id, 'name' => $flag->acknowledgedBy->name]
+                    : null,
             ])->all()),
         ];
     }

@@ -160,6 +160,7 @@
         },
         "flags": {
             "acknowledge": "Acknowledge",
+            "acknowledgedBy": "Acknowledged by {name}",
             "reasons": {
                 "rapid_actions": "Rapid actions",
                 "off_hours": "Off-hours activity",

@@ -532,6 +532,30 @@ test('the cell log can be filtered by flagged, excluding unflagged entries', fun
     );
 });
 
+test('the cell log exposes who acknowledged a flag, and null for an unacknowledged one', function () {
+    actingAsAdmin();
+    $acknowledger = User::factory()->create(['name' => 'Alice Admin']);
+
+    $log = CellStatusLog::factory()->create();
+    $unacknowledged = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id, 'reason' => CellLogFlagReason::OffHours]);
+    $acknowledged = CellStatusLogFlag::factory()->create([
+        'cell_status_log_id' => $log->id,
+        'reason' => CellLogFlagReason::QuickFlip,
+        'acknowledged_at' => now(),
+        'acknowledged_by' => $acknowledger->id,
+    ]);
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data.0.flags', 2)
+            ->where('logs.data.0.flags.0.id', $unacknowledged->id)
+            ->where('logs.data.0.flags.0.acknowledged_by', null)
+            ->where('logs.data.0.flags.1.id', $acknowledged->id)
+            ->where('logs.data.0.flags.1.acknowledged_by', ['id' => $acknowledger->id, 'name' => 'Alice Admin'])
+    );
+});
+
 test('an authenticated admin can acknowledge every unacknowledged flag on a cell log', function () {
     $admin = actingAsAdmin();
     $log = CellStatusLog::factory()->create();

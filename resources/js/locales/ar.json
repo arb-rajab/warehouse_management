@@ -160,6 +160,7 @@
         },
         "flags": {
             "acknowledge": "تأكيد المراجعة",
+            "acknowledgedBy": "تمت المراجعة بواسطة {name}",
             "reasons": {
                 "rapid_actions": "إجراءات متسارعة",
                 "off_hours": "نشاط خارج ساعات العمل",
