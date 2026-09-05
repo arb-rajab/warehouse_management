@@ -25,7 +25,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, function () use ($request, $cell, $user) {
+        return $this->handle($request, $cell, function () use ($request, $cell, $user) {
             $this->palletActions->store(
                 $cell->id,
                 $request->integer('product_id'),
@@ -41,7 +41,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, function () use ($request, $pallet, $user) {
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->open(
                 $pallet,
                 $request->integer('boxes_count'),
@@ -57,7 +57,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, function () use ($request, $pallet, $user) {
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->removeBoxes(
                 $pallet,
                 $request->integer('boxes_count'),
@@ -73,7 +73,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, function () use ($request, $pallet, $user) {
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
         });
     }
@@ -83,7 +83,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, function () use ($request, $pallet, $user) {
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->transfer(
                 $pallet,
                 $request->resolvedSlot()->id,
@@ -94,14 +94,24 @@ class PalletController extends Controller
     }
 
     /**
-     * Run a pallet-action closure, redirecting back to the cell map (preserving its
-     * current flat/highlight query) on success, or surfacing an InvalidSlotStateException
-     * as a non-field `action` error for ActionErrorBanner to render otherwise — the same
-     * "quick-action from a paginated/filtered index" pattern RowController's destroy/update
-     * follow (see controllers.md), applied here because the target state can legitimately
-     * have changed since the map was rendered (another admin, or the mobile app).
+     * Run a pallet-action closure, redirecting on success back to wherever the action
+     * was triggered from, or surfacing an InvalidSlotStateException as a non-field
+     * `action` error for ActionErrorBanner to render otherwise — the target state can
+     * legitimately have changed since the page was rendered (another admin, or the
+     * mobile app).
+     *
+     * Pallet actions are triggered from two different pages (the cell map and a
+     * single row's page), so — unlike the single-origin "explicit route + $request
+     * ->query()" quick-action pattern documented in controllers.md — the redirect
+     * target here is picked from the `Referer` header rather than hardcoded, so each
+     * page gets back its own current state instead of always landing on the map.
+     * `Referer` (not the session-backed `back()` helper, which controllers.md rules
+     * out for reliability reasons) is reliable here because it's read directly off
+     * this request rather than depending on a prior GET request having stored it in
+     * the session. It's still untrusted input, so it only ever selects between two
+     * known, hardcoded destinations — it's never used to build the redirect URL.
      */
-    private function handle(Request $request, callable $action): RedirectResponse
+    private function handle(Request $request, Cell $cell, callable $action): RedirectResponse
     {
         try {
             $action();
@@ -109,6 +119,28 @@ class PalletController extends Controller
             return back()->withErrors(['action' => $e->getMessage()]);
         }
 
+        if ($this->refererIsRowShow($request)) {
+            return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
+        }
+
         return redirect()->route('admin.cells.index', $request->query());
+    }
+
+    private function cellFor(Pallet $pallet): Cell
+    {
+        return $pallet->cell()->select(['id', 'row_id'])->firstOrFail();
+    }
+
+    private function refererIsRowShow(Request $request): bool
+    {
+        $referer = $request->headers->get('referer');
+
+        if ($referer === null) {
+            return false;
+        }
+
+        $path = parse_url($referer, PHP_URL_PATH);
+
+        return is_string($path) && preg_match('#^/admin/rows/[^/]+$#', $path) === 1;
     }
 }
