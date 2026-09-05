@@ -47,7 +47,9 @@ class Product extends Model
     }
 
     /**
-     * Scope a query to products whose name contains the given search term.
+     * Scope a query to products whose name contains every word of the given
+     * search term, in any order — so an admin searching "Blue Large" still
+     * finds "Large Blue Widget" without knowing the words' actual order.
      * A blank/null term is a no-op, matching every product.
      *
      * @param  Builder<Product>  $query
@@ -59,6 +61,10 @@ class Product extends Model
             return;
         }
 
-        $query->where('name', 'like', '%'.$term.'%');
+        $words = preg_split('/\s+/', trim($term)) ?: [];
+
+        foreach ($words as $word) {
+            $query->where('name', 'like', '%'.$word.'%');
+        }
     }
 }
