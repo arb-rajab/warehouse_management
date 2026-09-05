@@ -19,6 +19,7 @@ const props = defineProps<{
     cell: Cell | null;
     label: string;
     rows: CellMapRow[];
+    returnTo?: 'row';
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -110,6 +111,7 @@ function submit(): void {
                 product_id: product.value?.id ?? null,
                 expiration_date: expirationDate.value,
                 note: noteOrNull(),
+                return_to: props.returnTo ?? null,
             },
             options,
         );
@@ -130,6 +132,7 @@ function submit(): void {
                 boxes_count: boxesCount.value,
                 confirm_empty: confirmEmpty.value,
                 note: noteOrNull(),
+                return_to: props.returnTo ?? null,
             },
             options,
         );
@@ -140,13 +143,14 @@ function submit(): void {
                 boxes_count: boxesCount.value,
                 confirm_empty: confirmEmpty.value,
                 note: noteOrNull(),
+                return_to: props.returnTo ?? null,
             },
             options,
         );
     } else if (selectedAction.value === 'empty') {
         router.post(
             emptyPallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            { note: noteOrNull() },
+            { note: noteOrNull(), return_to: props.returnTo ?? null },
             options,
         );
     } else if (selectedAction.value === 'transfer') {
@@ -157,6 +161,7 @@ function submit(): void {
                 cell_number: destinationCellNumber.value,
                 flat_number: destinationFlatNumber.value,
                 note: noteOrNull(),
+                return_to: props.returnTo ?? null,
             },
             options,
         );

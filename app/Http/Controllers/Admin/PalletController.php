@@ -103,29 +103,34 @@ class PalletController extends Controller
      * Pallet actions are triggered from two different pages (the cell map and a
      * single row's page), so — unlike the single-origin "explicit route + $request
      * ->query()" quick-action pattern documented in controllers.md — the redirect
-     * target here is picked based on where the action came from, so each page gets
-     * back its own current state instead of always landing on the map.
-     *
-     * The origin is read from the session's tracked previous URL (the same source
-     * `back()` uses), not the `Referer` header — `config/secure-headers.php` sets
-     * `Referrer-Policy: no-referrer` app-wide, so browsers never actually send that
-     * header. The session value isn't affected by that policy: Laravel records it
-     * server-side on every real (GET) page visit and leaves it untouched by the
-     * action's own POST request, so it still reflects whichever page was open right
-     * before the action fired. It's still untrusted input, so it only ever selects
-     * between two known, hardcoded destinations — it's never used to build the
-     * redirect URL. The `Referer` header is kept as a fallback purely so this stays
-     * testable without a real prior page visit populating the session.
+     * target depends on which page the dialog was opened from. That can't be
+     * inferred server-side here: the `Referer` header is stripped app-wide by
+     * `config/secure-headers.php`'s `Referrer-Policy: no-referrer`, and the
+     * session-tracked previous URL `back()` relies on doesn't help either, since
+     * Inertia's client marks every visit (including full page-to-page navigation)
+     * as an XHR request, which stops Laravel's session middleware from ever
+     * updating it during normal SPA use — it stays frozen at whatever the last
+     * true full browser page load was. So `PalletActionsDialog.vue` sends an
+     * explicit `return_to` field (`'row'` or omitted) instead, validated against
+     * a fixed `in:cells,row` list by `ValidatesReturnTo` — it only ever selects
+     * between two known, hardcoded destinations, and the row it redirects to is
+     * still derived from the actual cell/pallet the action operated on, never
+     * from request input, so this can't be used to redirect somewhere unrelated.
      */
     private function handle(Request $request, Cell $cell, callable $action): RedirectResponse
     {
         try {
             $action();
         } catch (InvalidSlotStateException $e) {
-            return back()->withErrors(['action' => $e->getMessage()]);
+            return $this->redirectFor($request, $cell)->withErrors(['action' => $e->getMessage()]);
         }
 
-        if ($this->originatedFromRowShow($request)) {
+        return $this->redirectFor($request, $cell);
+    }
+
+    private function redirectFor(Request $request, Cell $cell): RedirectResponse
+    {
+        if ($request->input('return_to') === 'row') {
             return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
         }
 
@@ -135,18 +140,5 @@ class PalletController extends Controller
     private function cellFor(Pallet $pallet): Cell
     {
         return $pallet->cell()->select(['id', 'row_id'])->firstOrFail();
-    }
-
-    private function originatedFromRowShow(Request $request): bool
-    {
-        $previousUrl = $request->session()->previousUrl() ?? $request->headers->get('referer');
-
-        if ($previousUrl === null) {
-            return false;
-        }
-
-        $path = parse_url($previousUrl, PHP_URL_PATH);
-
-        return is_string($path) && preg_match('#^/admin/rows/[^/]+$#', $path) === 1;
     }
 }

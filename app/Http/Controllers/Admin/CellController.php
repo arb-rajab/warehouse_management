@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Models\Row;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -81,6 +82,15 @@ class CellController extends Controller
      * Toggle a cell's active status — deactivating flags it as corrupted/out of
      * service (regardless of its current occupancy), reactivating restores it.
      * Occupancy (`state`) is never touched by this action.
+     *
+     * Triggered from both the cell map and a row's page, so — like
+     * `PalletController::handle()` — the redirect target comes from an explicit
+     * `return_to` field the frontend sends (validated by `ValidatesReturnTo`),
+     * not `back()`: Inertia marks every visit as an XHR request, which stops
+     * Laravel's session middleware from ever updating the tracked "previous URL"
+     * `back()` relies on during normal SPA navigation, and the `Referer` header
+     * is stripped app-wide by `config/secure-headers.php`'s `Referrer-Policy:
+     * no-referrer` besides.
      */
     public function toggleActive(ToggleCellActiveRequest $request, Cell $cell): RedirectResponse
     {
@@ -104,8 +114,17 @@ class CellController extends Controller
                 'note' => $request->input('note'),
             ]);
 
-            return redirect()->back();
+            return $this->redirectAfterToggle($request, $lockedCell);
         });
+    }
+
+    private function redirectAfterToggle(Request $request, Cell $cell): RedirectResponse
+    {
+        if ($request->input('return_to') === 'row') {
+            return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
+        }
+
+        return redirect()->route('admin.cells.index', $request->query());
     }
 
     /**

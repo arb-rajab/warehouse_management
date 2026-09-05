@@ -60,9 +60,10 @@ test('storing a pallet from a row page redirects back to that row page instead o
     $cell = $row->cells()->first();
     $product = Product::factory()->create();
 
-    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/cells/{$cell->id}/pallet", [
+    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
+        'return_to' => 'row',
     ]);
 
     $response->assertRedirect("/admin/rows/{$row->letter}");
@@ -214,8 +215,9 @@ test('opening a pallet from a row page redirects back to that row page instead o
     $product = Product::factory()->create(['boxes_count' => 10]);
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
 
-    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/pallets/{$pallet->id}/open", [
+    $response = $this->post("/admin/pallets/{$pallet->id}/open", [
         'boxes_count' => 3,
+        'return_to' => 'row',
     ]);
 
     $response->assertRedirect("/admin/rows/{$row->letter}");
@@ -419,10 +421,11 @@ test('transferring a pallet from a row page redirects back to the source row pag
     $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
     $destinationCell = $destinationRow->cells()->first();
 
-    $response = $this->from("/admin/rows/{$sourceRow->letter}")->post("/admin/pallets/{$pallet->id}/transfer", [
+    $response = $this->post("/admin/pallets/{$pallet->id}/transfer", [
         'row_letter' => $destinationRow->letter,
         'cell_number' => $destinationCell->cell_number,
         'flat_number' => $destinationCell->flat_number,
+        'return_to' => 'row',
     ]);
 
     $response->assertRedirect("/admin/rows/{$sourceRow->letter}");

@@ -502,12 +502,22 @@ test('toggling the active status of a non-existent cell returns a 404', function
     $response->assertNotFound();
 });
 
-test('toggling a cells active status redirects back to whichever page it was triggered from', function () {
+test('toggling a cells active status redirects to the cell map by default', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active");
+
+    $response->assertRedirect(route('admin.cells.index'));
+});
+
+test('toggling a cells active status from a row page redirects back to that row page instead of the cell map', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $response = $this->from("/admin/rows/{$row->letter}")->post("/admin/cells/{$cell->id}/toggle-active");
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active", ['return_to' => 'row']);
 
     $response->assertRedirect("/admin/rows/{$row->letter}");
 });

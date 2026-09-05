@@ -11,6 +11,7 @@ import type { Cell } from '@/types/admin';
 const props = defineProps<{
     cell: Cell | null;
     label: string;
+    returnTo?: 'row';
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -60,8 +61,8 @@ function submit(): void {
     processing.value = true;
 
     router.post(
-        toggleActive({ cell: props.cell.id }).url,
-        { note: note.value === '' ? null : note.value },
+        toggleActive({ cell: props.cell.id }, { mergeQuery: {} }).url,
+        { note: note.value === '' ? null : note.value, return_to: props.returnTo ?? null },
         {
             preserveScroll: true,
             onFinish: () => {
