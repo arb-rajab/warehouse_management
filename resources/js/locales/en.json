@@ -5,6 +5,7 @@
         "rows": "Rows",
         "map": "Map",
         "cellLog": "Cell Log",
+        "cellVerificationReports": "Verification Reports",
         "products": "Products",
         "users": "Users",
         "logout": "Log out",
@@ -197,6 +198,51 @@
             "opened": "Opened"
         },
         "empty": "No activity yet."
+    },
+    "cellVerificationReport": {
+        "title": "Cell Verification Reports",
+        "export": "Export CSV",
+        "filters": {
+            "title": "Filters",
+            "close": "Close filters",
+            "sections": {
+                "location": "Location",
+                "activity": "Activity",
+                "date": "Date"
+            },
+            "product": "Product",
+            "row": "Row",
+            "column": "Column",
+            "round": "Round",
+            "reportedBy": "Reported by",
+            "correctness": "Correctness",
+            "correctnessAll": "All",
+            "correctnessCorrect": "Correct only",
+            "correctnessIncorrect": "Incorrect only",
+            "selectedCount": "{count} selected",
+            "from": "From",
+            "to": "To",
+            "withinDays": "Within last (days)",
+            "all": "All",
+            "apply": "Apply filters",
+            "clear": "Clear",
+            "searchPlaceholder": "Search products…",
+            "searching": "Searching…",
+            "noProductsFound": "No products found."
+        },
+        "columns": {
+            "round": "Round",
+            "cell": "Cell",
+            "correctness": "Correctness",
+            "expected": "Expected",
+            "reported": "Reported",
+            "note": "Note",
+            "reportedBy": "Reported by",
+            "when": "When"
+        },
+        "correct": "Correct",
+        "incorrect": "Incorrect",
+        "empty": "No verification reports yet."
     },
     "cellHighlight": {
         "staleAfterDays": "Stale for at least (days)",

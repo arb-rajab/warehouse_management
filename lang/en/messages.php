@@ -15,5 +15,6 @@ return [
     'pallet_boxes_depleted' => 'All boxes have been removed — this pallet should now be emptied.',
     'slot_inactive' => 'This slot is inactive and cannot be used.',
     'app_version_outdated' => 'This app version is no longer supported. Please update to continue.',
+    'verification_round_completed' => 'This verification round has already been completed.',
     'qr_label_description' => 'Row :row · Cell :cell · Level :flat',
 ];

@@ -21,6 +21,7 @@
         "laravel/telescope": "^5.22",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "league/csv": "*",
         "simplesoftwareio/simple-qrcode": "*",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-health": "^1.40",

@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CircleUser,
+    ClipboardCheck,
     LayoutDashboard,
     LogOut,
     Map,
@@ -16,6 +17,7 @@ import {
 import { computed, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as cellVerificationReportsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -41,6 +43,11 @@ const navItems = computed(() => [
         labelKey: 'nav.cellLog',
         href: cellLogsIndex().url,
         icon: ArrowLeftRight,
+    },
+    {
+        labelKey: 'nav.cellVerificationReports',
+        href: cellVerificationReportsIndex().url,
+        icon: ClipboardCheck,
     },
     { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },

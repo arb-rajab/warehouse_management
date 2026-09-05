@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CellController;
 use App\Http\Controllers\Api\V1\CellStatusLogController;
+use App\Http\Controllers\Api\V1\CellVerificationReportController;
+use App\Http\Controllers\Api\V1\CellVerificationRoundController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\PalletController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -33,5 +35,11 @@ Route::prefix('v1')->group(function () {
         Route::post('pallets/{pallet}/transfer', [PalletController::class, 'transfer']);
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index']);
+
+        Route::get('cell-verification-rounds', [CellVerificationRoundController::class, 'index']);
+        Route::post('cell-verification-rounds', [CellVerificationRoundController::class, 'store']);
+        Route::post('cell-verification-rounds/{cellVerificationRound}/complete', [CellVerificationRoundController::class, 'complete']);
+
+        Route::post('cell-verification-reports', [CellVerificationReportController::class, 'store']);
     });
 });
