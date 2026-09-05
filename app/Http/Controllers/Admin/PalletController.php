@@ -141,6 +141,6 @@ class PalletController extends Controller
 
         $path = parse_url($referer, PHP_URL_PATH);
 
-        return $path !== null && preg_match('#^/admin/rows/[^/]+$#', $path) === 1;
+        return is_string($path) && preg_match('#^/admin/rows/[^/]+$#', $path) === 1;
     }
 }
