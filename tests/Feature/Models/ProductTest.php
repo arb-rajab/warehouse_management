@@ -68,3 +68,12 @@ test('searchByName matches every product when the term is null or blank', functi
     expect(Product::query()->searchByName(null)->count())->toBe(2);
     expect(Product::query()->searchByName('')->count())->toBe(2);
 });
+
+test('searchByName matches multi-word terms regardless of word order, excluding a partial match', function () {
+    $matching = Product::factory()->create(['name' => 'Large Blue Widget']);
+    Product::factory()->create(['name' => 'Large Red Widget']);
+
+    $results = Product::query()->searchByName('Widget Blue')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
