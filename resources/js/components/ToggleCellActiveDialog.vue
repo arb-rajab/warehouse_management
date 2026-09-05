@@ -62,7 +62,10 @@ function submit(): void {
 
     router.post(
         toggleActive({ cell: props.cell.id }, { mergeQuery: {} }).url,
-        { note: note.value === '' ? null : note.value, return_to: props.returnTo ?? null },
+        {
+            note: note.value === '' ? null : note.value,
+            return_to: props.returnTo ?? null,
+        },
         {
             preserveScroll: true,
             onFinish: () => {
