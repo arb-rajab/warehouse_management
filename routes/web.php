@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
+use App\Http\Controllers\Admin\CellVerificationReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
@@ -53,6 +54,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
         Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');
+
+        Route::get('cell-verification-reports', [CellVerificationReportController::class, 'index'])->name('cell-verification-reports.index');
+        Route::get('cell-verification-reports/export', [CellVerificationReportController::class, 'exportCsv'])->name('cell-verification-reports.export');
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');

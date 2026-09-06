@@ -289,3 +289,50 @@ export interface ProductFilters {
 }
 
 export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
+
+export interface CellVerificationSnapshot {
+    cell_state: Cell['state'] | null;
+    product: {
+        id: number;
+        name: string;
+        image_url: string | null;
+        boxes_count: number;
+    } | null;
+    boxes_count: number | null;
+    expiration_date: string | null;
+}
+
+export interface CellVerificationReport {
+    id: number;
+    cell_verification_round_id: number;
+    is_correct: boolean;
+    cell: CellSlotLocation;
+    expected: CellVerificationSnapshot;
+    reported: CellVerificationSnapshot;
+    note: string | null;
+    user: {
+        id: number;
+        name: string;
+    };
+    created_at: string;
+}
+
+export interface CellVerificationReportFilters {
+    cell_verification_round_id?: number;
+    cell_id?: number;
+    row_id?: number;
+    column_number?: number;
+    user_id?: number[];
+    product_id?: number[];
+    is_correct?: boolean;
+    date_from?: string;
+    date_to?: string;
+    created_within_days?: number;
+    sort_direction?: 'asc' | 'desc';
+    per_page?: number;
+}
+
+export interface CellVerificationReportFilterOptions
+    extends RowAndColumnFilterOptions, ProductFilterOptions {
+    users: { id: number; name: string }[];
+}

@@ -5,6 +5,7 @@
         "rows": "الممرات",
         "map": "الخريطة",
         "cellLog": "سجل الخلايا",
+        "cellVerificationReports": "تقارير التحقق",
         "products": "المنتجات",
         "users": "المستخدمون",
         "logout": "تسجيل الخروج",
@@ -197,6 +198,51 @@
             "opened": "مفتوح"
         },
         "empty": "لا يوجد نشاط بعد."
+    },
+    "cellVerificationReport": {
+        "title": "تقارير التحقق من الخلايا",
+        "export": "تصدير CSV",
+        "filters": {
+            "title": "الفلاتر",
+            "close": "إغلاق الفلاتر",
+            "sections": {
+                "location": "الموقع",
+                "activity": "النشاط",
+                "date": "التاريخ"
+            },
+            "product": "المنتج",
+            "row": "الممر",
+            "column": "العمود",
+            "round": "الجولة",
+            "reportedBy": "بواسطة",
+            "correctness": "الصحة",
+            "correctnessAll": "الكل",
+            "correctnessCorrect": "الصحيح فقط",
+            "correctnessIncorrect": "غير الصحيح فقط",
+            "selectedCount": "تم اختيار {count}",
+            "from": "من",
+            "to": "إلى",
+            "withinDays": "خلال آخر (أيام)",
+            "all": "الكل",
+            "apply": "تطبيق الفلاتر",
+            "clear": "مسح",
+            "searchPlaceholder": "ابحث عن منتجات…",
+            "searching": "جارٍ البحث…",
+            "noProductsFound": "لم يتم العثور على منتجات."
+        },
+        "columns": {
+            "round": "الجولة",
+            "cell": "الخلية",
+            "correctness": "الصحة",
+            "expected": "المتوقع",
+            "reported": "المُبلَّغ",
+            "note": "ملاحظة",
+            "reportedBy": "بواسطة",
+            "when": "الوقت"
+        },
+        "correct": "صحيح",
+        "incorrect": "غير صحيح",
+        "empty": "لا توجد تقارير تحقق بعد."
     },
     "cellHighlight": {
         "staleAfterDays": "راكدة منذ (أيام) على الأقل",
