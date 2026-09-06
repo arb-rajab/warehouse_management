@@ -38,6 +38,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('cell-verification-rounds', [CellVerificationRoundController::class, 'index']);
         Route::post('cell-verification-rounds', [CellVerificationRoundController::class, 'store']);
+        Route::get('cell-verification-rounds/{cellVerificationRound}', [CellVerificationRoundController::class, 'show']);
         Route::post('cell-verification-rounds/{cellVerificationRound}/complete', [CellVerificationRoundController::class, 'complete']);
 
         Route::post('cell-verification-reports', [CellVerificationReportController::class, 'store']);

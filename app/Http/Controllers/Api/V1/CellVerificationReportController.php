@@ -17,7 +17,6 @@ class CellVerificationReportController extends Controller
 
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
-    #[DocumentedResponse(403, description: 'The verification round belongs to another user.', type: 'array{message: string}')]
     #[DocumentedResponse(409, description: 'The verification round has already been completed (`error_code`: `verification_round_completed`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationReportRequest $request): JsonResponse
     {

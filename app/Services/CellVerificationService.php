@@ -7,13 +7,17 @@ use App\Models\Cell;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Starts, resumes, completes, and reports against verification rounds —
  * shared by Api\V1\CellVerificationRoundController and
  * Api\V1\CellVerificationReportController, mirroring the
  * controller/service split used by PalletActionService.
+ *
+ * Ownership of the round (may this user act on it at all) is the caller's
+ * responsibility — enforced via CellVerificationRoundPolicy before reaching
+ * here, not re-checked in this class. This service only owns the business
+ * logic once that's settled.
  */
 class CellVerificationService
 {
@@ -26,10 +30,8 @@ class CellVerificationService
      * Mark a round completed. Idempotent: completing an already-completed
      * round is a no-op that returns the round unchanged, rather than an error.
      */
-    public function completeRound(CellVerificationRound $round, int $userId): CellVerificationRound
+    public function completeRound(CellVerificationRound $round): CellVerificationRound
     {
-        $this->authorizeRound($round, $userId);
-
         if (! $round->isCompleted()) {
             $round->update(['completed_at' => now()]);
         }
@@ -46,8 +48,6 @@ class CellVerificationService
      */
     public function report(CellVerificationRound $round, int $cellId, int $userId, array $reported): CellVerificationReport
     {
-        $this->authorizeRound($round, $userId);
-
         if ($round->isCompleted()) {
             throw new VerificationRoundCompletedException;
         }
@@ -72,15 +72,5 @@ class CellVerificationService
                 'note' => $reported['note'] ?? null,
             ]);
         });
-    }
-
-    /**
-     * A user may only view/resume/complete/report against their own rounds.
-     */
-    private function authorizeRound(CellVerificationRound $round, int $userId): void
-    {
-        if ($round->user_id !== $userId) {
-            throw new HttpException(403, 'This verification round belongs to another user.');
-        }
     }
 }
