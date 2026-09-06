@@ -808,13 +808,13 @@ describe('CellStatusLogs Index', () => {
         expect(rowCells(wrapper)[4].text()).toBe('—');
     });
 
-    it("links the doneBy cell to the user's edit page", () => {
+    it("links the doneBy cell to the user's show page", () => {
         const wrapper = mountPage([
             cellLog({ user: { id: 7, name: 'Jane Doe' } }),
         ]);
 
         const link = rowCells(wrapper)[5].get('a');
-        expect(link.attributes('href')).toBe('/admin/users/7/edit');
+        expect(link.attributes('href')).toBe('/admin/users/7');
         expect(link.text()).toBe('Jane Doe');
     });
 
