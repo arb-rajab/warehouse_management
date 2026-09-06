@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexCellVerificationRoundsRequest;
 use App\Http\Resources\CellVerificationRoundResource;
+use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\User;
 use App\Services\CellVerificationService;
@@ -35,6 +36,27 @@ class CellVerificationRoundController extends Controller
             ->withQueryString();
 
         return CellVerificationRoundResource::collection($rounds);
+    }
+
+    /**
+     * Show one of the authenticated user's own rounds, with its reports
+     * loaded in the order they were reported, so the mobile app can let a
+     * worker review a past (completed or still-open) walk cell by cell.
+     */
+    public function show(Request $request, CellVerificationRound $cellVerificationRound): CellVerificationRoundResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $this->cellVerifications->authorizeRound($cellVerificationRound, $user->id);
+
+        $cellVerificationRound->loadCount('reports');
+        $cellVerificationRound->load(['reports' => fn ($query) => $query
+            ->with(CellVerificationReport::WITH_DETAILS)
+            ->orderBy('created_at')
+            ->orderBy('id')]);
+
+        return new CellVerificationRoundResource($cellVerificationRound);
     }
 
     public function store(Request $request): JsonResponse

@@ -77,7 +77,7 @@ class CellVerificationService
     /**
      * A user may only view/resume/complete/report against their own rounds.
      */
-    private function authorizeRound(CellVerificationRound $round, int $userId): void
+    public function authorizeRound(CellVerificationRound $round, int $userId): void
     {
         if ($round->user_id !== $userId) {
             throw new HttpException(403, 'This verification round belongs to another user.');
