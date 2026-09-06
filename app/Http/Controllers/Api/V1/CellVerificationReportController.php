@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 
 class CellVerificationReportController extends Controller
 {
-    private const array EAGER_LOAD = ['cell.row:id,letter', 'expectedProduct:id,name,image_url,boxes_count', 'reportedProduct:id,name,image_url,boxes_count'];
+    private const array EAGER_LOAD = ['cell.row:id,letter', 'expectedProduct:id,name,image_url,boxes_count', 'reportedProduct:id,name,image_url,boxes_count', 'user:id,name'];
 
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 

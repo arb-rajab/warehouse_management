@@ -14,7 +14,14 @@ test('an authenticated worker can start a verification round', function () {
 
     expect($round->user_id)->toBe($user->id);
     expect($round->completed_at)->toBeNull();
-    expect($response->json('id'))->toBe($round->id);
+
+    // reports_count is omitted (not just null) since store() doesn't withCount() —
+    // see CellVerificationRoundResource::reports_count / RowResource.has_pallets for the pattern.
+    expect($response->json())->toEqual([
+        'id' => $round->id,
+        'started_at' => $round->created_at->toIso8601String(),
+        'completed_at' => null,
+    ]);
 });
 
 test('a worker can list only their own verification rounds, most recent first', function () {
@@ -85,4 +92,12 @@ test('a worker cannot complete another user\'s round', function () {
 
     $response->assertForbidden();
     expect($round->refresh()->completed_at)->toBeNull();
+});
+
+test('completing a non-existent round returns a 404', function () {
+    actingAsMobileUser();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds/999999/complete');
+
+    $response->assertNotFound();
 });

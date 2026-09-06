@@ -25,6 +25,7 @@ test('a worker can report a cell as correct against their own round', function (
         'cell_verification_round_id' => $round->id,
         'cell_id' => $cell->id,
         'is_correct' => true,
+        'note' => 'Matches the system.',
     ]);
 
     $response->assertCreated();
@@ -34,6 +35,35 @@ test('a worker can report a cell as correct against their own round', function (
     expect($report->is_correct)->toBeTrue();
     expect($report->expected_cell_state)->toBe(CellState::Empty);
     expect($report->reported_cell_state)->toBeNull();
+
+    expect($response->json())->toEqual([
+        'id' => $report->id,
+        'cell_verification_round_id' => $round->id,
+        'is_correct' => true,
+        'cell' => [
+            'row_letter' => $cell->row->letter,
+            'cell_number' => $cell->cell_number,
+            'flat_number' => $cell->flat_number,
+        ],
+        'expected' => [
+            'cell_state' => 'empty',
+            'product' => null,
+            'boxes_count' => null,
+            'expiration_date' => null,
+        ],
+        'reported' => [
+            'cell_state' => null,
+            'product' => null,
+            'boxes_count' => null,
+            'expiration_date' => null,
+        ],
+        'note' => 'Matches the system.',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+        ],
+        'created_at' => $report->created_at->toIso8601String(),
+    ]);
 });
 
 test('the expected snapshot is derived server-side from the cell\'s current pallet', function () {
