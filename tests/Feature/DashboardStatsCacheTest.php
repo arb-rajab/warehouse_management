@@ -57,6 +57,25 @@ test('the dashboard cache is invalidated when a row is created, so its new empty
     );
 });
 
+test('the dashboard cache is invalidated when a row is resized, so its regenerated cells are counted immediately', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy.empty', 1)
+    );
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => $row->letter,
+        'cells_count' => 3,
+        'flats_count' => 1,
+    ])->assertRedirect();
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy.empty', 3)
+    );
+});
+
 test('the dashboard cache is invalidated when a row is deleted, so its removed cells are no longer counted', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
