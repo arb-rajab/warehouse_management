@@ -18,7 +18,13 @@ class CellVerificationRoundSeeder extends Seeder
             return;
         }
 
-        $workers = User::factory()->mobileUser()->count(4)->create();
+        $workers = User::query()->doesntHave('roles')->get();
+
+        if ($workers->count() < 4) {
+            $workers = $workers->merge(
+                User::factory()->mobileUser()->count(4 - $workers->count())->create()
+            );
+        }
 
         foreach (range(1, 15) as $i) {
             $this->seedRound($workers->random(), completed: true);
