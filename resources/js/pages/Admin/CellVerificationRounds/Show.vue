@@ -2,11 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
-import {
-    exportReports,
-    index as cellVerificationRoundsIndex,
-    show as showCellVerificationRound,
-} from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
@@ -17,6 +13,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
@@ -37,6 +34,12 @@ import type {
     CellVerificationRound,
     Paginated,
 } from '@/types/admin';
+import {
+    exportReports,
+    index as cellVerificationRoundsIndex,
+    show as showCellVerificationRound,
+} from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
@@ -136,12 +139,6 @@ function onPerPageChange(perPage: number): void {
     filters.per_page = perPage;
     applyFilters();
 }
-
-function snapshotProductLabel(
-    snapshot: CellVerificationReport['expected'],
-): string | null {
-    return snapshot.product?.name ?? null;
-}
 </script>
 
 <template>
@@ -194,7 +191,14 @@ function snapshotProductLabel(
                 <div class="text-gray-500 dark:text-neutral-400">
                     {{ t('cellVerificationRound.columns.user') }}
                 </div>
-                <div class="font-medium">{{ round.user?.name }}</div>
+                <div class="font-medium">
+                    <TableLink
+                        v-if="round.user"
+                        :href="editUser({ id: round.user.id })"
+                    >
+                        {{ round.user.name }}
+                    </TableLink>
+                </div>
             </div>
             <div>
                 <div class="text-gray-500 dark:text-neutral-400">
@@ -375,18 +379,9 @@ function snapshotProductLabel(
                     }}
                 </td>
                 <td class="px-4 py-2">
-                    <span
-                        v-if="row.is_correct"
-                        class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    >
-                        {{ t('cellVerificationReport.correct') }}
-                    </span>
-                    <span
-                        v-else
-                        class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                    >
-                        {{ t('cellVerificationReport.incorrect') }}
-                    </span>
+                    <CellVerificationCorrectnessBadge
+                        :is-correct="row.is_correct"
+                    />
                 </td>
                 <td class="px-4 py-2">
                     <div>{{ row.expected.cell_state }}</div>

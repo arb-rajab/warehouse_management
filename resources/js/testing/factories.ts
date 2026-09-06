@@ -1,4 +1,11 @@
-import type { Cell, CellStatusLog, Paginated, Row, User } from '@/types/admin';
+import type {
+    Cell,
+    CellStatusLog,
+    CellVerificationReport,
+    Paginated,
+    Row,
+    User,
+} from '@/types/admin';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -48,6 +55,43 @@ export function user(overrides: Partial<User> = {}): User {
         name: 'Jane Doe',
         email: 'jane@example.com',
         is_admin: false,
+        ...overrides,
+    };
+}
+
+export function cellVerificationReport(
+    overrides: Partial<CellVerificationReport> = {},
+): CellVerificationReport {
+    return {
+        id: 1,
+        cell_verification_round_id: 1,
+        is_correct: true,
+        cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+        expected: {
+            cell_state: 'full',
+            product: {
+                id: 10,
+                name: 'Widgets',
+                image_url: null,
+                boxes_count: 10,
+            },
+            boxes_count: 10,
+            expiration_date: null,
+        },
+        reported: {
+            cell_state: 'full',
+            product: {
+                id: 10,
+                name: 'Widgets',
+                image_url: null,
+                boxes_count: 10,
+            },
+            boxes_count: 10,
+            expiration_date: null,
+        },
+        note: null,
+        user: { id: 7, name: 'Jane Doe' },
+        created_at: '2026-08-01T10:00:00Z',
         ...overrides,
     };
 }

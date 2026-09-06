@@ -113,6 +113,8 @@
         "show": {
             "title": "إجراءات {name}",
             "editUser": "تعديل المستخدم",
+            "actionsTitle": "الإجراءات",
+            "reportsTitle": "تقارير التحقق",
             "empty": "لا يوجد إجراءات بعد."
         },
         "fields": {
@@ -266,6 +268,7 @@
             "noProductsFound": "لم يتم العثور على منتجات."
         },
         "columns": {
+            "round": "الجولة",
             "cell": "الخلية",
             "correctness": "الصحة",
             "expected": "المتوقع",
