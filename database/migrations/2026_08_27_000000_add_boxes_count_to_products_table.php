@@ -22,6 +22,9 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Lossy: dropping boxes_count discards any live operational data stored
+     * in that column.
      */
     public function down(): void
     {

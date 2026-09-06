@@ -29,6 +29,9 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Lossy: dropping remaining_boxes discards any live operational data
+     * stored in that column.
      */
     public function down(): void
     {
