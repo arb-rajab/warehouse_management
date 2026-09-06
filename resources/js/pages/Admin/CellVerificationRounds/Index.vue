@@ -56,11 +56,13 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const { rangeDisabled: dateRangeDisabled, daysDisabled: createdWithinDaysDisabled } =
-    exclusivePair(
-        () => filters.date_from !== '' || filters.date_to !== '',
-        () => filters.created_within_days !== '',
-    );
+const {
+    rangeDisabled: dateRangeDisabled,
+    daysDisabled: createdWithinDaysDisabled,
+} = exclusivePair(
+    () => filters.date_from !== '' || filters.date_to !== '',
+    () => filters.created_within_days !== '',
+);
 
 const filtersOpen = ref(false);
 
@@ -77,7 +79,9 @@ const activeFilterCount = computed(() =>
 function filterQuery(): Record<string, FormDataConvertible> {
     const { completed, ...rest } = filters;
 
-    return completed === '' ? rest : { ...rest, completed: completed === 'true' };
+    return completed === ''
+        ? rest
+        : { ...rest, completed: completed === 'true' };
 }
 
 function applyFilters(): void {
@@ -165,7 +169,9 @@ function onPerPageChange(perPage: number): void {
                         <FilterSelect
                             id="filter-completed"
                             v-model="filters.completed"
-                            :label="t('cellVerificationRound.filters.completed')"
+                            :label="
+                                t('cellVerificationRound.filters.completed')
+                            "
                             :all-label="
                                 t('cellVerificationRound.filters.completedAll')
                             "
@@ -187,7 +193,9 @@ function onPerPageChange(perPage: number): void {
                     </div>
                 </div>
 
-                <div class="border-t border-gray-200 pt-6 dark:border-neutral-800">
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
+                >
                     <DateRangeFilterFields
                         from-id="filter-date-from"
                         to-id="filter-date-to"

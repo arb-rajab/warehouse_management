@@ -64,11 +64,13 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const { rangeDisabled: dateRangeDisabled, daysDisabled: createdWithinDaysDisabled } =
-    exclusivePair(
-        () => filters.date_from !== '' || filters.date_to !== '',
-        () => filters.created_within_days !== '',
-    );
+const {
+    rangeDisabled: dateRangeDisabled,
+    daysDisabled: createdWithinDaysDisabled,
+} = exclusivePair(
+    () => filters.date_from !== '' || filters.date_to !== '',
+    () => filters.created_within_days !== '',
+);
 
 const filtersOpen = ref(false);
 
@@ -86,7 +88,9 @@ const activeFilterCount = computed(() =>
 function filterQuery(): Record<string, FormDataConvertible> {
     const { is_correct, ...rest } = filters;
 
-    return is_correct === '' ? rest : { ...rest, is_correct: is_correct === 'true' };
+    return is_correct === ''
+        ? rest
+        : { ...rest, is_correct: is_correct === 'true' };
 }
 
 const showUrl = () =>
@@ -110,10 +114,14 @@ function clearFilters(): void {
     filters.date_to = '';
     filters.created_within_days = '';
     filters.sort_direction = '';
-    router.get(showUrl(), { per_page: filters.per_page }, {
-        preserveState: true,
-        replace: true,
-    });
+    router.get(
+        showUrl(),
+        { per_page: filters.per_page },
+        {
+            preserveState: true,
+            replace: true,
+        },
+    );
 }
 
 function onSort(): void {
@@ -171,7 +179,10 @@ function snapshotProductLabel(
             </div>
         </PageHeader>
 
-        <TableLink :href="cellVerificationRoundsIndex().url" class="mb-4 inline-flex">
+        <TableLink
+            :href="cellVerificationRoundsIndex().url"
+            class="mb-4 inline-flex"
+        >
             <ArrowLeft class="h-3.5 w-3.5 shrink-0 rtl:rotate-180" />
             {{ t('cellVerificationRound.show.backToList') }}
         </TableLink>
@@ -189,7 +200,9 @@ function snapshotProductLabel(
                 <div class="text-gray-500 dark:text-neutral-400">
                     {{ t('cellVerificationRound.show.startedAt') }}
                 </div>
-                <div class="font-medium">{{ formatDateTime(round.started_at) }}</div>
+                <div class="font-medium">
+                    {{ formatDateTime(round.started_at) }}
+                </div>
             </div>
             <div>
                 <div class="text-gray-500 dark:text-neutral-400">
@@ -220,7 +233,11 @@ function snapshotProductLabel(
             <form class="space-y-6" @submit.prevent="applyFilters">
                 <div>
                     <h3 :class="sectionHeadingClass">
-                        {{ t('cellVerificationReport.filters.sections.location') }}
+                        {{
+                            t(
+                                'cellVerificationReport.filters.sections.location',
+                            )
+                        }}
                     </h3>
                     <LocationFilterFields
                         id-prefix="filter"
@@ -232,9 +249,15 @@ function snapshotProductLabel(
                     />
                 </div>
 
-                <div class="border-t border-gray-200 pt-6 dark:border-neutral-800">
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
+                >
                     <h3 :class="sectionHeadingClass">
-                        {{ t('cellVerificationReport.filters.sections.activity') }}
+                        {{
+                            t(
+                                'cellVerificationReport.filters.sections.activity',
+                            )
+                        }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <FilterProductSelect
@@ -249,9 +272,13 @@ function snapshotProductLabel(
                         <FilterSelect
                             id="filter-correctness"
                             v-model="filters.is_correct"
-                            :label="t('cellVerificationReport.filters.correctness')"
+                            :label="
+                                t('cellVerificationReport.filters.correctness')
+                            "
                             :all-label="
-                                t('cellVerificationReport.filters.correctnessAll')
+                                t(
+                                    'cellVerificationReport.filters.correctnessAll',
+                                )
                             "
                             :options="[
                                 {
@@ -271,7 +298,9 @@ function snapshotProductLabel(
                     </div>
                 </div>
 
-                <div class="border-t border-gray-200 pt-6 dark:border-neutral-800">
+                <div
+                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
+                >
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellVerificationReport.filters.sections.date') }}
                     </h3>
@@ -280,7 +309,9 @@ function snapshotProductLabel(
                             from-id="filter-date-from"
                             to-id="filter-date-to"
                             within-days-id="filter-created-within-days"
-                            :from-label="t('cellVerificationReport.filters.from')"
+                            :from-label="
+                                t('cellVerificationReport.filters.from')
+                            "
                             :to-label="t('cellVerificationReport.filters.to')"
                             :within-days-label="
                                 t('cellVerificationReport.filters.withinDays')
