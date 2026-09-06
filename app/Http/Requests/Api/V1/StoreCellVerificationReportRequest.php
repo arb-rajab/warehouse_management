@@ -55,7 +55,7 @@ class StoreCellVerificationReportRequest extends FormRequest
             }
 
             if ($this->filled('cell_verification_round_id')) {
-                $round = CellVerificationRound::query()->find($this->input('cell_verification_round_id'));
+                $round = CellVerificationRound::query()->find($this->integer('cell_verification_round_id'));
 
                 if ($round !== null && $round->user_id !== $this->user()->id) {
                     $validator->errors()->add('cell_verification_round_id', 'This verification round belongs to another user.');

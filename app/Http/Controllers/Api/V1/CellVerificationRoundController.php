@@ -8,6 +8,7 @@ use App\Http\Resources\CellVerificationRoundResource;
 use App\Models\CellVerificationRound;
 use App\Models\User;
 use App\Services\CellVerificationService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,7 +29,7 @@ class CellVerificationRoundController extends Controller
         $rounds = CellVerificationRound::query()
             ->ownedBy($user->id)
             ->withCount('reports')
-            ->when($request->boolean('only_unfinished'), fn ($query) => $query->unfinished())
+            ->when($request->boolean('only_unfinished'), fn (Builder $query) => $query->unfinished())
             ->latest('created_at')
             ->paginate(20)
             ->withQueryString();
