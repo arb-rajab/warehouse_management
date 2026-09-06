@@ -17,12 +17,9 @@ test('the cell log table links the cell and done-by cells to their own admin pag
     );
 
     const doneByLink = firstRow.getByRole('link', { name: 'Test User' });
-    await expect(doneByLink).toHaveAttribute(
-        'href',
-        /^\/admin\/users\/\d+\/edit$/,
-    );
+    await expect(doneByLink).toHaveAttribute('href', /^\/admin\/users\/\d+$/);
 
     await doneByLink.click();
-    await expect(page).toHaveURL(/\/admin\/users\/\d+\/edit$/);
-    await expect(page.locator('#name')).toHaveValue('Test User');
+    await expect(page).toHaveURL(/\/admin\/users\/\d+$/);
+    await expect(page.locator('h1')).toContainText('Test User');
 });

@@ -7,7 +7,7 @@ import {
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
-import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
@@ -194,7 +194,7 @@ function onPerPageChange(perPage: number): void {
                 <div class="font-medium">
                     <TableLink
                         v-if="round.user"
-                        :href="editUser({ id: round.user.id })"
+                        :href="showUser({ id: round.user.id })"
                     >
                         {{ round.user.name }}
                     </TableLink>

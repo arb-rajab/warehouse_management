@@ -13,7 +13,7 @@ import {
 import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
-import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellLogFlagBadges from '@/components/CellLogFlagBadges.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -629,7 +629,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     {{ log.note ?? '—' }}
                 </td>
                 <td class="px-4 py-2">
-                    <TableLink :href="editUser({ id: log.user.id })">
+                    <TableLink :href="showUser({ id: log.user.id })">
                         {{ log.user.name }}
                     </TableLink>
                 </td>
