@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             RowSeeder::class,
             PalletSeeder::class,
             CellStatusLogSeeder::class,
+            CellVerificationRoundSeeder::class,
+            CellVerificationReportSeeder::class,
         ]);
     }
 }
