@@ -14,7 +14,10 @@ class RowController extends Controller
     public function index(): AnonymousResourceCollection
     {
         return RowResource::collection(
-            Row::query()->select(Row::SELECT_COLUMNS)->paginate(20)
+            Row::query()
+                ->select(Row::SELECT_COLUMNS)
+                ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
+                ->paginate(20)
         );
     }
 
