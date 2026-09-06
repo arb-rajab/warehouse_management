@@ -30,8 +30,18 @@ class CellStatusLogFactory extends Factory
             'to_state' => CellState::Full,
             'product_id' => Product::factory(),
             'pallet_id' => null,
+            'boxes_count' => null,
             'user_id' => User::factory(),
             'note' => null,
         ];
+    }
+
+    /**
+     * Set a realistic boxes_count, for tests covering pallet-quantity actions
+     * (store/open/removeBoxes/transfer/empty) where it's always recorded.
+     */
+    public function withBoxesCount(int $boxesCount = 10): static
+    {
+        return $this->state(fn () => ['boxes_count' => $boxesCount]);
     }
 }
