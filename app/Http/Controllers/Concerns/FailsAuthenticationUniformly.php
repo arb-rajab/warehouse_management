@@ -26,7 +26,7 @@ trait FailsAuthenticationUniformly
             ->where('email', $email)
             ->first();
 
-        if (! Hash::check($password, $user?->password ?? Hash::make(Str::random(40)))) {
+        if (! Hash::check($password, $user->password ?? Hash::make(Str::random(40)))) {
             $this->failAuthentication();
         }
 
