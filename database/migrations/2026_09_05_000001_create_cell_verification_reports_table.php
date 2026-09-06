@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('cell_verification_round_id')->constrained('cell_verification_rounds')->restrictOnDelete();
             $table->foreignId('cell_id')->constrained('cells')->restrictOnDelete();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('user_id')->constrained('wms_users')->restrictOnDelete();
             $table->boolean('is_correct');
 
             $table->string('expected_cell_state');

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('cell_verification_rounds', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('user_id')->constrained('wms_users')->restrictOnDelete();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 
