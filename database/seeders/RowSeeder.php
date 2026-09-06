@@ -14,9 +14,9 @@ class RowSeeder extends Seeder
      */
     public function run(): void
     {
-        Row::create(['letter' => 'A', 'cells_count' => 20, 'flats_count' => 4]);
-        Row::create(['letter' => 'B', 'cells_count' => 15, 'flats_count' => 3]);
-        Row::create(['letter' => 'C', 'cells_count' => 10, 'flats_count' => 5]);
-        Row::create(['letter' => 'AA', 'cells_count' => 8, 'flats_count' => 2]);
+        Row::firstOrCreate(['letter' => 'A'], ['cells_count' => 20, 'flats_count' => 4]);
+        Row::firstOrCreate(['letter' => 'B'], ['cells_count' => 15, 'flats_count' => 3]);
+        Row::firstOrCreate(['letter' => 'C'], ['cells_count' => 10, 'flats_count' => 5]);
+        Row::firstOrCreate(['letter' => 'AA'], ['cells_count' => 8, 'flats_count' => 2]);
     }
 }
