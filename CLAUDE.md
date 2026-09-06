@@ -326,6 +326,18 @@ rather than reaching for another route around it.
   tens of KB of matches — prefer a single targeted keyword, `-l`/`files_with_matches`
   first to see what matched before dumping content, or a narrower path scope.
 
+## PR watching: webhook-only, no fallback polling
+
+- When subscribed to a PR's activity (`subscribe_pr_activity`), rely on the
+  webhook-driven events alone — don't also schedule a fallback
+  `ScheduleWakeup`/`send_later` check-in "just in case" a webhook is missed.
+  Only schedule a manual poll when watching for something webhooks
+  genuinely don't cover for that PR (confirmed missing coverage), not as a
+  default safety net.
+- This is a repo-scoped fallback: the user's actual preference is durable
+  and cross-repo via `/remember`; this note exists only for sessions in
+  this repository that don't have that memory loaded.
+
 ## External input handling
 
 - Normalize untrusted input before persisting it, don't store it verbatim —

@@ -80,3 +80,23 @@ test('isStaleAfter is false when the pallet is younger than the given day count'
 
     expect($pallet->fresh()->isStaleAfter(5))->toBeFalse();
 });
+
+test('toMapSummaryArray describes the pallet by its product, expiration date, and added_at', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'image_url' => 'https://example.com/widgets.png']);
+    $pallet = Pallet::factory()->create([
+        'product_id' => $product->id,
+        'expiration_date' => '2026-09-15',
+    ]);
+
+    expect($pallet->toMapSummaryArray())->toBe([
+        'product_id' => $product->id,
+        'product_name' => 'Widgets',
+        'product_image_url' => 'https://example.com/widgets.png',
+        'expiration_date' => '2026-09-15',
+        'added_at' => '2026-08-01T10:00:00+00:00',
+    ]);
+
+    Carbon::setTestNow();
+});

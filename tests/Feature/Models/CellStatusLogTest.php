@@ -8,6 +8,7 @@ use App\Models\CellStatusLog;
 use App\Models\CellStatusLogFlag;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -216,6 +217,23 @@ test('the filtered scope can filter by created_within_days, excluding logs older
     expect($results->first()->id)->toBe($withinWindow->id);
 
     Carbon::setTestNow();
+});
+
+test('the filtered scope can filter by row and column, excluding logs on another cell', function () {
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $matchingCell = $row->cells()->where('cell_number', 1)->first();
+
+    $matching = CellStatusLog::factory()->create(['cell_id' => $matchingCell->id]);
+    CellStatusLog::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]); // noise: same row, other column
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
+
+    $request = Request::create('/', 'GET', ['row_id' => $row->id, 'column_number' => 1]);
+
+    $results = CellStatusLog::query()->filtered($request)->get();
+
+    expect($results)->toHaveCount(1);
+    expect($results->first()->id)->toBe($matching->id);
 });
 
 test('the filtered scope can filter by multiple actions at once, excluding the remaining action', function () {

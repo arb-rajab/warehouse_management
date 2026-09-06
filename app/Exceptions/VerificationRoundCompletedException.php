@@ -12,8 +12,12 @@ use Illuminate\Http\Request;
  */
 class VerificationRoundCompletedException extends Exception
 {
+    public readonly string $errorCode;
+
     public function __construct()
     {
+        $this->errorCode = 'verification_round_completed';
+
         parent::__construct(__('messages.verification_round_completed'));
     }
 
@@ -21,7 +25,7 @@ class VerificationRoundCompletedException extends Exception
     {
         return response()->json([
             'message' => $this->getMessage(),
-            'error_code' => 'verification_round_completed',
+            'error_code' => $this->errorCode,
         ], 409);
     }
 }
