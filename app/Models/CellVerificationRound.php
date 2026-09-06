@@ -30,6 +30,13 @@ class CellVerificationRound extends Model
     use HasFactory;
 
     /**
+     * Columns needed by CellVerificationRoundResource — shared by every listing.
+     *
+     * @var list<string>
+     */
+    public const array SELECT_COLUMNS = ['id', 'user_id', 'completed_at', 'created_at'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

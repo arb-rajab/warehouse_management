@@ -30,6 +30,7 @@ class CellVerificationRoundController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $rounds = CellVerificationRound::query()
+            ->select(CellVerificationRound::SELECT_COLUMNS)
             ->with('user:id,name')
             ->withCount('reports')
             ->filtered($request)
@@ -60,6 +61,7 @@ class CellVerificationRoundController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $reports = CellVerificationReport::query()
+            ->select(CellVerificationReport::SELECT_COLUMNS)
             ->with(CellVerificationReport::WITH_DETAILS)
             ->where('cell_verification_round_id', $cellVerificationRound->id)
             ->filtered($request)
@@ -97,6 +99,7 @@ class CellVerificationRoundController extends Controller
             ]);
 
             $reports = CellVerificationReport::query()
+                ->select(CellVerificationReport::SELECT_COLUMNS)
                 ->with(CellVerificationReport::WITH_DETAILS)
                 ->where('cell_verification_round_id', $cellVerificationRound->id)
                 ->filtered($request)

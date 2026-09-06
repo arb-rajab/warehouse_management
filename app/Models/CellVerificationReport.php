@@ -70,6 +70,18 @@ class CellVerificationReport extends Model
     ];
 
     /**
+     * Columns needed by CellVerificationReportResource/CSV export — shared by every listing.
+     *
+     * @var list<string>
+     */
+    public const array SELECT_COLUMNS = [
+        'id', 'cell_verification_round_id', 'cell_id', 'user_id', 'is_correct',
+        'expected_cell_state', 'expected_product_id', 'expected_boxes_count', 'expected_expiration_date',
+        'reported_cell_state', 'reported_product_id', 'reported_boxes_count', 'reported_expiration_date',
+        'note', 'created_at',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

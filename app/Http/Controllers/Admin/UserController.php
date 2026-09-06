@@ -56,6 +56,7 @@ class UserController extends Controller
         CellStatusLog::attachNextLogs($logs->getCollection());
 
         $reports = CellVerificationReport::query()
+            ->select(CellVerificationReport::SELECT_COLUMNS)
             ->with(CellVerificationReport::WITH_DETAILS)
             ->where('user_id', $user->id)
             ->sorted($request)
