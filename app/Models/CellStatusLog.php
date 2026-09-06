@@ -70,8 +70,9 @@ class CellStatusLog extends Model
      * performed the action (rapid_actions, off_hours, quick_flip) plus which
      * admin acknowledged it, so only the admin panel's listings load them.
      * `CellStatusLogResource` withholds the `flagged`/`flags` keys from a
-     * non-admin viewer besides — a worker reading the mobile log feed must not
-     * be able to see which of their own actions the heuristics caught.
+     * non-admin viewer besides, and `FiltersCellStatusLogs` drops the `flagged`
+     * filter for one — a worker reading the mobile log feed must not be able to
+     * see which of their own actions the heuristics caught.
      *
      * @var list<string>
      */
@@ -246,11 +247,6 @@ class CellStatusLog extends Model
      * (not `$request->validated()`) so an absent filter is skipped rather than
      * matched against null.
      *
-     * The `flagged` filter is the one exception: it is ignored for a non-admin
-     * viewer, since narrowing a listing to flagged rows would reveal the
-     * anti-fraud state by inclusion even though CellStatusLogResource withholds
-     * the `flagged`/`flags` keys themselves.
-     *
      * @param  Builder<CellStatusLog>  $query
      */
     #[Scope]
@@ -275,18 +271,7 @@ class CellStatusLog extends Model
                     ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
             }))
-            ->when($request->boolean('flagged') && self::viewerMaySeeFlags($request), fn (Builder $q) => $q->whereHas('flags'));
-    }
-
-    /**
-     * Whether the caller behind this request may see rule-based flag data at
-     * all — the admin panel may, the mobile app's own workers may not.
-     */
-    private static function viewerMaySeeFlags(Request $request): bool
-    {
-        $viewer = $request->user();
-
-        return $viewer instanceof User && $viewer->isAdmin();
+            ->when($request->boolean('flagged'), fn (Builder $q) => $q->whereHas('flags'));
     }
 
     /**

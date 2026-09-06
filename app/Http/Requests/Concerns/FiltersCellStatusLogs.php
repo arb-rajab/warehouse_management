@@ -20,6 +20,27 @@ trait FiltersCellStatusLogs
     protected function prepareForValidation(): void
     {
         $this->normalizeBooleanFilter('flagged');
+
+        if (! $this->viewerMaySeeFlags()) {
+            $this->merge(['flagged' => false]);
+        }
+    }
+
+    /**
+     * The `flagged` filter is admin-only, and dropping it is a boundary concern
+     * rather than a query one: `CellStatusLog::filtered()` stays a pure function
+     * of the request's filter params. Narrowing a listing to flagged rows would
+     * reveal the rule-based anti-fraud state by inclusion even though
+     * `CellStatusLogResource` withholds the `flagged`/`flags` keys themselves,
+     * and those flags are raised against the very worker doing the reading.
+     * Neutralized to `false` rather than removed so the `boolean` rule below
+     * still sees a valid value.
+     */
+    private function viewerMaySeeFlags(): bool
+    {
+        $viewer = $this->user();
+
+        return $viewer instanceof User && $viewer->isAdmin();
     }
 
     /**
