@@ -113,6 +113,8 @@
         "show": {
             "title": "Actions by {name}",
             "editUser": "Edit user",
+            "actionsTitle": "Actions",
+            "reportsTitle": "Verification reports",
             "empty": "No actions yet."
         },
         "fields": {
@@ -266,6 +268,7 @@
             "noProductsFound": "No products found."
         },
         "columns": {
+            "round": "Round",
             "cell": "Cell",
             "correctness": "Correctness",
             "expected": "Expected",

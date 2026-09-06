@@ -4,9 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
-import { cellLog, user } from '@/testing/factories';
+import {
+    cellLog,
+    cellVerificationReport,
+    paginated,
+    user,
+} from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { CellStatusLog, Paginated, User } from '@/types/admin';
+import type {
+    CellStatusLog,
+    CellVerificationReport,
+    User,
+} from '@/types/admin';
 import Show from './Show.vue';
 
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
@@ -26,25 +35,12 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function paginatedLogs(logs: CellStatusLog[]): Paginated<CellStatusLog> {
-    return {
-        data: logs,
-        meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 20,
-            total: logs.length,
-            from: logs.length ? 1 : null,
-            to: logs.length,
-            links: [],
-        },
-    };
-}
-
 function mountPage(
     logs: CellStatusLog[],
     userOverrides: Partial<User> = {},
     perPage = 20,
+    reports: CellVerificationReport[] = [],
+    reportsPerPage = 20,
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/users/7',
@@ -54,8 +50,9 @@ function mountPage(
     return mount(Show, {
         props: {
             user: user(userOverrides),
-            logs: paginatedLogs(logs),
-            filters: { per_page: perPage },
+            logs: paginated(logs, perPage),
+            reports: paginated(reports, reportsPerPage),
+            filters: { per_page: perPage, reports_per_page: reportsPerPage },
         },
     });
 }
@@ -82,10 +79,13 @@ describe('Users Show', () => {
         expect(editLink?.attributes('href')).toBe('/admin/users/9/edit');
     });
 
-    it('renders every column header, excluding Done By', () => {
+    it('renders every action column header, excluding Done By', () => {
         const wrapper = mountPage([]);
 
-        const headers = wrapper.findAll('thead th').map((th) => th.text());
+        const headers = wrapper
+            .findAll('table')[0]
+            .findAll('thead th')
+            .map((th) => th.text());
         expect(headers).toEqual([
             t('cellLog.columns.cell'),
             t('cellLog.columns.action'),
@@ -233,7 +233,7 @@ describe('Users Show', () => {
 
         const wrapper = mountPage([transferredOut, transferredIn]);
 
-        expect(wrapper.findAll('tbody tr')).toHaveLength(1);
+        expect(wrapper.findAll('table')[0].findAll('tbody tr')).toHaveLength(1);
         const actionCell = rowCells(wrapper)[1];
         expect(actionCell.text()).toContain(t('cellLog.actions.transferred'));
     });
@@ -264,22 +264,100 @@ describe('Users Show', () => {
         expect(rowCells(wrapper)[3].text()).toContain(formatDate('2026-09-01'));
     });
 
-    it('preselects the current per-page value in the page-size selector', () => {
+    it('preselects the current per-page value in the actions page-size selector', () => {
         const wrapper = mountPage([], { id: 7 }, 50);
 
-        expect((wrapper.get('select').element as HTMLSelectElement).value).toBe(
-            '50',
-        );
+        expect(
+            (wrapper.findAll('select')[0].element as HTMLSelectElement).value,
+        ).toBe('50');
     });
 
-    it('requests the new page size when the selector changes', async () => {
-        const wrapper = mountPage([], { id: 7 }, 25);
+    it('requests the new page size when the actions selector changes, preserving the reports page size', async () => {
+        const wrapper = mountPage([], { id: 7 }, 25, [], 15);
 
-        await wrapper.get('select').setValue('50');
+        await wrapper.findAll('select')[0].setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/users/7',
-            { per_page: 50 },
+            { per_page: 50, reports_per_page: 15 },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('renders every reports column header', () => {
+        const wrapper = mountPage([]);
+
+        const headers = wrapper
+            .findAll('table')[1]
+            .findAll('thead th')
+            .map((th) => th.text());
+        expect(headers).toEqual([
+            t('cellVerificationReport.columns.round'),
+            t('cellVerificationReport.columns.cell'),
+            t('cellVerificationReport.columns.correctness'),
+            t('cellVerificationReport.columns.expected'),
+            t('cellVerificationReport.columns.reported'),
+            t('cellVerificationReport.columns.note'),
+            t('cellVerificationReport.columns.when'),
+        ]);
+    });
+
+    it('shows the empty message when there are no verification reports', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.text()).toContain(t('cellVerificationReport.empty'));
+    });
+
+    it('links a report row to its round and cell, and shows its correctness/expected/reported/note/when', () => {
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({
+                id: 3,
+                cell_verification_round_id: 42,
+                is_correct: false,
+                cell: { row_letter: 'C', cell_number: 4, flat_number: 1 },
+                note: 'Missing boxes',
+                created_at: '2026-08-02T09:00:00Z',
+            }),
+        ]);
+
+        const reportRow = wrapper.findAll('table')[1].findAll('tbody tr')[0];
+        const cells = reportRow.findAll('td');
+
+        const roundLink = cells[0].get('a');
+        expect(roundLink.attributes('href')).toBe(
+            '/admin/cell-verification-rounds/42',
+        );
+        expect(roundLink.text()).toContain('#42');
+
+        const cellLink = cells[1].get('a');
+        expect(cellLink.attributes('href')).toBe('/admin/rows/C');
+        expect(cellLink.text()).toContain('C4·1');
+
+        expect(cells[2].text()).toContain(
+            t('cellVerificationReport.incorrect'),
+        );
+        expect(cells[5].text()).toBe('Missing boxes');
+        expect(cells[6].text()).toContain(
+            formatDateTime('2026-08-02T09:00:00Z'),
+        );
+    });
+
+    it('preselects the current per-page value in the reports page-size selector', () => {
+        const wrapper = mountPage([], {}, 20, [], 50);
+
+        expect(
+            (wrapper.findAll('select')[1].element as HTMLSelectElement).value,
+        ).toBe('50');
+    });
+
+    it('requests the new page size when the reports selector changes, preserving the actions page size', async () => {
+        const wrapper = mountPage([], { id: 7 }, 25, [], 15);
+
+        await wrapper.findAll('select')[1].setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/users/7',
+            { per_page: 25, reports_per_page: 50 },
             { preserveState: true, replace: true },
         );
     });

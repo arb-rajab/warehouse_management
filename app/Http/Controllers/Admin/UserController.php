@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\CellStatusLogResource;
+use App\Http\Resources\CellVerificationReportResource;
 use App\Http\Resources\UserResource;
 use App\Models\CellStatusLog;
+use App\Models\CellVerificationReport;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,6 +43,7 @@ class UserController extends Controller
     public function show(Request $request, User $user): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
+        $reportsPerPage = $this->resolvePerPage($request, 20, 'reports_per_page');
 
         $logs = CellStatusLog::query()
             ->forListing()
@@ -51,10 +54,18 @@ class UserController extends Controller
 
         CellStatusLog::attachNextLogs($logs->getCollection());
 
+        $reports = CellVerificationReport::query()
+            ->with(CellVerificationReport::WITH_DETAILS)
+            ->where('user_id', $user->id)
+            ->sorted($request)
+            ->paginate($reportsPerPage, ['*'], 'reports_page')
+            ->withQueryString();
+
         return Inertia::render('Admin/Users/Show', [
             'user' => new UserResource($user->loadMissing('roles:id,name')),
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
-            'filters' => ['per_page' => $perPage],
+            'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
+            'filters' => ['per_page' => $perPage, 'reports_per_page' => $reportsPerPage],
         ]);
     }
 

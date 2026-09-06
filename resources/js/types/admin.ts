@@ -34,13 +34,23 @@ export interface Row {
 
 /**
  * The `filters` prop shape for an admin listing whose only server-driven
- * state is its page size — Rows/Index.vue, Users/Index.vue, Users/Show.vue.
+ * state is its page size — Rows/Index.vue, Users/Index.vue.
  * A listing with its own filters/sort embeds `per_page` directly into its
  * own filters interface (see ProductFilters, CellStatusLogFilters) instead
  * of extending this.
  */
 export interface PerPageFilters {
     per_page?: number;
+}
+
+/**
+ * Users/Show.vue's filters — it renders two independently paginated tables
+ * (the user's cell-status-log actions and their cell-verification reports),
+ * each with its own page size so changing one doesn't reset the other.
+ */
+export interface UserShowFilters {
+    per_page?: number;
+    reports_per_page?: number;
 }
 
 export interface CellPallet {

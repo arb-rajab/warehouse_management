@@ -21,7 +21,9 @@ class CellVerificationRoundController extends Controller
 {
     /**
      * List verification rounds — one per mobile worker's walkthrough. Each
-     * round's own reports are viewed via show(), not listed here.
+     * round's own reports are viewed via show(), not listed here (a given
+     * user's reports across every round are also listed on their admin user
+     * page, see UserController::show()).
      */
     public function index(FilterCellVerificationRoundsRequest $request): InertiaResponse
     {
@@ -49,7 +51,9 @@ class CellVerificationRoundController extends Controller
 
     /**
      * Show one round and the reports made during it, filterable/paginated on
-     * their own — this is the only place a round's reports are listed.
+     * their own — this is the only place a round's reports are listed scoped
+     * to that one round (UserController::show() lists a user's reports
+     * across every round instead, unfiltered).
      */
     public function show(FilterCellVerificationReportsRequest $request, CellVerificationRound $cellVerificationRound): InertiaResponse
     {

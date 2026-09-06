@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\CellVerificationReport;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -203,6 +205,103 @@ test('viewing the action history for a non-existent user returns a 404', functio
     $response = $this->get('/admin/users/999999');
 
     $response->assertNotFound();
+});
+
+test('an authenticated admin can view a users verification reports with every property the table renders', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $report = CellVerificationReport::factory()->create(['user_id' => $target->id, 'note' => 'Looked fine']);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Users/Show')
+            ->has('reports.data', 1)
+            ->has('reports.data.0', fn (Assert $reportProp) => $reportProp
+                ->where('id', $report->id)
+                ->where('note', 'Looked fine')
+                ->etc()
+            )
+    );
+});
+
+test('a users verification reports only show their own reports, excluding another users', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $otherUser = User::factory()->mobileUser()->create();
+
+    $matching = CellVerificationReport::factory()->create(['user_id' => $target->id]);
+    CellVerificationReport::factory()->create(['user_id' => $otherUser->id]);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('reports.data', 1)
+            ->where('reports.data.0.id', $matching->id)
+    );
+});
+
+test('a users verification reports paginate instead of returning everything at once', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $cell = Cell::factory()->create();
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    assertInertiaPaginates($response, 'reports', 20, 30);
+});
+
+test('a users verification reports respect a reports_per_page query parameter independently of the actions per_page', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $cell = Cell::factory()->create();
+    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
+
+    $response = $this->get("/admin/users/{$target->id}?per_page=10&reports_per_page=25");
+
+    assertInertiaPaginates($response, 'logs', 10, 30);
+    assertInertiaPaginates($response, 'reports', 25, 30);
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('filters.per_page', 10)
+        ->where('filters.reports_per_page', 25));
+});
+
+test('an out-of-range reports_per_page value falls back to the default page size for a users verification reports', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $cell = Cell::factory()->create();
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
+
+    $response = $this->get("/admin/users/{$target->id}?reports_per_page=999");
+
+    assertInertiaPaginates($response, 'reports', 20, 30);
+});
+
+test('a users verification reports default to newest-first', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $older = backdate(CellVerificationReport::factory()->create(['user_id' => $target->id]), '2026-08-01 10:00:00');
+    $newer = backdate(CellVerificationReport::factory()->create(['user_id' => $target->id]), '2026-08-01 12:00:00');
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('reports.data', 2)
+            ->where('reports.data.0.id', $newer->id)
+            ->where('reports.data.1.id', $older->id)
+    );
+});
+
+test('a mobile app user cannot view a users verification reports', function () {
+    actingAsMobilePanelUser();
+    $target = User::factory()->mobileUser()->create();
+
+    $response = $this->get("/admin/users/{$target->id}");
+
+    $response->assertForbidden();
 });
 
 test('an admin can create a mobile user', function () {

@@ -21,12 +21,14 @@ abstract class Controller
 
     /**
      * Resolve the page size for an admin table listing from the request's
-     * `per_page` query param, restricted to PerPageOptions::VALUES — falls
-     * back to $default when absent or not one of the allowed values.
+     * `$key` query param (`per_page` by default — pass a distinct `$key` when
+     * a page renders two independently paginated tables, e.g.
+     * `reports_per_page`), restricted to PerPageOptions::VALUES — falls back
+     * to $default when absent or not one of the allowed values.
      */
-    protected function resolvePerPage(Request $request, int $default): int
+    protected function resolvePerPage(Request $request, int $default, string $key = 'per_page'): int
     {
-        $perPage = $request->integer('per_page');
+        $perPage = $request->integer($key);
 
         return in_array($perPage, PerPageOptions::VALUES, true) ? $perPage : $default;
     }

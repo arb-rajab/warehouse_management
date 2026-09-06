@@ -58,6 +58,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |
 | resources/js/types/admin.ts | .ai/rules/types.md |
-| resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/Users/Show.vue,resources/js/lib/cellStatusLogDisplay.ts | .ai/rules/users-js-lib.md |
+| resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/Users/Show.vue,resources/js/lib/cellStatusLogDisplay.ts,resources/js/pages/Admin/CellVerificationRounds/Show.vue,resources/js/lib/cellVerificationReportDisplay.ts,resources/js/components/CellVerificationCorrectnessBadge.vue | .ai/rules/users-js-lib.md |
 | app/Http/Controllers/Api/V1/PalletController.php | .ai/rules/v1.md |
 | resources/views/** | .ai/rules/views.md |

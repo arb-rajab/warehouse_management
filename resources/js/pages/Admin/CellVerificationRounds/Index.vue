@@ -7,6 +7,7 @@ import {
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { edit as editUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
@@ -264,7 +265,14 @@ function onPerPageChange(perPage: number): void {
                         #{{ row.id }}
                     </TableLink>
                 </td>
-                <td class="px-4 py-2">{{ row.user?.name }}</td>
+                <td class="px-4 py-2">
+                    <TableLink
+                        v-if="row.user"
+                        :href="editUser({ id: row.user.id })"
+                    >
+                        {{ row.user.name }}
+                    </TableLink>
+                </td>
                 <td class="px-4 py-2">{{ formatDateTime(row.started_at) }}</td>
                 <td class="px-4 py-2">
                     <span
