@@ -275,7 +275,7 @@ class CellStatusLog extends Model
                     ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
             }))
-            ->when($request->boolean('flagged') && static::viewerMaySeeFlags($request), fn (Builder $q) => $q->whereHas('flags'));
+            ->when($request->boolean('flagged') && self::viewerMaySeeFlags($request), fn (Builder $q) => $q->whereHas('flags'));
     }
 
     /**
