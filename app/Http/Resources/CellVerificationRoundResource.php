@@ -4,11 +4,12 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 /**
  * @property-read int $id
- * @property-read \Illuminate\Support\Carbon $created_at
- * @property-read \Illuminate\Support\Carbon|null $completed_at
+ * @property-read Carbon $created_at
+ * @property-read Carbon|null $completed_at
  * @property-read int|null $reports_count
  */
 class CellVerificationRoundResource extends JsonResource
