@@ -47,6 +47,7 @@ class UserController extends Controller
 
         $logs = CellStatusLog::query()
             ->forListing()
+            ->with(CellStatusLog::WITH_FLAG_DETAILS)
             ->where('user_id', $user->id)
             ->sorted($request)
             ->paginate($perPage)

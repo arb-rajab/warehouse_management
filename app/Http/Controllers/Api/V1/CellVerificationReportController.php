@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\CellVerificationService;
 use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class CellVerificationReportController extends Controller
 {
@@ -17,6 +18,7 @@ class CellVerificationReportController extends Controller
 
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
+    #[DocumentedResponse(403, description: 'The verification round belongs to another user.', type: 'array{message: string}')]
     #[DocumentedResponse(409, description: 'The verification round has already been completed (`error_code`: `verification_round_completed`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationReportRequest $request): JsonResponse
     {
@@ -24,6 +26,8 @@ class CellVerificationReportController extends Controller
         $user = $request->user();
 
         $round = CellVerificationRound::query()->findOrFail($request->integer('cell_verification_round_id'));
+
+        Gate::authorize('update', $round);
 
         $report = $this->cellVerifications->report($round, $request->integer('cell_id'), $user->id, [
             'is_correct' => $request->boolean('is_correct'),

@@ -140,7 +140,21 @@ test('a worker cannot report against another user\'s round', function () {
         'is_correct' => true,
     ]);
 
-    $response->assertInvalid(['cell_verification_round_id']);
+    $response->assertForbidden();
+    $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('an unauthenticated caller cannot report against a round and nothing changes', function () {
+    $round = CellVerificationRound::factory()->create();
+    $cell = makeEmptyCell();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => true,
+    ]);
+
+    $response->assertUnauthorized();
     $this->assertDatabaseCount('cell_verification_reports', 0);
 });
 

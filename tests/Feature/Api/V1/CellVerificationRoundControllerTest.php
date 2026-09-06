@@ -28,6 +28,13 @@ test('an authenticated worker can start a verification round', function () {
     ]);
 });
 
+test('an unauthenticated caller cannot start a verification round and nothing changes', function () {
+    $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertUnauthorized();
+    $this->assertDatabaseCount('cell_verification_rounds', 0);
+});
+
 test('a worker can list only their own verification rounds, most recent first', function () {
     $user = actingAsMobileUser();
 
@@ -64,6 +71,14 @@ test('the round listing paginates beyond one page', function () {
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(20);
     expect($response->json('meta.total'))->toBe(25);
+});
+
+test('an unauthenticated caller cannot list verification rounds', function () {
+    CellVerificationRound::factory()->create();
+
+    $response = $this->getJson('/api/v1/cell-verification-rounds');
+
+    $response->assertUnauthorized();
 });
 
 test('a worker can view one of their own rounds, including its reports in reported order', function () {
@@ -190,6 +205,14 @@ test('viewing a non-existent round returns a 404', function () {
     $response->assertNotFound();
 });
 
+test('an unauthenticated caller cannot view a round', function () {
+    $round = CellVerificationRound::factory()->create();
+
+    $response = $this->getJson("/api/v1/cell-verification-rounds/{$round->id}");
+
+    $response->assertUnauthorized();
+});
+
 test('a worker can complete their own round', function () {
     $user = actingAsMobileUser();
     $round = CellVerificationRound::factory()->for($user)->create();
@@ -219,6 +242,15 @@ test('a worker cannot complete another user\'s round', function () {
     $response = $this->postJson("/api/v1/cell-verification-rounds/{$round->id}/complete");
 
     $response->assertForbidden();
+    expect($round->refresh()->completed_at)->toBeNull();
+});
+
+test('an unauthenticated caller cannot complete a round and nothing changes', function () {
+    $round = CellVerificationRound::factory()->create();
+
+    $response = $this->postJson("/api/v1/cell-verification-rounds/{$round->id}/complete");
+
+    $response->assertUnauthorized();
     expect($round->refresh()->completed_at)->toBeNull();
 });
 

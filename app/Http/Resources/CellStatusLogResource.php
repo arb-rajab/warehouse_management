@@ -15,6 +15,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
 
 /**
+ * The `flagged`/`flags` keys are admin-only: they carry the rule-based
+ * anti-fraud signal raised against the log's own actor, so they are withheld
+ * from a non-admin (mobile app) viewer — see CellStatusLog::WITH_FLAG_DETAILS.
+ *
  * @property-read int $id
  * @property-read CellLogAction $action
  * @property-read CellState $from_state
@@ -42,6 +46,10 @@ class CellStatusLogResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var User|null $viewer */
+        $viewer = $request->user();
+        $viewerIsAdmin = $viewer?->isAdmin() ?? false;
+
         return [
             'id' => $this->id,
             'action' => $this->action->value,
@@ -63,15 +71,18 @@ class CellStatusLogResource extends JsonResource
             'created_at' => $this->created_at->toIso8601String(),
             'next_log_at' => $this->next_log_at?->toIso8601String(),
             'duration_seconds' => $this->duration_seconds,
-            'flagged' => (bool) $this->flagged,
-            'flags' => $this->whenLoaded('flags', fn () => $this->flags->map(fn (CellStatusLogFlag $flag): array => [
-                'id' => $flag->id,
-                'reason' => $flag->reason->value,
-                'acknowledged' => $flag->acknowledged_at !== null,
-                'acknowledged_by' => $flag->relationLoaded('acknowledgedBy') && $flag->acknowledgedBy !== null
-                    ? ['id' => $flag->acknowledgedBy->id, 'name' => $flag->acknowledgedBy->name]
-                    : null,
-            ])->all()),
+            'flagged' => $this->when($viewerIsAdmin, fn (): bool => (bool) $this->flagged),
+            'flags' => $this->when(
+                $viewerIsAdmin,
+                fn () => $this->whenLoaded('flags', fn (): array => $this->flags->map(fn (CellStatusLogFlag $flag): array => [
+                    'id' => $flag->id,
+                    'reason' => $flag->reason->value,
+                    'acknowledged' => $flag->acknowledged_at !== null,
+                    'acknowledged_by' => $flag->relationLoaded('acknowledgedBy') && $flag->acknowledgedBy !== null
+                        ? ['id' => $flag->acknowledgedBy->id, 'name' => $flag->acknowledgedBy->name]
+                        : null,
+                ])->all()),
+            ),
         ];
     }
 }
