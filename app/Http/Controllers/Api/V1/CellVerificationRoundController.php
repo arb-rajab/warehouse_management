@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 
 class CellVerificationRoundController extends Controller
 {
@@ -43,12 +44,9 @@ class CellVerificationRoundController extends Controller
      * loaded in the order they were reported, so the mobile app can let a
      * worker review a past (completed or still-open) walk cell by cell.
      */
-    public function show(Request $request, CellVerificationRound $cellVerificationRound): CellVerificationRoundResource
+    public function show(CellVerificationRound $cellVerificationRound): CellVerificationRoundResource
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        $this->cellVerifications->authorizeRound($cellVerificationRound, $user->id);
+        Gate::authorize('view', $cellVerificationRound);
 
         $cellVerificationRound->loadCount('reports');
         $cellVerificationRound->load(['reports' => fn ($query) => $query
@@ -71,12 +69,11 @@ class CellVerificationRoundController extends Controller
             ->setStatusCode(201);
     }
 
-    public function complete(Request $request, CellVerificationRound $cellVerificationRound): CellVerificationRoundResource
+    public function complete(CellVerificationRound $cellVerificationRound): CellVerificationRoundResource
     {
-        /** @var User $user */
-        $user = $request->user();
+        Gate::authorize('update', $cellVerificationRound);
 
-        $round = $this->cellVerifications->completeRound($cellVerificationRound, $user->id);
+        $round = $this->cellVerifications->completeRound($cellVerificationRound);
 
         return new CellVerificationRoundResource($round);
     }
