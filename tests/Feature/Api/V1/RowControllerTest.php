@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list rows with every property the app reads', function () {
     actingAsMobileUser();
@@ -22,6 +23,23 @@ test('an authenticated worker can list rows with every property the app reads', 
     ]);
     expect(collect($response->json('data'))->pluck('letter'))->toContain('Y');
     expect($otherRow->id)->not->toBeNull();
+});
+
+test('the row listing computes has_pallets without an exists query per row', function () {
+    actingAsMobileUser();
+
+    Row::factory()->count(5)->create(['cells_count' => 1, 'flats_count' => 1])->each(function (Row $row) {
+        Pallet::factory()->create(['cell_id' => $row->cells()->first()->id]);
+    });
+
+    DB::enableQueryLog();
+    $response = $this->getJson('/api/v1/rows');
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('has_pallets')->unique()->all())->toBe([true]);
+    expect($queryCount)->toBeLessThan(5);
 });
 
 test('the row listing paginates instead of returning everything at once', function () {
