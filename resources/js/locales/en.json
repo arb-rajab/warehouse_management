@@ -5,7 +5,7 @@
         "rows": "Rows",
         "map": "Map",
         "cellLog": "Cell Log",
-        "cellVerificationReports": "Verification Reports",
+        "cellVerificationRounds": "Verification Rounds",
         "products": "Products",
         "users": "Users",
         "logout": "Log out",
@@ -199,8 +199,45 @@
         },
         "empty": "No activity yet."
     },
+    "cellVerificationRound": {
+        "title": "Cell Verification Rounds",
+        "filters": {
+            "title": "Filters",
+            "close": "Close filters",
+            "user": "Worker",
+            "completed": "Status",
+            "completedAll": "All",
+            "completedYes": "Completed only",
+            "completedNo": "In progress only",
+            "selectedCount": "{count} selected",
+            "from": "From",
+            "to": "To",
+            "withinDays": "Within last (days)",
+            "all": "All",
+            "apply": "Apply filters",
+            "clear": "Clear"
+        },
+        "columns": {
+            "id": "Round",
+            "user": "Worker",
+            "startedAt": "Started",
+            "completedAt": "Completed",
+            "reportsCount": "Reports"
+        },
+        "status": {
+            "completed": "Completed",
+            "inProgress": "In progress"
+        },
+        "empty": "No verification rounds yet.",
+        "show": {
+            "backToList": "Back to rounds",
+            "startedAt": "Started",
+            "completedAt": "Completed",
+            "reportsCount": "{count} reports"
+        }
+    },
     "cellVerificationReport": {
-        "title": "Cell Verification Reports",
+        "title": "Reports",
         "export": "Export CSV",
         "filters": {
             "title": "Filters",
@@ -213,8 +250,6 @@
             "product": "Product",
             "row": "Row",
             "column": "Column",
-            "round": "Round",
-            "reportedBy": "Reported by",
             "correctness": "Correctness",
             "correctnessAll": "All",
             "correctnessCorrect": "Correct only",
@@ -231,13 +266,11 @@
             "noProductsFound": "No products found."
         },
         "columns": {
-            "round": "Round",
             "cell": "Cell",
             "correctness": "Correctness",
             "expected": "Expected",
             "reported": "Reported",
             "note": "Note",
-            "reportedBy": "Reported by",
             "when": "When"
         },
         "correct": "Correct",

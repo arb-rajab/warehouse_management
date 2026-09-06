@@ -5,7 +5,7 @@
         "rows": "الممرات",
         "map": "الخريطة",
         "cellLog": "سجل الخلايا",
-        "cellVerificationReports": "تقارير التحقق",
+        "cellVerificationRounds": "جولات التحقق",
         "products": "المنتجات",
         "users": "المستخدمون",
         "logout": "تسجيل الخروج",
@@ -199,8 +199,45 @@
         },
         "empty": "لا يوجد نشاط بعد."
     },
+    "cellVerificationRound": {
+        "title": "جولات التحقق من الخلايا",
+        "filters": {
+            "title": "الفلاتر",
+            "close": "إغلاق الفلاتر",
+            "user": "العامل",
+            "completed": "الحالة",
+            "completedAll": "الكل",
+            "completedYes": "المكتملة فقط",
+            "completedNo": "قيد التنفيذ فقط",
+            "selectedCount": "تم اختيار {count}",
+            "from": "من",
+            "to": "إلى",
+            "withinDays": "خلال آخر (أيام)",
+            "all": "الكل",
+            "apply": "تطبيق الفلاتر",
+            "clear": "مسح"
+        },
+        "columns": {
+            "id": "الجولة",
+            "user": "العامل",
+            "startedAt": "بدأت",
+            "completedAt": "اكتملت",
+            "reportsCount": "التقارير"
+        },
+        "status": {
+            "completed": "مكتملة",
+            "inProgress": "قيد التنفيذ"
+        },
+        "empty": "لا توجد جولات تحقق بعد.",
+        "show": {
+            "backToList": "العودة إلى الجولات",
+            "startedAt": "بدأت",
+            "completedAt": "اكتملت",
+            "reportsCount": "{count} تقرير"
+        }
+    },
     "cellVerificationReport": {
-        "title": "تقارير التحقق من الخلايا",
+        "title": "التقارير",
         "export": "تصدير CSV",
         "filters": {
             "title": "الفلاتر",
@@ -213,8 +250,6 @@
             "product": "المنتج",
             "row": "الممر",
             "column": "العمود",
-            "round": "الجولة",
-            "reportedBy": "بواسطة",
             "correctness": "الصحة",
             "correctnessAll": "الكل",
             "correctnessCorrect": "الصحيح فقط",
@@ -231,13 +266,11 @@
             "noProductsFound": "لم يتم العثور على منتجات."
         },
         "columns": {
-            "round": "الجولة",
             "cell": "الخلية",
             "correctness": "الصحة",
             "expected": "المتوقع",
             "reported": "المُبلَّغ",
             "note": "ملاحظة",
-            "reportedBy": "بواسطة",
             "when": "الوقت"
         },
         "correct": "صحيح",
