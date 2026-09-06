@@ -38,3 +38,11 @@ test('deleting a product referenced by a cell status log nulls the logs product_
 
     expect($log->fresh()->product_id)->toBeNull();
 });
+
+test('boxes_count is nullable for cell-only actions and settable for pallet-quantity actions', function () {
+    $withoutBoxes = CellStatusLog::factory()->create();
+    $withBoxes = CellStatusLog::factory()->withBoxesCount(7)->create();
+
+    expect($withoutBoxes->fresh()->boxes_count)->toBeNull()
+        ->and($withBoxes->fresh()->boxes_count)->toBe(7);
+});
