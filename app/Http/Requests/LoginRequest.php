@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Http\Controllers\Concerns\FailsAuthenticationUniformly;
 use App\Http\Requests\Concerns\ValidatesLoginCredentials;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,17 +17,12 @@ class LoginRequest extends FormRequest
      */
     public function authenticate(): void
     {
-        if (! Auth::guard('web')->attempt($this->only('email', 'password'))) {
-            $this->failAuthentication();
-        }
-
-        /** @var User $user */
-        $user = Auth::guard('web')->user();
+        $user = $this->findUserOrFailUniformly($this->input('email'), $this->input('password'));
 
         if (! $user->isAdmin()) {
-            Auth::guard('web')->logout();
-
             $this->failAuthentication();
         }
+
+        Auth::guard('web')->login($user);
     }
 }

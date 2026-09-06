@@ -27,10 +27,17 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('viewPulse', User::isAdminGate());
 
-        RateLimiter::for('login', function (Request $request): Limit {
-            $key = Str::lower((string) $request->input('email')).'|'.$request->ip();
+        RateLimiter::for('login', function (Request $request): array {
+            $email = Str::lower((string) $request->input('email'));
 
-            return Limit::perMinute(5)->by($key);
+            return [
+                // Per (email, IP): the primary guard, keeps one attacker on
+                // one IP from locking out a legitimate user sharing that email.
+                Limit::perMinute(5)->by($email.'|'.$request->ip()),
+                // Per email only: caps a distributed attack that spreads
+                // guesses across many IPs to dodge the limit above.
+                Limit::perMinute(20)->by($email),
+            ];
         });
 
         RateLimiter::for('api', function (Request $request): Limit {

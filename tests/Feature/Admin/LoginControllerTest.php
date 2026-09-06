@@ -111,6 +111,27 @@ test('login attempts are throttled after too many failures', function () {
     $this->assertGuest();
 });
 
+test('login attempts against one email are throttled even when spread across many IPs', function () {
+    $user = User::factory()->create(['password' => 'correct-password']);
+
+    foreach (range(1, 20) as $i) {
+        $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertSessionHasErrors('email');
+    }
+
+    $response = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
+        ->post('/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ]);
+
+    $response->assertStatus(429);
+    $this->assertGuest();
+});
+
 test('a logged-in user visiting the login page is redirected away', function () {
     actingAsAdmin();
 
