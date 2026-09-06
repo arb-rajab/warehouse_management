@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -18,14 +17,7 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::query()
-            ->select(['id', 'name', 'email', 'password'])
-            ->where('email', $request->input('email'))
-            ->first();
-
-        if ($user === null || ! Hash::check($request->input('password'), $user->password)) {
-            $this->failAuthentication();
-        }
+        $user = $this->findUserOrFailUniformly($request->input('email'), $request->input('password'));
 
         $token = $user->createToken('mobile');
 

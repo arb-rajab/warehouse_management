@@ -89,6 +89,27 @@ test('login attempts are throttled after too many failures', function () {
     $this->assertDatabaseCount('personal_access_tokens', 0);
 });
 
+test('login attempts against one email are throttled even when spread across many IPs', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+
+    foreach (range(1, 20) as $i) {
+        $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])
+            ->postJson('/api/v1/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+    }
+
+    $response = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
+        ->postJson('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ]);
+
+    $response->assertStatus(429);
+    $this->assertDatabaseCount('personal_access_tokens', 0);
+});
+
 test('a user can log out and their token is deleted', function () {
     $user = User::factory()->mobileUser()->create();
     $token = $user->createToken('test-device');
