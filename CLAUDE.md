@@ -326,6 +326,27 @@ rather than reaching for another route around it.
   tens of KB of matches — prefer a single targeted keyword, `-l`/`files_with_matches`
   first to see what matched before dumping content, or a narrower path scope.
 
+## Scoping review/audit sessions to control token consumption
+
+- Before launching a review/audit agent, scope it to the narrowest set of
+  files/rule files that actually answers the question. A request like "is
+  there a missing index on column X" should be a direct Grep/Read, not a
+  full-subsystem audit agent — reserve broad "review the whole layer" agents
+  for genuinely open-ended audit requests.
+- When an audit does need to span many files, split it into multiple
+  narrower agents by concern (e.g. migrations+tests vs. factories+seeders)
+  rather than one agent reading everything in one pass, if the request can
+  be decomposed that way.
+- Only read the `.ai/rules` files that are actually relevant to the files in
+  scope for the current task — don't re-trigger a full `.ai/rules` index
+  sweep for a narrow follow-up fix that touches 1-2 files.
+- When handing off follow-up work as separate session prompts (e.g. after a
+  review produces a punch list), paste the specific finding/file:line into
+  each prompt so that session doesn't re-derive it from scratch, and set an
+  explicit effort level per prompt — low for mechanical/localized fixes,
+  medium+ only for tasks that require reading application code to resolve a
+  design question first.
+
 ## PR watching: webhook-only, no fallback polling
 
 - When subscribed to a PR's activity (`subscribe_pr_activity`), rely on the
