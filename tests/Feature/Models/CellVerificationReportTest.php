@@ -104,39 +104,12 @@ test('the expected_expiration_date and reported_expiration_date attributes are c
     expect($fresh->reported_expiration_date)->toBeInstanceOf(CarbonImmutable::class);
 });
 
-test('the filtered scope can filter by cell_verification_round_id, excluding another rounds report', function () {
-    $round = CellVerificationRound::factory()->create();
-    $matching = CellVerificationReport::factory()->create(['cell_verification_round_id' => $round->id]);
-    CellVerificationReport::factory()->create(); // noise: another round
-
-    $request = Request::create('/', 'GET', ['cell_verification_round_id' => $round->id]);
-
-    $results = CellVerificationReport::query()->filtered($request)->get();
-
-    expect($results)->toHaveCount(1);
-    expect($results->first()->id)->toBe($matching->id);
-});
-
 test('the filtered scope can filter by cell_id, excluding another cells report', function () {
     $cell = Cell::factory()->create();
     $matching = CellVerificationReport::factory()->create(['cell_id' => $cell->id]);
     CellVerificationReport::factory()->create(); // noise: another cell
 
     $request = Request::create('/', 'GET', ['cell_id' => $cell->id]);
-
-    $results = CellVerificationReport::query()->filtered($request)->get();
-
-    expect($results)->toHaveCount(1);
-    expect($results->first()->id)->toBe($matching->id);
-});
-
-test('the filtered scope can filter by multiple user ids at once, excluding the remaining user', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $matching = CellVerificationReport::factory()->create(['user_id' => $user->id]);
-    CellVerificationReport::factory()->create(['user_id' => $otherUser->id]); // noise
-
-    $request = Request::create('/', 'GET', ['user_id' => [$user->id]]);
 
     $results = CellVerificationReport::query()->filtered($request)->get();
 
@@ -235,16 +208,14 @@ test('the filtered scope can filter by row and column, excluding reports on anot
 });
 
 test('the filtered scope combines multiple filters with AND, not OR', function () {
-    $round = CellVerificationRound::factory()->create();
-    $otherRound = CellVerificationRound::factory()->create();
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+    $cell = Cell::factory()->create();
+    $otherCell = Cell::factory()->create();
 
-    $matching = CellVerificationReport::factory()->create(['cell_verification_round_id' => $round->id, 'user_id' => $user->id]);
-    CellVerificationReport::factory()->create(['cell_verification_round_id' => $round->id, 'user_id' => $otherUser->id]);
-    CellVerificationReport::factory()->create(['cell_verification_round_id' => $otherRound->id, 'user_id' => $user->id]);
+    $matching = CellVerificationReport::factory()->create(['cell_id' => $cell->id, 'is_correct' => true]);
+    CellVerificationReport::factory()->create(['cell_id' => $cell->id, 'is_correct' => false]);
+    CellVerificationReport::factory()->create(['cell_id' => $otherCell->id, 'is_correct' => true]);
 
-    $request = Request::create('/', 'GET', ['cell_verification_round_id' => $round->id, 'user_id' => [$user->id]]);
+    $request = Request::create('/', 'GET', ['cell_id' => $cell->id, 'is_correct' => '1']);
 
     $results = CellVerificationReport::query()->filtered($request)->get();
 

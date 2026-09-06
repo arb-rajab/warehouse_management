@@ -124,10 +124,14 @@ class CellVerificationReport extends Model
     }
 
     /**
-     * Scope a query by the round/cell/user/correctness/product/date-range
-     * filters shared by the admin listing. Reads straight off the request
-     * (not `$request->validated()`) so an absent filter is skipped rather
-     * than matched against null, same convention as CellStatusLog::filtered().
+     * Scope a query by the cell/correctness/product/date-range filters
+     * shared by the admin listing of one round's reports (the round itself
+     * is always scoped by the caller via a plain `where`, not through this
+     * filter — every report belongs to exactly one round and one user, so
+     * filtering by either here would be redundant). Reads straight off the
+     * request (not `$request->validated()`) so an absent filter is skipped
+     * rather than matched against null, same convention as
+     * CellStatusLog::filtered().
      *
      * @param  Builder<CellVerificationReport>  $query
      */
@@ -137,9 +141,7 @@ class CellVerificationReport extends Model
         $productIdsFilter = $this->productIdsFromRequest($request);
 
         $query
-            ->when($request->filled('cell_verification_round_id'), fn (Builder $q) => $q->where('cell_verification_round_id', $request->integer('cell_verification_round_id')))
             ->when($request->filled('cell_id'), fn (Builder $q) => $q->where('cell_id', $request->integer('cell_id')))
-            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
             ->when($request->has('is_correct'), fn (Builder $q) => $q->where('is_correct', $request->boolean('is_correct')))
             ->when($productIdsFilter !== null, fn (Builder $q) => $q->where(function (Builder $productQuery) use ($productIdsFilter) {
                 $productQuery->whereIn('expected_product_id', $productIdsFilter)

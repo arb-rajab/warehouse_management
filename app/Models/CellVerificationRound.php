@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
@@ -82,5 +83,42 @@ class CellVerificationRound extends Model
     protected function unfinished(Builder $query): void
     {
         $query->whereNull('completed_at');
+    }
+
+    /**
+     * Scope a query by the user/completion/date-range filters used by the
+     * admin rounds listing. Reads straight off the request (not
+     * `$request->validated()`) so an absent filter is skipped rather than
+     * matched against null, same convention as CellStatusLog::filtered().
+     *
+     * @param  Builder<CellVerificationRound>  $query
+     */
+    #[Scope]
+    protected function filtered(Builder $query, Request $request): void
+    {
+        $query
+            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
+            ->when($request->has('completed'), fn (Builder $q) => $request->boolean('completed')
+                ? $q->whereNotNull('completed_at')
+                : $q->whereNull('completed_at'))
+            ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
+            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
+            ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))));
+    }
+
+    /**
+     * Sort a query of verification rounds by `created_at`, per the
+     * `sort_direction` request param — always descending by default, tied
+     * off `id` so pagination stays stable, same convention as
+     * CellStatusLog::sorted().
+     *
+     * @param  Builder<CellVerificationRound>  $query
+     */
+    #[Scope]
+    protected function sorted(Builder $query, Request $request): void
+    {
+        $direction = $request->string('sort_direction')->value() === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy('created_at', $direction)->orderBy('id', $direction);
     }
 }

@@ -17,7 +17,7 @@ import {
 import { computed, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
-import { index as cellVerificationReportsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
+import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -45,8 +45,8 @@ const navItems = computed(() => [
         icon: ArrowLeftRight,
     },
     {
-        labelKey: 'nav.cellVerificationReports',
-        href: cellVerificationReportsIndex().url,
+        labelKey: 'nav.cellVerificationRounds',
+        href: cellVerificationRoundsIndex().url,
         icon: ClipboardCheck,
     },
     { labelKey: 'nav.products', href: productsIndex().url, icon: Package },

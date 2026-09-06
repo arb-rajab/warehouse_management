@@ -317,12 +317,41 @@ export interface CellVerificationReport {
     created_at: string;
 }
 
+export interface CellVerificationRound {
+    id: number;
+    started_at: string;
+    completed_at: string | null;
+    reports_count?: number;
+    reports?: CellVerificationReport[];
+    user?: {
+        id: number;
+        name: string;
+    };
+}
+
+export interface CellVerificationRoundFilters {
+    user_id?: number[];
+    completed?: boolean;
+    date_from?: string;
+    date_to?: string;
+    created_within_days?: number;
+    sort_direction?: 'asc' | 'desc';
+    per_page?: number;
+}
+
+export interface CellVerificationRoundFilterOptions {
+    users: { id: number; name: string }[];
+}
+
+/**
+ * Filters for one round's own reports listing
+ * (Admin\CellVerificationRoundController::show()) — the round itself is
+ * scoped by the route, not a filter field here.
+ */
 export interface CellVerificationReportFilters {
-    cell_verification_round_id?: number;
     cell_id?: number;
     row_id?: number;
     column_number?: number;
-    user_id?: number[];
     product_id?: number[];
     is_correct?: boolean;
     date_from?: string;
@@ -332,7 +361,5 @@ export interface CellVerificationReportFilters {
     per_page?: number;
 }
 
-export interface CellVerificationReportFilterOptions
-    extends RowAndColumnFilterOptions, ProductFilterOptions {
-    users: { id: number; name: string }[];
-}
+export type CellVerificationReportFilterOptions = RowAndColumnFilterOptions &
+    ProductFilterOptions;
