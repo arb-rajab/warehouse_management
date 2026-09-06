@@ -313,6 +313,19 @@ rather than reaching for another route around it.
   guards; a per-record ownership check belongs in a policy. Don't add a
   policy ability for something that's actually a blanket role check.
 
+## Keeping review/survey tasks cheap
+
+- For an open-ended review or audit request that spans many files (e.g. "review
+  the admin backend surface", "audit X subsystem"), delegate the file-reading
+  survey to the Explore agent (or a general-purpose subagent for anything
+  needing judgment beyond locating code) instead of reading every file
+  directly into the main conversation. Only read files directly yourself when
+  you already know which specific file(s) you need to act on (edit, verify a
+  fix, etc.).
+- Avoid broad multi-keyword greps (e.g. `grep -rin 'a|b|c'`) that can return
+  tens of KB of matches — prefer a single targeted keyword, `-l`/`files_with_matches`
+  first to see what matched before dumping content, or a narrower path scope.
+
 ## External input handling
 
 - Normalize untrusted input before persisting it, don't store it verbatim —
