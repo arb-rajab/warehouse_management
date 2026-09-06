@@ -14,7 +14,9 @@ class DatabaseSeeder extends Seeder
     {
         User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => User::query()->where('email', 'test@example.com')->exists()
+                ? fake()->unique()->safeEmail()
+                : 'test@example.com',
         ]);
 
         $this->call([
