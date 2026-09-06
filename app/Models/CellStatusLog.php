@@ -62,13 +62,29 @@ class CellStatusLog extends Model
         'product:id,name,image_url,boxes_count',
         'pallet:id,expiration_date',
         'user:id,name',
+    ];
+
+    /**
+     * The rule-based flag eager loads, deliberately kept out of WITH_DETAILS:
+     * the flags are the anti-fraud signal raised *against* the worker who
+     * performed the action (rapid_actions, off_hours, quick_flip) plus which
+     * admin acknowledged it, so only the admin panel's listings load them.
+     * `CellStatusLogResource` withholds the `flagged`/`flags` keys from a
+     * non-admin viewer besides, and `FiltersCellStatusLogs` drops the `flagged`
+     * filter for one — a worker reading the mobile log feed must not be able to
+     * see which of their own actions the heuristics caught.
+     *
+     * @var list<string>
+     */
+    public const array WITH_FLAG_DETAILS = [
         'flags:id,cell_status_log_id,reason,acknowledged_at,acknowledged_by',
         'flags.acknowledgedBy:id,name',
     ];
 
     /**
      * The select()/with() preamble shared by every listing (admin and API) —
-     * see SELECT_COLUMNS/WITH_DETAILS above.
+     * see SELECT_COLUMNS/WITH_DETAILS above. Admin listings add
+     * `->with(self::WITH_FLAG_DETAILS)` on top; the API listing must not.
      *
      * @param  Builder<CellStatusLog>  $query
      */

@@ -4,6 +4,7 @@ use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\CellStatusLogFlag;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -84,11 +85,34 @@ test('an authenticated worker can list cell logs with every property the app rea
         'created_at' => $log->created_at->toIso8601String(),
         'next_log_at' => null,
         'duration_seconds' => 0,
-        'flagged' => false,
-        'flags' => [],
     ]);
 
     Carbon::setTestNow();
+});
+
+test('the cell log listing withholds flag data from a worker, even for a flagged entry', function () {
+    actingAsMobileUser();
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs');
+
+    $response->assertOk();
+    expect($response->json('data.0'))->not->toHaveKey('flagged');
+    expect($response->json('data.0'))->not->toHaveKey('flags');
+});
+
+test('the flagged filter is ignored for a worker, so it cannot be used to reveal which entries are flagged', function () {
+    actingAsMobileUser();
+    $flagged = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $flagged->id]);
+    $unflagged = CellStatusLog::factory()->create();
+
+    $response = $this->getJson('/api/v1/cell-logs?flagged=true');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$flagged->id, $unflagged->id]);
 });
 
 test('the cell log listing includes the next same-pallet log timestamp as next_log_at and the seconds between them', function () {

@@ -33,6 +33,12 @@ test('an authenticated admin can view the cell verification rounds list with eve
     );
 });
 
+test('an unauthenticated caller is redirected to login when viewing the cell verification rounds list', function () {
+    $response = $this->get('/admin/cell-verification-rounds');
+
+    $response->assertRedirect(route('login'));
+});
+
 test('a non-admin cannot view the cell verification rounds list', function () {
     actingAsMobilePanelUser();
 
@@ -148,6 +154,14 @@ test('an authenticated admin can view a single round with its own reports and ev
     );
 });
 
+test('an unauthenticated caller is redirected to login when viewing a single round', function () {
+    $round = CellVerificationRound::factory()->create();
+
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}");
+
+    $response->assertRedirect(route('login'));
+});
+
 test('a non-admin cannot view a single round', function () {
     actingAsMobilePanelUser();
 
@@ -205,6 +219,14 @@ test('a rounds reports listing paginates beyond one page', function () {
         fn (Assert $page) => $page->has('reports.data', 10)
             ->where('reports.meta.total', 25)
     );
+});
+
+test('an unauthenticated caller is redirected to login when exporting a rounds reports csv', function () {
+    $round = CellVerificationRound::factory()->create();
+
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}/export");
+
+    $response->assertRedirect(route('login'));
 });
 
 test('a non-admin cannot export a rounds reports csv', function () {

@@ -22,6 +22,7 @@ class CellStatusLogController extends Controller
 
         $logs = CellStatusLog::query()
             ->forListing()
+            ->with(CellStatusLog::WITH_FLAG_DETAILS)
             ->filtered($request)
             ->sorted($request)
             ->paginate($perPage)

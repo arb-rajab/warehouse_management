@@ -4,11 +4,9 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Enums\CellState;
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
-use App\Models\CellVerificationRound;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class StoreCellVerificationReportRequest extends FormRequest
@@ -52,14 +50,6 @@ class StoreCellVerificationReportRequest extends FormRequest
 
                 if (! $this->filled('reported_boxes_count')) {
                     $validator->errors()->add('reported_boxes_count', __('validation.required_if', ['attribute' => 'reported boxes count', 'other' => 'reported cell state', 'value' => $reportedState]));
-                }
-            }
-
-            if ($this->filled('cell_verification_round_id')) {
-                $round = CellVerificationRound::query()->find($this->integer('cell_verification_round_id'));
-
-                if ($round !== null && Gate::forUser($this->user())->denies('view', $round)) {
-                    $validator->errors()->add('cell_verification_round_id', 'This verification round belongs to another user.');
                 }
             }
         });
