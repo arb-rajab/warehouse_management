@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\User;
@@ -243,7 +244,8 @@ test('a users verification reports only show their own reports, excluding anothe
 test('a users verification reports paginate instead of returning everything at once', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create();
-    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id]);
+    $cell = Cell::factory()->create();
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
 
     $response = $this->get("/admin/users/{$target->id}");
 
@@ -253,8 +255,9 @@ test('a users verification reports paginate instead of returning everything at o
 test('a users verification reports respect a reports_per_page query parameter independently of the actions per_page', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create();
-    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id]);
-    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id]);
+    $cell = Cell::factory()->create();
+    CellStatusLog::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
 
     $response = $this->get("/admin/users/{$target->id}?per_page=10&reports_per_page=25");
 
@@ -268,7 +271,8 @@ test('a users verification reports respect a reports_per_page query parameter in
 test('an out-of-range reports_per_page value falls back to the default page size for a users verification reports', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create();
-    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id]);
+    $cell = Cell::factory()->create();
+    CellVerificationReport::factory()->count(30)->create(['user_id' => $target->id, 'cell_id' => $cell->id]);
 
     $response = $this->get("/admin/users/{$target->id}?reports_per_page=999");
 
