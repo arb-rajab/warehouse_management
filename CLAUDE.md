@@ -239,6 +239,29 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   after editing the file(s) they cover, not only via one final CI-check
   command at the end. Catching an issue on the file you just touched is
   cheaper than finding a pile of unrelated fallout later.
+- In a Claude Code web session none of these tools are installed and cannot be
+  installed — see the next section for what to do instead.
+
+## Sandbox: dependencies cannot be installed, so CI is the test run
+
+`composer install` cannot succeed in a Claude Code web session. `phpstan/phpstan`
+is dist-only, and its only download host (`api.github.com/.../zipball`, which
+redirects to `codeload.github.com`) returns 403 through the egress proxy. So
+`vendor/` is absent and Pint, PHPStan, vue-tsc and Pest cannot run locally there.
+
+This does not relax the testing rule above — write and update the tests exactly
+as normal. It changes only where you read the result: push the branch and read
+Pint/PHPStan/Pest from CI (`composer ci:check`), which runs the whole chain.
+Note `types:check` runs *before* Pest, so a PHPStan error means the suite never
+ran at all — fix it and look again rather than assuming the tests passed.
+
+Do not attempt the install "just once to see", and do not work around the block
+by seeding package caches, rebuilding archives from git, or repointing package
+sources. A 403 from the proxy is an organization egress-policy denial: per
+`/root/.ccr/README.md`, report the blocked host and move on. A guard hook
+(`.claude/hooks/install-retry-guard.sh`) denies repeat install attempts after
+the first failure, including backgrounded ones — take the denial at face value
+rather than reaching for another route around it.
 
 ## Testing conventions
 
