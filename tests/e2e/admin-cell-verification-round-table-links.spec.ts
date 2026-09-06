@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './support/auth';
 
-test('the cell verification rounds listing and round page link the worker to their admin edit page', async ({
+test('the cell verification rounds listing and round page link the worker to their admin show page', async ({
     page,
 }) => {
     await loginAsAdmin(page);
@@ -15,7 +15,7 @@ test('the cell verification rounds listing and round page link the worker to the
         .getByRole('link')
         .first();
     const workerHref = await listingWorkerLink.getAttribute('href');
-    expect(workerHref).toMatch(/^\/admin\/users\/\d+\/edit$/);
+    expect(workerHref).toMatch(/^\/admin\/users\/\d+$/);
     const workerName = (await listingWorkerLink.innerText()).trim();
 
     const roundLink = firstRow.locator('td').nth(0).getByRole('link').first();
@@ -26,8 +26,8 @@ test('the cell verification rounds listing and round page link the worker to the
     await expect(showWorkerLink).toHaveAttribute('href', workerHref!);
 
     await showWorkerLink.click();
-    await expect(page).toHaveURL(/\/admin\/users\/\d+\/edit$/);
-    await expect(page.locator('#name')).toHaveValue(workerName);
+    await expect(page).toHaveURL(/\/admin\/users\/\d+$/);
+    await expect(page.locator('h1')).toContainText(workerName);
 });
 
 test("a user's admin page links their verification reports to the round and cell they belong to", async ({
@@ -44,7 +44,7 @@ test("a user's admin page links their verification reports to the round and cell
         .getByRole('link')
         .first()
         .getAttribute('href');
-    const userId = workerHref!.match(/\/admin\/users\/(\d+)\/edit/)![1];
+    const userId = workerHref!.match(/\/admin\/users\/(\d+)$/)![1];
 
     await page.goto(`/admin/users/${userId}`);
 
