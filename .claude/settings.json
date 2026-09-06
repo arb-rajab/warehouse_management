@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); SID=$(echo \"$INPUT\" | jq -r '.session_id // \"unknown\"'); if echo \"$CMD\" | grep -Eqi 'composer install|npm (install|ci)|yarn install|pnpm install'; then if [ -f \"/tmp/claude-install-retry-guard/${SID}.blocked\" ]; then jq -n --arg reason \"A package-registry install already failed in this session with a network/auth error. Do not retry composer/npm/yarn/pnpm install - the registry or proxy is unreachable/rate-limited from this sandbox. Rely on CI to validate dependency-related changes instead, or ask the user how to proceed.\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:$reason}}'; fi; fi",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/install-retry-guard.sh\" check",
             "timeout": 10,
             "statusMessage": "Checking install-retry guard..."
           }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -Eqi 'composer install|npm (install|ci)|yarn install|pnpm install'; then if echo \"$INPUT\" | grep -Eqi 'could not authenticate against github|curl error 28|proxy CONNECT aborted|connection reset by peer|could not resolve host|operation timed out|407 Proxy Authentication Required|ECONNRESET|ETIMEDOUT'; then SID=$(echo \"$INPUT\" | jq -r '.session_id // \"unknown\"'); mkdir -p /tmp/claude-install-retry-guard; echo \"$CMD\" > \"/tmp/claude-install-retry-guard/${SID}.blocked\"; fi; fi",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/install-retry-guard.sh\" record",
             "timeout": 10
           }
         ]
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -Eqi 'composer install|npm (install|ci)|yarn install|pnpm install'; then if echo \"$INPUT\" | grep -Eqi 'could not authenticate against github|curl error 28|proxy CONNECT aborted|connection reset by peer|could not resolve host|operation timed out|407 Proxy Authentication Required|ECONNRESET|ETIMEDOUT'; then SID=$(echo \"$INPUT\" | jq -r '.session_id // \"unknown\"'); mkdir -p /tmp/claude-install-retry-guard; echo \"$CMD\" > \"/tmp/claude-install-retry-guard/${SID}.blocked\"; fi; fi",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/install-retry-guard.sh\" record",
             "timeout": 10
           }
         ]
