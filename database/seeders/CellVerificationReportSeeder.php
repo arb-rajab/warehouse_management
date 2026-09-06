@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Models\Cell;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
 
 class CellVerificationReportSeeder extends Seeder
 {
@@ -42,7 +42,7 @@ class CellVerificationReportSeeder extends Seeder
      * own randomized mismatch, while a correct one mirrors the cell's actual
      * current pallet so the admin view reads as a real, consistent snapshot.
      */
-    private function report(CellVerificationRound $round, Cell $cell, Carbon $reportedAt): void
+    private function report(CellVerificationRound $round, Cell $cell, CarbonInterface $reportedAt): void
     {
         if (fake()->boolean(75)) {
             $pallet = $cell->pallet;
