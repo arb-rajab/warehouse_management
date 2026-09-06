@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
@@ -38,6 +37,7 @@ import type {
     CellVerificationRound,
     Paginated,
 } from '@/types/admin';
+import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     round: CellVerificationRound;
@@ -85,7 +85,7 @@ const activeFilterCount = computed(() =>
     ]),
 );
 
-function filterQuery(): Record<string, FormDataConvertible> {
+function filterQuery(): QueryParams {
     const { is_correct, ...rest } = filters;
 
     return is_correct === ''
