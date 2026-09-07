@@ -145,7 +145,7 @@ return [
      * Note: Please ensure your website had set up ssl/tls before enable hsts.
      */
     'hsts' => [
-        'enable' => false,
+        'enable' => env('HSTS_ENABLED', true),
 
         'max-age' => 31536000,
 
@@ -615,10 +615,19 @@ return [
      * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
      */
     'csp' => [
-        'enable' => true,
+        'enable' => env('CSP_ENABLED', true),
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
-        'report-only' => false,
+        //
+        // Ships in report-only mode: the policy below is a first cut that has
+        // not been exercised against every screen in a browser yet, and two
+        // known consumers need checking before it is enforced — Vite's dev
+        // server (inline bootstrap + ws: HMR connection, so set CSP_ENABLED=false
+        // locally or accept the console noise) and vue-i18n, whose full build
+        // compiles messages with new Function() and would need 'unsafe-eval'
+        // unless messages are precompiled. Walk the admin panel with the
+        // console open, fix what reports, then set CSP_REPORT_ONLY=false.
+        'report-only' => env('CSP_REPORT_ONLY', true),
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/report-to
         'report-to' => '',
@@ -632,11 +641,11 @@ return [
         'block-all-mixed-content' => false,
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/upgrade-insecure-requests
-        'upgrade-insecure-requests' => false,
+        'upgrade-insecure-requests' => true,
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/base-uri
         'base-uri' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/child-src
@@ -646,12 +655,12 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/connect-src
         'connect-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/default-src
         'default-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/fenced-frame-src
@@ -661,42 +670,55 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/font-src
         'font-src' => [
-            //
+            'self' => true,
+
+            'allow' => [
+                'https://fonts.bunny.net',
+            ],
+
+            'schemes' => [
+                'data:',
+            ],
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/form-action
         'form-action' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors
         'frame-ancestors' => [
-            //
+            'none' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-src
         'frame-src' => [
-            //
+            'none' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/img-src
         'img-src' => [
-            //
+            'self' => true,
+
+            'schemes' => [
+                'data:',
+                'blob:',
+            ],
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/manifest-src
         'manifest-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/media-src
         'media-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/object-src
         'object-src' => [
-            //
+            'none' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/prefetch-src
@@ -746,7 +768,7 @@ return [
         'script-src' => [
             'none' => false,
 
-            'self' => false,
+            'self' => true,
 
             'report-sample' => false,
 
@@ -802,7 +824,15 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/style-src
         'style-src' => [
-            //
+            'self' => true,
+
+            'allow' => [
+                'https://fonts.bunny.net',
+            ],
+
+            // Tailwind and Vue set element styles at runtime; dropping this needs a
+            // nonce plumbed through the Blade layout first.
+            'unsafe-inline' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/style-src-attr
@@ -830,7 +860,11 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/worker-src
         'worker-src' => [
-            //
+            'self' => true,
+
+            'schemes' => [
+                'blob:',
+            ],
         ],
     ],
 ];

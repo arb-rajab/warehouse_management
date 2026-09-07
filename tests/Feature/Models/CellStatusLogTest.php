@@ -82,6 +82,12 @@ test('a cell status log belongs to the user who performed it', function () {
 });
 
 test('a cell status log has many flags, excluding another logs flags', function () {
+    // Pinned inside working hours: CellStatusLogObserver auto-flags any log
+    // created outside config('cell_status_log_flags.off_hours') (06:00-22:00
+    // UTC), so a factory log left at now() carries an extra OffHours flag
+    // whenever the suite runs in the evening or early morning.
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $log = CellStatusLog::factory()->create();
     $flag = CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id, 'reason' => CellLogFlagReason::OffHours]);
 
@@ -93,12 +99,16 @@ test('a cell status log has many flags, excluding another logs flags', function 
 });
 
 test('flagged is false when a log has no flags', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $log = CellStatusLog::factory()->create();
 
     expect($log->flagged)->toBeFalse();
 });
 
 test('flagged is true when a log has at least one flag, via a dedicated exists query when nothing is preloaded', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $log = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
 
@@ -106,6 +116,8 @@ test('flagged is true when a log has at least one flag, via a dedicated exists q
 });
 
 test('flagged reads an already-loaded flags relation instead of running another query', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $log = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
 
@@ -116,6 +128,8 @@ test('flagged reads an already-loaded flags relation instead of running another 
 });
 
 test('flagged reads a flags_count alias when present, without a flags relation loaded', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $log = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
@@ -127,6 +141,8 @@ test('flagged reads a flags_count alias when present, without a flags relation l
 });
 
 test('the filtered scope can filter by flagged, excluding unflagged logs', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $flagged = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $flagged->id]);
 

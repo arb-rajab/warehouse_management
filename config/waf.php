@@ -26,10 +26,29 @@ return [
     */
 
     'exclude_paths' => [
-        'telescope*',
-        '_boost*',
+        'telescope',
+        'telescope/*',
+        '_boost',
+        '_boost/*',
         'up',
         '.well-known/*',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inspected Headers
+    |--------------------------------------------------------------------------
+    |
+    | Headers whose values are checked against the signatures below alongside
+    | the URI and the request input. Kept to an allow-list on purpose: cookies
+    | and framework-issued tokens carry opaque payloads that would only invite
+    | false positives, while these are the headers attacks arrive in.
+    |
+    */
+
+    'inspect_headers' => [
+        'user-agent',
+        'referer',
     ],
 
     /*

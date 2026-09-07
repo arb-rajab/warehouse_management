@@ -23,8 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(BlockMaliciousRequests::class);
+        // SecureHeaders wraps the WAF, not the other way around: BlockMaliciousRequests
+        // aborts with a 403 from inside the pipeline, so anything appended after it
+        // never runs on a blocked request and those responses would ship bare.
         $middleware->append(SecureHeadersMiddleware::class);
+        $middleware->append(BlockMaliciousRequests::class);
 
         $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));
 
