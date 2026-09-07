@@ -130,10 +130,12 @@ function clearFilters(): void {
 }
 
 function onSort(): void {
-    toggleSort(
-        { sort_by: 'created_at', sort_direction: filters.sort_direction },
-        'created_at',
-    );
+    const sort = {
+        sort_by: 'created_at',
+        sort_direction: filters.sort_direction,
+    };
+    toggleSort(sort, 'created_at');
+    filters.sort_direction = sort.sort_direction;
     applyFilters();
 }
 
