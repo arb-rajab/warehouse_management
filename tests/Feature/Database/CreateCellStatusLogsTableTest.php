@@ -5,6 +5,7 @@ use App\Models\CellStatusLog;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Schema;
 
 test('deleting a cell referenced by a cell status log is restricted', function () {
     $log = CellStatusLog::factory()->create();
@@ -45,4 +46,11 @@ test('boxes_count is nullable for cell-only actions and settable for pallet-quan
 
     expect($withoutBoxes->fresh()->boxes_count)->toBeNull()
         ->and($withBoxes->fresh()->boxes_count)->toBe(7);
+});
+
+test('cell_status_logs has indexes on action and created_at', function () {
+    $indexes = collect(Schema::getIndexes('cell_status_logs'));
+
+    expect($indexes->contains(fn (array $index) => $index['columns'] === ['action']))->toBeTrue();
+    expect($indexes->contains(fn (array $index) => $index['columns'] === ['created_at']))->toBeTrue();
 });

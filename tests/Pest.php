@@ -36,10 +36,13 @@ pest()->extend(TestCase::class)
 /**
  * Authenticate a warehouse worker against the API's token guard, as the mobile app
  * does. Returns the user for tests that assert on who performed the action.
+ *
+ * Pass an existing $user to re-authenticate as them (e.g. to prove two known
+ * users each get their own rate-limit budget) instead of creating a new one.
  */
-function actingAsMobileUser(): User
+function actingAsMobileUser(?User $user = null): User
 {
-    $user = User::factory()->mobileUser()->create();
+    $user ??= User::factory()->mobileUser()->create();
 
     Sanctum::actingAs($user, ['*']);
 

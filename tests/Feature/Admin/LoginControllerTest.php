@@ -148,3 +148,10 @@ test('a logged-in user can log out', function () {
     $response->assertRedirect(route('login'));
     $this->assertGuest();
 });
+
+test('an unauthenticated caller cannot log out', function () {
+    $response = $this->post('/logout');
+
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
+});

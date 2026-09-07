@@ -3,6 +3,7 @@
 use App\Models\CellStatusLog;
 use App\Models\CellStatusLogFlag;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 test('deleting a cell status log cascades to delete its flags, leaving another logs flags untouched', function () {
     $log = CellStatusLog::factory()->create();
@@ -30,4 +31,10 @@ test('deleting the user who acknowledged a flag nulls its acknowledged_by, leavi
     expect($fresh)->not->toBeNull();
     expect($fresh->acknowledged_by)->toBeNull();
     expect($fresh->acknowledged_at)->not->toBeNull();
+});
+
+test('cell_status_log_flags has an index on cell_status_log_id', function () {
+    $indexes = collect(Schema::getIndexes('cell_status_log_flags'));
+
+    expect($indexes->contains(fn (array $index) => $index['columns'] === ['cell_status_log_id']))->toBeTrue();
 });
