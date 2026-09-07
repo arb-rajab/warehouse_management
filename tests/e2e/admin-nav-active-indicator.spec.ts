@@ -6,7 +6,7 @@ test('the app bar highlights the current section and not the others', async ({
 }) => {
     await loginAsAdmin(page);
 
-    await expect(page.getByRole('link', { name: 'Rows' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
         'aria-current',
         'page',
     );
