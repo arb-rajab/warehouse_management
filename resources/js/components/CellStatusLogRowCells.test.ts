@@ -1,31 +1,41 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import {
-    acknowledgeFlags,
-    cellLogActionLabel,
-} from '@/lib/cellStatusLogDisplay';
+import { cellLogActionLabel } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cellLog } from '@/testing/factories';
+import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type { CellStatusLog } from '@/types/admin';
 import CellLogFlagBadges from './CellLogFlagBadges.vue';
 import CellStatusLogRowCells from './CellStatusLogRowCells.vue';
 import TableLink from './TableLink.vue';
 
-vi.mock('@/lib/cellStatusLogDisplay', async () => {
-    const actual = await vi.importActual<
-        typeof import('@/lib/cellStatusLogDisplay')
-    >('@/lib/cellStatusLogDisplay');
+const { usePageMock, routerPostMock } = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+    routerPostMock: vi.fn(),
+}));
 
-    return { ...actual, acknowledgeFlags: vi.fn() };
+vi.mock('@inertiajs/vue3', async () => {
+    const { createLinkStub } = await import('@/testing/inertiaStubs');
+
+    return {
+        Link: createLinkStub(),
+        usePage: usePageMock,
+        router: { post: routerPostMock },
+    };
 });
 
 function mountCells(
     log: CellStatusLog,
     props: { showUserColumn?: boolean; returnTo?: 'user' } = {},
 ) {
+    usePageMock.mockReturnValue({
+        url: '/admin/cell-logs',
+        props: defaultAuthProps(),
+    });
+
     return mount(CellStatusLogRowCells, { props: { log, ...props } });
 }
 
@@ -97,26 +107,39 @@ describe('CellStatusLogRowCells', () => {
         );
     });
 
-    it('acknowledges unacknowledged flags without a returnTo by default', async () => {
-        const log = cellLog({
-            flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
-        });
-        const wrapper = mountCells(log);
+    it('acknowledges flags with a null return_to by default', async () => {
+        const wrapper = mountCells(
+            cellLog({
+                id: 42,
+                flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
+            }),
+        );
 
-        await wrapper.get('button').trigger('click');
+        await wrapper.findAll('td')[1].get('button').trigger('click');
 
-        expect(acknowledgeFlags).toHaveBeenCalledWith(log, undefined);
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-logs/42/acknowledge-flags',
+            { return_to: null },
+            { preserveScroll: true },
+        );
     });
 
     it('passes returnTo through when acknowledging flags', async () => {
-        const log = cellLog({
-            flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
-        });
-        const wrapper = mountCells(log, { returnTo: 'user' });
+        const wrapper = mountCells(
+            cellLog({
+                id: 42,
+                flags: [{ id: 1, reason: 'off_hours', acknowledged: false }],
+            }),
+            { returnTo: 'user' },
+        );
 
-        await wrapper.get('button').trigger('click');
+        await wrapper.findAll('td')[1].get('button').trigger('click');
 
-        expect(acknowledgeFlags).toHaveBeenCalledWith(log, 'user');
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-logs/42/acknowledge-flags',
+            { return_to: 'user' },
+            { preserveScroll: true },
+        );
     });
 
     it('hides the acknowledge button once every flag is acknowledged', () => {
@@ -126,7 +149,7 @@ describe('CellStatusLogRowCells', () => {
             }),
         );
 
-        expect(wrapper.find('button').exists()).toBe(false);
+        expect(wrapper.findAll('td')[1].find('button').exists()).toBe(false);
     });
 
     it('renders the product name and image when the log has a product', () => {
