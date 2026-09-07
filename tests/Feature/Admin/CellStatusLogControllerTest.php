@@ -519,6 +519,11 @@ test('the cell log can be sorted by pallet expiration date, with a direction, pl
 test('the cell log can be filtered by flagged, excluding unflagged entries', function () {
     actingAsAdmin();
 
+    // Pinned inside working hours: CellStatusLogObserver auto-flags any log
+    // created outside config('cell_status_log_flags.off_hours'), so the log
+    // this test needs to be unflagged is not one in the evening.
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $flagged = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $flagged->id]);
 
@@ -534,6 +539,9 @@ test('the cell log can be filtered by flagged, excluding unflagged entries', fun
 
 test('the cell log exposes who acknowledged a flag, and null for an unacknowledged one', function () {
     actingAsAdmin();
+
+    Carbon::setTestNow('2026-08-01 12:00:00');
+
     $acknowledger = User::factory()->create(['name' => 'Alice Admin']);
 
     $log = CellStatusLog::factory()->create();
