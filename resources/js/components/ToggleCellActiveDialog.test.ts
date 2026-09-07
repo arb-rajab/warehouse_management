@@ -39,7 +39,7 @@ async function mountDialog(
 ) {
     const wrapper = mount(ToggleCellActiveDialog, {
         props: {
-            cell: props.cell ?? cell(true),
+            cell: 'cell' in props ? (props.cell as Cell | null) : cell(true),
             label: props.label ?? 'A2·1',
             returnTo: props.returnTo,
             open: false,
