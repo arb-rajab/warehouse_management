@@ -102,6 +102,13 @@ describe('Users Show', () => {
         expect(wrapper.text()).toContain(t('users.show.empty'));
     });
 
+    it('renders both section headings', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.text()).toContain(t('users.show.actionsTitle'));
+        expect(wrapper.text()).toContain(t('users.show.reportsTitle'));
+    });
+
     it('renders the cell, action, product, pallet, boxes, note, when, and duration for an entry', () => {
         const wrapper = mountPage([
             cellLog({

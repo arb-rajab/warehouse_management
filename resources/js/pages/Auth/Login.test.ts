@@ -58,6 +58,13 @@ describe('Login', () => {
         );
     });
 
+    it('renders the email and password field labels', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('auth.login.email'));
+        expect(wrapper.text()).toContain(t('auth.login.password'));
+    });
+
     it('renders the email and password fields with the right input types and autocomplete hints', () => {
         const wrapper = mountPage();
 
