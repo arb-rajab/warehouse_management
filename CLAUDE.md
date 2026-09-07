@@ -332,12 +332,19 @@ specifically needs them (e.g. PHPStan itself).
 ## Keeping review/survey tasks cheap
 
 - For an open-ended review or audit request that spans many files (e.g. "review
-  the admin backend surface", "audit X subsystem"), delegate the file-reading
-  survey to the Explore agent (or a general-purpose subagent for anything
-  needing judgment beyond locating code) instead of reading every file
-  directly into the main conversation. Only read files directly yourself when
-  you already know which specific file(s) you need to act on (edit, verify a
-  fix, etc.).
+  the admin backend surface", "audit X subsystem") where the file list itself
+  is unknown up front, delegate the file-reading survey to the Explore agent
+  (or a general-purpose subagent for anything needing judgment beyond locating
+  code) instead of reading every file directly into the main conversation.
+- When the requester has already named the exact files/components in scope
+  (not "find what's relevant" but "review these N files"), prefer reading them
+  directly over spawning a subagent — a subagent still has to re-read the same
+  files from a cold context, so for an already-enumerated file list it adds
+  overhead rather than saving it. Reserve subagent delegation for when the
+  scope genuinely needs to be *discovered*, or the file count is large enough
+  that protecting the main context window outweighs the agent round-trip cost.
+- Only read files directly yourself when you already know which specific
+  file(s) you need to act on (edit, verify a fix, etc.).
 - Avoid broad multi-keyword greps (e.g. `grep -rin 'a|b|c'`) that can return
   tens of KB of matches — prefer a single targeted keyword, `-l`/`files_with_matches`
   first to see what matched before dumping content, or a narrower path scope.
@@ -355,13 +362,32 @@ specifically needs them (e.g. PHPStan itself).
   be decomposed that way.
 - Only read the `.ai/rules` files that are actually relevant to the files in
   scope for the current task — don't re-trigger a full `.ai/rules` index
-  sweep for a narrow follow-up fix that touches 1-2 files.
+  sweep for a narrow follow-up fix that touches 1-2 files. When checking
+  `.ai/rules` for a task, `Grep` for the specific keyword/section needed
+  rather than reading whole rule files (or the whole concatenated index) in
+  full — a targeted grep with a few lines of context is a fraction of the
+  cost of dumping every matched file's entire contents into context.
 - When handing off follow-up work as separate session prompts (e.g. after a
   review produces a punch list), paste the specific finding/file:line into
   each prompt so that session doesn't re-derive it from scratch, and set an
   explicit effort level per prompt — low for mechanical/localized fixes,
   medium+ only for tasks that require reading application code to resolve a
   design question first.
+- When a review/punch-list produces several independent findings to fix in
+  the same session, batch the ones that don't depend on each other's outcome
+  into a single edit → verify → commit → push pass instead of a full
+  read-edit-verify-commit-push round trip per finding — each round trip costs
+  a full turn of tool calls, so fixing 4 independent findings one at a time
+  costs roughly 4x what fixing them together does. Only split into separate
+  passes when a finding is uncertain enough that you want the user to
+  confirm/redirect before continuing to the next one.
+- Don't run whole-repo sweeps (`npm run lint:check`, `npm run format:check`,
+  a bare `npx vue-tsc --noEmit` with no path scoping, `npx vitest run` with no
+  path) to verify a change that only touched a handful of files — scope the
+  same tool to just the touched file paths (e.g. `npx eslint <file> <file>`,
+  `npx prettier --check <file>`). Reserve the unscoped whole-repo form for the
+  final pre-commit confirmation pass this file's testing-conventions section
+  already calls for, not for checking each intermediate edit.
 
 ## PR watching: webhook-only, no fallback polling
 
