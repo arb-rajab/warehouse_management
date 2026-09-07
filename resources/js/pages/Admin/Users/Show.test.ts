@@ -1,6 +1,7 @@
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -94,6 +95,17 @@ describe('Users Show', () => {
             t('cellLog.columns.note'),
             t('cellLog.columns.when'),
         ]);
+    });
+
+    it('renders each action row through CellStatusLogRowCells, without the doneBy column', () => {
+        const log = cellLog();
+        const wrapper = mountPage([log]);
+
+        const cells = wrapper.findComponent(CellStatusLogRowCells);
+        expect(cells.exists()).toBe(true);
+        expect(cells.props('showUserColumn')).toBeFalsy();
+        expect(cells.props('returnTo')).toBe('user');
+        expect(cells.props('log')).toMatchObject({ id: log.id });
     });
 
     it('shows the empty message when there are no actions', () => {
