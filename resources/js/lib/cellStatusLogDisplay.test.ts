@@ -1,13 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { cellLog as cellLogFixture } from '@/testing/factories';
-import type { CellStatusLog } from '@/types/admin';
+import type { CellStatusLog, CellStatusLogFlag } from '@/types/admin';
 import {
+    acknowledgeFlags,
     cellLogActionLabel,
     flagReasonLabel,
+    hasUnacknowledgedFlags,
     mergeTransferPairs,
     transferPair,
 } from './cellStatusLogDisplay';
+
+const { routerPostMock } = vi.hoisted(() => ({
+    routerPostMock: vi.fn(),
+}));
+
+vi.mock('@inertiajs/vue3', () => ({
+    router: { post: routerPostMock },
+}));
 
 function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
     return cellLogFixture({
@@ -17,6 +27,10 @@ function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         duration_seconds: 0,
         ...overrides,
     });
+}
+
+function flag(overrides: Partial<CellStatusLogFlag> = {}): CellStatusLogFlag {
+    return { id: 1, reason: 'off_hours', acknowledged: false, ...overrides };
 }
 
 describe('cellLogActionLabel', () => {
@@ -30,6 +44,58 @@ describe('flagReasonLabel', () => {
         expect(flagReasonLabel('off_hours')).toBe(
             t('cellLog.flags.reasons.off_hours'),
         );
+    });
+});
+
+describe('hasUnacknowledgedFlags', () => {
+    it('is false when there are no flags', () => {
+        expect(hasUnacknowledgedFlags(cellLog({ flags: [] }))).toBe(false);
+    });
+
+    it('is false when every flag is already acknowledged', () => {
+        const log = cellLog({
+            flags: [flag({ acknowledged: true }), flag({ acknowledged: true })],
+        });
+
+        expect(hasUnacknowledgedFlags(log)).toBe(false);
+    });
+
+    it('is true when at least one flag is unacknowledged', () => {
+        const log = cellLog({
+            flags: [
+                flag({ acknowledged: true }),
+                flag({ acknowledged: false }),
+            ],
+        });
+
+        expect(hasUnacknowledgedFlags(log)).toBe(true);
+    });
+});
+
+describe('acknowledgeFlags', () => {
+    beforeEach(() => {
+        routerPostMock.mockReset();
+    });
+
+    it('posts to the log-specific acknowledge endpoint', () => {
+        acknowledgeFlags(cellLog({ id: 42 }));
+
+        expect(routerPostMock).toHaveBeenCalledTimes(1);
+        expect(routerPostMock.mock.calls[0][0]).toContain(
+            'cell-logs/42/acknowledge-flags',
+        );
+    });
+
+    it('sends return_to null by default', () => {
+        acknowledgeFlags(cellLog({ id: 42 }));
+
+        expect(routerPostMock.mock.calls[0][1]).toEqual({ return_to: null });
+    });
+
+    it('sends the given return_to so the backend redirects back to that page', () => {
+        acknowledgeFlags(cellLog({ id: 42 }), 'user');
+
+        expect(routerPostMock.mock.calls[0][1]).toEqual({ return_to: 'user' });
     });
 });
 
