@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
 import FilterDialog from '@/components/FilterDialog.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
-import { fieldLabelClass } from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
 
@@ -98,7 +98,7 @@ function submit(): void {
                     rows="3"
                     maxlength="1000"
                     :placeholder="t('cells.toggleActive.notePlaceholder')"
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                    :class="plainFieldInputClass"
                 ></textarea>
             </div>
 

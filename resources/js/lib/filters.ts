@@ -72,6 +72,14 @@ export const fieldLabelClass =
     'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
 
 /**
+ * The plain bordered text/number/date/select/textarea input shared by every
+ * field in PalletActionsDialog.vue and ToggleCellActiveDialog.vue's note
+ * field — extracted once it was repeated 7 times across the two files.
+ */
+export const plainFieldInputClass =
+    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
+
+/**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every
  * multi-select filter (product/action/user/state) across the admin pages.
  */
