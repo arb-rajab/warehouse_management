@@ -267,6 +267,17 @@ test('an authenticated worker can view a pallet with every property the app read
     ]);
 });
 
+test('viewing a pallet with zero remaining boxes shows the depleted message', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 0]);
+
+    $response = $this->getJson("/api/v1/pallets/{$pallet->id}");
+
+    $response->assertOk();
+    $response->assertJsonPath('boxes_depleted_message', __('messages.pallet_boxes_depleted'));
+});
+
 test('viewing an unknown pallet returns 404', function () {
     actingAsMobileUser();
 

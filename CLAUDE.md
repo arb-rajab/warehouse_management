@@ -381,6 +381,29 @@ specifically needs them (e.g. PHPStan itself).
   costs roughly 4x what fixing them together does. Only split into separate
   passes when a finding is uncertain enough that you want the user to
   confirm/redirect before continuing to the next one.
+- Default to batching without being asked. Don't wait for the user to say
+  "batch these" — the moment a punch list has 2+ independent findings, propose
+  (or just do, if the user has already signaled "keep going") a single grouped
+  pass. Fixing one finding, pushing, waiting for CI, then asking "what's next"
+  and repeating is the exact anti-pattern the previous bullet describes; doing
+  it 4 times before switching to batches on request still costs the 4x.
+- Group commits/pushes with the batch, not with the finding. Each push is a
+  full CI round trip (composer ci:check, per the sandbox section above) — a
+  batch of N independent findings should cost one push and one CI wait, not N.
+- When an audit/review is delegated to a subagent and its findings are likely
+  to become fixes in this same session, ask it to cite exact `file:line`
+  excerpts for each finding (not just a narrative description) in its report.
+  A subagent's file reads aren't retained by the parent conversation — only
+  its text report is — so a citation-free "the flags array is never asserted"
+  finding forces the fix pass to re-read the whole file from scratch to
+  relocate what the subagent already found, paying the read cost twice for
+  the same file.
+- Once a large file's relevant section is already known — from a citation
+  above, a prior read in this session, or a fresh `Grep` hit — don't re-`Read`
+  the whole file to make a small addition (e.g. one new test appended near an
+  existing one in a 500+ line test file). `Grep` for the neighboring test name
+  to get its line number, then `Read` with `offset`/`limit` around just that
+  region.
 - Don't run whole-repo sweeps (`npm run lint:check`, `npm run format:check`,
   a bare `npx vue-tsc --noEmit` with no path scoping, `npx vitest run` with no
   path) to verify a change that only touched a handful of files — scope the
