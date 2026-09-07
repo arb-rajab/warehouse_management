@@ -2,11 +2,14 @@
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Laravel\Telescope\Http\Middleware\Authorize;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 test('an admin passes the viewTelescope gate', function () {
     $admin = actingAsAdmin();
@@ -79,4 +82,26 @@ test('the telescope user tag includes the resolved user once one exists', functi
         ->all();
 
     expect($tags)->toContain('User:'.$user->id);
+});
+
+test('the telescope Authorize middleware rejects a guest', function () {
+    // The config assertion above only proves the middleware is *listed*. This
+    // runs the class Telescope actually puts in front of its routes, which the
+    // suite can't reach over HTTP because phpunit.xml sets TELESCOPE_ENABLED=false
+    // and the routes are therefore never registered.
+    (new Authorize)->handle(Request::create('/telescope'), fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('the telescope Authorize middleware rejects a non-admin user', function () {
+    $this->actingAs(User::factory()->mobileUser()->create());
+
+    (new Authorize)->handle(Request::create('/telescope'), fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('the telescope Authorize middleware admits an admin', function () {
+    actingAsAdmin();
+
+    $response = (new Authorize)->handle(Request::create('/telescope'), fn ($req) => new Response('ok'));
+
+    expect($response->getContent())->toBe('ok');
 });

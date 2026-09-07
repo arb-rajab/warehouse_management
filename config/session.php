@@ -167,9 +167,14 @@ return [
     | to the server if the browser has a HTTPS connection. This will keep
     | the cookie from being sent to you when it can't be done securely.
     |
+    | Laravel's default leaves this null, which sends the session cookie over
+    | plain HTTP too. Production defaults to true instead, so a deploy that
+    | forgets SESSION_SECURE_COOKIE is still secure; other environments keep
+    | the null default so local HTTP development works.
+    |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------
