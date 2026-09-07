@@ -85,8 +85,20 @@ test('blocks a double percent-encoded path traversal', function () {
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
+test('the shipped config inspects the user agent and referer headers', function () {
+    expect(config('waf.inspect_headers'))->toBe(['user-agent', 'referer']);
+});
+
 test('blocks an attack signature smuggled through an inspected header', function () {
-    $request = Request::create('/login', 'GET', server: ['HTTP_USER_AGENT' => 'sqlmap/1.0 union select 1']);
+    $request = Request::create('/login', 'GET');
+    $request->headers->set('User-Agent', 'sqlmap/1.0 union select 1');
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('blocks an attack signature smuggled through the referer', function () {
+    $request = Request::create('/login', 'GET');
+    $request->headers->set('Referer', 'https://warehouse.test/?q=<script>alert(1)</script>');
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
@@ -96,7 +108,8 @@ test('leaves headers outside waf.inspect_headers alone', function () {
     // only produce false positives, so they are deliberately not inspected.
     config(['waf.inspect_headers' => ['user-agent']]);
 
-    $request = Request::create('/login', 'GET', server: ['HTTP_X_CUSTOM' => 'union select 1']);
+    $request = Request::create('/login', 'GET');
+    $request->headers->set('X-Custom', 'union select 1');
 
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 
@@ -132,10 +145,9 @@ test('the excluded telescope path does not exempt look-alike paths', function ()
 })->throws(HttpException::class);
 
 test('a clean request with an ordinary user agent and query string passes', function () {
-    $request = Request::create('/admin/products', 'GET', ['search' => 'Widget 12"'], server: [
-        'HTTP_USER_AGENT' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'HTTP_REFERER' => 'https://warehouse.test/admin?page=2',
-    ]);
+    $request = Request::create('/admin/products', 'GET', ['search' => 'Widget 12"']);
+    $request->headers->set('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
+    $request->headers->set('Referer', 'https://warehouse.test/admin?page=2');
 
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 
