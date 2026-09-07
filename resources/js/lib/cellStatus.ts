@@ -65,7 +65,7 @@ export function isCellStale(
     today: string,
     staleAfterDays: number | null,
 ): boolean {
-    if (!cell?.pallet || staleAfterDays === null) {
+    if (!cell?.pallet?.added_at || staleAfterDays === null) {
         return false;
     }
 

@@ -150,6 +150,7 @@ function onManagePallet(): void {
                     {{ formatDate(cell.pallet.expiration_date) }}
                 </div>
                 <div
+                    v-if="cell.pallet.added_at"
                     class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500"
                 >
                     <CalendarPlus class="h-3 w-3 shrink-0" />

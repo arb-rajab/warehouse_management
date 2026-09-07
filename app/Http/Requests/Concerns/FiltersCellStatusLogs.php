@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests\Concerns;
 
-use App\Enums\CellLogAction;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Validation\Rule;
 
 /**
  * Shared filter validation for requests listing cell status logs (the admin
@@ -13,9 +11,13 @@ use Illuminate\Validation\Rule;
  */
 trait FiltersCellStatusLogs
 {
+    use FiltersByDateRange;
+    use FiltersByLogAction;
     use FiltersByProductIds;
     use FiltersByRowAndColumn;
+    use FiltersByUserIds;
     use NormalizesBooleanFilters;
+    use SortsByDirection;
 
     protected function prepareForValidation(): void
     {
@@ -66,20 +68,14 @@ trait FiltersCellStatusLogs
             ...$this->rowAndColumnFilterRules(),
             'expiration_date_from' => ['nullable', 'date'],
             'expiration_date_to' => ['nullable', 'date', 'after_or_equal:expiration_date_from'],
-            'user_id' => ['nullable', 'array'],
-            'user_id.*' => ['integer', Rule::exists(User::class, 'id')],
-            'action' => ['nullable', 'array'],
-            'action.*' => [Rule::enum(CellLogAction::class)],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            // Alternative to date_from/date_to, not a companion to them — mutually
-            // exclusive so the two ways of expressing the same range can't conflict.
-            'created_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:date_from,date_to'],
+            ...$this->userIdsFilterRules(),
+            ...$this->logActionFilterRules(),
+            ...$this->dateRangeFilterRules(),
             // Same mutual-exclusion pattern as created_within_days, but for the
             // expiration range instead of the created-at range.
             'expires_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:expiration_date_from,expiration_date_to'],
             'sort_by' => ['nullable', 'in:created_at,expiration_date'],
-            'sort_direction' => ['nullable', 'in:asc,desc'],
+            ...$this->sortDirectionRules(),
             'flagged' => ['nullable', 'boolean'],
         ];
     }

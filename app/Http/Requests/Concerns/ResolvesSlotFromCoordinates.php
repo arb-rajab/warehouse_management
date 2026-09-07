@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Concerns;
 
 use App\Models\Cell;
+use App\Models\Pallet;
 use App\Models\Row;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -63,6 +64,28 @@ trait ResolvesSlotFromCoordinates
         $this->resolvedSlot = $slot;
 
         return $slot;
+    }
+
+    /**
+     * Resolve the transfer destination addressed by this request's coordinate
+     * fields, rejecting a destination the route-bound pallet already sits in —
+     * transferring a pallet onto itself is a no-op the caller almost certainly
+     * didn't mean.
+     */
+    protected function resolveTransferDestination(Validator $validator, string $prefix = ''): void
+    {
+        $destination = $this->resolveSlot($validator, $prefix);
+
+        if ($destination === null) {
+            return;
+        }
+
+        /** @var Pallet $pallet */
+        $pallet = $this->route('pallet');
+
+        if ($destination->id === $pallet->cell_id) {
+            $validator->errors()->add($prefix.'cell_number', __('messages.pallet_already_at_location'));
+        }
     }
 
     /**

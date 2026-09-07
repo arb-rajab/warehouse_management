@@ -24,7 +24,7 @@ trait BuildsCellLogFilterOptions
         return [
             ...Row::filterOptions(),
             'products' => Product::selectedOptions($productIds ?? []),
-            'users' => User::query()->select(['id', 'name'])->orderBy('name')->get(),
+            'users' => User::filterOptions(),
             'actions' => array_column(CellLogAction::cases(), 'value'),
         ];
     }

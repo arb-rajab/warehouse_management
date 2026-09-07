@@ -75,6 +75,30 @@ test('the completed filter excludes rounds of the other completion state', funct
     );
 });
 
+test('filtering the rounds listing by created_within_days together with a date range is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cell-verification-rounds?created_within_days=7&date_from=2026-06-01');
+
+    $response->assertSessionHasErrors('created_within_days');
+});
+
+test('an out-of-range sort_direction is rejected on the rounds listing', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/cell-verification-rounds?sort_direction=sideways')
+        ->assertSessionHasErrors('sort_direction');
+});
+
+test('filtering a rounds reports listing by created_within_days together with a date range is rejected', function () {
+    actingAsAdmin();
+    $round = CellVerificationRound::factory()->create();
+
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}?created_within_days=7&date_from=2026-06-01");
+
+    $response->assertSessionHasErrors('created_within_days');
+});
+
 test('the rounds listing paginates beyond one page', function () {
     actingAsAdmin();
 

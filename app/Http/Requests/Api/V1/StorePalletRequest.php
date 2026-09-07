@@ -4,13 +4,14 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Http\Requests\Concerns\ResolvesSlotFromCoordinates;
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
+use App\Http\Requests\Concerns\ValidatesPalletContents;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePalletRequest extends FormRequest
 {
-    use ResolvesSlotFromCoordinates, ValidatesOptionalNote;
+    use ResolvesSlotFromCoordinates, ValidatesOptionalNote, ValidatesPalletContents;
 
     /**
      * Get the validation rules that apply to the request.
@@ -22,8 +23,7 @@ class StorePalletRequest extends FormRequest
         return [
             ...$this->coordinateRules(),
             ...$this->noteRules(),
-            'product_id' => ['required', 'integer', 'exists:products,id'],
-            'expiration_date' => ['required', 'date', 'after_or_equal:today'],
+            ...$this->palletContentsRules(),
         ];
     }
 

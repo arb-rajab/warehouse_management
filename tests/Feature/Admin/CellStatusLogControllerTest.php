@@ -430,6 +430,13 @@ test('filtering the cell log by created_within_days together with a date range i
     $response->assertSessionHasErrors('created_within_days');
 });
 
+test('an out-of-range sort_direction is rejected on the cell log', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/cell-logs?sort_direction=sideways')
+        ->assertSessionHasErrors('sort_direction');
+});
+
 test('the cell log can be filtered by pallet expiration date range, excluding entries outside it', function () {
     actingAsAdmin();
     ['matching' => $matching] = $this->seedPalletExpirationRangeFixture();

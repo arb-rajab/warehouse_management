@@ -139,6 +139,12 @@ describe('isCellStale', () => {
         expect(isCellStale(cell(null), '2026-08-13', 5)).toBe(false);
     });
 
+    it('is false when the pallet has no added_at to age it from', () => {
+        const result = isCellStale(cell({ added_at: null }), '2026-08-13', 5);
+
+        expect(result).toBe(false);
+    });
+
     it('is true once the pallet is older than the given day count', () => {
         const result = isCellStale(
             cell({ added_at: '2026-08-01T00:00:00Z' }),

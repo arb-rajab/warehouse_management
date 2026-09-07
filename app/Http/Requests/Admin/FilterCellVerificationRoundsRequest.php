@@ -2,16 +2,21 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\FiltersByDateRange;
+use App\Http\Requests\Concerns\FiltersByUserIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
-use App\Models\User;
+use App\Http\Requests\Concerns\SortsByDirection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class FilterCellVerificationRoundsRequest extends FormRequest
 {
-    use FiltersPerPage, NormalizesBooleanFilters;
+    use FiltersByDateRange;
+    use FiltersByUserIds;
+    use FiltersPerPage;
+    use NormalizesBooleanFilters;
+    use SortsByDirection;
 
     protected function prepareForValidation(): void
     {
@@ -24,15 +29,10 @@ class FilterCellVerificationRoundsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['nullable', 'array'],
-            'user_id.*' => ['integer', Rule::exists(User::class, 'id')],
+            ...$this->userIdsFilterRules(),
             'completed' => ['nullable', 'boolean'],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            // Alternative to date_from/date_to, not a companion to them — mutually
-            // exclusive, same convention as FiltersCellStatusLogs::created_within_days.
-            'created_within_days' => ['nullable', 'integer', 'min:1', 'prohibits:date_from,date_to'],
-            'sort_direction' => ['nullable', 'in:asc,desc'],
+            ...$this->dateRangeFilterRules(),
+            ...$this->sortDirectionRules(),
             ...$this->perPageRules(),
         ];
     }

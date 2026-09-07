@@ -43,6 +43,10 @@ class Product extends Model
      */
     public static function selectedOptions(array $ids = []): Collection
     {
+        if ($ids === []) {
+            return new Collection;
+        }
+
         return self::query()->select(['id', 'name'])->whereIn('id', $ids)->orderBy('name')->get();
     }
 

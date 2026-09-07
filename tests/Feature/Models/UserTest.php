@@ -16,6 +16,22 @@ test('isAdmin is false for a mobile user with no roles', function () {
     expect($mobileUser->isAdmin())->toBeFalse();
 });
 
+test('filterOptions returns every user ordered by name, carrying only id and name', function () {
+    $charlie = User::factory()->create(['name' => 'Charlie']);
+    $alpha = User::factory()->mobileUser()->create(['name' => 'Alpha']);
+    $bravo = User::factory()->create(['name' => 'Bravo']);
+
+    $options = User::filterOptions();
+
+    expect($options->pluck('name')->all())->toBe(['Alpha', 'Bravo', 'Charlie']);
+    expect($options->pluck('id')->all())->toBe([$alpha->id, $bravo->id, $charlie->id]);
+    expect(array_keys($options->first()->getAttributes()))->toBe(['id', 'name']);
+});
+
+test('filterOptions returns an empty collection when there are no users', function () {
+    expect(User::filterOptions())->toBeEmpty();
+});
+
 test('the email_verified_at attribute is cast to a datetime', function () {
     $user = User::factory()->create(['email_verified_at' => '2026-01-01 10:00:00']);
 

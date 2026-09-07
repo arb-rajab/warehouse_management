@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
     $product = Product::factory()->create([
@@ -46,10 +47,18 @@ test('selectedOptions returns only the given ids, ordered by name, excluding an 
     expect($options->pluck('name')->all())->toBe(['Alpha', 'Bravo']);
 });
 
-test('selectedOptions returns an empty collection when given no ids', function () {
+test('selectedOptions returns an empty collection when given no ids, without querying at all', function () {
     Product::factory()->create();
 
-    expect(Product::selectedOptions())->toBeEmpty();
+    DB::enableQueryLog();
+    DB::flushQueryLog();
+
+    $options = Product::selectedOptions();
+
+    expect($options)->toBeEmpty();
+    expect(DB::getQueryLog())->toBeEmpty();
+
+    DB::disableQueryLog();
 });
 
 test('searchByName filters to products whose name contains the term, excluding a non-matching product', function () {

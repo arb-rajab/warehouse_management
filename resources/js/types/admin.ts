@@ -59,7 +59,11 @@ export interface CellPallet {
     product_name: string;
     product_image_url: string | null;
     expiration_date: string;
-    added_at: string;
+    /**
+     * Null-safe because `Pallet::toMapSummaryArray()` derives it from the
+     * model's nullable `created_at` (`$this->created_at?->toIso8601String()`).
+     */
+    added_at: string | null;
     is_stale: boolean | null;
     remaining_boxes: number;
 }
