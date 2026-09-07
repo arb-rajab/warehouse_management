@@ -241,6 +241,12 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   cheaper than finding a pile of unrelated fallout later.
 - In a Claude Code web session none of these tools are installed and cannot be
   installed — see the next section for what to do instead.
+- Same discipline for `vitest`: while iterating on a fix, run only the
+  specific `*.test.ts` file(s) the change touches (`npx vitest run
+  path/to/File.test.ts`), not the whole suite. Reserve one full `npx vitest
+  run` (all files) plus one full `npx vue-tsc --noEmit` (no per-file mode
+  exists for it) for right before each commit, as the final confirmation
+  that nothing else regressed — not after every intermediate edit.
 
 ## Sandbox: dependencies cannot be installed, so CI is the test run
 
@@ -262,6 +268,16 @@ sources. A 403 from the proxy is an organization egress-policy denial: per
 (`.claude/hooks/install-retry-guard.sh`) denies repeat install attempts after
 the first failure, including backgrounded ones — take the denial at face value
 rather than reaching for another route around it.
+
+If a session's environment does *not* have that 403 block (composer can
+actually reach `codeload.github.com`), `composer install` still commonly
+times out or SSL-times-out partway through the `dist` downloads for a few
+`spatie/*` packages before falling back to a slow one-by-one `git clone`
+from source — this is normal proxy flakiness, not the policy block above,
+and one retry resolves it. To avoid burning a multi-minute install on
+`phpstan/phpstan` (a dev-only dependency not needed for Pest/vitest/Pint),
+run `composer install --no-dev` first; only add dev deps back if a task
+specifically needs them (e.g. PHPStan itself).
 
 ## Testing conventions
 

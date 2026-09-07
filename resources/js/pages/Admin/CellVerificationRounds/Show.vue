@@ -7,6 +7,7 @@ import {
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -19,6 +20,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { cellStateLabel } from '@/lib/cellStateColor';
 import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
@@ -128,10 +130,12 @@ function clearFilters(): void {
 }
 
 function onSort(): void {
-    toggleSort(
-        { sort_by: 'created_at', sort_direction: filters.sort_direction },
-        'created_at',
-    );
+    const sort = {
+        sort_by: 'created_at',
+        sort_direction: filters.sort_direction,
+    };
+    toggleSort(sort, 'created_at');
+    filters.sort_direction = sort.sort_direction;
     applyFilters();
 }
 
@@ -370,13 +374,15 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    {{
-                        formatSlot(
-                            row.cell.row_letter,
-                            row.cell.cell_number,
-                            row.cell.flat_number,
-                        )
-                    }}
+                    <TableLink :href="showRow({ letter: row.cell.row_letter })">
+                        {{
+                            formatSlot(
+                                row.cell.row_letter,
+                                row.cell.cell_number,
+                                row.cell.flat_number,
+                            )
+                        }}
+                    </TableLink>
                 </td>
                 <td class="px-4 py-2">
                     <CellVerificationCorrectnessBadge
@@ -384,7 +390,13 @@ function onPerPageChange(perPage: number): void {
                     />
                 </td>
                 <td class="px-4 py-2">
-                    <div>{{ row.expected.cell_state }}</div>
+                    <div>
+                        {{
+                            row.expected.cell_state
+                                ? cellStateLabel(row.expected.cell_state)
+                                : '—'
+                        }}
+                    </div>
                     <div
                         v-if="snapshotProductLabel(row.expected)"
                         class="text-xs text-gray-500 dark:text-neutral-400"
@@ -394,7 +406,13 @@ function onPerPageChange(perPage: number): void {
                     </div>
                 </td>
                 <td class="px-4 py-2">
-                    <div>{{ row.reported.cell_state ?? '—' }}</div>
+                    <div>
+                        {{
+                            row.reported.cell_state
+                                ? cellStateLabel(row.reported.cell_state)
+                                : '—'
+                        }}
+                    </div>
                     <div
                         v-if="snapshotProductLabel(row.reported)"
                         class="text-xs text-gray-500 dark:text-neutral-400"

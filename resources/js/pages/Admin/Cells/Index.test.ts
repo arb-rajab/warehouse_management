@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellMap3D from '@/components/CellMap3D.vue';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
@@ -1251,7 +1252,7 @@ describe('Cells Index (warehouse map)', () => {
 
             await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
 
-            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const stub = wrapper.getComponent(CellMap3D);
             const bands = stub.props('bands') as CellMap3DBand[];
 
             expect(bands).toEqual([
@@ -1289,7 +1290,7 @@ describe('Cells Index (warehouse map)', () => {
             await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
             expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
-            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const stub = wrapper.getComponent(CellMap3D);
             const cellFromPanel: Cell = {
                 id: 42,
                 cell_number: 1,
@@ -1316,7 +1317,7 @@ describe('Cells Index (warehouse map)', () => {
             await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
             expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
-            const stub = wrapper.getComponent({ name: 'CellMap3DStub' });
+            const stub = wrapper.getComponent(CellMap3D);
             const cellFromPanel: Cell = {
                 id: 42,
                 cell_number: 1,

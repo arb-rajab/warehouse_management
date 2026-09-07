@@ -45,6 +45,7 @@ describe('AdminLayout', () => {
             '/admin/rows',
             '/admin/cells',
             '/admin/cell-logs',
+            '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
         ]);
@@ -222,6 +223,7 @@ describe('AdminLayout', () => {
             '/admin/rows',
             '/admin/cells',
             '/admin/cell-logs',
+            '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
         ]);

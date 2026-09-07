@@ -2,6 +2,7 @@ import type {
     Cell,
     CellStatusLog,
     CellVerificationReport,
+    CellVerificationRound,
     Paginated,
     Row,
     User,
@@ -92,6 +93,19 @@ export function cellVerificationReport(
         note: null,
         user: { id: 7, name: 'Jane Doe' },
         created_at: '2026-08-01T10:00:00Z',
+        ...overrides,
+    };
+}
+
+export function cellVerificationRound(
+    overrides: Partial<CellVerificationRound> = {},
+): CellVerificationRound {
+    return {
+        id: 1,
+        started_at: '2026-08-01T10:00:00Z',
+        completed_at: '2026-08-01T11:00:00Z',
+        reports_count: 3,
+        user: { id: 7, name: 'Jane Doe' },
         ...overrides,
     };
 }

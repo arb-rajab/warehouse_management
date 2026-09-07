@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { Cell, CellMapRow, Row } from '@/types/admin';
 import Show from './Show.vue';
 
@@ -100,6 +100,10 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 }
 
 describe('Rows Show', () => {
+    beforeEach(() => {
+        resetMocks({ usePageMock, routerGetMock, routerPostMock });
+    });
+
     it('renders the title with the row letter', () => {
         const wrapper = mountPage({ letter: 'B' }, []);
 
@@ -427,7 +431,7 @@ describe('Rows Show', () => {
 
         expect(routerPostMock).toHaveBeenCalledWith(
             '/admin/cells/42/toggle-active',
-            { note: 'Sensor malfunction' },
+            { note: 'Sensor malfunction', return_to: 'row' },
             expect.objectContaining({ preserveScroll: true }),
         );
     });
@@ -468,7 +472,7 @@ describe('Rows Show', () => {
 
         expect(routerPostMock).toHaveBeenCalledWith(
             '/admin/pallets/9/open',
-            expect.objectContaining({ boxes_count: '3' }),
+            expect.objectContaining({ boxes_count: 3 }),
             expect.objectContaining({ preserveScroll: true }),
         );
     });
