@@ -1,4 +1,10 @@
-import { ArrowUp, ArrowUpDown, Filter, PackageSearch } from '@lucide/vue';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    Filter,
+    PackageSearch,
+} from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
@@ -92,6 +98,20 @@ describe('DataTable', () => {
 
         const headers = wrapper.findAll('thead th');
         expect(headers[0].findComponent(ArrowUp).exists()).toBe(true);
+        expect(headers[1].findComponent(ArrowUpDown).exists()).toBe(true);
+    });
+
+    it('shows a down arrow on the active descending sort column', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }], {
+            columns: [
+                { label: 'Cells', sortKey: 'cells_count' },
+                { label: 'Flats', sortKey: 'flats_count' },
+            ],
+            sort: { by: 'cells_count', direction: 'desc' },
+        });
+
+        const headers = wrapper.findAll('thead th');
+        expect(headers[0].findComponent(ArrowDown).exists()).toBe(true);
         expect(headers[1].findComponent(ArrowUpDown).exists()).toBe(true);
     });
 

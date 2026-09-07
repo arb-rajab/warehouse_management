@@ -137,11 +137,12 @@ function mountPage(
         searchError?: boolean;
         filterOptions?: ProductFilterOptions;
         cellHighlightSamples?: CellHighlightSample[];
+        errors?: Record<string, string>;
     } = {},
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/cells',
-        props: defaultAuthProps(),
+        props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
     return mount(Index, {
@@ -197,6 +198,22 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.text()).toContain(t('cells.empty'));
     });
 
+    it('does not show an action error banner absent an action error', () => {
+        const wrapper = mountPage([], []);
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('shows the action error banner when the shared page props carry one', () => {
+        const wrapper = mountPage([], [], {
+            errors: { action: 'That pallet action could not be completed.' },
+        });
+
+        expect(wrapper.get('[role="alert"]').text()).toContain(
+            'That pallet action could not be completed.',
+        );
+    });
+
     it('renders every row with a slot per its cell count', () => {
         const wrapper = mountPage(
             [
@@ -237,6 +254,60 @@ describe('Cells Index (warehouse map)', () => {
 
         const emptySlot = slot(wrapper, formatSlot('A', 2, 1));
         expect(emptySlot?.text()).toContain(t('rows.show.empty'));
+    });
+
+    it('opens the pallet-actions dialog when a 2D cell slot emits manage-pallet', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ id: 9 }),
+                }),
+            ],
+        );
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        const manageButton = wrapper.find(
+            `[title="${t('cells.palletActions.triggerLabel')}"]`,
+        );
+        expect(manageButton.exists()).toBe(true);
+        await manageButton.trigger('click');
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            formatSlot('A', 1, 1),
+        );
+    });
+
+    it('opens the toggle-active dialog when a 2D cell slot emits toggle-active', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    is_active: true,
+                }),
+            ],
+        );
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        const toggleButton = wrapper.find(
+            `[title="${t('cells.toggleActive.deactivateLabel')}"]`,
+        );
+        expect(toggleButton.exists()).toBe(true);
+        await toggleButton.trigger('click');
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            formatSlot('A', 1, 1),
+        );
     });
 
     it('shows a not-available placeholder instead of empty cells for a row without this flat', () => {

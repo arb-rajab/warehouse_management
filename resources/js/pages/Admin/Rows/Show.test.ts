@@ -55,11 +55,15 @@ function pallet(
 function mountPage(
     rowOverrides: Partial<Row>,
     cells: Cell[],
-    overrides: { today?: string; rows?: CellMapRow[] } = {},
+    overrides: {
+        today?: string;
+        rows?: CellMapRow[];
+        errors?: Record<string, string>;
+    } = {},
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/rows/A',
-        props: defaultAuthProps(),
+        props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
     const shownRow = row(rowOverrides);
@@ -108,6 +112,24 @@ describe('Rows Show', () => {
         const wrapper = mountPage({ letter: 'B' }, []);
 
         expect(wrapper.text()).toContain(t('rows.show.title', { letter: 'B' }));
+    });
+
+    it('does not show an action error banner absent an action error', () => {
+        const wrapper = mountPage({ letter: 'B' }, []);
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('shows the action error banner when the shared page props carry one', () => {
+        const wrapper = mountPage(
+            { letter: 'B' },
+            [],
+            { errors: { action: 'That pallet action could not be completed.' } },
+        );
+
+        expect(wrapper.get('[role="alert"]').text()).toContain(
+            'That pallet action could not be completed.',
+        );
     });
 
     it("links to the row's edit page", () => {

@@ -204,6 +204,46 @@ describe('FilterProductSelect', () => {
         expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(2);
     });
 
+    it('shows a loading indicator alongside already-rendered options while fetching the next page', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).not.toContain(t('cellLog.filters.searching'));
+
+        const list = wrapper.get('[role="listbox"]').element as HTMLElement;
+        Object.defineProperty(list, 'scrollHeight', {
+            value: 100,
+            configurable: true,
+        });
+        Object.defineProperty(list, 'clientHeight', {
+            value: 50,
+            configurable: true,
+        });
+        Object.defineProperty(list, 'scrollTop', {
+            value: 60,
+            configurable: true,
+        });
+
+        await wrapper.get('[role="listbox"]').trigger('scroll');
+
+        expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(1);
+        expect(wrapper.text()).toContain(t('cellLog.filters.searching'));
+
+        resolveCall(
+            1,
+            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).not.toContain(t('cellLog.filters.searching'));
+    });
+
     it('does not fetch another page once the last page is loaded', async () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');
