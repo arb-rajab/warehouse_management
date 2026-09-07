@@ -161,6 +161,12 @@ describe('matchesCellHighlight', () => {
         ).toBe(true);
     });
 
+    it('does not match a product-id filter against a cell with no pallet', () => {
+        const filters = { ...emptyCellHighlightFilters(), productIds: ['1'] };
+
+        expect(matchesCellHighlight(cell(), filters, today)).toBe(false);
+    });
+
     it('matches any of several selected product ids', () => {
         const filters = {
             ...emptyCellHighlightFilters(),

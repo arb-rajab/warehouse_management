@@ -12,6 +12,19 @@ const products = [
 ];
 
 describe('CellHighlightFilters', () => {
+    it('renders the trigger button label', () => {
+        const wrapper = mount(CellHighlightFilters, {
+            props: {
+                products,
+                modelValue: emptyCellHighlightFilters(),
+            },
+        });
+
+        expect(wrapper.get('button').text()).toContain(
+            t('rows.show.highlight.button'),
+        );
+    });
+
     it('opens the dialog when the trigger button is clicked', async () => {
         const wrapper = mount(CellHighlightFilters, {
             props: {

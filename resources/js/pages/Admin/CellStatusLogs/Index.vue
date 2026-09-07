@@ -524,7 +524,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                             </TableLink>
                             <template v-if="pair.to">
                                 <ArrowRight
-                                    class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180"
+                                    class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-neutral-500"
                                 />
                                 <TableLink
                                     :href="
