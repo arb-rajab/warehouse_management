@@ -117,8 +117,11 @@ test('leaves headers outside waf.inspect_headers alone', function () {
 });
 
 test('blocks an attack signature in an uploaded filename', function () {
+    // No slash in the payload on purpose: Symfony's UploadedFile basenames the
+    // client-supplied name (everything up to the last "/" is dropped), so a
+    // "</script>" here would reach the middleware as "script>" and match nothing.
     $request = Request::create('/upload', 'POST', files: [
-        'document' => UploadedFile::fake()->create('<script>alert(1)</script>.csv'),
+        'document' => UploadedFile::fake()->create('1 union select 1.csv'),
     ]);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
