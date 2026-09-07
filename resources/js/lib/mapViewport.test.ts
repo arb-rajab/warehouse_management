@@ -11,6 +11,14 @@ import {
     ZOOM_MIN,
 } from './mapViewport';
 
+function wheelEvent(deltaY: number): WheelEvent {
+    return { deltaY } as WheelEvent;
+}
+
+function pointerEvent(pointerId: number, x: number, y: number): PointerEvent {
+    return { pointerId, clientX: x, clientY: y } as PointerEvent;
+}
+
 describe('clampZoom', () => {
     it('leaves an in-range zoom untouched', () => {
         expect(clampZoom(1.2)).toBe(1.2);
@@ -157,5 +165,98 @@ describe('useMapViewport', () => {
         expect(viewport.state.panY).toBe(0);
         expect(viewport.state.zoom).toBe(1.2);
         expect(viewport.state.rotation).toBe(0);
+    });
+
+    it('onWheel zooms via zoomFromWheelDelta', () => {
+        const viewport = useMapViewport();
+
+        viewport.onWheel(wheelEvent(-100));
+
+        expect(viewport.state.zoom).toBe(zoomFromWheelDelta(1, -100));
+    });
+
+    it('a single pointer drag pans by the movement delta', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 100, 100));
+        viewport.onPointerMove(pointerEvent(1, 130, 90));
+
+        expect(viewport.state.panX).toBe(30);
+        expect(viewport.state.panY).toBe(-10);
+
+        // The anchor moves with the pointer, so a second move pans by the
+        // next incremental delta, not the delta from the original start.
+        viewport.onPointerMove(pointerEvent(1, 140, 90));
+
+        expect(viewport.state.panX).toBe(40);
+        expect(viewport.state.panY).toBe(-10);
+    });
+
+    it('ignores a pointermove for a pointer that never went down', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerMove(pointerEvent(1, 130, 90));
+
+        expect(viewport.state.panX).toBe(0);
+        expect(viewport.state.panY).toBe(0);
+    });
+
+    it('a second pointer down starts a pinch instead of panning', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerDown(pointerEvent(2, 100, 0));
+
+        // The pinch-start distance is 100; moving the second pointer to 200
+        // apart doubles the distance and so doubles the zoom.
+        viewport.onPointerMove(pointerEvent(2, 200, 0));
+
+        expect(viewport.state.zoom).toBe(zoomFromPinch(1, 100, 200));
+        // A pinch in progress must not also pan.
+        expect(viewport.state.panX).toBe(0);
+        expect(viewport.state.panY).toBe(0);
+    });
+
+    it('lifting one finger of a pinch resumes panning from the remaining pointer', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerDown(pointerEvent(2, 100, 0));
+        viewport.onPointerUp(pointerEvent(2, 100, 0));
+
+        viewport.onPointerMove(pointerEvent(1, 20, 5));
+
+        expect(viewport.state.panX).toBe(20);
+        expect(viewport.state.panY).toBe(5);
+    });
+
+    it('lifting the last pointer clears the pan anchor', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerUp(pointerEvent(1, 0, 0));
+
+        // The pointer is no longer tracked, so a further move for the same
+        // id (e.g. a stray event) is ignored rather than panning.
+        viewport.onPointerMove(pointerEvent(1, 50, 50));
+
+        expect(viewport.state.panX).toBe(0);
+        expect(viewport.state.panY).toBe(0);
+    });
+
+    it('lifting a pointer mid-pinch stops zooming from further movement of the other one', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerDown(pointerEvent(2, 100, 0));
+        viewport.onPointerUp(pointerEvent(1, 0, 0));
+
+        const zoomAfterLift = viewport.state.zoom;
+
+        // Only one pointer remains, so this becomes a pan, not a pinch —
+        // zoom must not change from moving it further apart.
+        viewport.onPointerMove(pointerEvent(2, 300, 0));
+
+        expect(viewport.state.zoom).toBe(zoomAfterLift);
     });
 });
