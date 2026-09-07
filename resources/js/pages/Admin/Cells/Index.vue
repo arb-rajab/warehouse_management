@@ -45,7 +45,6 @@ import {
     columnNumberOptions,
     countBadgeClass,
     mapToolbarButtonClass,
-    matchNavButtonClass,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -65,6 +64,15 @@ import type {
     CellSlotLocation,
     CellWithLocation,
 } from '@/types/admin';
+
+/**
+ * The highlight-match previous/next nav buttons — same look as
+ * mapToolbarButtonClass but at the smaller p-1.5 size used alongside the
+ * match-count label. Local to this file, not lib/filters.ts, since it has no
+ * caller outside it.
+ */
+const matchNavButtonClass =
+    'cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 const props = defineProps<{
     rows: CellMapRow[];
