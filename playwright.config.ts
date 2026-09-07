@@ -55,6 +55,20 @@ export default defineConfig({
             TELESCOPE_DB_DATABASE: telescopeDbPath,
             PULSE_DB_DATABASE: pulseDbPath,
             HEALTH_DB_DATABASE: healthDbPath,
+            /**
+             * POST /login carries the `honeypot` middleware, which rejects
+             * any submission faster than config('honeypot.amount_of_seconds')
+             * (1s) after the form rendered — real spam protection, not
+             * something any e2e spec tests. Pest's login tests never trip
+             * this (they post directly, skipping the rendered form's timing
+             * field entirely), but Playwright's loginAsAdmin() fills and
+             * submits far faster than a human, so nearly every e2e spec
+             * failed at login until this was disabled — no e2e spec exists
+             * to actually verify anti-spam behavior, so there's nothing lost
+             * by turning it off here, same reasoning as disabling
+             * Telescope/Pulse for Pest in phpunit.xml.
+             */
+            HONEYPOT_ENABLED: 'false',
             SESSION_DRIVER: 'cookie',
             CACHE_STORE: 'array',
             QUEUE_CONNECTION: 'sync',
