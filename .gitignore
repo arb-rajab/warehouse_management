@@ -1,6 +1,9 @@
 /.phpunit.cache
 /bootstrap/ssr
 /database/e2e.sqlite
+/database/e2e-telescope.sqlite
+/database/e2e-pulse.sqlite
+/database/e2e-health.sqlite
 /playwright-report
 /test-results
 /node_modules
