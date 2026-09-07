@@ -231,7 +231,11 @@ describe('useProductSearch', () => {
         await wrapper.vm.$nextTick();
 
         wrapper.vm.onOptionsScroll(
-            scrollElement({ scrollHeight: 500, clientHeight: 50, scrollTop: 0 }),
+            scrollElement({
+                scrollHeight: 500,
+                clientHeight: 50,
+                scrollTop: 0,
+            }),
         );
 
         expect(getMock).toHaveBeenCalledTimes(1);

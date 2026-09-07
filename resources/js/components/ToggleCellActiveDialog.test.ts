@@ -115,7 +115,9 @@ describe('ToggleCellActiveDialog', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][0]).toContain('cells/7/toggle-active');
+        expect(routerPostMock.mock.calls[0][0]).toContain(
+            'cells/7/toggle-active',
+        );
         expect(routerPostMock.mock.calls[0][1]).toEqual({
             note: null,
             return_to: null,
@@ -123,7 +125,10 @@ describe('ToggleCellActiveDialog', () => {
     });
 
     it('posts the typed note and return_to when provided', async () => {
-        const wrapper = await mountDialog({ cell: cell(true), returnTo: 'row' });
+        const wrapper = await mountDialog({
+            cell: cell(true),
+            returnTo: 'row',
+        });
 
         await wrapper.get('textarea').setValue('Damaged shelf');
         await wrapper.get('form').trigger('submit');
