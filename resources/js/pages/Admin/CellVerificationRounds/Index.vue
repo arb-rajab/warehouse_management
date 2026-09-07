@@ -8,6 +8,7 @@ import {
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
@@ -20,9 +21,12 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
+    countBadgeClass,
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
+    filterFooterClass,
+    filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
     selectedCountLabel,
@@ -135,10 +139,7 @@ function onPerPageChange(perPage: number): void {
             >
                 <SlidersHorizontal class="h-4 w-4" />
                 {{ t('cellVerificationRound.filters.title') }}
-                <span
-                    v-if="activeFilterCount > 0"
-                    class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500"
-                >
+                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                     {{ activeFilterCount }}
                 </span>
             </button>
@@ -196,9 +197,7 @@ function onPerPageChange(perPage: number): void {
                     </div>
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <DateRangeFilterFields
                         from-id="filter-date-from"
                         to-id="filter-date-to"
@@ -217,9 +216,7 @@ function onPerPageChange(perPage: number): void {
                     />
                 </div>
 
-                <div
-                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterFooterClass">
                     <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellVerificationRound.filters.apply') }}
@@ -277,18 +274,9 @@ function onPerPageChange(perPage: number): void {
                 </td>
                 <td class="px-4 py-2">{{ formatDateTime(row.started_at) }}</td>
                 <td class="px-4 py-2">
-                    <span
-                        v-if="row.completed_at"
-                        class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    >
-                        {{ t('cellVerificationRound.status.completed') }}
-                    </span>
-                    <span
-                        v-else
-                        class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                    >
-                        {{ t('cellVerificationRound.status.inProgress') }}
-                    </span>
+                    <CellVerificationRoundStatusBadge
+                        :completed-at="row.completed_at"
+                    />
                 </td>
                 <td class="px-4 py-2">{{ row.reports_count }}</td>
             </template>

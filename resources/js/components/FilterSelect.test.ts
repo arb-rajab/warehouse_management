@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { plainFieldInputClass } from '@/lib/filters';
 import FilterSelect from './FilterSelect.vue';
 
 describe('FilterSelect', () => {
@@ -23,6 +24,7 @@ describe('FilterSelect', () => {
 
         const select = wrapper.get('select');
         expect(select.attributes('id')).toBe('filter-row');
+        expect(select.attributes('class')).toBe(plainFieldInputClass);
 
         const options = wrapper.findAll('option');
         expect(options.map((option) => option.text())).toEqual([

@@ -23,6 +23,8 @@ import {
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
+    filterFooterClass,
+    filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
     selectedCountLabel,
@@ -272,9 +274,7 @@ function activityHref(
                     />
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}
                     </h3>
@@ -300,9 +300,7 @@ function activityHref(
                     </div>
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.activity') }}
                     </h3>
@@ -331,9 +329,7 @@ function activityHref(
                     </div>
                 </div>
 
-                <div
-                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterFooterClass">
                     <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}

@@ -42,6 +42,8 @@ import {
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
+    filterFooterClass,
+    filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
     selectedCountLabel,
@@ -246,9 +248,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     />
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.activity') }}
                     </h3>
@@ -279,9 +279,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     />
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.date') }}
                     </h3>
@@ -302,9 +300,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     </div>
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.expiration') }}
                     </h3>
@@ -327,9 +323,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     </div>
                 </div>
 
-                <div
-                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterFooterClass">
                     <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}

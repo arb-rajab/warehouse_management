@@ -1,6 +1,7 @@
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -225,6 +226,9 @@ describe('CellVerificationRounds Index', () => {
         expect(rowCells(wrapper)[3].text()).toBe(
             t('cellVerificationRound.status.completed'),
         );
+        expect(
+            wrapper.findComponent(CellVerificationRoundStatusBadge).props(),
+        ).toMatchObject({ completedAt: '2026-08-01T11:00:00Z' });
     });
 
     it('shows an in-progress badge when the round has no completed_at', () => {
@@ -235,6 +239,9 @@ describe('CellVerificationRounds Index', () => {
         expect(rowCells(wrapper)[3].text()).toBe(
             t('cellVerificationRound.status.inProgress'),
         );
+        expect(
+            wrapper.findComponent(CellVerificationRoundStatusBadge).props(),
+        ).toMatchObject({ completedAt: null });
     });
 
     it('renders the reports_count', () => {

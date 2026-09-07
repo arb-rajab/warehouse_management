@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
+import { selectedToggleClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { PaginationLink } from '@/types/admin';
 
@@ -49,7 +50,7 @@ function linkClass(link: PaginationLink): string {
     }
 
     return link.active
-        ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+        ? selectedToggleClass
         : 'text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800';
 }
 </script>

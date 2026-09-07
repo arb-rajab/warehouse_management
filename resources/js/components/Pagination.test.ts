@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { selectedToggleClass } from '@/lib/filters';
 import type { PaginationLink } from '@/types/admin';
 import Pagination from './Pagination.vue';
 
@@ -61,8 +62,10 @@ describe('Pagination', () => {
         const activeLink = wrapper.findAll('a').find((a) => a.text() === '2');
         const inactiveLink = wrapper.findAll('a').find((a) => a.text() === '1');
 
-        expect(activeLink?.classes()).toContain('bg-gray-900');
-        expect(inactiveLink?.classes()).not.toContain('bg-gray-900');
+        for (const className of selectedToggleClass.split(' ')) {
+            expect(activeLink?.classes()).toContain(className);
+            expect(inactiveLink?.classes()).not.toContain(className);
+        }
     });
 
     it('links to the url given for each page link', () => {
