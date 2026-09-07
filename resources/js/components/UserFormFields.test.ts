@@ -74,6 +74,40 @@ describe('UserFormFields', () => {
         expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
     });
 
+    it('prevents the admin toggle checkbox from actually changing while disableAdminToggle is true', async () => {
+        const wrapper = mount(UserFormFields, {
+            props: { errors: {}, isAdmin: true, disableAdminToggle: true },
+            attachTo: document.body,
+        });
+
+        const checkbox = wrapper.get('input[type="checkbox"]')
+            .element as HTMLInputElement;
+        expect(checkbox.checked).toBe(true);
+
+        await wrapper.get('input[type="checkbox"]').trigger('click');
+
+        expect(checkbox.checked).toBe(true);
+
+        wrapper.unmount();
+    });
+
+    it('allows the admin toggle checkbox to change when disableAdminToggle is false', async () => {
+        const wrapper = mount(UserFormFields, {
+            props: { errors: {}, isAdmin: true, disableAdminToggle: false },
+            attachTo: document.body,
+        });
+
+        const checkbox = wrapper.get('input[type="checkbox"]')
+            .element as HTMLInputElement;
+        expect(checkbox.checked).toBe(true);
+
+        await wrapper.get('input[type="checkbox"]').trigger('click');
+
+        expect(checkbox.checked).toBe(false);
+
+        wrapper.unmount();
+    });
+
     it('marks the name and email fields as required with a max length, mirroring the backend rules', () => {
         const wrapper = mount(UserFormFields, { props: { errors: {} } });
 

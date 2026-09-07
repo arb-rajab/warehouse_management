@@ -10,7 +10,7 @@ test('dismissing the logout confirmation stays signed in, accepting it logs out'
 
     page.once('dialog', (dialog) => dialog.dismiss());
     await logoutButton.click();
-    await expect(page).toHaveURL(/\/admin\/rows$/);
+    await expect(page).toHaveURL(/\/admin$/);
 
     page.once('dialog', (dialog) => dialog.accept());
     await logoutButton.click();

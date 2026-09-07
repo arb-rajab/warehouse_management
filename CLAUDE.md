@@ -279,6 +279,16 @@ and one retry resolves it. To avoid burning a multi-minute install on
 run `composer install --no-dev` first; only add dev deps back if a task
 specifically needs them (e.g. PHPStan itself).
 
+Because none of these tools run locally, verifying a batch of edits (e.g.
+confirming JS/TS files are syntactically well-formed before a commit) often
+means writing an ad hoc check yourself. If that check will run more than
+once in the same session (e.g. once per touched file), write it to a file in
+the scratchpad directory a single time and invoke it repeatedly (`python3
+/tmp/.../checker.py "$f"` in a loop) rather than re-embedding the full
+script in a new Bash heredoc for every invocation — the repeated inline
+script text costs tool-input tokens on every call for no benefit over a
+single reusable file.
+
 ## Testing conventions
 
 - Every model relationship/filter/scope test needs unrelated "noise" data in
@@ -398,6 +408,11 @@ specifically needs them (e.g. PHPStan itself).
   finding forces the fix pass to re-read the whole file from scratch to
   relocate what the subagent already found, paying the read cost twice for
   the same file.
+- Also ask the agent to keep clean files terse in its report — a one-line
+  "no issues: FileA.vue, FileB.ts" list, not a paragraph re-explaining why
+  each file is fine. The parent conversation only needs to know where the
+  findings are; a narrative justification for files with no findings adds
+  report size without adding anything actionable.
 - Once a large file's relevant section is already known — from a citation
   above, a prior read in this session, or a fresh `Grep` hit — don't re-`Read`
   the whole file to make a small addition (e.g. one new test appended near an

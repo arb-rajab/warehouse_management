@@ -6,5 +6,5 @@ export async function loginAsAdmin(page: Page): Promise<void> {
     await page.locator('#email').fill('test@example.com');
     await page.locator('#password').fill('password');
     await page.getByRole('button', { name: 'Log in' }).click();
-    await expect(page).toHaveURL(/\/admin\/rows$/);
+    await expect(page).toHaveURL(/\/admin$/);
 }
