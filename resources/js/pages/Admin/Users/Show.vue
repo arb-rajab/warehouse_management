@@ -323,7 +323,13 @@ function onReportsPerPageChange(perPage: number): void {
                         />
                     </td>
                     <td class="px-4 py-2">
-                        <div>{{ report.expected.cell_state }}</div>
+                        <div>
+                            {{
+                                report.expected.cell_state
+                                    ? cellStateLabel(report.expected.cell_state)
+                                    : '—'
+                            }}
+                        </div>
                         <div
                             v-if="snapshotProductLabel(report.expected)"
                             class="text-xs text-gray-500 dark:text-neutral-400"
@@ -333,7 +339,13 @@ function onReportsPerPageChange(perPage: number): void {
                         </div>
                     </td>
                     <td class="px-4 py-2">
-                        <div>{{ report.reported.cell_state ?? '—' }}</div>
+                        <div>
+                            {{
+                                report.reported.cell_state
+                                    ? cellStateLabel(report.reported.cell_state)
+                                    : '—'
+                            }}
+                        </div>
                         <div
                             v-if="snapshotProductLabel(report.reported)"
                             class="text-xs text-gray-500 dark:text-neutral-400"
