@@ -121,11 +121,9 @@ describe('Rows Show', () => {
     });
 
     it('shows the action error banner when the shared page props carry one', () => {
-        const wrapper = mountPage(
-            { letter: 'B' },
-            [],
-            { errors: { action: 'That pallet action could not be completed.' } },
-        );
+        const wrapper = mountPage({ letter: 'B' }, [], {
+            errors: { action: 'That pallet action could not be completed.' },
+        });
 
         expect(wrapper.get('[role="alert"]').text()).toContain(
             'That pallet action could not be completed.',

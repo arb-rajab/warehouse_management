@@ -184,9 +184,9 @@ describe('PalletActionsDialog', () => {
     it('offers only the store tab for an empty cell, and posts the product/expiration/note fields on submit', async () => {
         const wrapper = await mountDialog(emptyCell());
 
-        expect(wrapper.findAll('[data-testid="pallet-action-tab"]')).toHaveLength(
-            0,
-        );
+        expect(
+            wrapper.findAll('[data-testid="pallet-action-tab"]'),
+        ).toHaveLength(0);
         expect(wrapper.find('#pallet-action-expiration').exists()).toBe(true);
 
         await wrapper.get('#pallet-action-expiration').setValue('2026-12-25');
@@ -226,8 +226,10 @@ describe('PalletActionsDialog', () => {
 
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
         expect(
-            (wrapper.get('#pallet-action-boxes-count').element as HTMLInputElement)
-                .value,
+            (
+                wrapper.get('#pallet-action-boxes-count')
+                    .element as HTMLInputElement
+            ).value,
         ).toBe('4');
 
         const tabs = wrapper.findAll('[data-testid="pallet-action-tab"]');
@@ -238,8 +240,10 @@ describe('PalletActionsDialog', () => {
         await tabs[0].trigger('click');
         expect(wrapper.find('#pallet-action-boxes-count').exists()).toBe(true);
         expect(
-            (wrapper.get('#pallet-action-boxes-count').element as HTMLInputElement)
-                .value,
+            (
+                wrapper.get('#pallet-action-boxes-count')
+                    .element as HTMLInputElement
+            ).value,
         ).toBe('');
     });
 
@@ -285,9 +289,9 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
         await wrapper.get('form').trigger('submit');
 
-        expect(
-            wrapper.getComponent(SubmitButton).props('processing'),
-        ).toBe(true);
+        expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
+            true,
+        );
 
         const options = routerPostMock.mock.calls[0][2] as {
             onSuccess: () => void;
@@ -301,8 +305,8 @@ describe('PalletActionsDialog', () => {
         options.onFinish();
         await wrapper.vm.$nextTick();
 
-        expect(
-            wrapper.getComponent(SubmitButton).props('processing'),
-        ).toBe(false);
+        expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
+            false,
+        );
     });
 });
