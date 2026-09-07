@@ -219,4 +219,60 @@ describe('CellSlot', () => {
 
         expect(wrapper.emitted('toggle-active')).toEqual([[targetCell]]);
     });
+
+    it('does not show a manage-pallet button unless manageable is set', () => {
+        const wrapper = mountSlot({ cell: cell() });
+
+        expect(
+            wrapper
+                .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('shows the manage-pallet button when manageable and the cell is active', () => {
+        const wrapper = mountSlot({
+            cell: cell({ is_active: true }),
+            manageable: true,
+        });
+
+        expect(
+            wrapper
+                .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('hides the manage-pallet button for an inactive cell even when manageable', () => {
+        const wrapper = mountSlot({
+            cell: cell({ is_active: false }),
+            manageable: true,
+        });
+
+        expect(
+            wrapper
+                .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('emits manage-pallet with the cell when the manage-pallet button is clicked', async () => {
+        const targetCell = cell({ id: 42, is_active: true });
+        const wrapper = mountSlot({ cell: targetCell, manageable: true });
+
+        await wrapper
+            .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+            .trigger('click');
+
+        expect(wrapper.emitted('manage-pallet')).toEqual([[targetCell]]);
+    });
+
+    it('draws a pulsing ring only when told to', () => {
+        expect(mountSlot({ pulsing: false }).classes()).not.toContain(
+            'ring-emerald-500',
+        );
+        expect(mountSlot({ pulsing: true }).classes()).toContain(
+            'ring-emerald-500',
+        );
+    });
 });
