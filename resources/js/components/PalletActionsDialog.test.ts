@@ -9,6 +9,24 @@ const { routerPostMock } = vi.hoisted(() => ({
 
 vi.mock('@inertiajs/vue3', () => ({
     router: { post: routerPostMock },
+    useHttp: () => ({
+        get: (
+            _url: string,
+            options?: { onSuccess?: (response: unknown) => void },
+        ) =>
+            options?.onSuccess?.({
+                data: [],
+                meta: {
+                    current_page: 1,
+                    last_page: 1,
+                    per_page: 20,
+                    total: 0,
+                    from: null,
+                    to: 0,
+                    links: [],
+                },
+            }),
+    }),
 }));
 
 const rows: CellMapRow[] = [
@@ -36,16 +54,27 @@ function openedCell(remainingBoxes: number): CellWithLocation {
     };
 }
 
-function mountDialog(cell: CellWithLocation | null) {
-    return mount(PalletActionsDialog, {
+/**
+ * Mounts closed and transitions to open, matching how the dialog is always
+ * used in the real app (Cells/Index.vue, Rows/Show.vue start it at
+ * `open: false` and flip it to `true` later) — `selectedAction`'s default
+ * is only set by the `watch(open, ...)` handler, which needs a false→true
+ * transition to fire (see FilterDialog.test.ts for the same pattern).
+ */
+async function mountDialog(cell: CellWithLocation | null) {
+    const wrapper = mount(PalletActionsDialog, {
         props: {
             cell,
             label: 'A2·1',
             rows,
-            open: true,
+            open: false,
             'onUpdate:open': () => {},
         },
     });
+
+    await wrapper.setProps({ open: true });
+
+    return wrapper;
 }
 
 describe('PalletActionsDialog', () => {
@@ -54,7 +83,7 @@ describe('PalletActionsDialog', () => {
     });
 
     it('does not offer the confirm-empty checkbox while boxes_count is below remaining_boxes', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
 
@@ -62,7 +91,7 @@ describe('PalletActionsDialog', () => {
     });
 
     it('offers the confirm-empty checkbox once boxes_count equals remaining_boxes', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('6');
 
@@ -70,7 +99,7 @@ describe('PalletActionsDialog', () => {
     });
 
     it('offers the confirm-empty checkbox once boxes_count exceeds remaining_boxes', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('9');
 
@@ -78,20 +107,23 @@ describe('PalletActionsDialog', () => {
     });
 
     it('posts confirm_empty false when removing fewer boxes than remain', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
         await wrapper.get('form').trigger('submit');
 
         expect(routerPostMock).toHaveBeenCalledTimes(1);
+        // The static type="number" input auto-casts through v-model (see
+        // js.md's FilterNumberField note) — boxes_count posts as a number
+        // despite boxesCount being declared as a string ref.
         expect(routerPostMock.mock.calls[0][1]).toMatchObject({
-            boxes_count: '4',
+            boxes_count: 4,
             confirm_empty: false,
         });
     });
 
     it('posts confirm_empty true when the checkbox is checked for an exact boxes_count match', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('6');
         await wrapper.get('input[type="checkbox"]').setValue(true);
@@ -99,13 +131,13 @@ describe('PalletActionsDialog', () => {
 
         expect(routerPostMock).toHaveBeenCalledTimes(1);
         expect(routerPostMock.mock.calls[0][1]).toMatchObject({
-            boxes_count: '6',
+            boxes_count: 6,
             confirm_empty: true,
         });
     });
 
     it('resets the checked confirm_empty state when boxes_count is edited back down', async () => {
-        const wrapper = mountDialog(openedCell(6));
+        const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('6');
         await wrapper.get('input[type="checkbox"]').setValue(true);

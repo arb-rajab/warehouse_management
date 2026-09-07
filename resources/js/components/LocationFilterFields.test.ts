@@ -82,7 +82,11 @@ describe('LocationFilterFields', () => {
 
         await wrapper.findAll('select')[0].setValue('2');
 
-        expect(wrapper.emitted('update:rowId')?.[0]).toEqual(['2']);
+        // The row select's options bind numeric `row.id` values, so Vue's
+        // native-select v-model preserves the actual type instead of the
+        // declared `string` model (same convention as FilterNumberField,
+        // see js.md).
+        expect(wrapper.emitted('update:rowId')?.[0]).toEqual([2]);
     });
 
     it('emits update:columnNumber when the column select changes', async () => {
@@ -98,7 +102,9 @@ describe('LocationFilterFields', () => {
 
         await wrapper.findAll('select')[1].setValue('2');
 
-        expect(wrapper.emitted('update:columnNumber')?.[0]).toEqual(['2']);
+        // The column select's options bind numeric values (1..maxColumnNumber),
+        // so the emitted value is a number too — see the note above.
+        expect(wrapper.emitted('update:columnNumber')?.[0]).toEqual([2]);
     });
 
     it('selects the options matching rowId and columnNumber', () => {
