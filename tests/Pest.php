@@ -60,6 +60,22 @@ function actingAsAdmin(): User
 }
 
 /**
+ * Authenticate an admin against the API's token guard, as the mobile app
+ * does for actingAsMobileUser() — for the handful of API responses (e.g.
+ * CellStatusLogResource's flagged/flags keys) that vary by whether the
+ * authenticated caller is an admin. Returns the user for tests that assert
+ * on who performed the action.
+ */
+function actingAsAdminMobileUser(): User
+{
+    $admin = User::factory()->create();
+
+    Sanctum::actingAs($admin, ['*']);
+
+    return $admin;
+}
+
+/**
  * Authenticate a mobile app user against the admin panel's session guard, to
  * assert that panel routes reject a non-admin caller. Returns the user for
  * tests that assert on who performed the action.

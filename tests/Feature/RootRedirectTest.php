@@ -42,3 +42,14 @@ test('an unauthenticated caller is redirected to login when visiting the admin i
 
     $response->assertRedirect(route('login'));
 });
+
+test('a mobile app user visiting the root ends up forbidden, not stuck redirecting', function () {
+    // "/" -> "/login" -> (already authenticated) "/admin" -> 403, since a
+    // signed-in caller is bounced off /login before role:admin ever rejects
+    // them at /admin itself. Distinct from hitting /admin directly.
+    $mobileUser = User::factory()->mobileUser()->create();
+
+    $response = $this->actingAs($mobileUser)->followingRedirects()->get('/');
+
+    $response->assertForbidden();
+});

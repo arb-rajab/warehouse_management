@@ -4,6 +4,8 @@ use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Pallet;
+use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -39,6 +41,25 @@ test('the dashboard cache is invalidated the moment a cell status log is written
     ]);
 
     $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy.full', 1)
+    );
+});
+
+test('dashboard stats are cached separately per product filter, not shared across filters', function () {
+    actingAsAdmin();
+
+    $productA = Product::factory()->create();
+    $productB = Product::factory()->create();
+    Pallet::factory()->count(2)->create(['product_id' => $productA->id]);
+    Pallet::factory()->create(['product_id' => $productB->id]);
+
+    $this->get("/admin?product_id[]={$productA->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy.full', 2)
+    );
+
+    // If the cache key ignored productIds, this would come back with productA's
+    // cached full count (2) instead of productB's own (1).
+    $this->get("/admin?product_id[]={$productB->id}")->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.occupancy.full', 1)
     );
 });

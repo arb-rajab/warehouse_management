@@ -133,6 +133,18 @@ test('an unauthenticated caller cannot store a pallet and nothing changes', func
     $this->assertDatabaseCount('pallets', 0);
 });
 
+test('storing a pallet into a non-existent cell returns a 404', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+
+    $response = $this->post('/admin/cells/999999/pallet', [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertNotFound();
+});
+
 test('an authenticated admin can open a full pallet, removing boxes at the same time', function () {
     $admin = actingAsAdmin();
     $product = Product::factory()->create(['boxes_count' => 10]);
@@ -251,6 +263,14 @@ test('an unauthenticated caller cannot open a pallet and nothing changes', funct
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
 });
 
+test('opening a non-existent pallet returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/pallets/999999/open', ['boxes_count' => 1]);
+
+    $response->assertNotFound();
+});
+
 test('an authenticated admin can remove more boxes from an already-opened pallet', function () {
     $admin = actingAsAdmin();
     $product = Product::factory()->create(['boxes_count' => 10]);
@@ -326,6 +346,14 @@ test('an unauthenticated caller cannot remove boxes and nothing changes', functi
     expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
+test('removing boxes from a non-existent pallet returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/pallets/999999/remove-boxes', ['boxes_count' => 1]);
+
+    $response->assertNotFound();
+});
+
 test('an authenticated admin can empty a pallet regardless of remaining boxes', function () {
     $admin = actingAsAdmin();
     $pallet = Pallet::factory()->create();
@@ -373,6 +401,14 @@ test('an unauthenticated caller cannot empty a pallet and nothing changes', func
 
     $response->assertRedirect(route('login'));
     $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
+});
+
+test('emptying a non-existent pallet returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/pallets/999999/empty');
+
+    $response->assertNotFound();
 });
 
 test('an authenticated admin can transfer a pallet to another empty cell', function () {
@@ -501,4 +537,17 @@ test('an unauthenticated caller cannot transfer a pallet and nothing changes', f
     $response->assertRedirect(route('login'));
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
     $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('transferring a non-existent pallet returns a 404', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->post('/admin/pallets/999999/transfer', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ]);
+
+    $response->assertNotFound();
 });

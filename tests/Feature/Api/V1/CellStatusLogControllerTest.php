@@ -102,6 +102,22 @@ test('the cell log listing withholds flag data from a worker, even for a flagged
     expect($response->json('data.0'))->not->toHaveKey('flags');
 });
 
+test('the cell log listing includes the flagged boolean for an admin caller, but never the underlying flags array', function () {
+    // forListing() deliberately never eager-loads WITH_FLAG_DETAILS on this
+    // endpoint (only the admin panel's own listing does), so `flags` stays
+    // absent for every viewer via whenLoaded() — only `flagged` itself
+    // (computed via the exists() fallback) actually varies by viewer here.
+    actingAsAdminMobileUser();
+    $log = CellStatusLog::factory()->create();
+    CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs');
+
+    $response->assertOk();
+    expect($response->json('data.0.flagged'))->toBeTrue();
+    expect($response->json('data.0'))->not->toHaveKey('flags');
+});
+
 test('the flagged filter is ignored for a worker, so it cannot be used to reveal which entries are flagged', function () {
     actingAsMobileUser();
     $flagged = CellStatusLog::factory()->create();

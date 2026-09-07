@@ -31,6 +31,20 @@ test('a request with no X-App-Version header is rejected once a minimum is confi
     $response->assertStatus(426);
 });
 
+test('a request with an empty X-App-Version header is rejected once a minimum is configured', function () {
+    // A present-but-empty header is a different code path from a missing one:
+    // is_string('') is true, so it reaches version_compare() rather than the
+    // early rejection above it — this pins that version_compare() treats an
+    // empty string as "below any real version" rather than passing it through.
+    MobileAppVersionRequirement::factory()->create(['minimum_version' => '2.0.0']);
+    actingAsMobileUser();
+
+    $response = $this->withHeaders(['X-App-Version' => ''])->getJson('/api/v1/dashboard');
+
+    $response->assertStatus(426);
+    expect($response->json('error_code'))->toBe('app_version_outdated');
+});
+
 test('a request at or above the minimum version is allowed through', function () {
     MobileAppVersionRequirement::factory()->create(['minimum_version' => '2.0.0']);
     actingAsMobileUser();

@@ -61,6 +61,24 @@ test('RestrictToAllowedIps blocks an IP outside a CIDR range entry', function ()
     (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips');
 })->throws(HttpException::class);
 
+test('RestrictToAllowedIps accepts an IPv6 CIDR range entry', function () {
+    config(['telescope.allowed_ips' => '2001:db8::/32']);
+
+    $request = Request::create('/telescope', 'GET', server: ['REMOTE_ADDR' => '2001:db8::1']);
+
+    $response = (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips');
+
+    expect($response->getContent())->toBe('ok');
+});
+
+test('RestrictToAllowedIps blocks an IPv6 address outside the CIDR range', function () {
+    config(['telescope.allowed_ips' => '2001:db8::/32']);
+
+    $request = Request::create('/telescope', 'GET', server: ['REMOTE_ADDR' => '2001:db9::1']);
+
+    (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips');
+})->throws(HttpException::class);
+
 test('RestrictToAllowedIps still accepts the documented wildcard form', function () {
     config(['telescope.allowed_ips' => '10.0.0.*']);
 
