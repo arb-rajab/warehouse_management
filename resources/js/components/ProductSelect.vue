@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import { nextTick, reactive, ref, watch } from 'vue';
-import { search as searchProducts } from '@/actions/App/Http/Controllers/Admin/ProductController';
-import { debounce, fieldLabelClass } from '@/lib/filters';
+import { nextTick, ref, watch } from 'vue';
+import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
-import type { Paginated, ProductFilterOption } from '@/types/admin';
+import { useProductSearch } from '@/lib/useProductSearch';
+import type { ProductFilterOption } from '@/types/admin';
 
 const props = defineProps<{
     id: string;
@@ -17,20 +16,23 @@ const props = defineProps<{
 const model = defineModel<ProductFilterOption | null>({ required: true });
 
 const searchInputRef = ref<HTMLInputElement | null>(null);
+const optionsListRef = ref<HTMLElement | null>(null);
 
-const query = ref('');
-const results = ref<ProductFilterOption[]>([]);
-const page = ref<Paginated<ProductFilterOption> | null>(null);
-const loading = ref(false);
-let requestSeq = 0;
-
-const namesById = reactive(new Map<number, string>());
+const {
+    query,
+    results,
+    loading,
+    namesById,
+    rememberNames,
+    fetchFirstPageIfEmpty,
+    onOptionsScroll,
+} = useProductSearch();
 
 watch(
     () => model.value,
     (product) => {
         if (product) {
-            namesById.set(product.id, product.name);
+            rememberNames([product]);
         }
     },
     { immediate: true },
@@ -39,69 +41,11 @@ watch(
 const { open, containerRef, setOptionRef, onOptionKeydown } =
     useDismissibleListbox(() => results.value.length);
 
-const http = useHttp({});
-
-function fetchPage(pageNumber: number, replace: boolean): void {
-    const mySeq = ++requestSeq;
-    loading.value = true;
-
-    http.get(
-        searchProducts.url({ query: { q: query.value, page: pageNumber } }),
-        {
-            onSuccess: (response: unknown) => {
-                if (mySeq !== requestSeq) {
-                    return;
-                }
-
-                const body = response as Paginated<ProductFilterOption>;
-
-                results.value = replace
-                    ? body.data
-                    : [...results.value, ...body.data];
-                page.value = body;
-
-                for (const product of body.data) {
-                    namesById.set(product.id, product.name);
-                }
-
-                loading.value = false;
-            },
-        },
-    );
-}
-
-const debouncedSearch = debounce(() => fetchPage(1, true), 300);
-
-watch(query, debouncedSearch);
-
-const optionsListRef = ref<HTMLElement | null>(null);
-
-function onOptionsScroll(): void {
-    const el = optionsListRef.value;
-    const currentPage = page.value;
-
-    if (!el || !currentPage || loading.value) {
-        return;
-    }
-
-    if (currentPage.meta.current_page >= currentPage.meta.last_page) {
-        return;
-    }
-
-    if (el.scrollHeight - el.scrollTop - el.clientHeight > 48) {
-        return;
-    }
-
-    fetchPage(currentPage.meta.current_page + 1, false);
-}
-
 function toggleOpen(): void {
     open.value = !open.value;
 
     if (open.value) {
-        if (results.value.length === 0 && !loading.value) {
-            fetchPage(1, true);
-        }
+        fetchFirstPageIfEmpty();
 
         nextTick(() => searchInputRef.value?.focus());
     }
@@ -156,7 +100,7 @@ function buttonLabel(): string {
                 ref="optionsListRef"
                 role="listbox"
                 class="max-h-64 overflow-y-auto"
-                @scroll="onOptionsScroll"
+                @scroll="onOptionsScroll(optionsListRef)"
             >
                 <p
                     v-if="loading && results.length === 0"

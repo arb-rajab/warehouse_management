@@ -11,7 +11,11 @@ import {
 import FilterDialog from '@/components/FilterDialog.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
-import { fieldLabelClass, selectedToggleClass } from '@/lib/filters';
+import {
+    fieldLabelClass,
+    plainFieldInputClass,
+    selectedToggleClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { Cell, CellMapRow, ProductFilterOption } from '@/types/admin';
 
@@ -240,7 +244,7 @@ const submitLabel = computed(() => {
                         v-model="expirationDate"
                         type="date"
                         required
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        :class="plainFieldInputClass"
                     />
                 </div>
             </template>
@@ -276,7 +280,7 @@ const submitLabel = computed(() => {
                         type="number"
                         min="1"
                         required
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        :class="plainFieldInputClass"
                     />
                 </div>
                 <label
@@ -315,7 +319,7 @@ const submitLabel = computed(() => {
                         id="pallet-action-to-row"
                         v-model="destinationRowLetter"
                         required
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        :class="plainFieldInputClass"
                     >
                         <option value="" disabled>—</option>
                         <option
@@ -337,7 +341,7 @@ const submitLabel = computed(() => {
                         type="number"
                         min="1"
                         required
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        :class="plainFieldInputClass"
                     />
                 </div>
                 <div>
@@ -350,7 +354,7 @@ const submitLabel = computed(() => {
                         type="number"
                         min="1"
                         required
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        :class="plainFieldInputClass"
                     />
                 </div>
             </template>
@@ -365,7 +369,7 @@ const submitLabel = computed(() => {
                     rows="3"
                     maxlength="1000"
                     :placeholder="t('cells.palletActions.notePlaceholder')"
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                    :class="plainFieldInputClass"
                 ></textarea>
             </div>
 

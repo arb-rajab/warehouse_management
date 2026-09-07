@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import { nextTick, reactive, ref, watch } from 'vue';
-import { search as searchProducts } from '@/actions/App/Http/Controllers/Admin/ProductController';
-import { debounce, fieldLabelClass } from '@/lib/filters';
+import { nextTick, ref, watch } from 'vue';
+import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
 } from '@/lib/useDismissibleListbox';
-import type { Paginated, ProductFilterOption } from '@/types/admin';
+import { useProductSearch } from '@/lib/useProductSearch';
+import type { ProductFilterOption } from '@/types/admin';
 
 const props = defineProps<{
     id: string;
@@ -24,22 +23,15 @@ const model = defineModel<string[]>({ required: true });
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const optionsListRef = ref<HTMLElement | null>(null);
 
-const query = ref('');
-const results = ref<ProductFilterOption[]>([]);
-const page = ref<Paginated<ProductFilterOption> | null>(null);
-const loading = ref(false);
-let requestSeq = 0;
-
-// Only ever grows — a selected id must keep resolving to its name even once
-// it scrolls out of `results` (a new search replaces the visible page, but
-// the selection itself doesn't change).
-const namesById = reactive(new Map<number, string>());
-
-function rememberNames(products: ProductFilterOption[]): void {
-    for (const product of products) {
-        namesById.set(product.id, product.name);
-    }
-}
+const {
+    query,
+    results,
+    loading,
+    namesById,
+    rememberNames,
+    fetchFirstPageIfEmpty,
+    onOptionsScroll,
+} = useProductSearch();
 
 watch(() => props.selected, rememberNames, { immediate: true });
 
@@ -47,63 +39,11 @@ const { open, containerRef, setOptionRef, onOptionKeydown } =
     useDismissibleListbox(() => results.value.length);
 const { isChecked, toggleValue } = useMultiSelectToggle(model);
 
-const http = useHttp({});
-
-function fetchPage(pageNumber: number, replace: boolean): void {
-    const mySeq = ++requestSeq;
-    loading.value = true;
-
-    http.get(
-        searchProducts.url({ query: { q: query.value, page: pageNumber } }),
-        {
-            onSuccess: (response: unknown) => {
-                if (mySeq !== requestSeq) {
-                    return;
-                }
-
-                const body = response as Paginated<ProductFilterOption>;
-
-                results.value = replace
-                    ? body.data
-                    : [...results.value, ...body.data];
-                page.value = body;
-                rememberNames(body.data);
-                loading.value = false;
-            },
-        },
-    );
-}
-
-const debouncedSearch = debounce(() => fetchPage(1, true), 300);
-
-watch(query, debouncedSearch);
-
-function onOptionsScroll(): void {
-    const el = optionsListRef.value;
-    const currentPage = page.value;
-
-    if (!el || !currentPage || loading.value) {
-        return;
-    }
-
-    if (currentPage.meta.current_page >= currentPage.meta.last_page) {
-        return;
-    }
-
-    if (el.scrollHeight - el.scrollTop - el.clientHeight > 48) {
-        return;
-    }
-
-    fetchPage(currentPage.meta.current_page + 1, false);
-}
-
 function toggleOpen(): void {
     open.value = !open.value;
 
     if (open.value) {
-        if (results.value.length === 0 && !loading.value) {
-            fetchPage(1, true);
-        }
+        fetchFirstPageIfEmpty();
 
         nextTick(() => searchInputRef.value?.focus());
     }
@@ -157,7 +97,7 @@ function buttonLabel(): string {
                 ref="optionsListRef"
                 role="listbox"
                 class="max-h-64 overflow-y-auto"
-                @scroll="onOptionsScroll"
+                @scroll="onOptionsScroll(optionsListRef)"
             >
                 <p
                     v-if="loading && results.length === 0"

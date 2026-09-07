@@ -42,14 +42,6 @@ export const mapToolbarButtonClass =
     'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 /**
- * The highlight-match previous/next nav buttons shared by Cells/Index.vue —
- * same look as mapToolbarButtonClass but at the smaller p-1.5 size used
- * alongside the match-count label.
- */
-export const matchNavButtonClass =
-    'cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
-
-/**
  * The "this toggle is the active one" variant applied on top of a toggle
  * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) in
  * Cells/Index.vue and CellMap3D.vue.
@@ -70,6 +62,14 @@ export const filterApplyButtonClass =
  */
 export const fieldLabelClass =
     'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
+
+/**
+ * The plain bordered text/number/date/select/textarea input shared by every
+ * field in PalletActionsDialog.vue and ToggleCellActiveDialog.vue's note
+ * field — extracted once it was repeated 7 times across the two files.
+ */
+export const plainFieldInputClass =
+    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
 
 /**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every

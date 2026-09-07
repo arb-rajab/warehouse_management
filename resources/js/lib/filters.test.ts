@@ -1,13 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import { nextTick, reactive, ref } from 'vue';
+import { t } from '@/lib/i18n';
 import {
     columnNumberOptions,
     countActive,
     debounce,
     exclusivePair,
+    selectedCountLabel,
     toggleSort,
     useColumnFilterPopover,
 } from './filters';
+
+describe('selectedCountLabel', () => {
+    it('interpolates the given count into the translated label', () => {
+        expect(selectedCountLabel(3)).toBe(
+            t('cellLog.filters.selectedCount', { count: 3 }),
+        );
+    });
+});
 
 describe('columnNumberOptions', () => {
     it('returns 1..maxColumnNumber', () => {
