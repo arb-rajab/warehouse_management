@@ -47,6 +47,20 @@ test('the migration creates the expected columns, with a required name and nulla
     expect(DB::table('products')->where('name', 'Widgets')->exists())->toBeTrue();
 });
 
+test('the stand-in mirrors the store\'s NOT NULL timestamps with a current default', function () {
+    // The store's `created_at`/`updated_at` are NOT NULL DEFAULT
+    // current_timestamp(), not Laravel's nullable `timestamps()`. A row
+    // inserted without them must therefore come back populated, not null.
+    Schema::dropIfExists('products');
+    loadCreateProductsTableMigration()->up();
+
+    DB::table('products')->insert(['name' => 'Widgets']);
+
+    $product = DB::table('products')->where('name', 'Widgets')->first();
+    expect($product->created_at)->not->toBeNull();
+    expect($product->updated_at)->not->toBeNull();
+});
+
 test('the migration skips dropping the products table in production', function () {
     Schema::dropIfExists('products');
     loadCreateProductsTableMigration()->up();

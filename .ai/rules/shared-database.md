@@ -17,24 +17,31 @@ collision is silent — no error, just two apps writing each other's rows.
 
 ## Exactly one table is shared: `products`
 
+Verified against the store's schema dump (107 tables): `products` is the only
+name the two apps share that this app also reads. Every WMS domain table —
+`rows`, `cells`, `pallets`, `cell_status_logs`, `cell_status_log_flags`,
+`cell_verification_rounds`, `cell_verification_reports`,
+`mobile_app_version_requirements` — is absent from the store's schema, so those
+keep bare names.
+
 `products` is the store app's, and this app is **read-only** on it — there is no
 create/update/delete of a `Product` anywhere in the codebase, and there must not
-be. Only four attributes are consumed:
+be. The store's table has 72 columns; only four are consumed here:
 
-| Attribute | Read by |
-| --- | --- |
-| `id` | every `product_id` FK, all filters |
-| `name` | `ProductResource`, `ProductSummaryResource`, `ProductOptionResource`, `Product::searchByName()`, `Pallet::toCellPayload()` |
-| `image_url` | `ProductResource`, `ProductSummaryResource`, `Pallet::toCellPayload()`, `Cell`/`CellStatusLog`/`CellVerificationReport` eager-load column lists |
-| `boxes_count` | `PalletActionService`, `Api\V1\ProductController`, `ProductResource` |
+| WMS attribute | Store column | Notes |
+| --- | --- | --- |
+| `id` | `id` `int(11)` signed | see below |
+| `name` | `name` `varchar(200)` NOT NULL | direct match. The store also carries `ar_name` and a `product_translations` table; this app reads the base `name` only |
+| `image_url` | **no counterpart** | unresolved — see below |
+| `boxes_count` | **no counterpart** | unresolved — see below |
 
-Do not mirror the store's other columns into the local stand-in migration, and
-do not widen a `select()` to `Product::all()` — the narrow column lists are what
-keep this app insulated from a schema it does not control.
+Do not mirror the store's other 68 columns into the local stand-in migration,
+and do not widen a `select()` to `Product::all()` — the narrow column lists are
+what keep this app insulated from a schema it does not control.
 
 ### `products.id` is a signed `int(11)`, not `bigint unsigned`
 
-The store's own migration ends with an `ALTER TABLE products MODIFY id int(11)
+The store's schema ends with `ALTER TABLE products MODIFY id int(11) NOT NULL
 AUTO_INCREMENT`, so the live primary key is a **signed 32-bit int**. Laravel's
 `foreignId()` emits `bigint unsigned`, which MySQL will not accept as a foreign
 key against it. Every column referencing a product is therefore a plain
@@ -49,33 +56,54 @@ sqlite reports both types as `integer`, so the test connection cannot catch a
 regression here — `CreateProductsTableTest` asserts it against the migration
 source instead. Keep that assertion when adding a new product FK.
 
-### Open: `boxes_count` has no home in production yet
+### Open: `image_url` and `boxes_count` do not exist upstream
 
-`add_boxes_count_to_products_table` still guards on `app()->isProduction()`, so
-in production the column does **not** exist on the shared table — while
-`PalletActionService` and `Api\V1\ProductController` both read it. That is an
-unresolved production defect, not a working arrangement. The agreed resolution
-is to map it onto the store's existing per-carton quantity column, which needs
-the store schema dump to identify. Until that lands, do not deploy pallet
-placement against the shared database.
+Both are columns this app invented on a table it does not own, and neither has a
+counterpart in the store's schema. In production the local
+`add_boxes_count_to_products_table` migration is guarded off, so `boxes_count`
+is simply absent while `PalletActionService` and `Api\V1\ProductController`
+read it — an unresolved production defect, not a working arrangement. Do not
+deploy pallet placement against the shared database until it is settled.
+
+The store's nearest columns, none of them a drop-in rename:
+
+- For an image: `thumbnail_img varchar(100)` and `photos varchar(2000)` hold
+  `uploads` row ids (resolved through the `uploads` table to a filename), not
+  URLs; `meta_img` is the SEO image. Turning any of them into the URL string the
+  mobile app already consumes needs a join plus a base-URL prefix, so this is a
+  resolver decision rather than a column rename.
+- For a box count: `unit_equal int(11) NOT NULL` sits with the ERP-sync columns
+  (`mat_id`, `serial`, `from_api`, `api_unitId`, `api_unit_name`) and reads like
+  units-per-carton, but the dump is schema-only and this is inference.
+  `min_qty`/`max_qty` are Active-eCommerce cart limits (their 1/1000 defaults
+  are the stock ones), and `current_stock` is a stock level — none of them is a
+  box count.
+
+Confirm both against the store app's code or its owners before wiring either up.
 
 ## Every other colliding table is WMS-owned, under a `wms_` prefix
 
-| Table | Why not shared |
-| --- | --- |
-| `wms_users` | separate staff/user population from the store's customers |
-| `wms_password_reset_tokens`, `wms_sessions` | follow `wms_users`; a shared `sessions` id space crosses the two apps' logins |
-| `wms_personal_access_tokens` | `tokenable_type` is `App\Models\User` in *both* apps, over two user tables with overlapping ids — a shared table lets a store token resolve to the WMS user of the same id |
-| `wms_roles`, `wms_permissions`, `wms_model_has_roles`, `wms_model_has_permissions`, `wms_role_has_permissions` | same morph-collision as above: `model_has_roles.model_type` is `App\Models\User` on both sides, so a shared row grants the store's roles to the WMS user of that id |
-| `wms_cache`, `wms_cache_locks` | both apps run the database cache store; a shared table means either can read, overwrite or flush the other's entries |
-| `wms_jobs`, `wms_job_batches`, `wms_failed_jobs` | both run the database queue; this app's workers would reserve store payloads whose job classes don't exist here |
-| `wms_migrations` | the migration repository itself — a shared one makes each app think the other's migrations have already run |
+Eight of these names are **taken in the store's schema today**; the rest are
+prefixed pre-emptively, because they are what Laravel's own scaffolding creates
+and the store could add any of them at any time. The distinction matters when
+weighing a future request to un-prefix one — the eight are not negotiable.
+
+| Table | Taken today? | Why not shared |
+| --- | --- | --- |
+| `wms_users` | yes | separate staff population from the store's customers. The store's `users.id` is `int(10) unsigned`; this app's stays `bigint unsigned` because nothing joins the two |
+| `wms_personal_access_tokens` | yes | `tokenable_type` is `App\Models\User` in *both* apps, over two user tables with overlapping ids — a shared table lets a store token resolve to the WMS user of the same id |
+| `wms_roles`, `wms_permissions`, `wms_model_has_roles`, `wms_model_has_permissions`, `wms_role_has_permissions` | yes | same morph-collision: `model_has_roles.model_type` is `App\Models\User` on both sides, so a shared row grants the store's roles to the WMS user of that id |
+| `wms_migrations` | yes | the migration repository itself — a shared one makes each app think the other's migrations have already run |
+| `wms_password_reset_tokens` | no — the store uses the legacy `password_resets` | follows `wms_users`: a reset token is meaningless against the other app's user table |
+| `wms_sessions` | no — the store is not on the database session driver | a shared session id space would cross the two apps' logins |
+| `wms_cache`, `wms_cache_locks` | no | this app runs `CACHE_STORE=database`; if the store ever does too, either app could read, overwrite or flush the other's entries |
+| `wms_jobs`, `wms_job_batches`, `wms_failed_jobs` | no | this app runs `QUEUE_CONNECTION=database`; if the store ever does too, each app's workers would reserve payloads whose job classes don't exist on their side |
 
 The remaining tables (`rows`, `cells`, `pallets`, `cell_status_logs`,
 `cell_status_log_flags`, `cell_verification_rounds`,
 `cell_verification_reports`, `mobile_app_version_requirements`) keep bare names:
 they are specific enough to this domain that the store app has nothing like
-them. `tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, so a
+them — verified name-by-name against the store's 107 tables. `tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, so a
 new bare-named table fails the suite until it is justified here. Telescope,
 Pulse and Health are unaffected — they run on their own sqlite connections (see
 config.md), never in the shared database.
