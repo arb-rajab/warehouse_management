@@ -8,16 +8,21 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * `wms_` prefixed because the production database is shared with the
+     * store app, which runs the database cache driver too — a shared cache
+     * table means either app can read, overwrite or flush the other's
+     * entries. See .ai/rules/shared-database.md.
      */
     public function up(): void
     {
-        Schema::create('cache', function (Blueprint $table) {
+        Schema::create('wms_cache', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->mediumText('value');
             $table->bigInteger('expiration')->index();
         });
 
-        Schema::create('cache_locks', function (Blueprint $table) {
+        Schema::create('wms_cache_locks', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->string('owner');
             $table->bigInteger('expiration')->index();
@@ -29,7 +34,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cache');
-        Schema::dropIfExists('cache_locks');
+        Schema::dropIfExists('wms_cache');
+        Schema::dropIfExists('wms_cache_locks');
     }
 };

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -56,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
         RedirectIfAuthenticated::redirectUsing(fn () => route('admin.dashboard'));
 
         Date::use(CarbonImmutable::class);
+
+        // Moves Sanctum off the default `personal_access_tokens` table,
+        // which the store app owns in the shared production database.
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

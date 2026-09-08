@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('pallets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('products')->restrictOnDelete();
+            // Signed int, not foreignId()'s bigint unsigned: `products` is the
+            // store app's table and its `id` is int(11) signed, so a bigint
+            // unsigned column cannot carry a real FK to it. See
+            // .ai/rules/shared-database.md.
+            $table->integer('product_id');
+            $table->foreign('product_id')->references('id')->on('products')->restrictOnDelete();
             $table->foreignId('cell_id')->unique()->constrained('cells')->restrictOnDelete();
             $table->date('expiration_date');
             $table->timestamps();

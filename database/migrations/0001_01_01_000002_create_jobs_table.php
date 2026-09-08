@@ -8,10 +8,16 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * `wms_` prefixed because the production database is shared with the
+     * store app, which runs the database queue driver too — a shared `jobs`
+     * table means this app's workers reserve and fail the store's payloads
+     * (whose job classes don't exist here) and vice versa. See
+     * .ai/rules/shared-database.md.
      */
     public function up(): void
     {
-        Schema::create('jobs', function (Blueprint $table) {
+        Schema::create('wms_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->index();
             $table->longText('payload');
@@ -21,7 +27,7 @@ return new class extends Migration
             $table->unsignedInteger('created_at');
         });
 
-        Schema::create('job_batches', function (Blueprint $table) {
+        Schema::create('wms_job_batches', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('name');
             $table->integer('total_jobs');
@@ -34,7 +40,7 @@ return new class extends Migration
             $table->integer('finished_at')->nullable();
         });
 
-        Schema::create('failed_jobs', function (Blueprint $table) {
+        Schema::create('wms_failed_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
             $table->string('connection');
@@ -52,8 +58,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('jobs');
-        Schema::dropIfExists('job_batches');
-        Schema::dropIfExists('failed_jobs');
+        Schema::dropIfExists('wms_jobs');
+        Schema::dropIfExists('wms_job_batches');
+        Schema::dropIfExists('wms_failed_jobs');
     }
 };
