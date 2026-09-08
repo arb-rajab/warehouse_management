@@ -38,7 +38,7 @@ class Upload extends Model
      */
     protected function url(): Attribute
     {
-        return Attribute::get(function (): ?string {
+        return Attribute::make(get: function (): ?string {
             if (filled($this->external_link)) {
                 return $this->external_link;
             }

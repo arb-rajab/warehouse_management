@@ -91,7 +91,7 @@ class Product extends Model
      */
     protected function imageUrl(): Attribute
     {
-        return Attribute::get(fn (): ?string => $this->thumbnailUpload?->url);
+        return Attribute::make(get: fn (): ?string => $this->thumbnailUpload?->url);
     }
 
     /**
@@ -99,7 +99,10 @@ class Product extends Model
      */
     protected function boxesCount(): Attribute
     {
-        return Attribute::get(fn (): int => $this->setting?->boxes_count ?? self::DEFAULT_BOXES_COUNT);
+        // `->` rather than `?->`: the null-coalesce already applies isset
+        // semantics to the whole left operand, so a product with no settings
+        // row falls through to the default without a warning.
+        return Attribute::make(get: fn (): int => $this->setting->boxes_count ?? self::DEFAULT_BOXES_COUNT);
     }
 
     /**
