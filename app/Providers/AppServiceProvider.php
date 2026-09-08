@@ -78,6 +78,16 @@ class AppServiceProvider extends ServiceProvider
         Model::preventSilentlyDiscardingAttributes($strict);
         Model::preventAccessingMissingAttributes($strict);
 
+        if ($strict) {
+            // Laravel resolves an unloaded relation by eager-loading it across
+            // the result set rather than raising the lazy-loading violation,
+            // which leaves preventLazyLoading() above reporting as enabled
+            // while never firing. Sensible as a production default, so it is
+            // left alone there; outside production the whole point is for the
+            // missing eager load to surface, so it is turned off.
+            Model::automaticallyEagerLoadRelationships(false);
+        }
+
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
                 ->mixedCase()
