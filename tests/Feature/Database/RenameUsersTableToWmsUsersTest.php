@@ -4,6 +4,7 @@ use App\Models\CellStatusLog;
 use App\Models\CellStatusLogFlag;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -61,7 +62,7 @@ test('the migration leaves the store app\'s users table alone', function () {
     // Stands in for the shared production database, where `users` belongs to
     // the store app and `wms_users` is this app's own table. The migration
     // must rename neither.
-    Schema::create('users', function (Illuminate\Database\Schema\Blueprint $table) {
+    Schema::create('users', function (Blueprint $table) {
         $table->id();
         $table->string('store_only_column');
     });

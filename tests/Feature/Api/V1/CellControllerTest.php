@@ -8,9 +8,8 @@ test('an authenticated worker can list a row cells with every property the app r
     actingAsMobileUser();
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
     ]);
     $occupiedCell = $row->cells()->where('cell_number', 1)->first();
     $emptyCell = $row->cells()->where('cell_number', 2)->first();
@@ -106,9 +105,8 @@ test('an authenticated worker can look up a cell by its coordinates with every p
     actingAsMobileUser();
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 3, 'flats_count' => 2]);
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
     ]);
     $cell = $row->cells()->where('cell_number', 2)->where('flat_number', 1)->first();
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);

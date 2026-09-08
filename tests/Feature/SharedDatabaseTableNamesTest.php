@@ -31,12 +31,13 @@ test('every spatie permission table name is wms-prefixed', function () {
     ]);
 });
 
-test('the only bare-named tables are this app\'s own domain tables plus shared products', function () {
+test('the only bare-named tables are this app\'s own domain tables plus the shared ones', function () {
     // Everything without a `wms_` prefix is either a table whose name is
     // specific enough to this domain that the store app has nothing like it,
-    // or `products`, the one table genuinely shared with the store app. A new
-    // bare name appearing here is a table that needs one of those two
-    // justifications before it ships.
+    // or one of the two tables genuinely shared with the store app —
+    // `products` and the `uploads` its thumbnails point at. A new bare name
+    // appearing here is a table that needs one of those two justifications
+    // before it ships.
     $bareNamed = array_values(array_filter(
         Schema::getTableListing(schemaQualified: false),
         fn (string $name): bool => ! str_starts_with($name, 'wms_')
@@ -55,5 +56,6 @@ test('the only bare-named tables are this app\'s own domain tables plus shared p
         'pallets',
         'products',
         'rows',
+        'uploads',
     ]);
 });

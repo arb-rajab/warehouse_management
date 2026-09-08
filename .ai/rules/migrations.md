@@ -19,13 +19,13 @@ Don't just assert a column/table exists — assert the behavior the migration en
 
 Model relationship tests (`tests/Feature/Models/*Test.php`) cover normal relation resolution — they don't double as constraint tests, so both are needed when a migration adds a relation with a delete rule.
 
-## Products is a shared table, and most default table names are collisions
+## Two tables are shared, and most default table names are collisions
 In production this app shares one MySQL database with a store app that owns
-`products` and would collide with this app on `users`, `sessions`, `cache`,
+`products` and `uploads` and would collide with this app on `users`, `sessions`, `cache`,
 `jobs`, `personal_access_tokens`, the Spatie permission tables and `migrations`
 itself. Every table this app owns therefore carries a `wms_` prefix, `products`
-is read-only and guarded with `Schema::hasTable()` on `up()` / `app()->isProduction()`
-on `down()`, and every `product_id` FK is a signed `integer` rather than
-`foreignId()`. Read **.ai/rules/shared-database.md** before adding a migration —
+and `uploads` are read-only and guarded with `Schema::hasTable()` on `up()` /
+`app()->isProduction()` on `down()`, and every `product_id` FK is a signed
+`integer` rather than `foreignId()`. Read **.ai/rules/shared-database.md** before adding a migration —
 it carries the full table inventory, the guard conventions, and the products
 column mapping.

@@ -24,11 +24,9 @@ return new class extends Migration
      * `varchar(200)`; and both timestamps are NOT NULL with a current
      * timestamp default.
      *
-     * `image_url` is the one column with no upstream counterpart — the store
-     * has no URL column at all, only `thumbnail_img`/`photos` holding
-     * `uploads` row ids. It is kept here so development and testing keep
-     * working while that mapping is decided; see the open item in
-     * .ai/rules/shared-database.md before relying on it in production.
+     * `thumbnail_img` holds an `uploads` row id, not a URL — the store has no
+     * URL column at all. Product::imageUrl() resolves it; see
+     * .ai/rules/shared-database.md.
      */
     public function up(): void
     {
@@ -39,7 +37,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->string('name', 200);
-            $table->string('image_url')->nullable();
+            $table->string('thumbnail_img', 100)->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent();
         });

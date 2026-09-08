@@ -59,7 +59,9 @@ class CellStatusLog extends Model
         'cell.row:id,letter',
         'relatedCell:id,row_id,cell_number,flat_number',
         'relatedCell.row:id,letter',
-        'product:id,name,image_url,boxes_count',
+        'product:id,name,thumbnail_img',
+        'product.thumbnailUpload:id,file_name,external_link',
+        'product.setting:product_id,boxes_count',
         'pallet:id,expiration_date',
         'user:id,name',
     ];

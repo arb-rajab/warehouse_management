@@ -1,13 +1,12 @@
 <?php
 
 use App\Models\Product;
+use App\Models\Upload;
 use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://example.com/widgets.png')->boxesCount(24)->create([
         'name' => 'Widgets',
-        'image_url' => 'https://example.com/widgets.png',
-        'boxes_count' => 24,
     ]);
 
     expect($product->fresh())
@@ -17,7 +16,7 @@ test('a product can be created with its fillable attributes', function () {
 });
 
 test('a product can be created without an image_url', function () {
-    $product = Product::factory()->create(['image_url' => null]);
+    $product = Product::factory()->imageUrl(null)->create();
 
     expect($product->fresh()->image_url)->toBeNull();
 });
@@ -85,4 +84,54 @@ test('searchByName matches multi-word terms regardless of word order, excluding 
     $results = Product::query()->searchByName('Widget Blue')->get();
 
     expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('image_url resolves through the thumbnail upload, with noise from another product', function () {
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+    Product::factory()->imageUrl('https://cdn.example.com/other.png')->create();
+
+    expect($product->fresh()->image_url)->toBe('https://cdn.example.com/widgets.png');
+});
+
+test('image_url resolves a stored upload through the store asset base url', function () {
+    config(['store.asset_base_url' => 'https://store.example.com']);
+    $product = Product::factory()->create([
+        'thumbnail_img' => Upload::factory()->stored('uploads/all/widgets.png'),
+    ]);
+
+    expect($product->fresh()->image_url)->toBe('https://store.example.com/uploads/all/widgets.png');
+});
+
+test('image_url is null when the product has no thumbnail', function () {
+    $product = Product::factory()->imageUrl(null)->create();
+
+    expect($product->fresh())
+        ->thumbnail_img->toBeNull()
+        ->image_url->toBeNull();
+});
+
+test('thumbnail_img is cast to an integer so the upload relation matches on sqlite', function () {
+    // The store declares the column varchar(100) though it holds an uploads
+    // row id; without the cast the relation silently resolves null here.
+    $upload = Upload::factory()->create();
+    $product = Product::factory()->create(['thumbnail_img' => $upload->id]);
+
+    expect($product->fresh()->thumbnail_img)->toBe($upload->id);
+    expect($product->fresh()->thumbnailUpload?->id)->toBe($upload->id);
+});
+
+test('boxes_count reads the wms-owned settings row, with noise from another product', function () {
+    $product = Product::factory()->boxesCount(24)->create();
+    Product::factory()->boxesCount(7)->create();
+
+    expect($product->fresh()->boxes_count)->toBe(24);
+});
+
+test('boxes_count falls back to its default for a product this app has never configured', function () {
+    // The store can add a product at any time without this app knowing.
+    $product = Product::factory()->unconfigured()->create();
+
+    expect($product->fresh())
+        ->setting->toBeNull()
+        ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
 });

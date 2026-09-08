@@ -65,8 +65,12 @@ class CellVerificationReport extends Model
         'cell:id,row_id,cell_number,flat_number',
         'cell.row:id,letter',
         'user:id,name',
-        'expectedProduct:id,name,image_url,boxes_count',
-        'reportedProduct:id,name,image_url,boxes_count',
+        'expectedProduct:id,name,thumbnail_img',
+        'expectedProduct.thumbnailUpload:id,file_name,external_link',
+        'expectedProduct.setting:product_id,boxes_count',
+        'reportedProduct:id,name,thumbnail_img',
+        'reportedProduct.thumbnailUpload:id,file_name,external_link',
+        'reportedProduct.setting:product_id,boxes_count',
     ];
 
     /**

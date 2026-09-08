@@ -16,9 +16,8 @@ test('an authenticated admin can view the products index with every property the
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
     ]);
     Pallet::factory()->create([
         'product_id' => $product->id,
@@ -432,9 +431,8 @@ test('an unauthenticated caller cannot view the products index', function () {
 test('an authenticated admin can search products with every property the filter reads', function () {
     actingAsAdmin();
 
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->create([
         'name' => 'Widget',
-        'image_url' => 'https://cdn.example.com/widget.png',
     ]);
     $otherProduct = Product::factory()->create(['name' => 'Gadget']);
 

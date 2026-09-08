@@ -15,29 +15,32 @@ and owns the `products` table plus roughly sixty other tables. Everything below
 follows from that: any table name both apps would pick is a collision, and a
 collision is silent — no error, just two apps writing each other's rows.
 
-## Exactly one table is shared: `products`
+## Two tables are shared: `products` and `uploads`
 
-Verified against the store's schema dump (107 tables): `products` is the only
-name the two apps share that this app also reads. Every WMS domain table —
-`rows`, `cells`, `pallets`, `cell_status_logs`, `cell_status_log_flags`,
+Verified against the store's schema dump (107 tables): these are the only names
+the two apps share that this app also reads. Every WMS domain table — `rows`,
+`cells`, `pallets`, `cell_status_logs`, `cell_status_log_flags`,
 `cell_verification_rounds`, `cell_verification_reports`,
 `mobile_app_version_requirements` — is absent from the store's schema, so those
 keep bare names.
 
-`products` is the store app's, and this app is **read-only** on it — there is no
-create/update/delete of a `Product` anywhere in the codebase, and there must not
-be. The store's table has 72 columns; only four are consumed here:
+Both belong to the store app, and this app is **read-only** on them: there is no
+create/update/delete of a `Product` or `Upload` anywhere in the codebase, and
+there must not be. The store's `products` has 72 columns and its `uploads` has
+eleven; only these are consumed here:
 
-| WMS attribute | Store column | Notes |
+| WMS attribute | Source | Notes |
 | --- | --- | --- |
-| `id` | `id` `int(11)` signed | see below |
-| `name` | `name` `varchar(200)` NOT NULL | direct match. The store also carries `ar_name` and a `product_translations` table; this app reads the base `name` only |
-| `image_url` | **no counterpart** | unresolved — see below |
-| `boxes_count` | **no counterpart** | unresolved — see below |
+| `Product::$id` | `products.id` `int(11)` signed | see below |
+| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match. The store also carries `ar_name` and a `product_translations` table; this app reads the base `name` only |
+| `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
+| `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
+| `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
+| `Upload::$file_name`, `$external_link` | same columns | the two halves of `Upload::url()` |
 
-Do not mirror the store's other 68 columns into the local stand-in migration,
-and do not widen a `select()` to `Product::all()` — the narrow column lists are
-what keep this app insulated from a schema it does not control.
+Do not mirror the store's other columns into either stand-in migration, and do
+not widen a `select()` to `Product::all()` — the narrow column lists are what
+keep this app insulated from a schema it does not control.
 
 ### `products.id` is a signed `int(11)`, not `bigint unsigned`
 
@@ -51,35 +54,41 @@ key against it. Every column referencing a product is therefore a plain
 - `cell_status_logs.product_id`
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
+- `wms_product_settings.product_id`
 
-sqlite reports both types as `integer`, so the test connection cannot catch a
-regression here — `CreateProductsTableTest` asserts it against the migration
-source instead. Keep that assertion when adding a new product FK.
+`uploads.id` is the same signed `int(11)`. sqlite reports both types as
+`integer`, so the test connection cannot catch a regression here —
+`CreateProductsTableTest` asserts it against the migration source instead. Keep
+that assertion when adding a new product FK.
 
-### Open: `image_url` and `boxes_count` do not exist upstream
+### `image_url` and `boxes_count` are not columns — both are derived
 
-Both are columns this app invented on a table it does not own, and neither has a
-counterpart in the store's schema. In production the local
-`add_boxes_count_to_products_table` migration is guarded off, so `boxes_count`
-is simply absent while `PalletActionService` and `Api\V1\ProductController`
-read it — an unresolved production defect, not a working arrangement. Do not
-deploy pallet placement against the shared database until it is settled.
+Neither exists in the store's schema under any name. They were columns this app
+had added to a table it does not own, which is why `boxes_count` was guarded off
+in production and therefore *absent* there while `PalletActionService` read it.
+Both are now attributes on `Product`, so the API and admin payloads keep the
+exact keys their clients already consume:
 
-The store's nearest columns, none of them a drop-in rename:
+- **`image_url`** resolves `thumbnail_img` through the shared `uploads` table.
+  `Upload::url()` returns `external_link` verbatim when set (the store uses it
+  for files already on a CDN), otherwise joins `file_name` to
+  `config('store.asset_base_url')`. That config is the store app's public base
+  URL — this app is served from a different host and cannot derive it. Unset,
+  the URL resolves to `null` rather than to a relative path that would 404
+  against this app's own domain.
+- **`boxes_count`** lives in `wms_product_settings`, keyed by the store's
+  product id. A product the store has added but this app has never configured
+  has no row, and falls back to `Product::DEFAULT_BOXES_COUNT`.
 
-- For an image: `thumbnail_img varchar(100)` and `photos varchar(2000)` hold
-  `uploads` row ids (resolved through the `uploads` table to a filename), not
-  URLs; `meta_img` is the SEO image. Turning any of them into the URL string the
-  mobile app already consumes needs a join plus a base-URL prefix, so this is a
-  resolver decision rather than a column rename.
-- For a box count: `unit_equal int(11) NOT NULL` sits with the ERP-sync columns
-  (`mat_id`, `serial`, `from_api`, `api_unitId`, `api_unit_name`) and reads like
-  units-per-carton, but the dump is schema-only and this is inference.
-  `min_qty`/`max_qty` are Active-eCommerce cart limits (their 1/1000 defaults
-  are the stock ones), and `current_stock` is a stock level — none of them is a
-  box count.
+Both are relation-backed, so anything reading them must eager-load first or
+trip the lazy-loading guard in local/testing. `Product::WITH_DERIVED_ATTRIBUTES`
+is the pair of eager loads; use it, or spell out whichever half a given payload
+actually needs (the admin product listing only renders the image, so it loads
+`thumbnailUpload` alone).
 
-Confirm both against the store app's code or its owners before wiring either up.
+In tests, `boxes_count` and `image_url` cannot be passed to
+`Product::factory()->create()` — they are not columns. Use the
+`boxesCount(int)`, `imageUrl(?string)` and `unconfigured()` factory states.
 
 ## Every other colliding table is WMS-owned, under a `wms_` prefix
 
@@ -126,7 +135,7 @@ would fail outright with "table already exists", and a subsequent rename would
 then rename the store's table out from under it.
 
 **A shared table's `up()` guards on `Schema::hasTable()`, its `down()` on the
-environment.** `create_products_table` is the worked example. `hasTable()` makes
+environment.** `create_products_table` and `create_uploads_table` are the worked examples. `hasTable()` makes
 `up()` a no-op wherever the real table is present — production, or any
 environment pointed at the shared database — while still building a local
 stand-in for development and testing. `down()` cannot use `hasTable()` (it

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,10 +12,10 @@ function loadCreateProductsTableMigration(): object
 
 test('the migration leaves an existing products table alone', function () {
     // The shared-database case: in production `products` belongs to the store
-    // app, with columns this app never reads. The migration must not try to
+    // app, with 72 columns this app never reads. The migration must not try to
     // create over it — which would fail outright — nor alter it.
     Schema::dropIfExists('products');
-    Schema::create('products', function (Illuminate\Database\Schema\Blueprint $table) {
+    Schema::create('products', function (Blueprint $table) {
         $table->integer('id')->autoIncrement();
         $table->string('name');
         $table->string('store_only_column')->nullable();
@@ -23,7 +24,7 @@ test('the migration leaves an existing products table alone', function () {
     loadCreateProductsTableMigration()->up();
 
     expect(Schema::hasColumn('products', 'store_only_column'))->toBeTrue();
-    expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
+    expect(Schema::hasColumn('products', 'thumbnail_img'))->toBeFalse();
 });
 
 test('the migration creates the products table when none exists', function () {
@@ -34,16 +35,21 @@ test('the migration creates the products table when none exists', function () {
     expect(Schema::hasTable('products'))->toBeTrue();
 });
 
-test('the migration creates the expected columns, with a required name and nullable image_url', function () {
+test('the migration creates the expected columns, with a required name and nullable thumbnail_img', function () {
     Schema::dropIfExists('products');
     loadCreateProductsTableMigration()->up();
 
-    expect(Schema::hasColumns('products', ['id', 'name', 'image_url', 'created_at', 'updated_at']))->toBeTrue();
+    expect(Schema::hasColumns('products', ['id', 'name', 'thumbnail_img', 'created_at', 'updated_at']))->toBeTrue();
+    // `image_url` is derived from the thumbnail's upload row, not stored —
+    // the store app has no URL column at all.
+    expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
+    // `boxes_count` lives in this app's own wms_product_settings table.
+    expect(Schema::hasColumn('products', 'boxes_count'))->toBeFalse();
 
     expect(fn () => DB::table('products')->insert(['created_at' => now(), 'updated_at' => now()]))
         ->toThrow(QueryException::class);
 
-    DB::table('products')->insert(['name' => 'Widgets', 'image_url' => null, 'created_at' => now(), 'updated_at' => now()]);
+    DB::table('products')->insert(['name' => 'Widgets', 'thumbnail_img' => null, 'created_at' => now(), 'updated_at' => now()]);
     expect(DB::table('products')->where('name', 'Widgets')->exists())->toBeTrue();
 });
 
@@ -87,6 +93,8 @@ test('products.id and every product_id FK are declared as signed integers, not b
             "\$table->integer('expected_product_id')->nullable();",
             "\$table->integer('reported_product_id')->nullable();",
         ],
+        '2026_09_08_000001_create_uploads_table.php' => ["\$table->integer('id')->autoIncrement();"],
+        '2026_09_08_000002_create_wms_product_settings_table.php' => ["\$table->integer('product_id')->primary();"],
     ];
 
     foreach ($columns as $migration => $declarations) {

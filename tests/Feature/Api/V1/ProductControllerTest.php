@@ -5,10 +5,8 @@ use App\Models\Product;
 test('an authenticated worker can list products with every property the app reads', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
         'name' => 'Widget',
-        'image_url' => 'https://cdn.example.com/widget.png',
-        'boxes_count' => 12,
     ]);
     $otherProduct = Product::factory()->create(['name' => 'Gadget']);
 

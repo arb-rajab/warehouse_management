@@ -13,10 +13,8 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
-        'boxes_count' => 10,
     ]);
     $cell = $row->cells()->where('cell_number', 1)->first();
     $expirationDate = now()->addMonth()->toDateString();
@@ -62,7 +60,7 @@ test('adding a pallet logs the status change, with an optional note', function (
 
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
-    $product = Product::factory()->create(['boxes_count' => 8]);
+    $product = Product::factory()->boxesCount(8)->create();
 
     $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
@@ -237,10 +235,8 @@ test('an authenticated worker can view a pallet with every property the app read
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
     $cell = $row->cells()->where('cell_number', 2)->where('flat_number', 1)->first();
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
-        'boxes_count' => 10,
     ]);
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
 
@@ -297,7 +293,7 @@ test('an unauthenticated caller cannot view a pallet', function () {
 test('an authenticated worker can open a full pallet, removing boxes at the same time', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -314,7 +310,7 @@ test('an authenticated worker can open a full pallet, removing boxes at the same
 test('opening a pallet with a boxes_count equal to what remains is rejected and nothing changes', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -330,7 +326,7 @@ test('opening a pallet with a boxes_count equal to what remains is rejected and 
 test('opening a pallet with a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
@@ -358,7 +354,7 @@ test('opening a pallet with a boxes_count equal to what remains, with confirm_em
 test('opening a pallet logs the status change, with an optional note', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -405,7 +401,7 @@ test('opening a pallet without a boxes_count is rejected', function () {
 test('opening a pallet with more boxes than remain is rejected and nothing changes', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -421,7 +417,7 @@ test('opening a pallet with more boxes than remain is rejected and nothing chang
 test('opening a pallet with more boxes than remain, with confirm_empty, empties the pallet instead', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
@@ -451,7 +447,7 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
 test('opening a pallet with confirm_empty but a sufficient boxes_count still just opens it', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -503,7 +499,7 @@ test('an unauthenticated caller cannot open a pallet and nothing changes', funct
 test('an authenticated worker can remove more boxes from an already-opened pallet', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -518,7 +514,7 @@ test('an authenticated worker can remove more boxes from an already-opened palle
 test('removing a boxes_count equal to what remains from an opened pallet is rejected and nothing changes', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 2]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -534,7 +530,7 @@ test('removing a boxes_count equal to what remains from an opened pallet is reje
 test('removing a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 2]);
     $cell = $pallet->cell;
     $cell->update(['state' => CellState::Opened]);
@@ -563,7 +559,7 @@ test('removing a boxes_count equal to what remains, with confirm_empty, empties 
 test('removing boxes logs the status change, with an optional note', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -602,7 +598,7 @@ test('removing boxes from a full (not yet opened) pallet is rejected and nothing
 test('removing more boxes than remain is rejected and nothing changes', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 3]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -618,7 +614,7 @@ test('removing more boxes than remain is rejected and nothing changes', function
 test('removing more boxes than remain, with confirm_empty, empties the pallet instead', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 3]);
     $cell = $pallet->cell;
     $cell->update(['state' => CellState::Opened]);
@@ -649,7 +645,7 @@ test('removing more boxes than remain, with confirm_empty, empties the pallet in
 test('removing boxes with confirm_empty but a sufficient boxes_count still just removes them', function () {
     actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -723,7 +719,7 @@ test('an authenticated worker can empty a full pallet', function () {
 test('emptying a pallet logs the status change, with an optional note', function () {
     $user = actingAsMobileUser();
 
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 4]);
     $cell = $pallet->cell;
     $productId = $pallet->product_id;
@@ -780,7 +776,7 @@ test('an authenticated worker can transfer a full pallet to an empty slot', func
 
     $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
     $sourceCell = $sourceRow->cells()->first();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'product_id' => $product->id, 'remaining_boxes' => 7]);
 
     $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);

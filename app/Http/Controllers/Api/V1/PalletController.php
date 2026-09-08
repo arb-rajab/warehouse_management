@@ -17,7 +17,12 @@ use Illuminate\Http\JsonResponse;
 
 class PalletController extends Controller
 {
-    private const array EAGER_LOAD = ['product:id,name,image_url,boxes_count', 'cell.row:id,letter'];
+    private const array EAGER_LOAD = [
+        'product:id,name,thumbnail_img',
+        'product.thumbnailUpload:id,file_name,external_link',
+        'product.setting:product_id,boxes_count',
+        'cell.row:id,letter',
+    ];
 
     public function __construct(private readonly PalletActionService $palletActions) {}
 

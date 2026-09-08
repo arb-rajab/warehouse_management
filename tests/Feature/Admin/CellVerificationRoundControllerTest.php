@@ -119,7 +119,7 @@ test('an authenticated admin can view a single round with its own reports and ev
     $cell = $row->cells()->first();
     $round = CellVerificationRound::factory()->create();
     $reporter = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
-    $product = Product::factory()->create(['name' => 'Widgets', 'image_url' => null, 'boxes_count' => 5]);
+    $product = Product::factory()->imageUrl(null)->boxesCount(5)->create(['name' => 'Widgets']);
     $report = CellVerificationReport::factory()->create([
         'cell_verification_round_id' => $round->id,
         'cell_id' => $cell->id,

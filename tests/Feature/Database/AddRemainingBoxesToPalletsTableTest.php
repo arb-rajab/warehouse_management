@@ -17,8 +17,8 @@ test('the migration backfills remaining_boxes from the pallet\'s product boxes_c
 
     Schema::table('pallets', fn (Blueprint $table) => $table->dropColumn('remaining_boxes'));
 
-    $product = Product::factory()->create(['boxes_count' => 7]);
-    $noiseProduct = Product::factory()->create(['boxes_count' => 3]);
+    $product = Product::factory()->boxesCount(7)->create();
+    $noiseProduct = Product::factory()->boxesCount(3)->create();
     $cell = Cell::factory()->create();
     $noiseCell = Cell::factory()->create();
 

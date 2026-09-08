@@ -163,7 +163,12 @@ class PalletActionService
                 throw new InvalidSlotStateException('slot_not_empty', __('messages.slot_not_empty'));
             }
 
-            $product = Product::query()->findOrFail($productId);
+            // `boxes_count` resolves through the wms_product_settings relation,
+            // so it has to be loaded here rather than read off the products row.
+            $product = Product::query()
+                ->select(['id'])
+                ->with('setting:product_id,boxes_count')
+                ->findOrFail($productId);
 
             $pallet = Pallet::create([
                 'product_id' => $product->id,

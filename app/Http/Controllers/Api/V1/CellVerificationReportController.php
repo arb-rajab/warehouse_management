@@ -14,7 +14,16 @@ use Illuminate\Support\Facades\Gate;
 
 class CellVerificationReportController extends Controller
 {
-    private const array EAGER_LOAD = ['cell.row:id,letter', 'expectedProduct:id,name,image_url,boxes_count', 'reportedProduct:id,name,image_url,boxes_count', 'user:id,name'];
+    private const array EAGER_LOAD = [
+        'cell.row:id,letter',
+        'expectedProduct:id,name,thumbnail_img',
+        'expectedProduct.thumbnailUpload:id,file_name,external_link',
+        'expectedProduct.setting:product_id,boxes_count',
+        'reportedProduct:id,name,thumbnail_img',
+        'reportedProduct.thumbnailUpload:id,file_name,external_link',
+        'reportedProduct.setting:product_id,boxes_count',
+        'user:id,name',
+    ];
 
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
