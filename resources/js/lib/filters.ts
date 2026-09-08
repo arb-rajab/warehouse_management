@@ -102,6 +102,25 @@ export function columnNumberOptions(maxColumnNumber: number): number[] {
 }
 
 /**
+ * Whether a listing's created-at window is narrowed at all, by either the
+ * explicit from/to range or the rolling "last N days" alternative. Shared by
+ * every filter dialog's active-filter count and by the sortable listings'
+ * per-column "this column is filtered" indicator, so the two can't disagree
+ * about what counts as filtered.
+ */
+export function dateRangeActive(filters: {
+    date_from: string;
+    date_to: string;
+    created_within_days: string;
+}): boolean {
+    return (
+        filters.date_from !== '' ||
+        filters.date_to !== '' ||
+        filters.created_within_days !== ''
+    );
+}
+
+/**
  * Counts how many of the given flags are true — shared by every
  * active-filter-count computed (CellStatusLogs/Index.vue's
  * `activeFilterCount`, cellHighlight.ts's `countActiveCellHighlightFilters`).
@@ -149,6 +168,32 @@ export function exclusivePair(
     return {
         rangeDisabled: computed(daysFilled),
         daysDisabled: computed(rangeFilled),
+    };
+}
+
+/**
+ * The created-at range/day-count mutual exclusion every filter dialog wires up
+ * identically — `exclusivePair` specialized to the `date_from`/`date_to` vs
+ * `created_within_days` fields, including the names the pages bind to their
+ * DateRangeFilterFields. CellStatusLogs/Index.vue still uses the generic
+ * `exclusivePair` directly for its second, expiration-based pair.
+ */
+export function createdDateRangeExclusivity(filters: {
+    date_from: string;
+    date_to: string;
+    created_within_days: string;
+}): {
+    dateRangeDisabled: ComputedRef<boolean>;
+    createdWithinDaysDisabled: ComputedRef<boolean>;
+} {
+    const { rangeDisabled, daysDisabled } = exclusivePair(
+        () => filters.date_from !== '' || filters.date_to !== '',
+        () => filters.created_within_days !== '',
+    );
+
+    return {
+        dateRangeDisabled: rangeDisabled,
+        createdWithinDaysDisabled: daysDisabled,
     };
 }
 

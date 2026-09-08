@@ -22,7 +22,8 @@ import { formatDateTime } from '@/lib/date';
 import {
     countActive,
     countBadgeClass,
-    exclusivePair,
+    createdDateRangeExclusivity,
+    dateRangeActive,
     filterApplyButtonClass,
     filterClearButtonClass,
     filterFooterClass,
@@ -61,13 +62,8 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const {
-    rangeDisabled: dateRangeDisabled,
-    daysDisabled: createdWithinDaysDisabled,
-} = exclusivePair(
-    () => filters.date_from !== '' || filters.date_to !== '',
-    () => filters.created_within_days !== '',
-);
+const { dateRangeDisabled, createdWithinDaysDisabled } =
+    createdDateRangeExclusivity(filters);
 
 const filtersOpen = ref(false);
 
@@ -75,9 +71,7 @@ const activeFilterCount = computed(() =>
     countActive([
         filters.user_id.length > 0,
         filters.completed !== '',
-        filters.date_from !== '' ||
-            filters.date_to !== '' ||
-            filters.created_within_days !== '',
+        dateRangeActive(filters),
     ]),
 );
 

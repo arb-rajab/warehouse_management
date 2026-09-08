@@ -32,10 +32,7 @@ class CellVerificationRoundResource extends JsonResource
             'completed_at' => $this->completed_at?->toIso8601String(),
             'reports_count' => $this->whenCounted('reports'),
             'reports' => $this->whenLoaded('reports', fn () => CellVerificationReportResource::collection($this->reports)),
-            'user' => $this->whenLoaded('user', fn () => [
-                'id' => $this->user->id,
-                'name' => $this->user->name,
-            ]),
+            'user' => $this->whenLoaded('user', fn () => new UserSummaryResource($this->user)),
         ];
     }
 }

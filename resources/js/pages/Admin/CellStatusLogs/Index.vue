@@ -23,6 +23,8 @@ import {
 import {
     countActive,
     countBadgeClass,
+    createdDateRangeExclusivity,
+    dateRangeActive,
     exclusivePair,
     filterApplyButtonClass,
     filterClearButtonClass,
@@ -67,13 +69,8 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const {
-    rangeDisabled: dateRangeDisabled,
-    daysDisabled: createdWithinDaysDisabled,
-} = exclusivePair(
-    () => filters.date_from !== '' || filters.date_to !== '',
-    () => filters.created_within_days !== '',
-);
+const { dateRangeDisabled, createdWithinDaysDisabled } =
+    createdDateRangeExclusivity(filters);
 
 const {
     rangeDisabled: expirationRangeDisabled,
@@ -94,9 +91,7 @@ const activeFilterCount = computed(() =>
         filters.column_number !== '',
         filters.user_id.length > 0,
         filters.action.length > 0,
-        filters.date_from !== '' ||
-            filters.date_to !== '' ||
-            filters.created_within_days !== '',
+        dateRangeActive(filters),
         filters.expiration_date_from !== '' ||
             filters.expiration_date_to !== '' ||
             filters.expires_within_days !== '',
@@ -110,12 +105,7 @@ const cellColumnFiltered = computed(
 const productColumnFiltered = computed(() => filters.product_id.length > 0);
 const actionColumnFiltered = computed(() => filters.action.length > 0);
 const doneByColumnFiltered = computed(() => filters.user_id.length > 0);
-const whenColumnFiltered = computed(
-    () =>
-        filters.date_from !== '' ||
-        filters.date_to !== '' ||
-        filters.created_within_days !== '',
-);
+const whenColumnFiltered = computed(() => dateRangeActive(filters));
 const palletColumnFiltered = computed(
     () =>
         filters.pallet_id !== '' ||
