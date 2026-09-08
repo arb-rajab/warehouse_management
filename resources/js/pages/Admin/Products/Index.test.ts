@@ -354,7 +354,7 @@ describe('Products Index', () => {
     it('renders the full count linking to the map filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
-        const cell = rowCells(wrapper)[1];
+        const cell = rowCells(wrapper)[2];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -365,7 +365,7 @@ describe('Products Index', () => {
     it('renders the opened count linking to the map filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
-        const cell = rowCells(wrapper)[2];
+        const cell = rowCells(wrapper)[3];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -377,7 +377,7 @@ describe('Products Index', () => {
             product({ id: 42, expired_cells_count: 1 }),
         ]);
 
-        const cell = rowCells(wrapper)[3];
+        const cell = rowCells(wrapper)[4];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -391,7 +391,7 @@ describe('Products Index', () => {
             { expiringSoonDays: 30 },
         );
 
-        const cell = rowCells(wrapper)[4];
+        const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -405,7 +405,7 @@ describe('Products Index', () => {
             { today: '2026-08-13' },
         );
 
-        const cell = rowCells(wrapper)[5];
+        const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('4');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cell-logs');
@@ -420,7 +420,7 @@ describe('Products Index', () => {
             { today: '2026-08-13', weekStart: '2026-08-10' },
         );
 
-        const cell = rowCells(wrapper)[6];
+        const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('9');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cell-logs');
@@ -435,7 +435,7 @@ describe('Products Index', () => {
             action: ['opened'],
         });
 
-        const href = rowCells(wrapper)[5].get('a').attributes('href') ?? '';
+        const href = rowCells(wrapper)[6].get('a').attributes('href') ?? '';
         expect(href).toContain('row_id=1');
         expect(href).toContain('user_id%5B%5D=7');
         expect(href).toContain('action%5B%5D=opened');
