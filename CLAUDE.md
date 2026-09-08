@@ -279,15 +279,40 @@ and one retry resolves it. To avoid burning a multi-minute install on
 run `composer install --no-dev` first; only add dev deps back if a task
 specifically needs them (e.g. PHPStan itself).
 
-Because none of these tools run locally, verifying a batch of edits (e.g.
-confirming JS/TS files are syntactically well-formed before a commit) often
-means writing an ad hoc check yourself. If that check will run more than
-once in the same session (e.g. once per touched file), write it to a file in
-the scratchpad directory a single time and invoke it repeatedly (`python3
-/tmp/.../checker.py "$f"` in a loop) rather than re-embedding the full
-script in a new Bash heredoc for every invocation — the repeated inline
-script text costs tool-input tokens on every call for no benefit over a
-single reusable file.
+Because none of these tools run locally, the stand-ins for them are committed
+in `.claude/scripts/`, so no session has to rebuild them:
+
+| Script | Stands in for |
+| --- | --- |
+| `php_import_order.py` | Pint's `ordered_imports`. Sorts case-INSENSITIVELY — a plain `sort` false-positives on pairs like `Date`/`DB` |
+| `js_balance.py` | a syntax smoke check for `.ts`/`.js`/`.vue` — catches the unclosed brace a `sed` edit leaves behind |
+| `vue_unused_imports.py` | eslint's `no-unused-vars` for a `<script setup>` block, template usage included |
+| `vue_prettier_hints.py` | Prettier's print width and its element-opening collapse |
+| `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs |
+
+Each script's docstring carries its usage and its limitations; read it before
+trusting a result. Run `python3 .claude/scripts/selftest.py` after changing any
+of them — nothing else verifies these, and a checker that has quietly stopped
+working is worse than none, because it is trusted.
+
+If you need a check they don't cover, add it there with a case in the self-test
+rather than writing another one to the scratchpad. Either way, never re-embed a
+script in a new Bash heredoc per invocation: the repeated inline text costs
+tool-input tokens on every call for no benefit over one reusable file.
+
+### Read the framework source before theorising about framework behaviour
+
+`vendor/` is absent, but the tagged source is fetchable — `curl
+https://raw.githubusercontent.com/laravel/framework/v<version>/src/Illuminate/...`,
+with `<version>` from `composer.lock`. When an installed package behaves in a
+way its public API appears to rule out, one fetch settles it, while a guess
+costs a CI round plus the diagnose-edit-push cycle around it.
+
+This is not hypothetical. `Model::preventsLazyLoading()` reporting true while
+no violation was ever raised cost three CI rounds and two pushed fixes for a
+cause that did not exist, before the answer turned up in four lines of
+`Builder::hydrate()`. The finding itself is recorded in the strict-mode section
+of `.ai/rules/app-providers.md`.
 
 ## Testing conventions
 
