@@ -16,7 +16,7 @@ class RowController extends Controller
         return RowResource::collection(
             Row::query()
                 ->select(Row::SELECT_COLUMNS)
-                ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
+                ->withHasPallets()
                 ->paginate(20)
         );
     }
@@ -29,6 +29,7 @@ class RowController extends Controller
         return RowResource::collection(
             Row::query()
                 ->select(Row::SELECT_COLUMNS)
+                ->withHasPallets()
                 ->with(['cells' => fn ($query) => $query
                     ->select(Cell::SELECT_COLUMNS)
                     ->with(Cell::WITH_CONTENTS)

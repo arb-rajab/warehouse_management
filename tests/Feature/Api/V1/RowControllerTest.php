@@ -109,6 +109,29 @@ test('an authenticated worker can list every row with its cells and their pallet
     ]);
 });
 
+test('listing every row with its cells computes has_pallets without an exists query per row', function () {
+    actingAsMobileUser();
+
+    Row::factory()->count(10)->create(['cells_count' => 1, 'flats_count' => 1])->each(function (Row $row) {
+        Pallet::factory()->create(['cell_id' => $row->cells()->first()->id]);
+    });
+    Row::factory()->count(2)->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    DB::enableQueryLog();
+    $response = $this->getJson('/api/v1/rows/full');
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    $payload = collect($response->json());
+    expect($payload->where('has_pallets', true))->toHaveCount(10);
+    expect($payload->where('has_pallets', false))->toHaveCount(2);
+
+    // A per-row exists query would put this at 12+ on top of the eager loads;
+    // the subquery keeps it flat regardless of how many rows come back.
+    expect($queryCount)->toBeLessThan(12);
+});
+
 test('listing every row with its cells computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {
     actingAsMobileUser();
 
