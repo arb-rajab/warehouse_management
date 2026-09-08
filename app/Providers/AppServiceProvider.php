@@ -67,9 +67,7 @@ class AppServiceProvider extends ServiceProvider
         // non-fillable attribute on fill/create. Off in production so a missed
         // eager load degrades to a slow page rather than a 500; on everywhere
         // else, including CI, so violations surface as failing tests.
-        Model::shouldBeStrict(
-            ! app()->isProduction(),
-        );
+        Model::shouldBeStrict(! app()->isProduction());
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
