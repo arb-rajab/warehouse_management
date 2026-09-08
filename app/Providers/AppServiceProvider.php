@@ -64,12 +64,17 @@ class AppServiceProvider extends ServiceProvider
         // Turns three conventions this codebase already follows by hand into
         // enforced ones: no lazy loading (the N+1 guard), no reading an
         // attribute a narrow select() left out, and no silently dropping a
-        // non-fillable attribute on fill/create. Off in production so a missed
-        // eager load degrades to a slow page rather than a 500; on everywhere
-        // else, including CI, so violations surface as failing tests.
-        // EloquentStrictModeTest asserts each of the three individually, so a
-        // change to what this bundles cannot quietly drop one.
-        Model::shouldBeStrict(! app()->isProduction());
+        // non-fillable attribute on fill/create.
+        //
+        // Named environments rather than ! isProduction(): staging runs
+        // APP_ENV=staging, so that test would leave the guards on in front of
+        // real users, where a missed eager load should degrade to a slow page
+        // rather than a 500. Listing the environments a developer is watching
+        // also means any environment added later is off by default, which is
+        // the safe direction to be wrong in. EloquentStrictModeTest asserts
+        // each of the three individually, so a change to what this bundles
+        // cannot quietly drop one.
+        Model::shouldBeStrict(app()->environment('local', 'testing'));
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
