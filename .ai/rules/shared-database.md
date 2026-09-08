@@ -78,7 +78,13 @@ exact keys their clients already consume:
   against this app's own domain.
 - **`boxes_count`** lives in `wms_product_settings`, keyed by the store's
   product id. A product the store has added but this app has never configured
-  has no row, and falls back to `Product::DEFAULT_BOXES_COUNT`.
+  has no row, and falls back to `Product::DEFAULT_BOXES_COUNT`. There is no
+  store column to backfill this from: `products.unit_equal` reads like a
+  units-per-carton value and was the obvious candidate, but it has been
+  checked with the store's owners and is **not** the box count — do not wire
+  it up. Nothing in this app writes `wms_product_settings` yet either, so
+  every product currently resolves to the default; a write path (admin field,
+  import command, or seeder) is still to be designed.
 
 Both are relation-backed, so anything reading them must eager-load first or
 trip the lazy-loading guard in local/testing. `Product::WITH_DERIVED_ATTRIBUTES`
