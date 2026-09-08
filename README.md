@@ -106,7 +106,9 @@ Leave it unset and every product image resolves to `null` — deliberately, sinc
 
 A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (1), so **every product reads as 1 box until configured**, and pallets are placed with a remaining count of 1.
 
-Nothing in this app writes that table yet — the admin product screen is read-only (`index`/`search`), and product CRUD belongs to the store app. Populating box counts needs a deliberate mechanism (an admin field, an import command, or a seeded set); until one exists, treat the box count as unconfigured rather than as a real value.
+Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path: product CRUD itself belongs to the store app, and this app never writes to `products`.
+
+A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 
 ## Contributing / conventions
 

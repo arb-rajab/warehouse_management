@@ -16,7 +16,7 @@ test('an authenticated admin can view the products index with every property the
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
         'name' => 'Widgets',
     ]);
     Pallet::factory()->create([
@@ -34,6 +34,7 @@ test('an authenticated admin can view the products index with every property the
                 ->where('id', $product->id)
                 ->where('name', 'Widgets')
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
+                ->where('boxes_count', 24)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
@@ -484,4 +485,78 @@ test('an unauthenticated caller cannot search products', function () {
     $response = $this->getJson('/admin/products/search');
 
     $response->assertUnauthorized();
+});
+
+test('an authenticated admin can set how many boxes a pallet of a product holds', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(6)->create();
+    $otherProduct = Product::factory()->boxesCount(9)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+
+    $response->assertRedirect();
+    $this->assertDatabaseHas('wms_product_settings', [
+        'product_id' => $product->id,
+        'boxes_count' => 30,
+    ]);
+    expect($otherProduct->fresh()->boxes_count)->toBe(9);
+});
+
+test('setting a box count creates the settings row for a product that has never had one', function () {
+    actingAsAdmin();
+
+    // The store can add a product at any time without this app knowing.
+    $product = Product::factory()->unconfigured()->create();
+    expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
+
+    $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
+
+    expect($product->fresh()->boxes_count)->toBe(15);
+    $this->assertDatabaseCount('wms_product_settings', 1);
+});
+
+test('the box count must be a whole number of at least one', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(6)->create();
+
+    foreach ([0, -3, 'many'] as $invalid) {
+        $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
+
+        $response->assertSessionHasErrors('boxes_count');
+    }
+
+    $response = $this->patch("/admin/products/{$product->id}/box-count", []);
+    $response->assertSessionHasErrors('boxes_count');
+
+    expect($product->fresh()->boxes_count)->toBe(6);
+});
+
+test('a mobile app user cannot set a box count', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->boxesCount(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+
+    $response->assertForbidden();
+    expect($product->fresh()->boxes_count)->toBe(6);
+});
+
+test('an unauthenticated caller cannot set a box count', function () {
+    $product = Product::factory()->boxesCount(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+
+    $response->assertRedirect(route('login'));
+    expect($product->fresh()->boxes_count)->toBe(6);
+});
+
+test('setting a box count for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+
+    $response->assertNotFound();
 });

@@ -82,9 +82,9 @@ exact keys their clients already consume:
   store column to backfill this from: `products.unit_equal` reads like a
   units-per-carton value and was the obvious candidate, but it has been
   checked with the store's owners and is **not** the box count — do not wire
-  it up. Nothing in this app writes `wms_product_settings` yet either, so
-  every product currently resolves to the default; a write path (admin field,
-  import command, or seeder) is still to be designed.
+  it up. The only write path is `Admin\ProductController::updateBoxCount()`,
+  behind the editable box-count column on the admin products screen; a product
+  nobody has set resolves to the default rather than to a stored zero.
 
 Both are relation-backed, so anything reading them must eager-load first or
 trip the lazy-loading guard in local/testing. `Product::WITH_DERIVED_ATTRIBUTES`

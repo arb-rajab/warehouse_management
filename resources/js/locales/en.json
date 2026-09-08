@@ -445,8 +445,10 @@
             "expired": "Expired",
             "expiringSoon": "Expiring ≤{days}d",
             "activityToday": "Today",
-            "activityWeek": "This week"
+            "activityWeek": "This week",
+            "boxesPerPallet": "Boxes / pallet"
         },
+        "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "empty": "No products yet."
     }
 }

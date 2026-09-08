@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
+        Route::patch('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');

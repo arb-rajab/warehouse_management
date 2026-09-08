@@ -281,6 +281,12 @@ export interface ProductSummary {
     id: number;
     name: string;
     image_url: string | null;
+    /**
+     * How many boxes a full pallet of this product holds. Stored in this app's
+     * own `wms_product_settings`, not on the store-owned products table, and
+     * falls back to 1 for a product nobody has configured yet.
+     */
+    boxes_count: number;
     full_cells_count: number;
     opened_cells_count: number;
     expired_cells_count: number;
