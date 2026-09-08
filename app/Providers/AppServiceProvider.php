@@ -67,26 +67,9 @@ class AppServiceProvider extends ServiceProvider
         // non-fillable attribute on fill/create. Off in production so a missed
         // eager load degrades to a slow page rather than a 500; on everywhere
         // else, including CI, so violations surface as failing tests.
-        //
-        // Listed individually rather than via Model::shouldBeStrict(), which
-        // also enables automaticallyEagerLoadRelationships() — that silently
-        // resolves an unloaded relation instead of raising the violation,
-        // which is the opposite of what this is for.
-        $strict = ! app()->isProduction();
-
-        Model::preventLazyLoading($strict);
-        Model::preventSilentlyDiscardingAttributes($strict);
-        Model::preventAccessingMissingAttributes($strict);
-
-        if ($strict) {
-            // Laravel resolves an unloaded relation by eager-loading it across
-            // the result set rather than raising the lazy-loading violation,
-            // which leaves preventLazyLoading() above reporting as enabled
-            // while never firing. Sensible as a production default, so it is
-            // left alone there; outside production the whole point is for the
-            // missing eager load to surface, so it is turned off.
-            Model::automaticallyEagerLoadRelationships(false);
-        }
+        // EloquentStrictModeTest asserts each of the three individually, so a
+        // change to what this bundles cannot quietly drop one.
+        Model::shouldBeStrict(! app()->isProduction());
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)

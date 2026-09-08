@@ -11,12 +11,8 @@ use Illuminate\Database\LazyLoadingViolationException;
  * conventions controllers.md states in prose — eager-load your relations, select
  * only the columns you need — fail the suite instead of only review.
  *
- * The flags are asserted directly as well as behaviourally: the two must agree,
- * and when they didn't, that was the bug. Model::shouldBeStrict() also turns on
- * automaticallyEagerLoadRelationships(), which resolves an unloaded relation
- * instead of raising the violation, so the lazy-loading guard silently never
- * fired. Hence the explicit per-guard calls in AppServiceProvider, and hence
- * this test asserting each flag rather than trusting a bundle.
+ * The flags are asserted directly as well as behaviourally, so a change to what
+ * shouldBeStrict() bundles cannot quietly drop one.
  */
 test('each guard is active outside production', function () {
     expect(Model::preventsLazyLoading())->toBeTrue();
@@ -25,21 +21,23 @@ test('each guard is active outside production', function () {
 });
 
 test('lazy loading a relation throws instead of silently running a query per model', function () {
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->count(2)->create(['cells_count' => 1, 'flats_count' => 1]);
 
-    // Re-fetch: Eloquent deliberately allows lazy loading on a model it just
-    // created (wasRecentlyCreated), so the factory's own instance won't throw.
-    $fetched = Row::query()->findOrFail($row->id);
+    // Must go through a multi-row result set. Builder::hydrate() only arms the
+    // guard when the query returned more than one row, since lazy loading a
+    // single model is one extra query rather than an N+1 — find()/first() will
+    // never throw no matter how strict the global flag is.
+    $rows = Row::query()->get();
 
-    expect(fn () => $fetched->cells)->toThrow(LazyLoadingViolationException::class);
+    expect(fn () => $rows->first()->cells)->toThrow(LazyLoadingViolationException::class);
 });
 
 test('an eager-loaded relation is still readable', function () {
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->count(2)->create(['cells_count' => 1, 'flats_count' => 1]);
 
-    $fetched = Row::query()->with('cells')->findOrFail($row->id);
+    $rows = Row::query()->with('cells')->get();
 
-    expect($fetched->cells)->toHaveCount(1);
+    expect($rows->first()->cells)->toHaveCount(1);
 });
 
 test('reading an attribute a narrow select left out throws instead of returning null', function () {
