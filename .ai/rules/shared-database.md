@@ -158,6 +158,17 @@ shared database every legacy name on that list is the store app's table, and
 renaming one would break that app. Both migrations are no-ops on a fresh install
 and exist only for databases migrated before the prefix landed.
 
+**Editing an already-run migration needs a companion upgrade migration.**
+Rewriting `create_products_table` to build the store's shape changed nothing on
+staging or an older local checkout: the migration was already recorded, so it
+never re-ran, and those databases kept the pre-alignment columns while the code
+moved on. `upgrade_legacy_products_stand_in` is the fix, and the pattern for the
+next one — identify the old shape by a column the store's table cannot have
+(`products.image_url` was only ever this app's), carry any data worth keeping
+into its new home, then drop it. A stand-in's `id` type is deliberately left
+alone: it only matters for a foreign key against the real shared table, which no
+stand-in environment has.
+
 **The migration repository cannot rename itself.** Laravel reads
 `database.migrations.table` before running anything, so pointing it at
 `wms_migrations` makes an existing WMS database look unmigrated and re-run
