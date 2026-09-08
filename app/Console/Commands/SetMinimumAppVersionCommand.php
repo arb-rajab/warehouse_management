@@ -24,9 +24,14 @@ class SetMinimumAppVersionCommand extends Command
             return self::FAILURE;
         }
 
-        MobileAppVersionRequirement::query()->updateOrCreate(['id' => 1], [
-            'minimum_version' => $version,
-        ]);
+        // firstOrNew() rather than updateOrCreate(['id' => 1], ...): the latter
+        // mass-assigns the primary key on the create path, which the id was
+        // never fillable for — Eloquent used to drop it silently, so the row
+        // got an auto-increment id anyway. The table holds one row either way.
+        $requirement = MobileAppVersionRequirement::query()->firstOrNew();
+
+        $requirement->minimum_version = $version;
+        $requirement->save();
 
         $this->components->info("Minimum app version set to {$version}. Older clients will now be rejected.");
 

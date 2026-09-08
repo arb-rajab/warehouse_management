@@ -6,6 +6,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
@@ -59,6 +60,16 @@ class AppServiceProvider extends ServiceProvider
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
+
+        // Turns three conventions this codebase already follows by hand into
+        // enforced ones: no lazy loading (the N+1 guard), no reading an
+        // attribute a narrow select() left out, and no silently dropping a
+        // non-fillable attribute on fill/create. Off in production so a missed
+        // eager load degrades to a slow page rather than a 500; on everywhere
+        // else, including CI, so violations surface as failing tests.
+        // EloquentStrictModeTest asserts each of the three individually, so a
+        // change to what this bundles cannot quietly drop one.
+        Model::shouldBeStrict(! app()->isProduction());
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
