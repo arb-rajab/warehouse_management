@@ -18,7 +18,7 @@ class MobileAppVersionRequirement extends Model
     use HasFactory;
 
     /**
-     * The command always upserts row id 1, so there is at most one
+     * The command upserts the single existing row, so there is at most one
      * requirement stored — null means no minimum has been configured yet,
      * which callers treat as "don't restrict anything".
      */

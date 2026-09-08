@@ -3,15 +3,27 @@
 use App\Models\Row;
 use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Database\Eloquent\MissingAttributeException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\LazyLoadingViolationException;
 
 /**
- * AppServiceProvider enables Model::shouldBeStrict() outside production, so the
+ * AppServiceProvider enables three Eloquent guards outside production, so the
  * conventions controllers.md states in prose — eager-load your relations, select
- * only the columns you need — fail the suite instead of only review. Asserted
- * behaviourally rather than through the preventsX() flags, since the behaviour is
- * what the rest of the codebase depends on.
+ * only the columns you need — fail the suite instead of only review.
+ *
+ * The flags are asserted directly as well as behaviourally: the two must agree,
+ * and when they didn't, that was the bug. Model::shouldBeStrict() also turns on
+ * automaticallyEagerLoadRelationships(), which resolves an unloaded relation
+ * instead of raising the violation, so the lazy-loading guard silently never
+ * fired. Hence the explicit per-guard calls in AppServiceProvider, and hence
+ * this test asserting each flag rather than trusting a bundle.
  */
+test('each guard is active outside production', function () {
+    expect(Model::preventsLazyLoading())->toBeTrue();
+    expect(Model::preventsSilentlyDiscardingAttributes())->toBeTrue();
+    expect(Model::preventsAccessingMissingAttributes())->toBeTrue();
+});
+
 test('lazy loading a relation throws instead of silently running a query per model', function () {
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
 
