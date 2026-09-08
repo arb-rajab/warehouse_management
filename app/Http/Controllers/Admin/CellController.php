@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ShowCellMapRequest;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
@@ -14,7 +15,6 @@ use App\Models\Product;
 use App\Models\Row;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -22,7 +22,7 @@ use Inertia\Response;
 
 class CellController extends Controller
 {
-    use BuildsCellQrLabels;
+    use BuildsCellQrLabels, RedirectsAfterCellAction;
 
     public function index(ShowCellMapRequest $request): Response
     {
@@ -83,14 +83,9 @@ class CellController extends Controller
      * service (regardless of its current occupancy), reactivating restores it.
      * Occupancy (`state`) is never touched by this action.
      *
-     * Triggered from both the cell map and a row's page, so — like
-     * `PalletController::handle()` — the redirect target comes from an explicit
-     * `return_to` field the frontend sends (validated by `ValidatesReturnTo`),
-     * not `back()`: Inertia marks every visit as an XHR request, which stops
-     * Laravel's session middleware from ever updating the tracked "previous URL"
-     * `back()` relies on during normal SPA navigation, and the `Referer` header
-     * is stripped app-wide by `config/secure-headers.php`'s `Referrer-Policy:
-     * no-referrer` besides.
+     * Triggered from both the cell map and a row's page, so the redirect target
+     * comes from the explicit `return_to` field the frontend sends — see
+     * `RedirectsAfterCellAction`, shared with the pallet actions.
      */
     public function toggleActive(ToggleCellActiveRequest $request, Cell $cell): RedirectResponse
     {
@@ -114,17 +109,8 @@ class CellController extends Controller
                 'note' => $request->input('note'),
             ]);
 
-            return $this->redirectAfterToggle($request, $lockedCell);
+            return $this->redirectAfterCellAction($request, $lockedCell);
         });
-    }
-
-    private function redirectAfterToggle(Request $request, Cell $cell): RedirectResponse
-    {
-        if ($request->input('return_to') === 'row') {
-            return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
-        }
-
-        return redirect()->route('admin.cells.index', $request->query());
     }
 
     /**

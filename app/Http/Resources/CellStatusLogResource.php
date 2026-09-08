@@ -64,10 +64,7 @@ class CellStatusLogResource extends JsonResource
                 'id' => $this->pallet_id,
                 'expiration_date' => $this->whenLoaded('pallet', fn () => $this->pallet?->expiration_date?->toDateString()),
             ],
-            'user' => $this->whenLoaded('user', fn () => [
-                'id' => $this->user->id,
-                'name' => $this->user->name,
-            ]),
+            'user' => $this->whenLoaded('user', fn () => new UserSummaryResource($this->user)),
             'created_at' => $this->created_at->toIso8601String(),
             'next_log_at' => $this->next_log_at?->toIso8601String(),
             'duration_seconds' => $this->duration_seconds,
@@ -79,7 +76,7 @@ class CellStatusLogResource extends JsonResource
                     'reason' => $flag->reason->value,
                     'acknowledged' => $flag->acknowledged_at !== null,
                     'acknowledged_by' => $flag->relationLoaded('acknowledgedBy') && $flag->acknowledgedBy !== null
-                        ? ['id' => $flag->acknowledgedBy->id, 'name' => $flag->acknowledgedBy->name]
+                        ? new UserSummaryResource($flag->acknowledgedBy)
                         : null,
                 ])->all()),
             ),

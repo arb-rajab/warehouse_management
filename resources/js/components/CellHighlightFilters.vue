@@ -15,6 +15,7 @@ import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import {
     countBadgeClass,
     filterClearButtonClass,
+    filterFooterClass,
     filterTriggerButtonClass,
     selectedCountLabel,
 } from '@/lib/filters';
@@ -114,9 +115,7 @@ function clear(): void {
                 />
             </div>
 
-            <div
-                class="mt-6 flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-            >
+            <div :class="['mt-6', filterFooterClass]">
                 <button
                     type="button"
                     :class="filterClearButtonClass"

@@ -54,10 +54,7 @@ class CellVerificationReportResource extends JsonResource
                 'expiration_date' => $this->reported_expiration_date?->toDateString(),
             ],
             'note' => $this->note,
-            'user' => $this->whenLoaded('user', fn () => [
-                'id' => $this->user->id,
-                'name' => $this->user->name,
-            ]),
+            'user' => $this->whenLoaded('user', fn () => new UserSummaryResource($this->user)),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

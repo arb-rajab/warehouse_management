@@ -10,6 +10,7 @@ import {
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
+import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
@@ -25,9 +26,13 @@ import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
-    exclusivePair,
+    countBadgeClass,
+    createdDateRangeExclusivity,
+    dateRangeActive,
     filterApplyButtonClass,
     filterClearButtonClass,
+    filterFooterClass,
+    filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
     selectedCountLabel,
@@ -69,13 +74,8 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const {
-    rangeDisabled: dateRangeDisabled,
-    daysDisabled: createdWithinDaysDisabled,
-} = exclusivePair(
-    () => filters.date_from !== '' || filters.date_to !== '',
-    () => filters.created_within_days !== '',
-);
+const { dateRangeDisabled, createdWithinDaysDisabled } =
+    createdDateRangeExclusivity(filters);
 
 const filtersOpen = ref(false);
 
@@ -84,9 +84,7 @@ const activeFilterCount = computed(() =>
         filters.row_id !== '' || filters.column_number !== '',
         filters.product_id.length > 0,
         filters.is_correct !== '',
-        filters.date_from !== '' ||
-            filters.date_to !== '' ||
-            filters.created_within_days !== '',
+        dateRangeActive(filters),
     ]),
 );
 
@@ -170,10 +168,7 @@ function onPerPageChange(perPage: number): void {
                 >
                     <SlidersHorizontal class="h-4 w-4" />
                     {{ t('cellVerificationReport.filters.title') }}
-                    <span
-                        v-if="activeFilterCount > 0"
-                        class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500"
-                    >
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
                 </button>
@@ -217,18 +212,11 @@ function onPerPageChange(perPage: number): void {
                     {{ t('cellVerificationRound.show.completedAt') }}
                 </div>
                 <div class="font-medium">
-                    <span
-                        v-if="round.completed_at"
-                        class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    <CellVerificationRoundStatusBadge
+                        :completed-at="round.completed_at"
                     >
-                        {{ formatDateTime(round.completed_at) }}
-                    </span>
-                    <span
-                        v-else
-                        class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                    >
-                        {{ t('cellVerificationRound.status.inProgress') }}
-                    </span>
+                        {{ formatDateTime(round.completed_at!) }}
+                    </CellVerificationRoundStatusBadge>
                 </div>
             </div>
         </div>
@@ -257,9 +245,7 @@ function onPerPageChange(perPage: number): void {
                     />
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{
                             t(
@@ -306,9 +292,7 @@ function onPerPageChange(perPage: number): void {
                     </div>
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellVerificationReport.filters.sections.date') }}
                     </h3>
@@ -333,9 +317,7 @@ function onPerPageChange(perPage: number): void {
                     </div>
                 </div>
 
-                <div
-                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterFooterClass">
                     <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellVerificationReport.filters.apply') }}

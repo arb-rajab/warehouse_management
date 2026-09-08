@@ -45,7 +45,7 @@ class CellVerificationRoundController extends Controller
                 'per_page' => $perPage,
             ],
             'filterOptions' => [
-                'users' => User::query()->select(['id', 'name'])->orderBy('name')->get(),
+                'users' => User::filterOptions(),
             ],
         ]);
     }

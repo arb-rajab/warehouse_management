@@ -24,6 +24,16 @@ export interface User {
     is_admin: boolean;
 }
 
+/**
+ * The id/name pair every listing carries for the user who did something, and
+ * that `User::filterOptions()` returns for a "done by" dropdown. Narrower than
+ * `User` on purpose — these payloads never include the email or admin flag.
+ */
+export interface UserSummary {
+    id: number;
+    name: string;
+}
+
 export interface Row {
     id: number;
     letter: string;
@@ -59,7 +69,11 @@ export interface CellPallet {
     product_name: string;
     product_image_url: string | null;
     expiration_date: string;
-    added_at: string;
+    /**
+     * Null-safe because `Pallet::toMapSummaryArray()` derives it from the
+     * model's nullable `created_at` (`$this->created_at?->toIso8601String()`).
+     */
+    added_at: string | null;
     is_stale: boolean | null;
     remaining_boxes: number;
 }
@@ -94,6 +108,18 @@ export interface CellMapRow {
     flats_count: number;
 }
 
+/**
+ * What `ProductResource` emits wherever a payload embeds the product itself
+ * rather than just an option label — the log listings and the verification
+ * snapshots.
+ */
+export interface ProductDetails {
+    id: number;
+    name: string;
+    image_url: string | null;
+    boxes_count: number;
+}
+
 export interface ProductFilterOption {
     id: number;
     name: string;
@@ -117,6 +143,23 @@ export interface CellHighlightSeed {
 }
 
 /**
+ * The pallet detail the cell map carries for every flat — `CellPallet` minus
+ * `is_stale`, which only the current flat's fully-loaded cells compute. Shared
+ * by the 2D map's per-flat highlight samples and the 3D map's items, which are
+ * built from those same samples.
+ */
+export type CellPalletSummary = Pick<
+    CellPallet,
+    | 'id'
+    | 'product_id'
+    | 'product_name'
+    | 'product_image_url'
+    | 'expiration_date'
+    | 'added_at'
+    | 'remaining_boxes'
+>;
+
+/**
  * The minimal per-cell data the warehouse map loads for every flat (not just
  * the one on screen) to compute a highlight-match count per flat tab, order
  * matches for next/previous-match navigation, and (via the 3D map's "faced
@@ -131,16 +174,7 @@ export interface CellHighlightSample {
     flat_number: number;
     state: Cell['state'];
     is_active: boolean;
-    pallet: Pick<
-        CellPallet,
-        | 'id'
-        | 'product_id'
-        | 'product_name'
-        | 'product_image_url'
-        | 'expiration_date'
-        | 'added_at'
-        | 'remaining_boxes'
-    > | null;
+    pallet: CellPalletSummary | null;
 }
 
 export interface CellSlotLocation {
@@ -167,16 +201,7 @@ export interface CellMap3DItem {
     isActive: boolean;
     highlighted: boolean;
     pulsing: boolean;
-    pallet: Pick<
-        CellPallet,
-        | 'id'
-        | 'product_id'
-        | 'product_name'
-        | 'product_image_url'
-        | 'expiration_date'
-        | 'added_at'
-        | 'remaining_boxes'
-    > | null;
+    pallet: CellPalletSummary | null;
 }
 
 export interface CellMap3DBand {
@@ -200,7 +225,7 @@ export interface CellStatusLogFlag {
     id: number;
     reason: CellLogFlagReason;
     acknowledged: boolean;
-    acknowledged_by?: { id: number; name: string } | null;
+    acknowledged_by?: UserSummary | null;
 }
 
 export interface CellStatusLog {
@@ -212,20 +237,12 @@ export interface CellStatusLog {
     boxes_count: number | null;
     cell: CellSlotLocation;
     related_cell: CellSlotLocation | null;
-    product: {
-        id: number;
-        name: string;
-        image_url: string | null;
-        boxes_count: number;
-    } | null;
+    product: ProductDetails | null;
     pallet: {
         id: number;
         expiration_date: string | null;
     } | null;
-    user: {
-        id: number;
-        name: string;
-    };
+    user: UserSummary;
     created_at: string;
     next_log_at: string | null;
     duration_seconds: number;
@@ -256,7 +273,7 @@ export interface CellStatusLogFilters {
 
 export interface CellStatusLogFilterOptions
     extends RowAndColumnFilterOptions, ProductFilterOptions {
-    users: { id: number; name: string }[];
+    users: UserSummary[];
     actions: CellLogAction[];
 }
 
@@ -302,12 +319,7 @@ export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
 
 export interface CellVerificationSnapshot {
     cell_state: Cell['state'] | null;
-    product: {
-        id: number;
-        name: string;
-        image_url: string | null;
-        boxes_count: number;
-    } | null;
+    product: ProductDetails | null;
     boxes_count: number | null;
     expiration_date: string | null;
 }
@@ -320,10 +332,7 @@ export interface CellVerificationReport {
     expected: CellVerificationSnapshot;
     reported: CellVerificationSnapshot;
     note: string | null;
-    user: {
-        id: number;
-        name: string;
-    };
+    user: UserSummary;
     created_at: string;
 }
 
@@ -333,10 +342,7 @@ export interface CellVerificationRound {
     completed_at: string | null;
     reports_count?: number;
     reports?: CellVerificationReport[];
-    user?: {
-        id: number;
-        name: string;
-    };
+    user?: UserSummary;
 }
 
 export interface CellVerificationRoundFilters {
@@ -350,7 +356,7 @@ export interface CellVerificationRoundFilters {
 }
 
 export interface CellVerificationRoundFilterOptions {
-    users: { id: number; name: string }[];
+    users: UserSummary[];
 }
 
 /**

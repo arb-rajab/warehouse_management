@@ -10,11 +10,26 @@ export const filterSectionHeadingClass =
     'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
 
 /**
- * The small rounded-pill count badge shared by every filter-dialog trigger's
- * active-filter count (CellHighlightFilters.vue, CellStatusLogs/Index.vue)
- * and the cell map's per-flat highlight-match count (Cells/Index.vue). Blue
- * rather than the page's usual gray-900/white pairing so it stays visible on
- * the flat tab's own dark selected-state background, matching the blue
+ * The divider above each section inside a filter dialog — the sibling of
+ * `filterSectionHeadingClass` (CellStatusLogs/Index.vue, Products/Index.vue,
+ * CellVerificationRounds/Index.vue + Show.vue).
+ */
+export const filterSectionClass =
+    'border-t border-gray-200 pt-6 dark:border-neutral-800';
+
+/**
+ * The same divider for a filter dialog's action row, which lays its Apply/Clear
+ * buttons out in a row. CellHighlightFilters.vue composes this with an extra
+ * `mt-6`, since its footer follows plain content rather than a divided section.
+ */
+export const filterFooterClass =
+    'flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800';
+
+/**
+ * The small rounded-pill count badge used by every filter-dialog trigger's
+ * active-filter count and by the cell map's per-flat highlight-match count.
+ * Blue rather than the page's usual gray-900/white pairing so it stays visible
+ * on the flat tab's own dark selected-state background, matching the blue
  * highlight ring cells get.
  */
 export const countBadgeClass =
@@ -42,9 +57,9 @@ export const mapToolbarButtonClass =
     'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
 
 /**
- * The "this toggle is the active one" variant applied on top of a toggle
- * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) in
- * Cells/Index.vue and CellMap3D.vue.
+ * The "this item is the selected one" variant applied on top of a toggle
+ * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) or a
+ * pagination page link.
  */
 export const selectedToggleClass =
     'bg-gray-900 text-white dark:bg-white dark:text-gray-900';
@@ -64,9 +79,9 @@ export const fieldLabelClass =
     'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
 
 /**
- * The plain bordered text/number/date/select/textarea input shared by every
- * field in PalletActionsDialog.vue and ToggleCellActiveDialog.vue's note
- * field — extracted once it was repeated 7 times across the two files.
+ * The plain bordered text/number/date/select/textarea input shared by the
+ * pallet-action and toggle-cell-active dialogs' fields and by FilterSelect.vue
+ * — extracted once it was repeated 7 times across the first two files.
  */
 export const plainFieldInputClass =
     'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
@@ -84,6 +99,25 @@ export function selectedCountLabel(count: number): string {
  */
 export function columnNumberOptions(maxColumnNumber: number): number[] {
     return Array.from({ length: maxColumnNumber }, (_, i) => i + 1);
+}
+
+/**
+ * Whether a listing's created-at window is narrowed at all, by either the
+ * explicit from/to range or the rolling "last N days" alternative. Shared by
+ * every filter dialog's active-filter count and by the sortable listings'
+ * per-column "this column is filtered" indicator, so the two can't disagree
+ * about what counts as filtered.
+ */
+export function dateRangeActive(filters: {
+    date_from: string;
+    date_to: string;
+    created_within_days: string;
+}): boolean {
+    return (
+        filters.date_from !== '' ||
+        filters.date_to !== '' ||
+        filters.created_within_days !== ''
+    );
 }
 
 /**
@@ -134,6 +168,32 @@ export function exclusivePair(
     return {
         rangeDisabled: computed(daysFilled),
         daysDisabled: computed(rangeFilled),
+    };
+}
+
+/**
+ * The created-at range/day-count mutual exclusion every filter dialog wires up
+ * identically — `exclusivePair` specialized to the `date_from`/`date_to` vs
+ * `created_within_days` fields, including the names the pages bind to their
+ * DateRangeFilterFields. CellStatusLogs/Index.vue still uses the generic
+ * `exclusivePair` directly for its second, expiration-based pair.
+ */
+export function createdDateRangeExclusivity(filters: {
+    date_from: string;
+    date_to: string;
+    created_within_days: string;
+}): {
+    dateRangeDisabled: ComputedRef<boolean>;
+    createdWithinDaysDisabled: ComputedRef<boolean>;
+} {
+    const { rangeDisabled, daysDisabled } = exclusivePair(
+        () => filters.date_from !== '' || filters.date_to !== '',
+        () => filters.created_within_days !== '',
+    );
+
+    return {
+        dateRangeDisabled: rangeDisabled,
+        createdWithinDaysDisabled: daysDisabled,
     };
 }
 

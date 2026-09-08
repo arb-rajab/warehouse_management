@@ -1,6 +1,7 @@
 import { Check, Clock, TriangleAlert, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -385,6 +386,17 @@ describe('CellStatusLogs Index', () => {
             t('cellLog.actions.transferred_out'),
             t('cellLog.actions.transferred_in'),
         ]);
+    });
+
+    it('renders each row through CellStatusLogRowCells, with the doneBy column', () => {
+        const log = cellLog();
+        const wrapper = mountPage([log]);
+
+        const cells = wrapper.findComponent(CellStatusLogRowCells);
+        expect(cells.exists()).toBe(true);
+        expect(cells.props('showUserColumn')).toBe(true);
+        expect(cells.props('returnTo')).toBeUndefined();
+        expect(cells.props('log')).toMatchObject({ id: log.id });
     });
 
     it('renders only the from-cell link when the log has no related cell', () => {

@@ -20,9 +20,12 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActive,
     countBadgeClass,
-    exclusivePair,
+    createdDateRangeExclusivity,
+    dateRangeActive,
     filterApplyButtonClass,
     filterClearButtonClass,
+    filterFooterClass,
+    filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
     selectedCountLabel,
@@ -64,13 +67,8 @@ const filters = reactive({
     per_page: props.filters.per_page ?? 20,
 });
 
-const {
-    rangeDisabled: dateRangeDisabled,
-    daysDisabled: createdWithinDaysDisabled,
-} = exclusivePair(
-    () => filters.date_from !== '' || filters.date_to !== '',
-    () => filters.created_within_days !== '',
-);
+const { dateRangeDisabled, createdWithinDaysDisabled } =
+    createdDateRangeExclusivity(filters);
 
 const filtersOpen = ref(false);
 
@@ -84,9 +82,7 @@ const activeFilterCount = computed(() =>
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
-        filters.date_from !== '' ||
-            filters.date_to !== '' ||
-            filters.created_within_days !== '',
+        dateRangeActive(filters),
     ]),
 );
 
@@ -114,9 +110,7 @@ const activityColumnsFiltered = computed(
         filters.state !== '' ||
         filters.user_id.length > 0 ||
         filters.action.length > 0 ||
-        filters.date_from !== '' ||
-        filters.date_to !== '' ||
-        filters.created_within_days !== '',
+        dateRangeActive(filters),
 );
 
 /**
@@ -272,9 +266,7 @@ function activityHref(
                     />
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}
                     </h3>
@@ -300,9 +292,7 @@ function activityHref(
                     </div>
                 </div>
 
-                <div
-                    class="border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.activity') }}
                     </h3>
@@ -331,9 +321,7 @@ function activityHref(
                     </div>
                 </div>
 
-                <div
-                    class="flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800"
-                >
+                <div :class="filterFooterClass">
                     <button type="submit" :class="filterApplyButtonClass">
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}

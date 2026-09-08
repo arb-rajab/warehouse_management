@@ -6,6 +6,7 @@ use Closure;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -48,6 +49,18 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    /**
+     * The id/name pairs for a "filter by who did this" dropdown, ordered by
+     * name — the same shape `Row::filterOptions()`/`Product::filterOptions()`
+     * return for their own filters.
+     *
+     * @return Collection<int, User>
+     */
+    public static function filterOptions(): Collection
+    {
+        return self::query()->select(['id', 'name'])->orderBy('name')->get();
     }
 
     /**

@@ -31,7 +31,7 @@ class RowController extends Controller
             'rows' => $this->paginated(RowResource::collection(
                 Row::query()
                     ->select(Row::SELECT_COLUMNS)
-                    ->withExists(['cells as has_pallets' => fn ($query) => $query->has('pallet')])
+                    ->withHasPallets()
                     ->paginate($perPage)
                     ->withQueryString()
             )),
@@ -54,7 +54,7 @@ class RowController extends Controller
     public function show(Row $row): Response
     {
         return Inertia::render('Admin/Rows/Show', [
-            'row' => new RowResource($row),
+            'row' => new RowResource($row->loadHasPallets()),
             'rows' => Row::mapOptions(),
             'cells' => CellResource::collection(
                 $row->cells()
@@ -73,7 +73,7 @@ class RowController extends Controller
     public function edit(Row $row): Response
     {
         return Inertia::render('Admin/Rows/Edit', [
-            'row' => new RowResource($row),
+            'row' => new RowResource($row->loadHasPallets()),
         ]);
     }
 

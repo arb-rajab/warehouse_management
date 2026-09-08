@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { nextTick, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 import { t } from '@/lib/i18n';
 import {
     columnNumberOptions,
     countActive,
+    createdDateRangeExclusivity,
+    dateRangeActive,
     debounce,
     exclusivePair,
     selectedCountLabel,
@@ -128,6 +130,115 @@ describe('exclusivePair', () => {
 
         expect(rangeDisabled.value).toBe(false);
         expect(daysDisabled.value).toBe(false);
+    });
+});
+
+describe('dateRangeActive', () => {
+    function filters(overrides: Partial<Record<string, string>> = {}) {
+        return reactive({
+            date_from: '',
+            date_to: '',
+            created_within_days: '',
+            ...overrides,
+        });
+    }
+
+    it('is false when no part of the window is set', () => {
+        expect(dateRangeActive(filters())).toBe(false);
+    });
+
+    it('is true when only the from date is set', () => {
+        expect(dateRangeActive(filters({ date_from: '2026-01-01' }))).toBe(
+            true,
+        );
+    });
+
+    it('is true when only the to date is set', () => {
+        expect(dateRangeActive(filters({ date_to: '2026-01-01' }))).toBe(true);
+    });
+
+    it('is true when only the rolling day count is set', () => {
+        expect(dateRangeActive(filters({ created_within_days: '7' }))).toBe(
+            true,
+        );
+    });
+
+    it('ignores unrelated filter fields', () => {
+        const withNoise = reactive({
+            date_from: '',
+            date_to: '',
+            created_within_days: '',
+            expiration_date_from: '2026-01-01',
+            product_id: ['3'],
+        });
+
+        expect(dateRangeActive(withNoise)).toBe(false);
+    });
+
+    it('tracks reactive changes to the window', () => {
+        const f = filters();
+        const active = computed(() => dateRangeActive(f));
+
+        expect(active.value).toBe(false);
+
+        f.created_within_days = '7';
+
+        expect(active.value).toBe(true);
+    });
+});
+
+describe('createdDateRangeExclusivity', () => {
+    function filters() {
+        return reactive({
+            date_from: '',
+            date_to: '',
+            created_within_days: '',
+        });
+    }
+
+    it('disables neither side when the whole window is empty', () => {
+        const { dateRangeDisabled, createdWithinDaysDisabled } =
+            createdDateRangeExclusivity(filters());
+
+        expect(dateRangeDisabled.value).toBe(false);
+        expect(createdWithinDaysDisabled.value).toBe(false);
+    });
+
+    it('disables the range fields once the day count is filled', () => {
+        const f = filters();
+        const { dateRangeDisabled, createdWithinDaysDisabled } =
+            createdDateRangeExclusivity(f);
+
+        f.created_within_days = '7';
+
+        expect(dateRangeDisabled.value).toBe(true);
+        expect(createdWithinDaysDisabled.value).toBe(false);
+    });
+
+    it('disables the day count once either range end is filled', () => {
+        const fromOnly = filters();
+        const fromPair = createdDateRangeExclusivity(fromOnly);
+        fromOnly.date_from = '2026-01-01';
+
+        const toOnly = filters();
+        const toPair = createdDateRangeExclusivity(toOnly);
+        toOnly.date_to = '2026-01-31';
+
+        expect(fromPair.createdWithinDaysDisabled.value).toBe(true);
+        expect(fromPair.dateRangeDisabled.value).toBe(false);
+        expect(toPair.createdWithinDaysDisabled.value).toBe(true);
+    });
+
+    it('re-enables both sides once the filled field is cleared', () => {
+        const f = filters();
+        const { dateRangeDisabled, createdWithinDaysDisabled } =
+            createdDateRangeExclusivity(f);
+
+        f.created_within_days = '7';
+        f.created_within_days = '';
+
+        expect(dateRangeDisabled.value).toBe(false);
+        expect(createdWithinDaysDisabled.value).toBe(false);
     });
 });
 

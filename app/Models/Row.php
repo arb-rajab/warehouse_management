@@ -7,6 +7,8 @@ use Database\Factories\RowFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -52,6 +54,33 @@ class Row extends Model
     public function cells(): HasMany
     {
         return $this->hasMany(Cell::class);
+    }
+
+    /**
+     * Adds the `has_pallets` exists-subquery RowResource emits, as part of the
+     * row query rather than one `hasPallets()` query per row. Every listing
+     * that builds a RowResource must use this (or `loadHasPallets()` for an
+     * already-bound model) — the resource has no fallback of its own, so that
+     * a missing subquery surfaces as an obvious error rather than silently
+     * costing a query per row.
+     *
+     * @param  Builder<Row>  $query
+     */
+    #[Scope]
+    protected function withHasPallets(Builder $query): void
+    {
+        $query->withExists(['cells as has_pallets' => fn ($cells) => $cells->has('pallet')]);
+    }
+
+    /**
+     * `withHasPallets()` for a model that's already been resolved — route-model
+     * binding hands the controller a Row it didn't query for itself.
+     */
+    public function loadHasPallets(): static
+    {
+        $this->loadExists(['cells as has_pallets' => fn ($cells) => $cells->has('pallet')]);
+
+        return $this;
     }
 
     /**

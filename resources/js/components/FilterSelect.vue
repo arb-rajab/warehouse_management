@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { fieldLabelClass } from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 
 defineProps<{
     id: string;
@@ -14,11 +14,7 @@ const model = defineModel<string>({ required: true });
 <template>
     <div>
         <label :for="id" :class="fieldLabelClass">{{ label }}</label>
-        <select
-            :id="id"
-            v-model="model"
-            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-        >
+        <select :id="id" v-model="model" :class="plainFieldInputClass">
             <option value="">{{ allLabel }}</option>
             <option
                 v-for="option in options"
