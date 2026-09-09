@@ -446,9 +446,9 @@
             "expiringSoon": "تنتهي ≤{days} يوم",
             "activityToday": "اليوم",
             "activityWeek": "هذا الأسبوع",
-            "boxesPerPallet": "صناديق / منصة"
+            "boxesPerPallet": "صناديق / طبلية"
         },
-        "boxesPerPalletLabel": "عدد الصناديق لكل منصة لـ {product}",
+        "boxesPerPalletLabel": "عدد الصناديق لكل طبلية لـ {product}",
         "empty": "لا توجد منتجات بعد."
     }
 }

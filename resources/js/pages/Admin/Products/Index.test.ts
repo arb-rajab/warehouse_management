@@ -321,17 +321,18 @@ describe('Products Index', () => {
         expect(rowCells(wrapper)[0].find('img').exists()).toBe(false);
     });
 
-    it("renders the product's stored box count in an editable field", () => {
+    it("renders the product's stored box count as a clickable trigger button", () => {
         const wrapper = mountPage([
             product({ name: 'Widgets', ar_name: 'ودجات', boxes_count: 24 }),
         ]);
 
-        const input = rowCells(wrapper)[1].get('input');
-        expect(input.attributes('type')).toBe('number');
-        expect((input.element as HTMLInputElement).value).toBe('24');
-        expect(input.attributes('aria-label')).toBe(
+        const button = rowCells(wrapper)[1].get('button');
+        expect(button.text()).toBe('24');
+        expect(button.attributes('aria-label')).toBe(
             t('products.boxesPerPalletLabel', { product: 'Widgets' }),
         );
+        // No bare number input in the cell — changes must go through the dialog.
+        expect(rowCells(wrapper)[1].find('input').exists()).toBe(false);
     });
 
     it('offers no column filter on the box count, unlike every other column', () => {
@@ -342,10 +343,23 @@ describe('Products Index', () => {
         expect(header.find('button[title]').exists()).toBe(false);
     });
 
-    it('saves a changed box count against that product', async () => {
+    it("opens the box-count dialog pre-seeded with the product's stored count", async () => {
+        const wrapper = mountPage([product({ boxes_count: 24 })]);
+
+        await rowCells(wrapper)[1].get('button').trigger('click');
+
+        expect(
+            (wrapper.get('#products-box-count').element as HTMLInputElement)
+                .value,
+        ).toBe('24');
+    });
+
+    it('saves a changed box count against that product on dialog submit', async () => {
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
 
-        await rowCells(wrapper)[1].get('input').setValue('30');
+        await rowCells(wrapper)[1].get('button').trigger('click');
+        await wrapper.get('#products-box-count').setValue('30');
+        await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).toHaveBeenCalledWith(
             '/admin/products/42/box-count',
@@ -354,24 +368,24 @@ describe('Products Index', () => {
         );
     });
 
-    it('rejects a box count below one without a round trip, restoring the stored value', async () => {
+    it('rejects a box count below one on dialog submit without a round trip', async () => {
         const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-        const input = rowCells(wrapper)[1].get('input');
-        await input.setValue('0');
+        await rowCells(wrapper)[1].get('button').trigger('click');
+        await wrapper.get('#products-box-count').setValue('0');
+        await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).not.toHaveBeenCalled();
-        expect((input.element as HTMLInputElement).value).toBe('12');
     });
 
-    it('rejects a cleared box count without a round trip, restoring the stored value', async () => {
+    it('rejects a cleared box count on dialog submit without a round trip', async () => {
         const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-        const input = rowCells(wrapper)[1].get('input');
-        await input.setValue('');
+        await rowCells(wrapper)[1].get('button').trigger('click');
+        await wrapper.get('#products-box-count').setValue('');
+        await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).not.toHaveBeenCalled();
-        expect((input.element as HTMLInputElement).value).toBe('12');
     });
 
     it('renders the full count linking to the map filtered to this product and state=full', () => {
@@ -933,9 +947,9 @@ describe('Products Index', () => {
         expect(productCell.text()).toContain('ودجات');
         expect(productCell.text()).not.toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('ودجات');
-        expect(rowCells(wrapper)[1].get('input').attributes('aria-label')).toBe(
-            t('products.boxesPerPalletLabel', { product: 'ودجات' }),
-        );
+        expect(
+            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+        ).toBe(t('products.boxesPerPalletLabel', { product: 'ودجات' }));
     });
 
     it('falls back to the base product name in Arabic when the store never translated it', () => {
@@ -952,8 +966,8 @@ describe('Products Index', () => {
         const productCell = rowCells(wrapper)[0];
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('Widgets');
-        expect(rowCells(wrapper)[1].get('input').attributes('aria-label')).toBe(
-            t('products.boxesPerPalletLabel', { product: 'Widgets' }),
-        );
+        expect(
+            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+        ).toBe(t('products.boxesPerPalletLabel', { product: 'Widgets' }));
     });
 });

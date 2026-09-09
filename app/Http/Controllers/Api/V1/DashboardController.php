@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Concerns\BuildsDashboardStats;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ShowDashboardRequest;
-use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
@@ -24,9 +23,6 @@ class DashboardController extends Controller
             'weekStart' => $this->dashboardWeekStart($today)->toDateString(),
             'filters' => [
                 'product_id' => $productIds,
-            ],
-            'filterOptions' => [
-                'products' => Product::filterOptions(),
             ],
         ]);
     }

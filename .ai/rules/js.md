@@ -80,5 +80,14 @@ Before inventing an icon for a concept, grep the codebase for how that concept i
 ## Interactive elements need explicit cursor-pointer / disabled:cursor-not-allowed
 Native `<button>` elements do not get a pointer cursor from the browser by default (only `<a>`/`<Link>` and checkbox/radio inputs do) — every clickable `<button>` must add `cursor-pointer` explicitly, and any `disabled:opacity-50` state on a button/input must be paired with `disabled:cursor-not-allowed` (see the existing pattern in UserFormFields.vue's admin-toggle checkbox). This was swept once (SubmitButton.vue, DataTable.vue's sort header, FilterMultiSelect.vue's trigger + option labels, FilterDialog.vue's close button, LanguageSwitcher.vue, lib/filters.ts's filterTriggerButtonClass/filterClearButtonClass/filterApplyButtonClass, FilterDateField.vue, FilterNumberField.vue, Cells/Index.vue, CellStatusLogs/Index.vue) — when adding a new `<button>` or a new disabled form control, add these classes at the same time instead of relying on the browser default.
 
+## Run Prettier immediately after every Edit to a .ts/.vue file
+After every Edit or Write to a `.ts`, `.vue`, or `.js` file, run Prettier on that file before any subsequent step:
+
+```bash
+npx prettier --write <path/to/file>
+```
+
+Do not defer this to a final gate — Prettier failures in CI cost a full round trip, and the diff is invisible until then. This applies to test files too (`.test.ts`).
+
 ## filterApplyButtonClass is the shared Apply-button class
 lib/filters.ts's filterApplyButtonClass (bg-gray-900/white pill with a Check icon) is the single definition for a filter-dialog's submit/Apply button — shared by CellStatusLogs/Index.vue and Dashboard/Index.vue's custom-expiring-days dialog (extracted once the second call site appeared). Don't retype the class string. Also: filterTriggerButtonClass and FilterNumberField (previously shared only by CellHighlightFilters.vue/CellStatusLogs/Index.vue) now have a third user — Dashboard/Index.vue's custom-expiring-days field moved from a bare `@change`-wired number input into a FilterDialog + FilterNumberField + Apply-button flow, so a spinner click no longer fires a request that a subsequent click immediately cancels; see dashboard.md for the full rationale.
