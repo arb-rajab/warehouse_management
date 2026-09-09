@@ -8,10 +8,18 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * These three tables are created under the `wms_` prefix rather than
+     * Laravel's default names: in production this app shares one MySQL
+     * database with the store app, which owns `users`, `sessions` and
+     * `password_reset_tokens` of its own. Creating the default names there
+     * would fail outright ("table already exists") on the first deploy, and
+     * the later rename migration would then rename the store's table out
+     * from under it. See .ai/rules/shared-database.md.
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('wms_users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
@@ -21,13 +29,13 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
+        Schema::create('wms_password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        Schema::create('sessions', function (Blueprint $table) {
+        Schema::create('wms_sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
@@ -42,8 +50,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('sessions');
+        Schema::dropIfExists('wms_users');
+        Schema::dropIfExists('wms_password_reset_tokens');
+        Schema::dropIfExists('wms_sessions');
     }
 };

@@ -19,6 +19,17 @@ return new class extends Migration
             $table->unsignedInteger('remaining_boxes')->default(0)->after('expiration_date');
         });
 
+        // `products.boxes_count` has since moved to the WMS-owned
+        // wms_product_settings table (see .ai/rules/shared-database.md), and
+        // the store-owned `products` never had a column of that name. A
+        // database migrated before that move still has it and still needs the
+        // backfill; anywhere else there is nothing to read from — and, this
+        // being the migration that introduces `remaining_boxes`, no pallet
+        // predating it either, so the default stands.
+        if (! Schema::hasColumn('products', 'boxes_count')) {
+            return;
+        }
+
         DB::statement('
             UPDATE pallets
             SET remaining_boxes = (

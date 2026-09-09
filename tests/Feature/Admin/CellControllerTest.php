@@ -17,9 +17,8 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
 
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 2]);
     $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,

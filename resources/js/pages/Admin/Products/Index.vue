@@ -5,7 +5,10 @@ import { Check, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
-import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import {
+    index as productsIndex,
+    updateBoxCount,
+} from '@/actions/App/Http/Controllers/Admin/ProductController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
@@ -226,6 +229,29 @@ function activityHref(
 
     return cellLogsIndex.url({ query });
 }
+
+/**
+ * Saves a product's pallet capacity. Validated here as well as server-side so a
+ * fumbled entry doesn't cost a round trip — the input is reverted to the stored
+ * value rather than sent. `preserveScroll`/`preserveState` keep the row in view
+ * and the filter dialog's state intact across the redirect back.
+ */
+function onBoxCountChange(product: ProductSummary, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const boxesCount = Number(input.value);
+
+    if (!Number.isInteger(boxesCount) || boxesCount < 1) {
+        input.value = String(product.boxes_count);
+
+        return;
+    }
+
+    router.patch(
+        updateBoxCount(product.id).url,
+        { boxes_count: boxesCount },
+        { preserveScroll: true, preserveState: true },
+    );
+}
 </script>
 
 <template>
@@ -347,6 +373,9 @@ function activityHref(
                     filterKey: 'product',
                 },
                 {
+                    label: t('products.columns.boxesPerPallet'),
+                },
+                {
                     label: t('products.columns.full'),
                     sortKey: 'full_cells_count',
                     filtered: occupancyColumnsFiltered,
@@ -464,6 +493,21 @@ function activityHref(
                         />
                         {{ product.name }}
                     </div>
+                </td>
+                <td class="px-4 py-2">
+                    <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        :value="product.boxes_count"
+                        :aria-label="
+                            t('products.boxesPerPalletLabel', {
+                                product: product.name,
+                            })
+                        "
+                        class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        @change="onBoxCountChange(product, $event)"
+                    />
                 </td>
                 <td class="px-4 py-2">
                     <TableLink

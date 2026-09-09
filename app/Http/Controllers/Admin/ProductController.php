@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
+use App\Http\Requests\Admin\UpdateProductBoxCountRequest;
 use App\Http\Resources\ProductOptionResource;
 use App\Http\Resources\ProductSummaryResource;
 use App\Models\Cell;
@@ -17,6 +18,7 @@ use App\Models\Product;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,7 +56,8 @@ class ProductController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $products = Product::query()
-            ->select(['id', 'name', 'image_url'])
+            ->select(['id', 'name', 'thumbnail_img'])
+            ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
             ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
@@ -99,6 +102,23 @@ class ProductController extends Controller
             ],
             'filterOptions' => $this->productRowUserActionFilterOptions($request->productIds()),
         ]);
+    }
+
+    /**
+     * Sets how many boxes a full pallet of this product holds.
+     *
+     * The product itself belongs to the store app and is never written here —
+     * this is WMS-owned data in `wms_product_settings`, which the store has no
+     * column for. `updateOrCreate` because a product the store added may have
+     * no settings row yet. See .ai/rules/shared-database.md.
+     */
+    public function updateBoxCount(UpdateProductBoxCountRequest $request, Product $product): RedirectResponse
+    {
+        $product->setting()->updateOrCreate([], [
+            'boxes_count' => $request->integer('boxes_count'),
+        ]);
+
+        return back();
     }
 
     /**

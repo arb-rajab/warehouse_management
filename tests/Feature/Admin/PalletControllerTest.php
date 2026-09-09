@@ -11,7 +11,7 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
 
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
@@ -147,7 +147,7 @@ test('storing a pallet into a non-existent cell returns a 404', function () {
 
 test('an authenticated admin can open a full pallet, removing boxes at the same time', function () {
     $admin = actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
@@ -166,7 +166,7 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
 
 test('opening a pallet with more boxes than remain, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
@@ -182,7 +182,7 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
 
 test('opening a pallet with a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
@@ -198,7 +198,7 @@ test('opening a pallet with a boxes_count equal to what remains, with confirm_em
 
 test('opening a pallet with a boxes_count equal to what remains, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 5]);
@@ -210,7 +210,7 @@ test('opening a pallet with a boxes_count equal to what remains, without confirm
 
 test('opening a pallet with more boxes than remain, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 5]);
+    $product = Product::factory()->boxesCount(5)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 6]);
@@ -224,7 +224,7 @@ test('opening a pallet from a row page redirects back to that row page instead o
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", [
@@ -273,7 +273,7 @@ test('opening a non-existent pallet returns a 404', function () {
 
 test('an authenticated admin can remove more boxes from an already-opened pallet', function () {
     $admin = actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
     $pallet->cell->update(['state' => CellState::Opened]);
 
@@ -291,7 +291,7 @@ test('an authenticated admin can remove more boxes from an already-opened pallet
 
 test('removing a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 4]);
     $cell = $pallet->cell;
     $cell->update(['state' => CellState::Opened]);
@@ -308,7 +308,7 @@ test('removing a boxes_count equal to what remains, with confirm_empty, empties 
 
 test('removing a boxes_count equal to what remains, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
-    $product = Product::factory()->create(['boxes_count' => 10]);
+    $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 4]);
     $pallet->cell->update(['state' => CellState::Opened]);
 

@@ -26,10 +26,8 @@ test('an authenticated admin can view the cell log with every property the table
     $fromCell = $fromRow->cells()->where('cell_number', 1)->where('flat_number', 2)->first();
     $toCell = $toRow->cells()->where('cell_number', 2)->where('flat_number', 1)->first();
 
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
-        'boxes_count' => 10,
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,

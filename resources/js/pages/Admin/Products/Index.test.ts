@@ -12,9 +12,10 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPatchMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerPatchMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -24,7 +25,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { get: routerGetMock },
+        router: { get: routerGetMock, patch: routerPatchMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -39,6 +40,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         id: 10,
         name: 'Widgets',
         image_url: null,
+        boxes_count: 12,
         full_cells_count: 2,
         opened_cells_count: 1,
         expired_cells_count: 0,
@@ -103,7 +105,7 @@ async function openFilters(
 
 describe('Products Index', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock });
+        resetMocks({ usePageMock, routerGetMock, routerPatchMock });
     });
 
     it('renders every column header', () => {
@@ -112,6 +114,7 @@ describe('Products Index', () => {
         const headers = wrapper.findAll('thead th').map((th) => th.text());
         expect(headers).toEqual([
             t('products.columns.product'),
+            t('products.columns.boxesPerPallet'),
             t('products.columns.full'),
             t('products.columns.opened'),
             t('products.columns.expired'),
@@ -295,10 +298,63 @@ describe('Products Index', () => {
         expect(rowCells(wrapper)[0].find('img').exists()).toBe(false);
     });
 
+    it("renders the product's stored box count in an editable field", () => {
+        const wrapper = mountPage([
+            product({ name: 'Widgets', boxes_count: 24 }),
+        ]);
+
+        const input = rowCells(wrapper)[1].get('input');
+        expect(input.attributes('type')).toBe('number');
+        expect((input.element as HTMLInputElement).value).toBe('24');
+        expect(input.attributes('aria-label')).toBe(
+            t('products.boxesPerPalletLabel', { product: 'Widgets' }),
+        );
+    });
+
+    it('offers no column filter on the box count, unlike every other column', () => {
+        const wrapper = mountPage([]);
+
+        const header = wrapper.findAll('thead th')[1];
+        expect(header.text()).toBe(t('products.columns.boxesPerPallet'));
+        expect(header.find('button[title]').exists()).toBe(false);
+    });
+
+    it('saves a changed box count against that product', async () => {
+        const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
+
+        await rowCells(wrapper)[1].get('input').setValue('30');
+
+        expect(routerPatchMock).toHaveBeenCalledWith(
+            '/admin/products/42/box-count',
+            { boxes_count: 30 },
+            { preserveScroll: true, preserveState: true },
+        );
+    });
+
+    it('rejects a box count below one without a round trip, restoring the stored value', async () => {
+        const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+        const input = rowCells(wrapper)[1].get('input');
+        await input.setValue('0');
+
+        expect(routerPatchMock).not.toHaveBeenCalled();
+        expect((input.element as HTMLInputElement).value).toBe('12');
+    });
+
+    it('rejects a cleared box count without a round trip, restoring the stored value', async () => {
+        const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+        const input = rowCells(wrapper)[1].get('input');
+        await input.setValue('');
+
+        expect(routerPatchMock).not.toHaveBeenCalled();
+        expect((input.element as HTMLInputElement).value).toBe('12');
+    });
+
     it('renders the full count linking to the map filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
-        const cell = rowCells(wrapper)[1];
+        const cell = rowCells(wrapper)[2];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -309,7 +365,7 @@ describe('Products Index', () => {
     it('renders the opened count linking to the map filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
-        const cell = rowCells(wrapper)[2];
+        const cell = rowCells(wrapper)[3];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -321,7 +377,7 @@ describe('Products Index', () => {
             product({ id: 42, expired_cells_count: 1 }),
         ]);
 
-        const cell = rowCells(wrapper)[3];
+        const cell = rowCells(wrapper)[4];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -335,7 +391,7 @@ describe('Products Index', () => {
             { expiringSoonDays: 30 },
         );
 
-        const cell = rowCells(wrapper)[4];
+        const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -349,7 +405,7 @@ describe('Products Index', () => {
             { today: '2026-08-13' },
         );
 
-        const cell = rowCells(wrapper)[5];
+        const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('4');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cell-logs');
@@ -364,7 +420,7 @@ describe('Products Index', () => {
             { today: '2026-08-13', weekStart: '2026-08-10' },
         );
 
-        const cell = rowCells(wrapper)[6];
+        const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('9');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cell-logs');
@@ -379,7 +435,7 @@ describe('Products Index', () => {
             action: ['opened'],
         });
 
-        const href = rowCells(wrapper)[5].get('a').attributes('href') ?? '';
+        const href = rowCells(wrapper)[6].get('a').attributes('href') ?? '';
         expect(href).toContain('row_id=1');
         expect(href).toContain('user_id%5B%5D=7');
         expect(href).toContain('action%5B%5D=opened');

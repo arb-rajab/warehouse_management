@@ -64,5 +64,5 @@ test('a login attempt from an outdated client is rejected before authentication 
     ]);
 
     $response->assertStatus(426);
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });

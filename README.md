@@ -9,7 +9,7 @@ The warehouse is laid out as a grid:
 - **Row** — a physical storage row, identified by a `letter` (e.g. `A`). Has a `cells_count` × `flats_count` grid size.
 - **Cell** — one slot in a row's grid, addressed by `(row, cell_number, flat_number)`. A cell is always `empty`, `full`, or `opened` (`App\Enums\CellState`).
 - **Pallet** — sits on exactly one cell and holds one `Product`, with an `expiration_date`. A pallet has no state of its own — its state is read through the cell it sits on.
-- **Product** — a catalog item a pallet can hold (name, image).
+- **Product** — a catalog item a pallet can hold. In production this table belongs to a separate store app and is read-only here; see [Deployment](#deployment).
 - **CellStatusLog** — an append-only audit trail. Every time a cell's state changes (stored, opened, emptied, or transferred between cells), a log row is written recording the action, the before/after state, and who did it.
 
 Creating a `Row` automatically generates its full grid of `Cell` rows (see `App\Observers\RowObserver`) — you don't create cells by hand.
@@ -73,6 +73,48 @@ npm run types:check          # vue-tsc
 composer run types:check     # phpstan/larastan
 composer run ci:check        # everything CI runs
 ```
+
+## Deployment
+
+Production runs this app and an existing store/marketplace app against **one shared MySQL database**. The store owns `products` and `uploads`; this app reads them and never writes to them. Every table this app owns carries a `wms_` prefix so the two can't collide. [`.ai/rules/shared-database.md`](.ai/rules/shared-database.md) carries the full table inventory and the reasoning behind each decision.
+
+Staging deploys automatically from `develop` (`.github/workflows/deploy-staging.yml`, on a green `tests` run) and runs `php artisan migrate --force` as part of that. So the three items below have to be settled *before* merging, not after.
+
+### 1. Rename the migration bookkeeping table (existing databases only)
+
+`config/database.php` points `migrations.table` at `wms_migrations`, because a shared `migrations` table would leave each app thinking the other's migrations had already run. Laravel reads that setting before it runs anything, so no migration can perform this rename itself.
+
+On any database that has already run this app's migrations — staging, and existing local checkouts — do this once, before the next `migrate`:
+
+```sql
+RENAME TABLE migrations TO wms_migrations;
+```
+
+Skip it and `migrate` finds an empty repository, tries to replay every migration from the start, and stops on the first one with `table 'wms_users' already exists`. That fails safely — it stops before creating or dropping any application table — but the deploy is stuck until the rename happens. Locally, `php artisan migrate:fresh` is the easier route.
+
+Production needs nothing here: it is a first install against the shared database, so `wms_migrations` is legitimately empty.
+
+Note for later: a database that predates this change keeps its old
+`products.id` (`bigint unsigned`) rather than the store's signed `int(11)`. That
+is harmless on sqlite, which ignores foreign key types, but MySQL rejects the
+`wms_product_settings` foreign key against it. If such a database is ever moved
+onto MySQL, rebuild it with `migrate:fresh` rather than migrating it in place.
+
+### 2. Set `STORE_ASSET_BASE_URL`
+
+The store's `uploads.file_name` holds a relative path; the absolute URL is built by whichever app serves the file. `STORE_ASSET_BASE_URL` is the store app's public base URL, and `Product::$image_url` resolves through it.
+
+Leave it unset and every product image resolves to `null` — deliberately, since a relative path would 404 against this app's own domain. Uploads that carry their own `external_link` (a CDN or object store) ignore it.
+
+### 3. Configure box counts
+
+`boxes_count` — how many boxes a full pallet of a product holds — is this app's own data, in `wms_product_settings`, because the store's `products` has no column for it. `products.unit_equal` reads like a units-per-carton value but is **not** the box count; it has been checked and ruled out. There is no column in the store's schema to backfill from.
+
+A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (1), so **every product reads as 1 box until configured**, and pallets are placed with a remaining count of 1.
+
+Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path: product CRUD itself belongs to the store app, and this app never writes to `products`.
+
+A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 
 ## Contributing / conventions
 

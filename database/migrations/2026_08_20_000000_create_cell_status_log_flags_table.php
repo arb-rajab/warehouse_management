@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('cell_status_log_id')->constrained('cell_status_logs')->cascadeOnDelete();
             $table->string('reason');
             $table->timestamp('acknowledged_at')->nullable();
-            $table->foreignId('acknowledged_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('acknowledged_by')->nullable()->constrained('wms_users')->nullOnDelete();
             $table->timestamp('created_at')->useCurrent();
 
             $table->index('cell_status_log_id');

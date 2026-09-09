@@ -84,7 +84,7 @@ test('isStaleAfter is false when the pallet is younger than the given day count'
 test('toMapSummaryArray describes the pallet by its product, expiration date, and added_at', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
 
-    $product = Product::factory()->create(['name' => 'Widgets', 'image_url' => 'https://example.com/widgets.png']);
+    $product = Product::factory()->imageUrl('https://example.com/widgets.png')->create(['name' => 'Widgets']);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
         'expiration_date' => '2026-09-15',

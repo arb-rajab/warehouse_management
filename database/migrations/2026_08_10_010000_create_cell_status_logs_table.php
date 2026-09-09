@@ -18,8 +18,12 @@ return new class extends Migration
             $table->string('action');
             $table->string('from_state');
             $table->string('to_state');
-            $table->foreignId('product_id')->nullable()->constrained('products')->nullOnDelete();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
+            // Signed int, not foreignId()'s bigint unsigned: `products` is the
+            // store app's table and its `id` is int(11) signed. See
+            // .ai/rules/shared-database.md.
+            $table->integer('product_id')->nullable();
+            $table->foreign('product_id')->references('id')->on('products')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('wms_users')->restrictOnDelete();
             $table->text('note')->nullable();
             $table->timestamps();
 

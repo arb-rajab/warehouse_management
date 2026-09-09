@@ -19,12 +19,16 @@ return new class extends Migration
             $table->boolean('is_correct');
 
             $table->string('expected_cell_state');
-            $table->foreignId('expected_product_id')->nullable()->constrained('products')->nullOnDelete();
+            // Signed int to match the store-owned `products.id` — see
+            // .ai/rules/shared-database.md.
+            $table->integer('expected_product_id')->nullable();
+            $table->foreign('expected_product_id')->references('id')->on('products')->nullOnDelete();
             $table->unsignedInteger('expected_boxes_count')->nullable();
             $table->date('expected_expiration_date')->nullable();
 
             $table->string('reported_cell_state')->nullable();
-            $table->foreignId('reported_product_id')->nullable()->constrained('products')->nullOnDelete();
+            $table->integer('reported_product_id')->nullable();
+            $table->foreign('reported_product_id')->references('id')->on('products')->nullOnDelete();
             $table->unsignedInteger('reported_boxes_count')->nullable();
             $table->date('reported_expiration_date')->nullable();
 

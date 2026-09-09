@@ -24,7 +24,7 @@ test('a user can log in with correct credentials and receives a token plus every
     ]);
     expect(array_keys($response->json()))->toEqualCanonicalizing(['token', 'user']);
 
-    $this->assertDatabaseCount('personal_access_tokens', 1);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 1);
 });
 
 test('logging in with the wrong password is rejected', function () {
@@ -36,7 +36,7 @@ test('logging in with the wrong password is rejected', function () {
     ]);
 
     $response->assertStatus(422);
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
 test('logging in with an unknown email is rejected with the same message as a wrong password', function () {
@@ -57,7 +57,7 @@ test('logging in with an unknown email is rejected with the same message as a wr
     expect($unknownEmailResponse->json('errors.email.0'))
         ->toBe($wrongPasswordResponse->json('errors.email.0'));
 
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
 test('logging in with an overly long email or password is rejected', function () {
@@ -67,7 +67,7 @@ test('logging in with an overly long email or password is rejected', function ()
     ]);
 
     $response->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
 test('login attempts are throttled after too many failures', function () {
@@ -86,7 +86,7 @@ test('login attempts are throttled after too many failures', function () {
     ]);
 
     $response->assertStatus(429);
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
 test('login attempts against one email are throttled even when spread across many IPs', function () {
@@ -107,7 +107,7 @@ test('login attempts against one email are throttled even when spread across man
         ]);
 
     $response->assertStatus(429);
-    $this->assertDatabaseCount('personal_access_tokens', 0);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
 test('a user can log out and their token is deleted', function () {
@@ -117,7 +117,7 @@ test('a user can log out and their token is deleted', function () {
     $response = $this->withToken($token->plainTextToken)->postJson('/api/v1/logout');
 
     $response->assertNoContent();
-    $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->accessToken->id]);
+    $this->assertDatabaseMissing('wms_personal_access_tokens', ['id' => $token->accessToken->id]);
 });
 
 test('an unauthenticated caller cannot log out and other users tokens are untouched', function () {
@@ -127,5 +127,5 @@ test('an unauthenticated caller cannot log out and other users tokens are untouc
     $response = $this->postJson('/api/v1/logout');
 
     $response->assertUnauthorized();
-    $this->assertDatabaseCount('personal_access_tokens', 1);
+    $this->assertDatabaseCount('wms_personal_access_tokens', 1);
 });

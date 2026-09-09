@@ -220,9 +220,8 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
     $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 1]);
     $otherRow = Row::factory()->create(['letter' => 'C', 'cells_count' => 2, 'flats_count' => 1]);
 
-    $product = Product::factory()->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
-        'image_url' => 'https://cdn.example.com/widgets.png',
     ]);
     $occupiedCell = $row->cells()->where('cell_number', 1)->first();
     $emptyCell = $row->cells()->where('cell_number', 2)->first();
