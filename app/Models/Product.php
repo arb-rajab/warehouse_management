@@ -24,13 +24,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *
  * @property int $id
  * @property string $name
+ * @property string $ar_name
  * @property int|null $thumbnail_img
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
  */
-#[Fillable(['name', 'thumbnail_img'])]
+#[Fillable(['name', 'ar_name', 'thumbnail_img'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -139,6 +140,22 @@ class Product extends Model
      * finds "Large Blue Widget" without knowing the words' actual order.
      * A blank/null term is a no-op, matching every product.
      *
+     * Each word may match *either* the store's base `name` or its Arabic
+     * `ar_name`, regardless of the request's locale. The locale is a
+     * presentation choice — the session's for the admin panel, the
+     * `Accept-Language` header's for the API (see SetLocaleFromHeader) — while
+     * the term is whatever the warehouse staff actually typed, and they type
+     * whichever of the two names they remember for a product. Scoping the
+     * search to the active locale's column would make an identical term return
+     * different results per device, and would return nothing at all for a
+     * product whose `ar_name` the store left empty. Matching both columns
+     * costs nothing here: an empty `ar_name` cannot match a non-empty word.
+     *
+     * The per-word grouping is load-bearing. A flat `orWhere()` chain would
+     * bind the OR across word boundaries too, turning "every word matches" into
+     * "any word matches" — so each word gets its own nested group, and the
+     * groups are still ANDed together.
+     *
      * @param  Builder<Product>  $query
      */
     #[Scope]
@@ -151,7 +168,11 @@ class Product extends Model
         $words = preg_split('/\s+/', trim($term)) ?: [];
 
         foreach ($words as $word) {
-            $query->where('name', 'like', '%'.$word.'%');
+            $query->where(function (Builder $matchesEitherName) use ($word): void {
+                $matchesEitherName
+                    ->where('name', 'like', '%'.$word.'%')
+                    ->orWhere('ar_name', 'like', '%'.$word.'%');
+            });
         }
     }
 }

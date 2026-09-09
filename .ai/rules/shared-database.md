@@ -32,7 +32,8 @@ eleven; only these are consumed here:
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
 | `Product::$id` | `products.id` `int(11)` signed | see below |
-| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match. The store also carries `ar_name` and a `product_translations` table; this app reads the base `name` only |
+| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match, and the only product name this app *renders* — in both locales |
+| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched, never rendered — see below. The store's `product_translations` table is still not read |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
 | `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
@@ -41,6 +42,42 @@ eleven; only these are consumed here:
 Do not mirror the store's other columns into either stand-in migration, and do
 not widen a `select()` to `Product::all()` — the narrow column lists are what
 keep this app insulated from a schema it does not control.
+
+### `ar_name` is searchable, not displayed, and not locale-scoped
+
+`Product::searchByName()` matches each word of the term against `name` **OR**
+`ar_name`; the two consumers — `Admin\ProductController::search()` (the admin
+filter dropdown) and `Api\V1\ProductController::index()` (the mobile catalog)
+— share that one scope, so both search both columns.
+
+The columns searched deliberately do **not** follow the request locale
+(`SetLocaleFromHeader` for the API, the session for the web panel). Locale is a
+presentation choice; the term is whatever the warehouse staff typed, and they
+type whichever of the two names they happen to know for a product. Scoping the
+search to the active locale's column would make one term return different
+results per device, and would return nothing for a product whose `ar_name` the
+store left empty. Matching both is free: an empty `ar_name` cannot match a
+non-empty word. Don't reintroduce a locale-dependent search here without
+revisiting this.
+
+Two things the implementation depends on, both covered by tests:
+
+- **Group per word.** Each word gets its own nested `where(fn ($q) => ...
+  ->orWhere(...))`. A flat `orWhere()` chain binds the OR across word
+  boundaries and silently turns "matches every word" into "matches any word".
+- **`ar_name` stays out of the payload.** Neither `ProductOptionResource` nor
+  `ProductResource` returns it, and the admin dropdown renders `name` only — so
+  an Arabic search can return rows whose displayed label is English. That is
+  the current, intended behaviour ("searchable", not "displayed"); showing the
+  Arabic label is a separate, deliberate UI change, not a bug fix.
+
+The stand-in declares `ar_name` NOT NULL with an empty-string default. Upstream
+it is `varchar(191) NOT NULL`; the default is a stand-in-only convenience so a
+row inserted without an Arabic name works, an existing stand-in can take the
+column with no backfill, and sqlite — which refuses a NOT NULL column added by
+`ALTER` without a default — accepts the migration. `ProductFactory` supplies a
+value that is deliberately *unlike* the English `name`, so tests asserting that
+an English term excludes a product actually prove it.
 
 ### `products.id` is a signed `int(11)`, not `bigint unsigned`
 
@@ -166,6 +203,14 @@ moved on. `upgrade_legacy_products_stand_in` is the fix, and the pattern for the
 next one — identify the old shape by a column the store's table cannot have
 (`products.image_url` was only ever this app's), carry any data worth keeping
 into its new home, then drop it.
+
+`add_ar_name_to_products_stand_in` is the same pattern for a pure column
+addition, and the simpler case to copy: adding `ar_name` to
+`create_products_table` covers fresh installs only, so the companion migration
+guards on `Schema::hasColumn('products', 'ar_name')` and no-ops wherever the
+column already exists — production (the store's own table) and any fresh
+install alike — while bringing an older stand-in across. Always add both halves;
+editing the create migration on its own is what left staging stale last time.
 
 That migration deliberately leaves the stand-in's `id` as `bigint unsigned`
 rather than retyping it to the store's signed `int(11)`, because altering a

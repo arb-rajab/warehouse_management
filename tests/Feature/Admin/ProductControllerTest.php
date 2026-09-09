@@ -463,14 +463,55 @@ test('the product search paginates instead of returning every product at once', 
 test('the product search filters by name, excluding a non-matching product', function () {
     actingAsAdmin();
 
-    $matching = Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
 
     $response = $this->getJson('/admin/products/search?q=Widg');
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the product search filters by the store\'s Arabic name, excluding a non-matching product', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->getJson('/admin/products/search?q='.urlencode('ودجات'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    // The dropdown still renders the English `name` — `ar_name` is searchable,
+    // not part of the payload.
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets']);
+});
+
+test('the product search matches a multi-word term split across the two name columns', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Large Blue Widget', 'ar_name' => 'ودجة زرقاء كبيرة']);
+    // Noise: matches only the English half of the term.
+    Product::factory()->create(['name' => 'Small Widget', 'ar_name' => 'ودجة صغيرة']);
+
+    $response = $this->getJson('/admin/products/search?q='.urlencode('Widget زرقاء'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the product search returns every product for a blank term', function () {
+    actingAsAdmin();
+
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->getJson('/admin/products/search?q=');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
 });
 
 test('a non-admin user cannot search products', function () {

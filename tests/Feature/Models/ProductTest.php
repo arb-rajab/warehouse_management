@@ -61,8 +61,43 @@ test('selectedOptions returns an empty collection when given no ids, without que
 });
 
 test('searchByName filters to products whose name contains the term, excluding a non-matching product', function () {
-    $matching = Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('Widg')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName matches an Arabic term against ar_name, excluding a product with a different Arabic name', function () {
+    // The store's `products.ar_name`: never displayed by this app, but the
+    // warehouse staff know products by it and type it into the search box.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('ودجات')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName matches an Arabic term regardless of the active locale', function () {
+    // The columns searched do not depend on the request locale — the same term
+    // must return the same products whichever language the UI is showing.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    app()->setLocale('en');
+    expect(Product::query()->searchByName('ودجات')->pluck('id')->all())->toBe([$matching->id]);
+
+    app()->setLocale('ar');
+    expect(Product::query()->searchByName('Widg')->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName ignores an empty ar_name rather than matching every product through it', function () {
+    // `ar_name` is NOT NULL upstream, so a product the store never translated
+    // carries an empty string. A LIKE '%term%' can never match it.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => '']);
 
     $results = Product::query()->searchByName('Widg')->get();
 
@@ -70,18 +105,31 @@ test('searchByName filters to products whose name contains the term, excluding a
 });
 
 test('searchByName matches every product when the term is null or blank', function () {
-    Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Gadgets']);
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
 
     expect(Product::query()->searchByName(null)->count())->toBe(2);
     expect(Product::query()->searchByName('')->count())->toBe(2);
+    expect(Product::query()->searchByName('   ')->count())->toBe(2);
 });
 
 test('searchByName matches multi-word terms regardless of word order, excluding a partial match', function () {
-    $matching = Product::factory()->create(['name' => 'Large Blue Widget']);
-    Product::factory()->create(['name' => 'Large Red Widget']);
+    $matching = Product::factory()->create(['name' => 'Large Blue Widget', 'ar_name' => 'ودجة']);
+    Product::factory()->create(['name' => 'Large Red Widget', 'ar_name' => 'ودجة']);
 
     $results = Product::query()->searchByName('Widget Blue')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName matches a multi-word term whose words split across name and ar_name', function () {
+    $matching = Product::factory()->create(['name' => 'Large Blue Widget', 'ar_name' => 'ودجة زرقاء كبيرة']);
+    // Noise: matches "Widget" through `name`, but nothing matches "زرقاء" in
+    // either of its columns. A flat orWhere() chain would OR across the word
+    // boundary and wrongly return it alongside the real match.
+    Product::factory()->create(['name' => 'Small Widget', 'ar_name' => 'ودجة صغيرة']);
+
+    $results = Product::query()->searchByName('Widget زرقاء')->get();
 
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
