@@ -165,9 +165,19 @@ never re-ran, and those databases kept the pre-alignment columns while the code
 moved on. `upgrade_legacy_products_stand_in` is the fix, and the pattern for the
 next one — identify the old shape by a column the store's table cannot have
 (`products.image_url` was only ever this app's), carry any data worth keeping
-into its new home, then drop it. A stand-in's `id` type is deliberately left
-alone: it only matters for a foreign key against the real shared table, which no
-stand-in environment has.
+into its new home, then drop it.
+
+That migration deliberately leaves the stand-in's `id` as `bigint unsigned`
+rather than retyping it to the store's signed `int(11)`, because altering a
+primary key referenced by four foreign keys is risky and sqlite cannot verify
+the result. The consequence is worth knowing: on such a database
+`wms_product_settings.product_id` (signed `int`) references a `bigint unsigned`
+key. sqlite does not type-check foreign keys so it is inert there, but **MySQL
+rejects it** — `create_wms_product_settings_table` would fail with errno 3780.
+A pre-existing stand-in must therefore never be moved onto MySQL in place;
+rebuild it with `migrate:fresh`. Production is a first install against the
+store's own `int(11)` table and is unaffected. Note that no test can catch this
+class of defect: CI runs sqlite, which ignores foreign key types entirely.
 
 **The migration repository cannot rename itself.** Laravel reads
 `database.migrations.table` before running anything, so pointing it at

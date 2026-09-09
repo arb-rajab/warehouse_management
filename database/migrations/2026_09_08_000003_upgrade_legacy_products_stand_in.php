@@ -22,10 +22,17 @@ return new class extends Migration
      * is already current. Both are left alone.
      *
      * The stand-in's `id` is deliberately not retyped to the store's signed
-     * `int(11)` here. That only matters for a foreign key against the real
-     * shared table, which no stand-in environment has, and changing a primary
-     * key referenced by four foreign keys is not worth the risk for a
-     * development copy. See .ai/rules/shared-database.md.
+     * `int(11)` here: altering a primary key referenced by four foreign keys
+     * is risky, and the sqlite test connection cannot verify the result.
+     *
+     * That leaves one real consequence, so don't rediscover it the hard way.
+     * On such a database `wms_product_settings.product_id` (signed `int`)
+     * references `products.id` (`bigint unsigned`). sqlite does not type-check
+     * foreign keys, so this is inert wherever stand-ins actually live. MySQL
+     * does, and rejects the constraint outright, so a legacy stand-in must
+     * never be pointed at MySQL — rebuild it with `migrate:fresh` instead.
+     * Production is unaffected: it is a first install against the store's own
+     * `int(11)` table. See .ai/rules/shared-database.md.
      */
     public function up(): void
     {

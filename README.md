@@ -94,6 +94,12 @@ Skip it and `migrate` finds an empty repository, tries to replay every migration
 
 Production needs nothing here: it is a first install against the shared database, so `wms_migrations` is legitimately empty.
 
+Note for later: a database that predates this change keeps its old
+`products.id` (`bigint unsigned`) rather than the store's signed `int(11)`. That
+is harmless on sqlite, which ignores foreign key types, but MySQL rejects the
+`wms_product_settings` foreign key against it. If such a database is ever moved
+onto MySQL, rebuild it with `migrate:fresh` rather than migrating it in place.
+
 ### 2. Set `STORE_ASSET_BASE_URL`
 
 The store's `uploads.file_name` holds a relative path; the absolute URL is built by whichever app serves the file. `STORE_ASSET_BASE_URL` is the store app's public base URL, and `Product::$image_url` resolves through it.
