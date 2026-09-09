@@ -98,6 +98,55 @@ test('an authenticated admin can view the cell log with every property the table
     Carbon::setTestNow();
 });
 
+test('the cell log renders the store\'s Arabic product name, falling back for an untranslated product', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $product = Product::factory()->imageUrl(null)->boxesCount(10)->create([
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+    ]);
+    // Noise: an untranslated product's log must stay English in the same list.
+    $untranslated = Product::factory()->imageUrl(null)->boxesCount(4)->create([
+        'name' => 'Gadgets',
+        'ar_name' => '',
+    ]);
+
+    CellStatusLog::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 1)->first()->id,
+        'product_id' => $product->id,
+    ]);
+    CellStatusLog::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 2)->first()->id,
+        'product_id' => $untranslated->id,
+    ]);
+
+    // Filtered one product at a time so the assertion doesn't depend on the
+    // listing's default ordering.
+    $this->withSession(['locale' => 'ar'])->get("/admin/cell-logs?product_id[]={$product->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.product.name', 'ودجات'));
+
+    $this->withSession(['locale' => 'ar'])->get("/admin/cell-logs?product_id[]={$untranslated->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.product.name', 'Gadgets'));
+});
+
+test('the cell log hydrates the product filter chips with the Arabic name', function () {
+    actingAsAdmin();
+    $selected = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unselected Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/cell-logs?product_id[]={$selected->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'ودجات'])
+    );
+});
+
 test('the cell log hydrates only the selected product ids for the product filter, not every product', function () {
     actingAsAdmin();
     $selected = Product::factory()->create(['name' => 'Widgets']);

@@ -11,6 +11,36 @@ use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
 
+test('the warehouse map labels a pallet with the store\'s Arabic name when the panel locale is Arabic', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    // Noise: an untranslated product in the next cell must still read English.
+    $untranslated = Product::factory()->imageUrl(null)->create(['name' => 'Gadgets', 'ar_name' => '']);
+    Pallet::factory()->create([
+        'product_id' => $product->id,
+        'cell_id' => $row->cells()->where('cell_number', 1)->first()->id,
+    ]);
+    Pallet::factory()->create([
+        'product_id' => $untranslated->id,
+        'cell_id' => $row->cells()->where('cell_number', 2)->first()->id,
+    ]);
+
+    $response = $this->withSession(['locale' => 'ar'])->get('/admin/cells');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page
+            ->where('cells.0.pallet.product_name', 'ودجات')
+            ->where('cells.1.pallet.product_name', 'Gadgets')
+            // cellHighlightSamples builds on the same shared shape, so it has
+            // to resolve the label identically or the flat-tab match badges
+            // would disagree with the cells they count.
+            ->where('cellHighlightSamples.0.pallet.product_name', 'ودجات')
+            ->where('cellHighlightSamples.1.pallet.product_name', 'Gadgets')
+    );
+});
+
 test('an authenticated admin can view the warehouse map for the default flat, with every property the map renders', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
     actingAsAdmin();

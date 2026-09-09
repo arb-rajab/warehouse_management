@@ -21,8 +21,10 @@ return new class extends Migration
      * store's schema ends with an `ALTER TABLE products MODIFY id int(11) NOT
      * NULL AUTO_INCREMENT`), not `bigint unsigned`, so every `product_id` FK
      * in this app is a signed `integer` column to match; `name` is
-     * `varchar(200)`; and both timestamps are NOT NULL with a current
-     * timestamp default.
+     * `varchar(200)`; `ar_name` is `varchar(191)` NOT NULL (defaulted to the
+     * empty string here so a stand-in row with no Arabic name is still
+     * insertable); and both timestamps are NOT NULL with a current timestamp
+     * default.
      *
      * `thumbnail_img` holds an `uploads` row id, not a URL — the store has no
      * URL column at all. Product::imageUrl() resolves it; see
@@ -37,6 +39,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->string('name', 200);
+            $table->string('ar_name', 191)->default('');
             $table->string('thumbnail_img', 100)->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent();

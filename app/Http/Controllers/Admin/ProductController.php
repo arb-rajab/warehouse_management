@@ -56,7 +56,7 @@ class ProductController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $products = Product::query()
-            ->select(['id', 'name', 'thumbnail_img'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
@@ -128,7 +128,7 @@ class ProductController extends Controller
     {
         return $this->paginated(ProductOptionResource::collection(
             Product::query()
-                ->select(['id', 'name'])
+                ->select(['id', 'name', 'ar_name'])
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')
                 ->paginate(20)

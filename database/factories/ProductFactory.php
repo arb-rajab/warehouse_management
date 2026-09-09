@@ -21,6 +21,12 @@ class ProductFactory extends Factory
     {
         return [
             'name' => Str::title(fake()->unique()->word().' '.fake()->word()),
+            // NOT NULL on the store's `products`, so every product needs one.
+            // Kept deliberately unlike `name` — the search scope matches either
+            // column, so a default derived from the English name would let an
+            // English term match through `ar_name` and blunt the exclusion
+            // assertions in the tests that pin that behaviour.
+            'ar_name' => 'منتج رقم '.fake()->unique()->numberBetween(1, 999999),
             'thumbnail_img' => Upload::factory(),
         ];
     }

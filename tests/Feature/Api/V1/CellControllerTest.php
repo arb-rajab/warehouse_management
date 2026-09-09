@@ -4,6 +4,32 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 
+test('an Arabic-locale worker sees the store\'s Arabic product name on a cell\'s pallet', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    // Noise: an untranslated product on another row must still read as English.
+    $otherRow = Row::factory()->create(['letter' => 'Y', 'cells_count' => 1, 'flats_count' => 1]);
+    $untranslated = Product::factory()->create(['name' => 'Gadgets', 'ar_name' => '']);
+    Pallet::factory()->create([
+        'cell_id' => $otherRow->cells()->first()->id,
+        'product_id' => $untranslated->id,
+    ]);
+
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
+
+    $response = $this->getJson("/api/v1/rows/{$row->letter}/cells", ['Accept-Language' => 'ar']);
+    $otherResponse = $this->getJson("/api/v1/rows/{$otherRow->letter}/cells", ['Accept-Language' => 'ar']);
+
+    $response->assertOk();
+    expect($response->json('data.0.pallet.product_name'))->toBe('ودجات');
+
+    $otherResponse->assertOk();
+    expect($otherResponse->json('data.0.pallet.product_name'))->toBe('Gadgets');
+});
+
 test('an authenticated worker can list a row cells with every property the app reads', function () {
     actingAsMobileUser();
 

@@ -14,7 +14,7 @@ class ProductController extends Controller
     {
         return ProductResource::collection(
             Product::query()
-                ->select('id', 'name', 'thumbnail_img')
+                ->select('id', 'name', 'ar_name', 'thumbnail_img')
                 ->with(Product::WITH_DERIVED_ATTRIBUTES)
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')

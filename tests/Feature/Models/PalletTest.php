@@ -81,6 +81,26 @@ test('isStaleAfter is false when the pallet is younger than the given day count'
     expect($pallet->fresh()->isStaleAfter(5))->toBeFalse();
 });
 
+test('toMapSummaryArray labels the pallet with the store\'s Arabic name when the locale is Arabic', function () {
+    $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    // Noise: another pallet's product must not supply the label.
+    Pallet::factory()->create(['product_id' => Product::factory()->create(['ar_name' => 'أدوات'])->id]);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    app()->setLocale('ar');
+
+    expect($pallet->toMapSummaryArray()['product_name'])->toBe('ودجات');
+});
+
+test('toMapSummaryArray falls back to the base name for a product the store never translated', function () {
+    $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => '']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    app()->setLocale('ar');
+
+    expect($pallet->toMapSummaryArray()['product_name'])->toBe('Widgets');
+});
+
 test('toMapSummaryArray describes the pallet by its product, expiration date, and added_at', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
 

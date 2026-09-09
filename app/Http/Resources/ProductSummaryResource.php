@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @property-read int $id
- * @property-read string $name
+ * @property-read string $display_name
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read int $full_cells_count
@@ -28,7 +28,7 @@ class ProductSummaryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->display_name,
             'image_url' => $this->image_url,
             'boxes_count' => $this->boxes_count,
             'full_cells_count' => (int) $this->full_cells_count,

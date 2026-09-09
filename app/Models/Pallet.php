@@ -83,7 +83,7 @@ class Pallet extends Model
     {
         return [
             'product_id' => $this->product_id,
-            'product_name' => $this->product->name,
+            'product_name' => $this->product->display_name,
             'product_image_url' => $this->product->image_url,
             'expiration_date' => $this->expiration_date->toDateString(),
             'added_at' => $this->created_at?->toIso8601String(),

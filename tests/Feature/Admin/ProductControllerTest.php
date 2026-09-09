@@ -52,6 +52,78 @@ test('an authenticated admin can view the products index with every property the
     Carbon::setTestNow();
 });
 
+test('the products index renders the store\'s Arabic name when the panel locale is Arabic', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+    ]);
+    Pallet::factory()->create([
+        'product_id' => $product->id,
+        'cell_id' => $cell->id,
+        'expiration_date' => '2027-06-01',
+    ]);
+
+    $response = $this->withSession(['locale' => 'ar'])->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Products/Index')
+            ->has('products.data', 1)
+            ->has('products.data.0', fn (Assert $productProp) => $productProp
+                ->where('id', $product->id)
+                ->where('name', 'ودجات')
+                ->where('image_url', 'https://cdn.example.com/widgets.png')
+                ->where('boxes_count', 24)
+                ->where('full_cells_count', 1)
+                ->where('opened_cells_count', 0)
+                ->where('expired_cells_count', 0)
+                ->where('expiring_soon_count', 0)
+                ->where('activity_today_count', 0)
+                ->where('activity_week_count', 0)
+            )
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the products index falls back to the base name for a product the store never translated', function () {
+    // `ar_name` is NOT NULL upstream, so an untranslated product carries an
+    // empty string — the table cell must not come back blank.
+    actingAsAdmin();
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+    // Noise: a translated sibling proves the fallback is per product, not a
+    // whole-listing decision.
+    Product::factory()->create(['name' => 'Aardvarks', 'ar_name' => 'حيوانات']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            // Ordering deliberately stays on the base `name` column in both
+            // locales, so "Aardvarks" still sorts first.
+            ->where('products.data.0.name', 'حيوانات')
+            ->where('products.data.1.name', 'Widgets')
+    );
+});
+
+test('the products index hydrates the product filter chips with the Arabic name', function () {
+    actingAsAdmin();
+    $selected = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unselected Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products?product_id[]={$selected->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'ودجات'])
+    );
+});
+
 test('the products index paginates instead of returning every product at once', function () {
     actingAsAdmin();
 
@@ -448,6 +520,36 @@ test('an authenticated admin can search products with every property the filter 
     expect($otherProduct->id)->not->toBeNull();
 });
 
+test('the product search labels options with the Arabic name when the panel locale is Arabic', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widget', 'ar_name' => 'ودجة']);
+    // Noise: another product's Arabic name must not be the one returned.
+    Product::factory()->create(['name' => 'Gadget', 'ar_name' => 'أداة']);
+
+    $response = $this->withSession(['locale' => 'ar'])->getJson('/admin/products/search');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
+        'id' => $product->id,
+        'name' => 'ودجة',
+    ]);
+});
+
+test('the product search falls back to the base name for a product the store never translated', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widget', 'ar_name' => '']);
+
+    $response = $this->withSession(['locale' => 'ar'])->getJson('/admin/products/search');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
+        'id' => $product->id,
+        'name' => 'Widget',
+    ]);
+});
+
 test('the product search paginates instead of returning every product at once', function () {
     actingAsAdmin();
 
@@ -463,14 +565,56 @@ test('the product search paginates instead of returning every product at once', 
 test('the product search filters by name, excluding a non-matching product', function () {
     actingAsAdmin();
 
-    $matching = Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
 
     $response = $this->getJson('/admin/products/search?q=Widg');
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the product search filters by the store\'s Arabic name, excluding a non-matching product', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->getJson('/admin/products/search?q='.urlencode('ودجات'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    // Searching is locale-independent; the label is not. This request has no
+    // Arabic locale in session, so an Arabic term still labels the option
+    // with the English `name`.
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets']);
+});
+
+test('the product search matches a multi-word term split across the two name columns', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Large Blue Widget', 'ar_name' => 'ودجة زرقاء كبيرة']);
+    // Noise: matches only the English half of the term.
+    Product::factory()->create(['name' => 'Small Widget', 'ar_name' => 'ودجة صغيرة']);
+
+    $response = $this->getJson('/admin/products/search?q='.urlencode('Widget زرقاء'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the product search returns every product for a blank term', function () {
+    actingAsAdmin();
+
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
+
+    $response = $this->getJson('/admin/products/search?q=');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
 });
 
 test('a non-admin user cannot search products', function () {

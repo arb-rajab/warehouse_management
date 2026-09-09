@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\Locale;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 /**
  * A row in the store app's shared `products` table.
@@ -24,13 +25,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *
  * @property int $id
  * @property string $name
+ * @property string $ar_name
  * @property int|null $thumbnail_img
+ * @property-read string $display_name
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
  */
-#[Fillable(['name', 'thumbnail_img'])]
+#[Fillable(['name', 'ar_name', 'thumbnail_img'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -95,6 +98,41 @@ class Product extends Model
     }
 
     /**
+     * The product name to render, following the request's active locale — the
+     * session's for the admin panel, the `Accept-Language` header's for the
+     * API (see SetLocale / SetLocaleFromHeader). Every payload this app
+     * renders a product name from returns this, never the raw `name`.
+     *
+     * `?:` rather than `??` is load-bearing: upstream `ar_name` is
+     * `varchar(191)` NOT NULL, so a product the store never translated carries
+     * an empty string rather than null and still has to fall back to `name`.
+     *
+     * Reading this needs `ar_name` in the query's `select()`. Outside
+     * production a query that leaves it out throws (strict mode's
+     * `preventAccessingMissingAttributes` — see .ai/rules/app-providers.md);
+     * in production the attribute reads as null and the label degrades to the
+     * English `name` rather than erroring in front of a warehouse worker.
+     *
+     * `ar_name` is therefore read *before* the locale branch rather than
+     * inside it, so that requirement doesn't itself depend on the locale. Read
+     * lazily, a query missing the column would pass every English-locale test
+     * and only throw once someone switched the panel to Arabic — which is
+     * exactly the run nobody makes before merging.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::make(get: function (): string {
+            $arabicName = $this->ar_name;
+
+            return app()->isLocale(Locale::Arabic->value)
+                ? ($arabicName ?: $this->name)
+                : $this->name;
+        });
+    }
+
+    /**
      * @return Attribute<int, never>
      */
     protected function boxesCount(): Attribute
@@ -108,11 +146,11 @@ class Product extends Model
     /**
      * The id/name list used to populate the mobile app's product filter dropdown.
      *
-     * @return Collection<int, Product>
+     * @return Collection<int, array{id: int, name: string}>
      */
     public static function filterOptions(): Collection
     {
-        return self::query()->select(['id', 'name'])->orderBy('name')->get();
+        return self::optionLabels(self::query());
     }
 
     /**
@@ -122,7 +160,7 @@ class Product extends Model
      * see Admin\ProductController::search()).
      *
      * @param  list<int>  $ids
-     * @return Collection<int, Product>
+     * @return Collection<int, array{id: int, name: string}>
      */
     public static function selectedOptions(array $ids = []): Collection
     {
@@ -130,7 +168,37 @@ class Product extends Model
             return new Collection;
         }
 
-        return self::query()->select(['id', 'name'])->whereIn('id', $ids)->orderBy('name')->get();
+        return self::optionLabels(self::query()->whereIn('id', $ids));
+    }
+
+    /**
+     * Reduces an option-list query to the `{id, name}` pairs both dropdowns
+     * consume, with `name` already resolved to the active locale's label.
+     *
+     * These two are the only product payloads that never pass through a
+     * Resource, so the mapping to a plain array is what keeps `ar_name` — read
+     * only to derive the label — out of the response, and what keeps the
+     * emitted shape identical to the `ProductFilterOption` the frontend types.
+     * Ordering deliberately stays on the base `name` column in both locales;
+     * see .ai/rules/shared-database.md.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     * @return Collection<int, array{id: int, name: string}>
+     */
+    private static function optionLabels(EloquentBuilder $query): Collection
+    {
+        return $query
+            ->select(['id', 'name', 'ar_name'])
+            ->orderBy('name')
+            ->get()
+            // toBase() before map(): Eloquent's map() is declared as returning
+            // `Support\Collection|static`, and a `static` of array shapes would
+            // breach that class's `TModel of Model` bound under Larastan.
+            ->toBase()
+            ->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->display_name,
+            ]);
     }
 
     /**
@@ -139,10 +207,26 @@ class Product extends Model
      * finds "Large Blue Widget" without knowing the words' actual order.
      * A blank/null term is a no-op, matching every product.
      *
-     * @param  Builder<Product>  $query
+     * Each word may match *either* the store's base `name` or its Arabic
+     * `ar_name`, regardless of the request's locale. The locale is a
+     * presentation choice — the session's for the admin panel, the
+     * `Accept-Language` header's for the API (see SetLocaleFromHeader) — while
+     * the term is whatever the warehouse staff actually typed, and they type
+     * whichever of the two names they remember for a product. Scoping the
+     * search to the active locale's column would make an identical term return
+     * different results per device, and would return nothing at all for a
+     * product whose `ar_name` the store left empty. Matching both columns
+     * costs nothing here: an empty `ar_name` cannot match a non-empty word.
+     *
+     * The per-word grouping is load-bearing. A flat `orWhere()` chain would
+     * bind the OR across word boundaries too, turning "every word matches" into
+     * "any word matches" — so each word gets its own nested group, and the
+     * groups are still ANDed together.
+     *
+     * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
-    protected function searchByName(Builder $query, ?string $term): void
+    protected function searchByName(EloquentBuilder $query, ?string $term): void
     {
         if (blank($term)) {
             return;
@@ -151,7 +235,11 @@ class Product extends Model
         $words = preg_split('/\s+/', trim($term)) ?: [];
 
         foreach ($words as $word) {
-            $query->where('name', 'like', '%'.$word.'%');
+            $query->where(function (EloquentBuilder $matchesEitherName) use ($word): void {
+                $matchesEitherName
+                    ->where('name', 'like', '%'.$word.'%')
+                    ->orWhere('ar_name', 'like', '%'.$word.'%');
+            });
         }
     }
 }

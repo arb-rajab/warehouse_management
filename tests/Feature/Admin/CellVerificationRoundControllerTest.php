@@ -178,6 +178,35 @@ test('an authenticated admin can view a single round with its own reports and ev
     );
 });
 
+test('a round\'s report snapshots name the product in Arabic, falling back for an untranslated one', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->create();
+    $expected = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    // The reported half is a separate eager load, so it needs its own proof —
+    // and an untranslated product there covers the fallback at the same time.
+    $reported = Product::factory()->imageUrl(null)->create(['name' => 'Gadgets', 'ar_name' => '']);
+
+    CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $row->cells()->first()->id,
+        'is_correct' => false,
+        'expected_cell_state' => CellState::Full,
+        'expected_product_id' => $expected->id,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $reported->id,
+    ]);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/cell-verification-rounds/{$round->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('reports.data', 1)
+            ->where('reports.data.0.expected.product.name', 'ودجات')
+            ->where('reports.data.0.reported.product.name', 'Gadgets')
+    );
+});
+
 test('an unauthenticated caller is redirected to login when viewing a single round', function () {
     $round = CellVerificationRound::factory()->create();
 
@@ -243,6 +272,29 @@ test('a rounds reports listing paginates beyond one page', function () {
         fn (Assert $page) => $page->has('reports.data', 10)
             ->where('reports.meta.total', 25)
     );
+});
+
+test('the reports csv keeps the store\'s base product name even under the Arabic locale', function () {
+    // The export is data, not UI: its column headers are untranslated
+    // machine names, so its product column stays on the store's stable base
+    // `name` rather than following the panel locale like every rendered
+    // label does. See .ai/rules/shared-database.md.
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->create();
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'expected_product_id' => $product->id,
+    ]);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/cell-verification-rounds/{$round->id}/export");
+
+    $response->assertOk();
+    $csv = $response->streamedContent();
+
+    expect($csv)->toContain('Widgets');
+    expect($csv)->not->toContain('ودجات');
 });
 
 test('an unauthenticated caller is redirected to login when exporting a rounds reports csv', function () {
