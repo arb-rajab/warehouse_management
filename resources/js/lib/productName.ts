@@ -22,3 +22,28 @@ import { i18n } from './i18n';
 export function productName(name: string, arName: string): string {
     return i18n.global.locale.value === 'ar' ? arName || name : name;
 }
+
+/**
+ * The store's *other* name for a product — the one `productName()` did not
+ * pick — or null when there is nothing worth showing beside it.
+ *
+ * Only the product search dropdowns render this, under the primary label: the
+ * search scope matches a term against `name` OR `ar_name` regardless of the
+ * active locale (see .ai/rules/shared-database.md), so a result can match on a
+ * name the list would otherwise never show, leaving the worker unable to tell
+ * why the row came back. Every other render site shows the primary label
+ * alone.
+ *
+ * Null rather than an empty string for the two cases where a second line would
+ * be noise: a product the store never translated (`ar_name` is `''`, so the
+ * primary already fell back to `name`), and one whose two names are identical.
+ */
+export function productAlternateName(
+    name: string,
+    arName: string,
+): string | null {
+    const primary = productName(name, arName);
+    const alternate = primary === name ? arName : name;
+
+    return alternate !== '' && alternate !== primary ? alternate : null;
+}

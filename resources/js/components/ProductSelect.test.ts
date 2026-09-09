@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
+import ProductOptionLabel from './ProductOptionLabel.vue';
 import ProductSelect from './ProductSelect.vue';
 
 interface HttpGetOptions {
@@ -313,7 +314,7 @@ describe('ProductSelect', () => {
         await wrapper.vm.$nextTick();
 
         const labels = wrapper
-            .findAll('[role="option"] span')
+            .findAll('[data-testid="product-option-name"]')
             .map((el) => el.text());
         expect(labels).toEqual(['New product']);
     });
@@ -352,7 +353,7 @@ describe('ProductSelect', () => {
         expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
     });
 
-    it("renders each option's Arabic name when the locale is Arabic", async () => {
+    it('leads each option with its Arabic name when the locale is Arabic', async () => {
         i18n.global.locale.value = 'ar';
         const wrapper = mountSelect();
 
@@ -366,15 +367,28 @@ describe('ProductSelect', () => {
         );
         await wrapper.vm.$nextTick();
 
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        const alternates = wrapper
+            .findAll('[data-testid="product-option-alternate-name"]')
+            .map((el) => el.text());
+
+        expect(names).toEqual(['ودجات', 'Gadgets']);
+        // The search matches either column whatever the locale, so the base
+        // name stays visible to explain a result matched through it. The
+        // untranslated product has no second name to show.
+        expect(alternates).toEqual(['Widgets']);
+
         const options = wrapper.findAll('[role="option"]');
 
-        expect(options[0].text()).toBe('ودجات');
-        // Untranslated upstream, so it falls back to the base name rather
-        // than rendering the empty `ar_name`.
+        expect(options[0].text()).toContain('ودجات');
+        // The store never translated this one, so it falls back to the base
+        // name rather than rendering the empty `ar_name`.
         expect(options[1].text()).toBe('Gadgets');
     });
 
-    it("renders each option's base name when the locale is English", async () => {
+    it('leads each option with its base name when the locale is English', async () => {
         const wrapper = mountSelect();
 
         await wrapper.get('button').trigger('click');
@@ -387,10 +401,15 @@ describe('ProductSelect', () => {
         );
         await wrapper.vm.$nextTick();
 
-        const options = wrapper.findAll('[role="option"]');
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        const alternates = wrapper
+            .findAll('[data-testid="product-option-alternate-name"]')
+            .map((el) => el.text());
 
-        expect(options[0].text()).toBe('Widgets');
-        expect(options[1].text()).toBe('Gadgets');
+        expect(names).toEqual(['Widgets', 'Gadgets']);
+        expect(alternates).toEqual(['ودجات']);
     });
 
     it("resolves the selected product's button label for the Arabic locale", () => {
@@ -405,5 +424,28 @@ describe('ProductSelect', () => {
 
         expect(translated.get('button').text()).toBe('ودجة');
         expect(untranslated.get('button').text()).toBe('Gadget');
+    });
+
+    it('hands each result to ProductOptionLabel with both raw name columns', async () => {
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .findAllComponents(ProductOptionLabel)
+                .map((label) => label.props('product')),
+        ).toEqual([
+            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+            { id: 2, name: 'Gadgets', ar_name: '' },
+        ]);
     });
 });

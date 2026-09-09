@@ -360,10 +360,24 @@ describe('CellStatusLogs Index', () => {
     it("populates the product filter's checkboxes from filterOptions", async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
+        await wrapper.get('#filter-product').trigger('click');
 
-        expect(await checkboxLabels(wrapper, '#filter-product')).toEqual([
-            'Widgets',
-        ]);
+        // Unlike the other filters, a product option renders two lines — the
+        // locale's label and the store's other name, since the search matches
+        // either column (see .ai/rules/shared-database.md). Assert the primary
+        // line rather than the option's whole text.
+        expect(
+            wrapper
+                .get('[role="listbox"]')
+                .findAll('[data-testid="product-option-name"]')
+                .map((name) => name.text()),
+        ).toEqual(['Widgets']);
+        expect(
+            wrapper
+                .get('[role="listbox"]')
+                .findAll('[data-testid="product-option-alternate-name"]')
+                .map((name) => name.text()),
+        ).toEqual(['ودجات']);
     });
 
     it("populates the user filter's checkboxes from filterOptions", async () => {

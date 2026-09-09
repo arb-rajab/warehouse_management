@@ -312,12 +312,21 @@ describe('CellVerificationRounds Show', () => {
 
         await wrapper.get('#filter-product').trigger('click');
 
+        // A product option renders two lines — the locale's label and the
+        // store's other name, since the search matches either column (see
+        // .ai/rules/shared-database.md).
         expect(
             wrapper
                 .get('[role="listbox"]')
-                .findAll('label')
-                .map((label) => label.text()),
+                .findAll('[data-testid="product-option-name"]')
+                .map((name) => name.text()),
         ).toEqual(['Widgets']);
+        expect(
+            wrapper
+                .get('[role="listbox"]')
+                .findAll('[data-testid="product-option-alternate-name"]')
+                .map((name) => name.text()),
+        ).toEqual(['ودجات']);
     });
 
     it("populates the correctness filter's options", async () => {
