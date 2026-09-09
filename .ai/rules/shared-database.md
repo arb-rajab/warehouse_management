@@ -112,6 +112,14 @@ Four consequences worth knowing before changing any of this:
   product names until a separate mobile release adopted it. A client that
   wants the store's base name should not send `Accept-Language: ar`.
 
+The one place that deliberately still reads the raw `name` is
+`Admin\CellVerificationRoundController::export()`'s CSV. That file is data
+rather than UI — its column headers are untranslated snake_case machine names
+(`expected_product`, `cell_number`) and `is_correct` is a literal `yes`/`no` —
+so its product column stays on the store's stable base name in both locales.
+A test pins that; if the export ever gains translated headers, revisit it as a
+whole rather than switching that one column.
+
 `filterOptions()` and `selectedOptions()` are the only product payloads that
 never pass through a Resource, so `Product::optionLabels()` maps them to plain
 `{id, name}` arrays instead of serialising models — that is what keeps
