@@ -43,7 +43,7 @@ const filterOptions: CellStatusLogFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
     users: [{ id: 7, name: 'Jane Doe' }],
     actions: [
         'stored',
@@ -731,6 +731,7 @@ describe('CellStatusLogs Index', () => {
                 product: {
                     id: 10,
                     name: 'Widgets',
+                    ar_name: 'ودجات',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
                 },

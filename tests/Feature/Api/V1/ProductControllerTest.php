@@ -7,6 +7,7 @@ test('an authenticated worker can list products with every property the app read
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
         'name' => 'Widget',
+        'ar_name' => 'ودجة',
     ]);
     $otherProduct = Product::factory()->create(['name' => 'Gadget']);
 
@@ -16,6 +17,7 @@ test('an authenticated worker can list products with every property the app read
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
         'name' => 'Widget',
+        'ar_name' => 'ودجة',
         'image_url' => 'https://cdn.example.com/widget.png',
         'boxes_count' => 12,
     ]);
@@ -23,14 +25,16 @@ test('an authenticated worker can list products with every property the app read
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('an Arabic-locale client gets the store\'s Arabic name in every property the app reads', function () {
+test('an Arabic-locale client gets the same raw name columns as an English one', function () {
+    // The payload no longer varies by `Accept-Language`: both store columns
+    // ship raw and the client picks. See .ai/rules/shared-database.md.
     actingAsMobileUser();
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
         'name' => 'Widget',
         'ar_name' => 'ودجة',
     ]);
-    // Noise: another product's Arabic name must not be the one returned.
+    // Noise: another product's names must not be the ones returned.
     Product::factory()->create(['name' => 'Gadget', 'ar_name' => 'أداة']);
 
     $response = $this->getJson('/api/v1/products', ['Accept-Language' => 'ar']);
@@ -38,15 +42,16 @@ test('an Arabic-locale client gets the store\'s Arabic name in every property th
     $response->assertOk();
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
-        'name' => 'ودجة',
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
         'image_url' => 'https://cdn.example.com/widget.png',
         'boxes_count' => 12,
     ]);
 });
 
-test('an Arabic-locale client gets the base name for a product the store never translated', function () {
+test('a product the store never translated ships an empty ar_name rather than a null one', function () {
     // `ar_name` is NOT NULL upstream, so an untranslated product carries an
-    // empty string — the label must not come back blank.
+    // empty string — that is exactly what the frontend resolver falls back on.
     actingAsMobileUser();
 
     $product = Product::factory()->imageUrl(null)->boxesCount(6)->create([
@@ -60,6 +65,7 @@ test('an Arabic-locale client gets the base name for a product the store never t
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
         'name' => 'Widget',
+        'ar_name' => '',
         'image_url' => null,
         'boxes_count' => 6,
     ]);
@@ -99,10 +105,10 @@ test('the product listing filters by the store\'s Arabic name, excluding a non-m
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
-    // Searching is locale-independent; the label is not. With no
-    // Accept-Language header the request resolves to English, so an Arabic
-    // term still returns the English label.
+    // Searching matches either column; the response ships both raw, so an
+    // Arabic term still comes back with the base `name` alongside it.
     expect($response->json('data.0.name'))->toBe('Widgets');
+    expect($response->json('data.0.ar_name'))->toBe('ودجات');
 });
 
 test('the product listing matches an Arabic term sent with an English Accept-Language header', function () {

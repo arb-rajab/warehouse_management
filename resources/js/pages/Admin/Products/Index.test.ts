@@ -1,7 +1,7 @@
 import { Check, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { t } from '@/lib/i18n';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { i18n, t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
@@ -39,6 +39,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     return {
         id: 10,
         name: 'Widgets',
+        ar_name: 'ودجات',
         image_url: null,
         boxes_count: 12,
         full_cells_count: 2,
@@ -57,7 +58,7 @@ const filterOptions: ProductIndexFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
     users: [{ id: 7, name: 'Jane Doe' }],
     actions: [
         'stored',
@@ -106,6 +107,10 @@ async function openFilters(
 describe('Products Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPatchMock });
+    });
+
+    afterEach(() => {
+        i18n.global.locale.value = 'en';
     });
 
     it('renders every column header', () => {
@@ -282,7 +287,11 @@ describe('Products Index', () => {
 
     it('renders the product name and image', () => {
         const wrapper = mountPage([
-            product({ name: 'Widgets', image_url: '/img/widgets.png' }),
+            product({
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                image_url: '/img/widgets.png',
+            }),
         ]);
 
         const productCell = rowCells(wrapper)[0];
@@ -300,7 +309,7 @@ describe('Products Index', () => {
 
     it("renders the product's stored box count in an editable field", () => {
         const wrapper = mountPage([
-            product({ name: 'Widgets', boxes_count: 24 }),
+            product({ name: 'Widgets', ar_name: 'ودجات', boxes_count: 24 }),
         ]);
 
         const input = rowCells(wrapper)[1].get('input');
@@ -892,6 +901,45 @@ describe('Products Index', () => {
             '/admin/products',
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
+        );
+    });
+
+    it("renders the product's Arabic name, alt text and box-count label when the locale is Arabic", () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountPage([
+            product({
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                image_url: '/img/widgets.png',
+            }),
+        ]);
+
+        const productCell = rowCells(wrapper)[0];
+        expect(productCell.text()).toContain('ودجات');
+        expect(productCell.text()).not.toContain('Widgets');
+        expect(productCell.get('img').attributes('alt')).toBe('ودجات');
+        expect(rowCells(wrapper)[1].get('input').attributes('aria-label')).toBe(
+            t('products.boxesPerPalletLabel', { product: 'ودجات' }),
+        );
+    });
+
+    it('falls back to the base product name in Arabic when the store never translated it', () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountPage([
+            product({
+                name: 'Widgets',
+                ar_name: '',
+                image_url: '/img/widgets.png',
+            }),
+        ]);
+
+        const productCell = rowCells(wrapper)[0];
+        expect(productCell.text()).toContain('Widgets');
+        expect(productCell.get('img').attributes('alt')).toBe('Widgets');
+        expect(rowCells(wrapper)[1].get('input').attributes('aria-label')).toBe(
+            t('products.boxesPerPalletLabel', { product: 'Widgets' }),
         );
     });
 });

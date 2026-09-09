@@ -73,8 +73,8 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 const products = [
-    { id: 1, name: 'Widgets' },
-    { id: 2, name: 'Gadgets' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
 ];
 
 function row(overrides: Partial<CellMapRow> = {}): CellMapRow {
@@ -101,6 +101,7 @@ function pallet(
         id: 1,
         product_id: 1,
         product_name: 'Widgets',
+        product_ar_name: 'ودجات',
         product_image_url: null,
         expiration_date: '2026-09-01',
         added_at: '2026-07-01T10:00:00Z',
@@ -834,6 +835,7 @@ describe('Cells Index (warehouse map)', () => {
                         id: 2,
                         product_id: 2,
                         product_name: 'Gadgets',
+                        product_ar_name: 'أدوات',
                     }),
                 }),
             ],

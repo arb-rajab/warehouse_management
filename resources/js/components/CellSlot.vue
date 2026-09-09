@@ -11,6 +11,7 @@ import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { productName } from '@/lib/productName';
 import type { Cell } from '@/types/admin';
 
 const props = withDefaults(
@@ -134,13 +135,23 @@ function onManagePallet(): void {
             <img
                 v-if="cell.pallet.product_image_url"
                 :src="cell.pallet.product_image_url"
-                :alt="cell.pallet.product_name"
+                :alt="
+                    productName(
+                        cell.pallet.product_name,
+                        cell.pallet.product_ar_name,
+                    )
+                "
                 class="mb-1 h-8 w-8 rounded object-cover"
             />
             <div
                 class="truncate font-medium text-gray-900 dark:text-neutral-100"
             >
-                {{ cell.pallet.product_name }}
+                {{
+                    productName(
+                        cell.pallet.product_name,
+                        cell.pallet.product_ar_name,
+                    )
+                }}
             </div>
             <div class="space-y-0.5">
                 <div

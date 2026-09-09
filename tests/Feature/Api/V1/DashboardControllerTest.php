@@ -137,10 +137,11 @@ test('a product filter narrows the mobile dashboard occupancy (empty forced to z
     Carbon::setTestNow();
 });
 
-test('the mobile dashboard labels the product filter with the store\'s Arabic names', function () {
+test('the mobile dashboard product filter carries both raw store name columns', function () {
     actingAsMobileUser();
     $translated = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
-    // Noise: an untranslated product must fall back rather than come back blank.
+    // Noise: an untranslated product ships an empty ar_name rather than a null
+    // one — the client falls back on exactly that.
     $untranslated = Product::factory()->create(['name' => 'Bravo', 'ar_name' => '']);
 
     $response = $this->getJson('/api/v1/dashboard', ['Accept-Language' => 'ar']);
@@ -148,21 +149,21 @@ test('the mobile dashboard labels the product filter with the store\'s Arabic na
     $response->assertOk();
     // Ordering deliberately stays on the base `name` column in both locales.
     expect($response->json('filterOptions.products'))->toEqual([
-        ['id' => $translated->id, 'name' => 'ألفا'],
-        ['id' => $untranslated->id, 'name' => 'Bravo'],
+        ['id' => $translated->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
+        ['id' => $untranslated->id, 'name' => 'Bravo', 'ar_name' => ''],
     ]);
 });
 
 test('the mobile dashboard exposes the product list for the product filter, today\'s date, and the week start', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
-    $product = Product::factory()->create(['name' => 'Widgets']);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
 
     $response = $this->getJson('/api/v1/dashboard');
 
     $response->assertOk();
     expect($response->json('filterOptions.products'))->toEqual([
-        ['id' => $product->id, 'name' => 'Widgets'],
+        ['id' => $product->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'],
     ]);
     expect($response->json('today'))->toBe('2026-08-13');
     expect($response->json('weekStart'))->toBe('2026-08-10');

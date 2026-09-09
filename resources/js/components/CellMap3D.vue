@@ -71,6 +71,7 @@ import type {
     OrbitState,
     WalkerBounds,
 } from '@/lib/mapWalker';
+import { productName } from '@/lib/productName';
 import type { Cell, CellMap3DBand, CellMap3DItem } from '@/types/admin';
 
 const props = defineProps<{
@@ -1328,8 +1329,9 @@ function describeItem(display: FacedItem): string {
         display.item.flatNumber,
     );
     const state = cellStateLabel(display.item.state);
-    const product = display.item.pallet
-        ? ` — ${display.item.pallet.product_name}`
+    const pallet = display.item.pallet;
+    const product = pallet
+        ? ` — ${productName(pallet.product_name, pallet.product_ar_name)}`
         : '';
 
     return `${label}: ${state}${product}`;
@@ -1390,6 +1392,7 @@ const displayedCellForSlot = computed<Cell | null>(() => {
                   id: item.pallet.id,
                   product_id: item.pallet.product_id,
                   product_name: item.pallet.product_name,
+                  product_ar_name: item.pallet.product_ar_name,
                   product_image_url: item.pallet.product_image_url,
                   expiration_date: item.pallet.expiration_date,
                   added_at: item.pallet.added_at,

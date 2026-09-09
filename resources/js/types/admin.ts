@@ -67,13 +67,18 @@ export interface CellPallet {
     id: number;
     product_id: number;
     /**
-     * Already resolved to the active locale by `Product::$display_name` —
-     * the store's `ar_name` in Arabic, falling back to the base `name`
-     * for a product it never translated. Never pick a name client-side
-     * from the shared `locale` prop; the mobile API shares this payload
-     * and has no such prop to pick with.
+     * The store's raw base name, straight from `products.name`. The backend
+     * resolves no label: pass this and `product_ar_name` through
+     * `lib/productName.ts`, which picks by the active locale, wherever a
+     * pallet's product is rendered.
      */
     product_name: string;
+    /**
+     * The store's raw `products.ar_name`. NOT NULL upstream, so a product the
+     * store never translated carries `''` — hence `productName()`'s fallback
+     * to `product_name` rather than a null check.
+     */
+    product_ar_name: string;
     product_image_url: string | null;
     expiration_date: string;
     /**
@@ -122,16 +127,20 @@ export interface CellMapRow {
  */
 export interface ProductDetails {
     id: number;
-    /** Locale-resolved — see `CellPallet.product_name`. */
+    /** The store's raw base name — see `CellPallet.product_name`. */
     name: string;
+    /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
+    ar_name: string;
     image_url: string | null;
     boxes_count: number;
 }
 
 export interface ProductFilterOption {
     id: number;
-    /** Locale-resolved — see `CellPallet.product_name`. */
+    /** The store's raw base name — see `CellPallet.product_name`. */
     name: string;
+    /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
+    ar_name: string;
 }
 
 /**
@@ -162,6 +171,7 @@ export type CellPalletSummary = Pick<
     | 'id'
     | 'product_id'
     | 'product_name'
+    | 'product_ar_name'
     | 'product_image_url'
     | 'expiration_date'
     | 'added_at'
@@ -288,8 +298,10 @@ export interface CellStatusLogFilterOptions
 
 export interface ProductSummary {
     id: number;
-    /** Locale-resolved — see `CellPallet.product_name`. */
+    /** The store's raw base name — see `CellPallet.product_name`. */
     name: string;
+    /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
+    ar_name: string;
     image_url: string | null;
     /**
      * How many boxes a full pallet of this product holds. Stored in this app's

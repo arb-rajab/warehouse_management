@@ -2,6 +2,7 @@ import { useHttp } from '@inertiajs/vue3';
 import { reactive, ref, watch } from 'vue';
 import { search as searchProducts } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { debounce } from '@/lib/filters';
+import { productName } from '@/lib/productName';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 
 /**
@@ -24,7 +25,10 @@ export function useProductSearch() {
 
     function rememberNames(products: ProductFilterOption[]): void {
         for (const product of products) {
-            namesById.set(product.id, product.name);
+            namesById.set(
+                product.id,
+                productName(product.name, product.ar_name),
+            );
         }
     }
 

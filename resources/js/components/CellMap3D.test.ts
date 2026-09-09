@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils';
 import * as THREE from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
     boundsForWarehouse,
@@ -17,6 +17,7 @@ import {
 } from '@/lib/mapWalker';
 import type { CellMap3DBand, CellMap3DItem } from '@/types/admin';
 import CellMap3D from './CellMap3D.vue';
+import CellSlot from './CellSlot.vue';
 
 vi.mock('three', () => {
     class Vector3 {
@@ -486,6 +487,7 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+    i18n.global.locale.value = 'en';
 });
 
 describe('CellMap3D', () => {
@@ -1201,6 +1203,7 @@ describe('CellMap3D', () => {
                                         id: 9,
                                         product_id: 3,
                                         product_name: 'Widgets',
+                                        product_ar_name: 'ودجات',
                                         product_image_url: null,
                                         expiration_date: '2026-09-01',
                                         added_at: '2026-07-01T10:00:00Z',
@@ -1220,6 +1223,50 @@ describe('CellMap3D', () => {
             expect(panel.text()).toContain(formatSlot('A', 1, 1));
             expect(panel.text()).toContain('Widgets');
             expect(panel.find('[data-testid="cell-slot"]').exists()).toBe(true);
+        });
+
+        it("renders the panel's product label once, resolved by CellSlot from the raw columns it is handed", async () => {
+            i18n.global.locale.value = 'ar';
+
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: {
+                                        id: 9,
+                                        product_id: 3,
+                                        product_name: 'Widgets',
+                                        product_ar_name: 'ودجات',
+                                        product_image_url: null,
+                                        expiration_date: '2026-09-01',
+                                        added_at: '2026-07-01T10:00:00Z',
+                                        remaining_boxes: 5,
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const slot = wrapper.getComponent(CellSlot);
+
+            // The 3D map re-projects its item into a CellPallet for CellSlot
+            // and must pass both raw columns straight through — resolving here
+            // as well would double-apply the locale choice.
+            expect(slot.props('cell')).toMatchObject({
+                pallet: { product_name: 'Widgets', product_ar_name: 'ودجات' },
+            });
+            expect(slot.text()).toContain('ودجات');
+            expect(slot.text()).not.toContain('Widgets');
         });
 
         it('shows no panel when facing an empty gap with no matching cell', async () => {
@@ -1371,6 +1418,7 @@ describe('CellMap3D', () => {
                                         id: 9,
                                         product_id: 3,
                                         product_name: 'Widgets',
+                                        product_ar_name: 'ودجات',
                                         product_image_url: null,
                                         expiration_date: '2026-09-01',
                                         added_at: '2026-07-01T10:00:00Z',
@@ -1768,6 +1816,81 @@ describe('CellMap3D', () => {
             expect(announcement.attributes('aria-live')).toBe('polite');
             expect(announcement.attributes('role')).toBe('status');
             expect(announcement.text()).toContain(formatSlot('A', 1, 1));
+        });
+
+        it("announces the pallet product's Arabic name when the locale is Arabic", async () => {
+            i18n.global.locale.value = 'ar';
+
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: {
+                                        id: 9,
+                                        product_id: 3,
+                                        product_name: 'Widgets',
+                                        product_ar_name: 'ودجات',
+                                        product_image_url: null,
+                                        expiration_date: '2026-09-01',
+                                        added_at: '2026-07-01T10:00:00Z',
+                                        remaining_boxes: 5,
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            const announced = wrapper
+                .get('[data-testid="map-3d-announcement"]')
+                .text();
+
+            expect(announced).toContain('ودجات');
+            expect(announced).not.toContain('Widgets');
+        });
+
+        it('announces the base product name when the store never translated it', async () => {
+            i18n.global.locale.value = 'ar';
+
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: {
+                                        id: 9,
+                                        product_id: 3,
+                                        product_name: 'Widgets',
+                                        product_ar_name: '',
+                                        product_image_url: null,
+                                        expiration_date: '2026-09-01',
+                                        added_at: '2026-07-01T10:00:00Z',
+                                        remaining_boxes: 5,
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-testid="map-3d-announcement"]').text(),
+            ).toContain('Widgets');
         });
 
         it('is empty while orbiting with nothing selected, and announces the selection once one is clicked', async () => {

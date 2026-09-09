@@ -20,9 +20,10 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { ProductFilterOption } from '@/types/admin';
 
 defineProps<{
-    products: { id: number; name: string }[];
+    products: ProductFilterOption[];
 }>();
 
 // The parent must pass a `reactive()` object, not a plain value — every

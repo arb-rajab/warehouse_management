@@ -73,6 +73,7 @@ export function cellVerificationReport(
             product: {
                 id: 10,
                 name: 'Widgets',
+                ar_name: 'ودجات',
                 image_url: null,
                 boxes_count: 10,
             },
@@ -84,6 +85,7 @@ export function cellVerificationReport(
             product: {
                 id: 10,
                 name: 'Widgets',
+                ar_name: 'ودجات',
                 image_url: null,
                 boxes_count: 10,
             },
@@ -120,7 +122,13 @@ export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         boxes_count: null,
         cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         related_cell: null,
-        product: { id: 10, name: 'Widgets', image_url: null, boxes_count: 10 },
+        product: {
+            id: 10,
+            name: 'Widgets',
+            ar_name: 'ودجات',
+            image_url: null,
+            boxes_count: 10,
+        },
         pallet: { id: 55, expiration_date: '2026-09-01' },
         user: { id: 7, name: 'Jane Doe' },
         created_at: '2026-08-01T10:00:00Z',

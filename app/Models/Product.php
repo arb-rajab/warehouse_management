@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Locale;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -27,7 +26,6 @@ use Illuminate\Support\Collection;
  * @property string $name
  * @property string $ar_name
  * @property int|null $thumbnail_img
- * @property-read string $display_name
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read Upload|null $thumbnailUpload
@@ -98,41 +96,6 @@ class Product extends Model
     }
 
     /**
-     * The product name to render, following the request's active locale — the
-     * session's for the admin panel, the `Accept-Language` header's for the
-     * API (see SetLocale / SetLocaleFromHeader). Every payload this app
-     * renders a product name from returns this, never the raw `name`.
-     *
-     * `?:` rather than `??` is load-bearing: upstream `ar_name` is
-     * `varchar(191)` NOT NULL, so a product the store never translated carries
-     * an empty string rather than null and still has to fall back to `name`.
-     *
-     * Reading this needs `ar_name` in the query's `select()`. Outside
-     * production a query that leaves it out throws (strict mode's
-     * `preventAccessingMissingAttributes` — see .ai/rules/app-providers.md);
-     * in production the attribute reads as null and the label degrades to the
-     * English `name` rather than erroring in front of a warehouse worker.
-     *
-     * `ar_name` is therefore read *before* the locale branch rather than
-     * inside it, so that requirement doesn't itself depend on the locale. Read
-     * lazily, a query missing the column would pass every English-locale test
-     * and only throw once someone switched the panel to Arabic — which is
-     * exactly the run nobody makes before merging.
-     *
-     * @return Attribute<string, never>
-     */
-    protected function displayName(): Attribute
-    {
-        return Attribute::make(get: function (): string {
-            $arabicName = $this->ar_name;
-
-            return app()->isLocale(Locale::Arabic->value)
-                ? ($arabicName ?: $this->name)
-                : $this->name;
-        });
-    }
-
-    /**
      * @return Attribute<int, never>
      */
     protected function boxesCount(): Attribute
@@ -146,7 +109,7 @@ class Product extends Model
     /**
      * The id/name list used to populate the mobile app's product filter dropdown.
      *
-     * @return Collection<int, array{id: int, name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string}>
      */
     public static function filterOptions(): Collection
     {
@@ -160,7 +123,7 @@ class Product extends Model
      * see Admin\ProductController::search()).
      *
      * @param  list<int>  $ids
-     * @return Collection<int, array{id: int, name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string}>
      */
     public static function selectedOptions(array $ids = []): Collection
     {
@@ -172,18 +135,20 @@ class Product extends Model
     }
 
     /**
-     * Reduces an option-list query to the `{id, name}` pairs both dropdowns
-     * consume, with `name` already resolved to the active locale's label.
+     * Reduces an option-list query to the `{id, name, ar_name}` triples both
+     * dropdowns consume — both store columns raw, with the label picked
+     * client-side by `lib/productName.ts` from the active locale.
      *
      * These two are the only product payloads that never pass through a
-     * Resource, so the mapping to a plain array is what keeps `ar_name` — read
-     * only to derive the label — out of the response, and what keeps the
-     * emitted shape identical to the `ProductFilterOption` the frontend types.
+     * Resource, so the mapping to a plain array is what keeps the emitted
+     * shape identical to the `ProductFilterOption` the frontend types, rather
+     * than serialising whole models. `ar_name` is part of that shape now: the
+     * frontend needs the column itself, not a label derived from it here.
      * Ordering deliberately stays on the base `name` column in both locales;
      * see .ai/rules/shared-database.md.
      *
      * @param  EloquentBuilder<Product>  $query
-     * @return Collection<int, array{id: int, name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string}>
      */
     private static function optionLabels(EloquentBuilder $query): Collection
     {
@@ -197,7 +162,8 @@ class Product extends Model
             ->toBase()
             ->map(fn (Product $product): array => [
                 'id' => $product->id,
-                'name' => $product->display_name,
+                'name' => $product->name,
+                'ar_name' => $product->ar_name,
             ]);
     }
 

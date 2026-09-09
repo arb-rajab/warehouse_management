@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import ProductSelect from './ProductSelect.vue';
 
@@ -63,6 +63,7 @@ describe('ProductSelect', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        i18n.global.locale.value = 'en';
     });
 
     it('shows the placeholder when nothing is selected', () => {
@@ -73,7 +74,7 @@ describe('ProductSelect', () => {
 
     it("resolves the selected product's label from the model without fetching", () => {
         const wrapper = mountSelect({
-            modelValue: { id: 99, name: 'Widget' },
+            modelValue: { id: 99, name: 'Widget', ar_name: 'ودجة' },
         });
 
         expect(wrapper.get('button').text()).toBe('Widget');
@@ -106,8 +107,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             page([
-                { id: 1, name: 'Widgets' },
-                { id: 2, name: 'Gadgets' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -118,7 +119,7 @@ describe('ProductSelect', () => {
         await options[1].trigger('click');
 
         expect(wrapper.emitted('update:modelValue')).toEqual([
-            [{ id: 2, name: 'Gadgets' }],
+            [{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }],
         ]);
     });
 
@@ -126,7 +127,7 @@ describe('ProductSelect', () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');
 
-        resolveCall(0, page([{ id: 1, name: 'Widgets' }]));
+        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
         await wrapper.vm.$nextTick();
 
         await wrapper.get('[role="option"]').trigger('click');
@@ -169,7 +170,10 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -194,7 +198,10 @@ describe('ProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+                currentPage: 2,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -207,7 +214,10 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -234,7 +244,10 @@ describe('ProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+                currentPage: 2,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -247,7 +260,10 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 1 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 1,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -285,9 +301,15 @@ describe('ProductSelect', () => {
         expect(getMock).toHaveBeenCalledTimes(3);
 
         // Resolve the newer ("new") request first, then the stale ("old") one.
-        resolveCall(2, page([{ id: 2, name: 'New product' }]));
+        resolveCall(
+            2,
+            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+        );
         await wrapper.vm.$nextTick();
-        resolveCall(1, page([{ id: 1, name: 'Old product' }]));
+        resolveCall(
+            1,
+            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+        );
         await wrapper.vm.$nextTick();
 
         const labels = wrapper
@@ -297,12 +319,23 @@ describe('ProductSelect', () => {
     });
 
     it('keeps resolving the selected product label once learned from a search page', async () => {
-        const wrapper = mountSelect({ modelValue: { id: 1, name: 'Widgets' } });
+        const wrapper = mountSelect({
+            modelValue: { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+        });
 
         expect(wrapper.get('button').text()).toBe('Widgets');
 
         await wrapper.get('button').trigger('click');
-        resolveCall(0, page([{ id: 1, name: 'Widgets (renamed)' }]));
+        resolveCall(
+            0,
+            page([
+                {
+                    id: 1,
+                    name: 'Widgets (renamed)',
+                    ar_name: 'ودجات (معاد تسميتها)',
+                },
+            ]),
+        );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.get('button').text()).toBe('Widgets (renamed)');
@@ -317,5 +350,60 @@ describe('ProductSelect', () => {
         await wrapper.vm.$nextTick();
 
         expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
+    });
+
+    it("renders each option's Arabic name when the locale is Arabic", async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+
+        expect(options[0].text()).toBe('ودجات');
+        // Untranslated upstream, so it falls back to the base name rather
+        // than rendering the empty `ar_name`.
+        expect(options[1].text()).toBe('Gadgets');
+    });
+
+    it("renders each option's base name when the locale is English", async () => {
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+
+        expect(options[0].text()).toBe('Widgets');
+        expect(options[1].text()).toBe('Gadgets');
+    });
+
+    it("resolves the selected product's button label for the Arabic locale", () => {
+        i18n.global.locale.value = 'ar';
+
+        const translated = mountSelect({
+            modelValue: { id: 99, name: 'Widget', ar_name: 'ودجة' },
+        });
+        const untranslated = mountSelect({
+            modelValue: { id: 98, name: 'Gadget', ar_name: '' },
+        });
+
+        expect(translated.get('button').text()).toBe('ودجة');
+        expect(untranslated.get('button').text()).toBe('Gadget');
     });
 });

@@ -39,7 +39,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/** | .ai/rules/js.md |
 | lang/** | .ai/rules/lang.md |
 | resources/js/layouts/** | .ai/rules/layouts.md |
-| database/migrations/**,config/database.php,config/permission.php,config/session.php,config/cache.php,config/queue.php,config/auth.php,app/Models/PersonalAccessToken.php,app/Models/Product.php,app/Providers/AppServiceProvider.php | .ai/rules/shared-database.md |
+| database/migrations/**,config/database.php,config/permission.php,config/session.php,config/cache.php,config/queue.php,config/auth.php,app/Models/PersonalAccessToken.php,app/Models/Product.php,app/Providers/AppServiceProvider.php,resources/js/lib/productName.ts | .ai/rules/shared-database.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellSlot.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellStatus.ts,resources/js/lib/cellHighlight.ts | .ai/rules/lib.md |
 | app/Http/Middleware/**, app/Http/Middleware/BlockMaliciousRequests.php,config/waf.php, app/Http/Middleware/RestrictToAllowedIps.php,config/telescope.php,config/pulse.php | .ai/rules/middleware.md |
 | database/migrations/**, database/migrations/2026_08_08_154136_create_products_table.php | .ai/rules/migrations.md |

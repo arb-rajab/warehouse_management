@@ -3,6 +3,7 @@ import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
 import { nextTick, ref, watch } from 'vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { productName } from '@/lib/productName';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
@@ -128,7 +129,9 @@ function buttonLabel(): string {
                         @change="toggleValue(product.id.toString())"
                         @keydown="onOptionKeydown($event, index)"
                     />
-                    <span class="break-words">{{ product.name }}</span>
+                    <span class="break-words">{{
+                        productName(product.name, product.ar_name)
+                    }}</span>
                 </label>
 
                 <p

@@ -5,6 +5,7 @@ paths:
   - app/Models/PersonalAccessToken.php
   - app/Models/Product.php
   - app/Providers/AppServiceProvider.php
+  - resources/js/lib/productName.ts
 ---
 
 # Shared production database (WMS + store app)
@@ -32,9 +33,8 @@ eleven; only these are consumed here:
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
 | `Product::$id` | `products.id` `int(11)` signed | see below |
-| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; the label rendered in English, and the fallback in Arabic |
-| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, rendered in Arabic — see below. The store's `product_translations` table is still not read |
-| `Product::$display_name` | derived | `ar_name ?: name` under the Arabic locale, `name` otherwise — the only product label any payload emits |
+| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; shipped raw, and the label the frontend renders outside Arabic |
+| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, shipped raw alongside `name`, rendered in Arabic — see below. The store's `product_translations` table is still not read |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
 | `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
@@ -44,7 +44,7 @@ Do not mirror the store's other columns into either stand-in migration, and do
 not widen a `select()` to `Product::all()` — the narrow column lists are what
 keep this app insulated from a schema it does not control.
 
-### `ar_name`: searched in both locales, rendered only in Arabic
+### `ar_name`: searched in both locales, rendered in Arabic by the frontend
 
 Two separate decisions, deliberately different from each other.
 
@@ -70,62 +70,88 @@ Two things the search implementation depends on, both covered by tests:
 - **An empty `ar_name` matches nothing**, which is what keeps a product the
   store never translated out of an English term's results through that column.
 
-**Rendering does follow the locale, and only through `display_name`.**
-`Product::$display_name` (`ar_name ?: name` under `ar`, `name` otherwise) is
-the single place that choice is made, and every payload that carries a product
-label emits it under the key it always used — `ProductResource`,
-`ProductOptionResource` and `ProductSummaryResource` all return
-`'name' => $this->display_name`, and `Pallet::toMapSummaryArray()` returns
-`'product_name' => $this->product->display_name`. Nothing emits `ar_name`
-itself, and no Vue component picks a name from the shared `locale` prop:
-resolving on the backend keeps every render site and every TS type unchanged
-(so there is no site to forget), and the mobile API — which has no shared
-Inertia prop — needs backend resolution regardless.
+**Rendering follows the locale, and the choice is made in Vue, not PHP.**
+Every payload carrying a product name ships **both raw store columns**, and
+`resources/js/lib/productName.ts` picks between them:
+
+```ts
+productName(name, arName) // arName || name under `ar`, name otherwise
+```
+
+`ProductResource`, `ProductOptionResource` and `ProductSummaryResource` all
+emit `name` **and** `ar_name`; `Pallet::toMapSummaryArray()` emits
+`product_name` **and** `product_ar_name`; `Product::optionLabels()` (behind
+`filterOptions()`/`selectedOptions()`) maps to `{id, name, ar_name}`. There is
+no `display_name` accessor any more — the model has no locale-aware attribute
+at all, and no payload varies by locale.
+
+Why the choice moved out of the backend, having first been made in it:
+
+- **One payload, one contract.** `ProductResource` is dual-audience: the mobile
+  app (`Api\V1\ProductController`, and nested via `PalletResource`,
+  `CellStatusLogResource`, `CellVerificationReportResource`) *and* the admin
+  Inertia panel. Resolving on the backend made `name`'s *content* depend on
+  `Accept-Language` while its key and type stayed put — a response two clients
+  could not cache or compare. Shipping both columns gives both audiences the
+  same bytes.
+- **The mobile app reads English until it adopts `ar_name`.** Accepted
+  knowingly: `name` is the raw base name for every client now, `ar_name` is
+  additive, and the mobile codebase (separate, not in this repo) picks it up on
+  its own schedule. It was never shipping Arabic product names in production —
+  the backend resolution that would have given it them was merged but not
+  released, and staging's `products` rows all carry `ar_name = ''` anyway.
+- **The web panel needs no round trip.** The locale is already on the client
+  (`i18n.global.locale.value`, set from the shared Inertia `locale` prop in
+  `resources/js/app.ts`), so a language switch re-renders labels from props
+  already in memory instead of depending on a server render.
 
 Four consequences worth knowing before changing any of this:
 
-- **`?:`, never `??`.** `ar_name` is NOT NULL upstream, so an untranslated
-  product carries `''` rather than null. `??` would render a blank label.
-  `ProductFactory` supplies a value deliberately *unlike* the English `name`;
-  pass `'ar_name' => ''` explicitly to exercise the fallback.
-- **The accessor reads `ar_name` before the locale branch, not inside it.**
-  That is load-bearing, not a redundant read: a query missing `ar_name` from
-  its `select()` must fail the same way in both locales. Read lazily, such a
-  query would pass every English-locale test and only blow up once someone
-  switched the panel to Arabic. With the eager read, strict mode's
-  `preventAccessingMissingAttributes` (see app-providers.md) turns a forgotten
-  column into a `MissingAttributeException` in the existing English tests. In
-  production, where strict mode is off, the attribute reads as null and the
-  label degrades to English rather than erroring at a warehouse worker.
+- **`?:` on the backend, `||` in TS — never `??`.** `ar_name` is NOT NULL
+  upstream, so an untranslated product carries `''` rather than null. `??`
+  would render a blank label. `ProductFactory` supplies a value deliberately
+  *unlike* the English `name`; pass `'ar_name' => ''` explicitly to exercise
+  the fallback, and cover both a populated and an empty `ar_name` in both
+  locales when adding a render site.
+- **Resolve once, at the render site — never twice.** `CellMap3D.vue`
+  re-projects a `CellMap3DItem` back into a `CellPallet`-shaped object it hands
+  to `CellSlot.vue`, which resolves the label itself; that re-projection passes
+  `product_ar_name` straight through. Resolving in both places double-applies
+  the choice. The one memo that stores a *resolved* label rather than raw
+  columns is `useProductSearch`'s `namesById`, which deliberately outlives the
+  result page a selection came from.
 - **Every product `select()`/eager load carries `ar_name`.** Currently
   `Admin\ProductController::index()` and `::search()`,
-  `Api\V1\ProductController::index()`, `Product::optionLabels()` (behind
-  `filterOptions()`/`selectedOptions()`), `Cell::WITH_CONTENTS`,
-  `CellStatusLog`'s and `CellVerificationReport`'s eager-load constants, and
+  `Api\V1\ProductController::index()`, `Product::optionLabels()`,
+  `Cell::WITH_CONTENTS`, `CellStatusLog`'s and `CellVerificationReport`'s
+  eager-load constants, and
   `Api\V1\PalletController`/`Api\V1\CellVerificationReportController`'s.
-  Add it to any new one.
-- **The mobile API's `name` key now varies by `Accept-Language`.** That was a
-  decision, not an oversight: the API already returns locale-dependent string
-  content under stable keys (`PalletResource.boxes_depleted_message`), the
-  type and nullability of `name` are unchanged, and an additive
-  `display_name` key would have left Arabic-speaking workers reading English
-  product names until a separate mobile release adopted it. A client that
-  wants the store's base name should not send `Accept-Language: ar`.
+  Add it to any new one. Every Resource now reads `ar_name` unconditionally, so
+  outside production a query that leaves it out throws a
+  `MissingAttributeException` in *both* locales (strict mode's
+  `preventAccessingMissingAttributes` — see app-providers.md), and the
+  response-shape tests that assert `ar_name` are what catch it. In production,
+  where strict mode is off, the attribute reads as null and the frontend
+  degrades to the base `name` rather than erroring at a warehouse worker.
+- **A missed render site fails silently.** Nothing throws when a component
+  renders `product.name` directly; it just shows English to an Arabic user. The
+  frontend tests therefore assert the *rendered* label in both locales rather
+  than only the props received.
 
-The one place that deliberately still reads the raw `name` is
+The one place that deliberately still reads the raw `name` alone is
 `Admin\CellVerificationRoundController::export()`'s CSV. That file is data
 rather than UI — its column headers are untranslated snake_case machine names
 (`expected_product`, `cell_number`) and `is_correct` is a literal `yes`/`no` —
-so its product column stays on the store's stable base name in both locales.
-A test pins that; if the export ever gains translated headers, revisit it as a
-whole rather than switching that one column.
+so its product column stays on the store's stable base name in both locales and
+never emits `ar_name` at all. A test pins that; if the export ever gains
+translated headers, revisit it as a whole rather than switching that one column.
 
 `filterOptions()` and `selectedOptions()` are the only product payloads that
 never pass through a Resource, so `Product::optionLabels()` maps them to plain
-`{id, name}` arrays instead of serialising models — that is what keeps
-`ar_name`, read only to derive the label, out of the response, and what keeps
-the shape identical to the frontend's `ProductFilterOption`. Don't revert them
-to returning `Collection<int, Product>`.
+`{id, name, ar_name}` arrays instead of serialising models — that is what keeps
+the emitted shape identical to the frontend's `ProductFilterOption`, and what
+keeps the other 69 store columns out of the response. Don't revert them to
+returning `Collection<int, Product>`.
 
 **Ordering deliberately stays on the base `name` column in both locales**, and
 that is a skipped feature rather than an oversight. Sorting an Arabic listing
@@ -135,8 +161,10 @@ name ELSE ar_name END`, which then mixes two scripts in one ordering, and MySQL
 utf8mb4 collation and sqlite's byte ordering disagree about the result — CI is
 sqlite, so no test could pin the production behaviour. It would also make the
 products index's `sort_by=name` column and its page boundaries mean different
-things per locale. If Arabic-collated ordering is wanted, it needs a decision
-about untranslated products first.
+things per locale. Moving rendering to the client does not change this: the
+server still paginates, so the page a product lands on is decided in SQL. If
+Arabic-collated ordering is wanted, it needs a decision about untranslated
+products first.
 
 The stand-in declares `ar_name` NOT NULL with an empty-string default. Upstream
 it is `varchar(191) NOT NULL`; the default is a stand-in-only convenience so a

@@ -49,7 +49,7 @@ const filterOptions: CellVerificationReportFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
 };
 
 function mountPage(
@@ -410,6 +410,7 @@ describe('CellVerificationRounds Show', () => {
                     product: {
                         id: 10,
                         name: 'Widgets',
+                        ar_name: 'ودجات',
                         image_url: null,
                         boxes_count: 10,
                     },

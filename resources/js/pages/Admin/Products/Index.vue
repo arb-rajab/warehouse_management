@@ -36,6 +36,7 @@ import {
     useColumnFilterPopover,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { productName } from '@/lib/productName';
 import type {
     Paginated,
     ProductFilters,
@@ -488,10 +489,10 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
                         <img
                             v-if="product.image_url"
                             :src="product.image_url"
-                            :alt="product.name"
+                            :alt="productName(product.name, product.ar_name)"
                             class="h-8 w-8 shrink-0 rounded object-cover"
                         />
-                        {{ product.name }}
+                        {{ productName(product.name, product.ar_name) }}
                     </div>
                 </td>
                 <td class="px-4 py-2">
@@ -502,7 +503,10 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
                         :value="product.boxes_count"
                         :aria-label="
                             t('products.boxesPerPalletLabel', {
-                                product: product.name,
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
                             })
                         "
                         class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"

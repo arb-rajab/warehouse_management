@@ -1,8 +1,8 @@
 import { CalendarPlus, CircleDashed, Inbox, PackageOpen } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import { cell } from '@/testing/factories';
 import CellSlot from './CellSlot.vue';
 
@@ -20,6 +20,10 @@ function mountSlot(
 }
 
 describe('CellSlot', () => {
+    afterEach(() => {
+        i18n.global.locale.value = 'en';
+    });
+
     it('renders the given label', () => {
         const wrapper = mountSlot({ label: 'B3·2' });
 
@@ -89,6 +93,7 @@ describe('CellSlot', () => {
                     id: 9,
                     product_id: 1,
                     product_name: 'Widgets',
+                    product_ar_name: 'ودجات',
                     product_image_url: '/img/widgets.png',
                     expiration_date: '2026-09-01',
                     added_at: '2026-08-01T10:00:00Z',
@@ -115,6 +120,7 @@ describe('CellSlot', () => {
                     id: 9,
                     product_id: 1,
                     product_name: 'Widgets',
+                    product_ar_name: 'ودجات',
                     product_image_url: null,
                     expiration_date: '2026-09-01',
                     added_at: null,
@@ -137,6 +143,7 @@ describe('CellSlot', () => {
                     id: 1,
                     product_id: 1,
                     product_name: 'Widgets',
+                    product_ar_name: 'ودجات',
                     product_image_url: null,
                     expiration_date: '2026-08-01',
                     added_at: '2026-07-01T10:00:00Z',
@@ -296,5 +303,54 @@ describe('CellSlot', () => {
         expect(mountSlot({ pulsing: true }).classes()).toContain(
             'ring-emerald-500',
         );
+    });
+
+    it("renders the pallet product's Arabic name, and its alt text, when the locale is Arabic", () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountSlot({
+            cell: cell({
+                state: 'full',
+                pallet: {
+                    id: 9,
+                    product_id: 1,
+                    product_name: 'Widgets',
+                    product_ar_name: 'ودجات',
+                    product_image_url: '/img/widgets.png',
+                    expiration_date: '2026-09-01',
+                    added_at: null,
+                    is_stale: null,
+                    remaining_boxes: 10,
+                },
+            }),
+        });
+
+        expect(wrapper.text()).toContain('ودجات');
+        expect(wrapper.text()).not.toContain('Widgets');
+        expect(wrapper.get('img').attributes('alt')).toBe('ودجات');
+    });
+
+    it('falls back to the base product name in Arabic when the store never translated it', () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountSlot({
+            cell: cell({
+                state: 'full',
+                pallet: {
+                    id: 9,
+                    product_id: 1,
+                    product_name: 'Widgets',
+                    product_ar_name: '',
+                    product_image_url: '/img/widgets.png',
+                    expiration_date: '2026-09-01',
+                    added_at: null,
+                    is_stale: null,
+                    remaining_boxes: 10,
+                },
+            }),
+        });
+
+        expect(wrapper.text()).toContain('Widgets');
+        expect(wrapper.get('img').attributes('alt')).toBe('Widgets');
     });
 });

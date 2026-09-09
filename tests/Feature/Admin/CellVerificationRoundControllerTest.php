@@ -119,7 +119,7 @@ test('an authenticated admin can view a single round with its own reports and ev
     $cell = $row->cells()->first();
     $round = CellVerificationRound::factory()->create();
     $reporter = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
-    $product = Product::factory()->imageUrl(null)->boxesCount(5)->create(['name' => 'Widgets']);
+    $product = Product::factory()->imageUrl(null)->boxesCount(5)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     $report = CellVerificationReport::factory()->create([
         'cell_verification_round_id' => $round->id,
         'cell_id' => $cell->id,
@@ -156,6 +156,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                     ->has('product', fn (Assert $productProp) => $productProp
                         ->where('id', $product->id)
                         ->where('name', 'Widgets')
+                        ->where('ar_name', 'ودجات')
                         ->where('image_url', null)
                         ->where('boxes_count', 5)
                     )
@@ -178,14 +179,15 @@ test('an authenticated admin can view a single round with its own reports and ev
     );
 });
 
-test('a round\'s report snapshots name the product in Arabic, falling back for an untranslated one', function () {
+test('a round\'s report snapshots ship both raw product name columns on each half', function () {
     actingAsAdmin();
 
     $row = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
     $round = CellVerificationRound::factory()->create();
     $expected = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     // The reported half is a separate eager load, so it needs its own proof —
-    // and an untranslated product there covers the fallback at the same time.
+    // and an untranslated product there covers the empty-string case that the
+    // frontend resolver falls back on.
     $reported = Product::factory()->imageUrl(null)->create(['name' => 'Gadgets', 'ar_name' => '']);
 
     CellVerificationReport::factory()->create([
@@ -202,8 +204,10 @@ test('a round\'s report snapshots name the product in Arabic, falling back for a
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('reports.data', 1)
-            ->where('reports.data.0.expected.product.name', 'ودجات')
+            ->where('reports.data.0.expected.product.name', 'Widgets')
+            ->where('reports.data.0.expected.product.ar_name', 'ودجات')
             ->where('reports.data.0.reported.product.name', 'Gadgets')
+            ->where('reports.data.0.reported.product.ar_name', '')
     );
 });
 
@@ -275,10 +279,11 @@ test('a rounds reports listing paginates beyond one page', function () {
 });
 
 test('the reports csv keeps the store\'s base product name even under the Arabic locale', function () {
-    // The export is data, not UI: its column headers are untranslated
-    // machine names, so its product column stays on the store's stable base
-    // `name` rather than following the panel locale like every rendered
-    // label does. See .ai/rules/shared-database.md.
+    // The export is data, not UI: its column headers are untranslated machine
+    // names, so its product column stays on the store's stable base `name`
+    // and never emits `ar_name`, unlike every rendered label — which now ships
+    // both columns for the frontend to choose from.
+    // See .ai/rules/shared-database.md.
     actingAsAdmin();
 
     $round = CellVerificationRound::factory()->create();

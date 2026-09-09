@@ -18,6 +18,7 @@ test('an authenticated admin can view the products index with every property the
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     Pallet::factory()->create([
         'product_id' => $product->id,
@@ -33,6 +34,7 @@ test('an authenticated admin can view the products index with every property the
             ->has('products.data.0', fn (Assert $productProp) => $productProp
                 ->where('id', $product->id)
                 ->where('name', 'Widgets')
+                ->where('ar_name', 'ودجات')
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('boxes_count', 24)
                 ->where('full_cells_count', 1)
@@ -52,7 +54,9 @@ test('an authenticated admin can view the products index with every property the
     Carbon::setTestNow();
 });
 
-test('the products index renders the store\'s Arabic name when the panel locale is Arabic', function () {
+test('the products index ships both raw name columns under the Arabic panel locale too', function () {
+    // The Inertia payload no longer varies by locale: `lib/productName.ts`
+    // picks the label client-side. See .ai/rules/shared-database.md.
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
@@ -76,7 +80,8 @@ test('the products index renders the store\'s Arabic name when the panel locale 
             ->has('products.data', 1)
             ->has('products.data.0', fn (Assert $productProp) => $productProp
                 ->where('id', $product->id)
-                ->where('name', 'ودجات')
+                ->where('name', 'Widgets')
+                ->where('ar_name', 'ودجات')
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('boxes_count', 24)
                 ->where('full_cells_count', 1)
@@ -91,12 +96,12 @@ test('the products index renders the store\'s Arabic name when the panel locale 
     Carbon::setTestNow();
 });
 
-test('the products index falls back to the base name for a product the store never translated', function () {
-    // `ar_name` is NOT NULL upstream, so an untranslated product carries an
-    // empty string — the table cell must not come back blank.
+test('the products index ships an empty ar_name for a product the store never translated', function () {
+    // NOT NULL upstream, so an untranslated product carries an empty string —
+    // that is what the frontend resolver falls back on, and it must reach it.
     actingAsAdmin();
     Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
-    // Noise: a translated sibling proves the fallback is per product, not a
+    // Noise: a translated sibling proves the empty value is per product, not a
     // whole-listing decision.
     Product::factory()->create(['name' => 'Aardvarks', 'ar_name' => 'حيوانات']);
 
@@ -106,12 +111,14 @@ test('the products index falls back to the base name for a product the store nev
         fn (Assert $page) => $page->has('products.data', 2)
             // Ordering deliberately stays on the base `name` column in both
             // locales, so "Aardvarks" still sorts first.
-            ->where('products.data.0.name', 'حيوانات')
+            ->where('products.data.0.name', 'Aardvarks')
+            ->where('products.data.0.ar_name', 'حيوانات')
             ->where('products.data.1.name', 'Widgets')
+            ->where('products.data.1.ar_name', '')
     );
 });
 
-test('the products index hydrates the product filter chips with the Arabic name', function () {
+test('the products index hydrates the product filter chips with both raw name columns', function () {
     actingAsAdmin();
     $selected = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Unselected Gadgets', 'ar_name' => 'أدوات']);
@@ -120,7 +127,7 @@ test('the products index hydrates the product filter chips with the Arabic name'
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
     );
 });
 
@@ -506,6 +513,7 @@ test('an authenticated admin can search products with every property the filter 
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->create([
         'name' => 'Widget',
+        'ar_name' => 'ودجة',
     ]);
     $otherProduct = Product::factory()->create(['name' => 'Gadget']);
 
@@ -515,16 +523,17 @@ test('an authenticated admin can search products with every property the filter 
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
         'name' => 'Widget',
+        'ar_name' => 'ودجة',
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the product search labels options with the Arabic name when the panel locale is Arabic', function () {
+test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
     actingAsAdmin();
 
     $product = Product::factory()->create(['name' => 'Widget', 'ar_name' => 'ودجة']);
-    // Noise: another product's Arabic name must not be the one returned.
+    // Noise: another product's names must not be the ones returned.
     Product::factory()->create(['name' => 'Gadget', 'ar_name' => 'أداة']);
 
     $response = $this->withSession(['locale' => 'ar'])->getJson('/admin/products/search');
@@ -532,11 +541,12 @@ test('the product search labels options with the Arabic name when the panel loca
     $response->assertOk();
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
-        'name' => 'ودجة',
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
     ]);
 });
 
-test('the product search falls back to the base name for a product the store never translated', function () {
+test('a searched product the store never translated carries an empty ar_name, not a null one', function () {
     actingAsAdmin();
 
     $product = Product::factory()->create(['name' => 'Widget', 'ar_name' => '']);
@@ -547,6 +557,7 @@ test('the product search falls back to the base name for a product the store nev
     expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
         'id' => $product->id,
         'name' => 'Widget',
+        'ar_name' => '',
     ]);
 });
 
@@ -585,10 +596,9 @@ test('the product search filters by the store\'s Arabic name, excluding a non-ma
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
-    // Searching is locale-independent; the label is not. This request has no
-    // Arabic locale in session, so an Arabic term still labels the option
-    // with the English `name`.
-    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets']);
+    // Searching matches either column, and the option carries both raw — the
+    // locale only decides which of them the frontend renders.
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
 });
 
 test('the product search matches a multi-word term split across the two name columns', function () {

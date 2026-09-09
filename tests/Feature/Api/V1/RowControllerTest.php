@@ -64,6 +64,7 @@ test('an authenticated worker can list every row with its cells and their pallet
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $occupiedCell = $row->cells()->where('cell_number', 1)->first();
     $emptyCell = $row->cells()->where('cell_number', 2)->first();
@@ -91,6 +92,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'id' => $pallet->id,
             'product_id' => $product->id,
             'product_name' => 'Widgets',
+            'product_ar_name' => 'ودجات',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),

@@ -11,12 +11,15 @@ use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
 
-test('the warehouse map labels a pallet with the store\'s Arabic name when the panel locale is Arabic', function () {
+test('the warehouse map ships both raw product name columns, whatever the panel locale', function () {
+    // `lib/productName.ts` picks the label client-side, so the payload is the
+    // same in both locales. See .ai/rules/shared-database.md.
     actingAsAdmin();
 
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
     $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
-    // Noise: an untranslated product in the next cell must still read English.
+    // Noise: an untranslated product in the next cell ships an empty ar_name,
+    // which is what the frontend resolver falls back on.
     $untranslated = Product::factory()->imageUrl(null)->create(['name' => 'Gadgets', 'ar_name' => '']);
     Pallet::factory()->create([
         'product_id' => $product->id,
@@ -31,13 +34,17 @@ test('the warehouse map labels a pallet with the store\'s Arabic name when the p
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page
-            ->where('cells.0.pallet.product_name', 'ودجات')
+            ->where('cells.0.pallet.product_name', 'Widgets')
+            ->where('cells.0.pallet.product_ar_name', 'ودجات')
             ->where('cells.1.pallet.product_name', 'Gadgets')
+            ->where('cells.1.pallet.product_ar_name', '')
             // cellHighlightSamples builds on the same shared shape, so it has
-            // to resolve the label identically or the flat-tab match badges
+            // to carry both columns identically or the flat-tab match badges
             // would disagree with the cells they count.
-            ->where('cellHighlightSamples.0.pallet.product_name', 'ودجات')
+            ->where('cellHighlightSamples.0.pallet.product_name', 'Widgets')
+            ->where('cellHighlightSamples.0.pallet.product_ar_name', 'ودجات')
             ->where('cellHighlightSamples.1.pallet.product_name', 'Gadgets')
+            ->where('cellHighlightSamples.1.pallet.product_ar_name', '')
     );
 });
 
@@ -49,6 +56,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
     $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
@@ -79,6 +87,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                     ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
+                    ->where('product_ar_name', 'ودجات')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
@@ -107,6 +116,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                     ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
+                    ->where('product_ar_name', 'ودجات')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
