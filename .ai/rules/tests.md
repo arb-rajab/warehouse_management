@@ -60,5 +60,14 @@ test('viewing the edit page for a non-existent row returns a 404', function () {
 
 `createTransferPair($pallet, $source, $destination, $outAt, $inAt)` (also in Pest.php) creates the matching `transferred_out`/`transferred_in` `CellStatusLog` row pair a real transfer writes in one transaction (see concerns-models.md, cell-status-logs.md), already backdated — use it instead of hand-rolling both factory calls whenever a test needs a transfer pair or a next-log/duration chain to test against.
 
+## Grep for ALL occurrences of a pattern before fixing any single one
+Before fixing (or updating) one instance of a pattern — a selector, a key name, a PHPDoc annotation — grep the entire relevant file (or codebase) for all occurrences of that pattern and fix every one in the same change:
+
+```bash
+grep -n "get('input')" resources/js/pages/Admin/Products/Index.test.ts
+```
+
+Never fix the first hit and push without enumerating the rest. A partial fix looks green locally but fails in CI when a second occurrence triggers the same failure, costing a full CI round trip per missed occurrence. Enumerate first, fix all, then push once.
+
 ## Authenticate admin-panel tests with actingAsAdmin()
 Use the `actingAsAdmin()` helper in `tests/Pest.php` instead of writing `$this->actingAs(User::factory()->create())` — it mirrors `actingAsMobileUser()` and returns the user for tests that need to reference it (its own id/name/etc., e.g. self-delete or self-demote tests). Only write the raw factory+actingAs pattern when the acting user needs non-default factory attributes (e.g. a specific name/email for an assertion).
