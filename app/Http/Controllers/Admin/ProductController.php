@@ -111,6 +111,11 @@ class ProductController extends Controller
      * this is WMS-owned data in `wms_product_settings`, which the store has no
      * column for. `updateOrCreate` because a product the store added may have
      * no settings row yet. See .ai/rules/shared-database.md.
+     *
+     * Redirects to `admin.products.index` rather than `back()` — the Referer
+     * header is stripped app-wide by `no-referrer` policy, and Inertia SPA
+     * visits don't update the session's previous URL, so `back()` lands on
+     * whatever the last full page load was (typically the dashboard).
      */
     public function updateBoxCount(UpdateProductBoxCountRequest $request, Product $product): RedirectResponse
     {
@@ -118,7 +123,7 @@ class ProductController extends Controller
             'boxes_count' => $request->integer('boxes_count'),
         ]);
 
-        return back();
+        return redirect()->route('admin.products.index', $request->query());
     }
 
     /**

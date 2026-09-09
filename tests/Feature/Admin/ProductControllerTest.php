@@ -649,7 +649,7 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
 
     $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
-    $response->assertRedirect();
+    $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
         'product_id' => $product->id,
         'boxes_count' => 30,
