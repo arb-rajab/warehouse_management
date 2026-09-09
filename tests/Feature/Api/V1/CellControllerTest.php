@@ -4,12 +4,14 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 
-test('an Arabic-locale worker sees the store\'s Arabic product name on a cell\'s pallet', function () {
+test('a cell\'s pallet carries both raw product name columns, whatever the request locale', function () {
+    // The payload no longer varies by `Accept-Language`: both store columns
+    // ship raw. See .ai/rules/shared-database.md.
     actingAsMobileUser();
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
-    // Noise: an untranslated product on another row must still read as English.
+    // Noise: an untranslated product on another row ships an empty ar_name.
     $otherRow = Row::factory()->create(['letter' => 'Y', 'cells_count' => 1, 'flats_count' => 1]);
     $untranslated = Product::factory()->create(['name' => 'Gadgets', 'ar_name' => '']);
     Pallet::factory()->create([
@@ -24,10 +26,12 @@ test('an Arabic-locale worker sees the store\'s Arabic product name on a cell\'s
     $otherResponse = $this->getJson("/api/v1/rows/{$otherRow->letter}/cells", ['Accept-Language' => 'ar']);
 
     $response->assertOk();
-    expect($response->json('data.0.pallet.product_name'))->toBe('ودجات');
+    expect($response->json('data.0.pallet.product_name'))->toBe('Widgets');
+    expect($response->json('data.0.pallet.product_ar_name'))->toBe('ودجات');
 
     $otherResponse->assertOk();
     expect($otherResponse->json('data.0.pallet.product_name'))->toBe('Gadgets');
+    expect($otherResponse->json('data.0.pallet.product_ar_name'))->toBe('');
 });
 
 test('an authenticated worker can list a row cells with every property the app reads', function () {
@@ -36,6 +40,7 @@ test('an authenticated worker can list a row cells with every property the app r
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $occupiedCell = $row->cells()->where('cell_number', 1)->first();
     $emptyCell = $row->cells()->where('cell_number', 2)->first();
@@ -55,6 +60,7 @@ test('an authenticated worker can list a row cells with every property the app r
             'id' => $pallet->id,
             'product_id' => $product->id,
             'product_name' => 'Widgets',
+            'product_ar_name' => 'ودجات',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
@@ -133,6 +139,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 3, 'flats_count' => 2]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $cell = $row->cells()->where('cell_number', 2)->where('flat_number', 1)->first();
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
@@ -151,6 +158,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
             'id' => $pallet->id,
             'product_id' => $product->id,
             'product_name' => 'Widgets',
+            'product_ar_name' => 'ودجات',
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),

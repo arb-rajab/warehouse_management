@@ -28,6 +28,7 @@ test('an authenticated admin can view the cell log with every property the table
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
@@ -74,6 +75,7 @@ test('an authenticated admin can view the cell log with every property the table
                 ->has('product', fn (Assert $productProp) => $productProp
                     ->where('id', $product->id)
                     ->where('name', 'Widgets')
+                    ->where('ar_name', 'ودجات')
                     ->where('image_url', 'https://cdn.example.com/widgets.png')
                     ->where('boxes_count', 10)
                 )
@@ -98,7 +100,7 @@ test('an authenticated admin can view the cell log with every property the table
     Carbon::setTestNow();
 });
 
-test('the cell log renders the store\'s Arabic product name, falling back for an untranslated product', function () {
+test('the cell log ships both raw product name columns, falling back to none of them', function () {
     actingAsAdmin();
 
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
@@ -106,7 +108,8 @@ test('the cell log renders the store\'s Arabic product name, falling back for an
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
-    // Noise: an untranslated product's log must stay English in the same list.
+    // Noise: an untranslated product's log ships an empty ar_name in the same
+    // list, which is what the frontend resolver falls back on.
     $untranslated = Product::factory()->imageUrl(null)->boxesCount(4)->create([
         'name' => 'Gadgets',
         'ar_name' => '',
@@ -126,15 +129,17 @@ test('the cell log renders the store\'s Arabic product name, falling back for an
     $this->withSession(['locale' => 'ar'])->get("/admin/cell-logs?product_id[]={$product->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('logs.data', 1)
-            ->where('logs.data.0.product.name', 'ودجات'));
+            ->where('logs.data.0.product.name', 'Widgets')
+            ->where('logs.data.0.product.ar_name', 'ودجات'));
 
     $this->withSession(['locale' => 'ar'])->get("/admin/cell-logs?product_id[]={$untranslated->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('logs.data', 1)
-            ->where('logs.data.0.product.name', 'Gadgets'));
+            ->where('logs.data.0.product.name', 'Gadgets')
+            ->where('logs.data.0.product.ar_name', ''));
 });
 
-test('the cell log hydrates the product filter chips with the Arabic name', function () {
+test('the cell log hydrates the product filter chips with both raw name columns', function () {
     actingAsAdmin();
     $selected = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Unselected Gadgets', 'ar_name' => 'أدوات']);
@@ -143,7 +148,7 @@ test('the cell log hydrates the product filter chips with the Arabic name', func
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
     );
 });
 

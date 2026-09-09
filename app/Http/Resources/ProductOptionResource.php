@@ -7,7 +7,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @property-read int $id
- * @property-read string $display_name
+ * @property-read string $name
+ * @property-read string $ar_name
  */
 class ProductOptionResource extends JsonResource
 {
@@ -20,7 +21,8 @@ class ProductOptionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->display_name,
+            'name' => $this->name,
+            'ar_name' => $this->ar_name,
         ];
     }
 }

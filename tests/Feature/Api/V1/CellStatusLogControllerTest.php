@@ -26,6 +26,7 @@ test('an authenticated worker can list cell logs with every property the app rea
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
@@ -69,6 +70,7 @@ test('an authenticated worker can list cell logs with every property the app rea
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',
+            'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
         ],

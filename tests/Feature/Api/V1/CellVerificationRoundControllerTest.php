@@ -87,7 +87,7 @@ test('a worker can view one of their own rounds, including its reports in report
 
     $row = Row::factory()->create(['letter' => 'D', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
-    $product = Product::factory()->imageUrl(null)->boxesCount(4)->create(['name' => 'Widgets']);
+    $product = Product::factory()->imageUrl(null)->boxesCount(4)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     $reporter = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
 
     $first = backdate(CellVerificationReport::factory()->create([
@@ -164,6 +164,7 @@ test('a worker can view one of their own rounds, including its reports in report
                     'product' => [
                         'id' => $product->id,
                         'name' => 'Widgets',
+                        'ar_name' => 'ودجات',
                         'image_url' => null,
                         'boxes_count' => 4,
                     ],

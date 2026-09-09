@@ -222,6 +222,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
 
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $occupiedCell = $row->cells()->where('cell_number', 1)->first();
     $emptyCell = $row->cells()->where('cell_number', 2)->first();
@@ -252,6 +253,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                     ->where('id', $pallet->id)
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
+                    ->where('product_ar_name', 'ودجات')
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', $pallet->expiration_date->toDateString())
                     ->where('added_at', $pallet->created_at->toIso8601String())

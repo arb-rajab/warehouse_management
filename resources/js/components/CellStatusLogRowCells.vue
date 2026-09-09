@@ -16,6 +16,7 @@ import type { DisplayCellStatusLog } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { productName } from '@/lib/productName';
 
 /**
  * One cell-status-log row's cells, shared by the cell-log listing
@@ -110,10 +111,10 @@ const pair = computed(() => transferPair(props.log));
             <img
                 v-if="log.product.image_url"
                 :src="log.product.image_url"
-                :alt="log.product.name"
+                :alt="productName(log.product.name, log.product.ar_name)"
                 class="h-8 w-8 shrink-0 rounded object-cover"
             />
-            {{ log.product.name }}
+            {{ productName(log.product.name, log.product.ar_name) }}
         </div>
         <span v-else class="text-gray-400 dark:text-neutral-600">—</span>
     </td>

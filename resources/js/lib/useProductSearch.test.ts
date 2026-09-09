@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
+import { i18n } from './i18n';
 import { useProductSearch } from './useProductSearch';
 
 interface HttpGetOptions {
@@ -69,6 +70,7 @@ describe('useProductSearch', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        i18n.global.locale.value = 'en';
     });
 
     it('starts empty, idle, with no results', () => {
@@ -93,7 +95,7 @@ describe('useProductSearch', () => {
         const wrapper = mountSearch();
 
         wrapper.vm.fetchFirstPageIfEmpty();
-        resolveCall(0, page([{ id: 1, name: 'Widgets' }]));
+        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
         await wrapper.vm.$nextTick();
 
         wrapper.vm.fetchFirstPageIfEmpty();
@@ -108,15 +110,15 @@ describe('useProductSearch', () => {
         resolveCall(
             0,
             page([
-                { id: 1, name: 'Widgets' },
-                { id: 2, name: 'Gadgets' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
             ]),
         );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.results).toEqual([
-            { id: 1, name: 'Widgets' },
-            { id: 2, name: 'Gadgets' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+            { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
         ]);
         expect(wrapper.vm.namesById.get(1)).toBe('Widgets');
         expect(wrapper.vm.namesById.get(2)).toBe('Gadgets');
@@ -125,7 +127,9 @@ describe('useProductSearch', () => {
     it('rememberNames records a name without fetching', () => {
         const wrapper = mountSearch();
 
-        wrapper.vm.rememberNames([{ id: 5, name: 'Preselected' }]);
+        wrapper.vm.rememberNames([
+            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا' },
+        ]);
 
         expect(wrapper.vm.namesById.get(5)).toBe('Preselected');
         expect(getMock).not.toHaveBeenCalled();
@@ -160,10 +164,18 @@ describe('useProductSearch', () => {
         expect(getMock).toHaveBeenCalledTimes(2);
 
         // Resolve the newer ("new") request first, then the stale ("old") one.
-        resolveCall(1, page([{ id: 2, name: 'New product' }]));
-        resolveCall(0, page([{ id: 1, name: 'Old product' }]));
+        resolveCall(
+            1,
+            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+        );
+        resolveCall(
+            0,
+            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+        );
 
-        expect(wrapper.vm.results).toEqual([{ id: 2, name: 'New product' }]);
+        expect(wrapper.vm.results).toEqual([
+            { id: 2, name: 'New product', ar_name: 'منتج جديد' },
+        ]);
     });
 
     it('onOptionsScroll fetches the next page when scrolled near the bottom', async () => {
@@ -172,7 +184,10 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -188,20 +203,26 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
         wrapper.vm.onOptionsScroll(scrollElement());
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+                currentPage: 2,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.results).toEqual([
-            { id: 1, name: 'Widgets' },
-            { id: 2, name: 'Gadgets' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+            { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
         ]);
     });
 
@@ -211,7 +232,10 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 1 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 1,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -226,7 +250,10 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -247,7 +274,10 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -258,5 +288,37 @@ describe('useProductSearch', () => {
         // further scroll event fires — must not fire a third request.
         wrapper.vm.onOptionsScroll(scrollElement());
         expect(getMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('memoizes the label resolved for the active locale, not the raw name', async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountSearch();
+
+        wrapper.vm.fetchFirstPageIfEmpty();
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        // The memo outlives the result page it came from (a selected id keeps
+        // resolving once it scrolls away), so it has to hold the rendered
+        // label — an untranslated product still falling back to its base name.
+        expect(wrapper.vm.namesById.get(1)).toBe('ودجات');
+        expect(wrapper.vm.namesById.get(2)).toBe('Gadgets');
+    });
+
+    it('rememberNames resolves the label for the active locale too', () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountSearch();
+
+        wrapper.vm.rememberNames([
+            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا' },
+        ]);
+
+        expect(wrapper.vm.namesById.get(5)).toBe('محدد مسبقا');
     });
 });

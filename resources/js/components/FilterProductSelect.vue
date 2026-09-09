@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
 import { nextTick, ref, watch } from 'vue';
+import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import {
@@ -128,7 +129,7 @@ function buttonLabel(): string {
                         @change="toggleValue(product.id.toString())"
                         @keydown="onOptionKeydown($event, index)"
                     />
-                    <span class="break-words">{{ product.name }}</span>
+                    <ProductOptionLabel :product="product" />
                 </label>
 
                 <p

@@ -81,30 +81,41 @@ test('isStaleAfter is false when the pallet is younger than the given day count'
     expect($pallet->fresh()->isStaleAfter(5))->toBeFalse();
 });
 
-test('toMapSummaryArray labels the pallet with the store\'s Arabic name when the locale is Arabic', function () {
+test('toMapSummaryArray carries both raw store name columns, whatever the locale', function () {
+    // Nothing is resolved here: `lib/productName.ts` picks the label from the
+    // active locale client-side, so the payload is locale-independent.
     $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
-    // Noise: another pallet's product must not supply the label.
-    Pallet::factory()->create(['product_id' => Product::factory()->create(['ar_name' => 'أدوات'])->id]);
+    // Noise: another pallet's product must not supply either name.
+    Pallet::factory()->create(['product_id' => Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات'])->id]);
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     app()->setLocale('ar');
 
-    expect($pallet->toMapSummaryArray()['product_name'])->toBe('ودجات');
+    expect($pallet->toMapSummaryArray())
+        ->product_name->toBe('Widgets')
+        ->product_ar_name->toBe('ودجات');
 });
 
-test('toMapSummaryArray falls back to the base name for a product the store never translated', function () {
+test('toMapSummaryArray carries an empty product_ar_name for a product the store never translated', function () {
+    // NOT NULL upstream, so an untranslated product ships `''` rather than
+    // null — the frontend resolver falls back on exactly that.
     $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => '']);
     $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     app()->setLocale('ar');
 
-    expect($pallet->toMapSummaryArray()['product_name'])->toBe('Widgets');
+    expect($pallet->toMapSummaryArray())
+        ->product_name->toBe('Widgets')
+        ->product_ar_name->toBe('');
 });
 
 test('toMapSummaryArray describes the pallet by its product, expiration date, and added_at', function () {
     Carbon::setTestNow('2026-08-01 10:00:00');
 
-    $product = Product::factory()->imageUrl('https://example.com/widgets.png')->create(['name' => 'Widgets']);
+    $product = Product::factory()->imageUrl('https://example.com/widgets.png')->create([
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+    ]);
     $pallet = Pallet::factory()->create([
         'product_id' => $product->id,
         'expiration_date' => '2026-09-15',
@@ -113,6 +124,7 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
     expect($pallet->toMapSummaryArray())->toBe([
         'product_id' => $product->id,
         'product_name' => 'Widgets',
+        'product_ar_name' => 'ودجات',
         'product_image_url' => 'https://example.com/widgets.png',
         'expiration_date' => '2026-09-15',
         'added_at' => '2026-08-01T10:00:00+00:00',

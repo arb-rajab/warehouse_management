@@ -69,8 +69,8 @@ const stats = {
 };
 
 const products = [
-    { id: 1, name: 'Widgets' },
-    { id: 2, name: 'Gadgets' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
 ];
 
 function mountPage(

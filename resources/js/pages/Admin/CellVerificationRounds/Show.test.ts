@@ -49,7 +49,7 @@ const filterOptions: CellVerificationReportFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
 };
 
 function mountPage(
@@ -312,12 +312,21 @@ describe('CellVerificationRounds Show', () => {
 
         await wrapper.get('#filter-product').trigger('click');
 
+        // A product option renders two lines — the locale's label and the
+        // store's other name, since the search matches either column (see
+        // .ai/rules/shared-database.md).
         expect(
             wrapper
                 .get('[role="listbox"]')
-                .findAll('label')
-                .map((label) => label.text()),
+                .findAll('[data-testid="product-option-name"]')
+                .map((name) => name.text()),
         ).toEqual(['Widgets']);
+        expect(
+            wrapper
+                .get('[role="listbox"]')
+                .findAll('[data-testid="product-option-alternate-name"]')
+                .map((name) => name.text()),
+        ).toEqual(['ودجات']);
     });
 
     it("populates the correctness filter's options", async () => {
@@ -410,6 +419,7 @@ describe('CellVerificationRounds Show', () => {
                     product: {
                         id: 10,
                         name: 'Widgets',
+                        ar_name: 'ودجات',
                         image_url: null,
                         boxes_count: 10,
                     },

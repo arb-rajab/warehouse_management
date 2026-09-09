@@ -300,13 +300,44 @@ rather than writing another one to the scratchpad. Either way, never re-embed a
 script in a new Bash heredoc per invocation: the repeated inline text costs
 tool-input tokens on every call for no benefit over one reusable file.
 
+### Enumerate before editing; ask for filenames before error bodies
+
+Two habits that pay for themselves whenever a change ripples across many files
+— which is most changes here, because Pest cannot run locally to find the
+ripple for you.
+
+**Enumerate the sites in one sweep, keyed on a stable sibling.** Adding a key to
+a Resource, a `toArray()` or a map-summary breaks every test asserting that
+whole payload, and Inertia's scoped `has('x', fn (Assert $p) => ...)` closures
+are exhaustive — a site you miss is a CI round. Grep a key that sits *beside*
+the one you changed in every instance of the shape, not the changed key itself:
+`image_url` enumerates every `ProductResource` payload assertion,
+`product_image_url` every `Pallet::toMapSummaryArray()` one. One sweep up front
+replaces the read-a-slice/patch/re-read loop — moving `products.ar_name` to the
+frontend cost four separate reads of the same test file before the sweep was
+run.
+
+**Ask for filenames before error bodies.** When a shared type gains a required
+field, `vue-tsc --noEmit` reports a near-identical error at dozens of sites and
+the bodies say nothing the first one didn't. Get the file list first
+(`| sed 's/(.*//' | sort -u`), then pull bodies only for files that don't fit
+the pattern. Same for any wide eslint or vitest failure.
+
+**Scripted bulk edits need an anchored pattern and a dry run.** A ` *name: '` regex
+matches inside `product_name: '` with zero leading spaces; anchor with
+`(?<![\w_])` and print the intended diff before writing, rather than writing and
+letting the type-checker find it.
+
 ### Read the framework source before theorising about framework behaviour
 
-`vendor/` is absent, but the tagged source is fetchable — `curl
-https://raw.githubusercontent.com/laravel/framework/v<version>/src/Illuminate/...`,
-with `<version>` from `composer.lock`. When an installed package behaves in a
-way its public API appears to rule out, one fetch settles it, while a guess
-costs a CI round plus the diagnose-edit-push cycle around it.
+`composer install --no-dev` succeeds here, so every non-dev package's source is
+already on disk — read `vendor/laravel/framework/src/Illuminate/...` directly
+rather than curling it. Only a dev-only package (Pint, Pest, PHPStan, Larastan)
+needs the tagged source over the network: `curl
+https://raw.githubusercontent.com/<vendor>/<package>/v<version>/src/...`, with
+`<version>` from `composer.lock`. When an installed package behaves in a way its
+public API appears to rule out, one read settles it, while a guess costs a CI
+round plus the diagnose-edit-push cycle around it.
 
 This is not hypothetical. `Model::preventsLazyLoading()` reporting true while
 no violation was ever raised cost three CI rounds and two pushed fixes for a

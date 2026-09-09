@@ -15,6 +15,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $cell = $row->cells()->where('cell_number', 1)->first();
     $expirationDate = now()->addMonth()->toDateString();
@@ -40,6 +41,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',
+            'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
         ],
@@ -237,6 +239,7 @@ test('an authenticated worker can view a pallet with every property the app read
     $cell = $row->cells()->where('cell_number', 2)->where('flat_number', 1)->first();
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
+        'ar_name' => 'ودجات',
     ]);
     $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
 
@@ -252,6 +255,7 @@ test('an authenticated worker can view a pallet with every property the app read
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',
+            'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
         ],

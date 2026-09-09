@@ -14,6 +14,7 @@ function cell(pallet: Partial<Cell['pallet']> | null): Cell {
                   id: 1,
                   product_id: 1,
                   product_name: 'Widgets',
+                  product_ar_name: 'ودجات',
                   product_image_url: null,
                   expiration_date: '2026-09-01',
                   added_at: '2026-08-01T00:00:00Z',

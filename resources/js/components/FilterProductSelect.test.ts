@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import FilterProductSelect from './FilterProductSelect.vue';
+import ProductOptionLabel from './ProductOptionLabel.vue';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
@@ -68,6 +69,7 @@ describe('FilterProductSelect', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        i18n.global.locale.value = 'en';
     });
 
     it('shows the all label when nothing is selected', () => {
@@ -78,7 +80,7 @@ describe('FilterProductSelect', () => {
 
     it("resolves a single selection's label from the `selected` prop without fetching", async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 99, name: 'Widget' }],
+            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
             modelValue: ['99'],
         });
 
@@ -89,8 +91,8 @@ describe('FilterProductSelect', () => {
     it('shows the selected count label when more than one is selected', () => {
         const wrapper = mountSelect({
             selected: [
-                { id: 1, name: 'Widget' },
-                { id: 2, name: 'Gadget' },
+                { id: 1, name: 'Widget', ar_name: 'ودجة' },
+                { id: 2, name: 'Gadget', ar_name: 'أداة' },
             ],
             modelValue: ['1', '2'],
         });
@@ -124,8 +126,8 @@ describe('FilterProductSelect', () => {
         resolveCall(
             0,
             page([
-                { id: 1, name: 'Widgets' },
-                { id: 2, name: 'Gadgets' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -172,7 +174,10 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -197,7 +202,10 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+                currentPage: 2,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -210,7 +218,10 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 2 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -237,7 +248,10 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets' }], { currentPage: 2, lastPage: 2 }),
+            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+                currentPage: 2,
+                lastPage: 2,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -250,7 +264,10 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets' }], { currentPage: 1, lastPage: 1 }),
+            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+                currentPage: 1,
+                lastPage: 1,
+            }),
         );
         await wrapper.vm.$nextTick();
 
@@ -288,13 +305,19 @@ describe('FilterProductSelect', () => {
         expect(getMock).toHaveBeenCalledTimes(3);
 
         // Resolve the newer ("new") request first, then the stale ("old") one.
-        resolveCall(2, page([{ id: 2, name: 'New product' }]));
+        resolveCall(
+            2,
+            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+        );
         await wrapper.vm.$nextTick();
-        resolveCall(1, page([{ id: 1, name: 'Old product' }]));
+        resolveCall(
+            1,
+            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+        );
         await wrapper.vm.$nextTick();
 
         const labels = wrapper
-            .findAll('[role="option"] span')
+            .findAll('[data-testid="product-option-name"]')
             .map((el) => el.text());
         expect(labels).toEqual(['New product']);
     });
@@ -305,7 +328,7 @@ describe('FilterProductSelect', () => {
 
         expect(wrapper.get('button').text()).toBe('All');
 
-        resolveCall(0, page([{ id: 1, name: 'Widgets' }]));
+        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.get('button').text()).toBe('Widgets');
@@ -320,5 +343,103 @@ describe('FilterProductSelect', () => {
         await wrapper.vm.$nextTick();
 
         expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
+    });
+
+    it('leads each option with its Arabic name when the locale is Arabic', async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        const alternates = wrapper
+            .findAll('[data-testid="product-option-alternate-name"]')
+            .map((el) => el.text());
+
+        expect(names).toEqual(['ودجات', 'Gadgets']);
+        // The search matches either column whatever the locale, so the base
+        // name stays visible to explain a result matched through it. The
+        // untranslated product has no second name to show.
+        expect(alternates).toEqual(['Widgets']);
+
+        const options = wrapper.findAll('[role="option"]');
+
+        expect(options[0].text()).toContain('ودجات');
+        // The store never translated this one, so it falls back to the base
+        // name rather than rendering the empty `ar_name`.
+        expect(options[1].text()).toBe('Gadgets');
+    });
+
+    it('leads each option with its base name when the locale is English', async () => {
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        const alternates = wrapper
+            .findAll('[data-testid="product-option-alternate-name"]')
+            .map((el) => el.text());
+
+        expect(names).toEqual(['Widgets', 'Gadgets']);
+        expect(alternates).toEqual(['ودجات']);
+    });
+
+    it("resolves a single selection's button label for the Arabic locale", () => {
+        i18n.global.locale.value = 'ar';
+
+        const translated = mountSelect({
+            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
+            modelValue: ['99'],
+        });
+        const untranslated = mountSelect({
+            selected: [{ id: 98, name: 'Gadget', ar_name: '' }],
+            modelValue: ['98'],
+        });
+
+        expect(translated.get('button').text()).toBe('ودجة');
+        expect(untranslated.get('button').text()).toBe('Gadget');
+    });
+
+    it('hands each result to ProductOptionLabel with both raw name columns', async () => {
+        const wrapper = mountSelect();
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: '' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .findAllComponents(ProductOptionLabel)
+                .map((label) => label.props('product')),
+        ).toEqual([
+            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+            { id: 2, name: 'Gadgets', ar_name: '' },
+        ]);
     });
 });

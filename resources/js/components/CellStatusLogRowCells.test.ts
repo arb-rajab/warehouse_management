@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { cellLogActionLabel } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cellLog } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
@@ -46,6 +46,10 @@ function noteText(note: string | null): string {
 describe('CellStatusLogRowCells', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        i18n.global.locale.value = 'en';
     });
 
     it('renders one cell per column, without the user column by default', () => {
@@ -158,6 +162,7 @@ describe('CellStatusLogRowCells', () => {
                 product: {
                     id: 10,
                     name: 'Widgets',
+                    ar_name: 'ودجات',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
                 },
@@ -228,5 +233,46 @@ describe('CellStatusLogRowCells', () => {
         expect(finished.findAll('td')[5].text()).not.toContain(
             t('cellLog.columns.ongoing'),
         );
+    });
+
+    it("renders the product's Arabic name and alt text when the locale is Arabic", () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountCells(
+            cellLog({
+                product: {
+                    id: 10,
+                    name: 'Widgets',
+                    ar_name: 'ودجات',
+                    image_url: '/img/widgets.png',
+                    boxes_count: 10,
+                },
+            }),
+        );
+
+        const productCell = wrapper.findAll('td')[2];
+        expect(productCell.text()).toContain('ودجات');
+        expect(productCell.text()).not.toContain('Widgets');
+        expect(productCell.get('img').attributes('alt')).toBe('ودجات');
+    });
+
+    it('falls back to the base product name in Arabic when the store never translated it', () => {
+        i18n.global.locale.value = 'ar';
+
+        const wrapper = mountCells(
+            cellLog({
+                product: {
+                    id: 10,
+                    name: 'Widgets',
+                    ar_name: '',
+                    image_url: '/img/widgets.png',
+                    boxes_count: 10,
+                },
+            }),
+        );
+
+        const productCell = wrapper.findAll('td')[2];
+        expect(productCell.text()).toContain('Widgets');
+        expect(productCell.get('img').attributes('alt')).toBe('Widgets');
     });
 });
