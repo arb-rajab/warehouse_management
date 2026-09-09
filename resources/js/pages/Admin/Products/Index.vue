@@ -13,6 +13,7 @@ import CellLogActivityFilterFields from '@/components/CellLogActivityFilterField
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -231,19 +232,43 @@ function activityHref(
     return cellLogsIndex.url({ query });
 }
 
+const boxCountDialogProduct = ref<ProductSummary | null>(null);
+const boxCountDraft = ref('');
+
 /**
- * Saves a product's pallet capacity. Validated here as well as server-side so a
- * fumbled entry doesn't cost a round trip — the input is reverted to the stored
- * value rather than sent. `preserveScroll`/`preserveState` keep the row in view
- * and the filter dialog's state intact across the redirect back.
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
  */
-function onBoxCountChange(product: ProductSummary, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const boxesCount = Number(input.value);
+const boxCountDialogOpen = computed({
+    get: () => boxCountDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            boxCountDialogProduct.value = null;
+        }
+    },
+});
+
+function openBoxCountDialog(product: ProductSummary): void {
+    boxCountDraft.value = String(product.boxes_count);
+    boxCountDialogProduct.value = product;
+}
+
+/**
+ * Saves a product's pallet capacity. `preserveScroll`/`preserveState` keep
+ * the row in view and the page filter state intact across the redirect.
+ * Client-side validation mirrors the server rule so an invalid draft is
+ * rejected without a round trip.
+ */
+function submitBoxCount(): void {
+    const product = boxCountDialogProduct.value;
+
+    if (product === null || boxCountDraft.value === '') {
+        return;
+    }
+
+    const boxesCount = Number(boxCountDraft.value);
 
     if (!Number.isInteger(boxesCount) || boxesCount < 1) {
-        input.value = String(product.boxes_count);
-
         return;
     }
 
@@ -252,6 +277,7 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
         { boxes_count: boxesCount },
         { preserveScroll: true, preserveState: true },
     );
+    boxCountDialogProduct.value = null;
 }
 </script>
 
@@ -362,6 +388,33 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
+            </form>
+        </FilterDialog>
+
+        <FilterDialog
+            v-model:open="boxCountDialogOpen"
+            :title="t('products.columns.boxesPerPallet')"
+            :close-label="t('cellLog.filters.close')"
+        >
+            <form class="space-y-4" @submit.prevent="submitBoxCount">
+                <FilterNumberField
+                    id="products-box-count"
+                    v-model="boxCountDraft"
+                    :label="
+                        t('products.boxesPerPalletLabel', {
+                            product: boxCountDialogProduct
+                                ? productName(
+                                      boxCountDialogProduct.name,
+                                      boxCountDialogProduct.ar_name,
+                                  )
+                                : '',
+                        })
+                    "
+                />
+                <button type="submit" :class="filterApplyButtonClass">
+                    <Check class="h-4 w-4 shrink-0" />
+                    {{ t('expiringWindow.apply') }}
+                </button>
             </form>
         </FilterDialog>
 
@@ -496,11 +549,8 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
                     </div>
                 </td>
                 <td class="px-4 py-2">
-                    <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        :value="product.boxes_count"
+                    <button
+                        type="button"
                         :aria-label="
                             t('products.boxesPerPalletLabel', {
                                 product: productName(
@@ -509,9 +559,11 @@ function onBoxCountChange(product: ProductSummary, event: Event): void {
                                 ),
                             })
                         "
-                        class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                        @change="onBoxCountChange(product, $event)"
-                    />
+                        :class="filterTriggerButtonClass"
+                        @click="openBoxCountDialog(product)"
+                    >
+                        {{ product.boxes_count }}
+                    </button>
                 </td>
                 <td class="px-4 py-2">
                     <TableLink
