@@ -343,7 +343,7 @@ describe('Products Index', () => {
         expect(header.find('button[title]').exists()).toBe(false);
     });
 
-    it('opens the box-count dialog pre-seeded with the product\'s stored count', async () => {
+    it("opens the box-count dialog pre-seeded with the product's stored count", async () => {
         const wrapper = mountPage([product({ boxes_count: 24 })]);
 
         await rowCells(wrapper)[1].get('button').trigger('click');
@@ -947,9 +947,9 @@ describe('Products Index', () => {
         expect(productCell.text()).toContain('ودجات');
         expect(productCell.text()).not.toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('ودجات');
-        expect(rowCells(wrapper)[1].get('button').attributes('aria-label')).toBe(
-            t('products.boxesPerPalletLabel', { product: 'ودجات' }),
-        );
+        expect(
+            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+        ).toBe(t('products.boxesPerPalletLabel', { product: 'ودجات' }));
     });
 
     it('falls back to the base product name in Arabic when the store never translated it', () => {
