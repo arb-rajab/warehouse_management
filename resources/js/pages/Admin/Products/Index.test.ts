@@ -966,8 +966,8 @@ describe('Products Index', () => {
         const productCell = rowCells(wrapper)[0];
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('Widgets');
-        expect(rowCells(wrapper)[1].get('input').attributes('aria-label')).toBe(
-            t('products.boxesPerPalletLabel', { product: 'Widgets' }),
-        );
+        expect(
+            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+        ).toBe(t('products.boxesPerPalletLabel', { product: 'Widgets' }));
     });
 });
