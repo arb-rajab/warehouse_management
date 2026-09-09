@@ -382,7 +382,8 @@ test('opening a pallet logs the status change, with an optional note', function 
 test('opening a pallet without a note logs a null note', function () {
     actingAsMobileUser();
 
-    $pallet = Pallet::factory()->create();
+    $product = Product::factory()->boxesCount(5)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 1,
