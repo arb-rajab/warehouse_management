@@ -2,6 +2,7 @@
 
 use App\Models\Product;
 use App\Models\Upload;
+use Illuminate\Database\Eloquent\MissingAttributeException;
 use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
@@ -19,6 +20,65 @@ test('a product can be created without an image_url', function () {
     $product = Product::factory()->imageUrl(null)->create();
 
     expect($product->fresh()->image_url)->toBeNull();
+});
+
+test('display_name returns the store\'s Arabic name when the locale is Arabic', function () {
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    // Noise: a second product's Arabic name must not be the one resolved.
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    app()->setLocale('ar');
+
+    expect($product->fresh()->display_name)->toBe('ودجات');
+});
+
+test('display_name returns the base name when the locale is English, even with an Arabic name stored', function () {
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    app()->setLocale('en');
+
+    expect($product->fresh()->display_name)->toBe('Widgets');
+});
+
+test('display_name falls back to the base name for a product the store never translated', function () {
+    // `ar_name` is NOT NULL upstream, so an untranslated product carries an
+    // empty string rather than null — `?:` catches that where `??` would not,
+    // and rendering an empty label is what this guards against.
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    app()->setLocale('ar');
+
+    expect($product->fresh()->display_name)->toBe('Widgets');
+});
+
+test('display_name follows a locale change within the same request, rather than caching the first read', function () {
+    // Attribute::make() only caches when asked to; nothing here calls
+    // shouldCache(). A cached value would leak one request's locale into the
+    // next in a long-running worker.
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات'])->fresh();
+
+    app()->setLocale('en');
+    expect($product->display_name)->toBe('Widgets');
+
+    app()->setLocale('ar');
+    expect($product->display_name)->toBe('ودجات');
+});
+
+test('display_name requires ar_name to be selected, in every locale', function () {
+    // The guard that catches a select() this change missed. It has to fire in
+    // English too — otherwise a narrow query passes CI and only breaks once a
+    // user switches the panel to Arabic. Unlike the lazy-loading guard, this
+    // one has no result-set-size condition (see .ai/rules/app-providers.md);
+    // it only needs a persisted model that wasn't just created.
+    Product::factory()->create();
+
+    app()->setLocale('en');
+    $narrowlySelected = Product::query()->select(['id', 'name'])->first();
+
+    expect(fn () => $narrowlySelected->display_name)->toThrow(MissingAttributeException::class);
+
+    app()->setLocale('ar');
+    expect(fn () => $narrowlySelected->display_name)->toThrow(MissingAttributeException::class);
 });
 
 test('filterOptions returns every product ordered by name', function () {
@@ -60,6 +120,37 @@ test('selectedOptions returns an empty collection when given no ids, without que
     DB::disableQueryLog();
 });
 
+test('filterOptions labels follow the active locale and fall back for an untranslated product', function () {
+    Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+    Product::factory()->create(['name' => 'Bravo', 'ar_name' => '']);
+
+    app()->setLocale('ar');
+
+    // Ordering deliberately stays on the base `name` column in both locales.
+    expect(Product::filterOptions()->pluck('name')->all())->toBe(['ألفا', 'Bravo']);
+});
+
+test('filterOptions keeps ar_name out of the payload it emits', function () {
+    // It is read only to derive the label; these two are the only product
+    // payloads that never pass through a Resource to strip it.
+    $product = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+
+    expect(Product::filterOptions()->all())->toBe([
+        ['id' => $product->id, 'name' => 'Alpha'],
+    ]);
+});
+
+test('selectedOptions labels follow the active locale, excluding an unselected product', function () {
+    $selected = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+    Product::factory()->create(['name' => 'Bravo', 'ar_name' => 'برافو']);
+
+    app()->setLocale('ar');
+
+    expect(Product::selectedOptions([$selected->id])->all())->toBe([
+        ['id' => $selected->id, 'name' => 'ألفا'],
+    ]);
+});
+
 test('searchByName filters to products whose name contains the term, excluding a non-matching product', function () {
     $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات']);
@@ -70,8 +161,9 @@ test('searchByName filters to products whose name contains the term, excluding a
 });
 
 test('searchByName matches an Arabic term against ar_name, excluding a product with a different Arabic name', function () {
-    // The store's `products.ar_name`: never displayed by this app, but the
-    // warehouse staff know products by it and type it into the search box.
+    // Searching is locale-independent even though rendering is not: the
+    // warehouse staff type whichever of the two names they know, whatever
+    // language the UI happens to be in.
     $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
 

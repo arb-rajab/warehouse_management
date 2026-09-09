@@ -137,6 +137,22 @@ test('a product filter narrows the mobile dashboard occupancy (empty forced to z
     Carbon::setTestNow();
 });
 
+test('the mobile dashboard labels the product filter with the store\'s Arabic names', function () {
+    actingAsMobileUser();
+    $translated = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+    // Noise: an untranslated product must fall back rather than come back blank.
+    $untranslated = Product::factory()->create(['name' => 'Bravo', 'ar_name' => '']);
+
+    $response = $this->getJson('/api/v1/dashboard', ['Accept-Language' => 'ar']);
+
+    $response->assertOk();
+    // Ordering deliberately stays on the base `name` column in both locales.
+    expect($response->json('filterOptions.products'))->toEqual([
+        ['id' => $translated->id, 'name' => 'ألفا'],
+        ['id' => $untranslated->id, 'name' => 'Bravo'],
+    ]);
+});
+
 test('the mobile dashboard exposes the product list for the product filter, today\'s date, and the week start', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();

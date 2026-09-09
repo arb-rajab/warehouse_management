@@ -66,6 +66,13 @@ export interface UserShowFilters {
 export interface CellPallet {
     id: number;
     product_id: number;
+    /**
+     * Already resolved to the active locale by `Product::$display_name` —
+     * the store's `ar_name` in Arabic, falling back to the base `name`
+     * for a product it never translated. Never pick a name client-side
+     * from the shared `locale` prop; the mobile API shares this payload
+     * and has no such prop to pick with.
+     */
     product_name: string;
     product_image_url: string | null;
     expiration_date: string;
@@ -115,6 +122,7 @@ export interface CellMapRow {
  */
 export interface ProductDetails {
     id: number;
+    /** Locale-resolved — see `CellPallet.product_name`. */
     name: string;
     image_url: string | null;
     boxes_count: number;
@@ -122,6 +130,7 @@ export interface ProductDetails {
 
 export interface ProductFilterOption {
     id: number;
+    /** Locale-resolved — see `CellPallet.product_name`. */
     name: string;
 }
 
@@ -279,6 +288,7 @@ export interface CellStatusLogFilterOptions
 
 export interface ProductSummary {
     id: number;
+    /** Locale-resolved — see `CellPallet.product_name`. */
     name: string;
     image_url: string | null;
     /**

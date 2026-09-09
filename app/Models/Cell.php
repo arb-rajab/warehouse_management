@@ -40,7 +40,7 @@ class Cell extends Model
      */
     public const array WITH_CONTENTS = [
         'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
-        'pallet.product:id,name,thumbnail_img',
+        'pallet.product:id,name,ar_name,thumbnail_img',
         'pallet.product.thumbnailUpload:id,file_name,external_link',
     ];
 

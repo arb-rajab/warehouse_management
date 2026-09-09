@@ -32,8 +32,9 @@ eleven; only these are consumed here:
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
 | `Product::$id` | `products.id` `int(11)` signed | see below |
-| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match, and the only product name this app *renders* — in both locales |
-| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched, never rendered — see below. The store's `product_translations` table is still not read |
+| `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; the label rendered in English, and the fallback in Arabic |
+| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, rendered in Arabic — see below. The store's `product_translations` table is still not read |
+| `Product::$display_name` | derived | `ar_name ?: name` under the Arabic locale, `name` otherwise — the only product label any payload emits |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
 | `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
@@ -43,41 +44,97 @@ Do not mirror the store's other columns into either stand-in migration, and do
 not widen a `select()` to `Product::all()` — the narrow column lists are what
 keep this app insulated from a schema it does not control.
 
-### `ar_name` is searchable, not displayed, and not locale-scoped
+### `ar_name`: searched in both locales, rendered only in Arabic
 
-`Product::searchByName()` matches each word of the term against `name` **OR**
-`ar_name`; the two consumers — `Admin\ProductController::search()` (the admin
-filter dropdown) and `Api\V1\ProductController::index()` (the mobile catalog)
-— share that one scope, so both search both columns.
+Two separate decisions, deliberately different from each other.
 
-The columns searched deliberately do **not** follow the request locale
-(`SetLocaleFromHeader` for the API, the session for the web panel). Locale is a
-presentation choice; the term is whatever the warehouse staff typed, and they
-type whichever of the two names they happen to know for a product. Scoping the
-search to the active locale's column would make one term return different
-results per device, and would return nothing for a product whose `ar_name` the
-store left empty. Matching both is free: an empty `ar_name` cannot match a
-non-empty word. Don't reintroduce a locale-dependent search here without
-revisiting this.
+**Search does not follow the locale.** `Product::searchByName()` matches each
+word of the term against `name` **OR** `ar_name`; the two consumers —
+`Admin\ProductController::search()` (the admin filter dropdown) and
+`Api\V1\ProductController::index()` (the mobile catalog) — share that one
+scope, so both search both columns whatever the request's locale
+(`SetLocaleFromHeader` for the API, the session via `SetLocale` for the web
+panel). The term is whatever the warehouse staff actually typed, and they type
+whichever of the two names they happen to know for a product. Scoping the
+search to the active locale's column would make an identical term return
+different results per device, and would return nothing at all for a product
+whose `ar_name` the store left empty. Matching both costs nothing: an empty
+`ar_name` cannot match a non-empty word. Rendering being locale-dependent is
+not a reason to revisit this — don't "align" the two.
 
-Two things the implementation depends on, both covered by tests:
+Two things the search implementation depends on, both covered by tests:
 
 - **Group per word.** Each word gets its own nested `where(fn ($q) => ...
   ->orWhere(...))`. A flat `orWhere()` chain binds the OR across word
   boundaries and silently turns "matches every word" into "matches any word".
-- **`ar_name` stays out of the payload.** Neither `ProductOptionResource` nor
-  `ProductResource` returns it, and the admin dropdown renders `name` only — so
-  an Arabic search can return rows whose displayed label is English. That is
-  the current, intended behaviour ("searchable", not "displayed"); showing the
-  Arabic label is a separate, deliberate UI change, not a bug fix.
+- **An empty `ar_name` matches nothing**, which is what keeps a product the
+  store never translated out of an English term's results through that column.
+
+**Rendering does follow the locale, and only through `display_name`.**
+`Product::$display_name` (`ar_name ?: name` under `ar`, `name` otherwise) is
+the single place that choice is made, and every payload that carries a product
+label emits it under the key it always used — `ProductResource`,
+`ProductOptionResource` and `ProductSummaryResource` all return
+`'name' => $this->display_name`, and `Pallet::toMapSummaryArray()` returns
+`'product_name' => $this->product->display_name`. Nothing emits `ar_name`
+itself, and no Vue component picks a name from the shared `locale` prop:
+resolving on the backend keeps every render site and every TS type unchanged
+(so there is no site to forget), and the mobile API — which has no shared
+Inertia prop — needs backend resolution regardless.
+
+Four consequences worth knowing before changing any of this:
+
+- **`?:`, never `??`.** `ar_name` is NOT NULL upstream, so an untranslated
+  product carries `''` rather than null. `??` would render a blank label.
+  `ProductFactory` supplies a value deliberately *unlike* the English `name`;
+  pass `'ar_name' => ''` explicitly to exercise the fallback.
+- **The accessor reads `ar_name` before the locale branch, not inside it.**
+  That is load-bearing, not a redundant read: a query missing `ar_name` from
+  its `select()` must fail the same way in both locales. Read lazily, such a
+  query would pass every English-locale test and only blow up once someone
+  switched the panel to Arabic. With the eager read, strict mode's
+  `preventAccessingMissingAttributes` (see app-providers.md) turns a forgotten
+  column into a `MissingAttributeException` in the existing English tests. In
+  production, where strict mode is off, the attribute reads as null and the
+  label degrades to English rather than erroring at a warehouse worker.
+- **Every product `select()`/eager load carries `ar_name`.** Currently
+  `Admin\ProductController::index()` and `::search()`,
+  `Api\V1\ProductController::index()`, `Product::optionLabels()` (behind
+  `filterOptions()`/`selectedOptions()`), `Cell::WITH_CONTENTS`,
+  `CellStatusLog`'s and `CellVerificationReport`'s eager-load constants, and
+  `Api\V1\PalletController`/`Api\V1\CellVerificationReportController`'s.
+  Add it to any new one.
+- **The mobile API's `name` key now varies by `Accept-Language`.** That was a
+  decision, not an oversight: the API already returns locale-dependent string
+  content under stable keys (`PalletResource.boxes_depleted_message`), the
+  type and nullability of `name` are unchanged, and an additive
+  `display_name` key would have left Arabic-speaking workers reading English
+  product names until a separate mobile release adopted it. A client that
+  wants the store's base name should not send `Accept-Language: ar`.
+
+`filterOptions()` and `selectedOptions()` are the only product payloads that
+never pass through a Resource, so `Product::optionLabels()` maps them to plain
+`{id, name}` arrays instead of serialising models — that is what keeps
+`ar_name`, read only to derive the label, out of the response, and what keeps
+the shape identical to the frontend's `ProductFilterOption`. Don't revert them
+to returning `Collection<int, Product>`.
+
+**Ordering deliberately stays on the base `name` column in both locales**, and
+that is a skipped feature rather than an oversight. Sorting an Arabic listing
+by `ar_name` would clump every untranslated product (`''`) at the top under an
+English label; the correct expression is `ORDER BY CASE WHEN ar_name = '' THEN
+name ELSE ar_name END`, which then mixes two scripts in one ordering, and MySQL
+utf8mb4 collation and sqlite's byte ordering disagree about the result — CI is
+sqlite, so no test could pin the production behaviour. It would also make the
+products index's `sort_by=name` column and its page boundaries mean different
+things per locale. If Arabic-collated ordering is wanted, it needs a decision
+about untranslated products first.
 
 The stand-in declares `ar_name` NOT NULL with an empty-string default. Upstream
 it is `varchar(191) NOT NULL`; the default is a stand-in-only convenience so a
 row inserted without an Arabic name works, an existing stand-in can take the
 column with no backfill, and sqlite — which refuses a NOT NULL column added by
-`ALTER` without a default — accepts the migration. `ProductFactory` supplies a
-value that is deliberately *unlike* the English `name`, so tests asserting that
-an English term excludes a product actually prove it.
+`ALTER` without a default — accepts the migration.
 
 ### `products.id` is a signed `int(11)`, not `bigint unsigned`
 

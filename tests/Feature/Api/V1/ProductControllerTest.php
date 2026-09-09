@@ -23,6 +23,48 @@ test('an authenticated worker can list products with every property the app read
     expect($otherProduct->id)->not->toBeNull();
 });
 
+test('an Arabic-locale client gets the store\'s Arabic name in every property the app reads', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
+    ]);
+    // Noise: another product's Arabic name must not be the one returned.
+    Product::factory()->create(['name' => 'Gadget', 'ar_name' => 'أداة']);
+
+    $response = $this->getJson('/api/v1/products', ['Accept-Language' => 'ar']);
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
+        'id' => $product->id,
+        'name' => 'ودجة',
+        'image_url' => 'https://cdn.example.com/widget.png',
+        'boxes_count' => 12,
+    ]);
+});
+
+test('an Arabic-locale client gets the base name for a product the store never translated', function () {
+    // `ar_name` is NOT NULL upstream, so an untranslated product carries an
+    // empty string — the label must not come back blank.
+    actingAsMobileUser();
+
+    $product = Product::factory()->imageUrl(null)->boxesCount(6)->create([
+        'name' => 'Widget',
+        'ar_name' => '',
+    ]);
+
+    $response = $this->getJson('/api/v1/products', ['Accept-Language' => 'ar']);
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $product->id))->toEqual([
+        'id' => $product->id,
+        'name' => 'Widget',
+        'image_url' => null,
+        'boxes_count' => 6,
+    ]);
+});
+
 test('the product listing paginates instead of returning everything at once', function () {
     actingAsMobileUser();
 
@@ -57,7 +99,9 @@ test('the product listing filters by the store\'s Arabic name, excluding a non-m
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
-    // `ar_name` is searchable only — the payload the app reads is unchanged.
+    // Searching is locale-independent; the label is not. With no
+    // Accept-Language header the request resolves to English, so an Arabic
+    // term still returns the English label.
     expect($response->json('data.0.name'))->toBe('Widgets');
 });
 
