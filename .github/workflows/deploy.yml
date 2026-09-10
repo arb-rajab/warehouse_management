@@ -18,7 +18,6 @@ jobs:
       github.event.workflow_run.head_branch == 'develop' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, Windows]
-    environment: develop
     defaults:
       run:
         shell: cmd
@@ -59,7 +58,6 @@ jobs:
       github.event.workflow_run.head_branch == 'staging' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, Windows]
-    environment: staging
     defaults:
       run:
         shell: cmd
