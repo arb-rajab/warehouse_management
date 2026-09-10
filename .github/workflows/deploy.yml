@@ -38,6 +38,13 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+      - name: Ensure SQLite database files exist
+        run: |
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+          php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
+          php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
+          php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
+
       - name: Run database migrations
         run: php artisan migrate --force
 
@@ -77,6 +84,13 @@ jobs:
 
       - name: Build frontend assets
         run: npm run build
+
+      - name: Ensure SQLite database files exist
+        run: |
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+          php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
+          php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
+          php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
 
       - name: Run database migrations
         run: php artisan migrate --force
