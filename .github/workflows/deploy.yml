@@ -1,0 +1,96 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-develop:
+    if: >-
+      github.event.workflow_run.head_branch == 'develop' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, Windows]
+    environment: develop
+    defaults:
+      run:
+        shell: cmd
+        working-directory: C:\sites\warehouse_management-develop
+
+    steps:
+      - name: Sync repository to tested commit
+        run: |
+          git fetch origin develop
+          git reset --hard ${{ github.event.workflow_run.head_sha }}
+
+      - name: Install PHP dependencies (production)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run database migrations
+        run: php artisan migrate --force
+
+      - name: Refresh application caches
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Ensure storage symlink exists
+        run: php artisan storage:link
+
+      - name: Restart queue workers
+        run: php artisan queue:restart
+
+  deploy-staging:
+    if: >-
+      github.event.workflow_run.head_branch == 'staging' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, Windows]
+    environment: staging
+    defaults:
+      run:
+        shell: cmd
+        working-directory: C:\sites\warehouse_management-staging
+
+    steps:
+      - name: Sync repository to tested commit
+        run: |
+          git fetch origin staging
+          git reset --hard ${{ github.event.workflow_run.head_sha }}
+
+      - name: Install PHP dependencies (production)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run database migrations
+        run: php artisan migrate --force
+
+      - name: Refresh application caches
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Ensure storage symlink exists
+        run: php artisan storage:link
+
+      - name: Restart queue workers
+        run: php artisan queue:restart
