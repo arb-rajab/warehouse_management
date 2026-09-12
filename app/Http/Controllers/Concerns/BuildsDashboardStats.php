@@ -40,6 +40,13 @@ trait BuildsDashboardStats
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
+     *
+     * @scramble-return array{
+     *     occupancy: array{empty: int, full: int, opened: int},
+     *     expiring: array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
+     *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
+     * }
      */
     private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, ?array $productIds): array
     {
