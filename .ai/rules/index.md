@@ -28,6 +28,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | tests/e2e/** | .ai/rules/e2e.md |
 | app/Enums/** | .ai/rules/enums.md |
 | app/Exceptions/** | .ai/rules/exceptions.md |
+| composer.json,composer.lock,package.json,package-lock.json,.github/dependabot.yml | .ai/rules/dependencies.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php,app/Http/Controllers/Admin/ProductController.php | .ai/rules/http-controllers-admin.md |
 | app/Http/Requests/StoreRowRequest.php,app/Http/Requests/UpdateRowRequest.php | .ai/rules/http-requests.md |
