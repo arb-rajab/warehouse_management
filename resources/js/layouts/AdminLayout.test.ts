@@ -196,12 +196,12 @@ describe('AdminLayout', () => {
         const wrapper = mountLayout('/admin/rows');
         const toggle = wrapper.get('button[aria-label="Account"]');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
         expect(toggle.attributes('aria-expanded')).toBe('false');
 
         await toggle.trigger('click');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(true);
         expect(toggle.attributes('aria-expanded')).toBe('true');
     });
 

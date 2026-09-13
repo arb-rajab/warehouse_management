@@ -41,17 +41,17 @@ describe('AccountMenu', () => {
         const wrapper = mountMenu();
         const toggle = wrapper.get('button[aria-label="Account"]');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
         expect(toggle.attributes('aria-expanded')).toBe('false');
 
         await toggle.trigger('click');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(true);
         expect(toggle.attributes('aria-expanded')).toBe('true');
 
         await toggle.trigger('click');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
         expect(toggle.attributes('aria-expanded')).toBe('false');
     });
 
@@ -74,7 +74,7 @@ describe('AccountMenu', () => {
 
         await logoutLink?.trigger('click');
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
     });
 
     it('closes the menu when clicking outside', async () => {
@@ -88,14 +88,14 @@ describe('AccountMenu', () => {
             { attachTo: document.body },
         );
         await wrapper.get('button[aria-label="Account"]').trigger('click');
-        expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(true);
 
         document
             .getElementById('outside')
             ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
         wrapper.unmount();
     });
 });

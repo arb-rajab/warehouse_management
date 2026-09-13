@@ -16,7 +16,8 @@ const { open, containerRef } = useDismissibleListbox(() => 0);
     <div ref="containerRef" class="relative">
         <button
             type="button"
-            aria-haspopup="menu"
+            aria-haspopup="true"
+            aria-controls="account-menu-panel"
             :aria-expanded="open"
             :aria-label="t('nav.account')"
             class="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
@@ -28,7 +29,7 @@ const { open, containerRef } = useDismissibleListbox(() => 0);
         </button>
         <div
             v-if="open"
-            role="menu"
+            id="account-menu-panel"
             class="absolute end-0 z-10 mt-1 w-56 rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
         >
             <div
@@ -39,7 +40,6 @@ const { open, containerRef } = useDismissibleListbox(() => 0);
             <Link
                 :href="destroy()"
                 as="button"
-                role="menuitem"
                 :on-before="confirmLogout"
                 class="mt-2 flex w-full cursor-pointer items-center gap-1.5 rounded px-1 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
                 @click="open = false"
