@@ -17,7 +17,14 @@ test('an authenticated admin can view the cell verification rounds list with eve
     Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise: not in this round
 
     $round = CellVerificationRound::factory()->completed()->covering($rowB, $rowA)->create(['user_id' => $worker->id]);
-    CellVerificationReport::factory()->count(2)->create(['cell_verification_round_id' => $round->id]);
+
+    // Reported against a cell inside the round's own coverage — which is also
+    // what keeps the report factory from generating a third row of its own,
+    // whose faker-drawn letter could collide with the ones hardcoded above.
+    CellVerificationReport::factory()->count(2)->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $rowA->cells()->first()->id,
+    ]);
 
     $response = $this->get('/admin/cell-verification-rounds');
 
