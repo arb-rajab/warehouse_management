@@ -33,14 +33,7 @@ class CellVerificationRoundResource extends JsonResource
             'started_at' => $this->created_at->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'reports_count' => $this->whenCounted('reports'),
-            // A plain id/letter pair rather than RowResource: that resource
-            // additionally requires the `has_pallets` exists-subquery from
-            // every caller (see .ai/rules/resources.md), which says nothing
-            // about a round's coverage.
-            'rows' => $this->whenLoaded('rows', fn () => $this->rows
-                ->toBase()
-                ->map(fn (Row $row): array => ['id' => $row->id, 'letter' => $row->letter])
-                ->all()),
+            'rows' => $this->whenLoaded('rows', fn () => RowSummaryResource::collection($this->rows)),
             'reports' => $this->whenLoaded('reports', fn () => CellVerificationReportResource::collection($this->reports)),
             'user' => $this->whenLoaded('user', fn () => new UserSummaryResource($this->user)),
         ];

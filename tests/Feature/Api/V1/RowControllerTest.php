@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list rows with every property the app reads', function () {
@@ -173,6 +175,45 @@ test('listing every row with its cells returns everything without pagination', f
 
 test('an unauthenticated caller cannot list every row with its cells', function () {
     $response = $this->getJson('/api/v1/rows/full');
+
+    $response->assertUnauthorized();
+});
+
+test('an authenticated worker can list rows frozen by any unfinished round, not just their own', function () {
+    actingAsMobileUser();
+
+    $frozenByOther = Row::factory()->create(['letter' => 'B']);
+    CellVerificationRound::factory()->for(User::factory())->covering($frozenByOther)->create();
+
+    $completedRound = Row::factory()->create(['letter' => 'C']);
+    CellVerificationRound::factory()->covering($completedRound)->completed()->create();
+
+    $unfrozen = Row::factory()->create(['letter' => 'A']);
+
+    $response = $this->getJson('/api/v1/rows/frozen');
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('id'))
+        ->toContain($frozenByOther->id)
+        ->not->toContain($completedRound->id)
+        ->not->toContain($unfrozen->id);
+});
+
+test('listing frozen rows returns letters in order rather than creation order', function () {
+    actingAsMobileUser();
+
+    $rowB = Row::factory()->create(['letter' => 'B']);
+    $rowA = Row::factory()->create(['letter' => 'A']);
+    CellVerificationRound::factory()->covering($rowB, $rowA)->create();
+
+    $response = $this->getJson('/api/v1/rows/frozen');
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('letter')->all())->toBe(['A', 'B']);
+});
+
+test('an unauthenticated caller cannot list frozen rows', function () {
+    $response = $this->getJson('/api/v1/rows/frozen');
 
     $response->assertUnauthorized();
 });
