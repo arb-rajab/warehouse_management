@@ -14,6 +14,10 @@ return [
     'insufficient_boxes_remaining' => 'لا توجد صناديق كافية متبقية في هذه الطبلية النقالة.',
     'pallet_boxes_depleted' => 'تمت إزالة جميع الصناديق — يجب إفراغ هذه الطبلية النقالة الآن.',
     'slot_inactive' => 'هذا الموقع غير نشط ولا يمكن استخدامه.',
+    'cell_in_active_round' => 'هذا الموقع في ممر يجري جرده حاليًا ولا يمكن تغييره حتى تكتمل الجولة.',
     'app_version_outdated' => 'هذا الإصدار من التطبيق لم يعد مدعومًا. يرجى التحديث للمتابعة.',
+    'verification_round_completed' => 'تم إكمال جولة الجرد هذه بالفعل.',
+    'rows_already_in_active_round' => 'هذه الممرات يجري جردها بالفعل في جولة أخرى: :rows',
+    'cell_outside_round_rows' => 'هذا الموقع ليس ضمن الممرات التي تغطيها هذه الجولة.',
     'qr_label_description' => 'الممر :row · الخلية :cell · المستوى :flat',
 ];

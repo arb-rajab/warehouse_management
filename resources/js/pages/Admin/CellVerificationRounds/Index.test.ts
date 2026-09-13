@@ -73,6 +73,7 @@ describe('CellVerificationRounds Index', () => {
             t('cellVerificationRound.columns.user'),
             t('cellVerificationRound.columns.startedAt'),
             t('cellVerificationRound.columns.completedAt'),
+            t('cellVerificationRound.columns.rows'),
             t('cellVerificationRound.columns.reportsCount'),
         ]);
     });
@@ -244,12 +245,31 @@ describe('CellVerificationRounds Index', () => {
         ).toMatchObject({ completedAt: null });
     });
 
+    it('renders the letters of the rows the round covers', () => {
+        const wrapper = mountPage([
+            cellVerificationRound({
+                rows: [
+                    { id: 3, letter: 'A' },
+                    { id: 9, letter: 'D' },
+                ],
+            }),
+        ]);
+
+        expect(rowCells(wrapper)[4].text()).toBe('A, D');
+    });
+
+    it('renders an em dash when the round covers no rows', () => {
+        const wrapper = mountPage([cellVerificationRound({ rows: [] })]);
+
+        expect(rowCells(wrapper)[4].text()).toBe('—');
+    });
+
     it('renders the reports_count', () => {
         const wrapper = mountPage([
             cellVerificationRound({ reports_count: 12 }),
         ]);
 
-        expect(rowCells(wrapper)[4].text()).toBe('12');
+        expect(rowCells(wrapper)[5].text()).toBe('12');
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {

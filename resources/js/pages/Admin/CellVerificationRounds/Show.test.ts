@@ -166,6 +166,28 @@ describe('CellVerificationRounds Show', () => {
         );
     });
 
+    it('shows the letters of the rows the round covers, under its own label', () => {
+        const wrapper = mountPage(
+            cellVerificationRound({
+                rows: [
+                    { id: 3, letter: 'A' },
+                    { id: 9, letter: 'D' },
+                ],
+            }),
+            [],
+        );
+
+        expect(wrapper.text()).toContain(t('cellVerificationRound.show.rows'));
+        expect(wrapper.text()).toContain('A, D');
+    });
+
+    it('shows an em dash for the covered rows when the round has none', () => {
+        const wrapper = mountPage(cellVerificationRound({ rows: [] }), []);
+
+        expect(wrapper.text()).toContain(t('cellVerificationRound.show.rows'));
+        expect(wrapper.text()).toContain('—');
+    });
+
     it('renders an export link with the current filters in the query', () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), [], {
             product_id: [10],

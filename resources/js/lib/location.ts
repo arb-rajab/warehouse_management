@@ -8,3 +8,18 @@ export function formatSlot(
 ): string {
     return `${rowLetter}${cellNumber}·${flatNumber}`;
 }
+
+/**
+ * The letters of a set of rows as one label, e.g. `A, C, D` for the rows a
+ * verification round covers. Already ordered by the server; an absent or empty
+ * list renders as an em dash rather than an empty cell.
+ */
+export function formatRowLetters(
+    rows: { letter: string }[] | undefined,
+): string {
+    if (rows === undefined || rows.length === 0) {
+        return '—';
+    }
+
+    return rows.map((row) => row.letter).join(', ');
+}

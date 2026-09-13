@@ -2,6 +2,7 @@
 
 use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Row;
 
@@ -61,4 +62,29 @@ test('filterOptions maxColumnNumber is 0 when there are no rows', function () {
 
     expect($options['rows'])->toBeEmpty();
     expect($options['maxColumnNumber'])->toBe(0);
+});
+
+test('a row has many verification rounds, excluding a round covering another row', function () {
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $round = CellVerificationRound::factory()->covering($row)->create();
+    CellVerificationRound::factory()->covering($otherRow)->create(); // noise
+
+    expect($row->verificationRounds)->toHaveCount(1);
+    expect($row->verificationRounds->first()->id)->toBe($round->id);
+});
+
+test('the underActiveVerification scope returns only rows claimed by an unfinished round', function () {
+    $claimed = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $released = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise: never in a round
+
+    CellVerificationRound::factory()->covering($claimed)->create();
+    CellVerificationRound::factory()->completed()->covering($released)->create();
+
+    $results = Row::query()->underActiveVerification()->get();
+
+    expect($results)->toHaveCount(1);
+    expect($results->first()->id)->toBe($claimed->id);
 });

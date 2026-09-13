@@ -50,6 +50,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'cell_status_log_flags',
         'cell_status_logs',
         'cell_verification_reports',
+        'cell_verification_round_row',
         'cell_verification_rounds',
         'cells',
         'mobile_app_version_requirements',

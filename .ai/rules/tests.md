@@ -71,3 +71,10 @@ Never fix the first hit and push without enumerating the rest. A partial fix loo
 
 ## Authenticate admin-panel tests with actingAsAdmin()
 Use the `actingAsAdmin()` helper in `tests/Pest.php` instead of writing `$this->actingAs(User::factory()->create())` — it mirrors `actingAsMobileUser()` and returns the user for tests that need to reference it (its own id/name/etc., e.g. self-delete or self-demote tests). Only write the raw factory+actingAs pattern when the acting user needs non-default factory attributes (e.g. a specific name/email for an assertion).
+
+## Don't hardcode a unique column's value beside a factory that generates its own
+`RowFactory` draws `letter` from `fake()->unique()->lexify(...)`, and faker's `unique()` only tracks what faker itself produced — it knows nothing about a letter written literally in a test. So a test that hardcodes `['letter' => 'Z']` *and* calls a factory that creates a row of its own can collide on `rows.letter`, as an intermittent `UniqueConstraintViolationException` that passes on one run and fails on the next.
+
+The factories that quietly create a row: `Pallet::factory()` and `CellVerificationReport::factory()` when given no `cell_id`, and `Cell::factory()` with no `row_id` (see `CellFactory`'s `Row::withoutEvents(...)`).
+
+Pick one convention per test: either hardcode the letters *and* give every factory an explicit `cell_id`/`row_id` so none of them creates a row, or let the factories draw every letter. Only hardcode a letter when an assertion actually reads it — `expect($response->json('rows'))` needs 'A', a row that exists purely as noise does not.

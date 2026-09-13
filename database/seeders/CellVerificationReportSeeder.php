@@ -15,7 +15,7 @@ class CellVerificationReportSeeder extends Seeder
      */
     public function run(): void
     {
-        $rounds = CellVerificationRound::all();
+        $rounds = CellVerificationRound::with('rows:id,letter')->get();
         $cells = Cell::with('pallet')->get();
 
         if ($rounds->isEmpty() || $cells->isEmpty()) {
@@ -23,6 +23,15 @@ class CellVerificationReportSeeder extends Seeder
         }
 
         foreach ($rounds as $round) {
+            // A report only ever comes from a row the round covers — the API
+            // refuses anything else (CellVerificationService::report()), so the
+            // seeded walk stays inside the same scope.
+            $roundCells = $cells->whereIn('row_id', $round->rows->modelKeys());
+
+            if ($roundCells->isEmpty()) {
+                continue;
+            }
+
             $reportCount = fake()->numberBetween(3, 8);
             $walkEndedAt = $round->completed_at ?? $round->created_at->addMinutes(45);
 
@@ -31,7 +40,7 @@ class CellVerificationReportSeeder extends Seeder
                     $round->created_at->diffInSeconds($walkEndedAt) * ($i / ($reportCount + 1))
                 ));
 
-                $this->report($round, $cells->random(), $reportedAt);
+                $this->report($round, $roundCells->random(), $reportedAt);
             }
         }
     }

@@ -29,6 +29,7 @@ class CellVerificationReportController extends Controller
 
     #[DocumentedResponse(403, description: 'The verification round belongs to another user.', type: 'array{message: string}')]
     #[DocumentedResponse(409, description: 'The verification round has already been completed (`error_code`: `verification_round_completed`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The cell is not in one of the rows this round covers (`error_code`: `cell_outside_round_rows`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationReportRequest $request): JsonResponse
     {
         /** @var User $user */
