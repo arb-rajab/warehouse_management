@@ -530,6 +530,37 @@ of `.ai/rules/app-providers.md`.
   and cross-repo via `/remember`; this note exists only for sessions in
   this repository that don't have that memory loaded.
 
+## CI/GitHub tool usage: targeted before full, consolidated before repeated
+
+- Diagnosing a failed check: try `get_check_run` (with a small `textLimit`
+  and `textOffset` paging) before reaching for `get_job_logs`. A full job
+  log easily runs to tens of thousands of characters of ANSI-coded text
+  that then has to be dumped to a file, stripped, and re-grepped in
+  multiple passes — that cost is avoidable whenever the check run's own
+  output already names the failure.
+- If a full job log genuinely is needed, request the minimum first: a
+  small `tail_lines` (e.g. 100-150) with `return_content: true`, not the
+  whole log. Only widen the window if that slice doesn't contain the
+  failure.
+- When a large log/text blob does have to be searched, strip ANSI codes
+  and grep for the target string in one pass (one Python/Bash step),
+  rather than a failed raw grep attempt followed by a separate cleanup
+  pass followed by a second grep.
+- Don't re-poll PR/CI state that a call already returned this turn.
+  `pull_request_read` (`get`) already carries `mergeable_state`; a
+  separate `get_status` call is only useful for repos that use legacy
+  commit statuses instead of check-runs (this repo uses check-runs, so
+  `get_status` returns nothing and can be skipped). Prefer one
+  consolidated read over `get_workflow_run` + `list_workflow_runs` +
+  `pull_request_read` when any one of them already answers the question.
+- When watching a single in-flight CI run, don't stack multiple short
+  (under ~5 min) `ScheduleWakeup`/`send_later` check-ins back-to-back —
+  each wake re-enters with full session context. Prefer one wait long
+  enough for the run to plausibly finish, and lean on the
+  `check_run.completed`/`check_suite.completed` webhook events (per the
+  PR-watching section above) as the actual completion signal rather than
+  timing a poll to beat them.
+
 ## External input handling
 
 - Normalize untrusted input before persisting it, don't store it verbatim —
