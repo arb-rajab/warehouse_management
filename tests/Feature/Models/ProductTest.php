@@ -222,3 +222,16 @@ test('boxes_count falls back to its default for a product this app has never con
         ->setting->toBeNull()
         ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
 });
+
+test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
+    $product = Product::factory()->create();
+
+    expect($product->fresh()->published)->toBeTrue();
+});
+
+test('the inactive factory state sets published to false, with noise from a default (active) product', function () {
+    $inactive = Product::factory()->inactive()->create();
+    Product::factory()->create();
+
+    expect($inactive->fresh()->published)->toBeFalse();
+});

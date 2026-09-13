@@ -524,6 +524,30 @@ describe('Products Index', () => {
         expect(sentFilters).not.toHaveProperty('expired');
     });
 
+    it('includes inactive only when the checkbox is checked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-inactive').setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ inactive: true }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('omits inactive entirely when the checkbox is left unchecked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('form').trigger('submit');
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('inactive');
+    });
+
     it('sets the expires_within_days field to a quick-pick day count when clicked', async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
@@ -646,6 +670,20 @@ describe('Products Index', () => {
         expect(
             isColumnActive(wrapper, t('products.columns.activityWeek')),
         ).toBe(true);
+    });
+
+    it('marks the product column (not the occupancy columns) active when the inactive filter is applied', () => {
+        // `inactive` restricts which product rows appear (the store admin's
+        // `published` flag) — it doesn't narrow what counts as
+        // full/opened/expired for a shown row, so it behaves like
+        // `product_id` rather than like `state`/`expired`. See
+        // .ai/rules/products.md.
+        const wrapper = mountPage([], { inactive: true });
+
+        expect(isColumnActive(wrapper, t('products.columns.product'))).toBe(
+            true,
+        );
+        expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
     it('marks only the activity columns active when only an action filter is applied', () => {
@@ -797,6 +835,7 @@ describe('Products Index', () => {
             row_id: 1,
             state: 'full',
             expired: true,
+            inactive: true,
             product_id: [10],
             user_id: [7],
             action: ['opened'],

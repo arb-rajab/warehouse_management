@@ -26,12 +26,13 @@ use Illuminate\Support\Collection;
  * @property string $name
  * @property string $ar_name
  * @property int|null $thumbnail_img
+ * @property bool $published
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
  */
-#[Fillable(['name', 'ar_name', 'thumbnail_img'])]
+#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -68,6 +69,9 @@ class Product extends Model
             // sqlite, which — unlike MySQL — will not match the string '5'
             // against the integer 5.
             'thumbnail_img' => 'integer',
+            // The store declares this `int(11)` (0/1), not a real boolean
+            // column type.
+            'published' => 'boolean',
         ];
     }
 

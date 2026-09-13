@@ -37,6 +37,7 @@ eleven; only these are consumed here:
 | `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; shipped raw, and the label the frontend renders outside Arabic |
 | `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, shipped raw alongside `name`, rendered in Arabic — see below. The store's `product_translations` table is still not read |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
+| `Product::$published` | `products.published` `int(11) NOT NULL DEFAULT 1` | the store admin's own active/inactive toggle, cast to `bool` here — see below |
 | `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
 | `Upload::$file_name`, `$external_link` | same columns | the two halves of `Upload::url()` |
@@ -212,6 +213,18 @@ key against it. Every column referencing a product is therefore a plain
 `integer`, so the test connection cannot catch a regression here —
 `CreateProductsTableTest` asserts it against the migration source instead. Keep
 that assertion when adding a new product FK.
+
+### `published`: the store admin's active/inactive toggle, not an occupancy signal
+
+`products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's own
+kill switch for a product, entirely independent of whether it currently
+occupies any cell in this warehouse. `Admin\ProductController::index()`'s
+`inactive` filter (`?inactive=true`) is `published = 0` — do not redefine
+"inactive" as "occupies zero cells" (e.g. `whereDoesntHave('pallets')`): a
+product can be `published = 0` while pallets of it still sit in cells (the
+store deactivated it after it was already stocked), and a freshly `published
+= 1` product legitimately has zero pallets before its first delivery. The two
+concepts don't imply each other in either direction.
 
 ### `image_url` and `boxes_count` are not columns — both are derived
 

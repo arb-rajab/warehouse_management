@@ -11,22 +11,23 @@ function mountFields(overrides: Record<string, unknown> = {}) {
             state: '',
             expired: false,
             expiresWithinDays: '',
+            inactive: false,
             ...overrides,
         },
     });
 }
 
 describe('ProductOccupancyFilterFields', () => {
-    it('renders the state select, expires-within-days field with quick picks, and expired checkbox, prefixed by idPrefix', () => {
+    it('renders the state select, expires-within-days field with quick picks, and expired/inactive checkboxes, prefixed by idPrefix', () => {
         const wrapper = mountFields();
 
         expect(wrapper.get('select').attributes('id')).toBe('filter-state');
         expect(wrapper.get('input[type="number"]').attributes('id')).toBe(
             'filter-expires-within-days',
         );
-        expect(wrapper.get('input[type="checkbox"]').attributes('id')).toBe(
-            'filter-expired',
-        );
+        const checkboxes = wrapper.findAll('input[type="checkbox"]');
+        expect(checkboxes[0].attributes('id')).toBe('filter-expired');
+        expect(checkboxes[1].attributes('id')).toBe('filter-inactive');
 
         const quickPicks = wrapper
             .findAll('button')
@@ -43,9 +44,9 @@ describe('ProductOccupancyFilterFields', () => {
         expect(wrapper.get('input[type="number"]').attributes('id')).toBe(
             'popover-filter-expires-within-days',
         );
-        expect(wrapper.get('input[type="checkbox"]').attributes('id')).toBe(
-            'popover-filter-expired',
-        );
+        const checkboxes = wrapper.findAll('input[type="checkbox"]');
+        expect(checkboxes[0].attributes('id')).toBe('popover-filter-expired');
+        expect(checkboxes[1].attributes('id')).toBe('popover-filter-inactive');
     });
 
     it('offers only the full and opened state options', () => {
@@ -79,7 +80,7 @@ describe('ProductOccupancyFilterFields', () => {
         ]);
     });
 
-    it('emits update:state, update:expiresWithinDays, and update:expired when each field changes', async () => {
+    it('emits update:state, update:expiresWithinDays, update:expired, and update:inactive when each field changes', async () => {
         const wrapper = mountFields();
 
         await wrapper.get('select').setValue('full');
@@ -88,7 +89,11 @@ describe('ProductOccupancyFilterFields', () => {
         await wrapper.get('input[type="number"]').setValue('10');
         expect(wrapper.emitted('update:expiresWithinDays')?.[0]).toEqual([10]);
 
-        await wrapper.get('input[type="checkbox"]').setValue(true);
+        const checkboxes = wrapper.findAll('input[type="checkbox"]');
+        await checkboxes[0].setValue(true);
         expect(wrapper.emitted('update:expired')?.[0]).toEqual([true]);
+
+        await checkboxes[1].setValue(true);
+        expect(wrapper.emitted('update:inactive')?.[0]).toEqual([true]);
     });
 });

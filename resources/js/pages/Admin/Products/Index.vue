@@ -61,6 +61,7 @@ const filters = reactive({
     state: props.filters.state ?? '',
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
+    inactive: props.filters.inactive ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -84,6 +85,7 @@ const activeFilterCount = computed(() =>
         filters.state !== '',
         filters.expired,
         filters.expires_within_days !== '',
+        filters.inactive,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -91,7 +93,16 @@ const activeFilterCount = computed(() =>
     ]),
 );
 
-const productColumnFiltered = computed(() => filters.product_id.length > 0);
+/**
+ * `inactive` filters to the store admin's `published = 0` products — it
+ * restricts which product rows appear, like `product_id`, rather than
+ * narrowing what counts as full/opened/expired for a shown row. So it marks
+ * the product column filtered, not the occupancy columns (see
+ * .ai/rules/products.md — `inactive` is unrelated to cell occupancy).
+ */
+const productColumnFiltered = computed(
+    () => filters.product_id.length > 0 || filters.inactive,
+);
 
 /**
  * Row/column/state narrow every occupancy-derived column identically on the
@@ -119,15 +130,20 @@ const activityColumnsFiltered = computed(
 );
 
 /**
- * `expired` is only ever included when checked — sending the unchecked
- * `false` would still be a non-empty query value the backend treats as
- * "filled" (see FilterProductsRequest), so it must be omitted rather than
- * sent as literal `false`. Mirrors Cells/Index.vue's `highlightQuery()`.
+ * `expired`/`inactive` are only ever included when checked — sending the
+ * unchecked `false` would still be a non-empty query value the backend
+ * treats as "filled" (see FilterProductsRequest), so each must be omitted
+ * rather than sent as literal `false`. Mirrors Cells/Index.vue's
+ * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, ...rest } = filters;
+    const { expired, inactive, ...rest } = filters;
 
-    return expired ? { ...rest, expired: true } : rest;
+    return {
+        ...rest,
+        ...(expired ? { expired: true } : {}),
+        ...(inactive ? { inactive: true } : {}),
+    };
 }
 
 function applyFilters(): void {
@@ -150,6 +166,7 @@ function clearFilters(): void {
     filters.state = '';
     filters.expired = false;
     filters.expires_within_days = '';
+    filters.inactive = false;
     filters.product_id = [];
     filters.user_id = [];
     filters.action = [];
@@ -331,6 +348,7 @@ function submitBoxCount(): void {
                             v-model:expires-within-days="
                                 filters.expires_within_days
                             "
+                            v-model:inactive="filters.inactive"
                             :expiring-soon-days="expiringSoonDays"
                         >
                             <FilterProductSelect
@@ -505,6 +523,7 @@ function submitBoxCount(): void {
                         v-model:expires-within-days="
                             filters.expires_within_days
                         "
+                        v-model:inactive="filters.inactive"
                         :expiring-soon-days="expiringSoonDays"
                     />
                 </div>
