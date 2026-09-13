@@ -181,8 +181,9 @@ describe('AdminLayout', () => {
         expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
     });
 
-    it('links the logout action to the /logout route', () => {
+    it('links the logout action to the /logout route from the account menu', async () => {
         const wrapper = mountLayout('/admin/rows');
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
 
         const logoutLink = wrapper
             .findAll('a,button')
@@ -191,10 +192,23 @@ describe('AdminLayout', () => {
         expect(logoutLink).toBeTruthy();
     });
 
-    it('renders the language switcher', () => {
+    it('hides the account menu panel by default and expands it via the toggle button', async () => {
         const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-label="Account"]');
 
-        expect(wrapper.findAll('button').length).toBeGreaterThanOrEqual(2);
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+
+        await toggle.trigger('click');
+
+        expect(wrapper.find('#account-menu-panel').exists()).toBe(true);
+        expect(toggle.attributes('aria-expanded')).toBe('true');
+    });
+
+    it('renders the language switcher inside the account menu', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
+
         expect(wrapper.text()).toContain('English');
         expect(wrapper.text()).toContain('Arabic');
     });

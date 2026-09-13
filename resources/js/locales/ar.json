@@ -11,7 +11,8 @@
         "logout": "تسجيل الخروج",
         "confirmLogout": "هل تريد تسجيل الخروج من حسابك؟",
         "openMenu": "فتح القائمة",
-        "closeMenu": "إغلاق القائمة"
+        "closeMenu": "إغلاق القائمة",
+        "account": "الحساب"
     },
     "language": {
         "label": "اللغة",
