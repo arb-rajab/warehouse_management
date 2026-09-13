@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
 uses(SeedsCellStatusLogFixtures::class);
@@ -270,6 +271,81 @@ test('the cell log listing can be filtered by multiple products at once, excludi
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(2);
     expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$matchingB->id, $matchingA->id]);
+});
+
+test('the cell log listing can be filtered by product_status=active, excluding entries for inactive products', function () {
+    actingAsMobileUser();
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+
+    $matching = CellStatusLog::factory()->create(['product_id' => $activeProduct->id]);
+    CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs?product_status=active');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the cell log listing can be filtered by product_status=inactive, excluding entries for active products', function () {
+    actingAsMobileUser();
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+
+    CellStatusLog::factory()->create(['product_id' => $activeProduct->id]);
+    $matching = CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs?product_status=inactive');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('a product_status with zero matching products returns nothing rather than falling back to unfiltered cell logs', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    CellStatusLog::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->getJson('/api/v1/cell-logs?product_status=inactive');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(0);
+});
+
+test('sending both product_status and product_id together is rejected on the mobile cell log listing', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/cell-logs?product_status=active&product_id[]={$product->id}");
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
+test('an invalid product_status is rejected on the mobile cell log listing', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/cell-logs?product_status=bogus');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
+test('product_status is silently ignored on the admin cell log listing', function () {
+    actingAsAdmin();
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+
+    CellStatusLog::factory()->create(['product_id' => $activeProduct->id]);
+    CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id]);
+
+    $response = $this->get('/admin/cell-logs?product_status=active');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+    );
 });
 
 test('the cell log listing can be filtered by pallet, excluding entries for other pallets, even after the pallet is deleted', function () {
