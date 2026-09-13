@@ -332,6 +332,7 @@ export interface ProductFilters {
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;
+    inactive?: boolean;
     product_id?: number[];
     user_id?: number[];
     action?: CellLogAction[];

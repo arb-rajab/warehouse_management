@@ -282,6 +282,42 @@ test('the expired filter narrows the full/opened/expiring-soon counts to already
     Carbon::setTestNow();
 });
 
+test('the inactive filter narrows the products index to products occupying zero cells', function () {
+    actingAsAdmin();
+
+    $inactive = Product::factory()->create();
+
+    $active = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $active->id]);
+
+    // Noise: another product that also occupies a cell, to prove the filter
+    // doesn't just happen to match everything.
+    $otherActive = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $otherActive->id]);
+
+    $response = $this->get('/admin/products?inactive=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $inactive->id)
+    );
+});
+
+test('the inactive filter is omitted (all products shown) when not sent', function () {
+    actingAsAdmin();
+
+    Product::factory()->create();
+
+    $active = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $active->id]);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+    );
+});
+
 test('the expiring-soon count defaults to a 45-day window when expires_within_days is not filled in', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();

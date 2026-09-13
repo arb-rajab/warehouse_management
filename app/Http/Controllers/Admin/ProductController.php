@@ -73,6 +73,7 @@ class ProductController extends Controller
             ->addSelect(['activity_today_count' => $this->activityCountSubquery($request, $today->copy()->startOfDay(), $today->copy()->endOfDay())])
             ->addSelect(['activity_week_count' => $this->activityCountSubquery($request, $weekStart->copy()->startOfDay(), $today->copy()->endOfDay())])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
+            ->when($request->boolean('inactive'), fn (Builder $query) => $query->whereDoesntHave('pallets'))
             ->when($historyFiltersActive, function (Builder $query) use ($request) {
                 $existsSubquery = CellStatusLog::query()->whereColumn('cell_status_logs.product_id', 'products.id');
                 $this->applyHistoryLogFilters($existsSubquery, $request);
@@ -91,7 +92,7 @@ class ProductController extends Controller
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
-                    'row_id', 'column_number', 'state', 'expired', 'expires_within_days', 'product_id',
+                    'row_id', 'column_number', 'state', 'expired', 'expires_within_days', 'inactive', 'product_id',
                     'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                     'sort_by', 'sort_direction',
                 ]),

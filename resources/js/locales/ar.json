@@ -438,7 +438,8 @@
         "filters": {
             "sections": {
                 "occupancy": "الإشغال"
-            }
+            },
+            "inactive": "غير نشط (لا تشغل أي خلايا)"
         },
         "columns": {
             "product": "المنتج",

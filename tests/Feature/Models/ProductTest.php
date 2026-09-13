@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Upload;
 use Illuminate\Support\Facades\DB;
@@ -221,4 +222,14 @@ test('boxes_count falls back to its default for a product this app has never con
     expect($product->fresh())
         ->setting->toBeNull()
         ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
+});
+
+test('pallets returns every pallet for the product, excluding another product\'s pallet', function () {
+    $product = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    $otherProduct = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $otherProduct->id]);
+
+    expect($product->pallets()->pluck('id')->all())->toBe([$pallet->id]);
 });

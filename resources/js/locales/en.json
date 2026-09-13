@@ -438,7 +438,8 @@
         "filters": {
             "sections": {
                 "occupancy": "Occupancy"
-            }
+            },
+            "inactive": "Inactive (no cells occupied)"
         },
         "columns": {
             "product": "Product",

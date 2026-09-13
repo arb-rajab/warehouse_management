@@ -21,6 +21,7 @@ const expired = defineModel<boolean>('expired', { required: true });
 const expiresWithinDays = defineModel<string>('expiresWithinDays', {
     required: true,
 });
+const inactive = defineModel<boolean>('inactive', { required: true });
 
 // No `empty` option here (unlike the cells map) — an empty cell never holds
 // a product, so filtering to it would always zero out every column.
@@ -83,6 +84,12 @@ function stateLabel(cellState: Cell['state']): string {
             :id="`${idPrefix}-expired`"
             v-model="expired"
             :label="t('cellHighlight.expired')"
+        />
+
+        <FilterCheckbox
+            :id="`${idPrefix}-inactive`"
+            v-model="inactive"
+            :label="t('products.filters.inactive')"
         />
     </div>
 </template>

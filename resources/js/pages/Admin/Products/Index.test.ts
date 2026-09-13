@@ -524,6 +524,30 @@ describe('Products Index', () => {
         expect(sentFilters).not.toHaveProperty('expired');
     });
 
+    it('includes inactive only when the checkbox is checked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-inactive').setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ inactive: true }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('omits inactive entirely when the checkbox is left unchecked', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('form').trigger('submit');
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('inactive');
+    });
+
     it('sets the expires_within_days field to a quick-pick day count when clicked', async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
@@ -646,6 +670,26 @@ describe('Products Index', () => {
         expect(
             isColumnActive(wrapper, t('products.columns.activityWeek')),
         ).toBe(true);
+    });
+
+    it('marks every occupancy column active when the inactive filter is applied, but leaves the activity columns alone', () => {
+        const wrapper = mountPage([], { inactive: true });
+
+        for (const label of [
+            t('products.columns.full'),
+            t('products.columns.opened'),
+            t('products.columns.expired'),
+            t('products.columns.expiringSoon', { days: 45 }),
+        ]) {
+            expect(isColumnActive(wrapper, label)).toBe(true);
+        }
+
+        // activityWeek's icon (a hidden sibling of activityToday) doesn't
+        // render at all while its shared `filtered` computed is false, so
+        // only the always-visible activityToday icon can be asserted here.
+        expect(
+            isColumnActive(wrapper, t('products.columns.activityToday')),
+        ).toBe(false);
     });
 
     it('marks only the activity columns active when only an action filter is applied', () => {
@@ -797,6 +841,7 @@ describe('Products Index', () => {
             row_id: 1,
             state: 'full',
             expired: true,
+            inactive: true,
             product_id: [10],
             user_id: [7],
             action: ['opened'],
