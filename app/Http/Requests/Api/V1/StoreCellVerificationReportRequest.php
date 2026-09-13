@@ -51,6 +51,10 @@ class StoreCellVerificationReportRequest extends FormRequest
                 if (! $this->filled('reported_boxes_count')) {
                     $validator->errors()->add('reported_boxes_count', __('validation.required_if', ['attribute' => 'reported boxes count', 'other' => 'reported cell state', 'value' => $reportedState]));
                 }
+
+                if (! $this->filled('reported_expiration_date')) {
+                    $validator->errors()->add('reported_expiration_date', __('validation.required_if', ['attribute' => 'reported expiration date', 'other' => 'reported cell state', 'value' => $reportedState]));
+                }
             }
         });
     }

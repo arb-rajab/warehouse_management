@@ -113,7 +113,7 @@ test('reported_cell_state is required when is_correct is false', function () {
     $this->assertDatabaseCount('cell_verification_reports', 0);
 });
 
-test('reported product and boxes count are required when the reported state is full', function () {
+test('reported product, boxes count and expiration date are required when the reported state is full', function () {
     $user = actingAsMobileUser();
     $round = CellVerificationRound::factory()->for($user)->create();
     $cell = makeEmptyCell();
@@ -125,8 +125,41 @@ test('reported product and boxes count are required when the reported state is f
         'reported_cell_state' => 'full',
     ]);
 
-    $response->assertInvalid(['reported_product_id', 'reported_boxes_count']);
+    $response->assertInvalid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
     $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('reported product, boxes count and expiration date are required when the reported state is opened', function () {
+    $user = actingAsMobileUser();
+    $round = CellVerificationRound::factory()->for($user)->create();
+    $cell = makeEmptyCell();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => false,
+        'reported_cell_state' => 'opened',
+    ]);
+
+    $response->assertInvalid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
+    $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('reported expiration date is not required when the reported state is empty', function () {
+    $user = actingAsMobileUser();
+    $cell = makeEmptyCell();
+    $round = CellVerificationRound::factory()->for($user)->covering($cell->row)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => false,
+        'reported_cell_state' => 'empty',
+    ]);
+
+    $response->assertCreated();
+    $response->assertValid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
+    $this->assertDatabaseCount('cell_verification_reports', 1);
 });
 
 test('a worker cannot report against another user\'s round', function () {
