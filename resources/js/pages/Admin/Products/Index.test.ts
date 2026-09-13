@@ -672,24 +672,18 @@ describe('Products Index', () => {
         ).toBe(true);
     });
 
-    it('marks every occupancy column active when the inactive filter is applied, but leaves the activity columns alone', () => {
+    it('marks the product column (not the occupancy columns) active when the inactive filter is applied', () => {
+        // `inactive` restricts which product rows appear (the store admin's
+        // `published` flag) — it doesn't narrow what counts as
+        // full/opened/expired for a shown row, so it behaves like
+        // `product_id` rather than like `state`/`expired`. See
+        // .ai/rules/products.md.
         const wrapper = mountPage([], { inactive: true });
 
-        for (const label of [
-            t('products.columns.full'),
-            t('products.columns.opened'),
-            t('products.columns.expired'),
-            t('products.columns.expiringSoon', { days: 45 }),
-        ]) {
-            expect(isColumnActive(wrapper, label)).toBe(true);
-        }
-
-        // activityWeek's icon (a hidden sibling of activityToday) doesn't
-        // render at all while its shared `filtered` computed is false, so
-        // only the always-visible activityToday icon can be asserted here.
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityToday')),
-        ).toBe(false);
+        expect(isColumnActive(wrapper, t('products.columns.product'))).toBe(
+            true,
+        );
+        expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
     it('marks only the activity columns active when only an action filter is applied', () => {

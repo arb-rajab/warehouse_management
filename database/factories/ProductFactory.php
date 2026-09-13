@@ -28,6 +28,7 @@ class ProductFactory extends Factory
             // assertions in the tests that pin that behaviour.
             'ar_name' => 'منتج رقم '.fake()->unique()->numberBetween(1, 999999),
             'thumbnail_img' => Upload::factory(),
+            'published' => true,
         ];
     }
 
@@ -80,5 +81,15 @@ class ProductFactory extends Factory
     public function unconfigured(): static
     {
         return $this->afterCreating(fn (Product $product) => $product->setting()->delete());
+    }
+
+    /**
+     * A product the store admin has toggled off (`published = 0`) — unrelated
+     * to whether it currently occupies any cell here. See
+     * .ai/rules/shared-database.md.
+     */
+    public function inactive(): static
+    {
+        return $this->state(['published' => false]);
     }
 }

@@ -439,7 +439,7 @@
             "sections": {
                 "occupancy": "Occupancy"
             },
-            "inactive": "Inactive (no cells occupied)"
+            "inactive": "Inactive"
         },
         "columns": {
             "product": "Product",

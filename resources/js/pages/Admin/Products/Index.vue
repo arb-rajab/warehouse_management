@@ -93,7 +93,16 @@ const activeFilterCount = computed(() =>
     ]),
 );
 
-const productColumnFiltered = computed(() => filters.product_id.length > 0);
+/**
+ * `inactive` filters to the store admin's `published = 0` products — it
+ * restricts which product rows appear, like `product_id`, rather than
+ * narrowing what counts as full/opened/expired for a shown row. So it marks
+ * the product column filtered, not the occupancy columns (see
+ * .ai/rules/products.md — `inactive` is unrelated to cell occupancy).
+ */
+const productColumnFiltered = computed(
+    () => filters.product_id.length > 0 || filters.inactive,
+);
 
 /**
  * Row/column/state narrow every occupancy-derived column identically on the
@@ -107,8 +116,7 @@ const occupancyColumnsFiltered = computed(
         filters.column_number !== '' ||
         filters.state !== '' ||
         filters.expired ||
-        filters.expires_within_days !== '' ||
-        filters.inactive,
+        filters.expires_within_days !== '',
 );
 
 const activityColumnsFiltered = computed(

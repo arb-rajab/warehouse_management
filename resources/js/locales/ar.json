@@ -439,7 +439,7 @@
             "sections": {
                 "occupancy": "الإشغال"
             },
-            "inactive": "غير نشط (لا تشغل أي خلايا)"
+            "inactive": "غير نشط"
         },
         "columns": {
             "product": "المنتج",

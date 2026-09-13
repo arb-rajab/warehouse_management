@@ -282,18 +282,21 @@ test('the expired filter narrows the full/opened/expiring-soon counts to already
     Carbon::setTestNow();
 });
 
-test('the inactive filter narrows the products index to products occupying zero cells', function () {
+test('the inactive filter narrows the products index to the store admin\'s deactivated products, regardless of cell occupancy', function () {
     actingAsAdmin();
 
-    $inactive = Product::factory()->create();
+    // Deactivated but still occupying a cell — proves `inactive` reads
+    // `published`, not occupancy (see .ai/rules/shared-database.md).
+    $inactive = Product::factory()->inactive()->create();
+    Pallet::factory()->create(['product_id' => $inactive->id]);
 
-    $active = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $active->id]);
+    // Active but with zero pallets — would look "inactive" under an
+    // occupancy-based definition, and must NOT be matched.
+    $activeNoPallets = Product::factory()->create();
 
-    // Noise: another product that also occupies a cell, to prove the filter
-    // doesn't just happen to match everything.
-    $otherActive = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $otherActive->id]);
+    // Noise: another active product that also occupies a cell.
+    $activeWithPallet = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
 
     $response = $this->get('/admin/products?inactive=true');
 
@@ -306,10 +309,8 @@ test('the inactive filter narrows the products index to products occupying zero 
 test('the inactive filter is omitted (all products shown) when not sent', function () {
     actingAsAdmin();
 
+    Product::factory()->inactive()->create();
     Product::factory()->create();
-
-    $active = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $active->id]);
 
     $response = $this->get('/admin/products');
 

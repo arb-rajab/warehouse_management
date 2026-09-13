@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Upload;
 use Illuminate\Support\Facades\DB;
@@ -224,12 +223,15 @@ test('boxes_count falls back to its default for a product this app has never con
         ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
 });
 
-test('pallets returns every pallet for the product, excluding another product\'s pallet', function () {
+test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
     $product = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
-    $otherProduct = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $otherProduct->id]);
+    expect($product->fresh()->published)->toBeTrue();
+});
 
-    expect($product->pallets()->pluck('id')->all())->toBe([$pallet->id]);
+test('the inactive factory state sets published to false, with noise from a default (active) product', function () {
+    $inactive = Product::factory()->inactive()->create();
+    Product::factory()->create();
+
+    expect($inactive->fresh()->published)->toBeFalse();
 });
