@@ -62,10 +62,11 @@ class CellVerificationRoundController extends Controller
     }
 
     /**
-     * Start a round over the rows the worker is about to walk. Those rows are
-     * claimed exclusively until the round completes: no other round may
-     * include any of them, and pallet actions on their cells are refused
-     * meanwhile.
+     * Start a round over the rows the worker is about to walk, or over the
+     * whole warehouse when `row_ids` is omitted. Those rows are claimed
+     * exclusively until the round completes: no other round may include any of
+     * them, and pallet actions on their cells are refused meanwhile — so a
+     * warehouse-wide round holds everything until it is finished.
      */
     #[DocumentedResponse(409, description: 'One or more of the requested rows are already covered by another unfinished round (`error_code`: `rows_already_in_active_round`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationRoundRequest $request): JsonResponse

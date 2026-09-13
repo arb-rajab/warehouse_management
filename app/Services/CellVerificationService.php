@@ -26,8 +26,15 @@ class CellVerificationService
 {
     /**
      * Start a round over the given rows, claiming them exclusively until it is
-     * completed. A round always covers a subset of the warehouse chosen by the
-     * caller, so two rounds may run at once as long as they share no row.
+     * completed, so two rounds may run at once as long as they share no row.
+     * A null `$rowIds` covers the whole warehouse — the round then claims every
+     * row, which blocks pallet actions everywhere and leaves no row for a second
+     * round to take.
+     *
+     * Coverage is resolved to actual rows once, here, rather than left as a
+     * standing "everything": a row added later belongs to the warehouse the
+     * worker was never sent to walk, and silently extending a running round's
+     * freeze onto it would be surprising.
      *
      * The `rows` records themselves are locked for the duration of the
      * transaction rather than the matching claims: two workers starting rounds
@@ -36,22 +43,33 @@ class CellVerificationService
      * either commits would lock nothing. Whoever takes the row locks first
      * commits their claim; the other's check then reads it and is refused.
      *
-     * @param  list<int>  $rowIds
+     * @param  array<int, int>|null  $rowIds
      *
      * @throws OverlappingVerificationRoundException
      */
-    public function startRound(int $userId, array $rowIds): CellVerificationRound
+    public function startRound(int $userId, ?array $rowIds): CellVerificationRound
     {
         return DB::transaction(function () use ($userId, $rowIds) {
-            // Read purely for the row locks it takes; the values are unused.
-            Row::query()->whereIn('id', $rowIds)->lockForUpdate()->pluck('id');
+            $scope = Row::query();
 
-            // toBase() before map(), and an explicit closure return type, so the
-            // letters are a plain array<int, string> without relying on how
-            // Larastan infers a pluck()'s column type — same reasoning as
-            // Product::optionLabels().
+            if ($rowIds !== null) {
+                $scope->whereIn('id', $rowIds);
+            }
+
+            // This read both takes the row locks and resolves what "the whole
+            // warehouse" means right now. toBase() before map(), with an
+            // explicit closure return type, keeps the result a plain array
+            // without relying on how Larastan infers a pluck()'s column type —
+            // same reasoning as Product::optionLabels().
+            $scopedIds = $scope
+                ->lockForUpdate()
+                ->get(['id'])
+                ->toBase()
+                ->map(fn (Row $row): int => $row->id)
+                ->all();
+
             $conflictingLetters = Row::query()
-                ->whereIn('id', $rowIds)
+                ->whereIn('id', $scopedIds)
                 ->underActiveVerification()
                 ->orderBy('letter')
                 ->get(['letter'])
@@ -65,7 +83,7 @@ class CellVerificationService
 
             $round = CellVerificationRound::create(['user_id' => $userId]);
 
-            $round->rows()->attach($rowIds);
+            $round->rows()->attach($scopedIds);
 
             return $round;
         });

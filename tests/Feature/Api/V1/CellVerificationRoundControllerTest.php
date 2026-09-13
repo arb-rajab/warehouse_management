@@ -39,12 +39,58 @@ test('an authenticated worker can start a verification round over the rows they 
     ]);
 });
 
-test('starting a round requires at least one existing row', function () {
+test('a round started without row_ids covers every row in the warehouse', function () {
     actingAsMobileUser();
 
-    $this->postJson('/api/v1/cell-verification-rounds')
-        ->assertJsonValidationErrors('row_ids');
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowC = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
 
+    $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertCreated();
+    expect($response->json('rows'))->toEqual([
+        ['id' => $rowA->id, 'letter' => 'A'],
+        ['id' => $rowB->id, 'letter' => 'B'],
+        ['id' => $rowC->id, 'letter' => 'C'],
+    ]);
+});
+
+test('a warehouse-wide round claims every row, leaving none for a second round', function () {
+    actingAsMobileUser();
+
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->postJson('/api/v1/cell-verification-rounds')->assertCreated();
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$rowB->id]])
+        ->assertStatus(409)
+        ->assertJsonPath('error_code', 'rows_already_in_active_round');
+
+    $this->assertDatabaseCount('cell_verification_rounds', 1);
+});
+
+test('a warehouse-wide round is refused while any single row is already claimed', function () {
+    actingAsMobileUser();
+
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $claimed = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->covering($claimed)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertStatus(409);
+    expect($response->json('message'))->toContain('B');
+    $this->assertDatabaseCount('cell_verification_rounds', 1);
+});
+
+test('starting a round rejects an empty row_ids array and a row that does not exist', function () {
+    actingAsMobileUser();
+
+    // An empty array is rejected rather than read as "the whole warehouse",
+    // which omitting the field entirely means instead.
     $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => []])
         ->assertJsonValidationErrors('row_ids');
 

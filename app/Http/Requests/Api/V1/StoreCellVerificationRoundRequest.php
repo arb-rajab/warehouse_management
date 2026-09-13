@@ -15,22 +15,29 @@ class StoreCellVerificationRoundRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // A round always names the rows it walks — there is no "all rows"
-            // shorthand, since the rows it claims are what other rounds are
-            // then refused and what pallet actions are frozen against.
-            'row_ids' => ['required', 'array', 'min:1'],
+            // Omitting `row_ids` walks the whole warehouse; naming rows walks
+            // only those. An *empty* array is rejected rather than read as
+            // either: a client whose row list came out empty by accident would
+            // otherwise silently claim every row and freeze pallet actions
+            // warehouse-wide.
+            'row_ids' => ['nullable', 'array', 'min:1'],
             'row_ids.*' => ['integer', 'distinct', 'exists:rows,id'],
         ];
     }
 
     /**
-     * The requested row ids, as ints — `exists:rows,id` has already proved
-     * every one of them resolves.
+     * The requested row ids as ints, or null when the caller named none and the
+     * round should cover the whole warehouse. `exists:rows,id` has already
+     * proved every id resolves.
      *
-     * @return list<int>
+     * @return array<int, int>|null
      */
-    public function rowIds(): array
+    public function rowIds(): ?array
     {
+        if (! $this->filled('row_ids')) {
+            return null;
+        }
+
         return array_values(array_map('intval', $this->array('row_ids')));
     }
 }
