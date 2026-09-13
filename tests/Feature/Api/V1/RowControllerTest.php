@@ -193,7 +193,7 @@ test('an authenticated worker can list rows frozen by any unfinished round, not 
     $response = $this->getJson('/api/v1/rows/frozen');
 
     $response->assertOk();
-    expect(collect($response->json('data'))->pluck('id'))
+    expect(collect($response->json())->pluck('id'))
         ->toContain($frozenByOther->id)
         ->not->toContain($completedRound->id)
         ->not->toContain($unfrozen->id);
@@ -209,7 +209,7 @@ test('listing frozen rows returns letters in order rather than creation order', 
     $response = $this->getJson('/api/v1/rows/frozen');
 
     $response->assertOk();
-    expect(collect($response->json('data'))->pluck('letter')->all())->toBe(['A', 'B']);
+    expect(collect($response->json())->pluck('letter')->all())->toBe(['A', 'B']);
 });
 
 test('an unauthenticated caller cannot list frozen rows', function () {
