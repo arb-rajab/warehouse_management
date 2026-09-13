@@ -23,6 +23,7 @@ import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/Pro
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { destroy } from '@/actions/App/Http/Controllers/LoginController';
+import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { confirmLogout } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -125,23 +126,8 @@ function navLinkStateClass(href: string): string[] {
                         </Link>
                     </div>
                 </div>
-                <div class="hidden items-center gap-4 text-sm xl:flex">
-                    <LanguageSwitcher />
-                    <span
-                        class="inline-flex items-center gap-1.5 text-gray-600 dark:text-neutral-400"
-                    >
-                        <CircleUser class="h-4 w-4 shrink-0" />
-                        {{ page.props.auth.user?.name }}
-                    </span>
-                    <Link
-                        :href="destroy()"
-                        as="button"
-                        :on-before="confirmLogout"
-                        class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
-                    >
-                        <LogOut class="h-4 w-4" />
-                        {{ t('nav.logout') }}
-                    </Link>
+                <div class="hidden items-center xl:flex">
+                    <AccountMenu :user-name="page.props.auth.user?.name" />
                 </div>
                 <button
                     type="button"
