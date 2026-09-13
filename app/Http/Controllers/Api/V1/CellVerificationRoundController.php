@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexCellVerificationRoundsRequest;
+use App\Http\Requests\Api\V1\StoreCellVerificationRoundRequest;
 use App\Http\Resources\CellVerificationRoundResource;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\User;
 use App\Services\CellVerificationService;
+use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 
@@ -29,6 +30,8 @@ class CellVerificationRoundController extends Controller
         $user = $request->user();
 
         $rounds = CellVerificationRound::query()
+            ->select(CellVerificationRound::SELECT_COLUMNS)
+            ->with('rows:id,letter')
             ->ownedBy($user->id)
             ->withCount('reports')
             ->when($request->boolean('only_unfinished'), fn (Builder $query) => $query->unfinished())
@@ -49,6 +52,7 @@ class CellVerificationRoundController extends Controller
         Gate::authorize('view', $cellVerificationRound);
 
         $cellVerificationRound->loadCount('reports');
+        $cellVerificationRound->load(['rows:id,letter']);
         $cellVerificationRound->load(['reports' => fn ($query) => $query
             ->with(CellVerificationReport::WITH_DETAILS)
             ->orderBy('created_at')
@@ -57,14 +61,21 @@ class CellVerificationRoundController extends Controller
         return new CellVerificationRoundResource($cellVerificationRound);
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Start a round over the rows the worker is about to walk. Those rows are
+     * claimed exclusively until the round completes: no other round may
+     * include any of them, and pallet actions on their cells are refused
+     * meanwhile.
+     */
+    #[DocumentedResponse(409, description: 'One or more of the requested rows are already covered by another unfinished round (`error_code`: `rows_already_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    public function store(StoreCellVerificationRoundRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $round = $this->cellVerifications->startRound($user->id);
+        $round = $this->cellVerifications->startRound($user->id, $request->rowIds());
 
-        return (new CellVerificationRoundResource($round))
+        return (new CellVerificationRoundResource($round->load('rows:id,letter')))
             ->response()
             ->setStatusCode(201);
     }
@@ -75,6 +86,6 @@ class CellVerificationRoundController extends Controller
 
         $round = $this->cellVerifications->completeRound($cellVerificationRound);
 
-        return new CellVerificationRoundResource($round);
+        return new CellVerificationRoundResource($round->load('rows:id,letter'));
     }
 }

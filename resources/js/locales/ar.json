@@ -224,7 +224,8 @@
             "user": "العامل",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
-            "reportsCount": "التقارير"
+            "reportsCount": "التقارير",
+            "rows": "الممرات"
         },
         "status": {
             "completed": "مكتملة",
@@ -235,7 +236,8 @@
             "backToList": "العودة إلى الجولات",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
-            "reportsCount": "{count} تقرير"
+            "reportsCount": "{count} تقرير",
+            "rows": "الممرات"
         }
     },
     "cellVerificationReport": {

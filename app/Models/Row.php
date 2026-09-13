@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -54,6 +55,34 @@ class Row extends Model
     public function cells(): HasMany
     {
         return $this->hasMany(Cell::class);
+    }
+
+    /**
+     * @return BelongsToMany<CellVerificationRound, $this>
+     */
+    public function verificationRounds(): BelongsToMany
+    {
+        return $this->belongsToMany(CellVerificationRound::class);
+    }
+
+    /**
+     * Scope a query to rows an unfinished verification round currently claims.
+     * This is the single definition of "frozen for counting", read both when a
+     * new round is proposed (CellVerificationService::startRound() refuses one
+     * that overlaps) and on every pallet action
+     * (PalletActionService::lockCell() refuses to touch such a cell).
+     *
+     * `whereNull('completed_at')` is inlined rather than calling
+     * `CellVerificationRound::unfinished()`: a model-specific `#[Scope]` called
+     * inside a `whereHas()` closure breaks Larastan's generic resolution — see
+     * .ai/rules/models.md.
+     *
+     * @param  Builder<Row>  $query
+     */
+    #[Scope]
+    protected function underActiveVerification(Builder $query): void
+    {
+        $query->whereHas('verificationRounds', fn (Builder $roundQuery) => $roundQuery->whereNull('completed_at'));
     }
 
     /**

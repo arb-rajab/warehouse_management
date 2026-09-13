@@ -107,6 +107,10 @@ export function cellVerificationRound(
         started_at: '2026-08-01T10:00:00Z',
         completed_at: '2026-08-01T11:00:00Z',
         reports_count: 3,
+        rows: [
+            { id: 1, letter: 'A' },
+            { id: 2, letter: 'B' },
+        ],
         user: { id: 7, name: 'Jane Doe' },
         ...overrides,
     };

@@ -2,6 +2,7 @@
 
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -102,6 +103,26 @@ test('storing a pallet into an inactive cell is rejected with a non-field action
 
     $response->assertSessionHasErrors(['action' => __('messages.slot_inactive')]);
     $this->assertDatabaseCount('pallets', 0);
+});
+
+test('storing a pallet into a row under an unfinished verification round is rejected with a non-field action error', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+
+    // The freeze applies to the admin panel too, not just the mobile app —
+    // both surfaces act through PalletActionService::lockCell().
+    CellVerificationRound::factory()->covering($row)->create();
+
+    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
+    $this->assertDatabaseCount('pallets', 0);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
 
 test('a mobile app user cannot store a pallet via the admin route', function () {

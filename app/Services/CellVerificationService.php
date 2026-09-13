@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\CellOutsideRoundRowsException;
+use App\Exceptions\OverlappingVerificationRoundException;
 use App\Exceptions\VerificationRoundCompletedException;
 use App\Models\Cell;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
+use App\Models\Row;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,9 +24,51 @@ use Illuminate\Support\Facades\DB;
  */
 class CellVerificationService
 {
-    public function startRound(int $userId): CellVerificationRound
+    /**
+     * Start a round over the given rows, claiming them exclusively until it is
+     * completed. A round always covers a subset of the warehouse chosen by the
+     * caller, so two rounds may run at once as long as they share no row.
+     *
+     * The `rows` records themselves are locked for the duration of the
+     * transaction rather than the matching claims: two workers starting rounds
+     * over the same row at the same moment need something already-existing to
+     * queue behind, and a locking read over the zero claims that exist before
+     * either commits would lock nothing. Whoever takes the row locks first
+     * commits their claim; the other's check then reads it and is refused.
+     *
+     * @param  list<int>  $rowIds
+     *
+     * @throws OverlappingVerificationRoundException
+     */
+    public function startRound(int $userId, array $rowIds): CellVerificationRound
     {
-        return CellVerificationRound::create(['user_id' => $userId]);
+        return DB::transaction(function () use ($userId, $rowIds) {
+            // Read purely for the row locks it takes; the values are unused.
+            Row::query()->whereIn('id', $rowIds)->lockForUpdate()->pluck('id');
+
+            // toBase() before map(), and an explicit closure return type, so the
+            // letters are a plain array<int, string> without relying on how
+            // Larastan infers a pluck()'s column type — same reasoning as
+            // Product::optionLabels().
+            $conflictingLetters = Row::query()
+                ->whereIn('id', $rowIds)
+                ->underActiveVerification()
+                ->orderBy('letter')
+                ->get(['letter'])
+                ->toBase()
+                ->map(fn (Row $row): string => $row->letter)
+                ->all();
+
+            if ($conflictingLetters !== []) {
+                throw new OverlappingVerificationRoundException($conflictingLetters);
+            }
+
+            $round = CellVerificationRound::create(['user_id' => $userId]);
+
+            $round->rows()->attach($rowIds);
+
+            return $round;
+        });
     }
 
     /**
@@ -44,7 +89,14 @@ class CellVerificationService
      * expected pallet snapshot is always derived server-side from the cell's
      * current pallet — the client only supplies what it observed.
      *
+     * The cell must sit in one of the rows the round claims: only those rows
+     * are frozen against pallet actions, so a report from outside them could
+     * be read against a pallet that is moving underneath it.
+     *
      * @param  array{is_correct: bool, reported_cell_state?: string|null, reported_product_id?: int|null, reported_boxes_count?: int|null, reported_expiration_date?: string|null, note?: string|null}  $reported
+     *
+     * @throws VerificationRoundCompletedException
+     * @throws CellOutsideRoundRowsException
      */
     public function report(CellVerificationRound $round, int $cellId, int $userId, array $reported): CellVerificationReport
     {
@@ -54,6 +106,11 @@ class CellVerificationService
 
         return DB::transaction(function () use ($round, $cellId, $userId, $reported) {
             $cell = Cell::query()->with('pallet')->findOrFail($cellId);
+
+            if (! $round->coversRow($cell->row_id)) {
+                throw new CellOutsideRoundRowsException;
+            }
+
             $pallet = $cell->pallet;
 
             return CellVerificationReport::create([

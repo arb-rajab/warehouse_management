@@ -224,7 +224,8 @@
             "user": "Worker",
             "startedAt": "Started",
             "completedAt": "Completed",
-            "reportsCount": "Reports"
+            "reportsCount": "Reports",
+            "rows": "Rows"
         },
         "status": {
             "completed": "Completed",
@@ -235,7 +236,8 @@
             "backToList": "Back to rounds",
             "startedAt": "Started",
             "completedAt": "Completed",
-            "reportsCount": "{count} reports"
+            "reportsCount": "{count} reports",
+            "rows": "Rows"
         }
     },
     "cellVerificationReport": {
