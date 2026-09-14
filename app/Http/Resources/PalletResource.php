@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Product;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property-read int $id
  * @property-read CellState $state
  * @property-read Carbon $expiration_date
+ * @property-read CarbonImmutable|null $cell_entered_at
  * @property-read int $remaining_boxes
  * @property-read Product $product
  * @property-read Cell $cell

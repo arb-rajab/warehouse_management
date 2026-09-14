@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use Carbon\CarbonImmutable;
 use Database\Factories\PalletFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property int $remaining_boxes
  * @property-read CellState $state
  * @property-read CellStatusLog|null $cellEnteredLog
+ * @property-read CarbonImmutable|null $cell_entered_at
  */
 #[Fillable(['product_id', 'cell_id', 'expiration_date', 'remaining_boxes'])]
 class Pallet extends Model
@@ -90,12 +92,12 @@ class Pallet extends Model
      * `created_at` (original stock-in date, never changes), this moves forward
      * on every transfer. Requires `cellEnteredLog` to be eager-loaded.
      *
-     * @return Attribute<Carbon|null, never>
+     * @return Attribute<CarbonImmutable|null, never>
      */
     protected function cellEnteredAt(): Attribute
     {
         return Attribute::make(
-            get: fn (): ?Carbon => $this->cellEnteredLog?->created_at,
+            get: fn (): ?CarbonImmutable => $this->cellEnteredLog?->created_at,
         );
     }
 
