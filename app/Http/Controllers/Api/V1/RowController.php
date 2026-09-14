@@ -24,9 +24,14 @@ class RowController extends Controller
 
     /**
      * Every row with its cells and the pallet occupying each occupied flat, unpaginated.
+     * `product_status` narrows each row's `cells` to only those occupied by a
+     * matching product, dropping empty cells and non-matching pallets from
+     * the returned grid.
      */
     public function full(ShowRowsFullRequest $request): AnonymousResourceCollection
     {
+        $productPublished = $request->productPublished();
+
         return RowResource::collection(
             Row::query()
                 ->select(Row::SELECT_COLUMNS)
@@ -34,6 +39,7 @@ class RowController extends Controller
                 ->with(['cells' => fn ($query) => $query
                     ->select(Cell::SELECT_COLUMNS)
                     ->with(Cell::WITH_CONTENTS)
+                    ->when($productPublished !== null, fn ($q) => $q->whereHas('pallet.product', fn ($q2) => $q2->where('published', $productPublished)))
                     ->orderedByCoordinates()])
                 ->orderBy('letter')
                 ->get()
