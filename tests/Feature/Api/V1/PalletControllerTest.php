@@ -9,6 +9,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
@@ -59,6 +60,27 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $this->assertDatabaseCount('pallets', 1);
     expect($pallet->remaining_boxes)->toBe(10);
     expect($cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('a submitted expiration_date carrying a time component is normalized to a bare date on storage', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+
+    $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString().' 23:59:59',
+    ])->assertCreated();
+
+    $pallet = Pallet::query()->sole();
+
+    expect(DB::table('pallets')->where('id', $pallet->id)->value('expiration_date'))
+        ->toBe(now()->addMonth()->toDateString().' 00:00:00');
 });
 
 test('adding a pallet logs the status change, with an optional note', function () {
