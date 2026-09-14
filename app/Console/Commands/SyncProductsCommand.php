@@ -81,7 +81,6 @@ class SyncProductsCommand extends Command
      * missing a usable `Mat_ID` or `enName` is skipped rather than written
      * with a guessed value.
      *
-     * @param  mixed  $products
      * @return list<array{id: int, name: string, ar_name: string, published: int}>
      */
     private function mapProducts(mixed $products): array
