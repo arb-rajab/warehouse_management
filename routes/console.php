@@ -15,6 +15,8 @@ Schedule::command('queue:work --stop-when-empty --max-time=55')->everyMinute()->
 Schedule::command('backup:clean')->daily()->at('01:00')->withoutOverlapping();
 Schedule::command('backup:run --only-db')->daily()->at('01:30')->withoutOverlapping();
 
+Schedule::command('products:sync')->hourly()->withoutOverlapping();
+
 Schedule::command('health:check')->everyMinute();
 Schedule::command('health:schedule-check-heartbeat')->everyMinute();
 Schedule::command('health:queue-check-heartbeat')->everyFiveMinutes();
