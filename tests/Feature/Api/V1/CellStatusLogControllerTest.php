@@ -74,6 +74,7 @@ test('an authenticated worker can list cell logs with every property the app rea
             'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
+            'active' => true,
         ],
         'pallet' => [
             'id' => $pallet->id,

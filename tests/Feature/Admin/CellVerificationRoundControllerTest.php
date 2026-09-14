@@ -175,6 +175,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                         ->where('ar_name', 'ودجات')
                         ->where('image_url', null)
                         ->where('boxes_count', 5)
+                        ->where('active', true)
                     )
                     ->where('boxes_count', 5)
                     ->where('expiration_date', '2026-12-01')

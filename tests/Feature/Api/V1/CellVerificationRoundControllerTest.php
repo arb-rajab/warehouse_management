@@ -294,6 +294,7 @@ test('a worker can view one of their own rounds, including its reports in report
                         'ar_name' => 'ودجات',
                         'image_url' => null,
                         'boxes_count' => 4,
+                        'active' => true,
                     ],
                     'boxes_count' => 4,
                     'expiration_date' => '2026-12-01',
