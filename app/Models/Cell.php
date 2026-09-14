@@ -36,13 +36,19 @@ class Cell extends Model
     /**
      * Eager loads needed to describe what a cell currently holds.
      *
+     * `pallet.cellEnteredLog`'s column list must be table-qualified
+     * (`cell_status_logs.id`, not bare `id`) — the "of many" join Pallet::
+     * cellEnteredLog() builds aliases its aggregate subquery to `pallet_id`
+     * too, so an unqualified `pallet_id` in the select list is ambiguous
+     * and errors ("ambiguous column name") on both SQLite and MySQL.
+     *
      * @var list<string>
      */
     public const array WITH_CONTENTS = [
         'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
         'pallet.product:id,name,ar_name,thumbnail_img,published',
         'pallet.product.thumbnailUpload:id,file_name,external_link',
-        'pallet.cellEnteredLog:id,pallet_id,action,created_at',
+        'pallet.cellEnteredLog:cell_status_logs.id,cell_status_logs.pallet_id,cell_status_logs.action,cell_status_logs.created_at',
     ];
 
     /**

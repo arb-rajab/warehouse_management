@@ -22,7 +22,8 @@ class PalletController extends Controller
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
         'cell.row:id,letter',
-        'cellEnteredLog:id,pallet_id,action,created_at',
+        // Table-qualified — see the comment on Cell::WITH_CONTENTS for why.
+        'cellEnteredLog:cell_status_logs.id,cell_status_logs.pallet_id,cell_status_logs.action,cell_status_logs.created_at',
     ];
 
     public function __construct(private readonly PalletActionService $palletActions) {}
