@@ -8,6 +8,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 test('a pallet belongs to its product', function () {
     $product = Product::factory()->create();
@@ -38,6 +39,19 @@ test('the expiration_date attribute is cast to a date', function () {
 
     expect($pallet->fresh()->expiration_date)->toBeInstanceOf(CarbonImmutable::class);
     expect($pallet->fresh()->expiration_date->toDateString())->toBe('2027-01-15');
+});
+
+test('the factory default expiration_date has no time component', function () {
+    // fake()->dateTimeBetween() returns a random time of day; PalletFactory
+    // must format it down to a bare date, or the raw stored value carries
+    // that random time — which SQLite (unlike MySQL's DATE column) keeps
+    // verbatim, breaking `expiration_date <= $until` boundary comparisons
+    // like BuildsDashboardStats::expiringWindow()'s.
+    $pallet = Pallet::factory()->create();
+
+    $raw = DB::table('pallets')->where('id', $pallet->id)->value('expiration_date');
+
+    expect($raw)->toEndWith(' 00:00:00');
 });
 
 test('the state attribute reads the state of the pallets current cell', function () {
