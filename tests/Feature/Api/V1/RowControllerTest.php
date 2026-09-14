@@ -98,6 +98,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
+            'cell_entered_at' => null,
             'is_stale' => null,
             'remaining_boxes' => $pallet->remaining_boxes,
         ],

@@ -32,11 +32,13 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $response->assertCreated();
 
     $pallet = Pallet::query()->sole();
+    $storedLog = CellStatusLog::query()->where('pallet_id', $pallet->id)->sole();
 
     expect($response->json())->toEqual([
         'id' => $pallet->id,
         'state' => 'full',
         'expiration_date' => $expirationDate,
+        'cell_entered_at' => $storedLog->created_at->toIso8601String(),
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
         'product' => [
@@ -252,6 +254,7 @@ test('an authenticated worker can view a pallet with every property the app read
         'id' => $pallet->id,
         'state' => 'full',
         'expiration_date' => $pallet->expiration_date->toDateString(),
+        'cell_entered_at' => null,
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
         'product' => [
