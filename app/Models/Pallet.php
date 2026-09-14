@@ -82,7 +82,7 @@ class Pallet extends Model
     public function cellEnteredLog(): HasOne
     {
         return $this->hasOne(CellStatusLog::class)
-            ->ofMany('created_at', function (Builder $query): void {
+            ->ofMany(['created_at' => 'max'], function (Builder $query): void {
                 $query->whereIn('action', [CellLogAction::Stored->value, CellLogAction::TransferredIn->value]);
             });
     }
