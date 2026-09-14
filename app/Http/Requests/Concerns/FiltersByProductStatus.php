@@ -2,20 +2,24 @@
 
 namespace App\Http\Requests\Concerns;
 
-use App\Models\Product;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
 /**
  * Mobile API-only filter: resolves a caller-chosen `active`/`inactive`
- * `product_status` into a concrete `product_id` list once validation has
- * passed, so the existing `product_id`-driven filtering (FiltersByProductIds,
- * CellStatusLog::filtered(), BuildsDashboardStats) picks it up unchanged.
- * Not used by the Admin equivalents, which keep `product_id[]` only.
+ * `product_status` into a synthetic `product_published` boolean once
+ * validation has passed, so downstream relational filtering
+ * (CellStatusLog::filtered(), BuildsDashboardStats) can join against
+ * `products.published` directly instead of materializing an id list. Kept
+ * as a private merge key rather than a validated field, the same way
+ * `product_id` was merged before it — so it never reaches the Admin
+ * equivalents (FilterCellStatusLogsRequest/ShowDashboardRequest), which
+ * don't use this trait and keep `product_id[]` only.
  *
  * The resolution happens in `passedValidation()` rather than
- * `prepareForValidation()` so the merged-in `product_id` never collides with
- * the `prohibits` rule below, which must see the caller's own raw input.
+ * `prepareForValidation()` so the merged-in `product_published` never
+ * collides with the `prohibits` rule below, which must see the caller's own
+ * raw input.
  */
 trait FiltersByProductStatus
 {
@@ -31,20 +35,19 @@ trait FiltersByProductStatus
 
     protected function resolveProductStatusFilter(): void
     {
-        if (! $this->filled('product_status') || $this->filled('product_id')) {
+        if (! $this->filled('product_status')) {
             return;
         }
 
-        $ids = Product::query()
-            ->where('published', $this->input('product_status') === 'active')
-            ->pluck('id')
-            ->all();
+        $this->merge(['product_published' => $this->input('product_status') === 'active']);
+    }
 
-        // `filled()` treats an empty array as blank — both `CellStatusLog::filtered()`
-        // and `FiltersByProductIds::productIds()` gate on `$request->filled('product_id')`,
-        // so merging `[]` here would make the filter disappear instead of matching
-        // zero rows. A sentinel id that can never exist (ids are positive
-        // auto-increments) keeps the array non-blank while still matching nothing.
-        $this->merge(['product_id' => $ids !== [] ? $ids : [-1]]);
+    /**
+     * The product-published filter derived from `product_status`, or null
+     * when the caller didn't filter by product status.
+     */
+    public function productPublished(): ?bool
+    {
+        return $this->filled('product_published') ? $this->boolean('product_published') : null;
     }
 }
