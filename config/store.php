@@ -20,4 +20,19 @@ return [
 
     'asset_base_url' => env('STORE_ASSET_BASE_URL'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Store App Product Sync URL
+    |--------------------------------------------------------------------------
+    |
+    | The full REST endpoint `products:sync` (SyncProductsCommand) polls on a
+    | schedule to pull product name/Arabic name/active-status updates into the
+    | shared `products` table. The store's API key is embedded in the URL
+    | path itself, which is why this is one opaque env value rather than a
+    | base URL plus a separate key. See .ai/rules/shared-database.md.
+    |
+    */
+
+    'products_sync_url' => env('STORE_PRODUCTS_SYNC_URL'),
+
 ];

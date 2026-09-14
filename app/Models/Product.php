@@ -16,11 +16,17 @@ use Illuminate\Support\Collection;
 /**
  * A row in the store app's shared `products` table.
  *
- * Read-only here — the store owns every write. `image_url` and `boxes_count`
- * are not columns on it: the first resolves through the store's `uploads`
- * table, the second through this app's own `wms_product_settings`. Both are
- * exposed as attributes so the API and admin payloads keep the shape their
- * clients already consume. See .ai/rules/shared-database.md.
+ * The store owns every column, and this app is read-only on all but three:
+ * `name`, `ar_name` and `published` are also written here, periodically and
+ * in bulk, by `products:sync` (App\Console\Commands\SyncProductsCommand),
+ * which upserts them from the Otajer store API — see the "Product sync"
+ * section of .ai/rules/shared-database.md, including the concurrency
+ * implications of two apps writing the same columns. There is still no
+ * per-request create/update/delete of a `Product` anywhere in this codebase.
+ * `image_url` and `boxes_count` are not columns on it: the first resolves
+ * through the store's `uploads` table, the second through this app's own
+ * `wms_product_settings`. Both are exposed as attributes so the API and
+ * admin payloads keep the shape their clients already consume.
  *
  * @property int $id
  * @property string $name
