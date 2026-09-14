@@ -149,6 +149,53 @@ test('listing every row with its cells computes is_stale from a caller-supplied 
     expect(collect($rowPayload['cells'])->firstWhere('id', $cell->id)['pallet']['is_stale'])->toBeTrue();
 });
 
+test('listing every row with its cells can be filtered by product_status=active, excluding cells with an inactive product and empty cells', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 1]);
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    $activeCell = $row->cells()->where('cell_number', 1)->first();
+    $inactiveCell = $row->cells()->where('cell_number', 2)->first();
+    // cell_number 3 stays empty
+    Pallet::factory()->create(['cell_id' => $activeCell->id, 'product_id' => $activeProduct->id]);
+    Pallet::factory()->create(['cell_id' => $inactiveCell->id, 'product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=active');
+
+    $response->assertOk();
+    $rowPayload = collect($response->json())->firstWhere('id', $row->id);
+    expect(collect($rowPayload['cells'])->pluck('id')->all())->toBe([$activeCell->id]);
+});
+
+test('listing every row with its cells can be filtered by product_status=inactive, excluding cells with an active product and empty cells', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 1]);
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    $activeCell = $row->cells()->where('cell_number', 1)->first();
+    $inactiveCell = $row->cells()->where('cell_number', 2)->first();
+    // cell_number 3 stays empty
+    Pallet::factory()->create(['cell_id' => $activeCell->id, 'product_id' => $activeProduct->id]);
+    Pallet::factory()->create(['cell_id' => $inactiveCell->id, 'product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=inactive');
+
+    $response->assertOk();
+    $rowPayload = collect($response->json())->firstWhere('id', $row->id);
+    expect(collect($rowPayload['cells'])->pluck('id')->all())->toBe([$inactiveCell->id]);
+});
+
+test('an invalid product_status is rejected on the full row listing', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=bogus');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
 test('listing every row with its cells excludes cells belonging to a different row', function () {
     actingAsMobileUser();
 
