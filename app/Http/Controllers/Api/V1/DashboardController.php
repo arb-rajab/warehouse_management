@@ -16,13 +16,15 @@ class DashboardController extends Controller
         $today = today();
         $customExpiringDays = $request->integer('expiring_days') ?: self::DEFAULT_CUSTOM_EXPIRING_DAYS;
         $productIds = $request->productIds();
+        $productPublished = $request->productPublished();
 
         return response()->json([
-            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $productIds),
+            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $productIds, $productPublished),
             'today' => $today->toDateString(),
             'weekStart' => $this->dashboardWeekStart($today)->toDateString(),
             'filters' => [
                 'product_id' => $productIds,
+                'product_status' => $request->input('product_status'),
             ],
         ]);
     }

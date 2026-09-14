@@ -153,7 +153,8 @@ test('a product_status of active narrows the mobile dashboard to active products
 
     $response->assertOk();
     expect($response->json('stats.activity_today.stored'))->toBe(1);
-    expect($response->json('filters.product_id'))->toEqual([$activeProduct->id]);
+    expect($response->json('filters.product_id'))->toBeNull();
+    expect($response->json('filters.product_status'))->toBe('active');
 
     Carbon::setTestNow();
 });
@@ -171,7 +172,8 @@ test('a product_status of inactive narrows the mobile dashboard to inactive prod
 
     $response->assertOk();
     expect($response->json('stats.activity_today.stored'))->toBe(1);
-    expect($response->json('filters.product_id'))->toEqual([$inactiveProduct->id]);
+    expect($response->json('filters.product_id'))->toBeNull();
+    expect($response->json('filters.product_status'))->toBe('inactive');
 
     Carbon::setTestNow();
 });
@@ -185,7 +187,6 @@ test('a product_status with zero matching products narrows the mobile dashboard 
 
     $response->assertOk();
     expect($response->json('stats.activity_today.stored'))->toBe(0);
-    expect($response->json('filters.product_id'))->toEqual([-1]);
 });
 
 test('sending both product_status and product_id together is rejected on the mobile dashboard', function () {
