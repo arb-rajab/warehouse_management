@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\CellState;
+use App\Observers\PalletObserver;
 use Database\Factories\PalletFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property-read CellState $state
  */
 #[Fillable(['product_id', 'cell_id', 'expiration_date', 'remaining_boxes'])]
+#[ObservedBy(PalletObserver::class)]
 class Pallet extends Model
 {
     /** @use HasFactory<PalletFactory> */
