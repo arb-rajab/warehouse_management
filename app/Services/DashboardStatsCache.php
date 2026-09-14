@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Cache;
  * product_id combination) can be invalidated at once via flush() without the
  * cache store needing to support tags — the app's default `database` store
  * doesn't. Call flush() from any write path that changes cell occupancy, pallet
- * expiration dates, or cell status log activity; see CellStatusLogObserver and
- * RowObserver for the current call sites.
+ * expiration dates, or cell status log activity; see CellStatusLogObserver,
+ * RowObserver, and PalletObserver for the current call sites.
  */
 class DashboardStatsCache
 {

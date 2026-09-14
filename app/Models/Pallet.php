@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Observers\PalletObserver;
 use Carbon\CarbonImmutable;
 use Database\Factories\PalletFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property-read CarbonImmutable|null $cell_entered_at
  */
 #[Fillable(['product_id', 'cell_id', 'expiration_date', 'remaining_boxes'])]
+#[ObservedBy(PalletObserver::class)]
 class Pallet extends Model
 {
     /** @use HasFactory<PalletFactory> */
