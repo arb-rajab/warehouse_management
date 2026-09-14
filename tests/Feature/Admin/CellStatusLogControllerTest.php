@@ -78,6 +78,7 @@ test('an authenticated admin can view the cell log with every property the table
                     ->where('ar_name', 'ودجات')
                     ->where('image_url', 'https://cdn.example.com/widgets.png')
                     ->where('boxes_count', 10)
+                    ->where('active', true)
                 )
                 ->has('pallet', fn (Assert $palletProp) => $palletProp
                     ->where('id', $pallet->id)

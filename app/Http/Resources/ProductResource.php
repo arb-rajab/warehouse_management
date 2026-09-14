@@ -11,6 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string $ar_name
  * @property-read string|null $image_url
  * @property-read int $boxes_count
+ * @property-read bool $published
  */
 class ProductResource extends JsonResource
 {
@@ -27,6 +28,7 @@ class ProductResource extends JsonResource
             'ar_name' => $this->ar_name,
             'image_url' => $this->image_url,
             'boxes_count' => $this->boxes_count,
+            'active' => $this->published,
         ];
     }
 }

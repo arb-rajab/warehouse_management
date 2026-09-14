@@ -45,6 +45,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
             'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
+            'active' => true,
         ],
         'location' => [
             'row_letter' => 'Z',
@@ -259,6 +260,7 @@ test('an authenticated worker can view a pallet with every property the app read
             'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
+            'active' => true,
         ],
         'location' => [
             'row_letter' => 'Z',

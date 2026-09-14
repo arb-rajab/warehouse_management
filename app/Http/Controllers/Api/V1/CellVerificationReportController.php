@@ -16,10 +16,10 @@ class CellVerificationReportController extends Controller
 {
     private const array EAGER_LOAD = [
         'cell.row:id,letter',
-        'expectedProduct:id,name,ar_name,thumbnail_img',
+        'expectedProduct:id,name,ar_name,thumbnail_img,published',
         'expectedProduct.thumbnailUpload:id,file_name,external_link',
         'expectedProduct.setting:product_id,boxes_count',
-        'reportedProduct:id,name,ar_name,thumbnail_img',
+        'reportedProduct:id,name,ar_name,thumbnail_img,published',
         'reportedProduct.thumbnailUpload:id,file_name,external_link',
         'reportedProduct.setting:product_id,boxes_count',
         'user:id,name',
