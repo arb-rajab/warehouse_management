@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use Carbon\CarbonImmutable;
@@ -128,7 +130,56 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
         'product_image_url' => 'https://example.com/widgets.png',
         'expiration_date' => '2026-09-15',
         'added_at' => '2026-08-01T10:00:00+00:00',
+        'cell_entered_at' => null,
     ]);
+
+    Carbon::setTestNow();
+});
+
+test('cellEnteredLog resolves the most recent stored or transferred_in log for the pallet', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    $pallet = Pallet::factory()->create();
+    $storedLog = CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Stored,
+    ]);
+
+    // Noise: an unrelated pallet's stored log, and this pallet's own opened log
+    // (not a "stored"/"transferred_in" action, so must not win).
+    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+    CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Opened,
+        'created_at' => now()->addHour(),
+    ]);
+
+    expect($pallet->fresh()->cellEnteredLog->id)->toBe($storedLog->id);
+
+    Carbon::setTestNow();
+});
+
+test('cellEnteredLog moves to the newest transferred_in log once the pallet is transferred', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    $pallet = Pallet::factory()->create();
+    CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Stored,
+    ]);
+
+    Carbon::setTestNow('2026-08-05 10:00:00');
+    $destinationCell = Cell::factory()->create();
+    $pallet->update(['cell_id' => $destinationCell->id]);
+    $transferredInLog = CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredIn,
+    ]);
+
+    expect($pallet->fresh()->cellEnteredLog->id)->toBe($transferredInLog->id);
+    expect($pallet->fresh()->cell_entered_at->toIso8601String())->toBe('2026-08-05T10:00:00+00:00');
 
     Carbon::setTestNow();
 });
