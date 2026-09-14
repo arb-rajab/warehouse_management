@@ -10,6 +10,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -189,7 +190,16 @@ class PalletActionService
             $pallet = Pallet::create([
                 'product_id' => $product->id,
                 'cell_id' => $cell->id,
-                'expiration_date' => $expirationDate,
+                // Normalized to a bare date: the validation rule only requires a
+                // parseable date, so a caller-submitted value carrying a time
+                // component (e.g. a raw ISO datetime) would otherwise be stored
+                // verbatim — and unlike MySQL's DATE column, SQLite keeps that
+                // time component intact instead of truncating it, so the pallet
+                // reads back as its correct date everywhere the app formats it
+                // via toDateString(), but a raw `expiration_date <= $until`
+                // comparison (BuildsDashboardStats::expiringWindow()) can then
+                // exclude it right at the boundary.
+                'expiration_date' => Carbon::parse($expirationDate)->toDateString(),
                 'remaining_boxes' => $product->boxes_count,
             ]);
 
