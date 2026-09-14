@@ -42,6 +42,7 @@ class Cell extends Model
         'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
         'pallet.product:id,name,ar_name,thumbnail_img,published',
         'pallet.product.thumbnailUpload:id,file_name,external_link',
+        'pallet.cellEnteredLog:id,pallet_id,action,created_at',
     ];
 
     /**

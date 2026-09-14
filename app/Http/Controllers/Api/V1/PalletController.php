@@ -22,6 +22,7 @@ class PalletController extends Controller
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
         'cell.row:id,letter',
+        'cellEnteredLog:id,pallet_id,action,created_at',
     ];
 
     public function __construct(private readonly PalletActionService $palletActions) {}
