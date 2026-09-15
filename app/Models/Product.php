@@ -46,11 +46,10 @@ class Product extends Model
 
     /**
      * The box count assumed for a product with no `wms_product_settings` row —
-     * the store can add a product at any time without this app knowing, and a
-     * pallet of one is the safe floor. Matches the default the old
-     * `products.boxes_count` column carried.
+     * the store can add a product at any time without this app knowing, and
+     * this is the warehouse's default pallet size until someone configures it.
      */
-    public const int DEFAULT_BOXES_COUNT = 1;
+    public const int DEFAULT_BOXES_COUNT = 50;
 
     /**
      * Eager loads needed before reading `image_url` or `boxes_count`. Both are
