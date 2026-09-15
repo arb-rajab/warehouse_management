@@ -31,14 +31,14 @@ jobs:
 
       - name: Check if dependencies changed since last deploy
         id: deps
-        shell: pwsh
+        shell: powershell
         run: |
           $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
           $markerFile = '.deploy-deps.hash'
           $previousHash = if (Test-Path $markerFile) { (Get-Content $markerFile -Raw).Trim() } else { '' }
           $changed = $currentHash -ne $previousHash
-          "changed=$($changed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-          "hash=$currentHash" >> $env:GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "changed=$($changed.ToString().ToLower())" -Encoding utf8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "hash=$currentHash" -Encoding utf8
 
       - name: Install PHP dependencies (production)
         if: steps.deps.outputs.changed == 'true'
@@ -50,7 +50,7 @@ jobs:
 
       - name: Record installed dependency hash
         if: steps.deps.outputs.changed == 'true'
-        shell: pwsh
+        shell: powershell
         run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
 
       - name: Build frontend assets
@@ -96,14 +96,14 @@ jobs:
 
       - name: Check if dependencies changed since last deploy
         id: deps
-        shell: pwsh
+        shell: powershell
         run: |
           $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
           $markerFile = '.deploy-deps.hash'
           $previousHash = if (Test-Path $markerFile) { (Get-Content $markerFile -Raw).Trim() } else { '' }
           $changed = $currentHash -ne $previousHash
-          "changed=$($changed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-          "hash=$currentHash" >> $env:GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "changed=$($changed.ToString().ToLower())" -Encoding utf8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "hash=$currentHash" -Encoding utf8
 
       - name: Install PHP dependencies (production)
         if: steps.deps.outputs.changed == 'true'
@@ -115,7 +115,7 @@ jobs:
 
       - name: Record installed dependency hash
         if: steps.deps.outputs.changed == 'true'
-        shell: pwsh
+        shell: powershell
         run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
 
       - name: Build frontend assets
