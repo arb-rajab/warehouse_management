@@ -254,6 +254,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_ar_name', 'ودجات')
+                    ->where('product_active', true)
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', $pallet->expiration_date->toDateString())
                     ->where('added_at', $pallet->created_at->toIso8601String())

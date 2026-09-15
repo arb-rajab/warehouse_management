@@ -141,6 +141,7 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
         'product_id' => $product->id,
         'product_name' => 'Widgets',
         'product_ar_name' => 'ودجات',
+        'product_active' => true,
         'product_image_url' => 'https://example.com/widgets.png',
         'expiration_date' => '2026-09-15',
         'added_at' => '2026-08-01T10:00:00+00:00',
@@ -148,6 +149,17 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
     ]);
 
     Carbon::setTestNow();
+});
+
+test('toMapSummaryArray carries product_active mirroring the product\'s published flag', function () {
+    $activeProduct = Product::factory()->imageUrl(null)->create(['published' => true]);
+    $inactiveProduct = Product::factory()->imageUrl(null)->create(['published' => false]);
+
+    $activePallet = Pallet::factory()->create(['product_id' => $activeProduct->id]);
+    $inactivePallet = Pallet::factory()->create(['product_id' => $inactiveProduct->id]);
+
+    expect($activePallet->toMapSummaryArray())->product_active->toBeTrue()
+        ->and($inactivePallet->toMapSummaryArray())->product_active->toBeFalse();
 });
 
 test('cellEnteredLog resolves the most recent stored or transferred_in log for the pallet', function () {
