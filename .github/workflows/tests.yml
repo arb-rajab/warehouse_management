@@ -23,8 +23,40 @@ permissions:
   contents: read
 
 jobs:
+  # resources/js/actions and resources/js/wayfinder are gitignored,
+  # generated from the app's routes/controllers by `php artisan
+  # wayfinder:generate` (the same command the Vite Wayfinder plugin shells
+  # out to on build). ESLint, vue-tsc and Vitest all resolve real imports
+  # from those directories, so generate them once here and hand them to
+  # those jobs instead of every JS job re-running a PHP install just to
+  # produce the same output.
+  generate-wayfinder:
+    name: Generate Wayfinder types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Generate Wayfinder actions
+        run: php artisan wayfinder:generate --skip-routes --with-form
+
+      - name: Upload Wayfinder types
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wayfinder-types
+          path: |
+            resources/js/actions
+            resources/js/wayfinder
+          retention-days: 1
+
   lint-js:
     name: ESLint
+    needs: generate-wayfinder
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,6 +66,12 @@ jobs:
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
+
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
 
       - name: Run ESLint
         run: npm run lint:check
@@ -55,6 +93,7 @@ jobs:
 
   types-js:
     name: vue-tsc
+    needs: generate-wayfinder
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -64,12 +103,19 @@ jobs:
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
+
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
 
       - name: Run vue-tsc
         run: npm run types:check
 
   test-js:
     name: Vitest
+    needs: generate-wayfinder
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -79,6 +125,12 @@ jobs:
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
+
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
 
       - name: Run Vitest
         run: npm run test:unit
@@ -124,6 +176,18 @@ jobs:
 
       - name: Setup backend
         uses: ./.github/actions/setup-backend
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      # Inertia-rendering Pest tests boot the real `app.blade.php` view,
+      # which reads public/build/manifest.json via the @vite directive —
+      # without a build, every one of those tests fails with "Vite
+      # manifest not found" even though nothing here asserts on the built
+      # JS itself. This also generates the Wayfinder actions as a
+      # byproduct of the Vite plugin, same as the dedicated job above.
+      - name: Build frontend assets
+        run: npm run build
 
       - name: Run Pest
         run: composer test:pest
