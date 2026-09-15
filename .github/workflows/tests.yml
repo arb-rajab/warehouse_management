@@ -1,5 +1,16 @@
 name: tests
 
+# The push trigger below re-runs the full suite on develop/staging even when
+# the pushed SHA already passed this workflow on its PR (merges here are
+# fast-forward, so the commit is identical). That re-run could in principle
+# be skipped by checking `github.event.before`/the merged commit against a
+# prior successful run for the same SHA (e.g. via the Checks API) and
+# short-circuiting the jobs. It is intentionally NOT skipped: the push run
+# is the only rebuild-from-scratch safety net between "the PR's runner
+# state" and "what deploy.yml is about to promote" — it re-verifies on a
+# clean checkout with no possible carryover from the PR run's environment,
+# and deploy.yml only fires after this exact push-triggered run succeeds. A
+# skip would trade that guarantee for the CI minutes of one redundant run.
 on:
   push:
     branches:
@@ -12,32 +23,206 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  # resources/js/actions and resources/js/wayfinder are gitignored,
+  # generated from the app's routes/controllers by `php artisan
+  # wayfinder:generate` (the same command the Vite Wayfinder plugin shells
+  # out to on build). ESLint, vue-tsc and Vitest all resolve real imports
+  # from those directories, so generate them once here and hand them to
+  # those jobs instead of every JS job re-running a PHP install just to
+  # produce the same output.
+  generate-wayfinder:
+    name: Generate Wayfinder types
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Generate Wayfinder actions
+        run: php artisan wayfinder:generate --skip-routes --with-form
+
+      - name: Upload Wayfinder types
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          php-version: '8.5'
-          tools: composer:v2
-          coverage: none
+          name: wayfinder-types
+          path: |
+            resources/js/actions
+            resources/js/wayfinder
+          retention-days: 1
 
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+  lint-js:
+    name: ESLint
+    needs: generate-wayfinder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: '22'
+          persist-credentials: false
 
-      - name: Setup Application
-        run: composer setup
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
 
-      - name: Run CI Checks
-        run: composer ci:check
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
+
+      - name: Run ESLint
+        run: npm run lint:check
+
+  format-js:
+    name: Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Run Prettier
+        run: npm run format:check
+
+  types-js:
+    name: vue-tsc
+    needs: generate-wayfinder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
+
+      - name: Run vue-tsc
+        run: npm run types:check
+
+  test-js:
+    name: Vitest
+    needs: generate-wayfinder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Download Wayfinder types
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wayfinder-types
+          path: resources/js
+
+      - name: Run Vitest
+        run: npm run test:unit
+
+  lint-php:
+    name: Pint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Run Pint
+        run: composer lint:check
+
+  types-php:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Run PHPStan
+        run: composer types:check
+
+  test-php:
+    name: Pest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      # Inertia-rendering Pest tests boot the real `app.blade.php` view,
+      # which reads public/build/manifest.json via the @vite directive —
+      # without a build, every one of those tests fails with "Vite
+      # manifest not found" even though nothing here asserts on the built
+      # JS itself. This also generates the Wayfinder actions as a
+      # byproduct of the Vite plugin, same as the dedicated job above.
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run Pest
+        run: composer test:pest
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Ensure SQLite database files exist
+        run: |
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+          php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
+          php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
+          php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
