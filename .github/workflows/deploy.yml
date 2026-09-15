@@ -31,7 +31,7 @@ jobs:
 
       - name: Check if dependencies changed since last deploy
         id: deps
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
           $markerFile = '.deploy-deps.hash'
@@ -50,7 +50,7 @@ jobs:
 
       - name: Record installed dependency hash
         if: steps.deps.outputs.changed == 'true'
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
         run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
 
       - name: Build frontend assets
@@ -96,7 +96,7 @@ jobs:
 
       - name: Check if dependencies changed since last deploy
         id: deps
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
           $markerFile = '.deploy-deps.hash'
@@ -115,7 +115,7 @@ jobs:
 
       - name: Record installed dependency hash
         if: steps.deps.outputs.changed == 'true'
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
         run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
 
       - name: Build frontend assets
