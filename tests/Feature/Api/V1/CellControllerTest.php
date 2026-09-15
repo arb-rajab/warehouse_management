@@ -64,6 +64,7 @@ test('an authenticated worker can list a row cells with every property the app r
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
+            'cell_entered_at' => null,
             'is_stale' => null,
             'remaining_boxes' => $pallet->remaining_boxes,
         ],
@@ -101,6 +102,84 @@ test('a row cell listing rejects a non-positive stale_after_days', function () {
     $response = $this->getJson("/api/v1/rows/{$row->letter}/cells?stale_after_days=0");
 
     $response->assertInvalid(['stale_after_days']);
+});
+
+test('a row cell listing filters by the pallet\'s product name, excluding a non-matching cell and an empty one', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 1]);
+    $matchingCell = $row->cells()->where('cell_number', 1)->first();
+    $nonMatchingCell = $row->cells()->where('cell_number', 2)->first();
+    // Noise: cell 3 stays empty and must never match a search.
+    Pallet::factory()->create([
+        'cell_id' => $matchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Large Blue Widget'])->id,
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $nonMatchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Small Gadget'])->id,
+    ]);
+
+    $response = $this->getJson("/api/v1/rows/{$row->letter}/cells?search=Widget");
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matchingCell->id);
+});
+
+test('a row cell listing search matches every space-separated word regardless of order', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $matchingCell = $row->cells()->where('cell_number', 1)->first();
+    $nonMatchingCell = $row->cells()->where('cell_number', 2)->first();
+    Pallet::factory()->create([
+        'cell_id' => $matchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Glass Tea Pot'])->id,
+    ]);
+    // Noise: "greentea" must not match "Tea, Green" since it isn't a substring of either word.
+    Pallet::factory()->create([
+        'cell_id' => $nonMatchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Tea, Green'])->id,
+    ]);
+
+    $response = $this->getJson('/api/v1/rows/'.$row->letter.'/cells?search='.urlencode('tea glass'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matchingCell->id);
+});
+
+test('a row cell listing search also matches the pallet\'s Arabic product name', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $matchingCell = $row->cells()->where('cell_number', 1)->first();
+    $nonMatchingCell = $row->cells()->where('cell_number', 2)->first();
+    Pallet::factory()->create([
+        'cell_id' => $matchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات'])->id,
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $nonMatchingCell->id,
+        'product_id' => Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات'])->id,
+    ]);
+
+    $response = $this->getJson('/api/v1/rows/'.$row->letter.'/cells?search='.urlencode('ودجات'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matchingCell->id);
+});
+
+test('a row cell listing rejects a search term over 255 characters', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create();
+
+    $response = $this->getJson('/api/v1/rows/'.$row->letter.'/cells?search='.str_repeat('a', 256));
+
+    $response->assertInvalid(['search']);
 });
 
 test('a row cell listing excludes cells belonging to a different row', function () {
@@ -162,6 +241,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
+            'cell_entered_at' => null,
             'is_stale' => null,
             'remaining_boxes' => $pallet->remaining_boxes,
         ],

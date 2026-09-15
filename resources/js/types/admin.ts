@@ -332,6 +332,7 @@ export interface ProductFilters {
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;
+    inactive?: boolean;
     product_id?: number[];
     user_id?: number[];
     action?: CellLogAction[];
@@ -370,6 +371,12 @@ export interface CellVerificationRound {
     completed_at: string | null;
     reports_count?: number;
     reports?: CellVerificationReport[];
+    /**
+     * The rows this round covers — a round walks a subset of the warehouse,
+     * never implicitly all of it. Same `{id, letter}` shape the row filter
+     * dropdowns consume, so it reuses that type rather than restating it.
+     */
+    rows?: RowFilterOption[];
     user?: UserSummary;
 }
 

@@ -39,7 +39,7 @@ test('the migration creates the expected columns, with a required name and nulla
     Schema::dropIfExists('products');
     loadCreateProductsTableMigration()->up();
 
-    expect(Schema::hasColumns('products', ['id', 'name', 'ar_name', 'thumbnail_img', 'created_at', 'updated_at']))->toBeTrue();
+    expect(Schema::hasColumns('products', ['id', 'name', 'ar_name', 'thumbnail_img', 'published', 'created_at', 'updated_at']))->toBeTrue();
     // `image_url` is derived from the thumbnail's upload row, not stored —
     // the store app has no URL column at all.
     expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
@@ -54,6 +54,8 @@ test('the migration creates the expected columns, with a required name and nulla
     // `ar_name` is NOT NULL on the store's table; the stand-in defaults it to
     // the empty string so a row with no Arabic name is still insertable.
     expect(DB::table('products')->where('name', 'Widgets')->value('ar_name'))->toBe('');
+    // `published` defaults to active (1), mirroring the store's own default.
+    expect(DB::table('products')->where('name', 'Widgets')->value('published'))->toBe(1);
 
     DB::table('products')->insert(['name' => 'Gadgets', 'ar_name' => 'أدوات', 'created_at' => now(), 'updated_at' => now()]);
     expect(DB::table('products')->where('name', 'Gadgets')->value('ar_name'))->toBe('أدوات');

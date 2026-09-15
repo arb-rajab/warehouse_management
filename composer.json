@@ -90,9 +90,12 @@
             "phpstan analyse --memory-limit=1G"
         ],
         "test": [
-            "@php artisan config:clear --ansi",
             "@lint:check",
             "@types:check",
+            "@test:pest"
+        ],
+        "test:pest": [
+            "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
         "post-autoload-dump": [

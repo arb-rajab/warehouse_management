@@ -31,7 +31,7 @@ class CellVerificationRoundController extends Controller
 
         $rounds = CellVerificationRound::query()
             ->select(CellVerificationRound::SELECT_COLUMNS)
-            ->with('user:id,name')
+            ->with(['user:id,name', 'rows:id,letter'])
             ->withCount('reports')
             ->filtered($request)
             ->sorted($request)
@@ -70,7 +70,7 @@ class CellVerificationRoundController extends Controller
             ->withQueryString();
 
         return Inertia::render('Admin/CellVerificationRounds/Show', [
-            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing('user:id,name')->loadCount('reports')),
+            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing(['user:id,name', 'rows:id,letter'])->loadCount('reports')),
             'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
             'filters' => [
                 ...$request->only(['cell_id', 'row_id', 'column_number', 'product_id', 'is_correct', 'date_from', 'date_to', 'created_within_days', 'sort_direction']),

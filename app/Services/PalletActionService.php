@@ -9,6 +9,8 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,6 +27,17 @@ class PalletActionService
      * concurrent requests cannot act on the same slot at the same time. Rejects an
      * inactive (corrupted / out of service) cell so every pallet action on either
      * side of a transfer is blocked while a cell is deactivated.
+     *
+     * Also rejects a cell whose row an unfinished verification round claims: the
+     * point of a round is to compare the shelf against what the system recorded,
+     * which a pallet moving mid-count would invalidate. Both surfaces that can
+     * perform these actions go through here, so this covers the mobile app and the
+     * admin panel alike — Admin\PalletController catches InvalidSlotStateException
+     * specifically, which is why this is that exception rather than a new type.
+     *
+     * Deliberately not blocked: Admin\CellController::toggleActive(), which takes a
+     * cell in or out of service without touching pallet contents and is the
+     * maintenance escape hatch for a shelf found damaged mid-round.
      */
     public function lockCell(int $cellId): Cell
     {
@@ -32,6 +45,10 @@ class PalletActionService
 
         if (! $cell->is_active) {
             throw new InvalidSlotStateException('slot_inactive', __('messages.slot_inactive'));
+        }
+
+        if (Row::query()->whereKey($cell->row_id)->underActiveVerification()->exists()) {
+            throw new InvalidSlotStateException('cell_in_active_round', __('messages.cell_in_active_round'));
         }
 
         return $cell;
@@ -173,7 +190,16 @@ class PalletActionService
             $pallet = Pallet::create([
                 'product_id' => $product->id,
                 'cell_id' => $cell->id,
-                'expiration_date' => $expirationDate,
+                // Normalized to a bare date: the validation rule only requires a
+                // parseable date, so a caller-submitted value carrying a time
+                // component (e.g. a raw ISO datetime) would otherwise be stored
+                // verbatim — and unlike MySQL's DATE column, SQLite keeps that
+                // time component intact instead of truncating it, so the pallet
+                // reads back as its correct date everywhere the app formats it
+                // via toDateString(), but a raw `expiration_date <= $until`
+                // comparison (BuildsDashboardStats::expiringWindow()) can then
+                // exclude it right at the boundary.
+                'expiration_date' => Carbon::parse($expirationDate)->toDateString(),
                 'remaining_boxes' => $product->boxes_count,
             ]);
 

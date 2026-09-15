@@ -8,6 +8,7 @@ use App\Http\Requests\Concerns\FiltersByProductIds;
 use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\FiltersByUserIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
+use App\Http\Requests\Concerns\NormalizesBooleanFilters;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use App\Http\Requests\Concerns\SortsByDirection;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -21,12 +22,14 @@ class FilterProductsRequest extends FormRequest
     use FiltersByRowAndColumn;
     use FiltersByUserIds;
     use FiltersPerPage;
+    use NormalizesBooleanFilters;
     use NormalizesExpiredFilter;
     use SortsByDirection;
 
     protected function prepareForValidation(): void
     {
         $this->normalizeExpiredFilter();
+        $this->normalizeBooleanFilter('inactive');
     }
 
     /**
@@ -44,6 +47,7 @@ class FilterProductsRequest extends FormRequest
             'state' => ['nullable', 'string', 'in:full,opened'],
             'expired' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
+            'inactive' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),
             ...$this->userIdsFilterRules(),
             ...$this->logActionFilterRules(),

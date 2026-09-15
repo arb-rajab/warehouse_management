@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\ShowCellsRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\Row;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CellController extends Controller
@@ -18,6 +19,22 @@ class CellController extends Controller
             $row->cells()
                 ->select(Cell::SELECT_COLUMNS)
                 ->with(Cell::WITH_ROW_AND_CONTENTS)
+                ->when(
+                    $request->filled('search'),
+                    // Inlined rather than calling Product::searchByName() from inside
+                    // whereHas() on a different model — see .ai/rules/models.md.
+                    fn (Builder $query) => $query->whereHas('pallet.product', function (Builder $productQuery) use ($request): void {
+                        $words = preg_split('/\s+/', trim($request->string('search')->value())) ?: [];
+
+                        foreach ($words as $word) {
+                            $productQuery->where(function (Builder $matchesEitherName) use ($word): void {
+                                $matchesEitherName
+                                    ->where('name', 'like', '%'.$word.'%')
+                                    ->orWhere('ar_name', 'like', '%'.$word.'%');
+                            });
+                        }
+                    })
+                )
                 ->orderedByCoordinates()
                 ->paginate(20)
         );

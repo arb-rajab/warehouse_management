@@ -59,7 +59,7 @@ class CellStatusLog extends Model
         'cell.row:id,letter',
         'relatedCell:id,row_id,cell_number,flat_number',
         'relatedCell.row:id,letter',
-        'product:id,name,ar_name,thumbnail_img',
+        'product:id,name,ar_name,thumbnail_img,published',
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
         'pallet:id,expiration_date',
@@ -256,6 +256,7 @@ class CellStatusLog extends Model
     {
         $query
             ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))))
+            ->when($request->filled('product_published'), fn (Builder $q) => $q->whereHas('product', fn (Builder $q2) => $q2->where('published', $request->boolean('product_published'))))
             ->when($request->filled('pallet_id'), fn (Builder $q) => $q->where('pallet_id', $request->integer('pallet_id')))
             ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
             ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', static::actionValuesFromRequest($request)))

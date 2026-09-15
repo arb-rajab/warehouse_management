@@ -18,8 +18,8 @@ function makeEmptyCell(): Cell
 
 test('a worker can report a cell as correct against their own round', function () {
     $user = actingAsMobileUser();
-    $round = CellVerificationRound::factory()->for($user)->create();
     $cell = makeEmptyCell();
+    $round = CellVerificationRound::factory()->for($user)->covering($cell->row)->create();
 
     $response = $this->postJson('/api/v1/cell-verification-reports', [
         'cell_verification_round_id' => $round->id,
@@ -68,9 +68,10 @@ test('a worker can report a cell as correct against their own round', function (
 
 test('the expected snapshot is derived server-side from the cell\'s current pallet', function () {
     $user = actingAsMobileUser();
-    $round = CellVerificationRound::factory()->for($user)->create();
 
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->for($user)->covering($row)->create();
+
     $cell = $row->cells()->first();
     $cell->update(['state' => CellState::Full]);
     $product = Product::factory()->create();
@@ -112,7 +113,7 @@ test('reported_cell_state is required when is_correct is false', function () {
     $this->assertDatabaseCount('cell_verification_reports', 0);
 });
 
-test('reported product and boxes count are required when the reported state is full', function () {
+test('reported product, boxes count and expiration date are required when the reported state is full', function () {
     $user = actingAsMobileUser();
     $round = CellVerificationRound::factory()->for($user)->create();
     $cell = makeEmptyCell();
@@ -124,8 +125,41 @@ test('reported product and boxes count are required when the reported state is f
         'reported_cell_state' => 'full',
     ]);
 
-    $response->assertInvalid(['reported_product_id', 'reported_boxes_count']);
+    $response->assertInvalid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
     $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('reported product, boxes count and expiration date are required when the reported state is opened', function () {
+    $user = actingAsMobileUser();
+    $round = CellVerificationRound::factory()->for($user)->create();
+    $cell = makeEmptyCell();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => false,
+        'reported_cell_state' => 'opened',
+    ]);
+
+    $response->assertInvalid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
+    $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('reported expiration date is not required when the reported state is empty', function () {
+    $user = actingAsMobileUser();
+    $cell = makeEmptyCell();
+    $round = CellVerificationRound::factory()->for($user)->covering($cell->row)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => false,
+        'reported_cell_state' => 'empty',
+    ]);
+
+    $response->assertCreated();
+    $response->assertValid(['reported_product_id', 'reported_boxes_count', 'reported_expiration_date']);
+    $this->assertDatabaseCount('cell_verification_reports', 1);
 });
 
 test('a worker cannot report against another user\'s round', function () {
@@ -172,4 +206,30 @@ test('a worker cannot report against an already-completed round', function () {
     $response->assertStatus(409);
     $response->assertJson(['error_code' => 'verification_round_completed']);
     $this->assertDatabaseCount('cell_verification_reports', 0);
+});
+
+test('a worker cannot report a cell in a row their round does not cover', function () {
+    $user = actingAsMobileUser();
+
+    $coveredCell = makeEmptyCell();
+    $outsideCell = makeEmptyCell();
+
+    $round = CellVerificationRound::factory()->for($user)->covering($coveredCell->row)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $outsideCell->id,
+        'is_correct' => true,
+    ]);
+
+    $response->assertStatus(409);
+    $response->assertJson(['error_code' => 'cell_outside_round_rows']);
+    $this->assertDatabaseCount('cell_verification_reports', 0);
+
+    // The same round still accepts a cell that is in scope.
+    $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $coveredCell->id,
+        'is_correct' => true,
+    ])->assertCreated();
 });

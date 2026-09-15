@@ -4,10 +4,12 @@ use App\Enums\CellLogAction;
 use App\Enums\CellLogFlagReason;
 use App\Enums\CellState;
 use App\Models\CellStatusLog;
+use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
@@ -31,11 +33,13 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $response->assertCreated();
 
     $pallet = Pallet::query()->sole();
+    $storedLog = CellStatusLog::query()->where('pallet_id', $pallet->id)->sole();
 
     expect($response->json())->toEqual([
         'id' => $pallet->id,
         'state' => 'full',
         'expiration_date' => $expirationDate,
+        'cell_entered_at' => $storedLog->created_at->toIso8601String(),
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
         'product' => [
@@ -44,6 +48,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
             'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
+            'active' => true,
         ],
         'location' => [
             'row_letter' => 'Z',
@@ -55,6 +60,27 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $this->assertDatabaseCount('pallets', 1);
     expect($pallet->remaining_boxes)->toBe(10);
     expect($cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('a submitted expiration_date carrying a time component is normalized to a bare date on storage', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+
+    $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString().' 23:59:59',
+    ])->assertCreated();
+
+    $pallet = Pallet::query()->sole();
+
+    expect(DB::table('pallets')->where('id', $pallet->id)->value('expiration_date'))
+        ->toBe(now()->addMonth()->toDateString().' 00:00:00');
 });
 
 test('adding a pallet logs the status change, with an optional note', function () {
@@ -250,6 +276,7 @@ test('an authenticated worker can view a pallet with every property the app read
         'id' => $pallet->id,
         'state' => 'full',
         'expiration_date' => $pallet->expiration_date->toDateString(),
+        'cell_entered_at' => null,
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
         'product' => [
@@ -258,6 +285,7 @@ test('an authenticated worker can view a pallet with every property the app read
             'ar_name' => 'ودجات',
             'image_url' => 'https://cdn.example.com/widgets.png',
             'boxes_count' => 10,
+            'active' => true,
         ],
         'location' => [
             'row_letter' => 'Z',
@@ -1188,4 +1216,136 @@ test('transferring a pallet into an inactive destination cell is rejected and no
     $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('adding a pallet to a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->create();
+
+    CellVerificationRound::factory()->covering($row)->create();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    $this->assertDatabaseCount('pallets', 0);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('opening a pallet in a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 10]);
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+});
+
+test('removing boxes in a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->opened()->create(['remaining_boxes' => 10]);
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+});
+
+test('emptying a pallet in a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create();
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/empty");
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('transferring a pallet out of a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->covering($sourceRow)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('transferring a pallet into a row under an unfinished verification round is rejected and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    // Only the destination is being verified — the source row is free.
+    CellVerificationRound::factory()->covering($destinationRow)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ]);
+
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('a pallet action in a row covered only by a completed round is allowed', function () {
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create(['remaining_boxes' => 10]);
+    // Letter left to the factory: the pallet's own row is generated by one too,
+    // and a hardcoded letter here can collide with whatever that one drew.
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->completed()->covering($pallet->cell->row)->create();
+    CellVerificationRound::factory()->covering($otherRow)->create(); // noise: a live round elsewhere
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
+        'boxes_count' => 3,
+    ]);
+
+    $response->assertOk();
+    expect($pallet->refresh()->remaining_boxes)->toBe(7);
 });

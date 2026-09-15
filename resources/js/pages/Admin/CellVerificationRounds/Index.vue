@@ -34,6 +34,7 @@ import {
     toggleSort,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { formatRowLetters } from '@/lib/location';
 import type {
     CellVerificationRound,
     CellVerificationRoundFilterOptions,
@@ -236,6 +237,7 @@ function onPerPageChange(perPage: number): void {
                     sortKey: 'created_at',
                 },
                 t('cellVerificationRound.columns.completedAt'),
+                t('cellVerificationRound.columns.rows'),
                 t('cellVerificationRound.columns.reportsCount'),
             ]"
             :rows="rounds.data"
@@ -272,6 +274,7 @@ function onPerPageChange(perPage: number): void {
                         :completed-at="row.completed_at"
                     />
                 </td>
+                <td class="px-4 py-2">{{ formatRowLetters(row.rows) }}</td>
                 <td class="px-4 py-2">{{ row.reports_count }}</td>
             </template>
         </DataTable>

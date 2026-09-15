@@ -279,6 +279,17 @@ and one retry resolves it. To avoid burning a multi-minute install on
 run `composer install --no-dev` first; only add dev deps back if a task
 specifically needs them (e.g. PHPStan itself).
 
+`fake()` is undefined here for the same reason: `fakerphp/faker` is a dev
+dependency, so under `--no-dev` there is no faker at all. That puts every
+factory and seeder out of reach locally — not only under Pest, but through
+`php artisan tinker` and `php artisan db:seed` too, which fail with "Call to
+undefined function Database\Factories\fake()". Take the first such failure at
+face value rather than trying a second route to the same place (a file-backed
+sqlite database instead of `:memory:` does not help — the missing package is
+the problem, not the connection). A local smoke check that needs rows must
+build them with plain `Model::create()`; anything genuinely factory- or
+seeder-shaped can only be verified in CI.
+
 Because none of these tools run locally, the stand-ins for them are committed
 in `.claude/scripts/`, so no session has to rebuild them:
 
@@ -426,6 +437,23 @@ of `.ai/rules/app-providers.md`.
   narrower agents by concern (e.g. migrations+tests vs. factories+seeders)
   rather than one agent reading everything in one pass, if the request can
   be decomposed that way.
+- A request to write prompts, plans or recommendations across several
+  unrelated areas is a survey too — the delegation rule in the previous
+  section covers it, not just reviews and audits. One Explore agent per area
+  keeps those file bodies out of the main context.
+- When the deliverable is a plan, a prompt or a recommendation rather than a
+  code change, stop research at "enough to name the right files and the real
+  constraints": locate with `files_with_matches`, confirm with one targeted
+  `grep`, and leave the full reads to whoever implements it — that session
+  re-reads from a cold context anyway. Reading whole controllers and models
+  to write one paragraph of prompt pays the implementation cost twice.
+- Route mechanical follow-ups — adding a name to a list, deleting a stray
+  line, applying the obvious fix a CI failure names — at lower effort than
+  the design work that preceded them. The turn that repairs a broken
+  assertion doesn't need the reasoning budget of the turn that designed the
+  schema.
+- Don't re-run a verification command after an edit that cannot change its
+  result. A reworded docblock doesn't need the smoke script run again.
 - Only read the `.ai/rules` files that are actually relevant to the files in
   scope for the current task — don't re-trigger a full `.ai/rules` index
   sweep for a narrow follow-up fix that touches 1-2 files. When checking
@@ -433,6 +461,13 @@ of `.ai/rules/app-providers.md`.
   rather than reading whole rule files (or the whole concatenated index) in
   full — a targeted grep with a few lines of context is a fraction of the
   cost of dumping every matched file's entire contents into context.
+  This is what the Boost "Project Rules" instruction above means by "read
+  every rule file whose globs cover the path(s) in scope": the files
+  governing the paths you are actually about to edit, grepped for the
+  keyword that matters — not every index row that looks adjacent to the
+  feature. A change touching ten directories does not license reading ten
+  rule files end to end; that is the exact failure this section exists to
+  prevent.
 - When handing off follow-up work as separate session prompts (e.g. after a
   review produces a punch list), paste the specific finding/file:line into
   each prompt so that session doesn't re-derive it from scratch, and set an
@@ -494,6 +529,37 @@ of `.ai/rules/app-providers.md`.
 - This is a repo-scoped fallback: the user's actual preference is durable
   and cross-repo via `/remember`; this note exists only for sessions in
   this repository that don't have that memory loaded.
+
+## CI/GitHub tool usage: targeted before full, consolidated before repeated
+
+- Diagnosing a failed check: try `get_check_run` (with a small `textLimit`
+  and `textOffset` paging) before reaching for `get_job_logs`. A full job
+  log easily runs to tens of thousands of characters of ANSI-coded text
+  that then has to be dumped to a file, stripped, and re-grepped in
+  multiple passes — that cost is avoidable whenever the check run's own
+  output already names the failure.
+- If a full job log genuinely is needed, request the minimum first: a
+  small `tail_lines` (e.g. 100-150) with `return_content: true`, not the
+  whole log. Only widen the window if that slice doesn't contain the
+  failure.
+- When a large log/text blob does have to be searched, strip ANSI codes
+  and grep for the target string in one pass (one Python/Bash step),
+  rather than a failed raw grep attempt followed by a separate cleanup
+  pass followed by a second grep.
+- Don't re-poll PR/CI state that a call already returned this turn.
+  `pull_request_read` (`get`) already carries `mergeable_state`; a
+  separate `get_status` call is only useful for repos that use legacy
+  commit statuses instead of check-runs (this repo uses check-runs, so
+  `get_status` returns nothing and can be skipped). Prefer one
+  consolidated read over `get_workflow_run` + `list_workflow_runs` +
+  `pull_request_read` when any one of them already answers the question.
+- When watching a single in-flight CI run, don't stack multiple short
+  (under ~5 min) `ScheduleWakeup`/`send_later` check-ins back-to-back —
+  each wake re-enters with full session context. Prefer one wait long
+  enough for the run to plausibly finish, and lean on the
+  `check_run.completed`/`check_suite.completed` webhook events (per the
+  PR-watching section above) as the actual completion signal rather than
+  timing a poll to beat them.
 
 ## External input handling
 

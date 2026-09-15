@@ -22,18 +22,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run Semgrep (full report)
-        run: >
-          semgrep scan
-          --config p/security-audit
-          --config p/owasp-top-ten
-          --config p/secrets
-          --config p/php
-          --config p/javascript
-          --config p/typescript
+      - name: Run Semgrep
         continue-on-error: true
-
-      - name: Run Semgrep (fail on ERROR severity)
         run: >
           semgrep scan
           --config p/security-audit
@@ -42,5 +32,16 @@ jobs:
           --config p/php
           --config p/javascript
           --config p/typescript
-          --severity ERROR
-          --error
+          --json
+          --output semgrep-results.json
+
+      - name: Summarize results and enforce ERROR severity gate
+        run: python3 .github/scripts/semgrep_report.py semgrep-results.json "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload full Semgrep report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+          retention-days: 30

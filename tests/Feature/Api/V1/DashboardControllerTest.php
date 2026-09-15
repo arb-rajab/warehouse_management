@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\CellLogAction;
+use App\Models\CellStatusLog;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
 uses(SeedsCellStatusLogFixtures::class);
@@ -133,6 +136,92 @@ test('a product filter narrows the mobile dashboard occupancy (empty forced to z
     expect($response->json('stats.activity_today.stored'))->toBe(1);
     expect($response->json('stats.activity_week.stored'))->toBe(1);
     expect($response->json('filters.product_id'))->toEqual([(int) $matchingProduct->id]);
+
+    Carbon::setTestNow();
+});
+
+test('a product_status of active narrows the mobile dashboard to active products, excluding inactive ones', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    CellStatusLog::factory()->create(['product_id' => $activeProduct->id, 'action' => CellLogAction::Stored]);
+    CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id, 'action' => CellLogAction::Stored]);
+
+    $response = $this->getJson('/api/v1/dashboard?product_status=active');
+
+    $response->assertOk();
+    expect($response->json('stats.activity_today.stored'))->toBe(1);
+    expect($response->json('filters.product_id'))->toBeNull();
+    expect($response->json('filters.product_status'))->toBe('active');
+
+    Carbon::setTestNow();
+});
+
+test('a product_status of inactive narrows the mobile dashboard to inactive products, excluding active ones', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    CellStatusLog::factory()->create(['product_id' => $activeProduct->id, 'action' => CellLogAction::Stored]);
+    CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id, 'action' => CellLogAction::Stored]);
+
+    $response = $this->getJson('/api/v1/dashboard?product_status=inactive');
+
+    $response->assertOk();
+    expect($response->json('stats.activity_today.stored'))->toBe(1);
+    expect($response->json('filters.product_id'))->toBeNull();
+    expect($response->json('filters.product_status'))->toBe('inactive');
+
+    Carbon::setTestNow();
+});
+
+test('a product_status with zero matching products narrows the mobile dashboard to nothing rather than falling back to unfiltered', function () {
+    actingAsMobileUser();
+    Product::factory()->create();
+    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+
+    $response = $this->getJson('/api/v1/dashboard?product_status=inactive');
+
+    $response->assertOk();
+    expect($response->json('stats.activity_today.stored'))->toBe(0);
+});
+
+test('sending both product_status and product_id together is rejected on the mobile dashboard', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/dashboard?product_status=active&product_id[]={$product->id}");
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
+test('an invalid product_status is rejected on the mobile dashboard', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/dashboard?product_status=bogus');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
+test('product_status is silently ignored on the admin dashboard', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    CellStatusLog::factory()->create(['product_id' => $activeProduct->id, 'action' => CellLogAction::Stored]);
+    CellStatusLog::factory()->create(['product_id' => $inactiveProduct->id, 'action' => CellLogAction::Stored]);
+
+    $response = $this->get('/admin?product_status=active');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.activity_today.stored', 2)
+    );
 
     Carbon::setTestNow();
 });

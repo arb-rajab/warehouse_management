@@ -7,10 +7,16 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 
-test('an authenticated worker can start a verification round', function () {
+test('an authenticated worker can start a verification round over the rows they name', function () {
     $user = actingAsMobileUser();
 
-    $response = $this->postJson('/api/v1/cell-verification-rounds');
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise: not requested
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', [
+        'row_ids' => [$rowB->id, $rowA->id],
+    ]);
 
     $response->assertCreated();
 
@@ -21,15 +27,132 @@ test('an authenticated worker can start a verification round', function () {
 
     // reports_count is omitted (not just null) since store() doesn't withCount() —
     // see CellVerificationRoundResource::reports_count / RowResource.has_pallets for the pattern.
+    // `rows` comes back ordered by letter whatever order they were requested in.
     expect($response->json())->toEqual([
         'id' => $round->id,
         'started_at' => $round->created_at->toIso8601String(),
         'completed_at' => null,
+        'rows' => [
+            ['id' => $rowA->id, 'letter' => 'A'],
+            ['id' => $rowB->id, 'letter' => 'B'],
+        ],
     ]);
 });
 
-test('an unauthenticated caller cannot start a verification round and nothing changes', function () {
+test('a round started without row_ids covers every row in the warehouse', function () {
+    actingAsMobileUser();
+
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowC = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+
     $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertCreated();
+    expect($response->json('rows'))->toEqual([
+        ['id' => $rowA->id, 'letter' => 'A'],
+        ['id' => $rowB->id, 'letter' => 'B'],
+        ['id' => $rowC->id, 'letter' => 'C'],
+    ]);
+});
+
+test('a warehouse-wide round claims every row, leaving none for a second round', function () {
+    actingAsMobileUser();
+
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->postJson('/api/v1/cell-verification-rounds')->assertCreated();
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$rowB->id]])
+        ->assertStatus(409)
+        ->assertJsonPath('error_code', 'rows_already_in_active_round');
+
+    $this->assertDatabaseCount('cell_verification_rounds', 1);
+});
+
+test('a warehouse-wide round is refused while any single row is already claimed', function () {
+    actingAsMobileUser();
+
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $claimed = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->covering($claimed)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertStatus(409);
+    expect($response->json('message'))->toContain('B');
+    $this->assertDatabaseCount('cell_verification_rounds', 1);
+});
+
+test('starting a round rejects an empty row_ids array and a row that does not exist', function () {
+    actingAsMobileUser();
+
+    // An empty array is rejected rather than read as "the whole warehouse",
+    // which omitting the field entirely means instead.
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => []])
+        ->assertJsonValidationErrors('row_ids');
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [999999]])
+        ->assertJsonValidationErrors('row_ids.0');
+
+    $this->assertDatabaseCount('cell_verification_rounds', 0);
+});
+
+test('starting a round is refused when an unfinished round already covers one of its rows', function () {
+    $user = actingAsMobileUser();
+
+    $shared = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $free = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    // Another worker's round entirely: a row claim is global, not per-user.
+    $otherWorker = User::factory()->mobileUser()->create();
+    CellVerificationRound::factory()->for($otherWorker)->covering($shared)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', [
+        'row_ids' => [$shared->id, $free->id],
+    ]);
+
+    $response->assertStatus(409);
+    expect($response->json('error_code'))->toBe('rows_already_in_active_round');
+    expect($response->json('message'))->toContain('A');
+
+    // The whole request is refused, not just the conflicting row — no second
+    // round exists and the free row was never claimed.
+    expect(CellVerificationRound::query()->where('user_id', $user->id)->count())->toBe(0);
+    $this->assertDatabaseCount('cell_verification_round_row', 1);
+});
+
+test('starting a round is allowed alongside an unfinished round covering different rows', function () {
+    actingAsMobileUser();
+
+    $claimed = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $free = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->covering($claimed)->create();
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$free->id]])
+        ->assertCreated();
+
+    $this->assertDatabaseCount('cell_verification_rounds', 2);
+});
+
+test('a completed round no longer blocks starting a new round over its rows', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    CellVerificationRound::factory()->completed()->covering($row)->create();
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$row->id]])
+        ->assertCreated();
+});
+
+test('an unauthenticated caller cannot start a verification round and nothing changes', function () {
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$row->id]]);
 
     $response->assertUnauthorized();
     $this->assertDatabaseCount('cell_verification_rounds', 0);
@@ -83,10 +206,11 @@ test('an unauthenticated caller cannot list verification rounds', function () {
 
 test('a worker can view one of their own rounds, including its reports in reported order', function () {
     $user = actingAsMobileUser();
-    $round = CellVerificationRound::factory()->for($user)->completed()->create();
 
     $row = Row::factory()->create(['letter' => 'D', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
+
+    $round = CellVerificationRound::factory()->for($user)->completed()->covering($row)->create();
     $product = Product::factory()->imageUrl(null)->boxesCount(4)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     $reporter = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
 
@@ -121,6 +245,9 @@ test('a worker can view one of their own rounds, including its reports in report
         'started_at' => $round->created_at->toIso8601String(),
         'completed_at' => $round->completed_at->toIso8601String(),
         'reports_count' => 2,
+        'rows' => [
+            ['id' => $row->id, 'letter' => 'D'],
+        ],
         'reports' => [
             [
                 'id' => $first->id,
@@ -167,6 +294,7 @@ test('a worker can view one of their own rounds, including its reports in report
                         'ar_name' => 'ودجات',
                         'image_url' => null,
                         'boxes_count' => 4,
+                        'active' => true,
                     ],
                     'boxes_count' => 4,
                     'expiration_date' => '2026-12-01',

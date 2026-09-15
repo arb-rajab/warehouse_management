@@ -39,7 +39,7 @@ import {
     toggleSort,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatRowLetters, formatSlot } from '@/lib/location';
 import type {
     CellVerificationReport,
     CellVerificationReportFilterOptions,
@@ -217,6 +217,14 @@ function onPerPageChange(perPage: number): void {
                     >
                         {{ formatDateTime(round.completed_at!) }}
                     </CellVerificationRoundStatusBadge>
+                </div>
+            </div>
+            <div>
+                <div class="text-gray-500 dark:text-neutral-400">
+                    {{ t('cellVerificationRound.show.rows') }}
+                </div>
+                <div class="font-medium">
+                    {{ formatRowLetters(round.rows) }}
                 </div>
             </div>
         </div>

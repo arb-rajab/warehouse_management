@@ -12,8 +12,19 @@ test('an authenticated admin can view the cell verification rounds list with eve
     actingAsAdmin();
 
     $worker = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
-    $round = CellVerificationRound::factory()->completed()->create(['user_id' => $worker->id]);
-    CellVerificationReport::factory()->count(2)->create(['cell_verification_round_id' => $round->id]);
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise: not in this round
+
+    $round = CellVerificationRound::factory()->completed()->covering($rowB, $rowA)->create(['user_id' => $worker->id]);
+
+    // Reported against a cell inside the round's own coverage — which is also
+    // what keeps the report factory from generating a third row of its own,
+    // whose faker-drawn letter could collide with the ones hardcoded above.
+    CellVerificationReport::factory()->count(2)->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $rowA->cells()->first()->id,
+    ]);
 
     $response = $this->get('/admin/cell-verification-rounds');
 
@@ -25,6 +36,10 @@ test('an authenticated admin can view the cell verification rounds list with eve
                 ->where('started_at', $round->created_at->toIso8601String())
                 ->where('completed_at', $round->completed_at->toIso8601String())
                 ->where('reports_count', 2)
+                ->where('rows', [
+                    ['id' => $rowA->id, 'letter' => 'A'],
+                    ['id' => $rowB->id, 'letter' => 'B'],
+                ])
                 ->has('user', fn (Assert $userProp) => $userProp
                     ->where('id', $worker->id)
                     ->where('name', 'Ada Reporter')
@@ -117,7 +132,7 @@ test('an authenticated admin can view a single round with its own reports and ev
 
     $row = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
-    $round = CellVerificationRound::factory()->create();
+    $round = CellVerificationRound::factory()->covering($row)->create();
     $reporter = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
     $product = Product::factory()->imageUrl(null)->boxesCount(5)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     $report = CellVerificationReport::factory()->create([
@@ -141,6 +156,7 @@ test('an authenticated admin can view a single round with its own reports and ev
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/CellVerificationRounds/Show')
             ->where('round.id', $round->id)
+            ->where('round.rows', [['id' => $row->id, 'letter' => 'C']])
             ->has('reports.data', 1)
             ->has('reports.data.0', fn (Assert $reportProp) => $reportProp
                 ->where('id', $report->id)
@@ -159,6 +175,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                         ->where('ar_name', 'ودجات')
                         ->where('image_url', null)
                         ->where('boxes_count', 5)
+                        ->where('active', true)
                     )
                     ->where('boxes_count', 5)
                     ->where('expiration_date', '2026-12-01')

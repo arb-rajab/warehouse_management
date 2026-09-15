@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list rows with every property the app reads', function () {
@@ -96,6 +98,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),
+            'cell_entered_at' => null,
             'is_stale' => null,
             'remaining_boxes' => $pallet->remaining_boxes,
         ],
@@ -147,6 +150,53 @@ test('listing every row with its cells computes is_stale from a caller-supplied 
     expect(collect($rowPayload['cells'])->firstWhere('id', $cell->id)['pallet']['is_stale'])->toBeTrue();
 });
 
+test('listing every row with its cells can be filtered by product_status=active, excluding cells with an inactive product and empty cells', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 1]);
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    $activeCell = $row->cells()->where('cell_number', 1)->first();
+    $inactiveCell = $row->cells()->where('cell_number', 2)->first();
+    // cell_number 3 stays empty
+    Pallet::factory()->create(['cell_id' => $activeCell->id, 'product_id' => $activeProduct->id]);
+    Pallet::factory()->create(['cell_id' => $inactiveCell->id, 'product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=active');
+
+    $response->assertOk();
+    $rowPayload = collect($response->json())->firstWhere('id', $row->id);
+    expect(collect($rowPayload['cells'])->pluck('id')->all())->toBe([$activeCell->id]);
+});
+
+test('listing every row with its cells can be filtered by product_status=inactive, excluding cells with an active product and empty cells', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 1]);
+    $activeProduct = Product::factory()->create();
+    $inactiveProduct = Product::factory()->inactive()->create();
+    $activeCell = $row->cells()->where('cell_number', 1)->first();
+    $inactiveCell = $row->cells()->where('cell_number', 2)->first();
+    // cell_number 3 stays empty
+    Pallet::factory()->create(['cell_id' => $activeCell->id, 'product_id' => $activeProduct->id]);
+    Pallet::factory()->create(['cell_id' => $inactiveCell->id, 'product_id' => $inactiveProduct->id]);
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=inactive');
+
+    $response->assertOk();
+    $rowPayload = collect($response->json())->firstWhere('id', $row->id);
+    expect(collect($rowPayload['cells'])->pluck('id')->all())->toBe([$inactiveCell->id]);
+});
+
+test('an invalid product_status is rejected on the full row listing', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/rows/full?product_status=bogus');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
+});
+
 test('listing every row with its cells excludes cells belonging to a different row', function () {
     actingAsMobileUser();
 
@@ -173,6 +223,45 @@ test('listing every row with its cells returns everything without pagination', f
 
 test('an unauthenticated caller cannot list every row with its cells', function () {
     $response = $this->getJson('/api/v1/rows/full');
+
+    $response->assertUnauthorized();
+});
+
+test('an authenticated worker can list rows frozen by any unfinished round, not just their own', function () {
+    actingAsMobileUser();
+
+    $frozenByOther = Row::factory()->create(['letter' => 'B']);
+    CellVerificationRound::factory()->for(User::factory())->covering($frozenByOther)->create();
+
+    $completedRound = Row::factory()->create(['letter' => 'C']);
+    CellVerificationRound::factory()->covering($completedRound)->completed()->create();
+
+    $unfrozen = Row::factory()->create(['letter' => 'A']);
+
+    $response = $this->getJson('/api/v1/rows/frozen');
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('id'))
+        ->toContain($frozenByOther->id)
+        ->not->toContain($completedRound->id)
+        ->not->toContain($unfrozen->id);
+});
+
+test('listing frozen rows returns letters in order rather than creation order', function () {
+    actingAsMobileUser();
+
+    $rowB = Row::factory()->create(['letter' => 'B']);
+    $rowA = Row::factory()->create(['letter' => 'A']);
+    CellVerificationRound::factory()->covering($rowB, $rowA)->create();
+
+    $response = $this->getJson('/api/v1/rows/frozen');
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('letter')->all())->toBe(['A', 'B']);
+});
+
+test('an unauthenticated caller cannot list frozen rows', function () {
+    $response = $this->getJson('/api/v1/rows/frozen');
 
     $response->assertUnauthorized();
 });

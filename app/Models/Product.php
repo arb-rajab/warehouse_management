@@ -16,22 +16,29 @@ use Illuminate\Support\Collection;
 /**
  * A row in the store app's shared `products` table.
  *
- * Read-only here — the store owns every write. `image_url` and `boxes_count`
- * are not columns on it: the first resolves through the store's `uploads`
- * table, the second through this app's own `wms_product_settings`. Both are
- * exposed as attributes so the API and admin payloads keep the shape their
- * clients already consume. See .ai/rules/shared-database.md.
+ * The store owns every column, and this app is read-only on all but three:
+ * `name`, `ar_name` and `published` are also written here, periodically and
+ * in bulk, by `products:sync` (App\Console\Commands\SyncProductsCommand),
+ * which upserts them from the Otajer store API — see the "Product sync"
+ * section of .ai/rules/shared-database.md, including the concurrency
+ * implications of two apps writing the same columns. There is still no
+ * per-request create/update/delete of a `Product` anywhere in this codebase.
+ * `image_url` and `boxes_count` are not columns on it: the first resolves
+ * through the store's `uploads` table, the second through this app's own
+ * `wms_product_settings`. Both are exposed as attributes so the API and
+ * admin payloads keep the shape their clients already consume.
  *
  * @property int $id
  * @property string $name
  * @property string $ar_name
  * @property int|null $thumbnail_img
+ * @property bool $published
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
  */
-#[Fillable(['name', 'ar_name', 'thumbnail_img'])]
+#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -39,11 +46,10 @@ class Product extends Model
 
     /**
      * The box count assumed for a product with no `wms_product_settings` row —
-     * the store can add a product at any time without this app knowing, and a
-     * pallet of one is the safe floor. Matches the default the old
-     * `products.boxes_count` column carried.
+     * the store can add a product at any time without this app knowing, and
+     * this is the warehouse's default pallet size until someone configures it.
      */
-    public const int DEFAULT_BOXES_COUNT = 1;
+    public const int DEFAULT_BOXES_COUNT = 50;
 
     /**
      * Eager loads needed before reading `image_url` or `boxes_count`. Both are
@@ -68,6 +74,9 @@ class Product extends Model
             // sqlite, which — unlike MySQL — will not match the string '5'
             // against the integer 5.
             'thumbnail_img' => 'integer',
+            // The store declares this `int(11)` (0/1), not a real boolean
+            // column type.
+            'published' => 'boolean',
         ];
     }
 

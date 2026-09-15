@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Cell;
 use App\Models\CellVerificationRound;
+use App\Models\Row;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -26,21 +27,47 @@ class CellVerificationRoundSeeder extends Seeder
             );
         }
 
+        $rowIds = Row::query()
+            ->get(['id'])
+            ->toBase()
+            ->map(fn (Row $row): int => $row->id)
+            ->all();
+
         foreach (range(1, 15) as $i) {
-            $this->seedRound($workers->random(), completed: true);
+            // Completed rounds may overlap each other freely — a row being
+            // re-counted next week is the normal case.
+            $shuffled = $rowIds;
+            shuffle($shuffled);
+
+            $this->seedRound($workers->random(), completed: true, rowIds: array_slice($shuffled, 0, 2));
         }
 
+        // Unfinished rounds hold their rows exclusively, so seeded data has to
+        // satisfy the same rule startRound() enforces: each one takes rows no
+        // other unfinished round already claims, and they stay narrow so most
+        // of the warehouse is still actionable in a seeded environment.
+        $unclaimed = $rowIds;
+        shuffle($unclaimed);
+
         foreach (range(1, 4) as $i) {
-            $this->seedRound($workers->random(), completed: false);
+            $claim = array_splice($unclaimed, 0, 2);
+
+            if ($claim === []) {
+                break;
+            }
+
+            $this->seedRound($workers->random(), completed: false, rowIds: $claim);
         }
     }
 
     /**
      * A round backdated to look like it happened at some point over the last
      * month — completed ones get a completed_at a realistic walk-length
-     * (15-90 minutes) after they started.
+     * (15-90 minutes) after they started — covering the given rows.
+     *
+     * @param  array<int, int>  $rowIds
      */
-    private function seedRound(User $user, bool $completed): void
+    private function seedRound(User $user, bool $completed, array $rowIds): void
     {
         $startedAt = now()
             ->subDays(fake()->numberBetween(0, 30))
@@ -50,6 +77,8 @@ class CellVerificationRoundSeeder extends Seeder
             'user_id' => $user->id,
             'completed_at' => $completed ? $startedAt->addMinutes(fake()->numberBetween(15, 90)) : null,
         ]);
+
+        $round->rows()->attach($rowIds);
 
         $round->forceFill(['created_at' => $startedAt])->save();
     }

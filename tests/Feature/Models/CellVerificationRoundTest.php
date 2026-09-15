@@ -2,6 +2,7 @@
 
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
+use App\Models\Row;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -25,6 +26,29 @@ test('a verification round has many reports, excluding another rounds reports', 
 
     expect($round->reports)->toHaveCount(1);
     expect($round->reports->first()->id)->toBe($report->id);
+});
+
+test('a verification round has many rows, excluding another rounds rows', function () {
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $round = CellVerificationRound::factory()->covering($rowB, $rowA)->create();
+    CellVerificationRound::factory()->covering($otherRow)->create(); // noise
+
+    // Attached B first, but the relation orders by letter for every consumer.
+    expect($round->rows->pluck('letter')->all())->toBe(['A', 'B']);
+});
+
+test('coversRow is true for a claimed row and false for one claimed by another round', function () {
+    $mine = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $theirs = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $round = CellVerificationRound::factory()->covering($mine)->create();
+    CellVerificationRound::factory()->covering($theirs)->create(); // noise
+
+    expect($round->coversRow($mine->id))->toBeTrue();
+    expect($round->coversRow($theirs->id))->toBeFalse();
 });
 
 test('the completed_at attribute is cast to a datetime', function () {

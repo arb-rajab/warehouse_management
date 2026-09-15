@@ -1,11 +1,14 @@
 <?php
 
+use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 test('a pallet belongs to its product', function () {
     $product = Product::factory()->create();
@@ -36,6 +39,19 @@ test('the expiration_date attribute is cast to a date', function () {
 
     expect($pallet->fresh()->expiration_date)->toBeInstanceOf(CarbonImmutable::class);
     expect($pallet->fresh()->expiration_date->toDateString())->toBe('2027-01-15');
+});
+
+test('the factory default expiration_date has no time component', function () {
+    // fake()->dateTimeBetween() returns a random time of day; PalletFactory
+    // must format it down to a bare date, or the raw stored value carries
+    // that random time — which SQLite (unlike MySQL's DATE column) keeps
+    // verbatim, breaking `expiration_date <= $until` boundary comparisons
+    // like BuildsDashboardStats::expiringWindow()'s.
+    $pallet = Pallet::factory()->create();
+
+    $raw = DB::table('pallets')->where('id', $pallet->id)->value('expiration_date');
+
+    expect($raw)->toEndWith(' 00:00:00');
 });
 
 test('the state attribute reads the state of the pallets current cell', function () {
@@ -128,7 +144,56 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
         'product_image_url' => 'https://example.com/widgets.png',
         'expiration_date' => '2026-09-15',
         'added_at' => '2026-08-01T10:00:00+00:00',
+        'cell_entered_at' => null,
     ]);
+
+    Carbon::setTestNow();
+});
+
+test('cellEnteredLog resolves the most recent stored or transferred_in log for the pallet', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    $pallet = Pallet::factory()->create();
+    $storedLog = CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Stored,
+    ]);
+
+    // Noise: an unrelated pallet's stored log, and this pallet's own opened log
+    // (not a "stored"/"transferred_in" action, so must not win).
+    CellStatusLog::factory()->create(['action' => CellLogAction::Stored]);
+    CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Opened,
+        'created_at' => now()->addHour(),
+    ]);
+
+    expect($pallet->fresh()->cellEnteredLog->id)->toBe($storedLog->id);
+
+    Carbon::setTestNow();
+});
+
+test('cellEnteredLog moves to the newest transferred_in log once the pallet is transferred', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    $pallet = Pallet::factory()->create();
+    CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $pallet->cell_id,
+        'action' => CellLogAction::Stored,
+    ]);
+
+    Carbon::setTestNow('2026-08-05 10:00:00');
+    $destinationCell = Cell::factory()->create();
+    $pallet->update(['cell_id' => $destinationCell->id]);
+    $transferredInLog = CellStatusLog::factory()->create([
+        'pallet_id' => $pallet->id,
+        'cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredIn,
+    ]);
+
+    expect($pallet->fresh()->cellEnteredLog->id)->toBe($transferredInLog->id);
+    expect($pallet->fresh()->cell_entered_at->toIso8601String())->toBe('2026-08-05T10:00:00+00:00');
 
     Carbon::setTestNow();
 });

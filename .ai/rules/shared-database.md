@@ -7,6 +7,8 @@ paths:
   - app/Providers/AppServiceProvider.php
   - resources/js/lib/productName.ts
   - resources/js/components/ProductOptionLabel.vue
+  - app/Console/Commands/SyncProductsCommand.php
+  - config/store.php
 ---
 
 # Shared production database (WMS + store app)
@@ -26,10 +28,13 @@ the two apps share that this app also reads. Every WMS domain table — `rows`,
 `mobile_app_version_requirements` — is absent from the store's schema, so those
 keep bare names.
 
-Both belong to the store app, and this app is **read-only** on them: there is no
-create/update/delete of a `Product` or `Upload` anywhere in the codebase, and
-there must not be. The store's `products` has 72 columns and its `uploads` has
-eleven; only these are consumed here:
+Both belong to the store app. This app is fully read-only on `Upload`, and
+read-only on `Product` except for three columns — see "Product sync" below.
+There is no per-request create/update/delete of a `Product` or `Upload`
+anywhere in the codebase, and there must not be: the one write path is the
+scheduled bulk sync, not a controller or job reacting to a WMS action. The
+store's `products` has 72 columns and its `uploads` has eleven; only these are
+consumed here:
 
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
@@ -37,6 +42,7 @@ eleven; only these are consumed here:
 | `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; shipped raw, and the label the frontend renders outside Arabic |
 | `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, shipped raw alongside `name`, rendered in Arabic — see below. The store's `product_translations` table is still not read |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
+| `Product::$published` | `products.published` `int(11) NOT NULL DEFAULT 1` | the store admin's own active/inactive toggle, cast to `bool` here — see below |
 | `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
 | `Upload::$file_name`, `$external_link` | same columns | the two halves of `Upload::url()` |
@@ -213,6 +219,18 @@ key against it. Every column referencing a product is therefore a plain
 `CreateProductsTableTest` asserts it against the migration source instead. Keep
 that assertion when adding a new product FK.
 
+### `published`: the store admin's active/inactive toggle, not an occupancy signal
+
+`products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's own
+kill switch for a product, entirely independent of whether it currently
+occupies any cell in this warehouse. `Admin\ProductController::index()`'s
+`inactive` filter (`?inactive=true`) is `published = 0` — do not redefine
+"inactive" as "occupies zero cells" (e.g. `whereDoesntHave('pallets')`): a
+product can be `published = 0` while pallets of it still sit in cells (the
+store deactivated it after it was already stocked), and a freshly `published
+= 1` product legitimately has zero pallets before its first delivery. The two
+concepts don't imply each other in either direction.
+
 ### `image_url` and `boxes_count` are not columns — both are derived
 
 Neither exists in the store's schema under any name. They were columns this app
@@ -247,6 +265,38 @@ actually needs (the admin product listing only renders the image, so it loads
 In tests, `boxes_count` and `image_url` cannot be passed to
 `Product::factory()->create()` — they are not columns. Use the
 `boxesCount(int)`, `imageUrl(?string)` and `unconfigured()` factory states.
+
+### Product sync: the one write path into a store-owned table
+
+`products:sync` (`app/Console/Commands/SyncProductsCommand.php`, scheduled
+hourly in `routes/console.php`) polls the Otajer store's REST product feed
+(URL in `config('store.products_sync_url')`, env `STORE_PRODUCTS_SYNC_URL` —
+the store's API key is embedded in that URL's path, so it is never
+hardcoded) and upserts exactly three columns — `name`, `ar_name`,
+`published` — keyed on `id`. This is a deliberate, narrow reversal of the
+"WMS never writes `products`" rule above, made because those three columns
+need to stay current without WMS having a live join to the store's own
+product-management flow.
+
+Two things worth knowing before touching this:
+
+- **`Mat_ID` is assumed to equal `products.id`.** The feed returns it as a
+  numeric string (e.g. `"100027"`); the command casts it to int and uses it
+  as the upsert key. If that assumption is ever wrong for some product
+  range, the symptom is silent — a sync either creates a phantom row at the
+  wrong id or overwrites an unrelated one, since nothing else cross-checks
+  the mapping.
+- **Two writers, same columns, no locking.** The store app can still edit a
+  product's name/Arabic name/published state directly at any time; the next
+  hourly sync run will overwrite that edit with whatever the feed currently
+  says, and a store-side write made between two sync runs has no
+  protection against being clobbered. There is no last-write-wins
+  timestamp comparison — the feed's copy always wins on the next run.
+- **Everything else in the feed is intentionally dropped.** Price tiers,
+  tax, barcodes, unit/class ids, and the image are not mapped to any
+  column — the same "narrow column list" discipline as the rest of this
+  file. A row with no usable `Mat_ID` or `enName` is skipped rather than
+  written with a guessed value.
 
 ## Every other colliding table is WMS-owned, under a `wms_` prefix
 

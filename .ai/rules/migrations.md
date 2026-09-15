@@ -19,6 +19,9 @@ Don't just assert a column/table exists — assert the behavior the migration en
 
 Model relationship tests (`tests/Feature/Models/*Test.php`) cover normal relation resolution — they don't double as constraint tests, so both are needed when a migration adds a relation with a delete rule.
 
+## A new table also has to be registered in SharedDatabaseTableNamesTest
+`tests/Feature/SharedDatabaseTableNamesTest.php` asserts the **exact** sorted list of every bare-named (non-`wms_`) table, so creating one breaks that test by design — the failure is the prompt to justify the name, not a bug. Add the name to that list in the same change, in `sort()`'s byte order (`_` sorts before letters, so `cell_verification_round_row` precedes `cell_verification_rounds`), and make sure it earns a bare name per the section below. Pest can't run locally, so missing this costs a full CI round every time; `Schema::getTableListing(schemaQualified: false)` through `php artisan tinker` after migrating prints the expected list directly.
+
 ## Two tables are shared, and most default table names are collisions
 In production this app shares one MySQL database with a store app that owns
 `products` and `uploads` and would collide with this app on `users`, `sessions`, `cache`,

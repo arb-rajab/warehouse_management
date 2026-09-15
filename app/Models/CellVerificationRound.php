@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -62,9 +63,36 @@ class CellVerificationRound extends Model
         return $this->hasMany(CellVerificationReport::class);
     }
 
+    /**
+     * The rows this round walks. A round covers a subset of the warehouse —
+     * never implicitly all of it — and claims those rows exclusively for as
+     * long as it stays unfinished: no second round may include any of them,
+     * and pallet actions on their cells are refused meanwhile.
+     *
+     * Ordered by letter on the relation itself so every consumer — the mobile
+     * app's round listing, the admin pages, the overlap message — reads the
+     * same stable order without repeating an orderBy at each eager load.
+     *
+     * @return BelongsToMany<Row, $this>
+     */
+    public function rows(): BelongsToMany
+    {
+        return $this->belongsToMany(Row::class)->orderBy('letter');
+    }
+
     public function isCompleted(): bool
     {
         return $this->completed_at !== null;
+    }
+
+    /**
+     * Whether this round claims the given row — what
+     * CellVerificationService::report() checks a reported cell against, so a
+     * round only ever collects reports from inside its own scope.
+     */
+    public function coversRow(int $rowId): bool
+    {
+        return $this->rows()->whereKey($rowId)->exists();
     }
 
     /**

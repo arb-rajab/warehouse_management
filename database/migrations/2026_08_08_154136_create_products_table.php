@@ -29,6 +29,11 @@ return new class extends Migration
      * `thumbnail_img` holds an `uploads` row id, not a URL — the store has no
      * URL column at all. Product::imageUrl() resolves it; see
      * .ai/rules/shared-database.md.
+     *
+     * `published` is the store admin's own active/inactive toggle for a
+     * product (`int(11) NOT NULL DEFAULT 1`) — unrelated to whether the
+     * product currently occupies any cell here. See
+     * .ai/rules/shared-database.md.
      */
     public function up(): void
     {
@@ -41,6 +46,7 @@ return new class extends Migration
             $table->string('name', 200);
             $table->string('ar_name', 191)->default('');
             $table->string('thumbnail_img', 100)->nullable();
+            $table->integer('published')->default(1);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent();
         });

@@ -20,6 +20,7 @@ test('an authenticated worker can list products with every property the app read
         'ar_name' => 'ودجة',
         'image_url' => 'https://cdn.example.com/widget.png',
         'boxes_count' => 12,
+        'active' => true,
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
@@ -46,6 +47,7 @@ test('an Arabic-locale client gets the same raw name columns as an English one',
         'ar_name' => 'ودجة',
         'image_url' => 'https://cdn.example.com/widget.png',
         'boxes_count' => 12,
+        'active' => true,
     ]);
 });
 
@@ -68,7 +70,19 @@ test('a product the store never translated ships an empty ar_name rather than a 
         'ar_name' => '',
         'image_url' => null,
         'boxes_count' => 6,
+        'active' => true,
     ]);
+});
+
+test('an unpublished product ships active as false', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create(['name' => 'Widget', 'published' => false]);
+
+    $response = $this->getJson('/api/v1/products');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->firstWhere('id', $product->id)['active'])->toBeFalse();
 });
 
 test('the product listing paginates instead of returning everything at once', function () {
@@ -150,6 +164,41 @@ test('the product listing returns every product for a blank term', function () {
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(2);
+});
+
+test('the product listing can be filtered by product_status=active, excluding an inactive product', function () {
+    actingAsMobileUser();
+
+    $activeProduct = Product::factory()->create(['name' => 'Active Widget']);
+    Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+
+    $response = $this->getJson('/api/v1/products?product_status=active');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($activeProduct->id);
+});
+
+test('the product listing can be filtered by product_status=inactive, excluding an active product', function () {
+    actingAsMobileUser();
+
+    Product::factory()->create(['name' => 'Active Widget']);
+    $inactiveProduct = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+
+    $response = $this->getJson('/api/v1/products?product_status=inactive');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($inactiveProduct->id);
+});
+
+test('an invalid product_status is rejected on the product listing', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/products?product_status=bogus');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['product_status']);
 });
 
 test('an unauthenticated caller cannot list products', function () {

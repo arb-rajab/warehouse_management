@@ -23,7 +23,12 @@ class PalletFactory extends Factory
         return [
             'product_id' => Product::factory(),
             'cell_id' => Cell::factory(),
-            'expiration_date' => fake()->dateTimeBetween('now', '+1 year'),
+            // A bare date, not fake()'s raw DateTime: that carries a random
+            // time-of-day, which (unlike MySQL's DATE column) SQLite stores
+            // verbatim instead of truncating, breaking boundary comparisons
+            // like BuildsDashboardStats::expiringWindow()'s expiration_date
+            // <= $until against a pallet that should land exactly on it.
+            'expiration_date' => fake()->dateTimeBetween('now', '+1 year')->format('Y-m-d'),
             'remaining_boxes' => fn (array $attributes): int => Product::query()->findOrFail((int) $attributes['product_id'])->boxes_count,
         ];
     }

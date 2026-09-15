@@ -11,7 +11,8 @@
         "logout": "تسجيل الخروج",
         "confirmLogout": "هل تريد تسجيل الخروج من حسابك؟",
         "openMenu": "فتح القائمة",
-        "closeMenu": "إغلاق القائمة"
+        "closeMenu": "إغلاق القائمة",
+        "account": "الحساب"
     },
     "language": {
         "label": "اللغة",
@@ -224,7 +225,8 @@
             "user": "العامل",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
-            "reportsCount": "التقارير"
+            "reportsCount": "التقارير",
+            "rows": "الممرات"
         },
         "status": {
             "completed": "مكتملة",
@@ -235,7 +237,8 @@
             "backToList": "العودة إلى الجولات",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
-            "reportsCount": "{count} تقرير"
+            "reportsCount": "{count} تقرير",
+            "rows": "الممرات"
         }
     },
     "cellVerificationReport": {
@@ -436,7 +439,8 @@
         "filters": {
             "sections": {
                 "occupancy": "الإشغال"
-            }
+            },
+            "inactive": "غير نشط"
         },
         "columns": {
             "product": "المنتج",
