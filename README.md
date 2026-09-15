@@ -110,7 +110,7 @@ Leave it unset and every product image resolves to `null` — deliberately, sinc
 
 `boxes_count` — how many boxes a full pallet of a product holds — is this app's own data, in `wms_product_settings`, because the store's `products` has no column for it. `products.unit_equal` reads like a units-per-carton value but is **not** the box count; it has been checked and ruled out. There is no column in the store's schema to backfill from.
 
-A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (1), so **every product reads as 1 box until configured**, and pallets are placed with a remaining count of 1.
+A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (50), so **every product reads as 50 boxes until configured**, and pallets are placed with a remaining count of 50.
 
 Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path: product CRUD itself belongs to the store app, and this app never writes to `products`.
 
