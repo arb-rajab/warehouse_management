@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PasswordChangeController;
 use App\Http\Middleware\RestrictToAllowedIps;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
@@ -29,6 +30,9 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::get('password/change', [PasswordChangeController::class, 'edit'])->name('password.change');
+    Route::put('password/change', [PasswordChangeController::class, 'update'])->name('password.update');
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
