@@ -1,6 +1,7 @@
 import { Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import LogoutLink from '@/components/LogoutLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
 import ChangePassword from './ChangePassword.vue';
@@ -184,6 +185,7 @@ describe('ChangePassword', () => {
     it('renders a logout link', () => {
         const wrapper = mountPage();
 
+        expect(wrapper.findComponent(LogoutLink).exists()).toBe(true);
         expect(wrapper.text()).toContain(t('nav.logout'));
     });
 });

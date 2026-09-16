@@ -283,6 +283,19 @@ test('opening an already-opened pallet is rejected with a non-field action error
     $response->assertSessionHasErrors(['action' => __('messages.pallet_not_full')]);
 });
 
+test('opening a pallet in a row under an unfinished verification round is rejected with a non-field action error', function () {
+    actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+});
+
 test('a mobile app user cannot open a pallet via the admin route', function () {
     actingAsMobilePanelUser();
     $pallet = Pallet::factory()->create();
@@ -366,6 +379,19 @@ test('removing boxes from a full (not yet opened) pallet is rejected with a non-
     $response->assertSessionHasErrors(['action' => __('messages.pallet_not_opened')]);
 });
 
+test('removing boxes from a pallet in a row under an unfinished verification round is rejected with a non-field action error', function () {
+    actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+    $pallet->cell->update(['state' => CellState::Opened]);
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
+});
+
 test('a mobile app user cannot remove boxes via the admin route', function () {
     actingAsMobilePanelUser();
     $pallet = Pallet::factory()->opened()->create(['remaining_boxes' => 6]);
@@ -420,6 +446,17 @@ test('emptying a pallet in an inactive cell is rejected with a non-field action 
     $response = $this->post("/admin/pallets/{$pallet->id}/empty");
 
     $response->assertSessionHasErrors(['action' => __('messages.slot_inactive')]);
+    $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
+});
+
+test('emptying a pallet in a row under an unfinished verification round is rejected with a non-field action error', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->create();
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/empty");
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
     $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
 });
 
@@ -540,6 +577,27 @@ test('transferring a pallet to its own current cell is rejected as a validation 
 
     $response->assertSessionHasErrors(['cell_number']);
     expect($pallet->refresh()->cell_id)->toBe($cell->id);
+});
+
+test('transferring a pallet out of a row under an unfinished verification round is rejected with a non-field action error', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $destinationCell = $destinationRow->cells()->first();
+
+    CellVerificationRound::factory()->covering($sourceRow)->create();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => $destinationRow->letter,
+        'cell_number' => $destinationCell->cell_number,
+        'flat_number' => $destinationCell->flat_number,
+    ]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
 
 test('a mobile app user cannot transfer a pallet via the admin route', function () {
@@ -707,6 +765,25 @@ test('updating a pallet in an inactive cell is rejected with a non-field action 
     ]);
 
     $response->assertSessionHasErrors(['action' => __('messages.slot_inactive')]);
+    expect($pallet->refresh()->product_id)->toBe($product->id);
+    expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
+});
+
+test('updating a pallet in a row under an unfinished verification round is rejected with a non-field action error and nothing changes', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $newProduct = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
+    CellVerificationRound::factory()->covering($pallet->cell->row)->create();
+
+    $response = $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $newProduct->id,
+        'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 3,
+    ]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
     expect($pallet->refresh()->product_id)->toBe($product->id);
     expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
     expect($pallet->refresh()->remaining_boxes)->toBe(6);

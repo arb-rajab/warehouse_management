@@ -320,6 +320,7 @@ test('the inactive filter narrows the products index to the store admin\'s deact
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 1)
             ->where('products.data.0.id', $inactive->id)
+            ->where('products.data.0.active', false)
     );
 });
 
