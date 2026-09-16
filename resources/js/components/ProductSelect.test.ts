@@ -40,7 +40,10 @@ function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
 }
 
 function mountSelect(
-    props: Partial<{ modelValue: ProductFilterOption | null }> = {},
+    props: Partial<{
+        modelValue: ProductFilterOption | null;
+        required: boolean;
+    }> = {},
 ) {
     let modelValue = props.modelValue ?? null;
 
@@ -49,6 +52,7 @@ function mountSelect(
             id: 'pallet-action-product',
             label: 'Product',
             placeholder: 'Choose a product',
+            required: props.required,
             modelValue,
             'onUpdate:modelValue': (value: ProductFilterOption | null) => {
                 modelValue = value;
@@ -71,6 +75,34 @@ describe('ProductSelect', () => {
         const wrapper = mountSelect();
 
         expect(wrapper.get('button').text()).toBe('Choose a product');
+    });
+
+    it('renders no required guard input by default', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.find('#pallet-action-product-guard').exists()).toBe(
+            false,
+        );
+    });
+
+    it('renders a required guard input mirroring the selected product id when required is set', () => {
+        const wrapper = mountSelect({ required: true });
+
+        const guard = wrapper.get('#pallet-action-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.required).toBe(true);
+        expect(guard.value).toBe('');
+    });
+
+    it('keeps the required guard input in sync with the selected product', () => {
+        const wrapper = mountSelect({
+            required: true,
+            modelValue: { id: 5, name: 'Widgets', ar_name: 'ودجات' },
+        });
+
+        const guard = wrapper.get('#pallet-action-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.value).toBe('5');
     });
 
     it("resolves the selected product's label from the model without fetching", () => {

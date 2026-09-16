@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import { Warehouse } from '@lucide/vue';
-import { destroy } from '@/actions/App/Http/Controllers/LoginController';
 import { update } from '@/actions/App/Http/Controllers/PasswordChangeController';
 import FormField from '@/components/FormField.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import LogoutLink from '@/components/LogoutLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
-import { confirmLogout } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
 
@@ -84,14 +83,9 @@ const { confirmationMismatchError, syncConfirmationValidity } =
                 />
             </Form>
 
-            <Link
-                :href="destroy()"
-                as="button"
-                :on-before="confirmLogout"
-                class="mt-4 block w-full cursor-pointer text-center text-sm text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
-            >
-                {{ t('nav.logout') }}
-            </Link>
+            <LogoutLink
+                class="mt-4 flex w-full cursor-pointer items-center justify-center gap-1 text-center text-sm text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+            />
         </div>
     </div>
 </template>

@@ -41,6 +41,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         name: 'Widgets',
         ar_name: 'ودجات',
         image_url: null,
+        active: true,
         boxes_count: 12,
         full_cells_count: 2,
         opened_cells_count: 1,

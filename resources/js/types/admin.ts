@@ -303,6 +303,7 @@ export interface ProductSummary {
     /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
     ar_name: string;
     image_url: string | null;
+    active: boolean;
     /**
      * How many boxes a full pallet of this product holds. Stored in this app's
      * own `wms_product_settings`, not on the store-owned products table, and
