@@ -22,6 +22,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Test the Semgrep report script
+        run: python3 .github/scripts/semgrep_report_test.py -v
+
       - name: Run Semgrep
         continue-on-error: true
         run: >
