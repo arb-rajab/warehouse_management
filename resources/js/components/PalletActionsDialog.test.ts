@@ -224,6 +224,26 @@ describe('PalletActionsDialog', () => {
         });
     });
 
+    it('requires a product to be selected to store a pallet', async () => {
+        const wrapper = await mountDialog(emptyCell());
+
+        const guard = wrapper.get('#pallet-action-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.required).toBe(true);
+    });
+
+    it('requires a product to be selected to edit a pallet', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        const guard = wrapper.get('#pallet-action-edit-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.required).toBe(true);
+    });
+
     it('defaults to the open tab for a full cell and posts boxes_count/confirm_empty on submit', async () => {
         const wrapper = await mountDialog(fullCell(6));
 

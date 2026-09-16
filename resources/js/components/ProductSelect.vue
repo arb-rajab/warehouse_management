@@ -12,6 +12,16 @@ const props = defineProps<{
     id: string;
     label: string;
     placeholder: string;
+    /**
+     * The button/listbox pair has no native form control of its own, so a
+     * `required` here has nothing for the browser's constraint validation to
+     * attach to — without this, a caller's `required` intent silently does
+     * nothing and the form submits with a null product. Renders a
+     * visually-hidden native input mirroring the selected id so the browser
+     * blocks submission the same way it does for every other required field
+     * in these forms.
+     */
+    required?: boolean;
 }>();
 
 const model = defineModel<ProductFilterOption | null>({ required: true });
@@ -69,6 +79,16 @@ function buttonLabel(): string {
 <template>
     <div ref="containerRef" class="relative">
         <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <input
+            v-if="required"
+            :id="`${id}-guard`"
+            type="text"
+            class="sr-only"
+            tabindex="-1"
+            readonly
+            required
+            :value="model ? String(model.id) : ''"
+        />
         <button
             :id="id"
             type="button"

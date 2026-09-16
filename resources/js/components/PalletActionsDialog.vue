@@ -260,6 +260,7 @@ const submitLabel = computed(() => {
                             : 'pallet-action-product'
                     "
                     v-model="product"
+                    required
                     :label="
                         t(`cells.palletActions.${selectedAction}.productLabel`)
                     "
