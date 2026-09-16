@@ -12,15 +12,15 @@ use Throwable;
 
 /**
  * Pulls the Otajer store's product feed and upserts a bounded subset of
- * columns (`name`, `ar_name`, `published`) into the shared `products` table.
+ * columns (`name`, `ar_name`, `published`) into this app's `products` table.
  *
- * This is a deliberate, narrow exception to this app being read-only on
- * `products` — see the "Product sync" section of .ai/rules/shared-database.md
- * for why, and for the concurrency risk of writing into a table the store
- * app also writes to directly.
+ * This app owns that table and this command is its only writer, so the feed is
+ * the single source of truth for those three columns: the upsert is
+ * unconditional and simply replaces whatever is there. See the "Product sync"
+ * section of .ai/rules/shared-database.md before adding a second write path.
  */
 #[Signature('products:sync')]
-#[Description("Sync product name, Arabic name, and active status from the store's API into the shared products table")]
+#[Description("Sync product name, Arabic name, and active status from the store's API into the products table")]
 class SyncProductsCommand extends Command
 {
     /**
