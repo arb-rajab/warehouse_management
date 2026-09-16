@@ -5,7 +5,6 @@ import {
     CircleUser,
     ClipboardCheck,
     LayoutDashboard,
-    LogOut,
     Map,
     Menu,
     Package,
@@ -22,10 +21,9 @@ import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/Da
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
-import { destroy } from '@/actions/App/Http/Controllers/LoginController';
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
-import { confirmLogout } from '@/lib/confirm';
+import LogoutLink from '@/components/LogoutLink.vue';
 import { t } from '@/lib/i18n';
 
 const page = usePage();
@@ -178,16 +176,10 @@ function navLinkStateClass(href: string): string[] {
                         <CircleUser class="h-4 w-4 shrink-0" />
                         {{ page.props.auth.user?.name }}
                     </span>
-                    <Link
-                        :href="destroy()"
-                        as="button"
-                        :on-before="confirmLogout"
+                    <LogoutLink
                         class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
                         @click="isMobileMenuOpen = false"
-                    >
-                        <LogOut class="h-4 w-4" />
-                        {{ t('nav.logout') }}
-                    </Link>
+                    />
                 </div>
             </div>
         </nav>

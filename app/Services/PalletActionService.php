@@ -140,6 +140,22 @@ class PalletActionService
     }
 
     /**
+     * Normalize a caller-submitted expiration date to a bare date string: the
+     * validation rule only requires a parseable date, so a caller-submitted
+     * value carrying a time component (e.g. a raw ISO datetime) would
+     * otherwise be stored verbatim — and unlike MySQL's DATE column, SQLite
+     * keeps that time component intact instead of truncating it, so the
+     * pallet reads back as its correct date everywhere the app formats it via
+     * toDateString(), but a raw `expiration_date <= $until` comparison
+     * (BuildsDashboardStats::expiringWindow()) can then exclude it right at
+     * the boundary.
+     */
+    private function normalizeExpirationDate(?string $expirationDate): ?string
+    {
+        return $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null;
+    }
+
+    /**
      * Write a CellStatusLog row for a cell state transition.
      */
     private function logCellStatus(
@@ -190,16 +206,7 @@ class PalletActionService
             $pallet = Pallet::create([
                 'product_id' => $product->id,
                 'cell_id' => $cell->id,
-                // Normalized to a bare date: the validation rule only requires a
-                // parseable date, so a caller-submitted value carrying a time
-                // component (e.g. a raw ISO datetime) would otherwise be stored
-                // verbatim — and unlike MySQL's DATE column, SQLite keeps that
-                // time component intact instead of truncating it, so the pallet
-                // reads back as its correct date everywhere the app formats it
-                // via toDateString(), but a raw `expiration_date <= $until`
-                // comparison (BuildsDashboardStats::expiringWindow()) can then
-                // exclude it right at the boundary.
-                'expiration_date' => $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null,
+                'expiration_date' => $this->normalizeExpirationDate($expirationDate),
                 'remaining_boxes' => $product->boxes_count,
             ]);
 
@@ -387,7 +394,7 @@ class PalletActionService
 
             $lockedPallet->update([
                 'product_id' => $productId,
-                'expiration_date' => $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null,
+                'expiration_date' => $this->normalizeExpirationDate($expirationDate),
                 'remaining_boxes' => $remainingBoxes,
             ]);
 

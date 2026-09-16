@@ -250,55 +250,52 @@ const submitLabel = computed(() => {
         </div>
 
         <form class="space-y-4" @submit.prevent="submit">
-            <template v-if="selectedAction === 'store'">
+            <template
+                v-if="selectedAction === 'store' || selectedAction === 'edit'"
+            >
                 <ProductSelect
-                    id="pallet-action-product"
+                    :id="
+                        selectedAction === 'edit'
+                            ? 'pallet-action-edit-product'
+                            : 'pallet-action-product'
+                    "
                     v-model="product"
-                    :label="t('cells.palletActions.store.productLabel')"
+                    :label="
+                        t(`cells.palletActions.${selectedAction}.productLabel`)
+                    "
                     :placeholder="
-                        t('cells.palletActions.store.productPlaceholder')
+                        t(
+                            `cells.palletActions.${selectedAction}.productPlaceholder`,
+                        )
                     "
                 />
                 <div>
                     <label
-                        for="pallet-action-expiration"
+                        :for="
+                            selectedAction === 'edit'
+                                ? 'pallet-action-edit-expiration'
+                                : 'pallet-action-expiration'
+                        "
                         :class="fieldLabelClass"
                     >
-                        {{ t('cells.palletActions.store.expirationLabel') }}
+                        {{
+                            t(
+                                `cells.palletActions.${selectedAction}.expirationLabel`,
+                            )
+                        }}
                     </label>
                     <input
-                        id="pallet-action-expiration"
+                        :id="
+                            selectedAction === 'edit'
+                                ? 'pallet-action-edit-expiration'
+                                : 'pallet-action-expiration'
+                        "
                         v-model="expirationDate"
                         type="date"
                         :class="plainFieldInputClass"
                     />
                 </div>
-            </template>
-
-            <template v-else-if="selectedAction === 'edit'">
-                <ProductSelect
-                    id="pallet-action-edit-product"
-                    v-model="product"
-                    :label="t('cells.palletActions.edit.productLabel')"
-                    :placeholder="
-                        t('cells.palletActions.edit.productPlaceholder')
-                    "
-                />
-                <div>
-                    <label
-                        for="pallet-action-edit-expiration"
-                        :class="fieldLabelClass"
-                    >
-                        {{ t('cells.palletActions.edit.expirationLabel') }}
-                    </label>
-                    <input
-                        id="pallet-action-edit-expiration"
-                        v-model="expirationDate"
-                        type="date"
-                        :class="plainFieldInputClass"
-                    />
-                </div>
-                <div>
+                <div v-if="selectedAction === 'edit'">
                     <label
                         for="pallet-action-edit-boxes"
                         :class="fieldLabelClass"
