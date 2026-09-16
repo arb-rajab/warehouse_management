@@ -52,11 +52,33 @@ describe('ChangePassword', () => {
         expect(wrapper.text()).toContain(t('auth.changePassword.description'));
     });
 
+    it('renders the current password, new password, and confirmation field labels', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('auth.changePassword.currentPassword'),
+        );
+        expect(wrapper.text()).toContain(t('auth.changePassword.password'));
+        expect(wrapper.text()).toContain(
+            t('auth.changePassword.confirmPassword'),
+        );
+    });
+
     it('submits the form to the password change route', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
             '/password/change',
+        );
+    });
+
+    it('renders the current password field with the right input type and autocomplete hint', () => {
+        const wrapper = mountPage();
+
+        const currentPassword = wrapper.get('#current_password');
+        expect(currentPassword.attributes('type')).toBe('password');
+        expect(currentPassword.attributes('autocomplete')).toBe(
+            'current-password',
         );
     });
 
@@ -72,8 +94,13 @@ describe('ChangePassword', () => {
         expect(confirmation.attributes('autocomplete')).toBe('new-password');
     });
 
-    it('marks the password and confirmation fields as required with a max length, mirroring the backend rule', () => {
+    it('marks the current password, password, and confirmation fields as required with a max length, mirroring the backend rule', () => {
         const wrapper = mountPage();
+
+        const currentPassword = wrapper.get('#current_password')
+            .element as HTMLInputElement;
+        expect(currentPassword.required).toBe(true);
+        expect(currentPassword.maxLength).toBe(255);
 
         const password = wrapper.get('#password').element as HTMLInputElement;
         expect(password.required).toBe(true);
@@ -112,6 +139,17 @@ describe('ChangePassword', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain('The password field is required.');
+    });
+
+    it('shows a validation error message for the current password field', () => {
+        formSlotPropsMock.mockReturnValue({
+            errors: { current_password: 'The password is incorrect.' },
+            processing: false,
+        });
+
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain('The password is incorrect.');
     });
 
     it('shows the submitting label and disables the button while processing', () => {

@@ -46,6 +46,16 @@ const { confirmationMismatchError, syncConfirmationValidity } =
                 class="space-y-4"
             >
                 <FormField
+                    id="current_password"
+                    :label="t('auth.changePassword.currentPassword')"
+                    type="password"
+                    :error="errors.current_password"
+                    maxlength="255"
+                    autocomplete="current-password"
+                    required
+                />
+
+                <FormField
                     id="password"
                     :label="t('auth.changePassword.password')"
                     type="password"

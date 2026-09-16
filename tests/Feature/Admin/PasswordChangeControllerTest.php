@@ -22,6 +22,7 @@ test('an unauthenticated caller is redirected to login when viewing the change p
 
 test('an unauthenticated caller cannot submit the change password form', function () {
     $response = $this->put('/password/change', [
+        'current_password' => 'old-password',
         'password' => 'newpassword123',
         'password_confirmation' => 'newpassword123',
     ]);
@@ -37,6 +38,7 @@ test('a user can change their password, which clears the must_change_password fl
     ]);
 
     $response = $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'old-password',
         'password' => 'new-strong-password',
         'password_confirmation' => 'new-strong-password',
     ]);
@@ -50,9 +52,13 @@ test('a user can change their password, which clears the must_change_password fl
 });
 
 test('changing the password redirects away once the flag is cleared', function () {
-    $user = User::factory()->create(['must_change_password' => true]);
+    $user = User::factory()->create([
+        'password' => 'old-password',
+        'must_change_password' => true,
+    ]);
 
     $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'old-password',
         'password' => 'new-strong-password',
         'password_confirmation' => 'new-strong-password',
     ]);
@@ -69,6 +75,7 @@ test('submitting a mismatched password confirmation is rejected and nothing chan
     ]);
 
     $response = $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'old-password',
         'password' => 'new-strong-password',
         'password_confirmation' => 'different-password',
     ]);
@@ -87,11 +94,49 @@ test('submitting an overly short password is rejected and nothing changes', func
     ]);
 
     $response = $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'old-password',
         'password' => 'short',
         'password_confirmation' => 'short',
     ]);
 
     $response->assertSessionHasErrors('password');
+
+    $fresh = $user->fresh();
+    expect($fresh->must_change_password)->toBeTrue();
+    expect(Hash::check('old-password', $fresh->password))->toBeTrue();
+});
+
+test('submitting the wrong current password is rejected and nothing changes', function () {
+    $user = User::factory()->create([
+        'password' => 'old-password',
+        'must_change_password' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'not-the-right-password',
+        'password' => 'new-strong-password',
+        'password_confirmation' => 'new-strong-password',
+    ]);
+
+    $response->assertSessionHasErrors('current_password');
+
+    $fresh = $user->fresh();
+    expect($fresh->must_change_password)->toBeTrue();
+    expect(Hash::check('old-password', $fresh->password))->toBeTrue();
+});
+
+test('submitting without a current password is rejected and nothing changes', function () {
+    $user = User::factory()->create([
+        'password' => 'old-password',
+        'must_change_password' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put('/password/change', [
+        'password' => 'new-strong-password',
+        'password_confirmation' => 'new-strong-password',
+    ]);
+
+    $response->assertSessionHasErrors('current_password');
 
     $fresh = $user->fresh();
     expect($fresh->must_change_password)->toBeTrue();
