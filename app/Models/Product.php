@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -267,7 +268,17 @@ class Product extends Model
             return;
         }
 
-        $plan = self::nameSearchPlan($term, $query->getConnection()->getDriverName());
+        // Query\Builder::getConnection() is declared as ConnectionInterface,
+        // which has no getDriverName() — only the concrete Connection does. A
+        // connection that is neither falls back to LIKE, which is the safe
+        // default here: the driver check exists to ask whether this grammar can
+        // compile MATCH at all, and an unknown one cannot be assumed to.
+        $connection = $query->getConnection();
+
+        $plan = self::nameSearchPlan(
+            $term,
+            $connection instanceof Connection ? $connection->getDriverName() : '',
+        );
 
         if ($plan['full_text_expression'] !== null) {
             $query->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
