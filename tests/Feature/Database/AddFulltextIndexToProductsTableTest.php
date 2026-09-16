@@ -65,5 +65,5 @@ test('the index covers exactly the columns Product matches against', function ()
     expect(Product::SEARCHABLE_NAME_COLUMNS)->toBe(['name', 'ar_name']);
     expect($source)->toContain("\$table->fullText(['name', 'ar_name'], self::INDEX_NAME);");
     expect($source)->toContain("private const string INDEX_NAME = 'products_name_ar_name_fulltext';");
-    expect($source)->toContain("\$table->dropFullText(self::INDEX_NAME);");
+    expect($source)->toContain('$table->dropFullText(self::INDEX_NAME);');
 });
