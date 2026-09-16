@@ -63,7 +63,7 @@ test('updating a pallet\'s expiration date directly (bypassing PalletActionServi
     expect($after->json('stats.expiring.windows.0.count'))->toBe(1);
 });
 
-test('updating a pallet with only an unguarded field change (remaining_boxes) does not invalidate the dashboard stats cache', function () {
+test('updating only a pallet\'s remaining_boxes directly invalidates the dashboard stats cache', function () {
     actingAsMobileUser();
 
     $pallet = Pallet::factory()->create(['expiration_date' => '2026-08-20', 'remaining_boxes' => 5]);
@@ -79,18 +79,12 @@ test('updating a pallet with only an unguarded field change (remaining_boxes) do
 
     $pallet->update(['remaining_boxes' => 2]);
 
-    $stale = $this->getJson('/api/v1/dashboard');
-    $stale->assertOk();
-    expect($stale->json('stats.expiring.windows.0.count'))->toBe(1);
-
-    // A guarded field change on the same pallet does flush, and the dashboard
-    // now picks up the second pallet too — proving the earlier remaining_boxes
-    // update really didn't flush, rather than the count coincidentally holding.
-    $pallet->update(['expiration_date' => '2026-08-19']);
-
-    $fresh = $this->getJson('/api/v1/dashboard');
-    $fresh->assertOk();
-    expect($fresh->json('stats.expiring.windows.0.count'))->toBe(2);
+    // The remaining_boxes-only update above must have flushed the cache on
+    // its own for the dashboard to already reflect the second pallet here —
+    // proving it isn't just picking it up from an unrelated flush elsewhere.
+    $after = $this->getJson('/api/v1/dashboard');
+    $after->assertOk();
+    expect($after->json('stats.expiring.windows.0.count'))->toBe(2);
 });
 
 test('updating a pallet via the real admin edit endpoint invalidates the dashboard stats cache', function () {
