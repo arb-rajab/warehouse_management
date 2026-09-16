@@ -157,7 +157,9 @@ trait BuildsDashboardStats
     /**
      * Apply the shared product-id/product-published dashboard filters to a query in place.
      *
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      * @param  list<int>|null  $productIds
      */
     private function applyProductFilters(Builder $query, ?array $productIds, ?bool $productPublished): void

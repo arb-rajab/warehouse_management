@@ -21,14 +21,12 @@ describe('LogoutLink', () => {
         expect(wrapper.text()).toContain('Log out');
     });
 
-    it('applies the class prop to the root element', () => {
+    it('applies a class attribute to the root element via fallthrough', () => {
         const wrapper = mount(LogoutLink, {
-            props: { class: 'my-custom-class' },
+            attrs: { class: 'my-custom-class' },
         });
 
-        expect(wrapper.get('a,button').classes()).toContain(
-            'my-custom-class',
-        );
+        expect(wrapper.get('a,button').classes()).toContain('my-custom-class');
     });
 
     it('forwards a click listener via attribute fallthrough', async () => {
