@@ -125,6 +125,25 @@ test('submitting the wrong current password is rejected and nothing changes', fu
     expect(Hash::check('old-password', $fresh->password))->toBeTrue();
 });
 
+test('submitting the current password as the new password is rejected and nothing changes', function () {
+    $user = User::factory()->create([
+        'password' => 'old-password',
+        'must_change_password' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put('/password/change', [
+        'current_password' => 'old-password',
+        'password' => 'old-password',
+        'password_confirmation' => 'old-password',
+    ]);
+
+    $response->assertSessionHasErrors(['password' => __('messages.password_same_as_current')]);
+
+    $fresh = $user->fresh();
+    expect($fresh->must_change_password)->toBeTrue();
+    expect(Hash::check('old-password', $fresh->password))->toBeTrue();
+});
+
 test('submitting without a current password is rejected and nothing changes', function () {
     $user = User::factory()->create([
         'password' => 'old-password',
