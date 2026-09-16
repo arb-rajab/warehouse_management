@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\ValidatesBoxesCount;
 use App\Http\Requests\Concerns\ValidatesPalletContents;
 use App\Http\Requests\Concerns\ValidatesReturnTo;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -9,7 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePalletRequest extends FormRequest
 {
-    use ValidatesPalletContents, ValidatesReturnTo;
+    use ValidatesBoxesCount, ValidatesPalletContents, ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.
@@ -21,6 +22,7 @@ class UpdatePalletRequest extends FormRequest
         return [
             ...$this->returnToRules(),
             ...$this->palletContentsRules(),
+            ...$this->confirmEmptyRules(),
             // Unlike creating a pallet, editing one must not require a
             // future-or-today date: a pallet can already be expired (that's
             // an expected, normal state) and an admin must still be able to

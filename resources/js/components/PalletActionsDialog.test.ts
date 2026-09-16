@@ -345,7 +345,39 @@ describe('PalletActionsDialog', () => {
             product_id: 1,
             expiration_date: '2027-01-01',
             remaining_boxes: 4,
+            confirm_empty: false,
             return_to: null,
+        });
+    });
+
+    it('hides the confirm_empty checkbox on the edit tab while remaining boxes is above zero', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        expect(wrapper.get('#pallet-action-edit-boxes').exists()).toBe(true);
+        expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
+    });
+
+    it('requires confirm_empty when editing remaining boxes down to zero, and posts it once checked', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        await wrapper.get('#pallet-action-edit-boxes').setValue('0');
+
+        const checkbox = wrapper.get('input[type="checkbox"]');
+        await checkbox.setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPutMock).toHaveBeenCalledTimes(1);
+        expect(routerPutMock.mock.calls[0][1]).toMatchObject({
+            remaining_boxes: 0,
+            confirm_empty: true,
         });
     });
 

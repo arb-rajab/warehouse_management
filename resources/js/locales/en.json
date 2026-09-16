@@ -353,6 +353,7 @@
                 "productPlaceholder": "Select a product…",
                 "expirationLabel": "Expiration date",
                 "boxesCountLabel": "Remaining boxes",
+                "confirmEmptyLabel": "Setting this to 0 would empty the pallet — check to confirm",
                 "submit": "Save changes"
             },
             "open": {

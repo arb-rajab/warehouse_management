@@ -646,19 +646,41 @@ test('updating a pallet can clear its expiration date', function () {
     expect($pallet->refresh()->expiration_date)->toBeNull();
 });
 
-test('updating a pallet can set its remaining boxes to zero', function () {
+test('updating a pallet\'s remaining boxes to zero, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
     $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+    $cell = $pallet->cell;
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
         'remaining_boxes' => 0,
+        'confirm_empty' => true,
     ]);
 
     $response->assertRedirect(route('admin.cells.index'));
-    expect($pallet->refresh()->remaining_boxes)->toBe(0);
+    $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
+    expect($cell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('updating a pallet\'s remaining boxes to zero, without confirm_empty, is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $newProduct = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
+
+    $response = $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $newProduct->id,
+        'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 0,
+    ]);
+
+    $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    expect($pallet->refresh()->product_id)->toBe($product->id);
+    expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
 test('updating a pallet with a negative remaining_boxes is rejected as a validation error, and nothing changes', function () {

@@ -353,6 +353,7 @@
                 "productPlaceholder": "اختر منتجًا…",
                 "expirationLabel": "تاريخ انتهاء الصلاحية",
                 "boxesCountLabel": "الصناديق المتبقية",
+                "confirmEmptyLabel": "سيؤدي ضبط هذا على 0 إلى تفريغ المنصة النقالة — حدد للتأكيد",
                 "submit": "حفظ التغييرات"
             },
             "open": {
