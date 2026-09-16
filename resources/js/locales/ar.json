@@ -90,7 +90,7 @@
         },
         "fields": {
             "letter": "الحرف",
-            "cellsPerFlat": "الخلايا في كل مستوى",
+            "cellsPerFlat": "عدد الأعمدة في الممر",
             "flats": "المستويات",
             "dimensionsLocked": "يحتوي هذا الممر على منصات نقالة، لذا لا يمكن تغيير أبعاده."
         }
@@ -168,7 +168,7 @@
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
-            "palletHistory": "عرض سجل الطبلية رقم #{id}",
+            "palletHistory": "عرض سجل المنصة رقم #{id}",
             "flaggedOnly": "المُعلَّمة فقط"
         },
         "flags": {
@@ -184,9 +184,9 @@
             "cell": "الخلية",
             "action": "الإجراء",
             "product": "المنتج",
-            "pallet": "الطبلية",
+            "pallet": "المنصة",
             "expires": "تنتهي في",
-            "viewPalletHistory": "عرض كل سجلات هذه الطبلية",
+            "viewPalletHistory": "عرض كل سجلات هذه المنصة",
             "boxes": "الصناديق",
             "note": "ملاحظة",
             "doneBy": "بواسطة",
@@ -331,8 +331,8 @@
             "submitting": "جارٍ الحفظ…"
         },
         "palletActions": {
-            "triggerLabel": "إدارة الطبلية النقالة",
-            "title": "إدارة الطبلية النقالة — {location}",
+            "triggerLabel": "إدارة المنصة النقالة",
+            "title": "إدارة المنصة النقالة — {location}",
             "tabs": {
                 "store": "تخزين",
                 "open": "فتح",
@@ -345,7 +345,7 @@
                 "productLabel": "المنتج",
                 "productPlaceholder": "اختر منتجًا…",
                 "expirationLabel": "تاريخ انتهاء الصلاحية",
-                "submit": "تخزين الطبلية النقالة"
+                "submit": "تخزين المنصة النقالة"
             },
             "edit": {
                 "productLabel": "المنتج",
@@ -357,24 +357,24 @@
             "open": {
                 "boxesCountLabel": "عدد الصناديق المراد إزالتها",
                 "remainingBoxesHint": "{count} صندوق متبقٍ",
-                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ الطبلية النقالة — حدد للتأكيد",
-                "submit": "فتح الطبلية النقالة"
+                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ المنصة النقالة — حدد للتأكيد",
+                "submit": "فتح المنصة النقالة"
             },
             "removeBoxes": {
                 "boxesCountLabel": "عدد الصناديق المراد إزالتها",
                 "remainingBoxesHint": "{count} صندوق متبقٍ",
-                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ الطبلية النقالة — حدد للتأكيد",
+                "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ المنصة النقالة — حدد للتأكيد",
                 "submit": "إزالة الصناديق"
             },
             "empty": {
-                "confirmText": "سيؤدي هذا إلى إزالة الطبلية النقالة من {location} وتحرير الخلية.",
-                "submit": "تفريغ الطبلية النقالة"
+                "confirmText": "سيؤدي هذا إلى إزالة المنصة النقالة من {location} وتحرير الخلية.",
+                "submit": "تفريغ المنصة النقالة"
             },
             "transfer": {
                 "rowLabel": "ممر الوجهة",
                 "cellNumberLabel": "رقم خلية الوجهة",
                 "flatNumberLabel": "مستوى الوجهة",
-                "submit": "نقل الطبلية النقالة"
+                "submit": "نقل المنصة النقالة"
             },
             "noteLabel": "ملاحظة (اختياري)",
             "notePlaceholder": "سبب هذا التغيير…",
@@ -440,7 +440,7 @@
             "opened": "مفتوحة"
         },
         "expiring": {
-            "title": "الطبليات القريبة من الانتهاء",
+            "title": "المنصات القريبة من الانتهاء",
             "expired": "منتهية الصلاحية",
             "soon": "تنتهي خلال {days} أيام"
         },
@@ -467,9 +467,9 @@
             "expiringSoon": "تنتهي ≤{days} يوم",
             "activityToday": "اليوم",
             "activityWeek": "هذا الأسبوع",
-            "boxesPerPallet": "صناديق / طبلية"
+            "boxesPerPallet": "صناديق / منصة"
         },
-        "boxesPerPalletLabel": "عدد الصناديق لكل طبلية لـ {product}",
+        "boxesPerPalletLabel": "عدد الصناديق لكل منصة لـ {product}",
         "empty": "لا توجد منتجات بعد."
     }
 }
