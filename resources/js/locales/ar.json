@@ -338,13 +338,20 @@
                 "open": "فتح",
                 "removeBoxes": "إزالة صناديق",
                 "empty": "تفريغ",
-                "transfer": "نقل"
+                "transfer": "نقل",
+                "edit": "تعديل"
             },
             "store": {
                 "productLabel": "المنتج",
                 "productPlaceholder": "اختر منتجًا…",
                 "expirationLabel": "تاريخ انتهاء الصلاحية",
                 "submit": "تخزين الطبلية النقالة"
+            },
+            "edit": {
+                "productLabel": "المنتج",
+                "productPlaceholder": "اختر منتجًا…",
+                "expirationLabel": "تاريخ انتهاء الصلاحية",
+                "submit": "حفظ التغييرات"
             },
             "open": {
                 "boxesCountLabel": "عدد الصناديق المراد إزالتها",

@@ -338,13 +338,20 @@
                 "open": "Open",
                 "removeBoxes": "Remove boxes",
                 "empty": "Empty",
-                "transfer": "Transfer"
+                "transfer": "Transfer",
+                "edit": "Edit"
             },
             "store": {
                 "productLabel": "Product",
                 "productPlaceholder": "Select a product…",
                 "expirationLabel": "Expiration date",
                 "submit": "Store pallet"
+            },
+            "edit": {
+                "productLabel": "Product",
+                "productPlaceholder": "Select a product…",
+                "expirationLabel": "Expiration date",
+                "submit": "Save changes"
             },
             "open": {
                 "boxesCountLabel": "Boxes to remove",

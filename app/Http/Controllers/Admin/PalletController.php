@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\OpenPalletRequest;
 use App\Http\Requests\Admin\RemovePalletBoxesRequest;
 use App\Http\Requests\Admin\StorePalletRequest;
 use App\Http\Requests\Admin\TransferPalletRequest;
+use App\Http\Requests\Admin\UpdatePalletRequest;
 use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\User;
@@ -92,6 +93,17 @@ class PalletController extends Controller
                 $request->resolvedSlot()->id,
                 $user->id,
                 $request->input('note'),
+            );
+        });
+    }
+
+    public function update(UpdatePalletRequest $request, Pallet $pallet): RedirectResponse
+    {
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet) {
+            $this->palletActions->update(
+                $pallet,
+                $request->integer('product_id'),
+                $request->input('expiration_date'),
             );
         });
     }

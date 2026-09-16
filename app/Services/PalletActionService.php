@@ -171,7 +171,7 @@ class PalletActionService
     /**
      * Store a new pallet into an Empty cell, transitioning it to Full.
      */
-    public function store(int $cellId, int $productId, string $expirationDate, int $userId, ?string $note): Pallet
+    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
     {
         return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note) {
             $cell = $this->lockCell($cellId);
@@ -199,7 +199,7 @@ class PalletActionService
                 // via toDateString(), but a raw `expiration_date <= $until`
                 // comparison (BuildsDashboardStats::expiringWindow()) can then
                 // exclude it right at the boundary.
-                'expiration_date' => Carbon::parse($expirationDate)->toDateString(),
+                'expiration_date' => $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null,
                 'remaining_boxes' => $product->boxes_count,
             ]);
 
@@ -363,5 +363,29 @@ class PalletActionService
         });
 
         return $pallet->refresh();
+    }
+
+    /**
+     * Edit an already-stored pallet's product and/or expiration date, without
+     * moving it or changing its cell's state. Unlike the other actions here,
+     * this doesn't write a CellStatusLog row — it's a correction to what's
+     * already on record rather than a new movement — but it still locks the
+     * cell/pallet the same way and updates through the model, so
+     * PalletObserver's wasChanged(['expiration_date', 'product_id', ...])
+     * guard still catches the change and flushes the dashboard stats cache.
+     */
+    public function update(Pallet $pallet, int $productId, ?string $expirationDate): Pallet
+    {
+        return DB::transaction(function () use ($pallet, $productId, $expirationDate) {
+            $this->lockCell($pallet->cell_id);
+            $lockedPallet = $this->lockPallet($pallet->id);
+
+            $lockedPallet->update([
+                'product_id' => $productId,
+                'expiration_date' => $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null,
+            ]);
+
+            return $lockedPallet;
+        });
     }
 }

@@ -62,6 +62,54 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     expect($cell->refresh()->state)->toBe(CellState::Full);
 });
 
+test('an authenticated worker can add a pallet to an empty slot with no expiration date', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+    ]);
+    $cell = $row->cells()->first();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => null,
+    ]);
+
+    $response->assertCreated();
+
+    $pallet = Pallet::query()->sole();
+    $storedLog = CellStatusLog::query()->where('pallet_id', $pallet->id)->sole();
+
+    expect($response->json())->toEqual([
+        'id' => $pallet->id,
+        'state' => 'full',
+        'expiration_date' => null,
+        'cell_entered_at' => $storedLog->created_at->toIso8601String(),
+        'remaining_boxes' => 10,
+        'boxes_depleted_message' => null,
+        'product' => [
+            'id' => $product->id,
+            'name' => 'Widgets',
+            'ar_name' => 'ودجات',
+            'image_url' => 'https://cdn.example.com/widgets.png',
+            'boxes_count' => 10,
+            'active' => true,
+        ],
+        'location' => [
+            'row_letter' => 'Z',
+            'cell_number' => 1,
+            'flat_number' => 1,
+        ],
+    ]);
+
+    expect($pallet->expiration_date)->toBeNull();
+});
+
 test('a submitted expiration_date carrying a time component is normalized to a bare date on storage', function () {
     actingAsMobileUser();
 
