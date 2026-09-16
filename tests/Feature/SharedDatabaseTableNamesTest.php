@@ -3,12 +3,12 @@
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Production runs this app and the store app against one MySQL database, so
- * every table this app owns carries a `wms_` prefix and only the genuinely
- * shared ones keep a bare name. These assertions guard the config half of that
- * arrangement: re-publishing a vendor config, or a package upgrade shipping a
- * new default, would silently point this app back at the store's tables. See
- * .ai/rules/shared-database.md.
+ * This app once shared one MySQL database with the store app, which is why
+ * every table it owns carries a `wms_` prefix. The databases are separate now,
+ * but those are the live table names in every existing database, so these
+ * assertions still hold the line: re-publishing a vendor config, or a package
+ * upgrade shipping a new default, would silently point this app at an
+ * unprefixed table it has never migrated. See .ai/rules/shared-database.md.
  */
 test('every framework table name this app owns is wms-prefixed', function () {
     expect(config('database.migrations.table'))->toBe('wms_migrations');
@@ -32,12 +32,12 @@ test('every spatie permission table name is wms-prefixed', function () {
 });
 
 test('the only bare-named tables are this app\'s own domain tables plus the shared ones', function () {
-    // Everything without a `wms_` prefix is either a table whose name is
-    // specific enough to this domain that the store app has nothing like it,
-    // or one of the two tables genuinely shared with the store app —
-    // `products` and the `uploads` its thumbnails point at. A new bare name
-    // appearing here is a table that needs one of those two justifications
-    // before it ships.
+    // Everything without a `wms_` prefix is either a table whose name was
+    // specific enough to this domain that the store app had nothing like it,
+    // or one of the two the store app owned — `products`, which this app has
+    // since taken ownership of, and the `uploads` its thumbnails point at,
+    // which it has not. A new bare name appearing here is a table that needs
+    // one of those justifications before it ships.
     $bareNamed = array_values(array_filter(
         Schema::getTableListing(schemaQualified: false),
         fn (string $name): bool => ! str_starts_with($name, 'wms_')
