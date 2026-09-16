@@ -611,6 +611,26 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
     expect($pallet->remaining_boxes)->toBe(3);
 });
 
+test('an admin can update an already-expired pallet without changing its expiration date', function () {
+    actingAsAdmin();
+    $originalProduct = Product::factory()->create();
+    $newProduct = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $originalProduct->id, 'expiration_date' => '2020-01-01', 'remaining_boxes' => 6]);
+
+    $response = $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $newProduct->id,
+        'expiration_date' => '2020-01-01',
+        'remaining_boxes' => 3,
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+
+    $pallet->refresh();
+    expect($pallet->product_id)->toBe($newProduct->id);
+    expect($pallet->expiration_date->toDateString())->toBe('2020-01-01');
+    expect($pallet->remaining_boxes)->toBe(3);
+});
+
 test('updating a pallet can clear its expiration date', function () {
     actingAsAdmin();
     $product = Product::factory()->create();

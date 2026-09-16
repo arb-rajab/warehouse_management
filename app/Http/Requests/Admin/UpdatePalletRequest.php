@@ -21,6 +21,12 @@ class UpdatePalletRequest extends FormRequest
         return [
             ...$this->returnToRules(),
             ...$this->palletContentsRules(),
+            // Unlike creating a pallet, editing one must not require a
+            // future-or-today date: a pallet can already be expired (that's
+            // an expected, normal state) and an admin must still be able to
+            // correct its product/remaining_boxes without also being forced
+            // to change the expiration date.
+            'expiration_date' => ['nullable', 'date'],
             // Sets remaining_boxes directly (an admin correction), unlike
             // open()/removeBoxes()'s boxes_count (an amount to subtract, via
             // ValidatesBoxesCount) — so 0 is a valid value here.
