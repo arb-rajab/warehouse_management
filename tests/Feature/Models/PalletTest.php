@@ -41,6 +41,12 @@ test('the expiration_date attribute is cast to a date', function () {
     expect($pallet->fresh()->expiration_date->toDateString())->toBe('2027-01-15');
 });
 
+test('a pallet can be created with a null expiration_date', function () {
+    $pallet = Pallet::factory()->create(['expiration_date' => null]);
+
+    expect($pallet->fresh()->expiration_date)->toBeNull();
+});
+
 test('the factory default expiration_date has no time component', function () {
     // fake()->dateTimeBetween() returns a random time of day; PalletFactory
     // must format it down to a bare date, or the raw stored value carries
@@ -149,6 +155,12 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
     ]);
 
     Carbon::setTestNow();
+});
+
+test('toMapSummaryArray carries a null expiration_date for a pallet with none, without throwing', function () {
+    $pallet = Pallet::factory()->create(['expiration_date' => null]);
+
+    expect($pallet->toMapSummaryArray())->expiration_date->toBeNull();
 });
 
 test('toMapSummaryArray carries product_active mirroring the product\'s published flag', function () {

@@ -7,6 +7,7 @@ import {
     removeBoxes,
     store,
     transfer,
+    update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import FilterDialog from '@/components/FilterDialog.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
@@ -28,7 +29,8 @@ const props = defineProps<{
 
 const open = defineModel<boolean>('open', { required: true });
 
-type PalletActionTab = 'store' | 'open' | 'remove-boxes' | 'empty' | 'transfer';
+type PalletActionTab =
+    'store' | 'open' | 'remove-boxes' | 'empty' | 'transfer' | 'edit';
 
 const availableActions = computed<PalletActionTab[]>(() => {
     if (!props.cell) {
@@ -40,10 +42,10 @@ const availableActions = computed<PalletActionTab[]>(() => {
     }
 
     if (props.cell.state === 'full') {
-        return ['open', 'empty', 'transfer'];
+        return ['open', 'empty', 'transfer', 'edit'];
     }
 
-    return ['remove-boxes', 'empty', 'transfer'];
+    return ['remove-boxes', 'empty', 'transfer', 'edit'];
 });
 
 const selectedAction = ref<PalletActionTab>('store');
@@ -76,7 +78,19 @@ watch(open, (isOpen) => {
     }
 });
 
-watch(selectedAction, resetFields);
+watch(selectedAction, (action) => {
+    resetFields();
+
+    if (action === 'edit' && props.cell?.pallet) {
+        product.value = {
+            id: props.cell.pallet.product_id,
+            name: props.cell.pallet.product_name,
+            ar_name: props.cell.pallet.product_ar_name,
+        };
+        expirationDate.value = props.cell.pallet.expiration_date ?? '';
+        boxesCount.value = String(props.cell.pallet.remaining_boxes);
+    }
+});
 
 const remainingBoxes = computed(() => props.cell?.pallet?.remaining_boxes ?? 0);
 
@@ -169,6 +183,17 @@ function submit(): void {
             },
             options,
         );
+    } else if (selectedAction.value === 'edit') {
+        router.put(
+            updatePallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
+            {
+                product_id: product.value?.id ?? null,
+                expiration_date: expirationDate.value,
+                remaining_boxes: boxesCount.value,
+                return_to: props.returnTo ?? null,
+            },
+            options,
+        );
     }
 }
 
@@ -184,6 +209,8 @@ const submitLabel = computed(() => {
             return t('cells.palletActions.empty.submit');
         case 'transfer':
             return t('cells.palletActions.transfer.submit');
+        case 'edit':
+            return t('cells.palletActions.edit.submit');
         default:
             return '';
     }
@@ -243,6 +270,46 @@ const submitLabel = computed(() => {
                         id="pallet-action-expiration"
                         v-model="expirationDate"
                         type="date"
+                        :class="plainFieldInputClass"
+                    />
+                </div>
+            </template>
+
+            <template v-else-if="selectedAction === 'edit'">
+                <ProductSelect
+                    id="pallet-action-edit-product"
+                    v-model="product"
+                    :label="t('cells.palletActions.edit.productLabel')"
+                    :placeholder="
+                        t('cells.palletActions.edit.productPlaceholder')
+                    "
+                />
+                <div>
+                    <label
+                        for="pallet-action-edit-expiration"
+                        :class="fieldLabelClass"
+                    >
+                        {{ t('cells.palletActions.edit.expirationLabel') }}
+                    </label>
+                    <input
+                        id="pallet-action-edit-expiration"
+                        v-model="expirationDate"
+                        type="date"
+                        :class="plainFieldInputClass"
+                    />
+                </div>
+                <div>
+                    <label
+                        for="pallet-action-edit-boxes"
+                        :class="fieldLabelClass"
+                    >
+                        {{ t('cells.palletActions.edit.boxesCountLabel') }}
+                    </label>
+                    <input
+                        id="pallet-action-edit-boxes"
+                        v-model="boxesCount"
+                        type="number"
+                        min="0"
                         required
                         :class="plainFieldInputClass"
                     />
@@ -359,7 +426,7 @@ const submitLabel = computed(() => {
                 </div>
             </template>
 
-            <div>
+            <div v-if="selectedAction !== 'edit'">
                 <label for="pallet-action-note" :class="fieldLabelClass">
                     {{ t('cells.palletActions.noteLabel') }}
                 </label>

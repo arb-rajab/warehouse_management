@@ -18,7 +18,7 @@ trait ValidatesPalletContents
     {
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'expiration_date' => ['required', 'date', 'after_or_equal:today'],
+            'expiration_date' => ['nullable', 'date', 'after_or_equal:today'],
         ];
     }
 }

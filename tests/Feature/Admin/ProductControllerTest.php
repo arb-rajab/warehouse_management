@@ -264,6 +264,23 @@ test('the products index always shows the expired count regardless of filters', 
     Carbon::setTestNow();
 });
 
+test('a pallet with no expiration date is excluded from the expired and expiring-soon counts, without throwing', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => null]);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.expired_cells_count', 0)
+            ->where('products.data.0.expiring_soon_count', 0)
+    );
+
+    Carbon::setTestNow();
+});
+
 test('the expired filter narrows the full/opened/expiring-soon counts to already-expired pallets', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();

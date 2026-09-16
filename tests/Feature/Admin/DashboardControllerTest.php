@@ -75,6 +75,23 @@ test('the expired count excludes a pallet expiring today, but the 7-day window i
     Carbon::setTestNow();
 });
 
+test('a pallet with no expiration date is excluded from the expired and expiring-soon counts, without throwing', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    Pallet::factory()->create(['expiration_date' => null]);
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.expiring.expired', 0)
+            ->where('stats.expiring.windows.0.count', 0)
+            ->where('stats.expiring.custom.count', 0)
+    );
+
+    Carbon::setTestNow();
+});
+
 test('a caller-chosen expiring_days widens or narrows the custom expiring-soon window, independent of the fixed windows', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();

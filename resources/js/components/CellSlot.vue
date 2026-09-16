@@ -155,6 +155,7 @@ function onManagePallet(): void {
             </div>
             <div class="space-y-0.5">
                 <div
+                    v-if="cell.pallet.expiration_date"
                     class="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
                 >
                     <CalendarX class="h-3 w-3 shrink-0" />

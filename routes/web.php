@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
 
         Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
+        Route::put('pallets/{pallet}/update', [PalletController::class, 'update'])->name('pallets.update');
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('pallets.open');
         Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('pallets.remove-boxes');
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('pallets.empty');
