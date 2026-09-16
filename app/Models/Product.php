@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 
 /**
@@ -61,6 +63,52 @@ class Product extends Model
     public const array WITH_DERIVED_ATTRIBUTES = [
         'thumbnailUpload:id,file_name,external_link',
         'setting:product_id,boxes_count',
+    ];
+
+    /**
+     * The columns a product search matches, in the order the FULLTEXT index
+     * declares them — `MATCH` only resolves against an index covering exactly
+     * this column list, so the two must stay in step with
+     * `add_fulltext_index_to_products_table`.
+     *
+     * @var list<string>
+     */
+    public const array SEARCHABLE_NAME_COLUMNS = ['name', 'ar_name'];
+
+    /**
+     * The drivers whose grammar can compile `MATCH ... AGAINST`. Everything
+     * else — sqlite, the test connection — falls back to `LIKE`, since
+     * Laravel's base query grammar throws outright on `whereFullText()`.
+     *
+     * @var list<string>
+     */
+    private const array FULL_TEXT_DRIVERS = ['mysql', 'mariadb'];
+
+    /**
+     * Mirrors MySQL's `innodb_ft_min_token_size` default: a shorter word is
+     * not in the FULLTEXT index, so `+ab*` matches nothing rather than
+     * matching less. A deployment that tunes the server variable downwards can
+     * lower this to match — it only ever costs a `LIKE` on words it excludes,
+     * never a wrong result.
+     */
+    public const int FULL_TEXT_MIN_WORD_LENGTH = 3;
+
+    /**
+     * InnoDB's default full-text stopword list
+     * (`information_schema.innodb_ft_default_stopword`, 36 entries). These are
+     * stripped from a boolean-mode query, so `+for*` matches nothing at all —
+     * they stay on `LIKE`. The entries shorter than
+     * {@see self::FULL_TEXT_MIN_WORD_LENGTH} are already excluded by length;
+     * the full list is kept so it reads as the upstream list rather than an
+     * arbitrary subset.
+     *
+     * @var list<string>
+     */
+    private const array FULL_TEXT_STOPWORDS = [
+        'a', 'about', 'an', 'are', 'as', 'at', 'be', 'by', 'com', 'de', 'en',
+        'for', 'from', 'how', 'i', 'in', 'is', 'it', 'la', 'of', 'on', 'or',
+        'that', 'the', 'this', 'to', 'was', 'what', 'when', 'where', 'who',
+        'will', 'with', 'und', 'www',
     ];
 
     /**
@@ -177,10 +225,10 @@ class Product extends Model
     }
 
     /**
-     * Scope a query to products whose name contains every word of the given
-     * search term, in any order — so an admin searching "Blue Large" still
-     * finds "Large Blue Widget" without knowing the words' actual order.
-     * A blank/null term is a no-op, matching every product.
+     * Scope a query to products matching every word of the given search term,
+     * in any order — so an admin searching "Blue Large" still finds "Large
+     * Blue Widget" without knowing the words' actual order. A blank/null term
+     * is a no-op, matching every product.
      *
      * Each word may match *either* the store's base `name` or its Arabic
      * `ar_name`, regardless of the request's locale. The locale is a
@@ -193,28 +241,134 @@ class Product extends Model
      * product whose `ar_name` the store left empty. Matching both columns
      * costs nothing here: an empty `ar_name` cannot match a non-empty word.
      *
-     * The per-word grouping is load-bearing. A flat `orWhere()` chain would
-     * bind the OR across word boundaries too, turning "every word matches" into
-     * "any word matches" — so each word gets its own nested group, and the
-     * groups are still ANDed together.
-     *
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
     protected function searchByName(EloquentBuilder $query, ?string $term): void
     {
+        self::applyNameSearch($query->getQuery(), $term);
+    }
+
+    /**
+     * Apply the product name search to a *query* builder rather than an
+     * Eloquent one.
+     *
+     * `Api\V1\CellController::index()` needs the same matching from inside a
+     * `whereHas('pallet.product', ...)` closure, where calling this model's
+     * `#[Scope]` directly loses its generic type under Larastan (see the
+     * "Don't call another model's #[Scope] inside whereHas()" rule in
+     * .ai/rules/models.md). Taking the underlying `Query\Builder` — which the
+     * Eloquent builder merely wraps, so the conditions land identically —
+     * sidesteps the generics entirely and keeps one implementation for both
+     * callers.
+     */
+    public static function applyNameSearch(QueryBuilder $query, ?string $term): void
+    {
         if (blank($term)) {
             return;
         }
 
-        $words = preg_split('/\s+/', trim($term)) ?: [];
+        // Query\Builder::getConnection() is declared as ConnectionInterface,
+        // which has no getDriverName() — only the concrete Connection does. A
+        // connection that is neither falls back to LIKE, which is the safe
+        // default here: the driver check exists to ask whether this grammar can
+        // compile MATCH at all, and an unknown one cannot be assumed to.
+        $connection = $query->getConnection();
 
-        foreach ($words as $word) {
-            $query->where(function (EloquentBuilder $matchesEitherName) use ($word): void {
+        $plan = self::nameSearchPlan(
+            $term,
+            $connection instanceof Connection ? $connection->getDriverName() : '',
+        );
+
+        if ($plan['full_text_expression'] !== null) {
+            $query->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
+        }
+
+        // The per-word grouping is load-bearing. A flat `orWhere()` chain would
+        // bind the OR across word boundaries too, turning "every word matches"
+        // into "any word matches" — so each word gets its own nested group, and
+        // the groups are still ANDed together (and ANDed with the MATCH above).
+        foreach ($plan['like_words'] as $word) {
+            $query->where(function (QueryBuilder $matchesEitherName) use ($word): void {
                 $matchesEitherName
                     ->where('name', 'like', '%'.$word.'%')
                     ->orWhere('ar_name', 'like', '%'.$word.'%');
             });
         }
+    }
+
+    /**
+     * Split a search term into the words MySQL's FULLTEXT index can answer and
+     * the words it cannot, which stay on `LIKE`.
+     *
+     * `MATCH (name, ar_name) AGAINST ('+w1* +w2*' IN BOOLEAN MODE)` reproduces
+     * the contract exactly on the words it covers: MySQL treats the two indexed
+     * columns as one document, so each `+word` must appear in *either* of them
+     * (the across-columns OR) and every `+word` must appear (the per-word AND).
+     * Matching is case-insensitive under the columns' collation, as `LIKE` was.
+     *
+     * Three kinds of word are deliberately routed to `LIKE` instead, because
+     * boolean mode would silently return *nothing* for them rather than fewer
+     * rows:
+     *
+     * - **Anything but letters and digits.** MySQL's default parser splits a
+     *   word on every other character, so `+Wid-get*` could never match the
+     *   product literally named "Wid-get". Routing these to `LIKE` is also what
+     *   makes the expression injection-proof: it is built solely from
+     *   alphanumeric words plus the `+` and `*` this method adds, so a term
+     *   containing boolean operators (`-`, `"`, `~`, `(`) cannot reach the
+     *   parser and invert or break the query.
+     * - **Words shorter than `innodb_ft_min_token_size`.** Such words are not
+     *   in the index at all. This matters most for the admin's type-ahead
+     *   dropdown, where a one- or two-letter term is the common case.
+     * - **InnoDB's default stopwords.** `+for*` matches nothing, which would
+     *   lose every result for a term like "Case for Phone".
+     *
+     * The one deliberate change to the old `LIKE` behaviour is that an indexed
+     * word now matches by *prefix* rather than as an infix: "Widg" still finds
+     * "Widgets", but "idget" no longer finds "Widget". Boolean mode has no
+     * leading wildcard, and a term typed into a type-ahead is a prefix in
+     * practice.
+     *
+     * @param  string  $driver  the connection's driver — sqlite (the test
+     *                          connection) has no `MATCH ... AGAINST` at all,
+     *                          so every word stays on `LIKE` there
+     * @return array{full_text_expression: string|null, like_words: list<string>}
+     */
+    private static function nameSearchPlan(string $term, string $driver): array
+    {
+        /** @var list<string> $words */
+        $words = preg_split('/\s+/', trim($term)) ?: [];
+
+        if (! in_array($driver, self::FULL_TEXT_DRIVERS, true)) {
+            return ['full_text_expression' => null, 'like_words' => $words];
+        }
+
+        $indexedWords = [];
+        $likeWords = [];
+
+        foreach ($words as $word) {
+            if (self::isFullTextIndexable($word)) {
+                $indexedWords[] = '+'.$word.'*';
+            } else {
+                $likeWords[] = $word;
+            }
+        }
+
+        return [
+            'full_text_expression' => $indexedWords === [] ? null : implode(' ', $indexedWords),
+            'like_words' => $likeWords,
+        ];
+    }
+
+    /**
+     * Whether boolean-mode `MATCH ... AGAINST` can answer this word at all —
+     * see the three exclusions documented on {@see self::nameSearchPlan()}.
+     */
+    private static function isFullTextIndexable(string $word): bool
+    {
+        return preg_match('/^[\p{L}\p{N}]+$/u', $word) === 1
+            && mb_strlen($word) >= self::FULL_TEXT_MIN_WORD_LENGTH
+            && ! in_array(mb_strtolower($word), self::FULL_TEXT_STOPWORDS, true);
     }
 }
