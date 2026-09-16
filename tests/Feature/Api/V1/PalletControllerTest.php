@@ -1283,7 +1283,7 @@ test('adding a pallet to a row under an unfinished verification round is rejecte
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     $this->assertDatabaseCount('pallets', 0);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
@@ -1299,7 +1299,7 @@ test('opening a pallet in a row under an unfinished verification round is reject
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
@@ -1315,7 +1315,7 @@ test('removing boxes in a row under an unfinished verification round is rejected
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
 });
@@ -1328,7 +1328,7 @@ test('emptying a pallet in a row under an unfinished verification round is rejec
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/empty");
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
@@ -1351,7 +1351,7 @@ test('transferring a pallet out of a row under an unfinished verification round 
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
@@ -1374,7 +1374,7 @@ test('transferring a pallet into a row under an unfinished verification round is
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
