@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { CircleAlert, TriangleAlert } from '@lucide/vue';
-import { computed, ref } from 'vue';
 import { t } from '@/lib/i18n';
+import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
 import FormField from './FormField.vue';
 
 withDefaults(
@@ -24,42 +24,8 @@ withDefaults(
     },
 );
 
-const passwordValue = ref('');
-const confirmationValue = ref('');
-
-const confirmationMismatchError = computed(() =>
-    confirmationValue.value && confirmationValue.value !== passwordValue.value
-        ? t('users.fields.passwordMismatch')
-        : undefined,
-);
-
-/**
- * Mirrors the backend's `confirmed` rule so a mismatch is caught by native
- * browser validation before the form is submitted, alongside the app-styled
- * message below (confirmationMismatchError) that matches every other
- * field's error styling.
- */
-function syncConfirmationValidity(): void {
-    const password = document.getElementById(
-        'password',
-    ) as HTMLInputElement | null;
-    const confirmation = document.getElementById(
-        'password_confirmation',
-    ) as HTMLInputElement | null;
-
-    if (!password || !confirmation) {
-        return;
-    }
-
-    passwordValue.value = password.value;
-    confirmationValue.value = confirmation.value;
-
-    confirmation.setCustomValidity(
-        confirmation.value && confirmation.value !== password.value
-            ? t('users.fields.passwordMismatch')
-            : '',
-    );
-}
+const { confirmationMismatchError, syncConfirmationValidity } =
+    usePasswordConfirmationMismatch();
 </script>
 
 <template>
