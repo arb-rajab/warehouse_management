@@ -351,6 +351,7 @@
                 "productLabel": "Product",
                 "productPlaceholder": "Select a product…",
                 "expirationLabel": "Expiration date",
+                "boxesCountLabel": "Remaining boxes",
                 "submit": "Save changes"
             },
             "open": {

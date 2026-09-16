@@ -104,6 +104,7 @@ class PalletController extends Controller
                 $pallet,
                 $request->integer('product_id'),
                 $request->input('expiration_date'),
+                $request->integer('remaining_boxes'),
             );
         });
     }

@@ -591,15 +591,16 @@ test('transferring a non-existent pallet returns a 404', function () {
     $response->assertNotFound();
 });
 
-test('an authenticated admin can update a pallet\'s product and expiration date', function () {
+test('an authenticated admin can update a pallet\'s product, expiration date, and remaining boxes', function () {
     actingAsAdmin();
     $originalProduct = Product::factory()->create();
     $newProduct = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $originalProduct->id, 'expiration_date' => '2026-10-01']);
+    $pallet = Pallet::factory()->create(['product_id' => $originalProduct->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $newProduct->id,
         'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 3,
     ]);
 
     $response->assertRedirect(route('admin.cells.index'));
@@ -607,20 +608,52 @@ test('an authenticated admin can update a pallet\'s product and expiration date'
     $pallet->refresh();
     expect($pallet->product_id)->toBe($newProduct->id);
     expect($pallet->expiration_date->toDateString())->toBe('2026-12-25');
+    expect($pallet->remaining_boxes)->toBe(3);
 });
 
 test('updating a pallet can clear its expiration date', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $product->id,
         'expiration_date' => null,
+        'remaining_boxes' => 6,
     ]);
 
     $response->assertRedirect(route('admin.cells.index'));
     expect($pallet->refresh()->expiration_date)->toBeNull();
+});
+
+test('updating a pallet can set its remaining boxes to zero', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+
+    $response = $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+        'remaining_boxes' => 0,
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+    expect($pallet->refresh()->remaining_boxes)->toBe(0);
+});
+
+test('updating a pallet with a negative remaining_boxes is rejected as a validation error, and nothing changes', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+
+    $response = $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+        'remaining_boxes' => -1,
+    ]);
+
+    $response->assertSessionHasErrors('remaining_boxes');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
 test('updating a pallet from a row page redirects back to that row page instead of the cell map', function () {
@@ -633,6 +666,7 @@ test('updating a pallet from a row page redirects back to that row page instead 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
+        'remaining_boxes' => $pallet->remaining_boxes,
         'return_to' => 'row',
     ]);
 
@@ -643,48 +677,54 @@ test('updating a pallet in an inactive cell is rejected with a non-field action 
     actingAsAdmin();
     $product = Product::factory()->create();
     $newProduct = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
     $pallet->cell->update(['is_active' => false]);
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $newProduct->id,
         'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 3,
     ]);
 
     $response->assertSessionHasErrors(['action' => __('messages.slot_inactive')]);
     expect($pallet->refresh()->product_id)->toBe($product->id);
     expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
 test('a mobile app user cannot update a pallet via the admin route', function () {
     actingAsMobilePanelUser();
     $product = Product::factory()->create();
     $newProduct = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $newProduct->id,
         'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 3,
     ]);
 
     $response->assertForbidden();
     expect($pallet->refresh()->product_id)->toBe($product->id);
     expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
 test('an unauthenticated caller cannot update a pallet and nothing changes', function () {
     $product = Product::factory()->create();
     $newProduct = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
 
     $response = $this->put("/admin/pallets/{$pallet->id}/update", [
         'product_id' => $newProduct->id,
         'expiration_date' => '2026-12-25',
+        'remaining_boxes' => 3,
     ]);
 
     $response->assertRedirect(route('login'));
     expect($pallet->refresh()->product_id)->toBe($product->id);
     expect($pallet->refresh()->expiration_date->toDateString())->toBe('2026-10-01');
+    expect($pallet->refresh()->remaining_boxes)->toBe(6);
 });
 
 test('updating a non-existent pallet returns a 404', function () {
@@ -694,6 +734,7 @@ test('updating a non-existent pallet returns a 404', function () {
     $response = $this->put('/admin/pallets/999999/update', [
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
+        'remaining_boxes' => 5,
     ]);
 
     $response->assertNotFound();

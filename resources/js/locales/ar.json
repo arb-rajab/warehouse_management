@@ -351,6 +351,7 @@
                 "productLabel": "المنتج",
                 "productPlaceholder": "اختر منتجًا…",
                 "expirationLabel": "تاريخ انتهاء الصلاحية",
+                "boxesCountLabel": "الصناديق المتبقية",
                 "submit": "حفظ التغييرات"
             },
             "open": {

@@ -88,6 +88,7 @@ watch(selectedAction, (action) => {
             ar_name: props.cell.pallet.product_ar_name,
         };
         expirationDate.value = props.cell.pallet.expiration_date ?? '';
+        boxesCount.value = String(props.cell.pallet.remaining_boxes);
     }
 });
 
@@ -188,6 +189,7 @@ function submit(): void {
             {
                 product_id: product.value?.id ?? null,
                 expiration_date: expirationDate.value,
+                remaining_boxes: boxesCount.value,
                 return_to: props.returnTo ?? null,
             },
             options,
@@ -293,6 +295,22 @@ const submitLabel = computed(() => {
                         id="pallet-action-edit-expiration"
                         v-model="expirationDate"
                         type="date"
+                        :class="plainFieldInputClass"
+                    />
+                </div>
+                <div>
+                    <label
+                        for="pallet-action-edit-boxes"
+                        :class="fieldLabelClass"
+                    >
+                        {{ t('cells.palletActions.edit.boxesCountLabel') }}
+                    </label>
+                    <input
+                        id="pallet-action-edit-boxes"
+                        v-model="boxesCount"
+                        type="number"
+                        min="0"
+                        required
                         :class="plainFieldInputClass"
                     />
                 </div>

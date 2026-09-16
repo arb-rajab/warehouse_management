@@ -305,7 +305,7 @@ describe('PalletActionsDialog', () => {
         });
     });
 
-    it("prefills the edit tab with the pallet's current product and expiration date, and hides the note field", async () => {
+    it("prefills the edit tab with the pallet's current product, expiration date, and remaining boxes, and hides the note field", async () => {
         const wrapper = await mountDialog(fullCell(6));
 
         await wrapper
@@ -318,10 +318,16 @@ describe('PalletActionsDialog', () => {
                     .element as HTMLInputElement
             ).value,
         ).toBe('2026-12-01');
+        expect(
+            (
+                wrapper.get('#pallet-action-edit-boxes')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('6');
         expect(wrapper.find('#pallet-action-note').exists()).toBe(false);
     });
 
-    it('submits the edit action via PUT with the updated product/expiration and no note', async () => {
+    it('submits the edit action via PUT with the updated product/expiration/remaining boxes and no note', async () => {
         const wrapper = await mountDialog(fullCell(6));
 
         await wrapper
@@ -331,12 +337,14 @@ describe('PalletActionsDialog', () => {
         await wrapper
             .get('#pallet-action-edit-expiration')
             .setValue('2027-01-01');
+        await wrapper.get('#pallet-action-edit-boxes').setValue('4');
         await wrapper.get('form').trigger('submit');
 
         expect(routerPutMock).toHaveBeenCalledTimes(1);
         expect(routerPutMock.mock.calls[0][1]).toEqual({
             product_id: 1,
             expiration_date: '2027-01-01',
+            remaining_boxes: 4,
             return_to: null,
         });
     });

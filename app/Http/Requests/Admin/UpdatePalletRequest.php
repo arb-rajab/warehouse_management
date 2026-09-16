@@ -21,6 +21,10 @@ class UpdatePalletRequest extends FormRequest
         return [
             ...$this->returnToRules(),
             ...$this->palletContentsRules(),
+            // Sets remaining_boxes directly (an admin correction), unlike
+            // open()/removeBoxes()'s boxes_count (an amount to subtract, via
+            // ValidatesBoxesCount) — so 0 is a valid value here.
+            'remaining_boxes' => ['required', 'integer', 'min:0'],
         ];
     }
 }

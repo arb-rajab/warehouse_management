@@ -366,23 +366,29 @@ class PalletActionService
     }
 
     /**
-     * Edit an already-stored pallet's product and/or expiration date, without
-     * moving it or changing its cell's state. Unlike the other actions here,
-     * this doesn't write a CellStatusLog row — it's a correction to what's
-     * already on record rather than a new movement — but it still locks the
-     * cell/pallet the same way and updates through the model, so
+     * Edit an already-stored pallet's product, expiration date, and/or remaining
+     * boxes, without moving it or changing its cell's state. Unlike the other
+     * actions here, this doesn't write a CellStatusLog row — it's a correction
+     * to what's already on record rather than a new movement — but it still
+     * locks the cell/pallet the same way and updates through the model, so
      * PalletObserver's wasChanged(['expiration_date', 'product_id', ...])
      * guard still catches the change and flushes the dashboard stats cache.
+     *
+     * $remainingBoxes sets the column directly (an admin correction), unlike
+     * open()/removeBoxes()'s boxes_count, which is an amount to subtract — so
+     * this can legitimately set it to 0 without going through the
+     * confirm_empty/emptyLockedPallet flow those use.
      */
-    public function update(Pallet $pallet, int $productId, ?string $expirationDate): Pallet
+    public function update(Pallet $pallet, int $productId, ?string $expirationDate, int $remainingBoxes): Pallet
     {
-        return DB::transaction(function () use ($pallet, $productId, $expirationDate) {
+        return DB::transaction(function () use ($pallet, $productId, $expirationDate, $remainingBoxes) {
             $this->lockCell($pallet->cell_id);
             $lockedPallet = $this->lockPallet($pallet->id);
 
             $lockedPallet->update([
                 'product_id' => $productId,
                 'expiration_date' => $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null,
+                'remaining_boxes' => $remainingBoxes,
             ]);
 
             return $lockedPallet;
