@@ -48,3 +48,17 @@ test('a guest is unaffected by the middleware', function () {
 
     $response->assertOk();
 });
+
+test('a freshly created user instance relying on the schema default, never re-fetched from the database, still passes through the middleware', function () {
+    // must_change_password has no factory override here on purpose: Eloquent
+    // does not re-select a DB-defaulted column after an insert, so a model
+    // instance built this way and handed straight to actingAs() (the same
+    // shape actingAsAdmin() produces) never had the attribute hydrated at
+    // all. Touching it under Eloquent strict mode (local/testing) used to
+    // throw MissingAttributeException instead of reading the false default.
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/admin');
+
+    $response->assertOk();
+});
