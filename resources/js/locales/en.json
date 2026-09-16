@@ -45,6 +45,7 @@
             "brand": "Warehouse Admin",
             "title": "Choose a new password",
             "description": "You must set a new password before continuing.",
+            "currentPassword": "Current password",
             "password": "New password",
             "confirmPassword": "Confirm new password",
             "submit": "Update password",
