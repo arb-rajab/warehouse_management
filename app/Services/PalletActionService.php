@@ -375,30 +375,41 @@ class PalletActionService
     /**
      * Edit an already-stored pallet's product, expiration date, and/or remaining
      * boxes, without moving it or changing its cell's state. Unlike the other
-     * actions here, this doesn't write a CellStatusLog row — it's a correction
-     * to what's already on record rather than a new movement — but it still
-     * locks the cell/pallet the same way and updates through the model, so
-     * PalletObserver's wasChanged(['expiration_date', 'product_id', ...])
-     * guard still catches the change and flushes the dashboard stats cache.
+     * actions here, a field-only correction (product/expiration/a positive
+     * remaining_boxes) doesn't write a CellStatusLog row — but it still locks
+     * the cell/pallet the same way and updates through the model, so
+     * PalletObserver's wasChanged(['expiration_date', 'product_id', ...,
+     * 'remaining_boxes']) guard still catches the change and flushes the
+     * dashboard stats cache.
      *
      * $remainingBoxes sets the column directly (an admin correction), unlike
-     * open()/removeBoxes()'s boxes_count, which is an amount to subtract — so
-     * this can legitimately set it to 0 without going through the
-     * confirm_empty/emptyLockedPallet flow those use.
+     * open()/removeBoxes()'s boxes_count, which is an amount to subtract.
+     * Editing it to 0 goes through the same confirm_empty/emptyLockedPallet
+     * flow those use — it deletes the pallet, frees the cell, and logs an
+     * Emptied transition — rather than storing a 0-box pallet row, which no
+     * other path in this service produces.
      */
-    public function update(Pallet $pallet, int $productId, ?string $expirationDate, int $remainingBoxes): Pallet
+    public function update(Pallet $pallet, int $productId, ?string $expirationDate, int $remainingBoxes, int $userId, bool $confirmEmpty, ?string $note = null): void
     {
-        return DB::transaction(function () use ($pallet, $productId, $expirationDate, $remainingBoxes) {
-            $this->lockCell($pallet->cell_id);
+        DB::transaction(function () use ($pallet, $productId, $expirationDate, $remainingBoxes, $userId, $confirmEmpty, $note) {
+            $cell = $this->lockCell($pallet->cell_id);
             $lockedPallet = $this->lockPallet($pallet->id);
+
+            if ($remainingBoxes === 0) {
+                if (! $confirmEmpty) {
+                    throw new InvalidSlotStateException('insufficient_boxes_remaining', __('messages.insufficient_boxes_remaining'));
+                }
+
+                $this->emptyLockedPallet($cell, $lockedPallet, $userId, $note);
+
+                return;
+            }
 
             $lockedPallet->update([
                 'product_id' => $productId,
                 'expiration_date' => $this->normalizeExpirationDate($expirationDate),
                 'remaining_boxes' => $remainingBoxes,
             ]);
-
-            return $lockedPallet;
         });
     }
 }

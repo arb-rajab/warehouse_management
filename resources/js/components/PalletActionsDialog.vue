@@ -100,6 +100,8 @@ const boxesWouldEmptyPallet = computed(() => {
     return count > 0 && count >= remainingBoxes.value;
 });
 
+const editWouldEmptyPallet = computed(() => Number(boxesCount.value) === 0);
+
 function noteOrNull(): string | null {
     return note.value === '' ? null : note.value;
 }
@@ -190,6 +192,7 @@ function submit(): void {
                 product_id: product.value?.id ?? null,
                 expiration_date: expirationDate.value,
                 remaining_boxes: boxesCount.value,
+                confirm_empty: confirmEmpty.value,
                 return_to: props.returnTo ?? null,
             },
             options,
@@ -311,6 +314,17 @@ const submitLabel = computed(() => {
                         :class="plainFieldInputClass"
                     />
                 </div>
+                <label
+                    v-if="selectedAction === 'edit' && editWouldEmptyPallet"
+                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                >
+                    <input
+                        v-model="confirmEmpty"
+                        type="checkbox"
+                        class="mt-0.5"
+                    />
+                    {{ t('cells.palletActions.edit.confirmEmptyLabel') }}
+                </label>
             </template>
 
             <template

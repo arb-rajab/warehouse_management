@@ -99,12 +99,17 @@ class PalletController extends Controller
 
     public function update(UpdatePalletRequest $request, Pallet $pallet): RedirectResponse
     {
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet) {
+        /** @var User $user */
+        $user = $request->user();
+
+        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->update(
                 $pallet,
                 $request->integer('product_id'),
                 $request->input('expiration_date'),
                 $request->integer('remaining_boxes'),
+                $user->id,
+                $request->boolean('confirm_empty'),
             );
         });
     }
