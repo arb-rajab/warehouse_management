@@ -1,4 +1,5 @@
 /.phpunit.cache
+__pycache__/
 /bootstrap/ssr
 /database/e2e.sqlite
 /database/e2e-telescope.sqlite
