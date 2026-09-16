@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Pallet;
+use App\Models\Product;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 
 afterEach(function () {
     Carbon::setTestNow();
@@ -40,4 +42,78 @@ test('deleting a pallet directly invalidates the dashboard stats cache', functio
     $after = $this->getJson('/api/v1/dashboard');
     $after->assertOk();
     expect($after->json('stats.expiring.windows.0.count'))->toBe(0);
+});
+
+test('updating a pallet\'s expiration date directly (bypassing PalletActionService, e.g. the admin edit action) invalidates the dashboard stats cache', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+
+    // Outside the 7-day window (until 2026-08-20), so it doesn't count yet.
+    $pallet = Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+
+    $before = $this->getJson('/api/v1/dashboard');
+    $before->assertOk();
+    expect($before->json('stats.expiring.windows.0.count'))->toBe(0);
+
+    $pallet->update(['expiration_date' => '2026-08-20']);
+
+    $after = $this->getJson('/api/v1/dashboard');
+    $after->assertOk();
+    expect($after->json('stats.expiring.windows.0.count'))->toBe(1);
+});
+
+test('updating a pallet with only an unguarded field change (remaining_boxes) does not invalidate the dashboard stats cache', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+
+    $pallet = Pallet::factory()->create(['expiration_date' => '2026-08-20', 'remaining_boxes' => 5]);
+
+    $before = $this->getJson('/api/v1/dashboard');
+    $before->assertOk();
+    expect($before->json('stats.expiring.windows.0.count'))->toBe(1);
+
+    // Bypasses PalletObserver::created() entirely, so this second expiring
+    // pallet exists in the database but the cache doesn't know about it yet
+    // — only a real flush would surface it below.
+    Pallet::withoutEvents(fn () => Pallet::factory()->create(['expiration_date' => '2026-08-20']));
+
+    $pallet->update(['remaining_boxes' => 2]);
+
+    $stale = $this->getJson('/api/v1/dashboard');
+    $stale->assertOk();
+    expect($stale->json('stats.expiring.windows.0.count'))->toBe(1);
+
+    // A guarded field change on the same pallet does flush, and the dashboard
+    // now picks up the second pallet too — proving the earlier remaining_boxes
+    // update really didn't flush, rather than the count coincidentally holding.
+    $pallet->update(['expiration_date' => '2026-08-19']);
+
+    $fresh = $this->getJson('/api/v1/dashboard');
+    $fresh->assertOk();
+    expect($fresh->json('stats.expiring.windows.0.count'))->toBe(2);
+});
+
+test('updating a pallet via the real admin edit endpoint invalidates the dashboard stats cache', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    // Outside the 7-day window (until 2026-08-20), so it doesn't count yet.
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-09-12', 'remaining_boxes' => 5]);
+
+    $before = $this->get('/admin');
+    $before->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.expiring.windows.0.count', 0)
+    );
+
+    $this->put("/admin/pallets/{$pallet->id}/update", [
+        'product_id' => $product->id,
+        'expiration_date' => '2026-08-20',
+        'remaining_boxes' => 5,
+    ]);
+
+    $after = $this->get('/admin');
+    $after->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.expiring.windows.0.count', 1)
+    );
 });
