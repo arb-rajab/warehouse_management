@@ -167,3 +167,12 @@ function assertInertiaPaginates(
             ->where("{$prop}.meta.total", $total)
     );
 }
+
+/**
+ * Assert that a pallet action was rejected because its cell's row is under
+ * an unfinished verification round (PalletActionService::lockCell()).
+ */
+function assertCellInActiveRoundRejection(TestResponse $response): void
+{
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+}

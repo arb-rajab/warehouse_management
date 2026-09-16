@@ -5,12 +5,15 @@ use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+});
+
 afterEach(function () {
     Carbon::setTestNow();
 });
 
 test('creating a pallet directly (bypassing PalletActionService) still invalidates the dashboard stats cache', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
 
     // Prime the cache with no pallets yet.
@@ -28,7 +31,6 @@ test('creating a pallet directly (bypassing PalletActionService) still invalidat
 });
 
 test('deleting a pallet directly invalidates the dashboard stats cache', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
 
     $pallet = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
@@ -45,7 +47,6 @@ test('deleting a pallet directly invalidates the dashboard stats cache', functio
 });
 
 test('updating a pallet\'s expiration date directly (bypassing PalletActionService, e.g. the admin edit action) invalidates the dashboard stats cache', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
 
     // Outside the 7-day window (until 2026-08-20), so it doesn't count yet.
@@ -63,7 +64,6 @@ test('updating a pallet\'s expiration date directly (bypassing PalletActionServi
 });
 
 test('updating a pallet with only an unguarded field change (remaining_boxes) does not invalidate the dashboard stats cache', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();
 
     $pallet = Pallet::factory()->create(['expiration_date' => '2026-08-20', 'remaining_boxes' => 5]);
@@ -94,7 +94,6 @@ test('updating a pallet with only an unguarded field change (remaining_boxes) do
 });
 
 test('updating a pallet via the real admin edit endpoint invalidates the dashboard stats cache', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
     $product = Product::factory()->create();

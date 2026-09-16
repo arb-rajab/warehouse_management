@@ -41,7 +41,7 @@ class CellVerificationRoundFactory extends Factory
     public function covering(Row ...$rows): static
     {
         return $this->afterCreating(function (CellVerificationRound $round) use ($rows): void {
-            $round->rows()->attach(array_map(fn (Row $row): int => $row->id, $rows));
+            $round->rows()->attach(collect($rows)->modelKeys());
         });
     }
 }
