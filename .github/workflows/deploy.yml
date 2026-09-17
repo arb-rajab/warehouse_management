@@ -232,10 +232,19 @@ jobs:
           # Composer's own shebang resolves to the account's default PHP, which
           # is not necessarily the one this app is pinned to, so drive it through
           # $PHP_BINARY explicitly rather than letting platform checks run
-          # against the wrong interpreter.
-          run_composer() {
-            "$PHP_BINARY" "$composer_bin" "$@"
-          }
+          # against the wrong interpreter. That only works when composer is a
+          # PHP script (a phar, `#!/usr/bin/env php`); CloudLinux-based hosts
+          # ship a /usr/local/bin/composer that is a shell wrapper selecting the
+          # PHP itself, and handing that to `php` would fail outright.
+          if head -n 1 "$composer_bin" | grep -qE '^#!.*[ /]php'; then
+            run_composer() {
+              "$PHP_BINARY" "$composer_bin" "$@"
+            }
+          else
+            run_composer() {
+              "$composer_bin" "$@"
+            }
+          fi
 
           # Reinstalling dependencies on every deploy costs minutes and changes
           # nothing when neither lockfile moved, so hash both and compare against
