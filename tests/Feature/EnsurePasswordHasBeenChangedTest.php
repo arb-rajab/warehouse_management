@@ -43,6 +43,19 @@ test('a user with must_change_password set can still switch the UI language', fu
     expect(session('locale'))->toBe('ar');
 });
 
+test('a user with must_change_password set can still submit the change-password form as an inertia-style ajax request', function () {
+    $user = User::factory()->create(['must_change_password' => true, 'password' => 'old-password']);
+
+    $response = $this->actingAs($user)->withHeaders(inertiaHeaders())->put('/password/change', [
+        'current_password' => 'old-password',
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+    ]);
+
+    $response->assertRedirect(route('admin.dashboard'));
+    expect($user->fresh()->must_change_password)->toBeFalse();
+});
+
 test('a guest is unaffected by the middleware', function () {
     $response = $this->get('/login');
 
