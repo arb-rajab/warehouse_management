@@ -1,26 +1,37 @@
 name: tests
 
-# The push trigger below re-runs the full suite on develop/staging even when
-# the pushed SHA already passed this workflow on its PR (merges here are
-# fast-forward, so the commit is identical). That re-run could in principle
-# be skipped by checking `github.event.before`/the merged commit against a
-# prior successful run for the same SHA (e.g. via the Checks API) and
-# short-circuiting the jobs. It is intentionally NOT skipped: the push run
-# is the only rebuild-from-scratch safety net between "the PR's runner
-# state" and "what deploy.yml is about to promote" — it re-verifies on a
-# clean checkout with no possible carryover from the PR run's environment,
-# and deploy.yml only fires after this exact push-triggered run succeeds. A
-# skip would trade that guarantee for the CI minutes of one redundant run.
+# This workflow used to also run on pushes to main/develop/staging. That run
+# existed to gate deploy.yml, which fired on a `workflow_run` completion of this
+# workflow -- so every merge paid for a second full suite over content the PR had
+# already tested green. (The old comment here justified it as testing a distinct
+# commit because "merges here are fast-forward"; that was wrong. Merges into
+# develop are real merge commits, but their tree is byte-identical to the PR head
+# that was already tested, so the re-run could not produce a different result.)
+#
+# deploy.yml now triggers on the push directly and gates itself on finding a
+# successful run of this workflow covering the merged tree, so the push run here
+# bought nothing and has been removed. Use the workflow_dispatch below to run the
+# full suite on a branch on demand -- notably to re-establish that gate when a
+# merge lands content no PR run covered, because the base moved under the PR.
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - staging
   pull_request:
+  workflow_dispatch:
+  # deploy.yml calls this workflow when a merge lands content that no pull
+  # request run covered, so the merged commit is tested before it is promoted.
+  workflow_call:
 
 permissions:
   contents: read
+
+# This only deduplicates runs against the *same* ref, and deliberately does not
+# touch the push-triggered run described above. PR runs group by PR number, so
+# pushing again to a PR branch cancels only that PR's own superseded run. Every
+# other event -- including the push run on develop/staging that deploy.yml gates
+# on -- falls back to the run id, which is unique per run, so such a run can
+# never be cancelled by, or queued behind, anything else.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   # resources/js/actions and resources/js/wayfinder are gitignored,

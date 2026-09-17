@@ -1,22 +1,153 @@
 name: deploy
 
+# Deploy used to hang off a `workflow_run` completion of `tests`, so the only way
+# to trigger a deploy was to re-run the entire suite on develop/staging after the
+# merge. Measured over the last 25 merges into develop, 23 of those re-runs were
+# provably pointless: the merge commit's tree was byte-identical to the PR head
+# the suite had already passed on, so the assertions could not come out
+# differently. The other 2 were the opposite -- the base had moved under the PR,
+# so the merge combined two independently-green branches into content that no run
+# had ever covered (#203 differed from its tested head in 10 files, across
+# PalletActionService, PalletObserver and their tests).
+#
+# Deploy now fires on the push itself and decides which of those two cases it is
+# rather than paying for the suite unconditionally: `verify-tested` looks for a
+# successful `tests` run covering this exact content, and only when there isn't
+# one does `test-merged-content` run the suite against the merged commit. That
+# keeps the guarantee the old re-run provided while skipping it in the ~92% of
+# merges where it verified something already verified.
 on:
-  workflow_run:
-    workflows: [tests]
-    types: [completed]
+  push:
+    branches:
+      - develop
+      - staging
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Deploy without testing, even if nothing covers this commit
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: deploy-${{ github.event.workflow_run.head_branch }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  # A merge into develop/staging normally lands a merge commit whose tree matches
+  # the PR head `tests` already ran against, because the merge contributes no
+  # content of its own. So this commit counts as tested when a successful `tests`
+  # run exists for either the pushed SHA itself (a direct push, a fast-forward, or
+  # a manual workflow_dispatch of the suite on this branch) or, for a two-parent
+  # merge whose tree matches its second parent, that parent.
+  #
+  # This job reports what it found rather than failing on a miss -- an untested
+  # commit is handled by running the suite below, not by blocking. It does fail
+  # closed on an API error, since a gate that cannot verify must not promote.
+  #
+  # It runs on the same self-hosted runner as the deploys on purpose: deploy needs
+  # no GitHub-hosted minutes today, and putting the gate on `ubuntu-latest` would
+  # make every promotion depend on hosted-runner availability.
+  verify-tested:
+    name: Check for an existing tests run
+    runs-on: [self-hosted, Windows]
+    outputs:
+      tested: ${{ steps.lookup.outputs.tested }}
+
+    steps:
+      - name: Look for a successful tests run covering this content
+        id: lookup
+        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          FORCED: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Windows PowerShell 5.1 can still default to TLS 1.0, which
+          # api.github.com refuses.
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+          $headers = @{
+            Authorization          = "Bearer $env:GH_TOKEN"
+            Accept                 = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $api = "https://api.github.com/repos/$env:REPO"
+
+          function Set-Tested($value, $message) {
+            Write-Host $message
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "tested=$value" -Encoding utf8
+            exit 0
+          }
+
+          if ($env:FORCED -eq 'true') {
+            Set-Tested 'true' '::warning::Deploying without verifying a tests run, because force was requested.'
+          }
+
+          function Get-CommitDetail($sha) {
+            return Invoke-RestMethod -Headers $headers -Uri "$api/commits/$sha"
+          }
+
+          function Test-TestedSha($sha) {
+            $uri = "$api/actions/workflows/tests.yml/runs?head_sha=$sha&per_page=100"
+            $runs = @((Invoke-RestMethod -Headers $headers -Uri $uri).workflow_runs |
+              Where-Object { $_.conclusion -eq 'success' })
+            return $runs.Count -gt 0
+          }
+
+          $head = Get-CommitDetail $env:HEAD_SHA
+          $candidates = [System.Collections.ArrayList]@($env:HEAD_SHA)
+
+          $parents = @($head.parents)
+          if ($parents.Count -eq 2) {
+            $mergedHead = $parents[1].sha
+            $mergedCommit = Get-CommitDetail $mergedHead
+            if ($mergedCommit.commit.tree.sha -eq $head.commit.tree.sha) {
+              [void]$candidates.Add($mergedHead)
+              Write-Host "$env:HEAD_SHA is a merge of $mergedHead with an identical tree."
+            } else {
+              Write-Host "Base moved under $mergedHead -- this merge combines content no run has covered."
+            }
+          }
+
+          foreach ($sha in $candidates) {
+            if (Test-TestedSha $sha) {
+              Set-Tested 'true' "Found a successful tests run for $sha; promoting $env:HEAD_SHA."
+            }
+          }
+
+          Set-Tested 'false' "No successful tests run covers $env:HEAD_SHA (checked $($candidates -join ', ')); running the suite first."
+
+  # The ~8% case: the merged content was never tested as a unit, so run the suite
+  # against it now, before anything is promoted. This is the one job that the old
+  # unconditional post-merge run was actually buying.
+  test-merged-content:
+    name: Test the merged commit
+    needs: verify-tested
+    if: needs.verify-tested.outputs.tested != 'true'
+    uses: ./.github/workflows/tests.yml
+    permissions:
+      contents: read
+
   deploy-develop:
+    needs: [verify-tested, test-merged-content]
+    # `always()` is required because test-merged-content is skipped in the common
+    # case, and a skipped dependency would otherwise skip this job too. The
+    # explicit result checks below are what actually gate the promotion: verify
+    # must have succeeded, and the suite must have either passed or not been
+    # needed -- never failed, never cancelled.
     if: >-
-      github.event.workflow_run.head_branch == 'develop' &&
-      github.event.workflow_run.conclusion == 'success'
+      always() &&
+      github.ref_name == 'develop' &&
+      needs.verify-tested.result == 'success' &&
+      (needs.test-merged-content.result == 'success' ||
+       needs.test-merged-content.result == 'skipped')
     runs-on: [self-hosted, Windows]
     defaults:
       run:
@@ -27,7 +158,7 @@ jobs:
       - name: Sync repository to tested commit
         run: |
           git fetch origin develop
-          git reset --hard ${{ github.event.workflow_run.head_sha }}
+          git reset --hard ${{ github.sha }}
 
       - name: Check if dependencies changed since last deploy
         id: deps
@@ -79,9 +210,18 @@ jobs:
         run: php artisan queue:restart
 
   deploy-staging:
+    needs: [verify-tested, test-merged-content]
+    # `always()` is required because test-merged-content is skipped in the common
+    # case, and a skipped dependency would otherwise skip this job too. The
+    # explicit result checks below are what actually gate the promotion: verify
+    # must have succeeded, and the suite must have either passed or not been
+    # needed -- never failed, never cancelled.
     if: >-
-      github.event.workflow_run.head_branch == 'staging' &&
-      github.event.workflow_run.conclusion == 'success'
+      always() &&
+      github.ref_name == 'staging' &&
+      needs.verify-tested.result == 'success' &&
+      (needs.test-merged-content.result == 'success' ||
+       needs.test-merged-content.result == 'skipped')
     runs-on: [self-hosted, Windows]
     defaults:
       run:
@@ -92,7 +232,7 @@ jobs:
       - name: Sync repository to tested commit
         run: |
           git fetch origin staging
-          git reset --hard ${{ github.event.workflow_run.head_sha }}
+          git reset --hard ${{ github.sha }}
 
       - name: Check if dependencies changed since last deploy
         id: deps
