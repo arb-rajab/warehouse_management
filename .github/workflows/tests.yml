@@ -22,6 +22,16 @@ on:
 permissions:
   contents: read
 
+# This only deduplicates runs against the *same* ref, and deliberately does not
+# touch the push-triggered run described above. PR runs group by PR number, so
+# pushing again to a PR branch cancels only that PR's own superseded run. Every
+# other event -- including the push run on develop/staging that deploy.yml gates
+# on -- falls back to the run id, which is unique per run, so such a run can
+# never be cancelled by, or queued behind, anything else.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # resources/js/actions and resources/js/wayfinder are gitignored,
   # generated from the app's routes/controllers by `php artisan
