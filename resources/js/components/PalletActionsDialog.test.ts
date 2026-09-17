@@ -377,7 +377,7 @@ describe('PalletActionsDialog', () => {
             .findAll('[data-testid="pallet-action-tab"]')[3]
             .trigger('click');
 
-        expect(wrapper.get('#pallet-action-edit-boxes').exists()).toBe(true);
+        expect(wrapper.find('#pallet-action-edit-boxes').exists()).toBe(true);
         expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
     });
 
