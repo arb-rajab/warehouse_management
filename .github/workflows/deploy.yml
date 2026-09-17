@@ -259,7 +259,19 @@ jobs:
 
           if [ "$current_deps_hash" != "$previous_deps_hash" ]; then
             echo "==> Lockfiles changed since the last deploy; installing dependencies"
-            run_composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+            # Composer runs its post-autoload-dump hook (`artisan package:discover`)
+            # through Symfony Process, which needs proc_open. Shared hosts commonly
+            # disable that function -- the Hostinger account this deploys to does --
+            # and composer then exits non-zero, which under `set -e` would abort the
+            # deploy after the packages are already on disk. So skip the hook and do
+            # its work here: bash launching PHP needs no proc_open.
+            run_composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+
+            # ComposerScripts::postAutoloadDump drops these two stale caches before
+            # package:discover regenerates the manifest; --no-scripts skipped it.
+            rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+            "$PHP_BINARY" artisan package:discover
+
             npm ci
 
             # Written only after both installs succeed, so a failed deploy does
