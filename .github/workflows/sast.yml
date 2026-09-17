@@ -20,17 +20,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Merging a PR into main/develop lands a merge commit whose tree is normally
+  # Merging a PR into main/develop lands a merge commit whose tree is usually
   # identical to the PR head this workflow already scanned — the merge adds no
-  # content of its own when nothing else landed on the base in between (verified
-  # against this repo's history: every recent `Merge pull request` commit on
-  # develop has the same tree as its second parent). Semgrep scans file content,
-  # so re-scanning an identical tree cannot produce a different result.
+  # content of its own when nothing else landed on the base in between. That held
+  # for 23 of the last 25 merges into develop; in the other 2 the base had moved,
+  # the merge combined branches into content nothing had scanned, and the tree
+  # check below correctly falls through to a full scan. Semgrep scans file
+  # content, so re-scanning an identical tree cannot produce a different result.
   #
-  # Unlike `tests`, nothing downstream consumes this workflow's push run —
-  # deploy.yml gates on a `workflow_run` of `tests` only — so that re-scan has
-  # none of the rebuild-before-deploy justification documented in tests.yml, and
-  # this job short-circuits it.
+  # The push trigger is kept rather than dropped the way tests.yml's was: nothing
+  # gates on this workflow, so there is no deploy to feed, but a push run is now
+  # the only verification that still fires on a commit landing directly on
+  # main/develop without a PR. The gate makes that cheap -- when the content was
+  # already scanned it costs one short job instead of a full container scan.
   #
   # The scan is skipped only when the content is provably identical: the pushed
   # commit is a two-parent merge whose tree matches its second parent, and that
