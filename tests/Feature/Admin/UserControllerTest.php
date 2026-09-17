@@ -413,6 +413,31 @@ test('an unauthenticated caller cannot create a user and nothing changes', funct
     $this->assertDatabaseCount('wms_users', 0);
 });
 
+test('creating a user with invalid data redirects back to the create form, not the dashboard', function () {
+    actingAsAdmin();
+
+    // Simulate the last *hard* page load landing on the dashboard (typical
+    // right after login) — this is what leaves session `_previous.url`
+    // stale at /admin under the pre-fix behavior.
+    $this->get('/admin');
+
+    // An ordinary Inertia SPA visit to the create page still carries
+    // X-Requested-With, which is exactly what used to make Laravel skip
+    // updating `_previous.url` for it.
+    $this->withHeaders(inertiaHeaders())->get('/admin/users/create');
+
+    $response = $this->withHeaders(inertiaHeaders())->post('/admin/users', [
+        'name' => 'Jane Doe',
+        'email' => 'not-an-email',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'is_admin' => '0',
+    ]);
+
+    $response->assertRedirect(route('admin.users.create'));
+    $response->assertSessionHasErrors('email');
+});
+
 test('creating a user with an overly long password is rejected and nothing changes', function () {
     actingAsAdmin();
     $overlyLongPassword = str_repeat('a', 256);
@@ -545,6 +570,25 @@ test('leaving the password blank while updating a user does not affect their mus
     ]);
 
     expect($target->fresh()->must_change_password)->toBeFalse();
+});
+
+test('updating a user with invalid data redirects back to the edit form, not the dashboard', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $this->get('/admin');
+    $this->withHeaders(inertiaHeaders())->get("/admin/users/{$target->id}/edit");
+
+    $response = $this->withHeaders(inertiaHeaders())->put("/admin/users/{$target->id}", [
+        'name' => $target->name,
+        'email' => 'not-an-email',
+        'password' => '',
+        'password_confirmation' => '',
+        'is_admin' => '0',
+    ]);
+
+    $response->assertRedirect(route('admin.users.edit', $target));
+    $response->assertSessionHasErrors('email');
 });
 
 test('updating a user with an overly long password is rejected and nothing changes', function () {

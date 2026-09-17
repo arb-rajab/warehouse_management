@@ -65,6 +65,27 @@ test('changing the password redirects away once the flag is cleared', function (
     $response->assertOk();
 });
 
+test('submitting invalid data redirects back to the change-password form, not the dashboard', function () {
+    // The last *hard* page load for a must-change-password user is /admin
+    // (EnsurePasswordHasBeenChanged then redirects them onward) — this is
+    // what leaves session `_previous.url` stale at /admin under the pre-fix
+    // behavior.
+    $this->actingAs($this->user)->get('/admin');
+
+    // The Vue page's own visit still carries X-Requested-With, which is
+    // exactly what used to make Laravel skip updating `_previous.url` for it.
+    $this->withHeaders(inertiaHeaders())->get('/password/change');
+
+    $response = $this->withHeaders(inertiaHeaders())->put('/password/change', [
+        'current_password' => 'old-password',
+        'password' => 'short',
+        'password_confirmation' => 'short',
+    ]);
+
+    $response->assertRedirect(route('password.change'));
+    $response->assertSessionHasErrors('password');
+});
+
 test('submitting a mismatched password confirmation is rejected and nothing changes', function () {
     $response = $this->actingAs($this->user)->put('/password/change', [
         'current_password' => 'old-password',

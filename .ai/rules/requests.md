@@ -31,6 +31,10 @@ Fix: normalize in `prepareForValidation()` with `filter_var($this->input($field)
 
 A test asserting `?expired=1` passes is not proof the feature works — the frontend actually sends `expired=true`; test that literal value too.
 
+## Validation-failure redirects: don't override getRedirectUrl()/redirectTo per request
+
+A `FormRequest` validation failure's default `redirect()->back()` used to silently land on `admin.dashboard` instead of the submitted form — caused by this app's `no-referrer` policy plus Inertia's `X-Requested-With` header breaking Laravel's session-based "previous URL" tracking for every SPA navigation, not just one form. Fixed once, systemically, via `App\Http\Middleware\StoreInertiaPreviousUrl` (see `.ai/rules/middleware.md`) rather than per-`FormRequest` `getRedirectUrl()`/`redirectTo` overrides — don't add those overrides to work around a redirect-target issue; check whether the middleware's criteria need adjusting instead.
+
 ## FiltersByProductStatus now also covers the mobile product listing and rows/full
 `App\Http\Requests\Concerns\FiltersByProductStatus` (`product_status=active|inactive` -> `product_published` boolean) is used by `Api\V1\ShowDashboardRequest`, `Api\V1\FilterCellStatusLogsRequest`, `Api\V1\FilterProductsRequest`, and `Api\V1\ShowRowsFullRequest`. `ProductController::index()` applies it directly against `products.published`; `RowController::full()` applies it as `whereHas('pallet.product', ...)` inside the `cells` eager-load closure. Since `FilterProductsRequest`/`ShowRowsFullRequest` have no `product_id` field, the trait's `prohibits:product_id,product_id.*` rule is inert there — harmless, kept for consistency with the other two consumers rather than forked into a narrower rule set.
 
