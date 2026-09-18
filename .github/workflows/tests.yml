@@ -161,6 +161,22 @@ jobs:
       - name: Run Pint
         run: composer lint:check
 
+  # deploy-remote.sh only ever runs on the Hostinger host, over SSH, as part of
+  # a real deploy -- nothing else would catch a regression in it before one. Its
+  # rollback path drops every table and reloads a dump, so that is not a failure
+  # mode to discover in production.
+  test-deploy-script:
+    name: Deploy script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test the remote deploy script
+        run: bash .github/scripts/deploy-remote-test.sh
+
   types-php:
     name: PHPStan
     runs-on: ubuntu-latest
