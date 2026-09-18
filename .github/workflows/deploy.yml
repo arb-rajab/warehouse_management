@@ -203,15 +203,27 @@ jobs:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
           SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH }}
+          # A variable rather than a secret: a deploy path is not a credential,
+          # and an unmasked value means a missing or wrong one is legible in the
+          # run log instead of rendering as `***` like every secret beside it.
+          DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH }}
           # hPanel picks the PHP version per domain, but the `php` on a plain SSH
           # PATH is whatever the account defaults to -- often an older release.
           # Point this at the 8.5 binary (e.g. /usr/bin/php8.5) when they differ.
           PHP_BINARY: ${{ secrets.HOSTINGER_PHP_BINARY || 'php' }}
           TARGET_BRANCH: ${{ github.ref_name }}
           TARGET_SHA: ${{ github.sha }}
+          ENVIRONMENT_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+
+          # An unset DEPLOY_PATH would otherwise reach the host as `cd ''` and
+          # fail there, reported as a remote shell error rather than as the
+          # configuration gap it is. Name the missing setting instead.
+          if [ -z "$DEPLOY_PATH" ]; then
+            echo "::error::HOSTINGER_DEPLOY_PATH is not set as a variable on the $ENVIRONMENT_NAME environment."
+            exit 1
+          fi
 
           # A login shell so the profile that puts nvm's node/npm and Composer on
           # PATH is sourced; a bare `bash -s` gets neither on Hostinger.
