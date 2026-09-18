@@ -170,11 +170,17 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_SSH_KNOWN_HOSTS }}
+          # Passed as an environment variable rather than interpolated into the
+          # script below: GitHub substitutes `${{ }}` into the run block as text
+          # before bash parses it, so a branch name carrying shell metacharacters
+          # would execute. workflow_dispatch can run this on any branch, so the
+          # name is not trustworthy just because the push triggers are fixed.
+          ENVIRONMENT_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ]; then
-            echo "::error::HOSTINGER_SSH_PRIVATE_KEY and HOSTINGER_SSH_KNOWN_HOSTS must both be set on the ${{ github.ref_name }} environment."
+            echo "::error::HOSTINGER_SSH_PRIVATE_KEY and HOSTINGER_SSH_KNOWN_HOSTS must both be set on the $ENVIRONMENT_NAME environment."
             exit 1
           fi
 

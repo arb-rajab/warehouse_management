@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,9 +25,9 @@ beforeEach(function () {
 });
 
 /**
- * @return \Illuminate\Support\Collection<int, object>
+ * @return Collection<int, object>
  */
-function schemaObjects(): \Illuminate\Support\Collection
+function schemaObjects(): Collection
 {
     return collect(DB::select(
         "select type, name, tbl_name from sqlite_master where name not like 'sqlite_%'"
