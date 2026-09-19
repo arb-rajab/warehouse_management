@@ -4,6 +4,7 @@ import { Pencil, Trash2, TriangleAlert } from '@lucide/vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
+import DataTable from '@/components/DataTable.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RowFormFields from '@/components/RowFormFields.vue';
@@ -13,6 +14,12 @@ import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters'
 import { t } from '@/lib/i18n';
 
 const plainSections = ['grid', 'dimensions'];
+
+/** Representative rows for the Rows-list table preview below — plain fixture data, never fetched. */
+const previewRows = [
+    { id: 1, letter: 'A', cells_count: 10, flats_count: 3 },
+    { id: 2, letter: 'B', cells_count: 8, flats_count: 2 },
+];
 </script>
 
 <template>
@@ -92,6 +99,30 @@ const plainSections = ['grid', 'dimensions'];
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t('help.rows.deleting.body') }}
                 </p>
+                <HelpUiPreview inert class="mt-2 block">
+                    <DataTable
+                        :columns="[
+                            t('rows.index.columnLetter'),
+                            t('rows.index.columnCells'),
+                            t('rows.index.columnFlats'),
+                            t('rows.index.columnAction'),
+                        ]"
+                        :rows="previewRows"
+                        :empty-message="t('rows.index.empty')"
+                    >
+                        <template #row="{ row }">
+                            <td class="px-4 py-2">
+                                <span
+                                    class="font-medium text-gray-900 dark:text-neutral-100"
+                                    >{{ row.letter }}</span
+                                >
+                            </td>
+                            <td class="px-4 py-2">{{ row.cells_count }}</td>
+                            <td class="px-4 py-2">{{ row.flats_count }}</td>
+                            <td class="px-4 py-2">—</td>
+                        </template>
+                    </DataTable>
+                </HelpUiPreview>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                     <HelpUiPreview>
                         <TableActionLink

@@ -1,6 +1,8 @@
 import { Download } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
+import { cellStateLabel } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import CellVerificationRounds from './CellVerificationRounds.vue';
@@ -64,6 +66,36 @@ describe('Help CellVerificationRounds', () => {
 
         expect(wrapper.text()).toContain(t('cellVerificationReport.correct'));
         expect(wrapper.text()).toContain(t('cellVerificationReport.incorrect'));
+    });
+
+    it('renders a preview of the reports table with its real column headers and example rows', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.cell'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.correctness'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.expected'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.reported'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.note'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.when'),
+        );
+
+        const table = wrapper.find('table');
+        expect(
+            table.findAllComponents(CellVerificationCorrectnessBadge),
+        ).toHaveLength(2);
+        expect(table.text()).toContain(cellStateLabel('full'));
+        expect(table.text()).toContain(cellStateLabel('empty'));
     });
 
     it('links to the verification rounds page', () => {

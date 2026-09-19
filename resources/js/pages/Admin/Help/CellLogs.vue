@@ -14,6 +14,7 @@ import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/Cel
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellStateLegend from '@/components/CellStateLegend.vue';
+import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
@@ -26,6 +27,7 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { formatSlot } from '@/lib/location';
 import type { CellLogAction } from '@/types/admin';
 
 const previewFilters = reactive({
@@ -73,6 +75,20 @@ const actionIcons: Partial<Record<ActionKey, Component>> = {
     transferred: ArrowLeftRight,
     deactivated: Ban,
 };
+
+/** Representative rows for the activity-log table preview below — plain fixture data, never fetched. */
+const previewLogs = [
+    {
+        id: 1,
+        cell: formatSlot('A', 3, 2),
+        action: t('cellLog.actions.stored'),
+        product: 'Example product',
+        pallet: '#123',
+        note: '—',
+        doneBy: 'Jane Doe',
+        when: '2026-01-01 10:00',
+    },
+];
 </script>
 
 <template>
@@ -96,6 +112,45 @@ const actionIcons: Partial<Record<ActionKey, Component>> = {
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t('help.cellLogs.filtering.body') }}
                 </p>
+                <HelpUiPreview inert class="mt-2 block">
+                    <DataTable
+                        :columns="[
+                            t('cellLog.columns.cell'),
+                            t('cellLog.columns.action'),
+                            t('cellLog.columns.product'),
+                            {
+                                label: t('cellLog.columns.pallet'),
+                                sortKey: 'expiration_date',
+                            },
+                            t('cellLog.columns.note'),
+                            t('cellLog.columns.doneBy'),
+                            {
+                                label: t('cellLog.columns.when'),
+                                sortKey: 'created_at',
+                            },
+                        ]"
+                        :rows="previewLogs"
+                        :empty-message="t('cellLog.empty')"
+                    >
+                        <template #row="{ row }">
+                            <td class="px-4 py-2">{{ row.cell }}</td>
+                            <td
+                                class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
+                            >
+                                {{ row.action }}
+                            </td>
+                            <td class="px-4 py-2">{{ row.product }}</td>
+                            <td class="px-4 py-2">{{ row.pallet }}</td>
+                            <td
+                                class="px-4 py-2 text-gray-500 dark:text-neutral-400"
+                            >
+                                {{ row.note }}
+                            </td>
+                            <td class="px-4 py-2">{{ row.doneBy }}</td>
+                            <td class="px-4 py-2">{{ row.when }}</td>
+                        </template>
+                    </DataTable>
+                </HelpUiPreview>
                 <HelpUiPreview class="mt-2">
                     <button
                         type="button"
