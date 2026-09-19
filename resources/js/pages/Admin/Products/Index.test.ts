@@ -136,6 +136,15 @@ describe('Products Index', () => {
         expect(wrapper.text()).toContain(t('products.empty'));
     });
 
+    it('links the help icon to the products help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/products');
+    });
+
     it('hides the filter fields until the Filters button is clicked', () => {
         const wrapper = mountPage([]);
 

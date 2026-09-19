@@ -1,0 +1,44 @@
+<script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3';
+import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import PageHeader from '@/components/PageHeader.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
+import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
+import { t } from '@/lib/i18n';
+
+const sections = ['defaultBoxes', 'settingBoxes'];
+</script>
+
+<template>
+    <Head :title="t('help.products.title')" />
+
+    <AdminLayout>
+        <PageHeader :title="t('help.products.title')" />
+
+        <Link
+            :href="helpIndex()"
+            class="mb-6 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+        >
+            {{ t('help.backToHelp') }}
+        </Link>
+
+        <div class="max-w-2xl space-y-6">
+            <section v-for="section in sections" :key="section">
+                <h2 :class="sectionHeadingClass">
+                    {{ t(`help.products.${section}.heading`) }}
+                </h2>
+                <p class="text-sm text-gray-700 dark:text-neutral-300">
+                    {{ t(`help.products.${section}.body`) }}
+                </p>
+            </section>
+
+            <Link
+                :href="productsIndex()"
+                class="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+                {{ t('products.title') }}
+            </Link>
+        </div>
+    </AdminLayout>
+</template>

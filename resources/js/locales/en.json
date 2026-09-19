@@ -477,5 +477,97 @@
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "empty": "No products yet."
+    },
+    "help": {
+        "viewHelp": "Help",
+        "backToHelp": "Back to help",
+        "index": {
+            "title": "Help",
+            "intro": "Quick, plain-language guides for the warehouse admin panel. Pick a topic below.",
+            "topics": {
+                "rows": {
+                    "title": "Rows & storage grids",
+                    "description": "What a row is, how the cell grid works, and how to add, change, or remove a row."
+                },
+                "users": {
+                    "title": "Users & accounts",
+                    "description": "How to create an account and what the Admin and Mobile user roles mean."
+                },
+                "products": {
+                    "title": "Products & box counts",
+                    "description": "Why a product starts at 50 boxes per pallet and how to set the real number."
+                },
+                "cellLogs": {
+                    "title": "Activity log",
+                    "description": "How to filter the activity log and what each entry means."
+                }
+            }
+        },
+        "rows": {
+            "title": "Help: Rows & storage grids",
+            "grid": {
+                "heading": "What is a row?",
+                "body": "A row is one physical rack of storage in the warehouse, identified by a single letter (A, B, C…). Inside a row, storage space is arranged as a grid: a number of cells across, stacked on a number of levels."
+            },
+            "dimensions": {
+                "heading": "Cells and levels",
+                "body": "A row's \"Cells\" number is how many storage positions sit side by side on one level, and \"Levels\" is how many of those levels are stacked on top of each other. Multiply them together and that's the total number of pallet slots the row holds — a row with 10 cells and 3 levels holds 30 pallets."
+            },
+            "creating": {
+                "heading": "Adding a new row",
+                "body": "From the Rows page, click \"Add row\" and enter a letter plus the number of cells and levels. The system creates every empty slot in the grid automatically — there's nothing else to set up before pallets can be stored in it."
+            },
+            "editing": {
+                "heading": "Changing a row's size",
+                "body": "Open a row and choose Edit to change its letter or its cells/levels count. The size can only be changed while the row is completely empty — if any slot in it currently holds a pallet, resizing is blocked until that pallet is moved or removed."
+            },
+            "deleting": {
+                "heading": "Deleting a row",
+                "body": "A row can be deleted from the Rows list, but only while it holds no pallets. If it still has stock in it, move or empty every slot first — the delete option is hidden and a \"Has pallets\" notice appears instead."
+            }
+        },
+        "users": {
+            "title": "Help: Users & accounts",
+            "accounts": {
+                "heading": "Creating an account",
+                "body": "From the Users page, click \"Add user\" and fill in a name, email, and password. Tick \"Admin access\" if the new account should be able to use this admin panel — leave it unticked for a warehouse worker who will only use the mobile scanning app."
+            },
+            "roles": {
+                "heading": "What the roles mean",
+                "body": "There are two kinds of account. An Admin account can sign in here to manage rows, products, users, and view the full activity log. A Mobile user account can only use the phone/scanner app on the warehouse floor to store, open, and move pallets — it cannot sign in to this admin panel."
+            }
+        },
+        "products": {
+            "title": "Help: Products & box counts",
+            "defaultBoxes": {
+                "heading": "Why every product starts at 50 boxes",
+                "body": "Products themselves come from the main store system, not from this app, so this app doesn't know how many boxes actually fit on one pallet of a given product. Until someone sets the real number, every product is assumed to hold 50 boxes per full pallet so the rest of the system has something to work with."
+            },
+            "settingBoxes": {
+                "heading": "Setting the real box count",
+                "body": "Go to the Products page, find the product, and edit the number in its \"Boxes / pallet\" column. Save it once and every full pallet of that product will use the real count from then on — you only need to do this the first time a product's true pallet size is known."
+            }
+        },
+        "cellLogs": {
+            "title": "Help: Activity log",
+            "filtering": {
+                "heading": "Filtering the activity log",
+                "body": "Open the Filters panel to narrow the list by product, pallet, row, column, the person who made the change, the type of action, or a date range. Combine as many filters as you need — for example, one product plus one row shows only that product's activity in that row."
+            },
+            "actions": {
+                "heading": "What each action means",
+                "stored": "Stored — a pallet was placed into an empty cell.",
+                "opened": "Opened — someone started taking individual boxes out of a full pallet, without emptying it.",
+                "boxesRemoved": "Boxes removed — more boxes were taken from a pallet that was already open.",
+                "emptied": "Emptied — the last boxes were taken and the cell is now empty again.",
+                "transferred": "Transferred — a pallet was moved from one cell to another; the log shows both where it left and where it landed.",
+                "deactivated": "Deactivated — a cell was marked unusable (for example, damaged shelving) and can't hold pallets until it's reactivated.",
+                "reactivated": "Reactivated — a previously deactivated cell was marked usable again."
+            },
+            "legend": {
+                "heading": "Cell colors",
+                "body": "These are the same colors and icons used on the Cells map, so what you see there matches what you see in the log."
+            }
+        }
     }
 }

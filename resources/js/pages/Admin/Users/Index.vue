@@ -2,6 +2,7 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     create,
     destroy,
@@ -11,6 +12,7 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -42,10 +44,13 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('users.index.title')">
-            <AddResourceLink
-                :href="create()"
-                :label="t('users.index.addUser')"
-            />
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('users')" />
+                <AddResourceLink
+                    :href="create()"
+                    :label="t('users.index.addUser')"
+                />
+            </div>
         </PageHeader>
 
         <DataTable

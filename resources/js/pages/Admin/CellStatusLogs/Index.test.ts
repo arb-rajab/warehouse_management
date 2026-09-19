@@ -100,6 +100,15 @@ describe('CellStatusLogs Index', () => {
         expect(wrapper.text()).toContain(t('cellLog.empty'));
     });
 
+    it('links the help icon to the cell logs help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/cell-logs');
+    });
+
     it('hides the filter fields until the Filters button is clicked', () => {
         const wrapper = mountPage([]);
 
