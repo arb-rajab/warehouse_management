@@ -59,6 +59,13 @@ describe('Help CellVerificationRounds', () => {
         expect(wrapper.text()).toContain(t('cellVerificationReport.export'));
     });
 
+    it('renders a preview of the correct/incorrect report badges', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cellVerificationReport.correct'));
+        expect(wrapper.text()).toContain(t('cellVerificationReport.incorrect'));
+    });
+
     it('links to the verification rounds page', () => {
         const wrapper = mountPage();
 
