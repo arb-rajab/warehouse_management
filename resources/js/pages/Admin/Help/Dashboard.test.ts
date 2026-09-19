@@ -1,5 +1,13 @@
+import {
+    ArrowLeftRight,
+    CalendarPlus,
+    CalendarX,
+    CircleDashed,
+    PackageOpen,
+} from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Dashboard from './Dashboard.vue';
@@ -44,6 +52,36 @@ describe('Help Dashboard', () => {
         expect(wrapper.text()).toContain(
             t('help.dashboard.productFilter.body'),
         );
+    });
+
+    it('renders the cell-state legend from the real cell state colors', () => {
+        const wrapper = mountPage();
+
+        for (const state of CELL_STATES) {
+            expect(wrapper.text()).toContain(cellStateLabel(state));
+        }
+    });
+
+    it('renders representative expiring and activity stat tiles', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(CalendarX).exists()).toBe(true);
+        expect(wrapper.findComponent(CalendarPlus).exists()).toBe(true);
+        expect(wrapper.findComponent(PackageOpen).exists()).toBe(true);
+        expect(wrapper.findComponent(CircleDashed).exists()).toBe(true);
+        expect(wrapper.findComponent(ArrowLeftRight).exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('dashboard.expiring.expired'));
+        expect(wrapper.text()).toContain(t('cellLog.actions.stored'));
+        expect(wrapper.text()).toContain(t('cellLog.actions.opened'));
+        expect(wrapper.text()).toContain(t('cellLog.actions.emptied'));
+        expect(wrapper.text()).toContain(t('cellLog.actions.transferred'));
+    });
+
+    it('renders a preview of the product filter trigger', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cellLog.filters.product'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.all'));
     });
 
     it('links to the dashboard page', () => {

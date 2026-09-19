@@ -55,6 +55,12 @@ describe('Help Rows', () => {
         expect(wrapper.text()).toContain(t('rows.index.delete'));
     });
 
+    it('renders a preview of the "Has pallets" notice', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('rows.index.hasPallets'));
+    });
+
     it('links to the rows page', () => {
         const wrapper = mountPage();
 

@@ -1,4 +1,4 @@
-import { Ban, PackageSearch, Search } from '@lucide/vue';
+import { Ban, Box, LayoutGrid, PackageSearch, Search } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
@@ -65,6 +65,27 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(t('cells.palletActions.triggerLabel'));
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.deactivateLabel'),
+        );
+    });
+
+    it('renders a preview of the 2D/3D view toggle', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(LayoutGrid).exists()).toBe(true);
+        expect(wrapper.findComponent(Box).exists()).toBe(true);
+    });
+
+    it('renders a preview of the pallet action tabs named in the managingPallets text', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cells.palletActions.tabs.store'));
+        expect(wrapper.text()).toContain(t('cells.palletActions.tabs.open'));
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.tabs.removeBoxes'),
+        );
+        expect(wrapper.text()).toContain(t('cells.palletActions.tabs.empty'));
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.tabs.transfer'),
         );
     });
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Pencil, Trash2 } from '@lucide/vue';
+import { Pencil, Trash2, TriangleAlert } from '@lucide/vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
@@ -78,12 +78,28 @@ const plainSections = ['grid', 'dimensions'];
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t('help.rows.deleting.body') }}
                 </p>
-                <HelpUiPreview class="mt-2">
-                    <TableActionLink href="#" tabindex="-1" variant="danger">
-                        <Trash2 class="h-3.5 w-3.5" />
-                        {{ t('rows.index.delete') }}
-                    </TableActionLink>
-                </HelpUiPreview>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <HelpUiPreview>
+                        <TableActionLink
+                            href="#"
+                            tabindex="-1"
+                            variant="danger"
+                        >
+                            <Trash2 class="h-3.5 w-3.5" />
+                            {{ t('rows.index.delete') }}
+                        </TableActionLink>
+                    </HelpUiPreview>
+                    <HelpUiPreview>
+                        <span
+                            tabindex="-1"
+                            :title="t('rows.index.hasPalletsTitle')"
+                            class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                        >
+                            <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
+                            {{ t('rows.index.hasPallets') }}
+                        </span>
+                    </HelpUiPreview>
+                </div>
             </section>
 
             <Link

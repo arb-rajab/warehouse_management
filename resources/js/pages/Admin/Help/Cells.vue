@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Ban, PackageSearch, Search } from '@lucide/vue';
+import { Ban, Box, LayoutGrid, PackageSearch, Search } from '@lucide/vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellStateLegend from '@/components/CellStateLegend.vue';
@@ -10,8 +10,17 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     filterSectionHeadingClass as sectionHeadingClass,
     mapToolbarButtonClass,
+    selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+
+const palletActionTabKeys = [
+    'store',
+    'open',
+    'removeBoxes',
+    'empty',
+    'transfer',
+] as const;
 </script>
 
 <template>
@@ -46,6 +55,22 @@ import { t } from '@/lib/i18n';
                         <Search class="h-4 w-4" />
                     </span>
                 </HelpUiPreview>
+                <HelpUiPreview class="mt-2">
+                    <span
+                        tabindex="-1"
+                        :title="t('cells.map.view2d')"
+                        :class="[mapToolbarButtonClass, selectedToggleClass]"
+                    >
+                        <LayoutGrid class="h-4 w-4" />
+                    </span>
+                    <span
+                        tabindex="-1"
+                        :title="t('cells.map.view3d')"
+                        :class="mapToolbarButtonClass"
+                    >
+                        <Box class="h-4 w-4" />
+                    </span>
+                </HelpUiPreview>
             </section>
 
             <section>
@@ -73,6 +98,21 @@ import { t } from '@/lib/i18n';
                     >
                         <PackageSearch class="h-4 w-4" />
                         {{ t('cells.palletActions.triggerLabel') }}
+                    </span>
+                </HelpUiPreview>
+                <HelpUiPreview class="mt-2">
+                    <span
+                        v-for="(action, index) in palletActionTabKeys"
+                        :key="action"
+                        tabindex="-1"
+                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+                        :class="
+                            index === 0
+                                ? selectedToggleClass
+                                : 'border border-gray-300 text-gray-700 dark:border-neutral-700 dark:text-neutral-200'
+                        "
+                    >
+                        {{ t(`cells.palletActions.tabs.${action}`) }}
                     </span>
                 </HelpUiPreview>
             </section>

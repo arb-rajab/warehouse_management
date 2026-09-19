@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Download } from '@lucide/vue';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -36,6 +37,11 @@ const sections = ['what', 'reports', 'exporting'];
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t(`help.cellVerificationRounds.${section}.body`) }}
                 </p>
+                <HelpUiPreview v-if="section === 'reports'" class="mt-2">
+                    <CellVerificationCorrectnessBadge :is-correct="true" />
+                    <CellVerificationCorrectnessBadge :is-correct="false" />
+                </HelpUiPreview>
+
                 <HelpUiPreview v-if="section === 'exporting'" class="mt-2">
                     <span tabindex="-1" :class="filterClearButtonClass">
                         <Download class="h-4 w-4" />
