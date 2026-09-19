@@ -54,7 +54,7 @@ describe('Login', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/login',
+            '/admin/login',
         );
     });
 

