@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
 use App\Http\Controllers\Admin\CellVerificationRoundController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
@@ -76,5 +77,8 @@ Route::middleware('auth')->group(function () {
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('help', [HelpController::class, 'index'])->name('help.index');
+        Route::get('help/{topic}', [HelpController::class, 'show'])->name('help.show');
     });
 });

@@ -1,0 +1,120 @@
+import { Download } from '@lucide/vue';
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
+import { cellStateLabel } from '@/lib/cellStateColor';
+import { t } from '@/lib/i18n';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import CellVerificationRounds from './CellVerificationRounds.vue';
+
+const { usePageMock } = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+}));
+
+vi.mock('@inertiajs/vue3', async () => {
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+
+    return {
+        Head: headStub,
+        Link: createLinkStub(),
+        usePage: usePageMock,
+    };
+});
+
+function mountPage() {
+    usePageMock.mockReturnValue({
+        url: '/admin/help/cell-verification-rounds',
+        props: defaultAuthProps(),
+    });
+
+    return mount(CellVerificationRounds);
+}
+
+describe('Help CellVerificationRounds', () => {
+    beforeEach(() => {
+        resetMocks({ usePageMock });
+    });
+
+    it('explains what a verification round is', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('help.cellVerificationRounds.what.body'),
+        );
+    });
+
+    it('explains correct/incorrect reports and exporting', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('help.cellVerificationRounds.reports.body'),
+        );
+        expect(wrapper.text()).toContain(
+            t('help.cellVerificationRounds.exporting.body'),
+        );
+    });
+
+    it('renders a preview of the export button', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(Download).exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('cellVerificationReport.export'));
+    });
+
+    it('renders a preview of the correct/incorrect report badges', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cellVerificationReport.correct'));
+        expect(wrapper.text()).toContain(t('cellVerificationReport.incorrect'));
+    });
+
+    it('renders a preview of the reports table with its real column headers and example rows', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.cell'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.correctness'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.expected'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.reported'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.note'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cellVerificationReport.columns.when'),
+        );
+
+        const table = wrapper.find('table');
+        expect(
+            table.findAllComponents(CellVerificationCorrectnessBadge),
+        ).toHaveLength(2);
+        expect(table.text()).toContain(cellStateLabel('full'));
+        expect(table.text()).toContain(cellStateLabel('empty'));
+    });
+
+    it('links to the verification rounds page', () => {
+        const wrapper = mountPage();
+
+        const roundsLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('cellVerificationRound.title'));
+        expect(roundsLink?.attributes('href')).toBe(
+            '/admin/cell-verification-rounds',
+        );
+    });
+
+    it('links back to the help landing page', () => {
+        const wrapper = mountPage();
+
+        const backLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('help.backToHelp'));
+        expect(backLink?.attributes('href')).toBe('/admin/help');
+    });
+});

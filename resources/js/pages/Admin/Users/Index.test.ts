@@ -70,6 +70,15 @@ describe('Users Index', () => {
         expect(addLink?.attributes('href')).toBe('/admin/users/create');
     });
 
+    it('links the help icon to the users help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/users');
+    });
+
     it('renders the name and email for a user', () => {
         const wrapper = mountPage([
             user({ id: 2, name: 'John Smith', email: 'john@example.com' }),
