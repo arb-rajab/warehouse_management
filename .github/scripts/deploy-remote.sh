@@ -184,6 +184,25 @@ for sqlite_name in database telescope pulse health; do
     ln -sf "$sqlite_file" "$RELEASE_DIR/database/$sqlite_name.sqlite"
 done
 
+# Entries the host needs inside the served directory but which are not part of
+# the repository. On this account hPanel will only resolve a subdomain's
+# document root under public_html, so the dev and staging roots have to sit
+# inside production's public/ -- and that directory now comes fresh from
+# `git archive` on every deploy, which would drop them. Keeping the originals
+# in shared/ and relinking them here makes them survive.
+#
+# Targets in shared/public must be absolute: a relative one would resolve
+# against the link's own directory, which differs between shared/ and a release.
+if [ -d "$SHARED_DIR/public" ]; then
+    log "Linking shared public entries into the release"
+    for shared_entry in "$SHARED_DIR/public/"*; do
+        # -L as well as -e so an entry pointing at an environment that has not
+        # deployed yet is still linked, rather than skipped for being dangling.
+        { [ -e "$shared_entry" ] || [ -L "$shared_entry" ]; } || continue
+        ln -sfn "$shared_entry" "$RELEASE_DIR/public/$(basename "$shared_entry")"
+    done
+fi
+
 previous_release=''
 if [ -L "$CURRENT_LINK" ]; then
     previous_release="$(readlink -f "$CURRENT_LINK")"

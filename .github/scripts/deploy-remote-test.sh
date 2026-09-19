@@ -157,6 +157,20 @@ check "old releases are pruned" "$(ls -1 "$WORK/host/releases" | wc -l | tr -d '
 check "old backups are pruned" "$(ls -1 "$WORK/host/shared/backups" | wc -l | tr -d ' ')" "2"
 check "current still resolves" "$([ -d "$WORK/host/current" ] && echo yes || echo no)" "yes"
 
+echo "shared public entries are relinked into every release"
+setup
+mkdir -p "$WORK/host/shared/public" "$WORK/elsewhere"
+ln -s "$WORK/elsewhere" "$WORK/host/shared/public/subdomain"
+# An entry whose target does not exist yet, standing in for an environment
+# that has not had its first deploy.
+ln -s "$WORK/not-deployed-yet" "$WORK/host/shared/public/pending"
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" && rc=0 || rc=$?
+check "exits successfully" "$rc" "0"
+check "resolvable entry is linked" "$([ -L "$WORK/host/current/public/subdomain" ] && echo yes || echo no)" "yes"
+check "dangling entry is linked anyway" "$([ -L "$WORK/host/current/public/pending" ] && echo yes || echo no)" "yes"
+deploy "$(commit_new_revision)" >/dev/null
+check "entries survive the next deploy" "$([ -L "$WORK/host/current/public/subdomain" ] && echo yes || echo no)" "yes"
+
 echo "a truncated dump aborts before migrating"
 setup
 deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
