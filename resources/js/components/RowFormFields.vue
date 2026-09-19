@@ -3,8 +3,14 @@ import { TriangleAlert } from '@lucide/vue';
 import { t } from '@/lib/i18n';
 import FormField from './FormField.vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
+        /**
+         * Prefixes every id this renders (`${idPrefix}letter`/etc.) so a page
+         * can render this component more than once without a DOM id
+         * collision — see LocationFilterFields.vue for the same pattern.
+         */
+        idPrefix?: string;
         letter?: string;
         cellsCount?: number;
         flatsCount?: number;
@@ -14,6 +20,7 @@ withDefaults(
         >;
     }>(),
     {
+        idPrefix: '',
         letter: '',
         cellsCount: undefined,
         flatsCount: undefined,
@@ -25,7 +32,7 @@ withDefaults(
 <template>
     <div class="space-y-4">
         <FormField
-            id="letter"
+            :id="`${props.idPrefix}letter`"
             :label="t('rows.fields.letter')"
             :value="letter"
             :error="errors.letter"
@@ -35,7 +42,7 @@ withDefaults(
         />
 
         <FormField
-            id="cells_count"
+            :id="`${props.idPrefix}cells_count`"
             :label="t('rows.fields.cellsPerFlat')"
             type="number"
             :value="cellsCount"
@@ -47,7 +54,7 @@ withDefaults(
         />
 
         <FormField
-            id="flats_count"
+            :id="`${props.idPrefix}flats_count`"
             :label="t('rows.fields.flats')"
             type="number"
             :value="flatsCount"

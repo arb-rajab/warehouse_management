@@ -45,10 +45,18 @@ describe('Help Users', () => {
         expect(wrapper.text()).toContain(t('help.users.roles.body'));
     });
 
-    it('renders a preview of the "Add user" button and the "Admin access" checkbox', () => {
+    it('renders a preview of the "Add user" button', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('users.index.addUser'));
+    });
+
+    it('renders a preview of the name, email, password, and admin-access fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('users.fields.name'));
+        expect(wrapper.text()).toContain(t('users.fields.email'));
+        expect(wrapper.text()).toContain(t('users.fields.password'));
         expect(wrapper.text()).toContain(t('users.fields.adminAccess'));
         expect(
             wrapper.get('input[type="checkbox"]').attributes('checked'),

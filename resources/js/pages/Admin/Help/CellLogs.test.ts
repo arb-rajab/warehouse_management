@@ -17,6 +17,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
     };
 });
 
@@ -65,6 +66,19 @@ describe('Help CellLogs', () => {
         for (const state of CELL_STATES) {
             expect(wrapper.text()).toContain(cellStateLabel(state));
         }
+    });
+
+    it('renders a preview of the real filter fields named in the filtering text', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cellLog.filters.product'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.row'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.column'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.doneBy'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.statusChange'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.from'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.to'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.withinDays'));
     });
 
     it('links to the activity log page', () => {

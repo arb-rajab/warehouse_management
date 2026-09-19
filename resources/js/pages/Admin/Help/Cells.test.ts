@@ -17,6 +17,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
     };
 });
 
@@ -86,6 +87,54 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(t('cells.palletActions.tabs.empty'));
         expect(wrapper.text()).toContain(
             t('cells.palletActions.tabs.transfer'),
+        );
+    });
+
+    it('renders a preview of the store tab fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.store.productLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.store.expirationLabel'),
+        );
+        expect(wrapper.text()).toContain(t('cells.palletActions.noteLabel'));
+    });
+
+    it('renders a preview of the open and remove-boxes tab fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.open.boxesCountLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.open.confirmEmptyLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.removeBoxes.boxesCountLabel'),
+        );
+    });
+
+    it('renders a preview of the empty tab confirmation text', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.empty.confirmText', { location: 'A3·2' }),
+        );
+    });
+
+    it('renders a preview of the transfer tab fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.transfer.rowLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.transfer.cellNumberLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.transfer.flatNumberLabel'),
         );
     });
 

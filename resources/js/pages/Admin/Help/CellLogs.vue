@@ -8,18 +8,36 @@ import {
     PackageOpen,
     SlidersHorizontal,
 } from '@lucide/vue';
+import { reactive } from 'vue';
 import type { Component } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellStateLegend from '@/components/CellStateLegend.vue';
+import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
+import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
+    selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { CellLogAction } from '@/types/admin';
+
+const previewFilters = reactive({
+    product_id: [] as string[],
+    row_id: '',
+    column_number: '',
+    action: [] as CellLogAction[],
+    user_id: [] as string[],
+    date_from: '',
+    date_to: '',
+    created_within_days: '',
+});
 
 type ActionKey =
     | 'stored'
@@ -87,6 +105,50 @@ const actionIcons: Partial<Record<ActionKey, Component>> = {
                         <SlidersHorizontal class="h-4 w-4" />
                         {{ t('cellLog.filters.title') }}
                     </button>
+                </HelpUiPreview>
+                <HelpUiPreview inert class="mt-2 block">
+                    <p class="mb-3 text-lg font-semibold">
+                        {{ t('cellLog.filters.title') }}
+                    </p>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FilterProductSelect
+                            id="help-cell-log-filter-product"
+                            v-model="previewFilters.product_id"
+                            :label="t('cellLog.filters.product')"
+                            :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
+                            :selected="[]"
+                        />
+                        <LocationFilterFields
+                            id-prefix="help-cell-log-filter"
+                            v-model:row-id="previewFilters.row_id"
+                            v-model:column-number="previewFilters.column_number"
+                            :rows="[]"
+                            :max-column-number="1"
+                        />
+                        <CellLogActivityFilterFields
+                            id-prefix="help-cell-log-filter"
+                            v-model:action="previewFilters.action"
+                            v-model:user-id="previewFilters.user_id"
+                            :actions="[]"
+                            :users="[]"
+                        />
+                        <DateRangeFilterFields
+                            from-id="help-cell-log-filter-date-from"
+                            to-id="help-cell-log-filter-date-to"
+                            within-days-id="help-cell-log-filter-within-days"
+                            :from-label="t('cellLog.filters.from')"
+                            :to-label="t('cellLog.filters.to')"
+                            :within-days-label="t('cellLog.filters.withinDays')"
+                            v-model:from="previewFilters.date_from"
+                            v-model:to="previewFilters.date_to"
+                            v-model:within-days="
+                                previewFilters.created_within_days
+                            "
+                            :range-disabled="false"
+                            :days-disabled="false"
+                        />
+                    </div>
                 </HelpUiPreview>
             </section>
 
