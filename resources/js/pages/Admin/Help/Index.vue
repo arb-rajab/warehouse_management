@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeftRight, Package, Rows3, Users } from '@lucide/vue';
+import {
+    ArrowLeftRight,
+    ClipboardCheck,
+    LayoutDashboard,
+    Map,
+    Package,
+    Rows3,
+    Users,
+} from '@lucide/vue';
 import type { Component } from 'vue';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import PageHeader from '@/components/PageHeader.vue';
@@ -8,10 +16,17 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { t } from '@/lib/i18n';
 
 const topics: { key: string; topic: string; icon: Component }[] = [
+    { key: 'dashboard', topic: 'dashboard', icon: LayoutDashboard },
     { key: 'rows', topic: 'rows', icon: Rows3 },
-    { key: 'users', topic: 'users', icon: Users },
-    { key: 'products', topic: 'products', icon: Package },
+    { key: 'cells', topic: 'cells', icon: Map },
     { key: 'cellLogs', topic: 'cell-logs', icon: ArrowLeftRight },
+    {
+        key: 'cellVerificationRounds',
+        topic: 'cell-verification-rounds',
+        icon: ClipboardCheck,
+    },
+    { key: 'products', topic: 'products', icon: Package },
+    { key: 'users', topic: 'users', icon: Users },
 ];
 </script>
 

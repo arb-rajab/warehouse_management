@@ -485,22 +485,45 @@
             "title": "Help",
             "intro": "Quick, plain-language guides for the warehouse admin panel. Pick a topic below.",
             "topics": {
+                "dashboard": {
+                    "title": "Dashboard",
+                    "description": "What the dashboard's tiles show and how to filter them by product."
+                },
                 "rows": {
                     "title": "Rows & storage grids",
                     "description": "What a row is, how the cell grid works, and how to add, change, or remove a row."
                 },
-                "users": {
-                    "title": "Users & accounts",
-                    "description": "How to create an account and what the Admin and Mobile user roles mean."
+                "cells": {
+                    "title": "Warehouse map",
+                    "description": "How to read the cell map, what the colors mean, and how to manage pallets."
+                },
+                "cellLogs": {
+                    "title": "Activity log",
+                    "description": "How to filter the activity log and what each entry means."
+                },
+                "cellVerificationRounds": {
+                    "title": "Verification rounds",
+                    "description": "What a verification round is and how to review its reports."
                 },
                 "products": {
                     "title": "Products & box counts",
                     "description": "Why a product starts at 50 boxes per pallet and how to set the real number."
                 },
-                "cellLogs": {
-                    "title": "Activity log",
-                    "description": "How to filter the activity log and what each entry means."
+                "users": {
+                    "title": "Users & accounts",
+                    "description": "How to create an account and what the Admin and Mobile user roles mean."
                 }
+            }
+        },
+        "dashboard": {
+            "title": "Help: Dashboard",
+            "overview": {
+                "heading": "What the dashboard shows",
+                "body": "The dashboard is the first page you see after signing in. It gives a quick snapshot of the whole warehouse: how many cells are empty, full, or opened; how many pallets are expired or expiring soon; and how much activity (pallets stored, opened, emptied, or transferred) happened today and this week."
+            },
+            "productFilter": {
+                "heading": "Filtering by product",
+                "body": "Use the product selector at the top to narrow every tile on the dashboard down to one or more specific products — useful for checking how much stock of a particular item is on hand or about to expire."
             }
         },
         "rows": {
@@ -524,6 +547,25 @@
             "deleting": {
                 "heading": "Deleting a row",
                 "body": "A row can be deleted from the Rows list, but only while it holds no pallets. If it still has stock in it, move or empty every slot first — the delete option is hidden and a \"Has pallets\" notice appears instead."
+            }
+        },
+        "cells": {
+            "title": "Help: Warehouse map",
+            "map": {
+                "heading": "Reading the map",
+                "body": "The Cells page shows every row as a grid of storage cells, colored by what's inside them. Switch between the flat 2D view and the walkable 3D view, and use the search box to jump straight to a cell by its position (for example A12·3)."
+            },
+            "legend": {
+                "heading": "Cell colors",
+                "body": "These are the same colors and icons used throughout the app, including the activity log — so a cell's color always means the same thing wherever you see it."
+            },
+            "managingPallets": {
+                "heading": "Storing, opening, and moving pallets",
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, or transfer it to a different cell. Every change is recorded in the activity log automatically."
+            },
+            "deactivating": {
+                "heading": "Deactivating a cell",
+                "body": "If a cell becomes unusable — damaged shelving, for example — deactivate it so it can no longer be used to store, open, or move pallets, until you reactivate it again."
             }
         },
         "users": {
@@ -567,6 +609,21 @@
             "legend": {
                 "heading": "Cell colors",
                 "body": "These are the same colors and icons used on the Cells map, so what you see there matches what you see in the log."
+            }
+        },
+        "cellVerificationRounds": {
+            "title": "Help: Verification rounds",
+            "what": {
+                "heading": "What is a verification round?",
+                "body": "A verification round is a physical stock check: a warehouse worker walks the rows with the mobile app and confirms what's actually stored in each cell matches what the system expects. Each round is made up of individual reports, one per cell checked."
+            },
+            "reports": {
+                "heading": "Correct and incorrect reports",
+                "body": "Open a round to see every report in it. Each one is marked correct when what the worker found matches the system, or incorrect when it doesn't — for example an empty cell that's actually holding a pallet, or the wrong product in a slot. Use this list to spot and fix real-world discrepancies."
+            },
+            "exporting": {
+                "heading": "Exporting a round's reports",
+                "body": "From a round's page, export its reports to a CSV file — useful for sharing results with someone who doesn't use this admin panel, or keeping an offline record."
             }
         }
     }

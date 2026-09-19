@@ -17,10 +17,13 @@ class HelpController extends Controller
     public function show(HelpTopic $topic): Response
     {
         $component = match ($topic) {
+            HelpTopic::Dashboard => 'Dashboard',
             HelpTopic::Rows => 'Rows',
+            HelpTopic::Cells => 'Cells',
             HelpTopic::Users => 'Users',
             HelpTopic::Products => 'Products',
             HelpTopic::CellLogs => 'CellLogs',
+            HelpTopic::CellVerificationRounds => 'CellVerificationRounds',
         };
 
         return Inertia::render("Admin/Help/{$component}");

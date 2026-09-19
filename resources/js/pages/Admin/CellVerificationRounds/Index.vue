@@ -7,6 +7,7 @@ import {
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -14,6 +15,7 @@ import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
@@ -127,17 +129,20 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('cellVerificationRound.title')">
-            <button
-                type="button"
-                :class="filterTriggerButtonClass"
-                @click="filtersOpen = true"
-            >
-                <SlidersHorizontal class="h-4 w-4" />
-                {{ t('cellVerificationRound.filters.title') }}
-                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('cell-verification-rounds')" />
+                <button
+                    type="button"
+                    :class="filterTriggerButtonClass"
+                    @click="filtersOpen = true"
+                >
+                    <SlidersHorizontal class="h-4 w-4" />
+                    {{ t('cellVerificationRound.filters.title') }}
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
+                        {{ activeFilterCount }}
+                    </span>
+                </button>
+            </div>
         </PageHeader>
 
         <FilterDialog

@@ -30,7 +30,10 @@ vi.mock('@inertiajs/vue3', async () => {
                 h(
                     'a',
                     {
-                        href: props.href,
+                        href:
+                            typeof props.href === 'string'
+                                ? props.href
+                                : props.href?.url,
                         'data-query': JSON.stringify(props.data ?? {}),
                     },
                     slots.default?.(),
@@ -122,6 +125,15 @@ async function openCustomExpiringDaysDialog(
 describe('Dashboard Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock });
+    });
+
+    it('links the help icon to the dashboard help page', () => {
+        const wrapper = mountPage();
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/dashboard');
     });
 
     it('renders every occupancy tile with its count, linking to the cells map with a matching highlight filter', () => {

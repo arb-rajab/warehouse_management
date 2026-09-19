@@ -78,6 +78,17 @@ describe('CellVerificationRounds Index', () => {
         ]);
     });
 
+    it('links the help icon to the verification rounds help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe(
+            '/admin/help/cell-verification-rounds',
+        );
+    });
+
     it('shows the empty message when there are no rounds', () => {
         const wrapper = mountPage([]);
 

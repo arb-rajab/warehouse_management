@@ -16,10 +16,13 @@ test('an authenticated admin can view each help topic page', function () {
     actingAsAdmin();
 
     $topics = [
+        'dashboard' => 'Admin/Help/Dashboard',
         'rows' => 'Admin/Help/Rows',
+        'cells' => 'Admin/Help/Cells',
         'users' => 'Admin/Help/Users',
         'products' => 'Admin/Help/Products',
         'cell-logs' => 'Admin/Help/CellLogs',
+        'cell-verification-rounds' => 'Admin/Help/CellVerificationRounds',
     ];
 
     foreach ($topics as $slug => $component) {

@@ -38,46 +38,39 @@ describe('Help Index', () => {
         expect(wrapper.text()).toContain(t('help.index.intro'));
     });
 
+    const topicHrefs: Record<string, string> = {
+        dashboard: '/admin/help/dashboard',
+        rows: '/admin/help/rows',
+        cells: '/admin/help/cells',
+        cellLogs: '/admin/help/cell-logs',
+        cellVerificationRounds: '/admin/help/cell-verification-rounds',
+        products: '/admin/help/products',
+        users: '/admin/help/users',
+    };
+
     it('links each topic to its help page', () => {
         const wrapper = mountPage();
 
-        const links = wrapper.findAll('a');
+        // Scoped to the topic grid, not the whole page — AdminLayout's own
+        // nav also renders a "Dashboard" link, which would otherwise collide
+        // with the "Dashboard" topic card's text.
+        const links = wrapper.get('ul').findAll('a');
 
-        const rowsLink = links.find((a) =>
-            a.text().includes(t('help.index.topics.rows.title')),
-        );
-        expect(rowsLink?.attributes('href')).toBe('/admin/help/rows');
-
-        const usersLink = links.find((a) =>
-            a.text().includes(t('help.index.topics.users.title')),
-        );
-        expect(usersLink?.attributes('href')).toBe('/admin/help/users');
-
-        const productsLink = links.find((a) =>
-            a.text().includes(t('help.index.topics.products.title')),
-        );
-        expect(productsLink?.attributes('href')).toBe('/admin/help/products');
-
-        const cellLogsLink = links.find((a) =>
-            a.text().includes(t('help.index.topics.cellLogs.title')),
-        );
-        expect(cellLogsLink?.attributes('href')).toBe('/admin/help/cell-logs');
+        for (const [key, href] of Object.entries(topicHrefs)) {
+            const link = links.find((a) =>
+                a.text().includes(t(`help.index.topics.${key}.title`)),
+            );
+            expect(link?.attributes('href')).toBe(href);
+        }
     });
 
     it('renders every topic description', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.text()).toContain(
-            t('help.index.topics.rows.description'),
-        );
-        expect(wrapper.text()).toContain(
-            t('help.index.topics.users.description'),
-        );
-        expect(wrapper.text()).toContain(
-            t('help.index.topics.products.description'),
-        );
-        expect(wrapper.text()).toContain(
-            t('help.index.topics.cellLogs.description'),
-        );
+        for (const key of Object.keys(topicHrefs)) {
+            expect(wrapper.text()).toContain(
+                t(`help.index.topics.${key}.description`),
+            );
+        }
     });
 });
