@@ -1,144 +1,255 @@
 name: deploy
 
+# Deploy used to hang off a `workflow_run` completion of `tests`, so the only way
+# to trigger a deploy was to re-run the entire suite on develop/staging after the
+# merge. Measured over the last 25 merges into develop, 23 of those re-runs were
+# provably pointless: the merge commit's tree was byte-identical to the PR head
+# the suite had already passed on, so the assertions could not come out
+# differently. The other 2 were the opposite -- the base had moved under the PR,
+# so the merge combined two independently-green branches into content that no run
+# had ever covered (#203 differed from its tested head in 10 files, across
+# PalletActionService, PalletObserver and their tests).
+#
+# Deploy now fires on the push itself and decides which of those two cases it is
+# rather than paying for the suite unconditionally: `verify-tested` looks for a
+# successful `tests` run covering this exact content, and only when there isn't
+# one does `test-merged-content` run the suite against the merged commit. That
+# keeps the guarantee the old re-run provided while skipping it in the ~92% of
+# merges where it verified something already verified.
+#
+# Deploys used to run on a self-hosted Windows runner on a VPS we controlled,
+# which is why every step below was once `cmd`/`powershell` against a local
+# `C:\sites\...` checkout. That VPS is gone and the app is hosted on Hostinger,
+# so the runner is now `ubuntu-latest` everywhere and the deploy is an SSH
+# session into the Hostinger host running the same sequence in bash.
 on:
-  workflow_run:
-    workflows: [tests]
-    types: [completed]
+  push:
+    branches:
+      - develop
+      - staging
+      - main
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Deploy without testing, even if nothing covers this commit
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: deploy-${{ github.event.workflow_run.head_branch }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  deploy-develop:
-    if: >-
-      github.event.workflow_run.head_branch == 'develop' &&
-      github.event.workflow_run.conclusion == 'success'
-    runs-on: [self-hosted, Windows]
-    defaults:
-      run:
-        shell: cmd
-        working-directory: C:\sites\warehouse_management-develop
+  # A merge into develop/staging/main normally lands a merge commit whose tree
+  # matches the PR head `tests` already ran against, because the merge
+  # contributes no content of its own. So this commit counts as tested when a
+  # successful `tests` run exists for either the pushed SHA itself (a direct
+  # push, a fast-forward, or a manual workflow_dispatch of the suite on this
+  # branch) or, for a two-parent merge whose tree matches its second parent,
+  # that parent.
+  #
+  # This job reports what it found rather than failing on a miss -- an untested
+  # commit is handled by running the suite below, not by blocking. It does fail
+  # closed on an API error, since a gate that cannot verify must not promote:
+  # `set -e` plus a non-zero `gh api` is what enforces that.
+  #
+  # It used to run on the self-hosted Windows runner, justified at the time by
+  # deploy needing no GitHub-hosted minutes anyway, so putting the gate on
+  # `ubuntu-latest` would have made every promotion depend on hosted-runner
+  # availability. With the self-hosted runner decommissioned there is nothing
+  # left to piggyback on -- the deploy job below is hosted regardless -- so that
+  # justification is void and the gate runs alongside everything else.
+  verify-tested:
+    name: Check for an existing tests run
+    runs-on: ubuntu-latest
+    outputs:
+      tested: ${{ steps.lookup.outputs.tested }}
 
     steps:
-      - name: Sync repository to tested commit
+      - name: Look for a successful tests run covering this content
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          FORCED: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
         run: |
-          git fetch origin develop
-          git reset --hard ${{ github.event.workflow_run.head_sha }}
+          set -euo pipefail
 
-      - name: Check if dependencies changed since last deploy
-        id: deps
-        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
-          $markerFile = '.deploy-deps.hash'
-          $previousHash = if (Test-Path $markerFile) { (Get-Content $markerFile -Raw).Trim() } else { '' }
-          $changed = $currentHash -ne $previousHash
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "changed=$($changed.ToString().ToLower())" -Encoding utf8
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "hash=$currentHash" -Encoding utf8
+          set_tested() {
+            echo "$2"
+            echo "tested=$1" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
 
-      - name: Install PHP dependencies (production)
-        if: steps.deps.outputs.changed == 'true'
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+          if [ "$FORCED" = 'true' ]; then
+            set_tested 'true' '::warning::Deploying without verifying a tests run, because force was requested.'
+          fi
 
-      - name: Install Node dependencies
-        if: steps.deps.outputs.changed == 'true'
-        run: npm ci
+          has_successful_run() {
+            local successes
+            successes="$(gh api "repos/$REPO/actions/workflows/tests.yml/runs?head_sha=$1&per_page=100" \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")] | length')"
+            [ "$successes" -gt 0 ]
+          }
 
-      - name: Record installed dependency hash
-        if: steps.deps.outputs.changed == 'true'
-        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
+          head_commit="$(gh api "repos/$REPO/commits/$HEAD_SHA")"
+          head_tree="$(jq -r '.commit.tree.sha' <<< "$head_commit")"
+          parent_count="$(jq -r '.parents | length' <<< "$head_commit")"
 
-      - name: Build frontend assets
-        run: npm run build
+          candidates=("$HEAD_SHA")
 
-      - name: Ensure SQLite database files exist
-        run: |
-          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
-          php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
-          php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
-          php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
+          if [ "$parent_count" -eq 2 ]; then
+            merged_head="$(jq -r '.parents[1].sha' <<< "$head_commit")"
+            merged_tree="$(gh api "repos/$REPO/commits/$merged_head" --jq '.commit.tree.sha')"
 
-      - name: Run database migrations
-        run: php artisan migrate --force
+            if [ "$merged_tree" = "$head_tree" ]; then
+              candidates+=("$merged_head")
+              echo "$HEAD_SHA is a merge of $merged_head with an identical tree."
+            else
+              echo "Base moved under $merged_head -- this merge combines content no run has covered."
+            fi
+          fi
 
-      - name: Refresh application caches
-        run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
+          for sha in "${candidates[@]}"; do
+            if has_successful_run "$sha"; then
+              set_tested 'true' "Found a successful tests run for $sha; promoting $HEAD_SHA."
+            fi
+          done
 
-      - name: Ensure storage symlink exists
-        run: php artisan storage:link
+          set_tested 'false' "No successful tests run covers $HEAD_SHA (checked ${candidates[*]}); running the suite first."
 
-      - name: Restart queue workers
-        run: php artisan queue:restart
+  # The ~8% case: the merged content was never tested as a unit, so run the suite
+  # against it now, before anything is promoted. This is the one job that the old
+  # unconditional post-merge run was actually buying.
+  test-merged-content:
+    name: Test the merged commit
+    needs: verify-tested
+    if: needs.verify-tested.outputs.tested != 'true'
+    uses: ./.github/workflows/tests.yml
+    permissions:
+      contents: read
 
-  deploy-staging:
+  # One job serves all three branches. `environment` resolves to the pushed
+  # branch name, and every Hostinger detail below is read from that
+  # environment's secrets -- so develop, staging and main use identical step
+  # definitions against different hosts, users, ports and paths. That is why
+  # there is no `deploy-develop`/`deploy-staging`/`deploy-main` trio here and no
+  # composite action under .github/actions/ for the sequence: environment-scoped
+  # secrets collapse what used to be three near-identical copies into a single
+  # call site, and a one-caller composite action would be indirection for its
+  # own sake.
+  #
+  # Protection rules on the `main` environment (required reviewers, wait timers)
+  # are configured in repository settings and gate this job automatically.
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    needs: [verify-tested, test-merged-content]
+    # `always()` is required because test-merged-content is skipped in the common
+    # case, and a skipped dependency would otherwise skip this job too. The
+    # explicit result checks below are what actually gate the promotion: verify
+    # must have succeeded, and the suite must have either passed or not been
+    # needed -- never failed, never cancelled. The ref_name check keeps a
+    # workflow_dispatch from an unrelated branch from resolving to an
+    # environment that does not exist.
     if: >-
-      github.event.workflow_run.head_branch == 'staging' &&
-      github.event.workflow_run.conclusion == 'success'
-    runs-on: [self-hosted, Windows]
-    defaults:
-      run:
-        shell: cmd
-        working-directory: C:\sites\warehouse_management-staging
+      always() &&
+      contains(fromJSON('["develop", "staging", "main"]'), github.ref_name) &&
+      needs.verify-tested.result == 'success' &&
+      (needs.test-merged-content.result == 'success' ||
+       needs.test-merged-content.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
 
     steps:
-      - name: Sync repository to tested commit
+      - name: Authorise the runner against the Hostinger host
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_SSH_KNOWN_HOSTS }}
+          # Passed as an environment variable rather than interpolated into the
+          # script below: GitHub substitutes `${{ }}` into the run block as text
+          # before bash parses it, so a branch name carrying shell metacharacters
+          # would execute. workflow_dispatch can run this on any branch, so the
+          # name is not trustworthy just because the push triggers are fixed.
+          ENVIRONMENT_NAME: ${{ github.ref_name }}
         run: |
-          git fetch origin staging
-          git reset --hard ${{ github.event.workflow_run.head_sha }}
+          set -euo pipefail
 
-      - name: Check if dependencies changed since last deploy
-        id: deps
-        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
+          if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::error::HOSTINGER_SSH_PRIVATE_KEY and HOSTINGER_SSH_KNOWN_HOSTS must both be set on the $ENVIRONMENT_NAME environment."
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # A trailing newline is mandatory: OpenSSH rejects a key file whose
+          # final line is unterminated, and GitHub strips it from the secret.
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Pinning the host key here is what lets StrictHostKeyChecking stay on
+          # below. Without it the first connection would either fail or, worse,
+          # be told to trust whatever answers on that address.
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Check out the deploy script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Deploy to Hostinger over SSH
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+          # A variable rather than a secret: a deploy path is not a credential,
+          # and an unmasked value means a missing or wrong one is legible in the
+          # run log instead of rendering as `***` like every secret beside it.
+          DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH }}
+          # hPanel picks the PHP version per domain, but the `php` on a plain SSH
+          # PATH is whatever the account defaults to -- often an older release.
+          # Point this at the 8.5 binary (e.g. /opt/alt/php85/usr/bin/php).
+          PHP_BINARY: ${{ secrets.HOSTINGER_PHP_BINARY || 'php' }}
+          KEEP_RELEASES: ${{ vars.HOSTINGER_KEEP_RELEASES || '5' }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+          TARGET_SHA: ${{ github.sha }}
+          ENVIRONMENT_NAME: ${{ github.ref_name }}
         run: |
-          $currentHash = (Get-FileHash composer.lock -Algorithm SHA256).Hash + '|' + (Get-FileHash package-lock.json -Algorithm SHA256).Hash
-          $markerFile = '.deploy-deps.hash'
-          $previousHash = if (Test-Path $markerFile) { (Get-Content $markerFile -Raw).Trim() } else { '' }
-          $changed = $currentHash -ne $previousHash
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "changed=$($changed.ToString().ToLower())" -Encoding utf8
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "hash=$currentHash" -Encoding utf8
+          set -euo pipefail
 
-      - name: Install PHP dependencies (production)
-        if: steps.deps.outputs.changed == 'true'
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+          # An unset DEPLOY_PATH would otherwise reach the host as an empty
+          # path and fail there, reported as a remote shell error rather than
+          # as the configuration gap it is. Name the missing setting instead.
+          if [ -z "$DEPLOY_PATH" ]; then
+            echo "::error::HOSTINGER_DEPLOY_PATH is not set as a variable on the $ENVIRONMENT_NAME environment."
+            exit 1
+          fi
 
-      - name: Install Node dependencies
-        if: steps.deps.outputs.changed == 'true'
-        run: npm ci
+          # The script is fed on stdin rather than copied to the host, so the
+          # version that runs is always the one from the commit being deployed
+          # and nothing is left behind on failure. A login shell so the profile
+          # that puts nvm's node/npm and composer on PATH is sourced; a bare
+          # `bash -s` gets neither on Hostinger.
+          ssh -i ~/.ssh/deploy_key \
+              -p "$SSH_PORT" \
+              -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes \
+              "$SSH_USER@$SSH_HOST" \
+              "DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") \
+               TARGET_BRANCH=$(printf '%q' "$TARGET_BRANCH") \
+               TARGET_SHA=$(printf '%q' "$TARGET_SHA") \
+               PHP_BINARY=$(printf '%q' "$PHP_BINARY") \
+               KEEP_RELEASES=$(printf '%q' "$KEEP_RELEASES") \
+               bash -l -s" < .github/scripts/deploy-remote.sh
 
-      - name: Record installed dependency hash
-        if: steps.deps.outputs.changed == 'true'
-        shell: powershell -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: Set-Content -Path .deploy-deps.hash -Value '${{ steps.deps.outputs.hash }}' -NoNewline
-
-      - name: Build frontend assets
-        run: npm run build
-
-      - name: Ensure SQLite database files exist
-        run: |
-          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
-          php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
-          php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
-          php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
-
-      - name: Run database migrations
-        run: php artisan migrate --force
-
-      - name: Refresh application caches
-        run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-
-      - name: Ensure storage symlink exists
-        run: php artisan storage:link
-
-      - name: Restart queue workers
-        run: php artisan queue:restart
+      - name: Remove deploy credentials from the runner
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

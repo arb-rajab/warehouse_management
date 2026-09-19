@@ -28,7 +28,7 @@ export function isCellExpiringWithin(
     today: string,
     withinDays: number | null,
 ): boolean {
-    if (!cell?.pallet || withinDays === null) {
+    if (!cell?.pallet?.expiration_date || withinDays === null) {
         return false;
     }
 
@@ -47,7 +47,7 @@ export function isCellExpired(
     cell: MatchableCell | null,
     today: string,
 ): boolean {
-    if (!cell?.pallet) {
+    if (!cell?.pallet?.expiration_date) {
         return false;
     }
 

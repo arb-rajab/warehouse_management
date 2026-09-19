@@ -75,6 +75,9 @@ class UserController extends Controller
     {
         $user = User::create($request->safe()->only(['name', 'email', 'password']));
 
+        $user->must_change_password = true;
+        $user->save();
+
         $user->syncRoles($request->boolean('is_admin') ? ['admin'] : []);
 
         return redirect()->route('admin.users.index');
@@ -95,6 +98,7 @@ class UserController extends Controller
 
         if ($request->filled('password')) {
             $user->password = $request->validated('password');
+            $user->must_change_password = true;
         }
 
         $user->save();

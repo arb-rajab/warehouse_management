@@ -22,9 +22,4 @@ class ShowRowsFullRequest extends FormRequest
             ...$this->productStatusFilterRules(),
         ];
     }
-
-    protected function passedValidation(): void
-    {
-        $this->resolveProductStatusFilter();
-    }
 }

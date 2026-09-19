@@ -20,4 +20,5 @@ return [
     'rows_already_in_active_round' => 'These rows are already being verified in another round: :rows',
     'cell_outside_round_rows' => 'This slot is not in one of the rows this round covers.',
     'qr_label_description' => 'Row :row · Cell :cell · Level :flat',
+    'password_same_as_current' => 'The new password must be different from your current password.',
 ];

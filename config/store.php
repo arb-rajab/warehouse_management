@@ -7,10 +7,10 @@ return [
     | Store App Asset Base URL
     |--------------------------------------------------------------------------
     |
-    | The store app owns the shared `products` and `uploads` tables, and stores
-    | only a relative file path in `uploads.file_name` — the absolute URL is
-    | built by whichever app serves the file. This is that app's public base
-    | URL, used by Product::imageUrl(). When an upload carries its own
+    | The store app owns the `uploads` table this app reads, and stores only a
+    | relative file path in `uploads.file_name` — the absolute URL is built by
+    | whichever app serves the file. This is the store app's public base URL,
+    | used by Product::imageUrl(). When an upload carries its own
     | `external_link` (a CDN or S3 URL), that wins and this is not consulted.
     |
     | A null value means product images resolve to null rather than to a
@@ -26,8 +26,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | The full REST endpoint `products:sync` (SyncProductsCommand) polls on a
-    | schedule to pull product name/Arabic name/active-status updates into the
-    | shared `products` table. The store's API key is embedded in the URL
+    | schedule to pull product name/Arabic name/active-status updates into this
+    | app's `products` table. The store's API key is embedded in the URL
     | path itself, which is why this is one opaque env value rather than a
     | base URL plus a separate key. See .ai/rules/shared-database.md.
     |

@@ -56,7 +56,7 @@ class ProductController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $products = Product::query()
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])

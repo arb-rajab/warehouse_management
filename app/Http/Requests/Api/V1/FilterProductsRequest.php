@@ -24,9 +24,4 @@ class FilterProductsRequest extends FormRequest
             ...$this->productStatusFilterRules(),
         ];
     }
-
-    protected function passedValidation(): void
-    {
-        $this->resolveProductStatusFilter();
-    }
 }

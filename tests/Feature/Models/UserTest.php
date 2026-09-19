@@ -45,6 +45,17 @@ test('the password is stored hashed rather than in plain text', function () {
     expect(Hash::check('plain-text-password', $user->fresh()->password))->toBeTrue();
 });
 
+test('must_change_password is cast to a boolean and defaults to false', function () {
+    $user = User::factory()->create();
+
+    expect($user->fresh()->must_change_password)->toBeFalse();
+
+    $user->must_change_password = true;
+    $user->save();
+
+    expect($user->fresh()->must_change_password)->toBeTrue();
+});
+
 test('password and remember_token are hidden from array and json representations', function () {
     $user = User::factory()->create();
 

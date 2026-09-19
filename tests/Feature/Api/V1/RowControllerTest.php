@@ -95,6 +95,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'product_id' => $product->id,
             'product_name' => 'Widgets',
             'product_ar_name' => 'ودجات',
+            'product_active' => true,
             'product_image_url' => 'https://cdn.example.com/widgets.png',
             'expiration_date' => $pallet->expiration_date->toDateString(),
             'added_at' => $pallet->created_at->toIso8601String(),

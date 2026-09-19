@@ -33,6 +33,11 @@ trait FiltersByProductStatus
         ];
     }
 
+    protected function passedValidation(): void
+    {
+        $this->resolveProductStatusFilter();
+    }
+
     protected function resolveProductStatusFilter(): void
     {
         if (! $this->filled('product_status')) {

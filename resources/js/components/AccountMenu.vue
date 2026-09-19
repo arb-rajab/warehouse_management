@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { ChevronDown, CircleUser, LogOut } from '@lucide/vue';
-import { destroy } from '@/actions/App/Http/Controllers/LoginController';
+import { ChevronDown, CircleUser } from '@lucide/vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
-import { confirmLogout } from '@/lib/confirm';
+import LogoutLink from '@/components/LogoutLink.vue';
 import { t } from '@/lib/i18n';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
@@ -37,16 +35,10 @@ const { open, containerRef } = useDismissibleListbox(() => 0);
             >
                 <LanguageSwitcher />
             </div>
-            <Link
-                :href="destroy()"
-                as="button"
-                :on-before="confirmLogout"
+            <LogoutLink
                 class="mt-2 flex w-full cursor-pointer items-center gap-1.5 rounded px-1 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
                 @click="open = false"
-            >
-                <LogOut class="h-4 w-4" />
-                {{ t('nav.logout') }}
-            </Link>
+            />
         </div>
     </div>
 </template>

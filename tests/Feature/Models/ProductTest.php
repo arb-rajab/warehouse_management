@@ -2,6 +2,7 @@
 
 use App\Models\Product;
 use App\Models\Upload;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
@@ -171,6 +172,93 @@ test('searchByName matches a multi-word term whose words split across name and a
     $results = Product::query()->searchByName('Widget زرقاء')->get();
 
     expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+/**
+ * The MySQL/MariaDB half of the search cannot be executed here — CI and the
+ * local test connection are sqlite (phpunit.xml), which has no
+ * `MATCH ... AGAINST` at all. These tests therefore pin the *compiled SQL and
+ * bindings* against the MySQL grammar instead, which needs no server: Laravel
+ * resolves a connection's query grammar without ever touching PDO, and
+ * `toSql()` never connects. That is what keeps the production code path from
+ * being wholly untested.
+ *
+ * @return Builder<Product>
+ */
+function mysqlProductSearch(?string $term): Builder
+{
+    return Product::on('mysql')->searchByName($term);
+}
+
+test('searchByName matches through the fulltext index on mysql, requiring every word', function () {
+    $query = mysqlProductSearch('Widget Blue');
+
+    // One MATCH over both indexed columns: MySQL treats them as a single
+    // document, so `+word` is the across-columns OR and the repeated `+` is
+    // the per-word AND — the same contract the LIKE chain encoded.
+    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode)');
+    expect($query->getBindings())->toBe(['+Widget* +Blue*']);
+});
+
+test('searchByName matches an Arabic term through the fulltext index on mysql', function () {
+    $query = mysqlProductSearch('ودجة زرقاء');
+
+    expect($query->getBindings())->toBe(['+ودجة* +زرقاء*']);
+});
+
+test('searchByName keeps a word shorter than the minimum token size on LIKE', function () {
+    // `innodb_ft_min_token_size` (3 by default) leaves such a word out of the
+    // index entirely, so `+ab*` would match nothing at all rather than
+    // matching more loosely. The admin's type-ahead dropdown sends one- and
+    // two-letter terms constantly, so this is the common case, not an edge one.
+    $query = mysqlProductSearch('ab Widget');
+
+    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode) and (`name` like ? or `ar_name` like ?)');
+    expect($query->getBindings())->toBe(['+Widget*', '%ab%', '%ab%']);
+});
+
+test('searchByName keeps an InnoDB stopword on LIKE', function () {
+    // Boolean mode strips stopwords from the query, so `+for*` matches
+    // nothing — a term like "Case for Phone" would lose every result.
+    $query = mysqlProductSearch('Case for Phone');
+
+    expect($query->getBindings())->toBe(['+Case* +Phone*', '%for%', '%for%']);
+});
+
+test('searchByName keeps a word carrying punctuation on LIKE', function () {
+    // MySQL's default parser splits a word on every non-alphanumeric
+    // character, so `+Wid-get*` could never match the product literally named
+    // "Wid-get".
+    $query = mysqlProductSearch('Wid-get Blue');
+
+    expect($query->getBindings())->toBe(['+Blue*', '%Wid-get%', '%Wid-get%']);
+});
+
+test('searchByName never lets boolean-mode operators reach the fulltext parser', function () {
+    // The expression is built only from alphanumeric words plus the `+` and
+    // `*` the scope adds itself, so a term of operators cannot invert the
+    // query (`-word` excludes in boolean mode) or break its syntax — every
+    // such word falls through to an exact LIKE instead.
+    $query = mysqlProductSearch('-Widget "Blue"');
+
+    expect($query->toSql())->not->toContain('match');
+    expect($query->getBindings())->toBe(['%-Widget%', '%-Widget%', '%"Blue"%', '%"Blue"%']);
+});
+
+test('searchByName adds no condition at all for a blank term on mysql', function () {
+    expect(mysqlProductSearch(null)->toSql())->toBe('select * from `products`');
+    expect(mysqlProductSearch('   ')->toSql())->toBe('select * from `products`');
+});
+
+test('searchByName stays on LIKE for a connection whose grammar has no fulltext support', function () {
+    // Laravel's base query grammar throws outright on whereFullText(), so the
+    // sqlite fallback is what keeps the whole suite — and any sqlite-backed
+    // local checkout — from erroring on every product search.
+    $query = Product::query()->searchByName('Widget Blue');
+
+    expect(DB::connection()->getDriverName())->toBe('sqlite');
+    expect($query->toSql())->not->toContain('match');
+    expect($query->getBindings())->toBe(['%Widget%', '%Widget%', '%Blue%', '%Blue%']);
 });
 
 test('image_url resolves through the thumbnail upload, with noise from another product', function () {
