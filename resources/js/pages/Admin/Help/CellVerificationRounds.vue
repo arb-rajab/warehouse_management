@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Download } from '@lucide/vue';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
+import {
+    filterClearButtonClass,
+    filterSectionHeadingClass as sectionHeadingClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
 const sections = ['what', 'reports', 'exporting'];
@@ -31,6 +36,12 @@ const sections = ['what', 'reports', 'exporting'];
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t(`help.cellVerificationRounds.${section}.body`) }}
                 </p>
+                <HelpUiPreview v-if="section === 'exporting'" class="mt-2">
+                    <span tabindex="-1" :class="filterClearButtonClass">
+                        <Download class="h-4 w-4" />
+                        {{ t('cellVerificationReport.export') }}
+                    </span>
+                </HelpUiPreview>
             </section>
 
             <Link

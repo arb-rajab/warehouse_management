@@ -47,6 +47,23 @@ describe('Help Rows', () => {
         expect(wrapper.text()).toContain(t('help.rows.deleting.body'));
     });
 
+    it('renders a preview of the add/edit/delete row controls', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('rows.index.addRow'));
+        expect(wrapper.text()).toContain(t('rows.show.editRow'));
+        expect(wrapper.text()).toContain(t('rows.index.delete'));
+    });
+
+    it('links to the rows page', () => {
+        const wrapper = mountPage();
+
+        const rowsLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('rows.index.title'));
+        expect(rowsLink?.attributes('href')).toBe('/admin/rows');
+    });
+
     it('links back to the help landing page', () => {
         const wrapper = mountPage();
 

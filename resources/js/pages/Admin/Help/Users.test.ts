@@ -1,3 +1,4 @@
+import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -42,6 +43,33 @@ describe('Help Users', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('help.users.roles.body'));
+    });
+
+    it('renders a preview of the "Add user" button and the "Admin access" checkbox', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('users.index.addUser'));
+        expect(wrapper.text()).toContain(t('users.fields.adminAccess'));
+        expect(
+            wrapper.get('input[type="checkbox"]').attributes('checked'),
+        ).toBeDefined();
+    });
+
+    it('renders a preview of both the admin and mobile-user role badges', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('users.index.roleAdmin'));
+        expect(wrapper.text()).toContain(t('users.index.roleMobile'));
+        expect(wrapper.findComponent(ShieldCheck).exists()).toBe(true);
+    });
+
+    it('links to the users page', () => {
+        const wrapper = mountPage();
+
+        const usersLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('users.index.title'));
+        expect(usersLink?.attributes('href')).toBe('/admin/users');
     });
 
     it('links back to the help landing page', () => {
