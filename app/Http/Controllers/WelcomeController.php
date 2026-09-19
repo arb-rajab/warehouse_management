@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class WelcomeController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(): RedirectResponse
     {
-        return Inertia::render('Welcome');
+        return redirect()->away('https://albaraka-holland.nl/');
     }
 }
