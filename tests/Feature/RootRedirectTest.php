@@ -3,22 +3,18 @@
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('a guest visiting the root sees the welcome page', function () {
+test('a guest visiting the root is redirected to the external site', function () {
     $response = $this->get('/');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Welcome')
-    );
+    $response->assertRedirect('https://albaraka-holland.nl/');
 });
 
-test('a signed-in admin visiting the root still sees the welcome page', function () {
+test('a signed-in admin visiting the root is redirected to the external site', function () {
     actingAsAdmin();
 
     $response = $this->get('/');
 
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Welcome')
-    );
+    $response->assertRedirect('https://albaraka-holland.nl/');
 });
 
 test('a signed-in admin visiting the admin index lands on the dashboard', function () {
