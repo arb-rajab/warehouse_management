@@ -33,6 +33,10 @@
             "second": "s"
         }
     },
+    "welcome": {
+        "brand": "Warehouse Admin",
+        "message": "Under construction."
+    },
     "auth": {
         "login": {
             "brand": "Warehouse Admin",

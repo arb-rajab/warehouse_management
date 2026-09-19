@@ -57,7 +57,7 @@ test('a user with must_change_password set can still submit the change-password 
 });
 
 test('a guest is unaffected by the middleware', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk();
 });

@@ -17,5 +17,5 @@ test('dismissing the logout confirmation stays signed in, accepting it logs out'
     await openAccountMenu(page);
     page.once('dialog', (dialog) => dialog.accept());
     await logoutButton.click();
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/admin\/login$/);
 });
