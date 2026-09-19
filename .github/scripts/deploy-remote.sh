@@ -54,7 +54,11 @@ fail() {
 live_artisan() {
     local root="$RELEASE_DIR"
 
-    if [ -L "$CURRENT_LINK" ]; then
+    # -d, not -L: `current` is a symlink either way, but -L is true even when
+    # it dangles, and a dangling one means there is no live release to run
+    # against. That happens after a failure that removed the release it pointed
+    # at, and `cd` into it then kills the deploy that would have repaired it.
+    if [ -d "$CURRENT_LINK" ]; then
         root="$CURRENT_LINK"
     fi
 
@@ -122,7 +126,7 @@ on_exit() {
 
         rm -rf "$RELEASE_DIR"
 
-        if [ -L "$CURRENT_LINK" ]; then
+        if [ -d "$CURRENT_LINK" ]; then
             log "Live release is unchanged: $(readlink "$CURRENT_LINK")"
         else
             log "No release was ever published; nothing is being served yet"
@@ -183,6 +187,14 @@ mkdir -p "$RELEASE_DIR"
 git -C "$REPO_DIR" archive "$TARGET_SHA" | tar -x -C "$RELEASE_DIR"
 
 log "Linking shared state into the release"
+
+# Created rather than demanded: a missing storage tree is something this script
+# can put right, so it does. (A missing .env or repo checkout is not -- see the
+# preflight above, which fails on those instead of inventing them.)
+for storage_subdir in app/public app/private framework/cache/data framework/sessions framework/views logs; do
+    mkdir -p "$SHARED_DIR/storage/$storage_subdir"
+done
+
 rm -rf "$RELEASE_DIR/storage"
 ln -s "$SHARED_DIR/storage" "$RELEASE_DIR/storage"
 ln -s "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
@@ -216,7 +228,7 @@ if [ -d "$SHARED_DIR/public" ]; then
 fi
 
 previous_release=''
-if [ -L "$CURRENT_LINK" ]; then
+if [ -d "$CURRENT_LINK" ]; then
     previous_release="$(readlink -f "$CURRENT_LINK")"
 fi
 
@@ -303,7 +315,6 @@ log "Refreshing application caches"
 # The link it would create is the one pair in config/filesystems.php, and bash
 # makes it without PHP's help. Absolute target, so it does not depend on
 # resolving through the release's own storage symlink.
-mkdir -p "$SHARED_DIR/storage/app/public"
 ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
 
 # The publish step. Everything above can fail without consequence; past this
@@ -368,7 +379,7 @@ prune_old_entries() {
 log "Pruning old releases (keeping $KEEP_RELEASES)"
 
 published_name=''
-if [ -L "$CURRENT_LINK" ]; then
+if [ -d "$CURRENT_LINK" ]; then
     published_name="$(basename "$(readlink -f "$CURRENT_LINK")")"
 fi
 

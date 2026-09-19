@@ -193,6 +193,29 @@ check "the database keeps the migration rather than being restored" \
     "$([ "$(tables)" != "$tables_before" ] && echo kept || echo restored)" "kept"
 check "site is out of maintenance" "$(maintenance_state)" "off"
 
+echo "a dangling current symlink from an earlier failure is repaired, not fatal"
+setup
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
+# The state a failure leaves behind when it removes the release `current` points
+# at. `current` is still a symlink, so a -L test would call it a live release
+# and try to cd into nothing -- killing the very deploy that would repair it.
+rm -rf "$(readlink "$WORK/host/current")"
+check "current dangles before the deploy" \
+    "$({ [ -L "$WORK/host/current" ] && [ ! -d "$WORK/host/current" ]; } && echo yes || echo no)" "yes"
+deploy "$(commit_new_revision)" && rc=0 || rc=$?
+check "exits successfully" "$rc" "0"
+check "current resolves again" "$([ -d "$WORK/host/current" ] && echo yes || echo no)" "yes"
+check "site is live" "$(maintenance_state)" "off"
+
+echo "a missing shared storage tree is created rather than failing the deploy"
+setup
+rm -rf "$WORK/host/shared/storage"
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" && rc=0 || rc=$?
+check "exits successfully" "$rc" "0"
+check "framework/views exists" \
+    "$([ -d "$WORK/host/shared/storage/framework/views" ] && echo yes || echo no)" "yes"
+check "logs exists" "$([ -d "$WORK/host/shared/storage/logs" ] && echo yes || echo no)" "yes"
+
 echo "a truncated dump aborts before migrating"
 setup
 deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
