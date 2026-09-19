@@ -11,11 +11,12 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
+use App\Http\Controllers\WelcomeController;
 use App\Http\Middleware\RestrictToAllowedIps;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 
-Route::redirect('/', '/login');
+Route::get('/', WelcomeController::class)->name('welcome');
 
 Route::post('locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 
@@ -24,8 +25,8 @@ Route::get('health', HealthCheckResultsController::class)
     ->name('health');
 
 Route::middleware('guest')->group(function () {
-    Route::get('login', [LoginController::class, 'create'])->name('login');
-    Route::post('login', [LoginController::class, 'store'])->middleware(['honeypot', 'throttle:login']);
+    Route::get('admin/login', [LoginController::class, 'create'])->name('login');
+    Route::post('admin/login', [LoginController::class, 'store'])->middleware(['honeypot', 'throttle:login']);
 });
 
 Route::middleware('auth')->group(function () {

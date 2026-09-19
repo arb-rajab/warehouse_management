@@ -4,7 +4,7 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the login screen can be rendered', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Auth/Login')
@@ -12,7 +12,7 @@ test('the login screen can be rendered', function () {
 });
 
 test('the login screen shares honeypot configuration', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Auth/Login')
@@ -26,7 +26,7 @@ test('the login screen shares honeypot configuration', function () {
 test('a login submission that fills in the honeypot field is rejected as spam', function () {
     $user = User::factory()->create(['password' => 'correct-password']);
 
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => $user->email,
         'password' => 'correct-password',
         config('honeypot.name_field_name').'_suffix' => 'filled-by-a-bot',
@@ -39,7 +39,7 @@ test('a login submission that fills in the honeypot field is rejected as spam', 
 test('a user can log in with correct credentials', function () {
     $user = User::factory()->create(['password' => 'correct-password']);
 
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => $user->email,
         'password' => 'correct-password',
     ]);
@@ -51,7 +51,7 @@ test('a user can log in with correct credentials', function () {
 test('logging in with the wrong password is rejected', function () {
     $user = User::factory()->create(['password' => 'correct-password']);
 
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => $user->email,
         'password' => 'wrong-password',
     ]);
@@ -61,7 +61,7 @@ test('logging in with the wrong password is rejected', function () {
 });
 
 test('logging in with an unknown email is rejected', function () {
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => 'nobody@example.com',
         'password' => 'whatever',
     ]);
@@ -71,7 +71,7 @@ test('logging in with an unknown email is rejected', function () {
 });
 
 test('logging in with an overly long email or password is rejected', function () {
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => str_repeat('a', 256).'@example.com',
         'password' => str_repeat('a', 256),
     ]);
@@ -83,7 +83,7 @@ test('logging in with an overly long email or password is rejected', function ()
 test('a mobile app user cannot log in to the admin panel', function () {
     $mobileUser = User::factory()->mobileUser()->create(['password' => 'correct-password']);
 
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => $mobileUser->email,
         'password' => 'correct-password',
     ]);
@@ -96,13 +96,13 @@ test('login attempts are throttled after too many failures', function () {
     $user = User::factory()->create(['password' => 'correct-password']);
 
     foreach (range(1, 5) as $_) {
-        $this->post('/login', [
+        $this->post('/admin/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
         ])->assertSessionHasErrors('email');
     }
 
-    $response = $this->post('/login', [
+    $response = $this->post('/admin/login', [
         'email' => $user->email,
         'password' => 'wrong-password',
     ]);
@@ -116,14 +116,14 @@ test('login attempts against one email are throttled even when spread across man
 
     foreach (range(1, 20) as $i) {
         $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])
-            ->post('/login', [
+            ->post('/admin/login', [
                 'email' => $user->email,
                 'password' => 'wrong-password',
             ])->assertSessionHasErrors('email');
     }
 
     $response = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
-        ->post('/login', [
+        ->post('/admin/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
         ]);
@@ -135,7 +135,7 @@ test('login attempts against one email are throttled even when spread across man
 test('a logged-in user visiting the login page is redirected away', function () {
     actingAsAdmin();
 
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertRedirect(route('admin.dashboard'));
 });
