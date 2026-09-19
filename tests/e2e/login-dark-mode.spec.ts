@@ -5,7 +5,7 @@ test('login form text has readable contrast against its input background in dark
     page,
 }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto('/login');
+    await page.goto('/admin/login');
 
     const email = page.locator('#email');
     await email.fill('someone@example.com');

@@ -3,19 +3,21 @@
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('a guest visiting the root is sent to the login page', function () {
+test('a guest visiting the root sees the welcome page', function () {
     $response = $this->get('/');
 
-    $response->assertRedirect('/login');
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Welcome')
+    );
 });
 
-test('a signed-in admin visiting the root lands on the dashboard', function () {
+test('a signed-in admin visiting the root still sees the welcome page', function () {
     actingAsAdmin();
 
-    $response = $this->followingRedirects()->get('/');
+    $response = $this->get('/');
 
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Dashboard/Index')
+        fn (Assert $page) => $page->component('Welcome')
     );
 });
 
@@ -41,15 +43,4 @@ test('an unauthenticated caller is redirected to login when visiting the admin i
     $response = $this->get('/admin');
 
     $response->assertRedirect(route('login'));
-});
-
-test('a mobile app user visiting the root ends up forbidden, not stuck redirecting', function () {
-    // "/" -> "/login" -> (already authenticated) "/admin" -> 403, since a
-    // signed-in caller is bounced off /login before role:admin ever rejects
-    // them at /admin itself. Distinct from hitting /admin directly.
-    $mobileUser = User::factory()->mobileUser()->create();
-
-    $response = $this->actingAs($mobileUser)->followingRedirects()->get('/');
-
-    $response->assertForbidden();
 });

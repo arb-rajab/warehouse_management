@@ -1,7 +1,7 @@
 <?php
 
 test('responses include the standard secure headers', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk();
     $response->assertHeader('X-Content-Type-Options', 'nosniff');
@@ -15,19 +15,19 @@ test('responses include the standard secure headers', function () {
 });
 
 test('responses carry an HSTS header', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     expect($response->headers->get('Strict-Transport-Security'))->toContain('max-age=31536000');
 });
 
 test('responses carry a Permissions-Policy header', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     expect($response->headers->get('Permissions-Policy'))->not->toBeEmpty();
 });
 
 test('responses carry a content security policy naming every directive we rely on', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     // Every directive is asserted rather than just the header's presence: the
     // published config ships CSP "enabled" with an entirely empty policy, which
@@ -44,7 +44,7 @@ test('responses carry a content security policy naming every directive we rely o
 });
 
 test('the content security policy is report-only until it has been walked in a browser', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertHeaderMissing('Content-Security-Policy');
 
@@ -52,7 +52,7 @@ test('the content security policy is report-only until it has been walked in a b
 });
 
 test('headers that are configured to be withheld are absent', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertHeaderMissing('X-Powered-By');
     $response->assertHeaderMissing('Server');
@@ -64,7 +64,7 @@ test('a request blocked by the WAF still carries the secure headers', function (
     // SecureHeaders has to wrap BlockMaliciousRequests: the WAF aborts from
     // inside the pipeline, so anything appended after it never runs on a
     // blocked request and those 403s would ship bare.
-    $response = $this->get('/login?search='.urlencode('1 UNION SELECT * FROM users'));
+    $response = $this->get('/admin/login?search='.urlencode('1 UNION SELECT * FROM users'));
 
     $response->assertForbidden();
     $response->assertHeader('X-Content-Type-Options', 'nosniff');

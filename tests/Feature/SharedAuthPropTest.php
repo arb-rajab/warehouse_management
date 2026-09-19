@@ -20,7 +20,7 @@ test('the shared auth prop exposes only the fields the UI reads', function () {
 });
 
 test('the shared auth prop is null for a guest', function () {
-    $response = $this->get('/login');
+    $response = $this->get('/admin/login');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Auth/Login')
