@@ -199,6 +199,15 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.text()).toContain(t('cells.empty'));
     });
 
+    it('links the help icon to the cells help page', () => {
+        const wrapper = mountPage([], []);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/cells');
+    });
+
     it('does not show an action error banner absent an action error', () => {
         const wrapper = mountPage([], []);
 

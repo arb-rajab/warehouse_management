@@ -27,10 +27,12 @@ import {
     watch,
 } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
@@ -659,6 +661,7 @@ watch(
     <AdminLayout>
         <PageHeader :title="t('cells.title')">
             <div class="flex items-center gap-4">
+                <HelpLink :href="showHelp('cells')" />
                 <div v-if="hasActiveHighlight" class="flex items-center gap-2">
                     <span
                         data-testid="total-match-count"

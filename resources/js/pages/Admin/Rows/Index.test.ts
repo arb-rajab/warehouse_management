@@ -72,6 +72,15 @@ describe('Rows Index', () => {
         expect(addLink?.attributes('href')).toBe('/admin/rows/create');
     });
 
+    it('links the help icon to the rows help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe('/admin/help/rows');
+    });
+
     it('renders the letter, cell count, and flat count for a row', () => {
         const wrapper = mountPage([
             row({ letter: 'B', cells_count: 3, flats_count: 4 }),

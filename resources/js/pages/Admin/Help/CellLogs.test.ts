@@ -1,0 +1,78 @@
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
+import { t } from '@/lib/i18n';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import CellLogs from './CellLogs.vue';
+
+const { usePageMock } = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+}));
+
+vi.mock('@inertiajs/vue3', async () => {
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+
+    return {
+        Head: headStub,
+        Link: createLinkStub(),
+        usePage: usePageMock,
+    };
+});
+
+function mountPage() {
+    usePageMock.mockReturnValue({
+        url: '/admin/help/cell-logs',
+        props: defaultAuthProps(),
+    });
+
+    return mount(CellLogs);
+}
+
+describe('Help CellLogs', () => {
+    beforeEach(() => {
+        resetMocks({ usePageMock });
+    });
+
+    it('explains how to filter the activity log', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.cellLogs.filtering.body'));
+    });
+
+    it('explains what each action type means', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.cellLogs.actions.stored'));
+        expect(wrapper.text()).toContain(t('help.cellLogs.actions.opened'));
+        expect(wrapper.text()).toContain(t('help.cellLogs.actions.emptied'));
+        expect(wrapper.text()).toContain(
+            t('help.cellLogs.actions.transferred'),
+        );
+    });
+
+    it('renders the cell-state legend from the real cell state colors, not hardcoded labels', () => {
+        const wrapper = mountPage();
+
+        for (const state of CELL_STATES) {
+            expect(wrapper.text()).toContain(cellStateLabel(state));
+        }
+    });
+
+    it('links to the activity log page', () => {
+        const wrapper = mountPage();
+
+        const logLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('cellLog.title'));
+        expect(logLink?.attributes('href')).toBe('/admin/cell-logs');
+    });
+
+    it('links back to the help landing page', () => {
+        const wrapper = mountPage();
+
+        const backLink = wrapper
+            .findAll('a')
+            .find((a) => a.text() === t('help.backToHelp'));
+        expect(backLink?.attributes('href')).toBe('/admin/help');
+    });
+});

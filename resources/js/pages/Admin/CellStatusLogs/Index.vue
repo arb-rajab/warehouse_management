@@ -4,6 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { Check, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -12,6 +13,7 @@ import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -188,17 +190,20 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
     <AdminLayout>
         <PageHeader :title="t('cellLog.title')">
-            <button
-                type="button"
-                :class="filterTriggerButtonClass"
-                @click="filtersOpen = true"
-            >
-                <SlidersHorizontal class="h-4 w-4" />
-                {{ t('cellLog.filters.title') }}
-                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('cell-logs')" />
+                <button
+                    type="button"
+                    :class="filterTriggerButtonClass"
+                    @click="filtersOpen = true"
+                >
+                    <SlidersHorizontal class="h-4 w-4" />
+                    {{ t('cellLog.filters.title') }}
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
+                        {{ activeFilterCount }}
+                    </span>
+                </button>
+            </div>
         </PageHeader>
 
         <FilterDialog

@@ -14,10 +14,12 @@ import type { Component } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -129,6 +131,7 @@ function onProductIdsChange(ids: string[]): void {
     <AdminLayout>
         <PageHeader :title="t('dashboard.title')">
             <div class="flex items-center gap-4">
+                <HelpLink :href="showHelp('dashboard')" />
                 <FilterProductSelect
                     id="dashboard-product"
                     :model-value="productIdStrings"
