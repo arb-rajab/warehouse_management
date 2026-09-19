@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import DataTable from '@/components/DataTable.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -15,6 +16,28 @@ import { t } from '@/lib/i18n';
 
 const sections = ['defaultBoxes', 'settingBoxes'];
 const previewBoxCountDraft = ref('50');
+
+/**
+ * Matches ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS, the app's real default
+ * "expiring soon" window, so the previewed column label reads the same as
+ * the live Products page.
+ */
+const previewExpiringSoonDays = 45;
+
+/** Representative row for the products-table preview below — plain fixture data, never fetched. */
+const previewProducts = [
+    {
+        id: 1,
+        name: 'Example product',
+        boxes_count: 50,
+        full_cells_count: 12,
+        opened_cells_count: 3,
+        expired_cells_count: 1,
+        expiring_soon_count: 2,
+        activity_today_count: 4,
+        activity_week_count: 15,
+    },
+];
 </script>
 
 <template>
@@ -38,6 +61,73 @@ const previewBoxCountDraft = ref('50');
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
                     {{ t(`help.products.${section}.body`) }}
                 </p>
+                <HelpUiPreview
+                    v-if="section === 'settingBoxes'"
+                    inert
+                    class="mt-2 block"
+                >
+                    <DataTable
+                        :columns="[
+                            { label: t('products.columns.product') },
+                            { label: t('products.columns.boxesPerPallet') },
+                            {
+                                label: t('products.columns.full'),
+                                sortKey: 'full_cells_count',
+                            },
+                            {
+                                label: t('products.columns.opened'),
+                                sortKey: 'opened_cells_count',
+                            },
+                            {
+                                label: t('products.columns.expired'),
+                                sortKey: 'expired_cells_count',
+                            },
+                            {
+                                label: t('products.columns.expiringSoon', {
+                                    days: previewExpiringSoonDays,
+                                }),
+                                sortKey: 'expiring_soon_count',
+                            },
+                            {
+                                label: t('products.columns.activityToday'),
+                                sortKey: 'activity_today_count',
+                            },
+                            {
+                                label: t('products.columns.activityWeek'),
+                                sortKey: 'activity_week_count',
+                            },
+                        ]"
+                        :rows="previewProducts"
+                        :empty-message="t('products.empty')"
+                    >
+                        <template #row="{ row }">
+                            <td
+                                class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
+                            >
+                                {{ row.name }}
+                            </td>
+                            <td class="px-4 py-2">{{ row.boxes_count }}</td>
+                            <td class="px-4 py-2">
+                                {{ row.full_cells_count }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.opened_cells_count }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.expired_cells_count }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.expiring_soon_count }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.activity_today_count }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.activity_week_count }}
+                            </td>
+                        </template>
+                    </DataTable>
+                </HelpUiPreview>
                 <HelpUiPreview v-if="section === 'settingBoxes'" class="mt-2">
                     <button
                         type="button"

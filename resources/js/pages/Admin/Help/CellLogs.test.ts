@@ -68,6 +68,23 @@ describe('Help CellLogs', () => {
         }
     });
 
+    it('renders a preview of the activity-log table with its real column headers and an example row', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('cellLog.columns.cell'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.action'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.product'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.pallet'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.note'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.doneBy'));
+        expect(wrapper.text()).toContain(t('cellLog.columns.when'));
+
+        const table = wrapper.find('table');
+        expect(table.text()).toContain(t('cellLog.actions.stored'));
+        expect(table.text()).toContain('Example product');
+        expect(table.text()).toContain('Jane Doe');
+    });
+
     it('renders a preview of the real filter fields named in the filtering text', () => {
         const wrapper = mountPage();
 

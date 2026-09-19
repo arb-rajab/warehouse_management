@@ -61,6 +61,20 @@ describe('Help Rows', () => {
         expect(wrapper.text()).toContain(t('rows.index.hasPallets'));
     });
 
+    it('renders a preview of the Rows-list table with its real column headers and an example row', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('rows.index.columnLetter'));
+        expect(wrapper.text()).toContain(t('rows.index.columnCells'));
+        expect(wrapper.text()).toContain(t('rows.index.columnFlats'));
+        expect(wrapper.text()).toContain(t('rows.index.columnAction'));
+
+        const table = wrapper.find('table');
+        expect(table.text()).toContain('A');
+        expect(table.text()).toContain('10');
+        expect(table.text()).toContain('3');
+    });
+
     it('renders a preview of the row-creation form fields', () => {
         const wrapper = mountPage();
 

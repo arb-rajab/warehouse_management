@@ -44,6 +44,25 @@ describe('Help Products', () => {
         expect(wrapper.text()).toContain(t('help.products.settingBoxes.body'));
     });
 
+    it('renders a preview of the products table with its real column headers and an example row', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('products.columns.product'));
+        expect(wrapper.text()).toContain(t('products.columns.boxesPerPallet'));
+        expect(wrapper.text()).toContain(t('products.columns.full'));
+        expect(wrapper.text()).toContain(t('products.columns.opened'));
+        expect(wrapper.text()).toContain(t('products.columns.expired'));
+        expect(wrapper.text()).toContain(
+            t('products.columns.expiringSoon', { days: 45 }),
+        );
+        expect(wrapper.text()).toContain(t('products.columns.activityToday'));
+        expect(wrapper.text()).toContain(t('products.columns.activityWeek'));
+
+        const table = wrapper.find('table');
+        expect(table.text()).toContain('Example product');
+        expect(table.text()).toContain('50');
+    });
+
     it('renders a preview of the boxes-per-pallet control', () => {
         const wrapper = mountPage();
 
