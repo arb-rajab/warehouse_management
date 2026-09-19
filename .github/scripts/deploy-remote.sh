@@ -32,6 +32,7 @@ maintenance_engaged=0
 database_backup=''
 migrations_attempted=0
 mysql_defaults_file=''
+release_published=0
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -96,7 +97,16 @@ on_exit() {
     local exit_code=$?
     trap - EXIT
 
-    if [ "$exit_code" -ne 0 ]; then
+    if [ "$exit_code" -ne 0 ] && [ "$release_published" -eq 1 ]; then
+        # Past the symlink flip the new release is serving traffic and the
+        # migrations belong to it. Restoring the database here would leave live
+        # code running against a pre-migration schema, and deleting the release
+        # would leave `current` dangling -- both far worse than whatever
+        # post-publish step failed. Report it and leave the deploy standing.
+        echo
+        log "Deploy failed (exit $exit_code) AFTER publishing -- the release stays live"
+        log "Live release: $(readlink "$CURRENT_LINK")"
+    elif [ "$exit_code" -ne 0 ]; then
         echo
         log "Deploy failed (exit $exit_code) -- rolling back"
 
@@ -303,6 +313,7 @@ ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
 log "Publishing release $release_id"
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK.tmp"
 mv -Tf "$CURRENT_LINK.tmp" "$CURRENT_LINK"
+release_published=1
 
 log "Leaving maintenance mode"
 live_artisan up
@@ -314,50 +325,62 @@ maintenance_engaged=0
 log "Signalling queue workers to restart"
 live_artisan queue:restart
 
+# Housekeeping, and deliberately non-fatal: the release is already live by this
+# point, so a directory that would not delete is no reason to report the deploy
+# as failed.
+#
+# Entries are ordered by modification time, not by name. A release id is
+# <timestamp>-<sha>, so name order only tracks recency while the timestamps
+# differ -- two created in the same second are then ordered by their sha
+# suffix, which says nothing about which came first.
+#
+# The listing goes through a temp file rather than `< <(...)`: process
+# substitution needs /dev/fd, which the shell this runs in over ssh does not
+# provide. It failed there with "/dev/fd/63: No such file or directory" while
+# working fine on a CI runner.
+prune_old_entries() {
+    local directory="$1" entry_type="$2" delete_from="$3" always_keep="$4"
+    local listing kept entry
+
+    listing="$(mktemp)"
+
+    find "$directory" -mindepth 1 -maxdepth 1 -type "$entry_type" -printf '%T@ %f\n' \
+        | sort -rn | cut -d' ' -f2- > "$listing"
+
+    kept=0
+    while IFS= read -r entry; do
+        if [ -n "$always_keep" ] && [ "$entry" = "$always_keep" ]; then
+            continue
+        fi
+
+        kept=$((kept + 1))
+
+        if [ "$kept" -lt "$delete_from" ]; then
+            continue
+        fi
+
+        rm -rf "${directory:?}/$entry"
+    done < "$listing"
+
+    rm -f "$listing"
+}
+
 log "Pruning old releases (keeping $KEEP_RELEASES)"
 
-# Ordered by modification time, not by name. A release id is
-# <timestamp>-<sha>, so sorting by name only tracks recency while the
-# timestamps differ -- two releases created in the same second are then ordered
-# by their sha suffix, which says nothing about which came first. That made the
-# published release sort into the stale tail, where skipping it left one extra
-# directory behind, and could have deleted a newer release while keeping an
-# older one.
 published_name=''
 if [ -L "$CURRENT_LINK" ]; then
     published_name="$(basename "$(readlink -f "$CURRENT_LINK")")"
 fi
 
 # The published release is always kept and counts towards the total, so it is
-# excluded here and only KEEP_RELEASES - 1 others are retained.
-kept=0
-while IFS= read -r release_name; do
-    if [ "$release_name" = "$published_name" ]; then
-        continue
-    fi
-
-    kept=$((kept + 1))
-
-    if [ "$kept" -lt "$KEEP_RELEASES" ]; then
-        continue
-    fi
-
-    rm -rf "${RELEASES_DIR:?}/$release_name"
-done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' \
-    | sort -rn | cut -d' ' -f2-)
+# excluded from the tally and only KEEP_RELEASES - 1 others are retained.
+prune_old_entries "$RELEASES_DIR" d "$KEEP_RELEASES" "$published_name" \
+    || log "WARNING: could not prune old releases; they stay on disk"
 
 # Backups are only useful for the deploy they belong to; the database's own
-# backup schedule is a separate concern. Same ordering caveat as above.
-kept=0
-while IFS= read -r backup_name; do
-    kept=$((kept + 1))
-
-    if [ "$kept" -le "$KEEP_RELEASES" ]; then
-        continue
-    fi
-
-    rm -f "${SHARED_DIR:?}/backups/$backup_name"
-done < <(find "$SHARED_DIR/backups" -mindepth 1 -maxdepth 1 -type f -printf '%T@ %f\n' \
-    | sort -rn | cut -d' ' -f2-)
+# backup schedule is a separate concern. Nothing here is live, so all
+# KEEP_RELEASES of them are kept.
+prune_old_entries "$SHARED_DIR/backups" f "$((KEEP_RELEASES + 1))" '' \
+    || log "WARNING: could not prune old backups; they stay on disk"
 
 log "Deployed $TARGET_SHA as $release_id"
