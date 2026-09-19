@@ -82,12 +82,12 @@ restore_database() {
     # every later migrate with "table already exists". Drop everything first.
     {
         echo 'SET FOREIGN_KEY_CHECKS=0;'
-        mysql --defaults-extra-file="$mysql_defaults_file" -N -B -e 'SHOW TABLES;' \
+        mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" -N -B -e 'SHOW TABLES;' \
             | sed 's/.*/DROP TABLE IF EXISTS `&`;/'
         echo 'SET FOREIGN_KEY_CHECKS=1;'
-    } | mysql --defaults-extra-file="$mysql_defaults_file"
+    } | mysql --defaults-extra-file="$mysql_defaults_file" "$db_database"
 
-    mysql --defaults-extra-file="$mysql_defaults_file" < "$database_backup"
+    mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" < "$database_backup"
 
     log "Database restored to its state before this deploy"
 }
@@ -148,15 +148,17 @@ db_host="$(env_value DB_HOST)"
 # would be visible to anyone running `ps` on a shared host.
 mysql_defaults_file="$(mktemp)"
 chmod 600 "$mysql_defaults_file"
+# No `database=` here: mysqldump reads [client] too and maps that key to
+# --databases, which collides with the database named positionally and makes it
+# warn and ignore the option. Every call below names the database explicitly.
 cat > "$mysql_defaults_file" <<CNF
 [client]
 host=${db_host:-localhost}
 user=$db_username
 password="$db_password"
-database=$db_database
 CNF
 
-mysql --defaults-extra-file="$mysql_defaults_file" -e 'SELECT 1;' >/dev/null \
+mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" -e 'SELECT 1;' >/dev/null \
     || fail "Cannot connect to MySQL with the credentials in $SHARED_DIR/.env"
 
 # --------------------------------------------------------------------------
@@ -285,7 +287,14 @@ log "Refreshing application caches"
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan config:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan route:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan view:cache)
-(cd "$RELEASE_DIR" && "$PHP_BINARY" artisan storage:link)
+# Not `artisan storage:link`: Filesystem::link() calls symlink(), and falls
+# back to exec() when that is unavailable. This host disables both, so the
+# command dies with "Call to undefined function Illuminate\Filesystem\exec()".
+# The link it would create is the one pair in config/filesystems.php, and bash
+# makes it without PHP's help. Absolute target, so it does not depend on
+# resolving through the release's own storage symlink.
+mkdir -p "$SHARED_DIR/storage/app/public"
+ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
 
 # The publish step. Everything above can fail without consequence; past this
 # line the new release is the live one. ln -sfn writes the new target onto a
@@ -306,19 +315,49 @@ log "Signalling queue workers to restart"
 live_artisan queue:restart
 
 log "Pruning old releases (keeping $KEEP_RELEASES)"
-published="$(readlink -f "$CURRENT_LINK")"
-# shellcheck disable=SC2012
-ls -1 "$RELEASES_DIR" | sort -r | tail -n +"$((KEEP_RELEASES + 1))" | while read -r stale; do
-    stale_path="$RELEASES_DIR/$stale"
-    [ "$(readlink -f "$stale_path")" = "$published" ] && continue
-    rm -rf "$stale_path"
-done
+
+# Ordered by modification time, not by name. A release id is
+# <timestamp>-<sha>, so sorting by name only tracks recency while the
+# timestamps differ -- two releases created in the same second are then ordered
+# by their sha suffix, which says nothing about which came first. That made the
+# published release sort into the stale tail, where skipping it left one extra
+# directory behind, and could have deleted a newer release while keeping an
+# older one.
+published_name=''
+if [ -L "$CURRENT_LINK" ]; then
+    published_name="$(basename "$(readlink -f "$CURRENT_LINK")")"
+fi
+
+# The published release is always kept and counts towards the total, so it is
+# excluded here and only KEEP_RELEASES - 1 others are retained.
+kept=0
+while IFS= read -r release_name; do
+    if [ "$release_name" = "$published_name" ]; then
+        continue
+    fi
+
+    kept=$((kept + 1))
+
+    if [ "$kept" -lt "$KEEP_RELEASES" ]; then
+        continue
+    fi
+
+    rm -rf "${RELEASES_DIR:?}/$release_name"
+done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' \
+    | sort -rn | cut -d' ' -f2-)
 
 # Backups are only useful for the deploy they belong to; the database's own
-# backup schedule is a separate concern.
-# shellcheck disable=SC2012
-ls -1 "$SHARED_DIR/backups" | sort -r | tail -n +"$((KEEP_RELEASES + 1))" | while read -r stale; do
-    rm -f "$SHARED_DIR/backups/$stale"
-done
+# backup schedule is a separate concern. Same ordering caveat as above.
+kept=0
+while IFS= read -r backup_name; do
+    kept=$((kept + 1))
+
+    if [ "$kept" -le "$KEEP_RELEASES" ]; then
+        continue
+    fi
+
+    rm -f "${SHARED_DIR:?}/backups/$backup_name"
+done < <(find "$SHARED_DIR/backups" -mindepth 1 -maxdepth 1 -type f -printf '%T@ %f\n' \
+    | sort -rn | cut -d' ' -f2-)
 
 log "Deployed $TARGET_SHA as $release_id"
