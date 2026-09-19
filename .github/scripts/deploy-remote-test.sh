@@ -131,6 +131,9 @@ deploy "$(git -C "$WORK/origin" rev-parse HEAD)" && rc=0 || rc=$?
 check "exits successfully" "$rc" "0"
 check "current points at a release" "$([ -L "$WORK/host/current" ] && echo yes || echo no)" "yes"
 check "site is live" "$(maintenance_state)" "off"
+# storage:link cannot run on the target host, so the link is made in bash.
+check "public/storage links into shared storage" \
+    "$(readlink "$WORK/host/current/public/storage")" "$WORK/host/shared/storage/app/public"
 
 echo "a failed migration rolls the database back and keeps the old release live"
 before_tables="$(tables)"

@@ -82,12 +82,12 @@ restore_database() {
     # every later migrate with "table already exists". Drop everything first.
     {
         echo 'SET FOREIGN_KEY_CHECKS=0;'
-        mysql --defaults-extra-file="$mysql_defaults_file" -N -B -e 'SHOW TABLES;' \
+        mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" -N -B -e 'SHOW TABLES;' \
             | sed 's/.*/DROP TABLE IF EXISTS `&`;/'
         echo 'SET FOREIGN_KEY_CHECKS=1;'
-    } | mysql --defaults-extra-file="$mysql_defaults_file"
+    } | mysql --defaults-extra-file="$mysql_defaults_file" "$db_database"
 
-    mysql --defaults-extra-file="$mysql_defaults_file" < "$database_backup"
+    mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" < "$database_backup"
 
     log "Database restored to its state before this deploy"
 }
@@ -148,15 +148,17 @@ db_host="$(env_value DB_HOST)"
 # would be visible to anyone running `ps` on a shared host.
 mysql_defaults_file="$(mktemp)"
 chmod 600 "$mysql_defaults_file"
+# No `database=` here: mysqldump reads [client] too and maps that key to
+# --databases, which collides with the database named positionally and makes it
+# warn and ignore the option. Every call below names the database explicitly.
 cat > "$mysql_defaults_file" <<CNF
 [client]
 host=${db_host:-localhost}
 user=$db_username
 password="$db_password"
-database=$db_database
 CNF
 
-mysql --defaults-extra-file="$mysql_defaults_file" -e 'SELECT 1;' >/dev/null \
+mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" -e 'SELECT 1;' >/dev/null \
     || fail "Cannot connect to MySQL with the credentials in $SHARED_DIR/.env"
 
 # --------------------------------------------------------------------------
@@ -285,7 +287,14 @@ log "Refreshing application caches"
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan config:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan route:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan view:cache)
-(cd "$RELEASE_DIR" && "$PHP_BINARY" artisan storage:link)
+# Not `artisan storage:link`: Filesystem::link() calls symlink(), and falls
+# back to exec() when that is unavailable. This host disables both, so the
+# command dies with "Call to undefined function Illuminate\Filesystem\exec()".
+# The link it would create is the one pair in config/filesystems.php, and bash
+# makes it without PHP's help. Absolute target, so it does not depend on
+# resolving through the release's own storage symlink.
+mkdir -p "$SHARED_DIR/storage/app/public"
+ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
 
 # The publish step. Everything above can fail without consequence; past this
 # line the new release is the live one. ln -sfn writes the new target onto a
