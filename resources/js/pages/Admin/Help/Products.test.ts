@@ -53,6 +53,20 @@ describe('Help Products', () => {
         expect(preview).toBeTruthy();
     });
 
+    it('renders a preview of the boxes-per-pallet edit dialog fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('products.columns.boxesPerPallet'));
+        expect(wrapper.text()).toContain(
+            t('products.boxesPerPalletLabel', {
+                product: t('products.columns.product'),
+            }),
+        );
+
+        const input = wrapper.get('#help-products-box-count');
+        expect((input.element as HTMLInputElement).value).toBe('50');
+    });
+
     it('links to the products page', () => {
         const wrapper = mountPage();
 

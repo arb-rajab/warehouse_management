@@ -61,6 +61,27 @@ describe('Help Rows', () => {
         expect(wrapper.text()).toContain(t('rows.index.hasPallets'));
     });
 
+    it('renders a preview of the row-creation form fields', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('rows.fields.letter'));
+        expect(wrapper.text()).toContain(t('rows.fields.cellsPerFlat'));
+        expect(wrapper.text()).toContain(t('rows.fields.flats'));
+        expect(wrapper.find('#help-row-create-letter').exists()).toBe(true);
+    });
+
+    it('renders a preview of the resize-blocked-while-occupied warning', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('rows.fields.dimensionsLocked'));
+
+        const cellsInput = wrapper.find('#help-row-edit-cells_count');
+        expect((cellsInput.element as HTMLInputElement).readOnly).toBe(true);
+
+        const flatsInput = wrapper.find('#help-row-edit-flats_count');
+        expect((flatsInput.element as HTMLInputElement).readOnly).toBe(true);
+    });
+
     it('links to the rows page', () => {
         const wrapper = mountPage();
 

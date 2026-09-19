@@ -71,6 +71,17 @@ describe('RowFormFields', () => {
         expect(wrapper.find('#flats_count').attributes('step')).toBe('1');
     });
 
+    it('prefixes its ids when idPrefix is given, so it can render more than once on the same page', () => {
+        const wrapper = mount(RowFormFields, {
+            props: { errors: {}, idPrefix: 'preview-' },
+        });
+
+        expect(wrapper.find('#preview-letter').exists()).toBe(true);
+        expect(wrapper.find('#preview-cells_count').exists()).toBe(true);
+        expect(wrapper.find('#preview-flats_count').exists()).toBe(true);
+        expect(wrapper.find('#letter').exists()).toBe(false);
+    });
+
     it('marks the dimension inputs readonly when disableDimensions is true', () => {
         const wrapper = mount(RowFormFields, {
             props: { errors: {}, disableDimensions: true },

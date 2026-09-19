@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import FilterNumberField from '@/components/FilterNumberField.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -12,6 +14,7 @@ import {
 import { t } from '@/lib/i18n';
 
 const sections = ['defaultBoxes', 'settingBoxes'];
+const previewBoxCountDraft = ref('50');
 </script>
 
 <template>
@@ -43,6 +46,24 @@ const sections = ['defaultBoxes', 'settingBoxes'];
                     >
                         50
                     </button>
+                </HelpUiPreview>
+                <HelpUiPreview
+                    v-if="section === 'settingBoxes'"
+                    inert
+                    class="mt-2 block max-w-xs"
+                >
+                    <p class="mb-3 text-lg font-semibold">
+                        {{ t('products.columns.boxesPerPallet') }}
+                    </p>
+                    <FilterNumberField
+                        id="help-products-box-count"
+                        v-model="previewBoxCountDraft"
+                        :label="
+                            t('products.boxesPerPalletLabel', {
+                                product: t('products.columns.product'),
+                            })
+                        "
+                    />
                 </HelpUiPreview>
             </section>
 

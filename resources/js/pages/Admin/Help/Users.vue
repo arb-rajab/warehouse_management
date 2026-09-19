@@ -5,6 +5,7 @@ import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserCo
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import UserFormFields from '@/components/UserFormFields.vue';
 import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
@@ -40,20 +41,14 @@ import { t } from '@/lib/i18n';
                             :label="t('users.index.addUser')"
                         />
                     </HelpUiPreview>
-                    <HelpUiPreview>
-                        <label
-                            class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300"
-                        >
-                            <input
-                                type="checkbox"
-                                checked
-                                disabled
-                                class="rounded border-gray-300 dark:border-neutral-700 dark:bg-neutral-800"
-                            />
-                            {{ t('users.fields.adminAccess') }}
-                        </label>
-                    </HelpUiPreview>
                 </div>
+                <HelpUiPreview inert class="mt-2 block max-w-xs">
+                    <UserFormFields
+                        password-required
+                        :is-admin="true"
+                        :errors="{}"
+                    />
+                </HelpUiPreview>
             </section>
 
             <section>

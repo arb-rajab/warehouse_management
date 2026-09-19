@@ -6,6 +6,7 @@ import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowCont
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RowFormFields from '@/components/RowFormFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
@@ -51,6 +52,9 @@ const plainSections = ['grid', 'dimensions'];
                         :label="t('rows.index.addRow')"
                     />
                 </HelpUiPreview>
+                <HelpUiPreview inert class="mt-2 block max-w-xs">
+                    <RowFormFields id-prefix="help-row-create-" :errors="{}" />
+                </HelpUiPreview>
             </section>
 
             <section>
@@ -68,6 +72,16 @@ const plainSections = ['grid', 'dimensions'];
                         <Pencil class="h-3.5 w-3.5" />
                         {{ t('rows.show.editRow') }}
                     </span>
+                </HelpUiPreview>
+                <HelpUiPreview inert class="mt-2 block max-w-xs">
+                    <RowFormFields
+                        id-prefix="help-row-edit-"
+                        letter="A"
+                        :cells-count="10"
+                        :flats-count="3"
+                        :disable-dimensions="true"
+                        :errors="{}"
+                    />
                 </HelpUiPreview>
             </section>
 
