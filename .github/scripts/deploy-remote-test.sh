@@ -76,6 +76,7 @@ case "$2" in
            [ "${FAIL_MIGRATE:-0}" = 1 ] && { echo "SQLSTATE[42S01] simulated" >&2; exit 1; } ;;
   down) touch "$MAINT" ;;
   up)   rm -f "$MAINT" ;;
+  queue:restart) [ "${FAIL_AFTER_PUBLISH:-0}" = 1 ] && { echo "simulated post-publish failure" >&2; exit 1; } ;;
 esac
 exit 0
 STUB
@@ -173,6 +174,24 @@ check "resolvable entry is linked" "$([ -L "$WORK/host/current/public/subdomain"
 check "dangling entry is linked anyway" "$([ -L "$WORK/host/current/public/pending" ] && echo yes || echo no)" "yes"
 deploy "$(commit_new_revision)" >/dev/null
 check "entries survive the next deploy" "$([ -L "$WORK/host/current/public/subdomain" ] && echo yes || echo no)" "yes"
+
+echo "a failure after publishing leaves the release live and the database alone"
+setup
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
+previous_release="$(published)"
+tables_before="$(tables)"
+# queue:restart runs after the symlink flip, so this fails once the new release
+# is already serving traffic -- the case where rolling back does more harm than
+# the failure itself.
+deploy "$(commit_new_revision)" FAIL_AFTER_PUBLISH=1 && rc=0 || rc=$?
+check "exits non-zero" "$rc" "1"
+check "the new release is the published one" \
+    "$([ "$(published)" != "$previous_release" ] && echo yes || echo no)" "yes"
+check "the published release still exists on disk" \
+    "$([ -d "$WORK/host/current" ] && echo yes || echo no)" "yes"
+check "the database keeps the migration rather than being restored" \
+    "$([ "$(tables)" != "$tables_before" ] && echo kept || echo restored)" "kept"
+check "site is out of maintenance" "$(maintenance_state)" "off"
 
 echo "a truncated dump aborts before migrating"
 setup
