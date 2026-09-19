@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\ShowCellRequest;
 use App\Http\Requests\Api\V1\ShowCellsRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
+use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -21,18 +22,14 @@ class CellController extends Controller
                 ->with(Cell::WITH_ROW_AND_CONTENTS)
                 ->when(
                     $request->filled('search'),
-                    // Inlined rather than calling Product::searchByName() from inside
-                    // whereHas() on a different model — see .ai/rules/models.md.
+                    // Product::applyNameSearch() takes the underlying query builder
+                    // rather than this Eloquent one, because calling that model's
+                    // #[Scope] from inside whereHas() on a different model loses its
+                    // generic type under Larastan — see .ai/rules/models.md. That is
+                    // what lets this share one implementation with the scope instead
+                    // of inlining a second copy that would drift from it.
                     fn (Builder $query) => $query->whereHas('pallet.product', function (Builder $productQuery) use ($request): void {
-                        $words = preg_split('/\s+/', trim($request->string('search')->value())) ?: [];
-
-                        foreach ($words as $word) {
-                            $productQuery->where(function (Builder $matchesEitherName) use ($word): void {
-                                $matchesEitherName
-                                    ->where('name', 'like', '%'.$word.'%')
-                                    ->orWhere('ar_name', 'like', '%'.$word.'%');
-                            });
-                        }
+                        Product::applyNameSearch($productQuery->getQuery(), $request->string('search')->value());
                     })
                 )
                 ->orderedByCoordinates()

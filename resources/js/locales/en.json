@@ -40,6 +40,16 @@
             "password": "Password",
             "submit": "Log in",
             "submitting": "Logging in..."
+        },
+        "changePassword": {
+            "brand": "Warehouse Admin",
+            "title": "Choose a new password",
+            "description": "You must set a new password before continuing.",
+            "currentPassword": "Current password",
+            "password": "New password",
+            "confirmPassword": "Confirm new password",
+            "submit": "Update password",
+            "submitting": "Updating..."
         }
     },
     "rows": {
@@ -329,13 +339,22 @@
                 "open": "Open",
                 "removeBoxes": "Remove boxes",
                 "empty": "Empty",
-                "transfer": "Transfer"
+                "transfer": "Transfer",
+                "edit": "Edit"
             },
             "store": {
                 "productLabel": "Product",
                 "productPlaceholder": "Select a product…",
                 "expirationLabel": "Expiration date",
                 "submit": "Store pallet"
+            },
+            "edit": {
+                "productLabel": "Product",
+                "productPlaceholder": "Select a product…",
+                "expirationLabel": "Expiration date",
+                "boxesCountLabel": "Remaining boxes",
+                "confirmEmptyLabel": "Setting this to 0 would empty the pallet — check to confirm",
+                "submit": "Save changes"
             },
             "open": {
                 "boxesCountLabel": "Boxes to remove",

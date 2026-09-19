@@ -8,6 +8,14 @@ the given step-summary file (grouped by severity), and exits 1 if any
 finding has severity ERROR — the same gate `semgrep scan --severity ERROR
 --error` enforced when it ran as a second, separate invocation. Findings at
 WARNING/INFO severity are reported but do not fail the job.
+
+Also exits 1 if Semgrep reported scan errors (e.g. a ruleset config that
+failed to load or fetch) AND found nothing at all — that combination means
+the scan most likely didn't really run, so an empty "No findings." result
+would otherwise report green while silently covering nothing. Scan errors
+alongside a non-empty result set are still just reported, not gated on:
+a single file that failed to parse is common and shouldn't fail runs that
+otherwise produced real findings.
 """
 
 import json
@@ -59,6 +67,14 @@ def main() -> int:
     error_findings = [f for f in findings if f.get("extra", {}).get("severity") == "ERROR"]
     if error_findings:
         print(f"{len(error_findings)} finding(s) at ERROR severity — failing the job.", file=sys.stderr)
+        return 1
+
+    if errors and not findings:
+        print(
+            f"Semgrep reported {len(errors)} scan error(s) and found nothing — "
+            "the scan likely didn't run, failing the job.",
+            file=sys.stderr,
+        )
         return 1
 
     return 0

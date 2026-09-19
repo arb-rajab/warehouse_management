@@ -10,8 +10,99 @@ on:
 permissions:
   contents: read
 
+# Cancel a superseded run when a PR branch is pushed again before the previous
+# scan finished. PR runs group by PR number, so only that PR's own stale run is
+# cancelled. Every other event — notably the push run on main/develop — falls
+# back to the run id, which is unique per run, so a push run can never be
+# cancelled by, or queued behind, anything else.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
+  # Merging a PR into main/develop lands a merge commit whose tree is usually
+  # identical to the PR head this workflow already scanned — the merge adds no
+  # content of its own when nothing else landed on the base in between. That held
+  # for 23 of the last 25 merges into develop; in the other 2 the base had moved,
+  # the merge combined branches into content nothing had scanned, and the tree
+  # check below correctly falls through to a full scan. Semgrep scans file
+  # content, so re-scanning an identical tree cannot produce a different result.
+  #
+  # The push trigger is kept rather than dropped the way tests.yml's was: nothing
+  # gates on this workflow, so there is no deploy to feed, but a push run is now
+  # the only verification that still fires on a commit landing directly on
+  # main/develop without a PR. The gate makes that cheap -- when the content was
+  # already scanned it costs one short job instead of a full container scan.
+  #
+  # The scan is skipped only when the content is provably identical: the pushed
+  # commit is a two-parent merge whose tree matches its second parent, and that
+  # parent already has a successful `sast` run. Everything else falls through to
+  # a full scan — a squash merge, a direct push, a base that moved under the PR,
+  # no prior run, a prior run that failed, or an API error.
+  #
+  # Note the skip is a job-level `if:`, not a narrowing of the `on:` triggers: a
+  # job skipped by a conditional still reports a check run (GitHub reports it as
+  # successful), so branch protection requiring `sast` always gets a conclusion.
+  # Pull request events never consult this at all, so the checks a PR must pass
+  # are completely unchanged.
+  resolve-scanned-commit:
+    name: Check for an existing scan of this tree
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      already-scanned: ${{ steps.lookup.outputs.already-scanned }}
+    steps:
+      - name: Look for a successful scan of the same content
+        id: lookup
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          head_json="$RUNNER_TEMP/head-commit.json"
+
+          if ! gh api "repos/$REPO/commits/$HEAD_SHA" > "$head_json"; then
+            echo "Could not read $HEAD_SHA; scanning."
+            exit 0
+          fi
+
+          head_tree="$(jq -r '.commit.tree.sha' "$head_json")"
+          pr_head="$(jq -r 'if (.parents | length) == 2 then .parents[1].sha else "" end' "$head_json")"
+
+          if [ -z "$pr_head" ]; then
+            echo "$HEAD_SHA is not a two-parent merge commit; scanning."
+            exit 0
+          fi
+
+          if ! pr_head_tree="$(gh api "repos/$REPO/commits/$pr_head" --jq '.commit.tree.sha')"; then
+            echo "Could not read merged head $pr_head; scanning."
+            exit 0
+          fi
+
+          if [ "$head_tree" != "$pr_head_tree" ]; then
+            echo "Merge tree $head_tree differs from $pr_head's tree $pr_head_tree; scanning."
+            exit 0
+          fi
+
+          successful_runs="$(gh api \
+            "repos/$REPO/actions/workflows/sast.yml/runs?head_sha=$pr_head&event=pull_request&per_page=100" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' || echo 0)"
+
+          if [ "${successful_runs:-0}" -gt 0 ]; then
+            echo "already-scanned=true" >> "$GITHUB_OUTPUT"
+            echo "Tree $head_tree was already scanned successfully at $pr_head; skipping the re-scan."
+          else
+            echo "No successful sast run for $pr_head; scanning."
+          fi
+
   semgrep:
+    needs: resolve-scanned-commit
+    if: needs.resolve-scanned-commit.outputs.already-scanned != 'true'
     runs-on: ubuntu-latest
     container:
       image: semgrep/semgrep:1.155.0
@@ -21,6 +112,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Test the Semgrep report script
+        run: python3 .github/scripts/semgrep_report_test.py -v
 
       - name: Run Semgrep
         continue-on-error: true

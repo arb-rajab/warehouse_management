@@ -1,4 +1,10 @@
-import { CalendarPlus, CircleDashed, Inbox, PackageOpen } from '@lucide/vue';
+import {
+    CalendarPlus,
+    CalendarX,
+    CircleDashed,
+    Inbox,
+    PackageOpen,
+} from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
@@ -133,6 +139,31 @@ describe('CellSlot', () => {
         expect(wrapper.findComponent(CalendarPlus).exists()).toBe(false);
         expect(wrapper.text()).toContain('Widgets');
         expect(wrapper.text()).toContain(formatDate('2026-09-01'));
+    });
+
+    it('omits the expiration line when the pallet has no expiration date, keeping the rest of the detail', () => {
+        const wrapper = mountSlot({
+            cell: cell({
+                state: 'full',
+                pallet: {
+                    id: 9,
+                    product_id: 1,
+                    product_name: 'Widgets',
+                    product_ar_name: 'ودجات',
+                    product_image_url: null,
+                    expiration_date: null,
+                    added_at: '2026-08-01T10:00:00Z',
+                    is_stale: null,
+                    remaining_boxes: 10,
+                },
+            }),
+        });
+
+        expect(wrapper.findComponent(CalendarX).exists()).toBe(false);
+        expect(wrapper.text()).toContain('Widgets');
+        expect(wrapper.text()).toContain(
+            formatDateTime('2026-08-01T10:00:00Z'),
+        );
     });
 
     it('does not draw an expiry border or badge for an expired pallet, absent a highlight filter', () => {

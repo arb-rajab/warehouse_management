@@ -125,7 +125,7 @@ class CellController extends Controller
      * Cells/Index.vue) can drive real pallet actions/toggle-active, not just
      * display detail.
      *
-     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_image_url: string|null, expiration_date: string, added_at: string|null, cell_entered_at: string|null, remaining_boxes: int}|null}>
+     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_image_url: string|null, expiration_date: string|null, added_at: string|null, cell_entered_at: string|null, remaining_boxes: int}|null}>
      */
     private function cellHighlightSamples(): array
     {

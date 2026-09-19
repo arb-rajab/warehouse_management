@@ -62,6 +62,54 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     expect($cell->refresh()->state)->toBe(CellState::Full);
 });
 
+test('an authenticated worker can add a pallet to an empty slot with no expiration date', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+    ]);
+    $cell = $row->cells()->first();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => null,
+    ]);
+
+    $response->assertCreated();
+
+    $pallet = Pallet::query()->sole();
+    $storedLog = CellStatusLog::query()->where('pallet_id', $pallet->id)->sole();
+
+    expect($response->json())->toEqual([
+        'id' => $pallet->id,
+        'state' => 'full',
+        'expiration_date' => null,
+        'cell_entered_at' => $storedLog->created_at->toIso8601String(),
+        'remaining_boxes' => 10,
+        'boxes_depleted_message' => null,
+        'product' => [
+            'id' => $product->id,
+            'name' => 'Widgets',
+            'ar_name' => 'ودجات',
+            'image_url' => 'https://cdn.example.com/widgets.png',
+            'boxes_count' => 10,
+            'active' => true,
+        ],
+        'location' => [
+            'row_letter' => 'Z',
+            'cell_number' => 1,
+            'flat_number' => 1,
+        ],
+    ]);
+
+    expect($pallet->expiration_date)->toBeNull();
+});
+
 test('a submitted expiration_date carrying a time component is normalized to a bare date on storage', function () {
     actingAsMobileUser();
 
@@ -1235,7 +1283,7 @@ test('adding a pallet to a row under an unfinished verification round is rejecte
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     $this->assertDatabaseCount('pallets', 0);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
@@ -1251,7 +1299,7 @@ test('opening a pallet in a row under an unfinished verification round is reject
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
@@ -1267,7 +1315,7 @@ test('removing boxes in a row under an unfinished verification round is rejected
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
 });
@@ -1280,7 +1328,7 @@ test('emptying a pallet in a row under an unfinished verification round is rejec
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/empty");
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
@@ -1303,7 +1351,7 @@ test('transferring a pallet out of a row under an unfinished verification round 
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
@@ -1326,7 +1374,7 @@ test('transferring a pallet into a row under an unfinished verification round is
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    assertCellInActiveRoundRejection($response);
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });

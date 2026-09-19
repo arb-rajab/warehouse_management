@@ -27,11 +27,7 @@ class CellVerificationRoundSeeder extends Seeder
             );
         }
 
-        $rowIds = Row::query()
-            ->get(['id'])
-            ->toBase()
-            ->map(fn (Row $row): int => $row->id)
-            ->all();
+        $rowIds = Row::query()->pluck('id')->all();
 
         foreach (range(1, 15) as $i) {
             // Completed rounds may overlap each other freely — a row being

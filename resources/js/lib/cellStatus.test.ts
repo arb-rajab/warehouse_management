@@ -41,6 +41,16 @@ describe('isCellExpiringWithin', () => {
         expect(isCellExpiringWithin(cell(null), '2026-08-13', 5)).toBe(false);
     });
 
+    it('is false when the pallet has no expiration date', () => {
+        const result = isCellExpiringWithin(
+            cell({ expiration_date: null }),
+            '2026-08-13',
+            5,
+        );
+
+        expect(result).toBe(false);
+    });
+
     it('is false when the pallet already expired', () => {
         const result = isCellExpiringWithin(
             cell({ expiration_date: '2026-08-01' }),
@@ -95,6 +105,15 @@ describe('isCellExpiringWithin', () => {
 describe('isCellExpired', () => {
     it('is false for a cell with no pallet', () => {
         expect(isCellExpired(cell(null), '2026-08-13')).toBe(false);
+    });
+
+    it('is false when the pallet has no expiration date', () => {
+        const result = isCellExpired(
+            cell({ expiration_date: null }),
+            '2026-08-13',
+        );
+
+        expect(result).toBe(false);
     });
 
     it('is true when the expiration date is before today', () => {

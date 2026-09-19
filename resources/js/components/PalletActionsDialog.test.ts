@@ -4,12 +4,13 @@ import type { CellMapRow, CellWithLocation } from '@/types/admin';
 import PalletActionsDialog from './PalletActionsDialog.vue';
 import SubmitButton from './SubmitButton.vue';
 
-const { routerPostMock } = vi.hoisted(() => ({
+const { routerPostMock, routerPutMock } = vi.hoisted(() => ({
     routerPostMock: vi.fn(),
+    routerPutMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
-    router: { post: routerPostMock },
+    router: { post: routerPostMock, put: routerPutMock },
     useHttp: () => ({
         get: (
             _url: string,
@@ -116,6 +117,7 @@ async function mountDialog(cell: CellWithLocation | null) {
 describe('PalletActionsDialog', () => {
     beforeEach(() => {
         routerPostMock.mockReset();
+        routerPutMock.mockReset();
     });
 
     it('does not offer the confirm-empty checkbox while boxes_count is below remaining_boxes', async () => {
@@ -204,11 +206,49 @@ describe('PalletActionsDialog', () => {
         });
     });
 
+    it('does not require an expiration date to store a pallet', async () => {
+        const wrapper = await mountDialog(emptyCell());
+
+        expect(
+            wrapper.get('#pallet-action-expiration').attributes('required'),
+        ).toBeUndefined();
+
+        await wrapper.get('#pallet-action-note').setValue('No label on box');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledTimes(1);
+        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+            product_id: null,
+            expiration_date: '',
+            note: 'No label on box',
+        });
+    });
+
+    it('requires a product to be selected to store a pallet', async () => {
+        const wrapper = await mountDialog(emptyCell());
+
+        const guard = wrapper.get('#pallet-action-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.required).toBe(true);
+    });
+
+    it('requires a product to be selected to edit a pallet', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        const guard = wrapper.get('#pallet-action-edit-product-guard')
+            .element as HTMLInputElement;
+        expect(guard.required).toBe(true);
+    });
+
     it('defaults to the open tab for a full cell and posts boxes_count/confirm_empty on submit', async () => {
         const wrapper = await mountDialog(fullCell(6));
 
         const tabs = wrapper.findAll('[data-testid="pallet-action-tab"]');
-        expect(tabs).toHaveLength(3);
+        expect(tabs).toHaveLength(4);
         expect(tabs[0].attributes('aria-pressed')).toBe('true');
         expect(wrapper.find('#pallet-action-boxes-count').exists()).toBe(true);
 
@@ -282,6 +322,104 @@ describe('PalletActionsDialog', () => {
             row_letter: 'A',
             cell_number: 3,
             flat_number: 2,
+        });
+    });
+
+    it("prefills the edit tab with the pallet's current product, expiration date, and remaining boxes, and hides the note field", async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        expect(
+            (
+                wrapper.get('#pallet-action-edit-expiration')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('2026-12-01');
+        expect(
+            (
+                wrapper.get('#pallet-action-edit-boxes')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('6');
+        expect(wrapper.find('#pallet-action-note').exists()).toBe(false);
+    });
+
+    it('submits the edit action via PUT with the updated product/expiration/remaining boxes and no note', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        await wrapper
+            .get('#pallet-action-edit-expiration')
+            .setValue('2027-01-01');
+        await wrapper.get('#pallet-action-edit-boxes').setValue('4');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPutMock).toHaveBeenCalledTimes(1);
+        expect(routerPutMock.mock.calls[0][1]).toEqual({
+            product_id: 1,
+            expiration_date: '2027-01-01',
+            remaining_boxes: 4,
+            confirm_empty: false,
+            return_to: null,
+        });
+    });
+
+    it('hides the confirm_empty checkbox on the edit tab while remaining boxes is above zero', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        expect(wrapper.find('#pallet-action-edit-boxes').exists()).toBe(true);
+        expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
+    });
+
+    it('requires confirm_empty when editing remaining boxes down to zero, and posts it once checked', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        await wrapper.get('#pallet-action-edit-boxes').setValue('0');
+
+        const checkbox = wrapper.get('input[type="checkbox"]');
+        await checkbox.setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPutMock).toHaveBeenCalledTimes(1);
+        expect(routerPutMock.mock.calls[0][1]).toMatchObject({
+            remaining_boxes: 0,
+            confirm_empty: true,
+        });
+    });
+
+    it('allows clearing the expiration date on the edit tab', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[3]
+            .trigger('click');
+
+        expect(
+            wrapper
+                .get('#pallet-action-edit-expiration')
+                .attributes('required'),
+        ).toBeUndefined();
+
+        await wrapper.get('#pallet-action-edit-expiration').setValue('');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPutMock).toHaveBeenCalledTimes(1);
+        expect(routerPutMock.mock.calls[0][1]).toMatchObject({
+            expiration_date: '',
         });
     });
 

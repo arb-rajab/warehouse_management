@@ -93,6 +93,26 @@ function actingAsMobilePanelUser(): User
 }
 
 /**
+ * Headers an Inertia client sends on every visit, including ordinary
+ * client-side page navigations (not just partial reloads) — see
+ * app/Http/Middleware/StoreInertiaPreviousUrl.php's docblock for why that
+ * matters: it's what makes `$request->ajax()` true and breaks Laravel's
+ * default `back()` redirect unless that middleware compensates. Tests that
+ * reproduce the validation-redirect bug send these on both the form page's
+ * GET and the failing submission, and never set a Referer (this app's
+ * `no-referrer` policy means real browsers never send one either).
+ *
+ * @return array<string, string>
+ */
+function inertiaHeaders(): array
+{
+    return [
+        'X-Requested-With' => 'XMLHttpRequest',
+        'X-Inertia' => 'true',
+    ];
+}
+
+/**
  * Set a model's `created_at` to a specific timestamp after creation — needed
  * because `created_at` is never mass-assignable, so factories can't set it
  * via `create()`.
@@ -166,4 +186,13 @@ function assertInertiaPaginates(
             ->has("{$prop}.data", $dataCount)
             ->where("{$prop}.meta.total", $total)
     );
+}
+
+/**
+ * Assert that a pallet action was rejected because its cell's row is under
+ * an unfinished verification round (PalletActionService::lockCell()).
+ */
+function assertCellInActiveRoundRejection(TestResponse $response): void
+{
+    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
 }

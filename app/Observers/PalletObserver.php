@@ -24,7 +24,7 @@ class PalletObserver
 
     public function updated(Pallet $pallet): void
     {
-        if (! $pallet->wasChanged(['expiration_date', 'product_id', 'cell_id'])) {
+        if (! $pallet->wasChanged(['expiration_date', 'product_id', 'cell_id', 'remaining_boxes'])) {
             return;
         }
 

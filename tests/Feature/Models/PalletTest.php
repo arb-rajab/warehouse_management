@@ -41,6 +41,12 @@ test('the expiration_date attribute is cast to a date', function () {
     expect($pallet->fresh()->expiration_date->toDateString())->toBe('2027-01-15');
 });
 
+test('a pallet can be created with a null expiration_date', function () {
+    $pallet = Pallet::factory()->create(['expiration_date' => null]);
+
+    expect($pallet->fresh()->expiration_date)->toBeNull();
+});
+
 test('the factory default expiration_date has no time component', function () {
     // fake()->dateTimeBetween() returns a random time of day; PalletFactory
     // must format it down to a bare date, or the raw stored value carries
@@ -141,6 +147,7 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
         'product_id' => $product->id,
         'product_name' => 'Widgets',
         'product_ar_name' => 'ودجات',
+        'product_active' => true,
         'product_image_url' => 'https://example.com/widgets.png',
         'expiration_date' => '2026-09-15',
         'added_at' => '2026-08-01T10:00:00+00:00',
@@ -148,6 +155,23 @@ test('toMapSummaryArray describes the pallet by its product, expiration date, an
     ]);
 
     Carbon::setTestNow();
+});
+
+test('toMapSummaryArray carries a null expiration_date for a pallet with none, without throwing', function () {
+    $pallet = Pallet::factory()->create(['expiration_date' => null]);
+
+    expect($pallet->toMapSummaryArray())->expiration_date->toBeNull();
+});
+
+test('toMapSummaryArray carries product_active mirroring the product\'s published flag', function () {
+    $activeProduct = Product::factory()->imageUrl(null)->create(['published' => true]);
+    $inactiveProduct = Product::factory()->imageUrl(null)->create(['published' => false]);
+
+    $activePallet = Pallet::factory()->create(['product_id' => $activeProduct->id]);
+    $inactivePallet = Pallet::factory()->create(['product_id' => $inactiveProduct->id]);
+
+    expect($activePallet->toMapSummaryArray())->product_active->toBeTrue()
+        ->and($inactivePallet->toMapSummaryArray())->product_active->toBeFalse();
 });
 
 test('cellEnteredLog resolves the most recent stored or transferred_in log for the pallet', function () {

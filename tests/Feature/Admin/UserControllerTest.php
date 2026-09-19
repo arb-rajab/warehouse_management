@@ -339,6 +339,21 @@ test('an admin can create another admin user', function () {
     expect($user->isAdmin())->toBeTrue();
 });
 
+test('a newly created user must change their password on first login', function () {
+    actingAsAdmin();
+
+    $this->post('/admin/users', [
+        'name' => 'Jane Doe',
+        'email' => 'jane@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'is_admin' => '0',
+    ]);
+
+    $user = User::query()->where('email', 'jane@example.com')->first();
+    expect($user->must_change_password)->toBeTrue();
+});
+
 test('creating a user with a duplicate email is rejected and nothing changes', function () {
     actingAsAdmin();
     User::factory()->create(['email' => 'jane@example.com']);
@@ -396,6 +411,31 @@ test('an unauthenticated caller cannot create a user and nothing changes', funct
 
     $response->assertRedirect(route('login'));
     $this->assertDatabaseCount('wms_users', 0);
+});
+
+test('creating a user with invalid data redirects back to the create form, not the dashboard', function () {
+    actingAsAdmin();
+
+    // Simulate the last *hard* page load landing on the dashboard (typical
+    // right after login) — this is what leaves session `_previous.url`
+    // stale at /admin under the pre-fix behavior.
+    $this->get('/admin');
+
+    // An ordinary Inertia SPA visit to the create page still carries
+    // X-Requested-With, which is exactly what used to make Laravel skip
+    // updating `_previous.url` for it.
+    $this->withHeaders(inertiaHeaders())->get('/admin/users/create');
+
+    $response = $this->withHeaders(inertiaHeaders())->post('/admin/users', [
+        'name' => 'Jane Doe',
+        'email' => 'not-an-email',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'is_admin' => '0',
+    ]);
+
+    $response->assertRedirect(route('admin.users.create'));
+    $response->assertSessionHasErrors('email');
 });
 
 test('creating a user with an overly long password is rejected and nothing changes', function () {
@@ -500,6 +540,55 @@ test('leaving the password blank keeps the current password', function () {
 
     $response->assertRedirect(route('admin.users.index'));
     expect($target->fresh()->password)->toBe($originalPassword);
+});
+
+test('resetting a users password requires them to change it again on their next login', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create(['must_change_password' => false]);
+
+    $this->put("/admin/users/{$target->id}", [
+        'name' => $target->name,
+        'email' => $target->email,
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+        'is_admin' => '0',
+    ]);
+
+    expect($target->fresh()->must_change_password)->toBeTrue();
+});
+
+test('leaving the password blank while updating a user does not affect their must_change_password flag', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create(['must_change_password' => false]);
+
+    $this->put("/admin/users/{$target->id}", [
+        'name' => $target->name,
+        'email' => $target->email,
+        'password' => '',
+        'password_confirmation' => '',
+        'is_admin' => '0',
+    ]);
+
+    expect($target->fresh()->must_change_password)->toBeFalse();
+});
+
+test('updating a user with invalid data redirects back to the edit form, not the dashboard', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $this->get('/admin');
+    $this->withHeaders(inertiaHeaders())->get("/admin/users/{$target->id}/edit");
+
+    $response = $this->withHeaders(inertiaHeaders())->put("/admin/users/{$target->id}", [
+        'name' => $target->name,
+        'email' => 'not-an-email',
+        'password' => '',
+        'password_confirmation' => '',
+        'is_admin' => '0',
+    ]);
+
+    $response->assertRedirect(route('admin.users.edit', $target));
+    $response->assertSessionHasErrors('email');
 });
 
 test('updating a user with an overly long password is rejected and nothing changes', function () {

@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Services\DashboardStatsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -79,12 +80,12 @@ trait BuildsDashboardStats
         if ($productIds !== null || $productPublished !== null) {
             return [
                 'empty' => 0,
-                'full' => Cell::query()->where('state', CellState::Full)->whereHas('pallet', fn ($q) => $q
-                    ->when($productIds !== null, fn ($q) => $q->whereIn('product_id', $productIds))
-                    ->when($productPublished !== null, fn ($q) => $q->whereHas('product', fn ($q2) => $q2->where('published', $productPublished))))->count(),
-                'opened' => Cell::query()->where('state', CellState::Opened)->whereHas('pallet', fn ($q) => $q
-                    ->when($productIds !== null, fn ($q) => $q->whereIn('product_id', $productIds))
-                    ->when($productPublished !== null, fn ($q) => $q->whereHas('product', fn ($q2) => $q2->where('published', $productPublished))))->count(),
+                'full' => Cell::query()->where('state', CellState::Full)
+                    ->whereHas('pallet', fn ($q) => $this->applyProductFilters($q, $productIds, $productPublished))
+                    ->count(),
+                'opened' => Cell::query()->where('state', CellState::Opened)
+                    ->whereHas('pallet', fn ($q) => $this->applyProductFilters($q, $productIds, $productPublished))
+                    ->count(),
             ];
         }
 
@@ -104,14 +105,7 @@ trait BuildsDashboardStats
     private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?bool $productPublished = null): array
     {
         $expired = Pallet::query()->whereDate('expiration_date', '<', $today);
-
-        if ($productIds !== null) {
-            $expired->whereIn('product_id', $productIds);
-        }
-
-        if ($productPublished !== null) {
-            $expired->whereHas('product', fn ($q) => $q->where('published', $productPublished));
-        }
+        $this->applyProductFilters($expired, $productIds, $productPublished);
 
         return [
             'expired' => $expired->count(),
@@ -131,14 +125,7 @@ trait BuildsDashboardStats
     {
         $until = $today->copy()->addDays($days);
         $query = Pallet::query()->whereBetween('expiration_date', [$today, $until]);
-
-        if ($productIds !== null) {
-            $query->whereIn('product_id', $productIds);
-        }
-
-        if ($productPublished !== null) {
-            $query->whereHas('product', fn ($q) => $q->where('published', $productPublished));
-        }
+        $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
             'days' => $days,
@@ -154,13 +141,7 @@ trait BuildsDashboardStats
      */
     private function activityCounts(Builder $query, ?array $productIds, ?bool $productPublished = null): array
     {
-        if ($productIds !== null) {
-            $query->whereIn('product_id', $productIds);
-        }
-
-        if ($productPublished !== null) {
-            $query->whereHas('product', fn ($q) => $q->where('published', $productPublished));
-        }
+        $this->applyProductFilters($query, $productIds, $productPublished);
 
         /** @var Collection<string, int> $counts */
         $counts = $query->select('action')->selectRaw('count(*) as count')->groupBy('action')->pluck('count', 'action');
@@ -171,5 +152,24 @@ trait BuildsDashboardStats
             'emptied' => (int) ($counts[CellLogAction::Emptied->value] ?? 0),
             'transferred' => (int) ($counts[CellLogAction::TransferredOut->value] ?? 0) + (int) ($counts[CellLogAction::TransferredIn->value] ?? 0),
         ];
+    }
+
+    /**
+     * Apply the shared product-id/product-published dashboard filters to a query in place.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @param  list<int>|null  $productIds
+     */
+    private function applyProductFilters(Builder $query, ?array $productIds, ?bool $productPublished): void
+    {
+        if ($productIds !== null) {
+            $query->whereIn('product_id', $productIds);
+        }
+
+        if ($productPublished !== null) {
+            $query->whereHas('product', fn ($q) => $q->where('published', $productPublished));
+        }
     }
 }

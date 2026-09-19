@@ -11,30 +11,60 @@ paths:
   - config/store.php
 ---
 
-# Shared production database (WMS + store app)
+# Database ownership, and the shared-database history behind it
 
-In production this app does not have a database of its own. It shares one MySQL
-database with an existing store/marketplace Laravel app, which was there first
-and owns the `products` table plus roughly sixty other tables. Everything below
-follows from that: any table name both apps would pick is a collision, and a
-collision is silent — no error, just two apps writing each other's rows.
+**This app now runs its own database.** It used to share one MySQL database
+with an existing store/marketplace Laravel app, which was there first. That
+arrangement is over, but it is not merely trivia: it is the reason almost every
+table in this app is named the way it is, and the reason `products` and
+`uploads` have the shapes they do. Read the history before changing any of it.
 
-## Two tables are shared: `products` and `uploads`
+## The `wms_` prefixes stay, whatever the history
 
-Verified against the store's schema dump (107 tables): these are the only names
-the two apps share that this app also reads. Every WMS domain table — `rows`,
-`cells`, `pallets`, `cell_status_logs`, `cell_status_log_flags`,
-`cell_verification_rounds`, `cell_verification_reports`,
-`mobile_app_version_requirements` — is absent from the store's schema, so those
-keep bare names.
+Every table this app owns carries a `wms_` prefix (`wms_users`, `wms_migrations`,
+`wms_roles`, …). Those prefixes were adopted to avoid collisions in the shared
+database. The collision risk is gone; **the names are not negotiable anyway.**
 
-Both belong to the store app. This app is fully read-only on `Upload`, and
-read-only on `Product` except for three columns — see "Product sync" below.
-There is no per-request create/update/delete of a `Product` or `Upload`
-anywhere in the codebase, and there must not be: the one write path is the
-scheduled bulk sync, not a controller or job reacting to a WMS action. The
-store's `products` has 72 columns and its `uploads` has eleven; only these are
-consumed here:
+They are the live table names in every existing database, and
+`tests/Feature/SharedDatabaseTableNamesTest.php` pins both them and the config
+keys that point at them. Un-prefixing one is not a rename in a migration — it is
+a data migration against production, coordinated with a deploy, for no
+functional gain. Do not treat "the databases are separate now" as licence to
+drop the prefix, and do not re-publish a vendor config in a way that resets a
+table name to its colliding default. The inventory and the reasoning are in
+"Every other table is WMS-owned, under a `wms_` prefix" below.
+
+## `products` is WMS-owned; `uploads` still holds the store's data
+
+This is the one thing that changed, and the two tables are no longer symmetric:
+
+- **`products` belongs to this app.** WMS owns its schema and is its only
+  writer. New migrations may alter it like any other WMS table — see "Migration
+  conventions" below, which is where the old "never alter this table" rule used
+  to live and no longer does.
+- **`uploads` is still the store's data, and this app is still fully read-only
+  on it.** Nothing here writes an `Upload`, and nothing should: its rows are
+  authored by the store's own file management, and `Product::$thumbnail_img`
+  merely points at them. `Upload` declares no `$connection`, so it reads the
+  default one like every other model.
+
+  **Open question, flagged rather than guessed:** now that the databases are
+  separate, nothing in this repo populates or refreshes `uploads` — there is no
+  uploads equivalent of `products:sync`, and no second connection pointing at
+  the store. So it is not clear how the table stays current, or whether it is
+  now a frozen copy taken at the split. Find out before relying on a newly
+  uploaded product image appearing here; the symptom of a stale table is a
+  `thumbnail_img` pointing at a row that does not exist, which surfaces as a
+  null `image_url` rather than an error.
+
+There is still no per-request create/update/delete of a `Product` anywhere in
+the codebase, and there must not be: the one write path is the scheduled bulk
+sync (see "Product sync" below), not a controller or job reacting to a WMS
+action. That is now a design choice about where product data comes from rather
+than a constraint imposed by another app's ownership — but it is still the rule.
+
+`products` carries 72 columns inherited from the store's schema and `uploads`
+eleven; only these are consumed here:
 
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
@@ -47,9 +77,10 @@ consumed here:
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
 | `Upload::$file_name`, `$external_link` | same columns | the two halves of `Upload::url()` |
 
-Do not mirror the store's other columns into either stand-in migration, and do
-not widen a `select()` to `Product::all()` — the narrow column lists are what
-keep this app insulated from a schema it does not control.
+Do not widen a `select()` to `Product::all()` — the narrow column lists are what
+keep this app insulated from the other ~65 columns it inherited and never reads.
+That discipline outlived the shared database: those columns are still there,
+still unread, and still free to change shape.
 
 ### `ar_name`: searched in both locales, rendered in Arabic by the frontend
 
@@ -69,16 +100,57 @@ whose `ar_name` the store left empty. Matching both costs nothing: an empty
 `ar_name` cannot match a non-empty word. Rendering being locale-dependent is
 not a reason to revisit this — don't "align" the two.
 
-Two things the search implementation depends on, both covered by tests:
+The matching itself is a MySQL FULLTEXT search, added by
+`add_fulltext_index_to_products_table` over `(name, ar_name)` — the one index
+`Product::SEARCHABLE_NAME_COLUMNS` names. Five things it depends on, all
+covered by tests:
 
-- **Group per word.** Each word gets its own nested `where(fn ($q) => ...
-  ->orWhere(...))`. A flat `orWhere()` chain binds the OR across word
-  boundaries and silently turns "matches every word" into "matches any word".
+- **One `MATCH` over both columns, not one per column.** MySQL treats the two
+  indexed columns as a single document, so `MATCH (name, ar_name) AGAINST
+  ('+w1* +w2*' IN BOOLEAN MODE)` *is* the old contract: each `+word` may land
+  in either column (the across-columns OR) and every `+word` must land
+  somewhere (the per-word AND). Boolean mode is required — natural-language
+  mode ranks rather than requires, so "every word matches" would silently
+  become "any word matches", the same failure a flat `orWhere()` chain used to
+  cause. MySQL resolves a `MATCH` only against an index covering *exactly* the
+  clause's column list, so the index and that constant must change together or
+  every search fails with errno 1191.
+- **Three kinds of word deliberately stay on `LIKE`**, ANDed onto the `MATCH`:
+  anything but letters and digits (MySQL's parser splits a word on every other
+  character, so `+Wid-get*` could never match "Wid-get"), words shorter than
+  `innodb_ft_min_token_size` (`Product::FULL_TEXT_MIN_WORD_LENGTH`), and
+  InnoDB's default stopwords. Boolean mode returns *nothing* for those rather
+  than returning more, and the admin type-ahead sends one- and two-letter terms
+  constantly. Don't "simplify" these back into the `MATCH`.
+- **That routing is also what makes the expression injection-proof.** It is
+  built solely from alphanumeric words plus the `+` and `*` the scope adds, so
+  a term containing boolean operators (`-`, `"`, `~`, `(`) can never reach the
+  parser to invert or break the query.
+- **sqlite keeps a full `LIKE` path, and it is not optional.** Laravel's base
+  query grammar throws outright on `whereFullText()`, and its base *schema*
+  grammar throws on `compileFullText()` rather than leaving it unimplemented —
+  so an unguarded `fullText()` breaks `migrate` itself, not just the search.
+  CI and the test connection are sqlite, so both the migration and
+  `Product::applyNameSearch()` guard on the driver. The MySQL path is pinned by
+  asserting compiled SQL and bindings against the `mysql` grammar (Laravel
+  resolves a query grammar without touching PDO, so `toSql()` needs no server).
 - **An empty `ar_name` matches nothing**, which is what keeps a product the
   store never translated out of an English term's results through that column.
 
+One deliberate behaviour change came with the index: an indexed word now
+matches by **prefix**, not as an infix. "Widg" still finds "Widgets"; "idget"
+no longer finds "Widget". Boolean mode has no leading wildcard, and a term
+typed into a type-ahead is a prefix in practice. Words on the `LIKE` fallback
+above are unaffected and still match as infixes.
+
+`Api\V1\CellController::index()` shares this via
+`Product::applyNameSearch($productQuery->getQuery(), ...)` rather than a second
+inlined copy: it takes the underlying `Query\Builder` because calling a
+`#[Scope]` from inside `whereHas()` on a different model loses its generic type
+under Larastan (see models.md). Conditions land identically either way.
+
 **Rendering follows the locale, and the choice is made in Vue, not PHP.**
-Every payload carrying a product name ships **both raw store columns**, and
+Every payload carrying a product name ships **both raw columns**, and
 `resources/js/lib/productName.ts` picks between them:
 
 ```ts
@@ -170,7 +242,7 @@ The one place that deliberately still reads the raw `name` alone is
 `Admin\CellVerificationRoundController::export()`'s CSV. That file is data
 rather than UI — its column headers are untranslated snake_case machine names
 (`expected_product`, `cell_number`) and `is_correct` is a literal `yes`/`no` —
-so its product column stays on the store's stable base name in both locales and
+so its product column stays on the stable base `name` in both locales and
 never emits `ar_name` at all. A test pins that; if the export ever gains
 translated headers, revisit it as a whole rather than switching that one column.
 
@@ -178,7 +250,7 @@ translated headers, revisit it as a whole rather than switching that one column.
 never pass through a Resource, so `Product::optionLabels()` maps them to plain
 `{id, name, ar_name}` arrays instead of serialising models — that is what keeps
 the emitted shape identical to the frontend's `ProductFilterOption`, and what
-keeps the other 69 store columns out of the response. Don't revert them to
+keeps the other 69 columns out of the response. Don't revert them to
 returning `Collection<int, Product>`.
 
 **Ordering deliberately stays on the base `name` column in both locales**, and
@@ -194,19 +266,21 @@ server still paginates, so the page a product lands on is decided in SQL. If
 Arabic-collated ordering is wanted, it needs a decision about untranslated
 products first.
 
-The stand-in declares `ar_name` NOT NULL with an empty-string default. Upstream
-it is `varchar(191) NOT NULL`; the default is a stand-in-only convenience so a
-row inserted without an Arabic name works, an existing stand-in can take the
-column with no backfill, and sqlite — which refuses a NOT NULL column added by
-`ALTER` without a default — accepts the migration.
+`ar_name` is `varchar(191)` NOT NULL with an empty-string default. The NOT NULL
+mirrors the store's original column; the default was added so a row inserted
+without an Arabic name works, an existing database could take the column with no
+backfill, and sqlite — which refuses a NOT NULL column added by `ALTER` without
+a default — accepts the migration. All three still hold.
 
 ### `products.id` is a signed `int(11)`, not `bigint unsigned`
 
-The store's schema ends with `ALTER TABLE products MODIFY id int(11) NOT NULL
-AUTO_INCREMENT`, so the live primary key is a **signed 32-bit int**. Laravel's
-`foreignId()` emits `bigint unsigned`, which MySQL will not accept as a foreign
-key against it. Every column referencing a product is therefore a plain
-`integer` with an explicit `foreign()` clause, not `foreignId()->constrained()`:
+Inherited from the store's schema, which ended with `ALTER TABLE products MODIFY
+id int(11) NOT NULL AUTO_INCREMENT`, and **still the live type** — owning the
+table now does not retype a primary key that four foreign keys reference.
+Laravel's `foreignId()` emits `bigint unsigned`, which MySQL will not accept as
+a foreign key against a signed 32-bit int. Every column referencing a product is
+therefore a plain `integer` with an explicit `foreign()` clause, not
+`foreignId()->constrained()`:
 
 - `pallets.product_id`
 - `cell_status_logs.product_id`
@@ -219,11 +293,17 @@ key against it. Every column referencing a product is therefore a plain
 `CreateProductsTableTest` asserts it against the migration source instead. Keep
 that assertion when adding a new product FK.
 
+Retyping `products.id` to a bigint is a real option now that this app owns the
+table, but it is a schema change against every FK above plus a production data
+migration, and no test here can verify it (CI is sqlite, which ignores foreign
+key types entirely). Treat it as its own piece of work, not a drive-by.
+
 ### `published`: the store admin's active/inactive toggle, not an occupancy signal
 
-`products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's own
-kill switch for a product, entirely independent of whether it currently
-occupies any cell in this warehouse. `Admin\ProductController::index()`'s
+`products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's
+active/inactive kill switch for a product, arriving here through `products:sync`
+and entirely independent of whether it currently occupies any cell in this
+warehouse. `Admin\ProductController::index()`'s
 `inactive` filter (`?inactive=true`) is `published = 0` — do not redefine
 "inactive" as "occupies zero cells" (e.g. `whereDoesntHave('pallets')`): a
 product can be `published = 0` while pallets of it still sit in cells (the
@@ -233,11 +313,16 @@ concepts don't imply each other in either direction.
 
 ### `image_url` and `boxes_count` are not columns — both are derived
 
-Neither exists in the store's schema under any name. They were columns this app
-had added to a table it does not own, which is why `boxes_count` was guarded off
+Neither exists in `products` under any name. They were once columns this app had
+added to a table it did not then own, which is why `boxes_count` was guarded off
 in production and therefore *absent* there while `PalletActionService` read it.
-Both are now attributes on `Product`, so the API and admin payloads keep the
-exact keys their clients already consume:
+Both are attributes on `Product` instead, so the API and admin payloads keep the
+exact keys their clients already consume.
+
+Owning the table does not make re-adding them the right move: `image_url` is
+derived from another table's row and would go stale the moment an upload
+changed, and `boxes_count` is WMS configuration that has nothing to do with the
+store's catalog. Keep them derived.
 
 - **`image_url`** resolves `thumbnail_img` through the shared `uploads` table.
   `Upload::url()` returns `external_link` verbatim when set (the store uses it
@@ -246,13 +331,12 @@ exact keys their clients already consume:
   URL — this app is served from a different host and cannot derive it. Unset,
   the URL resolves to `null` rather than to a relative path that would 404
   against this app's own domain.
-- **`boxes_count`** lives in `wms_product_settings`, keyed by the store's
-  product id. A product the store has added but this app has never configured
-  has no row, and falls back to `Product::DEFAULT_BOXES_COUNT`. There is no
-  store column to backfill this from: `products.unit_equal` reads like a
-  units-per-carton value and was the obvious candidate, but it has been
-  checked with the store's owners and is **not** the box count — do not wire
-  it up. The only write path is `Admin\ProductController::updateBoxCount()`,
+- **`boxes_count`** lives in `wms_product_settings`, keyed on the product id. A
+  product the sync has created but this app has never configured has no row, and
+  falls back to `Product::DEFAULT_BOXES_COUNT`. There is no inherited column to
+  backfill this from: `products.unit_equal` reads like a units-per-carton value
+  and was the obvious candidate, but it has been checked with the store's owners
+  and is **not** the box count — do not wire it up. The only write path is `Admin\ProductController::updateBoxCount()`,
   behind the editable box-count column on the admin products screen; a product
   nobody has set resolves to the default rather than to a stored zero.
 
@@ -266,19 +350,25 @@ In tests, `boxes_count` and `image_url` cannot be passed to
 `Product::factory()->create()` — they are not columns. Use the
 `boxesCount(int)`, `imageUrl(?string)` and `unconfigured()` factory states.
 
-### Product sync: the one write path into a store-owned table
+### Product sync: the only writer of `products`
 
 `products:sync` (`app/Console/Commands/SyncProductsCommand.php`, scheduled
 hourly in `routes/console.php`) polls the Otajer store's REST product feed
 (URL in `config('store.products_sync_url')`, env `STORE_PRODUCTS_SYNC_URL` —
 the store's API key is embedded in that URL's path, so it is never
 hardcoded) and upserts exactly three columns — `name`, `ar_name`,
-`published` — keyed on `id`. This is a deliberate, narrow reversal of the
-"WMS never writes `products`" rule above, made because those three columns
-need to stay current without WMS having a live join to the store's own
-product-management flow.
+`published` — keyed on `id`.
 
-Two things worth knowing before touching this:
+This app owns `products` and this command is its **only** writer. Nothing else
+in the codebase creates, updates or deletes a product row, and the store app no
+longer writes these columns either — so the feed is the single source of truth
+for a product's name, Arabic name and published state, and a WMS-side edit to
+any of the three would simply be overwritten on the next run. If product names
+ever need to be editable in the admin panel, that is a real design decision
+about which side wins, not a small feature: raise it rather than adding a second
+writer.
+
+Three things worth knowing before touching this:
 
 - **`Mat_ID` is assumed to equal `products.id`.** The feed returns it as a
   numeric string (e.g. `"100027"`); the command casts it to int and uses it
@@ -286,26 +376,27 @@ Two things worth knowing before touching this:
   range, the symptom is silent — a sync either creates a phantom row at the
   wrong id or overwrites an unrelated one, since nothing else cross-checks
   the mapping.
-- **Two writers, same columns, no locking.** The store app can still edit a
-  product's name/Arabic name/published state directly at any time; the next
-  hourly sync run will overwrite that edit with whatever the feed currently
-  says, and a store-side write made between two sync runs has no
-  protection against being clobbered. There is no last-write-wins
-  timestamp comparison — the feed's copy always wins on the next run.
+- **The feed always wins, and it creates rows as well as updating them.** The
+  upsert is unconditional: there is no last-write-wins timestamp comparison, so
+  whatever the feed currently says replaces what is in the table, and a product
+  id the feed reports that this app has never seen is inserted. A product
+  deleted from the feed is *not* deleted here — nothing prunes rows.
 - **Everything else in the feed is intentionally dropped.** Price tiers,
   tax, barcodes, unit/class ids, and the image are not mapped to any
   column — the same "narrow column list" discipline as the rest of this
   file. A row with no usable `Mat_ID` or `enName` is skipped rather than
   written with a guessed value.
 
-## Every other colliding table is WMS-owned, under a `wms_` prefix
+## Every other table is WMS-owned, under a `wms_` prefix
 
-Eight of these names are **taken in the store's schema today**; the rest are
-prefixed pre-emptively, because they are what Laravel's own scaffolding creates
-and the store could add any of them at any time. The distinction matters when
-weighing a future request to un-prefix one — the eight are not negotiable.
+The table below is history now that the databases are separate — no name here
+collides with anything today. It is kept because it is the record of *why* each
+prefix exists, and because "eight of these were live collisions" is the honest
+answer to a future "can we drop the prefix?". The answer is still no, for the
+reason in "The `wms_` prefixes stay" above: these are the live names in every
+existing database, and changing one is a production data migration.
 
-| Table | Taken today? | Why not shared |
+| Table | Was a live collision? | Why it was never shared |
 | --- | --- | --- |
 | `wms_users` | yes | separate staff population from the store's customers. The store's `users.id` is `int(10) unsigned`; this app's stays `bigint unsigned` because nothing joins the two |
 | `wms_personal_access_tokens` | yes | `tokenable_type` is `App\Models\User` in *both* apps, over two user tables with overlapping ids — a shared table lets a store token resolve to the WMS user of the same id |
@@ -319,11 +410,13 @@ weighing a future request to un-prefix one — the eight are not negotiable.
 The remaining tables (`rows`, `cells`, `pallets`, `cell_status_logs`,
 `cell_status_log_flags`, `cell_verification_rounds`,
 `cell_verification_reports`, `mobile_app_version_requirements`) keep bare names:
-they are specific enough to this domain that the store app has nothing like
-them — verified name-by-name against the store's 107 tables. `tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, so a
-new bare-named table fails the suite until it is justified here. Telescope,
+they were specific enough to this domain that the store app had nothing like
+them — verified name-by-name against the store's 107 tables at the time.
+`tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, and still
+should: it is what keeps the prefixed and bare sets from drifting by accident.
+A new bare-named table fails the suite until it is added there. Telescope,
 Pulse and Health are unaffected — they run on their own sqlite connections (see
-config.md), never in the shared database.
+config.md), never in this app's main database.
 
 Where a table name is config-driven, the prefix lives in config, not in the
 migration: `config/permission.php`'s `table_names`, `config/session.php`,
@@ -334,38 +427,58 @@ configs resets them to the colliding defaults —
 config key, so `App\Models\PersonalAccessToken` overrides `$table` and
 `AppServiceProvider` registers it via `Sanctum::usePersonalAccessTokenModel()`.
 
-## Migration conventions this arrangement requires
+## Migration conventions
 
 **Create the final table name.** A create migration emits the `wms_` name
-directly — never the bare name plus a later rename. On a fresh production
-migrate the bare name already exists (it is the store's), so `Schema::create()`
-would fail outright with "table already exists", and a subsequent rename would
-then rename the store's table out from under it.
+directly — never the bare name plus a later rename. The original reason was that
+a fresh production migrate would hit the store's existing bare-named table; the
+reason it still holds is that every existing database already carries the
+prefixed name, so a create-then-rename pair is two migrations doing what one
+should, with a window in between where the name is wrong.
 
-**A shared table's `up()` guards on `Schema::hasTable()`, its `down()` on the
-environment.** `create_products_table` and `create_uploads_table` are the worked examples. `hasTable()` makes
-`up()` a no-op wherever the real table is present — production, or any
-environment pointed at the shared database — while still building a local
-stand-in for development and testing. `down()` cannot use `hasTable()` (it
-cannot tell the store's table from the stand-in), so it guards on
-`app()->isProduction()`: a rollback drops the development copy and never the
-store's data. Do not use `isProduction()` on `up()` — that was the previous
-guard, and it breaks any non-production environment that points at the shared
-database.
+**`products` takes ordinary migrations now — do not copy the old guard onto
+one.** This is the rule that changed, and it changed in the direction that
+matters: a migration altering `products` should just alter it.
+`add_fulltext_index_to_products_table` is the worked example — it guards on the
+*driver* (sqlite cannot build a FULLTEXT index) and on `hasIndex()` for
+idempotency, and on nothing else.
+
+The trap to know about, because it is subtle and it cost a full investigation:
+the old convention wrapped `up()` in `if (Schema::hasTable('products')) {
+return; }`. In production that table always exists, so a migration written that
+way is a **guaranteed no-op exactly where it matters**, silently. Anything that
+needs to reach production `products` — an index, a column, a type change — must
+not be written that way. `create_products_table` still carries the guard. Leave it: it is
+already recorded in every existing database so it does not re-run there, and on
+a fresh install the table does not exist yet so the guard passes and the table
+is created. It is effectively vestigial and harmless — but it is also the thing
+that will mislead the next person, so read it as "this create is a no-op if the
+table is somehow already there", not as a pattern to follow.
+
+**`uploads` is still guarded, because this app still does not own it.**
+`create_uploads_table` is the remaining worked example: `hasTable()` on `up()`
+makes it a no-op wherever the real table is present, while still building a
+local stand-in for development and testing; `down()` cannot use `hasTable()` (it
+cannot tell a real table from a stand-in), so it guards on
+`app()->isProduction()` — a rollback drops the development copy and never real
+data. Do not use `isProduction()` on `up()`: that was an even earlier guard, and
+it breaks any non-production environment pointed at real data.
 
 **A rename migration checks both ends.** `rename_users_table_to_wms_users` and
 `rename_colliding_tables_to_wms_prefix` both rename only when the legacy name
-exists *and* the target does not. The second half is the safety property: in the
-shared database every legacy name on that list is the store app's table, and
-renaming one would break that app. Both migrations are no-ops on a fresh install
-and exist only for databases migrated before the prefix landed.
+exists *and* the target does not. The second half was the safety property that
+mattered in the shared database, where every legacy name on that list was the
+store app's table. Both migrations are no-ops on a fresh install and exist only
+for databases migrated before the prefix landed — leave them alone rather than
+tidying them away; a database old enough to need them may still be out there.
 
-**Editing an already-run migration needs a companion upgrade migration.**
-Rewriting `create_products_table` to build the store's shape changed nothing on
-staging or an older local checkout: the migration was already recorded, so it
-never re-ran, and those databases kept the pre-alignment columns while the code
-moved on. `upgrade_legacy_products_stand_in` is the fix, and the pattern for the
-next one — identify the old shape by a column the store's table cannot have
+**Editing an already-run migration needs a companion upgrade migration.** This
+one is unchanged by the ownership move and is the rule most often forgotten.
+Rewriting `create_products_table` changed nothing on staging or an older local
+checkout: the migration was already recorded, so it never re-ran, and those
+databases kept the pre-alignment columns while the code moved on.
+`upgrade_legacy_products_stand_in` is the fix, and the pattern for the next one —
+identify the old shape by a column the current one cannot have
 (`products.image_url` was only ever this app's), carry any data worth keeping
 into its new home, then drop it.
 
@@ -373,25 +486,31 @@ into its new home, then drop it.
 addition, and the simpler case to copy: adding `ar_name` to
 `create_products_table` covers fresh installs only, so the companion migration
 guards on `Schema::hasColumn('products', 'ar_name')` and no-ops wherever the
-column already exists — production (the store's own table) and any fresh
-install alike — while bringing an older stand-in across. Always add both halves;
-editing the create migration on its own is what left staging stale last time.
+column already exists, while bringing an older database across. Always add both
+halves; editing the create migration on its own is what left staging stale last
+time.
 
-That migration deliberately leaves the stand-in's `id` as `bigint unsigned`
-rather than retyping it to the store's signed `int(11)`, because altering a
-primary key referenced by four foreign keys is risky and sqlite cannot verify
-the result. The consequence is worth knowing: on such a database
+Note the naming: the `_stand_in` suffix on these two is a leftover from when a
+local `products` was a *stand-in* for the store's real table. The migrations are
+already recorded under those filenames, so they cannot be renamed — read them as
+"upgrade legacy products" and "add ar_name to products", and do not use the
+suffix on anything new.
+
+That migration deliberately leaves such a database's `id` as `bigint unsigned`
+rather than retyping it to `int(11)`, because altering a primary key referenced
+by four foreign keys is risky and sqlite cannot verify the result. The
+consequence is worth knowing: on those databases
 `wms_product_settings.product_id` (signed `int`) references a `bigint unsigned`
 key. sqlite does not type-check foreign keys so it is inert there, but **MySQL
 rejects it** — `create_wms_product_settings_table` would fail with errno 3780.
-A pre-existing stand-in must therefore never be moved onto MySQL in place;
-rebuild it with `migrate:fresh`. Production is a first install against the
-store's own `int(11)` table and is unaffected. Note that no test can catch this
+Such a database must therefore never be moved onto MySQL in place; rebuild it
+with `migrate:fresh`. Note that no test can catch this
 class of defect: CI runs sqlite, which ignores foreign key types entirely.
 
 **The migration repository cannot rename itself.** Laravel reads
 `database.migrations.table` before running anything, so pointing it at
 `wms_migrations` makes an existing WMS database look unmigrated and re-run
-everything. Production is a fresh install and is unaffected. An existing
-local/staging database needs the rename applied out of band before the next
-migrate — `RENAME TABLE migrations TO wms_migrations;` — or a `migrate:fresh`.
+everything. This is the concrete reason "just un-prefix the tables" is not a
+migration you can write: the repository table is the one that has to be renamed
+out of band — `RENAME TABLE migrations TO wms_migrations;` — or the database
+rebuilt with `migrate:fresh`.

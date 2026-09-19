@@ -140,6 +140,22 @@ class PalletActionService
     }
 
     /**
+     * Normalize a caller-submitted expiration date to a bare date string: the
+     * validation rule only requires a parseable date, so a caller-submitted
+     * value carrying a time component (e.g. a raw ISO datetime) would
+     * otherwise be stored verbatim — and unlike MySQL's DATE column, SQLite
+     * keeps that time component intact instead of truncating it, so the
+     * pallet reads back as its correct date everywhere the app formats it via
+     * toDateString(), but a raw `expiration_date <= $until` comparison
+     * (BuildsDashboardStats::expiringWindow()) can then exclude it right at
+     * the boundary.
+     */
+    private function normalizeExpirationDate(?string $expirationDate): ?string
+    {
+        return $expirationDate !== null ? Carbon::parse($expirationDate)->toDateString() : null;
+    }
+
+    /**
      * Write a CellStatusLog row for a cell state transition.
      */
     private function logCellStatus(
@@ -171,7 +187,7 @@ class PalletActionService
     /**
      * Store a new pallet into an Empty cell, transitioning it to Full.
      */
-    public function store(int $cellId, int $productId, string $expirationDate, int $userId, ?string $note): Pallet
+    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
     {
         return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note) {
             $cell = $this->lockCell($cellId);
@@ -190,16 +206,7 @@ class PalletActionService
             $pallet = Pallet::create([
                 'product_id' => $product->id,
                 'cell_id' => $cell->id,
-                // Normalized to a bare date: the validation rule only requires a
-                // parseable date, so a caller-submitted value carrying a time
-                // component (e.g. a raw ISO datetime) would otherwise be stored
-                // verbatim — and unlike MySQL's DATE column, SQLite keeps that
-                // time component intact instead of truncating it, so the pallet
-                // reads back as its correct date everywhere the app formats it
-                // via toDateString(), but a raw `expiration_date <= $until`
-                // comparison (BuildsDashboardStats::expiringWindow()) can then
-                // exclude it right at the boundary.
-                'expiration_date' => Carbon::parse($expirationDate)->toDateString(),
+                'expiration_date' => $this->normalizeExpirationDate($expirationDate),
                 'remaining_boxes' => $product->boxes_count,
             ]);
 
@@ -363,5 +370,46 @@ class PalletActionService
         });
 
         return $pallet->refresh();
+    }
+
+    /**
+     * Edit an already-stored pallet's product, expiration date, and/or remaining
+     * boxes, without moving it or changing its cell's state. Unlike the other
+     * actions here, a field-only correction (product/expiration/a positive
+     * remaining_boxes) doesn't write a CellStatusLog row — but it still locks
+     * the cell/pallet the same way and updates through the model, so
+     * PalletObserver's wasChanged(['expiration_date', 'product_id', ...,
+     * 'remaining_boxes']) guard still catches the change and flushes the
+     * dashboard stats cache.
+     *
+     * $remainingBoxes sets the column directly (an admin correction), unlike
+     * open()/removeBoxes()'s boxes_count, which is an amount to subtract.
+     * Editing it to 0 goes through the same confirm_empty/emptyLockedPallet
+     * flow those use — it deletes the pallet, frees the cell, and logs an
+     * Emptied transition — rather than storing a 0-box pallet row, which no
+     * other path in this service produces.
+     */
+    public function update(Pallet $pallet, int $productId, ?string $expirationDate, int $remainingBoxes, int $userId, bool $confirmEmpty, ?string $note = null): void
+    {
+        DB::transaction(function () use ($pallet, $productId, $expirationDate, $remainingBoxes, $userId, $confirmEmpty, $note) {
+            $cell = $this->lockCell($pallet->cell_id);
+            $lockedPallet = $this->lockPallet($pallet->id);
+
+            if ($remainingBoxes === 0) {
+                if (! $confirmEmpty) {
+                    throw new InvalidSlotStateException('insufficient_boxes_remaining', __('messages.insufficient_boxes_remaining'));
+                }
+
+                $this->emptyLockedPallet($cell, $lockedPallet, $userId, $note);
+
+                return;
+            }
+
+            $lockedPallet->update([
+                'product_id' => $productId,
+                'expiration_date' => $this->normalizeExpirationDate($expirationDate),
+                'remaining_boxes' => $remainingBoxes,
+            ]);
+        });
     }
 }
