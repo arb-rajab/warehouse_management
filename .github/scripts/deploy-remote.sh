@@ -315,19 +315,49 @@ log "Signalling queue workers to restart"
 live_artisan queue:restart
 
 log "Pruning old releases (keeping $KEEP_RELEASES)"
-published="$(readlink -f "$CURRENT_LINK")"
-# shellcheck disable=SC2012
-ls -1 "$RELEASES_DIR" | sort -r | tail -n +"$((KEEP_RELEASES + 1))" | while read -r stale; do
-    stale_path="$RELEASES_DIR/$stale"
-    [ "$(readlink -f "$stale_path")" = "$published" ] && continue
-    rm -rf "$stale_path"
-done
+
+# Ordered by modification time, not by name. A release id is
+# <timestamp>-<sha>, so sorting by name only tracks recency while the
+# timestamps differ -- two releases created in the same second are then ordered
+# by their sha suffix, which says nothing about which came first. That made the
+# published release sort into the stale tail, where skipping it left one extra
+# directory behind, and could have deleted a newer release while keeping an
+# older one.
+published_name=''
+if [ -L "$CURRENT_LINK" ]; then
+    published_name="$(basename "$(readlink -f "$CURRENT_LINK")")"
+fi
+
+# The published release is always kept and counts towards the total, so it is
+# excluded here and only KEEP_RELEASES - 1 others are retained.
+kept=0
+while IFS= read -r release_name; do
+    if [ "$release_name" = "$published_name" ]; then
+        continue
+    fi
+
+    kept=$((kept + 1))
+
+    if [ "$kept" -lt "$KEEP_RELEASES" ]; then
+        continue
+    fi
+
+    rm -rf "${RELEASES_DIR:?}/$release_name"
+done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' \
+    | sort -rn | cut -d' ' -f2-)
 
 # Backups are only useful for the deploy they belong to; the database's own
-# backup schedule is a separate concern.
-# shellcheck disable=SC2012
-ls -1 "$SHARED_DIR/backups" | sort -r | tail -n +"$((KEEP_RELEASES + 1))" | while read -r stale; do
-    rm -f "$SHARED_DIR/backups/$stale"
-done
+# backup schedule is a separate concern. Same ordering caveat as above.
+kept=0
+while IFS= read -r backup_name; do
+    kept=$((kept + 1))
+
+    if [ "$kept" -le "$KEEP_RELEASES" ]; then
+        continue
+    fi
+
+    rm -f "${SHARED_DIR:?}/backups/$backup_name"
+done < <(find "$SHARED_DIR/backups" -mindepth 1 -maxdepth 1 -type f -printf '%T@ %f\n' \
+    | sort -rn | cut -d' ' -f2-)
 
 log "Deployed $TARGET_SHA as $release_id"
