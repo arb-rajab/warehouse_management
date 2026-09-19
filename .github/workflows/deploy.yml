@@ -198,6 +198,13 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Check out the deploy script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
       - name: Deploy to Hostinger over SSH
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
@@ -209,24 +216,28 @@ jobs:
           DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH }}
           # hPanel picks the PHP version per domain, but the `php` on a plain SSH
           # PATH is whatever the account defaults to -- often an older release.
-          # Point this at the 8.5 binary (e.g. /usr/bin/php8.5) when they differ.
+          # Point this at the 8.5 binary (e.g. /opt/alt/php85/usr/bin/php).
           PHP_BINARY: ${{ secrets.HOSTINGER_PHP_BINARY || 'php' }}
+          KEEP_RELEASES: ${{ vars.HOSTINGER_KEEP_RELEASES || '5' }}
           TARGET_BRANCH: ${{ github.ref_name }}
           TARGET_SHA: ${{ github.sha }}
           ENVIRONMENT_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
-          # An unset DEPLOY_PATH would otherwise reach the host as `cd ''` and
-          # fail there, reported as a remote shell error rather than as the
-          # configuration gap it is. Name the missing setting instead.
+          # An unset DEPLOY_PATH would otherwise reach the host as an empty
+          # path and fail there, reported as a remote shell error rather than
+          # as the configuration gap it is. Name the missing setting instead.
           if [ -z "$DEPLOY_PATH" ]; then
             echo "::error::HOSTINGER_DEPLOY_PATH is not set as a variable on the $ENVIRONMENT_NAME environment."
             exit 1
           fi
 
-          # A login shell so the profile that puts nvm's node/npm and Composer on
-          # PATH is sourced; a bare `bash -s` gets neither on Hostinger.
+          # The script is fed on stdin rather than copied to the host, so the
+          # version that runs is always the one from the commit being deployed
+          # and nothing is left behind on failure. A login shell so the profile
+          # that puts nvm's node/npm and composer on PATH is sourced; a bare
+          # `bash -s` gets neither on Hostinger.
           ssh -i ~/.ssh/deploy_key \
               -p "$SSH_PORT" \
               -o StrictHostKeyChecking=yes \
@@ -236,102 +247,8 @@ jobs:
                TARGET_BRANCH=$(printf '%q' "$TARGET_BRANCH") \
                TARGET_SHA=$(printf '%q' "$TARGET_SHA") \
                PHP_BINARY=$(printf '%q' "$PHP_BINARY") \
-               bash -l -s" <<'REMOTE'
-          set -euo pipefail
-
-          cd "$DEPLOY_PATH"
-
-          echo "==> Syncing $DEPLOY_PATH to $TARGET_SHA"
-          git fetch --prune origin "$TARGET_BRANCH"
-          git reset --hard "$TARGET_SHA"
-
-          composer_bin="$(command -v composer)"
-
-          # Composer's own shebang resolves to the account's default PHP, which
-          # is not necessarily the one this app is pinned to, so drive it through
-          # $PHP_BINARY explicitly rather than letting platform checks run
-          # against the wrong interpreter. That only works when composer is a
-          # PHP script (a phar, `#!/usr/bin/env php`); CloudLinux-based hosts
-          # ship a /usr/local/bin/composer that is a shell wrapper selecting the
-          # PHP itself, and handing that to `php` would fail outright.
-          if head -n 1 "$composer_bin" | grep -qE '^#!.*[ /]php'; then
-            run_composer() {
-              "$PHP_BINARY" "$composer_bin" "$@"
-            }
-          else
-            run_composer() {
-              "$composer_bin" "$@"
-            }
-          fi
-
-          # Reinstalling dependencies on every deploy costs minutes and changes
-          # nothing when neither lockfile moved, so hash both and compare against
-          # what the last successful deploy recorded.
-          deps_marker='.deploy-deps.hash'
-          current_deps_hash="$(sha256sum composer.lock package-lock.json | awk '{ print $1 }' | paste -sd '|' -)"
-          previous_deps_hash=''
-
-          if [ -f "$deps_marker" ]; then
-            previous_deps_hash="$(tr -d '[:space:]' < "$deps_marker")"
-          fi
-
-          if [ "$current_deps_hash" != "$previous_deps_hash" ]; then
-            echo "==> Lockfiles changed since the last deploy; installing dependencies"
-            # Composer runs its post-autoload-dump hook (`artisan package:discover`)
-            # through Symfony Process, which needs proc_open. Shared hosts commonly
-            # disable that function -- the Hostinger account this deploys to does --
-            # and composer then exits non-zero, which under `set -e` would abort the
-            # deploy after the packages are already on disk. So skip the hook and do
-            # its work here: bash launching PHP needs no proc_open.
-            run_composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
-
-            # ComposerScripts::postAutoloadDump drops these two stale caches before
-            # package:discover regenerates the manifest; --no-scripts skipped it.
-            rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-            "$PHP_BINARY" artisan package:discover
-
-            npm ci
-
-            # Written only after both installs succeed, so a failed deploy does
-            # not convince the next one that the new dependencies are in place.
-            printf '%s' "$current_deps_hash" > "$deps_marker"
-          else
-            echo "==> composer.lock and package-lock.json unchanged; skipping dependency installs"
-          fi
-
-          echo "==> Building frontend assets"
-          npm run build
-
-          echo "==> Ensuring SQLite database files exist"
-          for sqlite_file in \
-            database/database.sqlite \
-            database/telescope.sqlite \
-            database/pulse.sqlite \
-            database/health.sqlite
-          do
-            [ -f "$sqlite_file" ] || touch "$sqlite_file"
-          done
-
-          echo "==> Running database migrations"
-          "$PHP_BINARY" artisan migrate --force
-
-          echo "==> Refreshing application caches"
-          "$PHP_BINARY" artisan config:cache
-          "$PHP_BINARY" artisan route:cache
-          "$PHP_BINARY" artisan view:cache
-
-          echo "==> Ensuring storage symlink exists"
-          "$PHP_BINARY" artisan storage:link
-
-          # Hostinger Cloud has no supervisor/systemd, so there is no resident
-          # `queue:work` to signal -- the queue is drained by a cron entry
-          # running `queue:work --stop-when-empty`. This still matters there:
-          # it sets the restart timestamp that makes a worker cron-started
-          # before this deploy exit after its current job instead of finishing
-          # the batch against half-replaced code.
-          echo "==> Signalling queue workers to restart"
-          "$PHP_BINARY" artisan queue:restart
-          REMOTE
+               KEEP_RELEASES=$(printf '%q' "$KEEP_RELEASES") \
+               bash -l -s" < .github/scripts/deploy-remote.sh
 
       - name: Remove deploy credentials from the runner
         if: always()
