@@ -1,3 +1,4 @@
+import { Ban, PackageSearch, Search } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
@@ -52,6 +53,19 @@ describe('Help Cells', () => {
 
         expect(wrapper.text()).toContain(t('help.cells.managingPallets.body'));
         expect(wrapper.text()).toContain(t('help.cells.deactivating.body'));
+    });
+
+    it('renders a preview of the search, manage-pallet, and deactivate controls', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(Search).exists()).toBe(true);
+        expect(wrapper.findComponent(PackageSearch).exists()).toBe(true);
+        expect(wrapper.findComponent(Ban).exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('cells.search.placeholder'));
+        expect(wrapper.text()).toContain(t('cells.palletActions.triggerLabel'));
+        expect(wrapper.text()).toContain(
+            t('cells.toggleActive.deactivateLabel'),
+        );
     });
 
     it('links to the warehouse map page', () => {

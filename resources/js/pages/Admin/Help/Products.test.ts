@@ -44,6 +44,15 @@ describe('Help Products', () => {
         expect(wrapper.text()).toContain(t('help.products.settingBoxes.body'));
     });
 
+    it('renders a preview of the boxes-per-pallet control', () => {
+        const wrapper = mountPage();
+
+        const preview = wrapper
+            .findAll('button')
+            .find((b) => b.text() === '50');
+        expect(preview).toBeTruthy();
+    });
+
     it('links to the products page', () => {
         const wrapper = mountPage();
 

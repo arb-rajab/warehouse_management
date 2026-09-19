@@ -1,3 +1,4 @@
+import { ArrowLeftRight, CalendarPlus } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
@@ -48,6 +49,14 @@ describe('Help CellLogs', () => {
         expect(wrapper.text()).toContain(
             t('help.cellLogs.actions.transferred'),
         );
+    });
+
+    it('renders an icon next to actions with an established icon, and a preview of the Filters button', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(CalendarPlus).exists()).toBe(true);
+        expect(wrapper.findComponent(ArrowLeftRight).exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('cellLog.filters.title'));
     });
 
     it('renders the cell-state legend from the real cell state colors, not hardcoded labels', () => {

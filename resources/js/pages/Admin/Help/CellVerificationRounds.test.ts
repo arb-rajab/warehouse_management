@@ -1,3 +1,4 @@
+import { Download } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -49,6 +50,13 @@ describe('Help CellVerificationRounds', () => {
         expect(wrapper.text()).toContain(
             t('help.cellVerificationRounds.exporting.body'),
         );
+    });
+
+    it('renders a preview of the export button', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(Download).exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('cellVerificationReport.export'));
     });
 
     it('links to the verification rounds page', () => {

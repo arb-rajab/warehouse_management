@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import AddResourceLink from '@/components/AddResourceLink.vue';
+import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-
-const sections = ['accounts', 'roles'];
 </script>
 
 <template>
@@ -23,14 +25,60 @@ const sections = ['accounts', 'roles'];
         </Link>
 
         <div class="max-w-2xl space-y-6">
-            <section v-for="section in sections" :key="section">
+            <section>
                 <h2 :class="sectionHeadingClass">
-                    {{ t(`help.users.${section}.heading`) }}
+                    {{ t('help.users.accounts.heading') }}
                 </h2>
                 <p class="text-sm text-gray-700 dark:text-neutral-300">
-                    {{ t(`help.users.${section}.body`) }}
+                    {{ t('help.users.accounts.body') }}
                 </p>
+                <div class="mt-2 flex flex-wrap items-center gap-3">
+                    <HelpUiPreview>
+                        <AddResourceLink
+                            href="#"
+                            tabindex="-1"
+                            :label="t('users.index.addUser')"
+                        />
+                    </HelpUiPreview>
+                    <HelpUiPreview>
+                        <label
+                            class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                        >
+                            <input
+                                type="checkbox"
+                                checked
+                                disabled
+                                class="rounded border-gray-300 dark:border-neutral-700 dark:bg-neutral-800"
+                            />
+                            {{ t('users.fields.adminAccess') }}
+                        </label>
+                    </HelpUiPreview>
+                </div>
             </section>
+
+            <section>
+                <h2 :class="sectionHeadingClass">
+                    {{ t('help.users.roles.heading') }}
+                </h2>
+                <p class="text-sm text-gray-700 dark:text-neutral-300">
+                    {{ t('help.users.roles.body') }}
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-3">
+                    <HelpUiPreview>
+                        <UserRoleBadge :is-admin="true" />
+                    </HelpUiPreview>
+                    <HelpUiPreview>
+                        <UserRoleBadge :is-admin="false" />
+                    </HelpUiPreview>
+                </div>
+            </section>
+
+            <Link
+                :href="usersIndex()"
+                class="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+                {{ t('users.index.title') }}
+            </Link>
         </div>
     </AdminLayout>
 </template>
