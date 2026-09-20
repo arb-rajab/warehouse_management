@@ -4,6 +4,7 @@ use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -35,7 +36,7 @@ test('down() backfills a null expiration_date before restoring NOT NULL', functi
         'remaining_boxes' => 0,
         'created_at' => now(),
         'updated_at' => now(),
-    ]))->toThrow(Illuminate\Database\QueryException::class);
+    ]))->toThrow(QueryException::class);
 
     loadMakeExpirationDateNullableOnPalletsTableMigration()->up();
 
