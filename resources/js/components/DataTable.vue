@@ -90,11 +90,27 @@ const popoverStyle = ref<{ top: string; insetInlineStart: string }>({
     insetInlineStart: '0px',
 });
 
-const triggerRefs = new Map<string, HTMLElement>();
+/**
+ * Several columns can share one `filterKey` (see js-components.md), so this
+ * maps a filterKey to every trigger button currently registered under it,
+ * keyed by that column's index — a plain `Map<string, HTMLElement>` would
+ * let the last-mounted sibling's button silently overwrite the others,
+ * failing the outside-click containment check below for every other
+ * sibling's icon.
+ */
+const triggerRefs = new Map<string, Map<number, HTMLElement>>();
 
-function setTriggerRef(el: Element | null, key: string): void {
+function setTriggerRef(el: Element | null, key: string, index: number): void {
+    const refs = triggerRefs.get(key) ?? new Map<number, HTMLElement>();
+
     if (el instanceof HTMLElement) {
-        triggerRefs.set(key, el);
+        refs.set(index, el);
+    } else {
+        refs.delete(index);
+    }
+
+    if (refs.size > 0) {
+        triggerRefs.set(key, refs);
     } else {
         triggerRefs.delete(key);
     }
@@ -143,7 +159,9 @@ function onDocumentClick(event: MouseEvent): void {
     }
 
     const target = event.target as Node;
-    const withinTrigger = triggerRefs.get(key)?.contains(target) ?? false;
+    const withinTrigger = Array.from(triggerRefs.get(key)?.values() ?? []).some(
+        (el) => el.contains(target),
+    );
     const withinPopover = popoverRef.value?.contains(target) ?? false;
 
     if (!withinTrigger && !withinPopover) {
@@ -179,7 +197,7 @@ onBeforeUnmount(() => {
                 >
                     <tr>
                         <th
-                            v-for="column in columns"
+                            v-for="(column, index) in columns"
                             :key="columnLabel(column)"
                             class="px-4 py-2 font-medium"
                         >
@@ -227,6 +245,7 @@ onBeforeUnmount(() => {
                                             setTriggerRef(
                                                 el as Element | null,
                                                 filterKey(column)!,
+                                                index,
                                             )
                                     "
                                     @click="

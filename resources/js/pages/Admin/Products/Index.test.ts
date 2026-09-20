@@ -365,7 +365,13 @@ describe('Products Index', () => {
         ).toBe('24');
     });
 
-    it('saves a changed box count against that product on dialog submit', async () => {
+    it('preserves the current page and filters when saving a changed box count', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/products?row_id=1&per_page=20',
+        );
+
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
 
         await rowCells(wrapper)[1].get('button').trigger('click');
@@ -373,10 +379,12 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).toHaveBeenCalledWith(
-            '/admin/products/42/box-count',
+            '/admin/products/42/box-count?row_id=1&per_page=20',
             { boxes_count: 30 },
             { preserveScroll: true, preserveState: true },
         );
+
+        window.history.pushState({}, '', '/');
     });
 
     it('rejects a box count below one on dialog submit without a round trip', async () => {

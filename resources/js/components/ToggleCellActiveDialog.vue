@@ -70,6 +70,8 @@ function submit(): void {
             preserveScroll: true,
             onFinish: () => {
                 processing.value = false;
+            },
+            onSuccess: () => {
                 open.value = false;
             },
         },
