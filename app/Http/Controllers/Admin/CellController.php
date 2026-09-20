@@ -13,7 +13,6 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Product;
 use App\Models\Row;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
@@ -73,9 +72,9 @@ class CellController extends Controller
     {
         $cell->loadMissing('row:id,letter');
 
-        return Pdf::loadView('pdf.qr-labels', [
-            'labels' => $this->cellQrLabels($cell->row->letter, collect([$cell])),
-        ])->download("cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr-code.pdf");
+        return response($this->cellQrLabelImage($cell->row->letter, $cell))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }
 
     /**

@@ -24,6 +24,11 @@ trait BuildsQrLabels
      * font referenced in the qr-labels PDF view must carry glyphs for the
      * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
      *
+     * Only the dompdf-rendered multi-label sheet (RowController's row-wide
+     * export, via cellQrLabels()) needs this — a standalone SVG label image
+     * (qrLabelImage()) is drawn by a standards-compliant SVG renderer, which
+     * already shapes and bidi-reorders Arabic text correctly on its own.
+     *
      * $hindo is false to keep Western digits, matching how the same
      * translation string renders un-shaped in the Vue/Inertia UI.
      */
@@ -58,5 +63,47 @@ trait BuildsQrLabels
         $svg = QrCode::format('svg')->size(200)->generate($data);
 
         return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+    }
+
+    /**
+     * A single, self-contained SVG "image" label — one QR plus up to two
+     * lines of plain legible text below it — for a single-item export
+     * (one cell, one product) that a worker downloads and prints directly,
+     * as opposed to the multi-label PDF sheet built by cellQrLabels() for
+     * printing a whole row at once. $secondaryDirection controls the second
+     * line's reading direction independently of the first, since a
+     * product's Arabic name is always RTL regardless of the primary
+     * (English) line next to it.
+     */
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText = null, string $secondaryDirection = 'ltr'): string
+    {
+        $qrSize = 240;
+        $padding = 20;
+        $width = $qrSize + $padding * 2;
+        $centerX = (int) ($width / 2);
+        $primaryY = $qrSize + $padding + 24;
+        $height = $primaryY + 16;
+        $qrDataUri = $this->qrImageDataUri($qrData);
+        $primary = e($primaryText);
+
+        $secondaryMarkup = '';
+
+        if ($secondaryText !== null) {
+            $secondaryY = $primaryY + 26;
+            $height = $secondaryY + 16;
+            $secondary = e($secondaryText);
+            $secondaryMarkup = <<<SVG
+                <text x="{$centerX}" y="{$secondaryY}" direction="{$secondaryDirection}" font-family="sans-serif" font-size="16" text-anchor="middle" fill="#555555">{$secondary}</text>
+                SVG;
+        }
+
+        return <<<SVG
+            <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$height}" viewBox="0 0 {$width} {$height}">
+                <rect width="100%" height="100%" fill="#ffffff"/>
+                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                <text x="{$centerX}" y="{$primaryY}" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#111111">{$primary}</text>
+                {$secondaryMarkup}
+            </svg>
+            SVG;
     }
 }

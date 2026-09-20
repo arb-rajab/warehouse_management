@@ -6,9 +6,10 @@ use App\Models\Cell;
 use Illuminate\Support\Collection;
 
 /**
- * Shared QR-label building for the row-wide and single-cell QR-export PDFs —
- * used by both Admin\RowController and Admin\CellController so the printed
- * label text and QR payload stay in lockstep.
+ * Shared QR-label building for the row-wide QR-export PDF sheet and the
+ * single-cell QR-export image — used by both Admin\RowController and
+ * Admin\CellController so the printed/exported label text and QR payload
+ * stay in lockstep.
  */
 trait BuildsCellQrLabels
 {
@@ -34,8 +35,36 @@ trait BuildsCellQrLabels
                 ])),
                 // The mobile app's custom URL scheme, encoded directly — no web
                 // redirect page in between. Only the app itself can open this link.
-                'qrImage' => $this->qrImageDataUri("warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}"),
+                'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell)),
             ])
             ->all();
+    }
+
+    /**
+     * The single-cell counterpart to cellQrLabels() — one standalone SVG
+     * image (see qrLabelImage()) for downloading/printing just this cell's
+     * label, rather than a whole PDF sheet.
+     */
+    private function cellQrLabelImage(string $rowLetter, Cell $cell): string
+    {
+        return $this->qrLabelImage(
+            $this->cellDeepLink($rowLetter, $cell),
+            Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
+            __('messages.qr_label_description', [
+                'row' => $rowLetter,
+                'cell' => $cell->cell_number,
+                'flat' => $cell->flat_number,
+            ]),
+            app()->isLocale('ar') ? 'rtl' : 'ltr',
+        );
+    }
+
+    /**
+     * The mobile app's custom URL scheme, encoded directly — no web redirect
+     * page in between. Only the app itself can open this link.
+     */
+    private function cellDeepLink(string $rowLetter, Cell $cell): string
+    {
+        return "warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}";
     }
 }

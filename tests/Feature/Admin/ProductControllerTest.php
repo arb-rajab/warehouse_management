@@ -8,7 +8,6 @@ use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
-use Smalot\PdfParser\Parser as PdfParser;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
@@ -773,23 +772,33 @@ test('setting a box count for a non-existent product returns a 404', function ()
     $response->assertNotFound();
 });
 
-test('an authenticated admin can export a QR code for a product', function () {
+test('an authenticated admin can export a QR code image for a product, with both its names', function () {
     actingAsAdmin();
 
-    $product = Product::factory()->create(['name' => 'Widgets']);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
 
     $response = $this->get("/admin/products/{$product->id}/export-qr");
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'application/pdf');
-    // A PDF with a real QR code drawn is meaningfully larger than one with just the
-    // label (~1.1KB) — regression guard for the QR silently failing to render (dompdf
-    // doesn't support inline <svg>, only an <img> referencing an image source).
-    expect(strlen($response->getContent()))->toBeGreaterThan(1500);
+    $response->assertHeader('content-type', 'image/svg+xml');
 
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    expect($pdfText)->toContain('Widgets');
-    expect($pdfText)->toContain((string) $product->id);
+    $svg = $response->getContent();
+    // A real QR is embedded as a base64 SVG data URI — regression guard for the
+    // QR silently failing to render rather than just the surrounding text.
+    expect($svg)->toContain('data:image/svg+xml;base64,');
+    expect($svg)->toContain('Widgets');
+    expect($svg)->toContain('ودجات');
+});
+
+test('a product with no Arabic name ships a QR code image with only the English name', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('Widgets');
 });
 
 test('a mobile app user cannot export a products QR code', function () {

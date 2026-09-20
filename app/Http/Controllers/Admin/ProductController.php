@@ -16,7 +16,6 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -150,9 +149,9 @@ class ProductController extends Controller
      */
     public function exportQr(Product $product): HttpResponse
     {
-        return Pdf::loadView('pdf.qr-labels', [
-            'labels' => [$this->productQrLabel($product)],
-        ])->download("product-{$product->id}-qr-code.pdf");
+        return response($this->productQrLabelImage($product))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
     }
 
     /**
