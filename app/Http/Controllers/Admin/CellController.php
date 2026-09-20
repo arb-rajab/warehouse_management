@@ -73,7 +73,7 @@ class CellController extends Controller
     {
         $cell->loadMissing('row:id,letter');
 
-        return Pdf::loadView('pdf.cell-qr-labels', [
+        return Pdf::loadView('pdf.qr-labels', [
             'labels' => $this->cellQrLabels($cell->row->letter, collect([$cell])),
         ])->download("cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr-code.pdf");
     }

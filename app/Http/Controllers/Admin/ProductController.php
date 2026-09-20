@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CellState;
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
+use App\Http\Controllers\Concerns\BuildsProductQrLabels;
 use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
@@ -15,17 +16,19 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProductController extends Controller
 {
-    use BuildsCellLogFilterOptions;
+    use BuildsCellLogFilterOptions, BuildsProductQrLabels;
 
     /**
      * @var list<string>
@@ -139,6 +142,17 @@ class ProductController extends Controller
                 ->orderBy('name')
                 ->paginate(20)
         ));
+    }
+
+    /**
+     * One QR per product id, meant to be printed and stuck on every
+     * box/pallet of that product — see BuildsProductQrLabels.
+     */
+    public function exportQr(Product $product): HttpResponse
+    {
+        return Pdf::loadView('pdf.qr-labels', [
+            'labels' => [$this->productQrLabel($product)],
+        ])->download("product-{$product->id}-qr-code.pdf");
     }
 
     /**

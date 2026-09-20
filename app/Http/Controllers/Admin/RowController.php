@@ -89,7 +89,7 @@ class RowController extends Controller
             ->orderedByCoordinates()
             ->get();
 
-        return Pdf::loadView('pdf.cell-qr-labels', [
+        return Pdf::loadView('pdf.qr-labels', [
             'labels' => $this->cellQrLabels($row->letter, $cells),
         ])->download("row-{$row->letter}-qr-codes.pdf");
     }

@@ -20,5 +20,6 @@ return [
     'rows_already_in_active_round' => 'هذه الممرات يجري جردها بالفعل في جولة أخرى: :rows',
     'cell_outside_round_rows' => 'هذا الموقع ليس ضمن الممرات التي تغطيها هذه الجولة.',
     'qr_label_description' => 'الممر :row · الخلية :cell · المستوى :flat',
+    'product_qr_label_description' => 'رقم المنتج: :id',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
 ];
