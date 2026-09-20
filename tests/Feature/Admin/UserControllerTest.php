@@ -736,8 +736,20 @@ test('an admin cannot delete a user who has recorded activity and nothing change
 
     $response = $this->delete("/admin/users/{$target->id}");
 
+    $response->assertRedirect(route('admin.users.index'));
     $response->assertSessionHasErrors(['user' => __('messages.user_cannot_delete_has_history')]);
     $this->assertDatabaseHas('wms_users', ['id' => $target->id]);
+});
+
+test('a rejected user deletion redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->create(['user_id' => $target->id]);
+
+    $response = $this->delete("/admin/users/{$target->id}?page=2");
+
+    $response->assertRedirect(route('admin.users.index', ['page' => 2]));
+    $response->assertSessionHasErrors(['user' => __('messages.user_cannot_delete_has_history')]);
 });
 
 test('deleting a user redirects back with the current page preserved', function () {

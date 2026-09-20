@@ -435,6 +435,7 @@ test('resizing a row that has a pallet is rejected and nothing changes', functio
         'flats_count' => 5,
     ]);
 
+    $response->assertRedirect(route('admin.rows.edit', $row));
     $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
@@ -453,6 +454,7 @@ test('resizing a row that has history but no pallet is rejected and nothing chan
         'flats_count' => 5,
     ]);
 
+    $response->assertRedirect(route('admin.rows.edit', $row));
     $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
@@ -575,6 +577,7 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
 
     $response = $this->delete("/admin/rows/{$row->letter}");
 
+    $response->assertRedirect(route('admin.rows.index'));
     $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
@@ -588,10 +591,23 @@ test('deleting a row that has history but no pallet is rejected and nothing chan
 
     $response = $this->delete("/admin/rows/{$row->letter}");
 
+    $response->assertRedirect(route('admin.rows.index'));
     $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_history')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
     $this->assertDatabaseHas('cells', ['id' => $cell->id]);
+});
+
+test('a rejected row deletion redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}?page=2");
+
+    $response->assertRedirect(route('admin.rows.index', ['page' => 2]));
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
 });
 
 test('a mobile app user cannot delete a row and nothing changes', function () {

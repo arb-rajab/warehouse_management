@@ -110,7 +110,7 @@ class RowController extends Controller
                 );
 
                 if ($blockReason !== null) {
-                    return back()->withErrors(['cells_count' => $blockReason]);
+                    return redirect()->route('admin.rows.edit', $row)->withErrors(['cells_count' => $blockReason]);
                 }
             }
 
@@ -130,7 +130,7 @@ class RowController extends Controller
             );
 
             if ($blockReason !== null) {
-                return back()->withErrors(['row' => $blockReason]);
+                return redirect()->route('admin.rows.index', $request->query())->withErrors(['row' => $blockReason]);
             }
 
             $row->delete();
