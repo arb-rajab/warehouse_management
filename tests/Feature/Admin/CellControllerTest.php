@@ -408,6 +408,16 @@ test('an authenticated user can export a QR code image for a single cell', funct
     // QR silently failing to render rather than just the surrounding text.
     expect($svg)->toContain('data:image/svg+xml;base64,');
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
+
+    // Regression guard: the single-cell SVG export and the row-wide PDF sheet
+    // (see RowControllerTest) must describe the same cell identically — both
+    // build the description from BuildsCellQrLabels::cellQrLabelDescription().
+    $description = __('messages.qr_label_description', [
+        'row' => 'Z',
+        'cell' => $cell->cell_number,
+        'flat' => $cell->flat_number,
+    ]);
+    expect($svg)->toContain($description);
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {

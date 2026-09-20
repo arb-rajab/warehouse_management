@@ -28,11 +28,7 @@ trait BuildsCellQrLabels
                 // worker which digit is the cell and which is the flat once the
                 // sticker is torn off the sheet and stuck on a shelf with no app
                 // around it for context.
-                'description' => $this->shapeArabicForPdf(__('messages.qr_label_description', [
-                    'row' => $rowLetter,
-                    'cell' => $cell->cell_number,
-                    'flat' => $cell->flat_number,
-                ])),
+                'description' => $this->shapeArabicForPdf($this->cellQrLabelDescription($rowLetter, $cell)),
                 // The mobile app's custom URL scheme, encoded directly — no web
                 // redirect page in between. Only the app itself can open this link.
                 'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell)),
@@ -50,13 +46,23 @@ trait BuildsCellQrLabels
         return $this->qrLabelImage(
             $this->cellDeepLink($rowLetter, $cell),
             Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
-            __('messages.qr_label_description', [
-                'row' => $rowLetter,
-                'cell' => $cell->cell_number,
-                'flat' => $cell->flat_number,
-            ]),
+            $this->cellQrLabelDescription($rowLetter, $cell),
             app()->isLocale('ar') ? 'rtl' : 'ltr',
         );
+    }
+
+    /**
+     * Shared by cellQrLabels() (PDF sheet, needs shapeArabicForPdf()) and
+     * cellQrLabelImage() (SVG, rendered correctly without it) so the
+     * translation parameters can't drift between the two exports.
+     */
+    private function cellQrLabelDescription(string $rowLetter, Cell $cell): string
+    {
+        return __('messages.qr_label_description', [
+            'row' => $rowLetter,
+            'cell' => $cell->cell_number,
+            'flat' => $cell->flat_number,
+        ]);
     }
 
     /**

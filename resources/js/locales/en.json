@@ -593,7 +593,7 @@
             },
             "exportingQr": {
                 "heading": "Printing a product's QR label",
-                "body": "Click the QR icon at the end of a product's row to download a printable QR label for it. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the label in the mobile app looks up the product by its current name and picture, so a label printed today still works correctly even if the product's name changes later."
+                "body": "Click the QR icon at the end of a product's row to download a printable QR label for it. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the label in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {
