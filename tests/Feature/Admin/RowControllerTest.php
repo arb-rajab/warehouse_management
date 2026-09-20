@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -365,6 +366,7 @@ test('viewing the edit page for a non-existent row returns a 404', function () {
 test('renaming a rows letter always succeeds', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Y',
@@ -374,6 +376,7 @@ test('renaming a rows letter always succeeds', function () {
 
     $response->assertRedirect(route('admin.rows.show', $row->fresh()));
     expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
 });
 
 test('renaming a row normalizes a lowercase letter to uppercase', function () {
@@ -436,6 +439,25 @@ test('resizing a row that has a pallet is rejected and nothing changes', functio
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('resizing a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 5,
+    ]);
+
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
+    expect($row->fresh()->cells_count)->toBe(2);
+    expect($row->fresh()->flats_count)->toBe(1);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
 });
 
 test('resizing a row with invalid dimensions and an existing pallet reports the dimension error, not the pallet block', function () {
@@ -556,6 +578,20 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
     $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('deleting a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_history')]);
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
 });
 
 test('a mobile app user cannot delete a row and nothing changes', function () {

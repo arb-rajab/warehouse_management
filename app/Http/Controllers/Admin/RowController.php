@@ -102,8 +102,16 @@ class RowController extends Controller
             $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
                 || $validated['flats_count'] !== $row->flats_count;
 
-            if ($dimensionsChanging && $this->lockedRowHasPallets($row)) {
-                return back()->withErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
+            if ($dimensionsChanging) {
+                $blockReason = $this->lockedRowBlockReason(
+                    $row,
+                    'messages.row_cannot_resize_has_pallets',
+                    'messages.row_cannot_resize_has_history',
+                );
+
+                if ($blockReason !== null) {
+                    return back()->withErrors(['cells_count' => $blockReason]);
+                }
             }
 
             $row->update($validated);
@@ -115,8 +123,14 @@ class RowController extends Controller
     public function destroy(Request $request, Row $row): RedirectResponse
     {
         return DB::transaction(function () use ($request, $row) {
-            if ($this->lockedRowHasPallets($row)) {
-                return back()->withErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
+            $blockReason = $this->lockedRowBlockReason(
+                $row,
+                'messages.row_cannot_delete_has_pallets',
+                'messages.row_cannot_delete_has_history',
+            );
+
+            if ($blockReason !== null) {
+                return back()->withErrors(['row' => $blockReason]);
             }
 
             $row->delete();
@@ -125,10 +139,25 @@ class RowController extends Controller
         });
     }
 
-    private function lockedRowHasPallets(Row $row): bool
+    /**
+     * Locks the row's cells for the remainder of the transaction, then
+     * returns the translated block message when the row currently has
+     * pallets or has history (past status logs/verification reports) that
+     * would otherwise fail on the `restrictOnDelete` constraints once the
+     * cells are deleted/regenerated — null when neither blocks the action.
+     */
+    private function lockedRowBlockReason(Row $row, string $palletsMessageKey, string $historyMessageKey): ?string
     {
         $row->cells()->lockForUpdate()->get();
 
-        return $row->hasPallets();
+        if ($row->hasPallets()) {
+            return __($palletsMessageKey);
+        }
+
+        if ($row->hasHistory()) {
+            return __($historyMessageKey);
+        }
+
+        return null;
     }
 }

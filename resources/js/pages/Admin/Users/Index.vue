@@ -10,6 +10,7 @@ import {
     index as usersIndex,
     show,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import HelpLink from '@/components/HelpLink.vue';
@@ -28,6 +29,10 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+
+const deleteError = computed(
+    () => (page.props.errors as Partial<Record<'user', string>>)?.user,
+);
 
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 
@@ -53,6 +58,8 @@ function onPerPageChange(perPage: number): void {
                 />
             </div>
         </PageHeader>
+
+        <ActionErrorBanner :message="deleteError" />
 
         <DataTable
             :columns="[

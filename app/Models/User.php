@@ -54,6 +54,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether this user has ever performed an action that left a permanent
+     * record. `cell_status_logs.user_id`, `cell_verification_rounds.user_id`
+     * and `cell_verification_reports.user_id` are all `restrictOnDelete`, so
+     * a user with any of these can never be deleted — see
+     * UserController::destroy().
+     */
+    public function hasHistory(): bool
+    {
+        return CellStatusLog::query()->where('user_id', $this->id)->exists()
+            || CellVerificationRound::query()->where('user_id', $this->id)->exists()
+            || CellVerificationReport::query()->where('user_id', $this->id)->exists();
+    }
+
+    /**
      * The id/name pairs for a "filter by who did this" dropdown, ordered by
      * name — the same shape `Row::filterOptions()`/`Product::filterOptions()`
      * return for their own filters.
