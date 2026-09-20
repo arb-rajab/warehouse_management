@@ -16,7 +16,7 @@ class PalletSeeder extends Seeder
     public function run(): void
     {
         $products = Product::all();
-        $availableCells = Cell::all();
+        $availableCells = Cell::query()->doesntHave('pallet')->get();
 
         if ($products->isEmpty() || $availableCells->isEmpty()) {
             return;

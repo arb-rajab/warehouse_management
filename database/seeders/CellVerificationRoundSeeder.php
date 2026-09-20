@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Cell;
 use App\Models\CellVerificationRound;
 use App\Models\Row;
 use App\Models\User;
@@ -15,7 +14,7 @@ class CellVerificationRoundSeeder extends Seeder
      */
     public function run(): void
     {
-        if (Cell::query()->doesntExist()) {
+        if (Row::query()->doesntExist()) {
             return;
         }
 
@@ -40,17 +39,23 @@ class CellVerificationRoundSeeder extends Seeder
 
         // Unfinished rounds hold their rows exclusively, so seeded data has to
         // satisfy the same rule startRound() enforces: each one takes rows no
-        // other unfinished round already claims, and they stay narrow so most
-        // of the warehouse is still actionable in a seeded environment.
-        $unclaimed = $rowIds;
+        // other unfinished round — including ones a previous seed run already
+        // left in place — already claims. They stay narrow (at most a quarter
+        // of the warehouse's rows) so most of the warehouse is still
+        // actionable in a seeded environment.
+        $alreadyClaimedRowIds = Row::query()->underActiveVerification()->pluck('id')->all();
+        $unclaimed = array_values(array_diff($rowIds, $alreadyClaimedRowIds));
         shuffle($unclaimed);
 
-        foreach (range(1, 4) as $i) {
-            $claim = array_splice($unclaimed, 0, 2);
+        $rowsLeftToClaim = (int) max(1, floor(count($rowIds) / 4));
 
-            if ($claim === []) {
+        foreach (range(1, 4) as $i) {
+            if ($unclaimed === [] || $rowsLeftToClaim <= 0) {
                 break;
             }
+
+            $claim = array_splice($unclaimed, 0, 1);
+            $rowsLeftToClaim -= count($claim);
 
             $this->seedRound($workers->random(), completed: false, rowIds: $claim);
         }
