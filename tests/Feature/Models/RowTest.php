@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Models\Cell;
+use App\Models\CellStatusLog;
+use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Row;
@@ -43,6 +46,44 @@ test('hasPallets is true when one of the rows cells holds a pallet', function ()
 
     expect($row->hasPallets())->toBeTrue();
     expect($emptyCell->fresh()->pallet)->toBeNull();
+});
+
+test('hasHistory is false when none of the rows cells have a status log or verification report', function () {
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]);
+
+    expect($row->hasHistory())->toBeFalse();
+});
+
+test('hasHistory is true when one of the rows cells has a status log', function () {
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    expect($row->hasHistory())->toBeTrue();
+});
+
+test('hasHistory is true when one of the rows cells is only the related_cell_id of a transfer log', function () {
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $destinationRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $row->cells()->first();
+    $destinationCell = $destinationRow->cells()->first();
+    CellStatusLog::factory()->create([
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn,
+    ]);
+
+    expect($row->hasHistory())->toBeTrue();
+});
+
+test('hasHistory is true when one of the rows cells has a verification report', function () {
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellVerificationReport::factory()->create(['cell_id' => $cell->id]);
+
+    expect($row->hasHistory())->toBeTrue();
 });
 
 test('filterOptions returns rows ordered by letter and the highest cells_count as maxColumnNumber', function () {

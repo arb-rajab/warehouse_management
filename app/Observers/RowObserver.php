@@ -22,8 +22,11 @@ class RowObserver
     /**
      * Handle the Row "updated" event by regenerating its cells when the layout changed.
      *
-     * Callers must guarantee the row has no pallets before changing its dimensions,
-     * since regenerating cells discards the previous ones.
+     * Callers must guarantee the row has no pallets and no history (see
+     * Row::hasPallets()/hasHistory()) before changing its dimensions, since
+     * regenerating cells discards the previous ones — deleting a cell with
+     * status logs or verification reports against it fails the
+     * `restrictOnDelete` constraint on those tables.
      */
     public function updated(Row $row): void
     {
@@ -39,9 +42,10 @@ class RowObserver
     }
 
     /**
-     * Handle the Row "deleted" event — its cells (all Empty; deletion is
-     * blocked while any hold a pallet, see RowController::destroy) go with it,
-     * which changes the dashboard's occupancy.empty count.
+     * Handle the Row "deleted" event — its cells (all Empty and history-free;
+     * deletion is blocked while any hold a pallet or have status log/
+     * verification history, see RowController::destroy) go with it, which
+     * changes the dashboard's occupancy.empty count.
      */
     public function deleted(Row $row): void
     {
