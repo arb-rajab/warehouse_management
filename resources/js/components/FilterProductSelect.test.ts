@@ -7,6 +7,7 @@ import ProductOptionLabel from './ProductOptionLabel.vue';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
+    onFinish?: () => void;
 }
 
 const { getMock } = vi.hoisted(() => ({
@@ -36,7 +37,10 @@ function page(
 }
 
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
+    // A real request always calls onFinish after onSuccess (or after
+    // onError), regardless of outcome.
     getMock.mock.calls[index][1]?.onSuccess?.(response);
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
 function mountSelect(

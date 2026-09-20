@@ -85,7 +85,6 @@ function buttonLabel(): string {
             type="text"
             class="sr-only"
             tabindex="-1"
-            readonly
             required
             :value="model ? String(model.id) : ''"
         />

@@ -293,7 +293,7 @@ function submitBoxCount(): void {
     }
 
     router.patch(
-        updateBoxCount(product.id).url,
+        updateBoxCount(product.id, { mergeQuery: {} }).url,
         { boxes_count: boxesCount },
         { preserveScroll: true, preserveState: true },
     );
