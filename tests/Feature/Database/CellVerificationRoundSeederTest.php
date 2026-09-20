@@ -34,7 +34,7 @@ test('running the seeder twice does not create two unfinished rounds over the sa
         ->get()
         ->flatMap(fn (CellVerificationRound $round) => $round->rows->pluck('id'));
 
-    expect($claimedRowIds)->toBe($claimedRowIds->unique());
+    expect($claimedRowIds->count())->toBe($claimedRowIds->unique()->count());
 });
 
 test('a row already claimed by an unfinished round from a prior run is never claimed again', function () {

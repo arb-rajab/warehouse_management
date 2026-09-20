@@ -4,7 +4,6 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
-use App\Models\Row;
 use App\Models\User;
 use Database\Seeders\CellStatusLogSeeder;
 use Database\Seeders\PalletSeeder;
@@ -51,6 +50,7 @@ test('running the seeder twice does not throw', function () {
     (new RowSeeder)->run();
     (new ProductSeeder)->run();
     (new PalletSeeder)->run();
+    User::factory()->create();
 
     (new CellStatusLogSeeder)->run();
     $firstRunCount = CellStatusLog::count();

@@ -2,7 +2,6 @@
 
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
-use App\Models\Row;
 use Database\Seeders\CellVerificationReportSeeder;
 use Database\Seeders\CellVerificationRoundSeeder;
 use Database\Seeders\RowSeeder;

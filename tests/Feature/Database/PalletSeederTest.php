@@ -3,7 +3,6 @@
 use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
-use App\Models\Row;
 use Database\Seeders\PalletSeeder;
 use Database\Seeders\ProductSeeder;
 use Database\Seeders\RowSeeder;
