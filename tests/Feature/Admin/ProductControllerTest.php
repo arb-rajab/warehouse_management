@@ -771,3 +771,58 @@ test('setting a box count for a non-existent product returns a 404', function ()
 
     $response->assertNotFound();
 });
+
+test('an authenticated admin can export a QR code image for a product, with both its names', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'image/svg+xml');
+
+    $svg = $response->getContent();
+    // A real QR is embedded as a base64 SVG data URI — regression guard for the
+    // QR silently failing to render rather than just the surrounding text.
+    expect($svg)->toContain('data:image/svg+xml;base64,');
+    expect($svg)->toContain('Widgets');
+    expect($svg)->toContain('ودجات');
+});
+
+test('a product with no Arabic name ships a QR code image with only the English name', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('Widgets');
+});
+
+test('a mobile app user cannot export a products QR code', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller cannot export a products QR code', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('exporting a QR code for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/products/999999/export-qr');
+
+    $response->assertNotFound();
+});

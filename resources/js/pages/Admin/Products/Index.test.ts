@@ -127,6 +127,7 @@ describe('Products Index', () => {
             t('products.columns.expiringSoon', { days: 45 }),
             t('products.columns.activityToday'),
             t('products.columns.activityWeek'),
+            t('products.columns.qr'),
         ]);
     });
 
@@ -473,6 +474,17 @@ describe('Products Index', () => {
         expect(href).toContain('/admin/cell-logs');
         expect(href).toContain('date_from=2026-08-10');
         expect(href).toContain('date_to=2026-08-13');
+    });
+
+    it('renders a QR export link for the product', () => {
+        const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
+
+        const cell = rowCells(wrapper)[8];
+        const link = cell.get('a');
+        expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
+        expect(link.attributes('aria-label')).toBe(
+            t('products.exportQrLabel', { product: 'Widgets' }),
+        );
     });
 
     it('carries the current row/column/user/action filters into the activity drill-down links', () => {

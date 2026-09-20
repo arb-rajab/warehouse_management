@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { QrCode } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -14,7 +15,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
-const sections = ['defaultBoxes', 'settingBoxes'];
+const sections = ['defaultBoxes', 'settingBoxes', 'exportingQr'];
 const previewBoxCountDraft = ref('50');
 
 /**
@@ -154,6 +155,20 @@ const previewProducts = [
                             })
                         "
                     />
+                </HelpUiPreview>
+                <HelpUiPreview v-if="section === 'exportingQr'" class="mt-2">
+                    <span
+                        tabindex="-1"
+                        :aria-label="
+                            t('products.exportQrLabel', {
+                                product: t('products.columns.product'),
+                            })
+                        "
+                        :title="t('products.columns.qr')"
+                        class="inline-flex text-gray-400 dark:text-neutral-500"
+                    >
+                        <QrCode class="h-4 w-4" />
+                    </span>
                 </HelpUiPreview>
             </section>
 

@@ -9,7 +9,6 @@ use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
-use Smalot\PdfParser\Parser as PdfParser;
 
 test('the warehouse map ships both raw product name columns, whatever the panel locale', function () {
     // `lib/productName.ts` picks the label client-side, so the payload is the
@@ -394,7 +393,7 @@ test('an unauthenticated caller is redirected to login when viewing the warehous
     $response->assertRedirect(route('login'));
 });
 
-test('an authenticated user can export a QR code for a single cell', function () {
+test('an authenticated user can export a QR code image for a single cell', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
@@ -402,14 +401,13 @@ test('an authenticated user can export a QR code for a single cell', function ()
     $response = $this->get("/admin/cells/{$cell->id}/export-qr");
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'application/pdf');
-    // A PDF with a real QR code drawn is meaningfully larger than one with just the
-    // label (~1.1KB) — regression guard for the QR silently failing to render (dompdf
-    // doesn't support inline <svg>, only an <img> referencing an image source).
-    expect(strlen($response->getContent()))->toBeGreaterThan(1500);
+    $response->assertHeader('content-type', 'image/svg+xml');
 
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    expect($pdfText)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
+    $svg = $response->getContent();
+    // A real QR is embedded as a base64 SVG data URI — regression guard for the
+    // QR silently failing to render rather than just the surrounding text.
+    expect($svg)->toContain('data:image/svg+xml;base64,');
+    expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {

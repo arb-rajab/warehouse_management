@@ -206,3 +206,53 @@ test('an unauthenticated caller cannot list products', function () {
 
     $response->assertUnauthorized();
 });
+
+test('an authenticated worker can fetch a single product by id', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
+    ]);
+    // Noise: a second product must not leak into this response.
+    Product::factory()->create(['name' => 'Gadget']);
+
+    $response = $this->getJson("/api/v1/products/{$product->id}");
+
+    $response->assertOk();
+    expect($response->json())->toEqual([
+        'id' => $product->id,
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
+        'image_url' => 'https://cdn.example.com/widget.png',
+        'boxes_count' => 12,
+        'active' => true,
+    ]);
+});
+
+test('fetching a deactivated product by id returns it normally with active false, not a 404', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->inactive()->create(['name' => 'Widget']);
+
+    $response = $this->getJson("/api/v1/products/{$product->id}");
+
+    $response->assertOk();
+    expect($response->json('active'))->toBeFalse();
+});
+
+test('fetching a nonexistent product id returns a 404', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/products/999999');
+
+    $response->assertNotFound();
+});
+
+test('an unauthenticated caller cannot fetch a single product', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/products/{$product->id}");
+
+    $response->assertUnauthorized();
+});

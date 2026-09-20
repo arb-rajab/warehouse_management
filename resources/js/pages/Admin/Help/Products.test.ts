@@ -44,6 +44,12 @@ describe('Help Products', () => {
         expect(wrapper.text()).toContain(t('help.products.settingBoxes.body'));
     });
 
+    it('explains how to print a products QR label', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.products.exportingQr.body'));
+    });
+
     it('renders a preview of the products table with its real column headers and an example row', () => {
         const wrapper = mountPage();
 
@@ -84,6 +90,15 @@ describe('Help Products', () => {
 
         const input = wrapper.get('#help-products-box-count');
         expect((input.element as HTMLInputElement).value).toBe('50');
+    });
+
+    it('renders a preview of the export-QR control', () => {
+        const wrapper = mountPage();
+
+        const preview = wrapper
+            .findAll('span')
+            .find((s) => s.attributes('title') === t('products.columns.qr'));
+        expect(preview).toBeTruthy();
     });
 
     it('links to the products page', () => {

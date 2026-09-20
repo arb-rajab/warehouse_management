@@ -27,6 +27,7 @@ Route::prefix('v1')->group(function () {
             ->whereNumber(['cellNumber', 'flatNumber']);
 
         Route::get('products', [ProductController::class, 'index']);
+        Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product');
 
         Route::post('pallets', [PalletController::class, 'store']);
         Route::get('pallets/{pallet}', [PalletController::class, 'show']);
