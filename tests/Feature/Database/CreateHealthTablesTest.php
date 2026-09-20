@@ -13,6 +13,12 @@ test('down() drops the health history table on the health connection', function 
     $connection = $historyItem->getConnectionName();
     $tableName = $historyItem->getTable();
 
+    // Health runs on its own sqlite connection, migrated independently of
+    // RefreshDatabase's usual connection — (re)create it explicitly here
+    // rather than assume the suite's migration already left it in place.
+    Schema::connection($connection)->dropIfExists($tableName);
+    loadCreateHealthTablesMigration()->up();
+
     expect(Schema::connection($connection)->hasTable($tableName))->toBeTrue();
 
     loadCreateHealthTablesMigration()->down();

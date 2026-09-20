@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
@@ -14,8 +13,10 @@ function loadMakeExpirationDateNullableOnPalletsTableMigration(): object
 }
 
 test('down() backfills a null expiration_date before restoring NOT NULL', function () {
-    $row = Row::create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = Cell::create(['row_id' => $row->id, 'cell_number' => 1, 'flat_number' => 1, 'state' => 'empty']);
+    // RowObserver auto-generates cells_count x flats_count empty cells, so
+    // creating them here directly would collide with the generated rows.
+    $row = Row::create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    [$cell, $secondCell] = $row->cells()->orderBy('cell_number')->get();
     $product = Product::create(['name' => 'Widgets', 'ar_name' => '', 'published' => 1]);
     $pallet = Pallet::create([
         'product_id' => $product->id,
@@ -31,7 +32,7 @@ test('down() backfills a null expiration_date before restoring NOT NULL', functi
     // Restoring NOT NULL must actually succeed rather than throw.
     expect(fn () => DB::table('pallets')->insert([
         'product_id' => $product->id,
-        'cell_id' => Cell::create(['row_id' => $row->id, 'cell_number' => 2, 'flat_number' => 1, 'state' => 'empty'])->id,
+        'cell_id' => $secondCell->id,
         'expiration_date' => null,
         'remaining_boxes' => 0,
         'created_at' => now(),
