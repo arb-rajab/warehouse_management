@@ -282,15 +282,47 @@ class Product extends Model
             $connection instanceof Connection ? $connection->getDriverName() : '',
         );
 
-        if ($plan['full_text_expression'] !== null) {
-            $query->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
+        // No FULLTEXT expression at all — either this driver can't compile
+        // MATCH, or the term has no indexable word — so the LIKE-AND-of-words
+        // group is the whole condition, exactly as it always was on sqlite.
+        if ($plan['full_text_expression'] === null) {
+            self::applyLikeWords($query, $plan['like_words']);
+
+            return;
         }
 
-        // The per-word grouping is load-bearing. A flat `orWhere()` chain would
-        // bind the OR across word boundaries too, turning "every word matches"
-        // into "any word matches" — so each word gets its own nested group, and
-        // the groups are still ANDed together (and ANDed with the MATCH above).
-        foreach ($plan['like_words'] as $word) {
+        // Otherwise a product matches this driver's search if it satisfies
+        // *either* strategy: the FULLTEXT expression (prefix matching, but
+        // gapless past the length/stopword/punctuation exclusions below) or
+        // the same LIKE-AND-of-words group sqlite would run (infix matching
+        // over every word, with no exclusions). OR'ing the two whole
+        // strategies — rather than routing each word to exactly one of them —
+        // is what makes the combined search a superset of the LIKE search:
+        // "idget" only ever matches "Widget" through this LIKE branch, never
+        // through FULLTEXT, whichever branch a given word's own FULLTEXT
+        // eligibility would have picked.
+        $query->where(function (QueryBuilder $group) use ($plan): void {
+            $group->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
+            $group->orWhere(function (QueryBuilder $likeGroup) use ($plan): void {
+                self::applyLikeWords($likeGroup, $plan['like_words']);
+            });
+        });
+    }
+
+    /**
+     * AND together one `LIKE '%word%'` group per word, each word matching
+     * *either* store name column.
+     *
+     * The per-word grouping is load-bearing. A flat `orWhere()` chain would
+     * bind the OR across word boundaries too, turning "every word matches"
+     * into "any word matches" — so each word gets its own nested group, and
+     * the groups are still ANDed together.
+     *
+     * @param  list<string>  $words
+     */
+    private static function applyLikeWords(QueryBuilder $query, array $words): void
+    {
+        foreach ($words as $word) {
             $query->where(function (QueryBuilder $matchesEitherName) use ($word): void {
                 $matchesEitherName
                     ->where('name', 'like', '%'.$word.'%')
@@ -300,41 +332,63 @@ class Product extends Model
     }
 
     /**
-     * Split a search term into the words MySQL's FULLTEXT index can answer and
-     * the words it cannot, which stay on `LIKE`.
+     * Build the FULLTEXT half of the search: a single boolean-mode expression
+     * covering only the term's *indexable* words, or `null` when it has none.
      *
-     * `MATCH (name, ar_name) AGAINST ('+w1* +w2*' IN BOOLEAN MODE)` reproduces
-     * the contract exactly on the words it covers: MySQL treats the two indexed
-     * columns as one document, so each `+word` must appear in *either* of them
-     * (the across-columns OR) and every `+word` must appear (the per-word AND).
-     * Matching is case-insensitive under the columns' collation, as `LIKE` was.
+     * `MATCH (name, ar_name) AGAINST ('+w1* +w2*' IN BOOLEAN MODE)` requires
+     * every included word (the per-word AND) in *either* indexed column (the
+     * across-columns OR, since MySQL treats them as one document). Matching is
+     * case-insensitive under the columns' collation, as `LIKE` is.
      *
-     * Three kinds of word are deliberately routed to `LIKE` instead, because
-     * boolean mode would silently return *nothing* for them rather than fewer
-     * rows:
+     * `isFullTextIndexable()` excludes three kinds of word, because boolean
+     * mode would silently return *nothing* for them rather than fewer rows —
+     * and unlike the old routing, an excluded word here costs nothing: it is
+     * still covered by the LIKE-AND-of-every-word group `applyNameSearch()`
+     * ORs against this expression, over every word regardless of exclusion:
      *
      * - **Anything but letters and digits.** MySQL's default parser splits a
      *   word on every other character, so `+Wid-get*` could never match the
-     *   product literally named "Wid-get". Routing these to `LIKE` is also what
-     *   makes the expression injection-proof: it is built solely from
-     *   alphanumeric words plus the `+` and `*` this method adds, so a term
-     *   containing boolean operators (`-`, `"`, `~`, `(`) cannot reach the
-     *   parser and invert or break the query.
+     *   product literally named "Wid-get". Excluding these also keeps this
+     *   expression injection-proof: it is built solely from alphanumeric words
+     *   plus the `+` and `*` this method adds, so a term containing boolean
+     *   operators (`-`, `"`, `~`, `(`) cannot reach the parser and invert or
+     *   break the query.
      * - **Words shorter than `innodb_ft_min_token_size`.** Such words are not
      *   in the index at all. This matters most for the admin's type-ahead
      *   dropdown, where a one- or two-letter term is the common case.
      * - **InnoDB's default stopwords.** `+for*` matches nothing, which would
-     *   lose every result for a term like "Case for Phone".
+     *   lose every result for a term like "Case for Phone" through this
+     *   expression alone.
      *
-     * The one deliberate change to the old `LIKE` behaviour is that an indexed
-     * word now matches by *prefix* rather than as an infix: "Widg" still finds
-     * "Widgets", but "idget" no longer finds "Widget". Boolean mode has no
-     * leading wildcard, and a term typed into a type-ahead is a prefix in
-     * practice.
+     * The one respect in which the combined search still differs from a pure
+     * `LIKE`: an indexable word matches by *prefix* through this expression
+     * ("Widg" finds "Widgets") in addition to matching as an infix through the
+     * LIKE branch — so the combined search is a strict superset of `LIKE`
+     * alone, never narrower.
+     *
+     * @param  list<string>  $words
+     */
+    private static function fullTextExpression(array $words): ?string
+    {
+        $indexedWords = array_values(array_filter(array_map(
+            static fn (string $word): ?string => self::isFullTextIndexable($word) ? '+'.$word.'*' : null,
+            $words,
+        )));
+
+        return $indexedWords === [] ? null : implode(' ', $indexedWords);
+    }
+
+    /**
+     * Plan the two search strategies `applyNameSearch()` OR's together on
+     * mysql/mariadb: the FULLTEXT expression from
+     * {@see self::fullTextExpression()}, and the full list of words for the
+     * LIKE-AND-of-every-word group. On every other driver — sqlite, the test
+     * connection — there is no FULLTEXT support at all, so every word goes
+     * only to the LIKE group, which becomes the whole search.
      *
      * @param  string  $driver  the connection's driver — sqlite (the test
      *                          connection) has no `MATCH ... AGAINST` at all,
-     *                          so every word stays on `LIKE` there
+     *                          so the FULLTEXT half is skipped there
      * @return array{full_text_expression: string|null, like_words: list<string>}
      */
     private static function nameSearchPlan(string $term, string $driver): array
@@ -346,26 +400,15 @@ class Product extends Model
             return ['full_text_expression' => null, 'like_words' => $words];
         }
 
-        $indexedWords = [];
-        $likeWords = [];
-
-        foreach ($words as $word) {
-            if (self::isFullTextIndexable($word)) {
-                $indexedWords[] = '+'.$word.'*';
-            } else {
-                $likeWords[] = $word;
-            }
-        }
-
         return [
-            'full_text_expression' => $indexedWords === [] ? null : implode(' ', $indexedWords),
-            'like_words' => $likeWords,
+            'full_text_expression' => self::fullTextExpression($words),
+            'like_words' => $words,
         ];
     }
 
     /**
      * Whether boolean-mode `MATCH ... AGAINST` can answer this word at all —
-     * see the three exclusions documented on {@see self::nameSearchPlan()}.
+     * see the three exclusions documented on {@see self::fullTextExpression()}.
      */
     private static function isFullTextIndexable(string $word): bool
     {

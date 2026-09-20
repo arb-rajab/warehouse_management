@@ -190,55 +190,91 @@ function mysqlProductSearch(?string $term): Builder
     return Product::on('mysql')->searchByName($term);
 }
 
-test('searchByName matches through the fulltext index on mysql, requiring every word', function () {
+test('searchByName matches through the fulltext index OR the like-and-of-words group on mysql', function () {
     $query = mysqlProductSearch('Widget Blue');
 
     // One MATCH over both indexed columns: MySQL treats them as a single
     // document, so `+word` is the across-columns OR and the repeated `+` is
-    // the per-word AND — the same contract the LIKE chain encoded.
-    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode)');
-    expect($query->getBindings())->toBe(['+Widget* +Blue*']);
+    // the per-word AND. It is OR'd against the same LIKE-AND-of-every-word
+    // group the sqlite path runs (each word its own group, matching either
+    // name column, the groups ANDed together) — either strategy matching is
+    // enough, so the whole thing sits behind one outer group.
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? or `ar_name` like ?) and (`name` like ? or `ar_name` like ?)))'
+    );
+    expect($query->getBindings())->toBe(['+Widget* +Blue*', '%Widget%', '%Widget%', '%Blue%', '%Blue%']);
 });
 
 test('searchByName matches an Arabic term through the fulltext index on mysql', function () {
     $query = mysqlProductSearch('ودجة زرقاء');
 
-    expect($query->getBindings())->toBe(['+ودجة* +زرقاء*']);
+    expect($query->getBindings())->toBe(['+ودجة* +زرقاء*', '%ودجة%', '%ودجة%', '%زرقاء%', '%زرقاء%']);
 });
 
-test('searchByName keeps a word shorter than the minimum token size on LIKE', function () {
+test('searchByName also runs a word shorter than the minimum token size through LIKE on mysql', function () {
     // `innodb_ft_min_token_size` (3 by default) leaves such a word out of the
-    // index entirely, so `+ab*` would match nothing at all rather than
-    // matching more loosely. The admin's type-ahead dropdown sends one- and
-    // two-letter terms constantly, so this is the common case, not an edge one.
+    // FULLTEXT expression entirely — `+ab*` would match nothing at all rather
+    // than matching more loosely — but every word, including this one, still
+    // goes through the LIKE-AND-of-words group. The admin's type-ahead
+    // dropdown sends one- and two-letter terms constantly, so this is the
+    // common case, not an edge one.
     $query = mysqlProductSearch('ab Widget');
 
-    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode) and (`name` like ? or `ar_name` like ?)');
-    expect($query->getBindings())->toBe(['+Widget*', '%ab%', '%ab%']);
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? or `ar_name` like ?) and (`name` like ? or `ar_name` like ?)))'
+    );
+    expect($query->getBindings())->toBe(['+Widget*', '%ab%', '%ab%', '%Widget%', '%Widget%']);
 });
 
-test('searchByName keeps an InnoDB stopword on LIKE', function () {
-    // Boolean mode strips stopwords from the query, so `+for*` matches
-    // nothing — a term like "Case for Phone" would lose every result.
+test('searchByName also runs an InnoDB stopword through LIKE on mysql', function () {
+    // Boolean mode strips stopwords from the FULLTEXT expression, so `+for*`
+    // would match nothing there — a term like "Case for Phone" would lose
+    // every result through that branch alone — but the LIKE branch still
+    // requires it like any other word.
     $query = mysqlProductSearch('Case for Phone');
 
-    expect($query->getBindings())->toBe(['+Case* +Phone*', '%for%', '%for%']);
+    expect($query->getBindings())->toBe([
+        '+Case* +Phone*',
+        '%Case%', '%Case%',
+        '%for%', '%for%',
+        '%Phone%', '%Phone%',
+    ]);
 });
 
-test('searchByName keeps a word carrying punctuation on LIKE', function () {
+test('searchByName also runs a word carrying punctuation through LIKE on mysql', function () {
     // MySQL's default parser splits a word on every non-alphanumeric
     // character, so `+Wid-get*` could never match the product literally named
-    // "Wid-get".
+    // "Wid-get" — but the LIKE branch matches it as a plain infix.
     $query = mysqlProductSearch('Wid-get Blue');
 
-    expect($query->getBindings())->toBe(['+Blue*', '%Wid-get%', '%Wid-get%']);
+    expect($query->getBindings())->toBe(['+Blue*', '%Wid-get%', '%Wid-get%', '%Blue%', '%Blue%']);
+});
+
+test('searchByName matches a term that is only an infix of the stored name, via the LIKE branch on mysql', function () {
+    // The gap this combined search closes: boolean-mode FULLTEXT only matches
+    // by prefix, so "idget" alone could never find "Widget" through MATCH.
+    // "idget" is otherwise a perfectly indexable word (alphanumeric, long
+    // enough, not a stopword), so it still lands in the FULLTEXT expression —
+    // it just cannot match there. The OR'd LIKE branch matches it as an infix
+    // instead, the same way sqlite always would.
+    $query = mysqlProductSearch('idget');
+
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? or `ar_name` like ?)))'
+    );
+    expect($query->getBindings())->toBe(['+idget*', '%idget%', '%idget%']);
 });
 
 test('searchByName never lets boolean-mode operators reach the fulltext parser', function () {
     // The expression is built only from alphanumeric words plus the `+` and
     // `*` the scope adds itself, so a term of operators cannot invert the
     // query (`-word` excludes in boolean mode) or break its syntax — every
-    // such word falls through to an exact LIKE instead.
+    // such word is excluded from the FULLTEXT expression, leaving only the
+    // LIKE-AND-of-words group (no indexable word at all, so no outer OR
+    // group either — same shape as the non-mysql path).
     $query = mysqlProductSearch('-Widget "Blue"');
 
     expect($query->toSql())->not->toContain('match');
