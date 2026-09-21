@@ -110,6 +110,7 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(
             t('cells.palletActions.tabs.transfer'),
         );
+        expect(wrapper.text()).toContain(t('cells.palletActions.tabs.edit'));
     });
 
     it('renders a preview of the store tab fields', () => {
@@ -136,6 +137,33 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(
             t('cells.palletActions.removeBoxes.boxesCountLabel'),
         );
+    });
+
+    it('renders a preview of the edit tab fields, without the note field', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.edit.productLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.edit.expirationLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.edit.boxesCountLabel'),
+        );
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.edit.confirmEmptyLabel'),
+        );
+
+        // The real dialog hides the note field on the edit tab, so the
+        // preview must not show one more note field than there are tabs
+        // that actually have it (store, open, removeBoxes, transfer).
+        const noteLabels = wrapper
+            .findAll('label')
+            .filter(
+                (label) => label.text() === t('cells.palletActions.noteLabel'),
+            );
+        expect(noteLabels).toHaveLength(4);
     });
 
     it('renders a preview of the empty tab confirmation text', () => {

@@ -122,9 +122,16 @@ function inertiaHeaders(): array
 }
 
 /**
- * Set a model's `created_at` to a specific timestamp after creation — needed
- * because `created_at` is never mass-assignable, so factories can't set it
- * via `create()`.
+ * Set a model's `created_at` to a specific timestamp after creation.
+ *
+ * Note this is *not* needed to beat mass assignment: `Factory::makeInstance()`
+ * builds the model inside `Model::unguarded()`, and `updateTimestamps()` leaves
+ * an already-dirty `created_at` alone, so `create(['created_at' => ...])` does
+ * set it. Use this helper for a model that already exists, and prefer passing
+ * `created_at` to the factory when a `created`/`creating` model event must see
+ * the real timestamp — `CellStatusLogObserver::created()` evaluates the
+ * auto-flag thresholds against `$log->created_at`, which is still `now()` when
+ * a later `backdate()` is what moves it.
  *
  * @template TModel of Model
  *
