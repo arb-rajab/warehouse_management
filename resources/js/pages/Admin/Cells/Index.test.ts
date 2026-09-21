@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CellMap3D from '@/components/CellMap3D.vue';
@@ -191,6 +192,15 @@ describe('Cells Index (warehouse map)', () => {
         cellMap3DFocusCell.mockClear();
         cellMap3DResetView.mockClear();
         cellMap3DSetCameraMode.mockClear();
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([], []);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('cells.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('cells.title'));
     });
 
     it('shows the empty message when there are no rows', () => {

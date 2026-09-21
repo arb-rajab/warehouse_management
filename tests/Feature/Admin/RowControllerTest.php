@@ -453,6 +453,44 @@ test('renaming a row to a letter that already exists is rejected and nothing cha
     expect($otherRow->fresh()->letter)->toBe('Y');
 });
 
+test('renaming a row holding a pallet leaves its cells and the pallet untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+});
+
+test('renaming a row holding history but no pallet leaves its cells untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $log = CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($log->fresh()->cell_id)->toBe($cell->id);
+});
+
 test('resizing a row with no pallets regenerates its cells', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);

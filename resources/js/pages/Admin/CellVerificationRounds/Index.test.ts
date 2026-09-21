@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,6 +63,15 @@ async function openFilters(
 describe('CellVerificationRounds Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('cellVerificationRound.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('cellVerificationRound.title'));
     });
 
     it('renders every column header', () => {

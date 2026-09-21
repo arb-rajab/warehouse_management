@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the cell verification rounds list with every property the table renders', function () {
-    actingAsAdmin();
+    $admin = actingAsAdmin();
+    $admin->update(['name' => 'Zoe Admin']);
 
     $worker = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
     $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
@@ -46,6 +47,10 @@ test('an authenticated admin can view the cell verification rounds list with eve
                     ->where('name', 'Ada Reporter')
                 )
             )
+            ->where('filterOptions.users', [
+                ['id' => $worker->id, 'name' => 'Ada Reporter'],
+                ['id' => $admin->id, 'name' => 'Zoe Admin'],
+            ])
     );
 });
 
@@ -158,6 +163,9 @@ test('an authenticated admin can view a single round with its own reports and ev
         fn (Assert $page) => $page->component('Admin/CellVerificationRounds/Show')
             ->where('round.id', $round->id)
             ->where('round.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('filterOptions.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('filterOptions.maxColumnNumber', 1)
+            ->has('filterOptions.products', 0)
             ->has('reports.data', 1)
             ->has('reports.data.0', fn (Assert $reportProp) => $reportProp
                 ->where('id', $report->id)

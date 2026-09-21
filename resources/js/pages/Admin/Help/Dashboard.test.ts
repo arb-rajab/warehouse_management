@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -38,6 +39,25 @@ function mountPage() {
 describe('Help Dashboard', () => {
     beforeEach(() => {
         resetMocks({ usePageMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('help.dashboard.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('help.dashboard.title'));
+    });
+
+    it('renders every section heading', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(headings).toEqual([
+            t('help.dashboard.overview.heading'),
+            t('help.dashboard.productFilter.heading'),
+        ]);
     });
 
     it('explains what the dashboard shows', () => {

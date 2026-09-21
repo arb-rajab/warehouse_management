@@ -28,6 +28,12 @@ describe('ProductOccupancyFilterFields', () => {
         const checkboxes = wrapper.findAll('input[type="checkbox"]');
         expect(checkboxes[0].attributes('id')).toBe('filter-expired');
         expect(checkboxes[1].attributes('id')).toBe('filter-inactive');
+        expect(wrapper.get('label[for="filter-expired"]').text()).toBe(
+            t('cellHighlight.expired'),
+        );
+        expect(wrapper.get('label[for="filter-inactive"]').text()).toBe(
+            t('products.filters.inactive'),
+        );
 
         const quickPicks = wrapper
             .findAll('button')

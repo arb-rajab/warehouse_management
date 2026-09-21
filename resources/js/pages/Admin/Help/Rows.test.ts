@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -30,6 +31,28 @@ function mountPage() {
 describe('Help Rows', () => {
     beforeEach(() => {
         resetMocks({ usePageMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('help.rows.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('help.rows.title'));
+    });
+
+    it('renders every section heading', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(headings).toEqual([
+            t('help.rows.grid.heading'),
+            t('help.rows.dimensions.heading'),
+            t('help.rows.creating.heading'),
+            t('help.rows.editing.heading'),
+            t('help.rows.deleting.heading'),
+        ]);
     });
 
     it('explains what a row is and how cells/levels multiply into pallet slots', () => {

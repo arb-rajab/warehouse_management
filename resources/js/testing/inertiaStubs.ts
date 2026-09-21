@@ -48,4 +48,7 @@ export function createFormStub(
     });
 }
 
-export const headStub = defineComponent({ render: () => null });
+export const headStub = defineComponent({
+    props: ['title'],
+    render: () => null,
+});

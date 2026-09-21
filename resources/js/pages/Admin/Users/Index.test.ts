@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +42,15 @@ function mountPage(users: User[], currentUserId = 7, perPage = 20) {
 describe('Users Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock, routerGetMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('users.index.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('users.index.title'));
     });
 
     it('renders every column header', () => {

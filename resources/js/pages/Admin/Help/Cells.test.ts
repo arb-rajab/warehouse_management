@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { Ban, Box, LayoutGrid, PackageSearch, Search } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +34,27 @@ function mountPage() {
 describe('Help Cells', () => {
     beforeEach(() => {
         resetMocks({ usePageMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('help.cells.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('help.cells.title'));
+    });
+
+    it('renders every section heading', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(headings).toEqual([
+            t('help.cells.map.heading'),
+            t('help.cells.legend.heading'),
+            t('help.cells.managingPallets.heading'),
+            t('help.cells.deactivating.heading'),
+        ]);
     });
 
     it('explains how to read the map', () => {
