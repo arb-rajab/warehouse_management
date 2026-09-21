@@ -137,6 +137,7 @@ class ProductController extends Controller
         return $this->paginated(ProductOptionResource::collection(
             Product::query()
                 ->select(['id', 'name', 'ar_name'])
+                ->where('published', true)
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')
                 ->paginate(20)
