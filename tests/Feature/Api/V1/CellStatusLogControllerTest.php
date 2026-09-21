@@ -135,9 +135,11 @@ test('the cell log listing computes flagged for an admin caller without an exist
 
     $response->assertOk();
     expect(collect($response->json('data'))->pluck('flagged')->unique()->all())->toBe([true]);
-    // A per-row exists() fallback would put this well past 10 on top of the
-    // eager loads; the withCount('flags') alias keeps it to one extra column.
-    expect($queryCount)->toBeLessThan(10);
+    // The eager-loaded WITH_DETAILS relations plus withCount('flags') and
+    // pagination put this in the low teens regardless of row count; a
+    // per-row exists() fallback would add one query per row on top of that
+    // (21+ for these 10 rows), so 15 comfortably separates the two.
+    expect($queryCount)->toBeLessThan(15);
 });
 
 test('the flagged filter is ignored for a worker, so it cannot be used to reveal which entries are flagged', function () {
