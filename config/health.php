@@ -69,12 +69,14 @@ return [
         'only_on_failure' => false,
 
         'mail' => [
-            // Left unset by default, on purpose: an unconfigured recipient makes
-            // notification delivery fail loudly (invalid address) rather than
-            // silently mailing this app's failing check details — e.g. a
-            // database/queue failure message — to your@example.com, a domain
-            // this app doesn't control.
-            'to' => env('HEALTH_TO_ADDRESS', ''),
+            // An address on the .invalid TLD, reserved by RFC 2606 to never
+            // resolve — matches config/backup.php's BACKUP_NOTIFICATION_EMAIL
+            // fallback, and keeps the same guarantee here: an unconfigured
+            // recipient fails loudly at mail delivery time rather than silently
+            // mailing this app's failing check details — e.g. a database/queue
+            // failure message — to your@example.com, a domain this app doesn't
+            // control.
+            'to' => env('HEALTH_TO_ADDRESS', 'health-notifications-not-configured@example.invalid'),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
