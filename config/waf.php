@@ -53,6 +53,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Skipped Input Keys
+    |--------------------------------------------------------------------------
+    |
+    | Input keys whose *values* are never matched against the signatures below
+    | (the key names themselves still are). Credentials are the one class of
+    | input a user is expected to fill with unpredictable symbols: the
+    | production Password::defaults() in AppServiceProvider requires them, so a
+    | password-manager value holding a backtick or "$(...)" matched the
+    | command-injection signatures and produced a bare 403 before routing, with
+    | no validation error the Inertia form could show. Excluding these three
+    | keys is narrower than an exclude_paths entry for admin/login, admin/users
+    | and password/change, which would switch the input checks off entirely on
+    | the app's three most sensitive routes.
+    |
+    | Matched case-insensitively against the last segment of the dotted key, so
+    | a nested "users.0.password" is covered too.
+    |
+    */
+
+    'skip_input_keys' => [
+        'password',
+        'password_confirmation',
+        'current_password',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Attack Signatures
     |--------------------------------------------------------------------------
     |
