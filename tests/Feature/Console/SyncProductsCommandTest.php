@@ -2,6 +2,7 @@
 
 use App\Models\Product;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -114,6 +115,38 @@ test('the sync command fails without throwing when the request itself fails', fu
     $this->artisan('products:sync')->assertFailed();
 
     expect(Product::count())->toBe(0);
+});
+
+test('the sync command chunks the upsert instead of building one oversized statement', function () {
+    // upsert() compiles one statement with all its bindings and never chunks
+    // on its own — with DB_CONNECTION=sqlite (this suite's default), a single
+    // statement over ~8,200 rows (4 bindings/row) would exceed SQLite's
+    // 32766-variable limit. 1,200 rows across a chunk size of 500 forces 3
+    // separate insert statements, proving the command chunks rather than
+    // relying on row count alone (which a single, larger upsert would also
+    // satisfy for the row-count assertion but not the statement-count one).
+    $products = collect(range(1, 1200))->map(fn (int $i) => [
+        'Mat_ID' => (string) $i,
+        'enName' => "Product {$i}",
+        'arName' => '',
+        'Active' => 1,
+    ])->all();
+
+    Http::fake([
+        'stores.otajer.com/*' => Http::response(['Result' => 'OK', 'Products' => $products]),
+    ]);
+
+    $upsertStatements = [];
+    DB::listen(function ($query) use (&$upsertStatements) {
+        if (str_contains($query->sql, 'insert into "products"')) {
+            $upsertStatements[] = $query;
+        }
+    });
+
+    $this->artisan('products:sync')->assertSuccessful();
+
+    expect(Product::count())->toBe(1200);
+    expect($upsertStatements)->toHaveCount(3);
 });
 
 test('the sync command fails cleanly when no sync url is configured', function () {

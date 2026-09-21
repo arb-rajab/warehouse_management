@@ -236,7 +236,14 @@ return [
         'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => 'your@example.com',
+            // spatie/laravel-backup eagerly validates this as a real email address
+            // (NotificationMailConfig::fromArray()) during package:discover, so an
+            // empty/blank default breaks `composer install` outright. Fall back to
+            // an address on the .invalid TLD instead — reserved by RFC 2606 to
+            // never resolve — so an unconfigured recipient fails loudly at mail
+            // delivery time rather than silently mailing backup details to
+            // your@example.com, a domain this app doesn't control.
+            'to' => env('BACKUP_NOTIFICATION_EMAIL', 'backup-notifications-not-configured@example.invalid'),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
