@@ -66,6 +66,48 @@ trait BuildsQrLabels
     }
 
     /**
+     * SVG `<text>` never wraps on its own, so a name wider than the label's
+     * fixed canvas would draw past the edge and get visually clipped when
+     * rasterized/printed. There's no text-measurement API available for a
+     * plain `sans-serif` webfont at export time, so the max characters per
+     * line is estimated from an average-character-width heuristic (each
+     * character is assumed to fill roughly 55% of the font-size in pixels)
+     * rather than measured exactly — safe because a slight over/under
+     * estimate only shifts which word happens to land on which line, never
+     * how many characters are shown. `wordwrap()`'s `cut` is enabled only as
+     * a fallback for a single word wider than the whole line on its own.
+     *
+     * @return list<string>
+     */
+    private function wrapLabelText(string $text, int $maxWidth, int $fontSize): array
+    {
+        $avgCharWidth = $fontSize * 0.55;
+        $maxChars = max(1, (int) floor($maxWidth / $avgCharWidth));
+
+        return explode("\n", wordwrap($text, $maxChars, "\n", true));
+    }
+
+    /**
+     * @param  list<string>  $lines
+     */
+    private function textLinesMarkup(array $lines, int $centerX, int $startY, int $lineHeight, int $fontSize, string $color, string $direction, bool $bold = false): string
+    {
+        $fontWeight = $bold ? ' font-weight="bold"' : '';
+        $markup = '';
+
+        foreach ($lines as $index => $line) {
+            $y = $startY + $index * $lineHeight;
+            $text = e($line);
+            $markup .= <<<SVG
+                <text x="{$centerX}" y="{$y}" direction="{$direction}" font-family="sans-serif" font-size="{$fontSize}"{$fontWeight} text-anchor="middle" fill="{$color}">{$text}</text>
+
+                SVG;
+        }
+
+        return rtrim($markup);
+    }
+
+    /**
      * A single, self-contained SVG "image" label — one QR plus up to two
      * lines of plain legible text below it — for a single-item export
      * (one cell, one product) that a worker downloads and prints directly,
@@ -73,7 +115,10 @@ trait BuildsQrLabels
      * printing a whole row at once. $secondaryDirection controls the second
      * line's reading direction independently of the first, since a
      * product's Arabic name is always RTL regardless of the primary
-     * (English) line next to it.
+     * (English) line next to it. Either line wraps onto additional lines
+     * when it's too wide for the fixed-width canvas (see wrapLabelText());
+     * $height grows to fit however many lines that produces, the same way
+     * it already grows to fit an optional secondary line.
      */
     private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText = null, string $secondaryDirection = 'ltr'): string
     {
@@ -81,27 +126,34 @@ trait BuildsQrLabels
         $padding = 20;
         $width = $qrSize + $padding * 2;
         $centerX = (int) ($width / 2);
+        $textMaxWidth = $width - $padding * 2;
+        $primaryFontSize = 18;
+        $primaryLineHeight = 22;
         $primaryY = $qrSize + $padding + 24;
-        $height = $primaryY + 16;
         $qrDataUri = $this->qrImageDataUri($qrData);
-        $primary = e($primaryText);
+
+        $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
+        $primaryMarkup = $this->textLinesMarkup($primaryLines, $centerX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
+        $lastPrimaryY = $primaryY + (count($primaryLines) - 1) * $primaryLineHeight;
+        $height = $lastPrimaryY + 16;
 
         $secondaryMarkup = '';
 
         if ($secondaryText !== null) {
-            $secondaryY = $primaryY + 26;
-            $height = $secondaryY + 16;
-            $secondary = e($secondaryText);
-            $secondaryMarkup = <<<SVG
-                <text x="{$centerX}" y="{$secondaryY}" direction="{$secondaryDirection}" font-family="sans-serif" font-size="16" text-anchor="middle" fill="#555555">{$secondary}</text>
-                SVG;
+            $secondaryFontSize = 16;
+            $secondaryLineHeight = 20;
+            $secondaryY = $lastPrimaryY + 26;
+            $secondaryLines = $this->wrapLabelText($secondaryText, $textMaxWidth, $secondaryFontSize);
+            $secondaryMarkup = $this->textLinesMarkup($secondaryLines, $centerX, $secondaryY, $secondaryLineHeight, $secondaryFontSize, '#555555', $secondaryDirection);
+            $lastSecondaryY = $secondaryY + (count($secondaryLines) - 1) * $secondaryLineHeight;
+            $height = $lastSecondaryY + 16;
         }
 
         return <<<SVG
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$height}" viewBox="0 0 {$width} {$height}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
                 <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
-                <text x="{$centerX}" y="{$primaryY}" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#111111">{$primary}</text>
+                {$primaryMarkup}
                 {$secondaryMarkup}
             </svg>
             SVG;

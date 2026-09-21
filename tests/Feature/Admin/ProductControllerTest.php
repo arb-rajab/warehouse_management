@@ -811,6 +811,29 @@ test('an authenticated admin can export a QR code image for a product, with both
     expect($svg)->toContain('data:image/svg+xml;base64,');
     expect($svg)->toContain('Widgets');
     expect($svg)->toContain('ودجات');
+    // Regression guard: a short name must still render as a single line per
+    // field (one <text> for the name, one for the Arabic name), not wrapped.
+    expect(substr_count($svg, '<text'))->toBe(2);
+});
+
+test('a product with a long name has its QR code label text wrapped instead of clipped', function () {
+    actingAsAdmin();
+
+    $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
+    $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+
+    $svg = $response->getContent();
+    // The name wraps across several <text> lines rather than one, so the full
+    // name doesn't appear as one contiguous string — instead assert none of
+    // its words were dropped (a clipped label would lose the tail end) and
+    // that more than one line was actually rendered.
+    expect(substr_count($svg, 'Widget'))->toBe(11);
+    expect(substr_count($svg, 'Component'))->toBe(11);
+    expect(substr_count($svg, '<text'))->toBeGreaterThan(2);
 });
 
 test('a product with no Arabic name ships a QR code image with only the English name', function () {
