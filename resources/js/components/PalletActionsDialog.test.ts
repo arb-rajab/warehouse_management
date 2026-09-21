@@ -261,6 +261,16 @@ describe('PalletActionsDialog', () => {
         expect(guard.required).toBe(true);
     });
 
+    it('shows a pointer cursor on every action tab, selected or not', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        const tabs = wrapper.findAll('[data-testid="pallet-action-tab"]');
+        expect(tabs.length).toBeGreaterThan(1);
+        for (const tab of tabs) {
+            expect(tab.classes()).toContain('cursor-pointer');
+        }
+    });
+
     it('defaults to the open tab for a full cell and posts boxes_count/confirm_empty on submit', async () => {
         const wrapper = await mountDialog(fullCell(6));
 

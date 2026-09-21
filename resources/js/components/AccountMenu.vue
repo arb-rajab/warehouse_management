@@ -7,7 +7,7 @@ import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
 defineProps<{ userName: string | undefined }>();
 
-const { open, containerRef } = useDismissibleListbox(() => 0);
+const { open, containerRef } = useDismissibleListbox();
 </script>
 
 <template>

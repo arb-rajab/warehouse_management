@@ -224,10 +224,12 @@ describe('CellVerificationRounds Index', () => {
         expect(link.text()).toBe('Jane Doe');
     });
 
-    it('renders an empty worker cell when the round has no user', () => {
+    it('renders an em-dash worker cell when the round has no user', () => {
         const wrapper = mountPage([cellVerificationRound({ user: undefined })]);
 
-        expect(rowCells(wrapper)[1].find('a').exists()).toBe(false);
+        const cell = rowCells(wrapper)[1];
+        expect(cell.find('a').exists()).toBe(false);
+        expect(cell.text()).toBe('—');
     });
 
     it('renders the started_at timestamp formatted', () => {

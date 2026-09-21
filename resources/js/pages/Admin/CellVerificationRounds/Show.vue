@@ -197,6 +197,7 @@ function onPerPageChange(perPage: number): void {
                     >
                         {{ round.user.name }}
                     </TableLink>
+                    <template v-else>—</template>
                 </div>
             </div>
             <div>

@@ -272,6 +272,7 @@ function onPerPageChange(perPage: number): void {
                     >
                         {{ row.user.name }}
                     </TableLink>
+                    <template v-else>—</template>
                 </td>
                 <td class="px-4 py-2">{{ formatDateTime(row.started_at) }}</td>
                 <td class="px-4 py-2">

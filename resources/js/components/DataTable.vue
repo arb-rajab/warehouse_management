@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
                     <tr>
                         <th
                             v-for="(column, index) in columns"
-                            :key="columnLabel(column)"
+                            :key="index"
                             class="px-4 py-2 font-medium"
                         >
                             <div class="flex items-center gap-1">

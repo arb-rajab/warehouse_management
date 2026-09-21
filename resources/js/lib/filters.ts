@@ -148,13 +148,6 @@ export function toggleSort(
 }
 
 /**
- * Delays calling `fn` until `delayMs` have passed without another call —
- * shared by FilterProductSelect.vue's search-as-you-type and the
- * column-filter popovers' apply-on-change watchers (CellStatusLogs/Index.vue,
- * Products/Index.vue), so free-typed text/number/date edits don't fire a
- * request per keystroke.
- */
-/**
  * Enforces mutual exclusion between a date-range filter pair and a
  * day-count filter pair — filling one disables the other. Shared by
  * CellStatusLogs/Index.vue (date/created_within_days,
@@ -197,6 +190,13 @@ export function createdDateRangeExclusivity(filters: {
     };
 }
 
+/**
+ * Delays calling `fn` until `delayMs` have passed without another call —
+ * shared by FilterProductSelect.vue's search-as-you-type and the
+ * column-filter popovers' apply-on-change watchers (CellStatusLogs/Index.vue,
+ * Products/Index.vue), so free-typed text/number/date edits don't fire a
+ * request per keystroke.
+ */
 export function debounce<Args extends unknown[]>(
     fn: (...args: Args) => void,
     delayMs: number,

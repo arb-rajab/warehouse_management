@@ -116,7 +116,7 @@ describe('CellVerificationRounds Show', () => {
         expect(link?.text()).toContain('Jane Doe');
     });
 
-    it('shows no worker link when the round has none', () => {
+    it('shows an em-dash for the worker summary field when the round has none', () => {
         const wrapper = mountPage(
             cellVerificationRound({ user: undefined }),
             [],
@@ -125,6 +125,13 @@ describe('CellVerificationRounds Show', () => {
         expect(
             wrapper.findAll('a').some((a) => a.text().includes('Jane Doe')),
         ).toBe(false);
+
+        const label = wrapper
+            .findAll('div')
+            .find((div) =>
+                div.text().includes(t('cellVerificationRound.columns.user')),
+            );
+        expect(label?.text()).toContain('—');
     });
 
     it('shows the formatted started_at timestamp', () => {

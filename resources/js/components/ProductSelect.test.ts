@@ -83,6 +83,12 @@ describe('ProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('Choose a product');
     });
 
+    it('shows a pointer cursor on the trigger button', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.get('button').classes()).toContain('cursor-pointer');
+    });
+
     it('renders no required guard input by default', () => {
         const wrapper = mountSelect();
 
