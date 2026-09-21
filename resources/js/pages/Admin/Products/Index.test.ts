@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { Check, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -112,6 +113,15 @@ describe('Products Index', () => {
 
     afterEach(() => {
         i18n.global.locale.value = 'en';
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('products.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('products.title'));
     });
 
     it('renders every column header', () => {

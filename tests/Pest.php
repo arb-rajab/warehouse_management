@@ -174,6 +174,10 @@ function assertJsonListingPaginates(TestResponse $response, int $total, int $per
     $response->assertOk();
     expect($response->json('data'))->toHaveCount($perPage);
     expect($response->json('meta.total'))->toBe($total);
+    expect($response->json('meta.current_page'))->toBe(1);
+    expect($response->json('meta.per_page'))->toBe($perPage);
+    expect($response->json('meta.last_page'))->toBe((int) ceil($total / $perPage));
+    expect($response->json('meta.links'))->not->toBeEmpty();
 }
 
 /**
@@ -194,7 +198,12 @@ function assertInertiaPaginates(
         fn (Assert $page) => ($component !== null ? $page->component($component) : $page)
             ->has("{$prop}.data", $dataCount)
             ->where("{$prop}.meta.total", $total)
+            ->where("{$prop}.meta.current_page", 1)
+            ->where("{$prop}.meta.per_page", $dataCount)
+            ->where("{$prop}.meta.last_page", (int) ceil($total / $dataCount))
     );
+
+    expect($response->inertiaProps("{$prop}.meta.links"))->not->toBeEmpty();
 }
 
 /**

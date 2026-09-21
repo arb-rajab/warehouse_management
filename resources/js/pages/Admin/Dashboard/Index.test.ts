@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -125,6 +126,15 @@ async function openCustomExpiringDaysDialog(
 describe('Dashboard Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('dashboard.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('dashboard.title'));
     });
 
     it('links the help icon to the dashboard help page', () => {
