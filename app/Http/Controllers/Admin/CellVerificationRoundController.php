@@ -12,6 +12,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use League\Csv\Writer;
@@ -86,6 +87,13 @@ class CellVerificationRoundController extends Controller
     /**
      * Export the given round's currently filtered/sorted reports as CSV,
      * streamed rather than loaded fully into memory.
+     *
+     * Chunked (not chunkById()) so the query keeps the exact order sorted()
+     * applied — chunkById() forces its own order by id and would silently
+     * override the caller's chosen sort_direction. Reports are append-only
+     * (see CellVerificationReport's docblock), so chunk()'s offset-based
+     * paging can't skip/repeat rows across chunks the way it could for a
+     * mutable table.
      */
     public function exportReports(FilterCellVerificationReportsRequest $request, CellVerificationRound $cellVerificationRound): StreamedResponse
     {
@@ -98,33 +106,33 @@ class CellVerificationRoundController extends Controller
                 'reported_boxes_count', 'reported_expiration_date', 'note', 'reported_at',
             ]);
 
-            $reports = CellVerificationReport::query()
+            CellVerificationReport::query()
                 ->select(CellVerificationReport::SELECT_COLUMNS)
                 ->with(CellVerificationReport::WITH_DETAILS)
                 ->where('cell_verification_round_id', $cellVerificationRound->id)
                 ->filtered($request)
                 ->sorted($request)
-                ->cursor();
-
-            foreach ($reports as $report) {
-                $csv->insertOne([
-                    $report->id,
-                    $report->cell->row->letter,
-                    $report->cell->cell_number,
-                    $report->cell->flat_number,
-                    $report->is_correct ? 'yes' : 'no',
-                    $report->expected_cell_state->value,
-                    $report->expectedProduct?->name,
-                    $report->expected_boxes_count,
-                    $report->expected_expiration_date?->toDateString(),
-                    $report->reported_cell_state?->value,
-                    $report->reportedProduct?->name,
-                    $report->reported_boxes_count,
-                    $report->reported_expiration_date?->toDateString(),
-                    $report->note,
-                    $report->created_at->toIso8601String(),
-                ]);
-            }
+                ->chunk(500, function (Collection $reports) use ($csv) {
+                    foreach ($reports as $report) {
+                        $csv->insertOne([
+                            $report->id,
+                            $report->cell->row->letter,
+                            $report->cell->cell_number,
+                            $report->cell->flat_number,
+                            $report->is_correct ? 'yes' : 'no',
+                            $report->expected_cell_state->value,
+                            $report->expectedProduct?->name,
+                            $report->expected_boxes_count,
+                            $report->expected_expiration_date?->toDateString(),
+                            $report->reported_cell_state?->value,
+                            $report->reportedProduct?->name,
+                            $report->reported_boxes_count,
+                            $report->reported_expiration_date?->toDateString(),
+                            $report->note,
+                            $report->created_at->toIso8601String(),
+                        ]);
+                    }
+                });
         }, "cell-verification-round-{$cellVerificationRound->id}-reports.csv", ['Content-Type' => 'text/csv']);
     }
 }

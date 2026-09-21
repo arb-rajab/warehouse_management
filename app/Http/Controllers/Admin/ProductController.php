@@ -65,12 +65,12 @@ class ProductController extends Controller
             ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
                 $request,
                 null,
-                fn (Builder $query) => $query->whereDate('expiration_date', '<', $today),
+                fn (Builder $query) => $query->where('expiration_date', '<', $today),
             )])
             ->addSelect(['expiring_soon_count' => $this->occupancyCountSubquery(
                 $request,
                 null,
-                fn (Builder $query) => $query->whereDate('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
+                fn (Builder $query) => $query->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
             )])
             ->addSelect(['activity_today_count' => $this->activityCountSubquery($request, $today->copy()->startOfDay(), $today->copy()->endOfDay())])
             ->addSelect(['activity_week_count' => $this->activityCountSubquery($request, $weekStart->copy()->startOfDay(), $today->copy()->endOfDay())])
@@ -172,8 +172,8 @@ class ProductController extends Controller
         return Pallet::query()
             ->selectRaw('count(*)')
             ->whereColumn('pallets.product_id', 'products.id')
-            ->when($request->filled('expired'), fn (Builder $query) => $query->whereDate('expiration_date', '<', today()))
-            ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->whereDate('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
+            ->when($request->filled('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
+            ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
             ->when($extraPalletConstraint !== null, fn (Builder $query) => $extraPalletConstraint($query))
             ->whereHas('cell', function (Builder $cellQuery) use ($request, $forcedState) {
                 $this->applyOccupancyCellFilters($cellQuery, $request);

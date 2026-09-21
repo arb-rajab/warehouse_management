@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
@@ -297,6 +298,28 @@ test('the expired filter narrows the full/opened/expiring-soon counts to already
         fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
             ->where('products.data.0.expired_cells_count', 1)
     );
+
+    Carbon::setTestNow();
+});
+
+test('the expired/expiring-soon pallet subqueries compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column — date()/strftime() around it
+    // makes the comparison a function of the column, which the index added
+    // for it cannot satisfy on MySQL. See .ai/rules/shared-database.md.
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+
+    DB::enableQueryLog();
+    $this->get('/admin/products?expired=true&expires_within_days=7')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
 
     Carbon::setTestNow();
 });

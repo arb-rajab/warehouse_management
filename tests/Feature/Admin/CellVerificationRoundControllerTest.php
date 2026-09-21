@@ -6,6 +6,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the cell verification rounds list with every property the table renders', function () {
@@ -363,4 +364,29 @@ test('exporting a rounds reports csv only includes that rounds filtered rows', f
     expect($csv)->toContain('Included row');
     expect($csv)->not->toContain('Excluded row');
     expect($csv)->toContain((string) $report->id);
+});
+
+test('exporting a rounds reports csv eager loads report details instead of an N+1 per report', function () {
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->create();
+    $expectedProduct = Product::factory()->create();
+    $reportedProduct = Product::factory()->create();
+    CellVerificationReport::factory()->count(10)->create([
+        'cell_verification_round_id' => $round->id,
+        'expected_product_id' => $expectedProduct->id,
+        'reported_product_id' => $reportedProduct->id,
+    ]);
+
+    DB::enableQueryLog();
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}/export");
+    $csv = $response->streamedContent();
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    expect(substr_count($csv, "\n"))->toBe(11); // header + 10 report rows
+    // Without eager loading, 10 reports touching cell->row, expectedProduct and
+    // reportedProduct each would push this well past 30 queries.
+    expect($queryCount)->toBeLessThan(15);
 });

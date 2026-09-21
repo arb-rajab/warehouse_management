@@ -8,6 +8,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the warehouse map ships both raw product name columns, whatever the panel locale', function () {
@@ -118,12 +119,12 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_ar_name', 'ودجات')
-                    ->where('product_active', true)
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('cell_entered_at', null)
                     ->where('remaining_boxes', $pallet->remaining_boxes)
+                    ->missing('product_active')
+                    ->missing('cell_entered_at')
                 )
             )
             ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
@@ -198,6 +199,28 @@ test('the per-flat highlight-match samples cover every flat, unlike the flat-sco
     );
 
     Carbon::setTestNow();
+});
+
+test('cellHighlightSamples skips product.published and the cellEnteredLog join, unlike the current flat\'s cells query', function () {
+    // cellHighlightSamples only ships CellPalletSummary (no product_active,
+    // no cell_entered_at), so it has no need for product.published or the
+    // cellEnteredLog "of many" join Cell::WITH_ROW_AND_CONTENTS pulls in for
+    // the current flat's `cells` prop — narrowing that away is the whole
+    // point, since this query runs once for every cell in the warehouse.
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $row->cells()->first()->id]);
+
+    DB::enableQueryLog();
+    $this->get('/admin/cells')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query');
+    DB::disableQueryLog();
+
+    // Only the current flat's `cells` query touches cell_status_logs
+    // (cellEnteredLog's "of many" join) and selects `published`.
+    expect($queries->filter(fn (string $sql) => str_contains($sql, 'cell_status_logs')))->toHaveCount(1);
+    expect($queries->filter(fn (string $sql) => str_contains($sql, 'published')))->toHaveCount(1);
 });
 
 test('a state and product_id passed from the dashboard seed the initial highlight filter', function () {
