@@ -117,6 +117,22 @@ describe('Help CellLogs', () => {
         expect(wrapper.text()).toContain(t('cellLog.filters.from'));
         expect(wrapper.text()).toContain(t('cellLog.filters.to'));
         expect(wrapper.text()).toContain(t('cellLog.filters.withinDays'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.flaggedOnly'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.expirationFrom'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.expirationTo'));
+        expect(wrapper.text()).toContain(
+            t('cellLog.filters.expiresWithinDays'),
+        );
+    });
+
+    it('previews both of the filter dialog date sections, not just the activity one', () => {
+        const wrapper = mountPage();
+
+        const sectionHeadings = wrapper.findAll('h3').map((h3) => h3.text());
+        expect(sectionHeadings).toEqual([
+            t('cellLog.filters.sections.date'),
+            t('cellLog.filters.sections.expiration'),
+        ]);
     });
 
     it('links to the activity log page', () => {

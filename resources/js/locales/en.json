@@ -563,7 +563,7 @@
             },
             "managingPallets": {
                 "heading": "Storing, opening, and moving pallets",
-                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, or transfer it to a different cell. Every change is recorded in the activity log automatically."
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically."
             },
             "deactivating": {
                 "heading": "Deactivating a cell",
@@ -600,7 +600,7 @@
             "title": "Help: Activity log",
             "filtering": {
                 "heading": "Filtering the activity log",
-                "body": "Open the Filters panel to narrow the list by product, pallet, row, column, the person who made the change, the type of action, or a date range. Combine as many filters as you need — for example, one product plus one row shows only that product's activity in that row."
+                "body": "Open the Filters panel to narrow the list by product, pallet, row, column, the person who made the change, the type of action, a date range, or the pallets' expiration window. You can also show only flagged entries. Combine as many filters as you need — for example, one product plus one row shows only that product's activity in that row."
             },
             "actions": {
                 "heading": "What each action means",
