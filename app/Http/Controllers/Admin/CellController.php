@@ -116,21 +116,32 @@ class CellController extends Controller
      * The minimal per-cell data needed to compute a highlight-match count for
      * every flat (not just the one currently on screen) — the map only ever
      * loads one flat's full cell/row/pallet.product data at a time, so this
-     * covers the rest with the fewest columns that `matchesCellHighlight()`
-     * on the frontend needs. `row_letter`/`cell_number` are included so the
-     * frontend can also order matches for next/previous-match navigation.
-     * `cell_id`/`pallet.id`/`pallet.remaining_boxes` are included so the 3D
-     * map's faced-cell panel (built from this same data — see `map3DBands` in
-     * Cells/Index.vue) can drive real pallet actions/toggle-active, not just
-     * display detail.
+     * covers the rest with the fewest columns/relations `matchesCellHighlight()`
+     * and the 3D map's faced-cell panel (built from this same data — see
+     * `map3DBands` in Cells/Index.vue) need between them — exactly
+     * `CellPalletSummary` in resources/js/types/admin.ts. `row_letter`/
+     * `cell_number` are included so the frontend can also order matches for
+     * next/previous-match navigation. `cell_id`/`pallet.id`/
+     * `pallet.remaining_boxes` let the 3D panel drive real pallet
+     * actions/toggle-active, not just display detail. Unlike
+     * `Cell::WITH_ROW_AND_CONTENTS` (used for the one flat actually on
+     * screen), this skips `product.published` and the `cellEnteredLog` "of
+     * many" join entirely — neither `product_active` nor `cell_entered_at` is
+     * part of `CellPalletSummary`, and this query already runs once per
+     * request for every cell in the warehouse, not just one flat's worth.
      *
-     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_image_url: string|null, expiration_date: string|null, added_at: string|null, cell_entered_at: string|null, remaining_boxes: int}|null}>
+     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_ar_name: string, product_image_url: string|null, expiration_date: string|null, added_at: string|null, remaining_boxes: int}|null}>
      */
     private function cellHighlightSamples(): array
     {
         return Cell::query()
             ->select(Cell::SELECT_COLUMNS)
-            ->with(Cell::WITH_ROW_AND_CONTENTS)
+            ->with([
+                'row:id,letter',
+                'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
+                'pallet.product:id,name,ar_name,thumbnail_img',
+                'pallet.product.thumbnailUpload:id,file_name,external_link',
+            ])
             ->orderedByCoordinates()
             ->get()
             ->map(fn (Cell $cell) => [
@@ -142,7 +153,12 @@ class CellController extends Controller
                 'is_active' => $cell->is_active,
                 'pallet' => $cell->pallet === null ? null : [
                     'id' => $cell->pallet->id,
-                    ...$cell->pallet->toMapSummaryArray(),
+                    'product_id' => $cell->pallet->product_id,
+                    'product_name' => $cell->pallet->product->name,
+                    'product_ar_name' => $cell->pallet->product->ar_name,
+                    'product_image_url' => $cell->pallet->product->image_url,
+                    'expiration_date' => $cell->pallet->expiration_date?->toDateString(),
+                    'added_at' => $cell->pallet->created_at?->toIso8601String(),
                     'remaining_boxes' => $cell->pallet->remaining_boxes,
                 ],
             ])

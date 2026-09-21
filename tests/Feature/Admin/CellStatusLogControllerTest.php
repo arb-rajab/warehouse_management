@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -515,6 +516,24 @@ test('the cell log can be filtered by expires_within_days, excluding pallets exp
     );
 
     Carbon::setTestNow();
+});
+
+test('the pallet expiration filters compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column — date()/strftime() around it
+    // makes the comparison a function of the column, which the index added
+    // for it cannot satisfy on MySQL. See .ai/rules/shared-database.md.
+    actingAsAdmin();
+    ['matching' => $matching] = $this->seedPalletExpirationRangeFixture();
+
+    DB::enableQueryLog();
+    $this->get('/admin/cell-logs?expiration_date_from=2026-06-01&expiration_date_to=2026-06-30')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($matching)->not->toBeNull();
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
 });
 
 test('filtering the cell log by expires_within_days together with an expiration date range is rejected', function () {

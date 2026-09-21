@@ -6,6 +6,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 test('an authenticated worker can start a verification round over the rows they name', function () {
     $user = actingAsMobileUser();
@@ -182,6 +183,29 @@ test('only_unfinished filters out completed rounds', function () {
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($unfinished->id);
+});
+
+test('rounds created within the same second are not repeated or skipped across pages, tied off by id', function () {
+    // Without an id tiebreaker, ties on created_at (rounds started in the
+    // same second) can land in a different order per page query, so a round
+    // can be repeated on one page and skipped on the next.
+    $user = actingAsMobileUser();
+
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    $rounds = CellVerificationRound::factory()->for($user)->count(25)->create();
+    Carbon::setTestNow();
+
+    $firstPage = $this->getJson('/api/v1/cell-verification-rounds?page=1');
+    $secondPage = $this->getJson('/api/v1/cell-verification-rounds?page=2');
+
+    $firstPage->assertOk();
+    $secondPage->assertOk();
+
+    $seenIds = collect($firstPage->json('data'))->pluck('id')
+        ->concat(collect($secondPage->json('data'))->pluck('id'));
+
+    expect($seenIds->unique()->count())->toBe(25);
+    expect($seenIds->sort()->values()->all())->toBe($rounds->pluck('id')->sort()->values()->all());
 });
 
 test('the round listing paginates beyond one page', function () {

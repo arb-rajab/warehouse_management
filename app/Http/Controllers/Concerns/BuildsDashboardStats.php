@@ -104,7 +104,7 @@ trait BuildsDashboardStats
      */
     private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?bool $productPublished = null): array
     {
-        $expired = Pallet::query()->whereDate('expiration_date', '<', $today);
+        $expired = Pallet::query()->where('expiration_date', '<', $today);
         $this->applyProductFilters($expired, $productIds, $productPublished);
 
         return [
