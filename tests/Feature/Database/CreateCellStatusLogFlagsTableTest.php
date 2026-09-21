@@ -32,6 +32,7 @@ test('deleting the user who acknowledged a flag nulls its acknowledged_by, leavi
     expect($fresh->acknowledged_at)->not->toBeNull();
 });
 
-// The explicit index this migration adds on cell_status_log_id is dropped as
-// redundant by 2026_09_21_000000_drop_redundant_foreign_key_indexes — see
-// DropRedundantForeignKeyIndexesTest for that coverage.
+// The explicit index this migration adds on cell_status_log_id is dropped by
+// 2026_09_21_000000_drop_redundant_foreign_key_indexes on databases where
+// something else already covers the column (MySQL, when genuinely
+// redundant) — see DropRedundantForeignKeyIndexesTest for that coverage.
