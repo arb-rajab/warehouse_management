@@ -266,6 +266,7 @@ describe('PalletActionsDialog', () => {
 
         const tabs = wrapper.findAll('[data-testid="pallet-action-tab"]');
         expect(tabs.length).toBeGreaterThan(1);
+
         for (const tab of tabs) {
             expect(tab.classes()).toContain('cursor-pointer');
         }
