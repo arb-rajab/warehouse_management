@@ -14,6 +14,18 @@ use Symfony\Component\HttpFoundation\Response;
  * itself, its submit route, logging out, and switching the UI language,
  * which all need to stay reachable or the user could never clear the flag
  * or leave the flow.
+ *
+ * Registered on the `web` group only, and that is a deliberate product
+ * decision rather than an oversight: `Api\V1\AuthController::login()` issues a
+ * Sanctum token without consulting the flag, so a warehouse worker may keep
+ * using the mobile app with an admin-issued temporary password. Enforcing it
+ * on `api/v1/*` needs a mobile change-password endpoint to escape to, and the
+ * mobile client lives outside this repository — until it can call one,
+ * enforcement would lock every flagged worker out of the app entirely. The
+ * web flow stays the only place the flag is cleared. Pinned by 'the mobile api
+ * deliberately does not enforce must_change_password' in
+ * tests/Feature/Api/V1/AuthControllerTest.php, so lifting the exemption is a
+ * visible change rather than a silent one.
  */
 class EnsurePasswordHasBeenChanged
 {

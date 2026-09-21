@@ -31,6 +31,11 @@ use Symfony\Component\HttpFoundation\Response;
  * (or a genuine non-XHR page load) updates `_previous.url`; a partial reload
  * (props-only refetch of the current page, e.g. polling/pagination) does not,
  * since it isn't a navigation to a new page.
+ *
+ * Substituting that check must not amount to dropping it — see `isPageVisit()`:
+ * this middleware is deliberately *more* permissive than `ajax()`, and without
+ * a positive "this is a page" test it would record any same-origin XHR GET on a
+ * web route, including calls to JSON endpoints that no user can be sent back to.
  */
 class StoreInertiaPreviousUrl
 {
@@ -43,6 +48,7 @@ class StoreInertiaPreviousUrl
 
         if ($request->isMethod('GET') &&
             $request->route() instanceof Route &&
+            $this->isPageVisit($request) &&
             ! $request->header('X-Inertia-Partial-Data') &&
             ! $request->prefetch() &&
             ! $request->isPrecognitive()) {
@@ -50,5 +56,27 @@ class StoreInertiaPreviousUrl
         }
 
         return $response;
+    }
+
+    /**
+     * Whether this GET is a navigation to a page a user could be redirected back to.
+     *
+     * An Inertia visit announces itself with `X-Inertia`; anything else has to
+     * look like a browser asking for a document. Both halves are needed: Inertia
+     * v3's `useHttp` (resources/js/lib/useProductSearch.ts) sends its request
+     * through `XhrHttpClient`, which sets `X-Requested-With` and never
+     * `X-Inertia`, so a product-search call is an XHR to a JSON endpoint rather
+     * than a page visit. Recording one as `_previous.url` sent the next
+     * `FormRequest` validation failure's `back()` redirect to raw JSON — the
+     * very symptom this middleware exists to prevent, and one Laravel's own
+     * `ajax()` check would have caught.
+     */
+    private function isPageVisit(Request $request): bool
+    {
+        if ($request->header('X-Inertia')) {
+            return true;
+        }
+
+        return ! $request->ajax() && $request->acceptsHtml();
     }
 }
