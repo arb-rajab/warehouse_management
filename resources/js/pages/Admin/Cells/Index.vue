@@ -743,6 +743,7 @@ watch(
                                 v-model="searchQuery"
                                 type="text"
                                 :placeholder="t('cells.search.placeholder')"
+                                maxlength="100"
                                 class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
                             />
                             <button

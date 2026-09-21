@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\NormalizesRowLetter;
+use App\Models\Row;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,8 +20,8 @@ class StoreRowRequest extends FormRequest
     {
         return [
             'letter' => ['required', 'string', 'max:2', 'unique:rows,letter'],
-            'cells_count' => ['required', 'integer', 'min:1'],
-            'flats_count' => ['required', 'integer', 'min:1'],
+            'cells_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
+            'flats_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
         ];
     }
 }

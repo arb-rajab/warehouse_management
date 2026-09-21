@@ -37,6 +37,17 @@ class Row extends Model
     public const array SELECT_COLUMNS = ['id', 'letter', 'cells_count', 'flats_count'];
 
     /**
+     * The operational ceiling for cells_count/flats_count. The columns are
+     * unsignedSmallInteger (max 65535), but that is an upper limit, not a
+     * sane UX bound: no real warehouse row needs anywhere near this many
+     * cells, and RowObserver::generateCells() builds cells_count * flats_count
+     * array elements in memory for a single Cell::insert() — an unbounded
+     * value risks PHP memory exhaustion. Enforced by StoreRowRequest/
+     * UpdateRowRequest.
+     */
+    public const int MAX_DIMENSION = 500;
+
+    /**
      * Every row's id/letter/cells_count/flats_count, ordered by letter — the
      * cell-map's row list (flat-tab layout, transfer/pallet-action destination
      * dropdown), shared by CellController::index() and RowController::show()

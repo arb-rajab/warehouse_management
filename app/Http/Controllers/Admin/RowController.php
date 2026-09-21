@@ -46,7 +46,7 @@ class RowController extends Controller
 
     public function store(StoreRowRequest $request): RedirectResponse
     {
-        $row = Row::create($request->validated());
+        $row = DB::transaction(fn () => Row::create($request->validated()));
 
         return redirect()->route('admin.rows.show', $row);
     }
@@ -79,9 +79,10 @@ class RowController extends Controller
 
     public function exportQrCodes(Row $row): HttpResponse
     {
-        // No upper bound on cells_count/flats_count is enforced, so an unusually
-        // large row could still take a while to render even with SVG-rendered QRs
-        // (see BuildsCellQrLabels) — buy headroom beyond PHP's default 30s limit.
+        // cells_count/flats_count can each be as large as Row::MAX_DIMENSION, so a
+        // maximally-sized row could still take a while to render even with
+        // SVG-rendered QRs (see BuildsCellQrLabels) — buy headroom beyond PHP's
+        // default 30s limit.
         set_time_limit(300);
 
         $cells = $row->cells()

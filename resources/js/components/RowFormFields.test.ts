@@ -71,6 +71,13 @@ describe('RowFormFields', () => {
         expect(wrapper.find('#flats_count').attributes('step')).toBe('1');
     });
 
+    it('caps cells count and flats count at the operational maximum, mirroring the backend rule', () => {
+        const wrapper = mount(RowFormFields, { props: { errors: {} } });
+
+        expect(wrapper.find('#cells_count').attributes('max')).toBe('500');
+        expect(wrapper.find('#flats_count').attributes('max')).toBe('500');
+    });
+
     it('prefixes its ids when idPrefix is given, so it can render more than once on the same page', () => {
         const wrapper = mount(RowFormFields, {
             props: { errors: {}, idPrefix: 'preview-' },

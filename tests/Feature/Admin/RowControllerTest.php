@@ -179,6 +179,50 @@ test('creating a row with an invalid flats_count is rejected and nothing changes
     $this->assertDatabaseCount('rows', 0);
 });
 
+test('creating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row with a flats_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => Row::MAX_DIMENSION + 1,
+    ]);
+
+    $response->assertSessionHasErrors('flats_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row at exactly the operational maximum dimensions succeeds', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION,
+        'flats_count' => 1,
+    ]);
+
+    $row = Row::query()->where('letter', 'Z')->first();
+
+    $response->assertRedirect(route('admin.rows.show', $row));
+    expect($row)->not->toBeNull();
+    expect($row->cells()->count())->toBe(Row::MAX_DIMENSION);
+});
+
 test('creating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
     actingAsAdmin();
 
@@ -491,6 +535,20 @@ test('updating a row with an invalid flats_count is rejected and nothing changes
 
     $response->assertSessionHasErrors('flats_count');
     expect($row->fresh()->flats_count)->toBe(1);
+});
+
+test('updating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    expect($row->fresh()->cells_count)->toBe(2);
 });
 
 test('updating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
