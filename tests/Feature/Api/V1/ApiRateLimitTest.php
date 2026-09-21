@@ -3,6 +3,7 @@
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 test('a mobile user is throttled after 60 requests to an authenticated api endpoint within a minute', function () {
     actingAsMobileUser();
@@ -44,6 +45,14 @@ test('two mobile clients sharing one IP get independent api rate limit buckets',
     }
 
     $this->withToken($tokenA)->getJson('/api/v1/products')->assertStatus(429);
+
+    // Sanctum's guard is a RequestGuard, which caches the user it resolved for
+    // the life of the guard instance — and one app instance serves every request
+    // in a test, so without this the second token would still resolve the first
+    // token's user. Production rebuilds the container per request; this only
+    // restores that.
+    Auth::forgetGuards();
+
     $this->withToken($tokenB)->getJson('/api/v1/products')->assertOk();
 });
 

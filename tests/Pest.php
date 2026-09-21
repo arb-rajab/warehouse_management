@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CellLogAction;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
@@ -109,6 +110,14 @@ function inertiaHeaders(): array
     return [
         'X-Requested-With' => 'XMLHttpRequest',
         'X-Inertia' => 'true',
+        // Inertia's middleware answers a GET whose asset version doesn't match
+        // with a 409 + X-Inertia-Location instead of the page, so a visit that
+        // omits this header can never reach a 200 (CI builds public/build/
+        // manifest.json, which is what the version hashes). Asking the app's own
+        // middleware for the value keeps it in step with however it is computed,
+        // and yields '' — matching Inertia's own default — when there is no
+        // manifest, so this works with or without a build present.
+        'X-Inertia-Version' => (string) (new HandleInertiaRequests)->version(request()),
     ];
 }
 
