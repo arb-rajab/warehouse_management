@@ -236,7 +236,11 @@ return [
         'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => 'your@example.com',
+            // Left unset by default, on purpose: an unconfigured recipient makes
+            // notification delivery fail loudly (invalid address) rather than
+            // silently mailing backup/health details for this app to
+            // your@example.com, a domain this app doesn't control.
+            'to' => env('BACKUP_NOTIFICATION_EMAIL', ''),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),

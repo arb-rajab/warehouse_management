@@ -69,7 +69,12 @@ return [
         'only_on_failure' => false,
 
         'mail' => [
-            'to' => env('HEALTH_TO_ADDRESS', 'your@example.com'),
+            // Left unset by default, on purpose: an unconfigured recipient makes
+            // notification delivery fail loudly (invalid address) rather than
+            // silently mailing this app's failing check details — e.g. a
+            // database/queue failure message — to your@example.com, a domain
+            // this app doesn't control.
+            'to' => env('HEALTH_TO_ADDRESS', ''),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
