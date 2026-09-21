@@ -144,6 +144,28 @@ test('searchByName ignores an empty ar_name rather than matching every product t
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
 
+test('searchByName treats a literal % in the term as a literal character, not a wildcard', function () {
+    // Unescaped, `LIKE '%%%'` matches every row — a search term containing a
+    // raw `%` must not silently become "match everything".
+    $matching = Product::factory()->create(['name' => 'Widgets 50% Off', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('50%')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName treats a literal _ in the term as a literal character, not a single-character wildcard', function () {
+    $matching = Product::factory()->create(['name' => 'a_b Widget', 'ar_name' => 'ودجات']);
+    // Noise: would match "a_b" via the unescaped `_` single-character wildcard
+    // (`_` matching any one character), but must not match once escaped.
+    Product::factory()->create(['name' => 'aXb Widget', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('a_b')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
 test('searchByName matches every product when the term is null or blank', function () {
     Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
@@ -201,15 +223,23 @@ test('searchByName matches through the fulltext index OR the like-and-of-words g
     // enough, so the whole thing sits behind one outer group.
     expect($query->toSql())->toBe(
         'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
-        .'((`name` like ? or `ar_name` like ?) and (`name` like ? or `ar_name` like ?)))'
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?) and (`name` like ? escape ? or `ar_name` like ? escape ?)))'
     );
-    expect($query->getBindings())->toBe(['+Widget* +Blue*', '%Widget%', '%Widget%', '%Blue%', '%Blue%']);
+    expect($query->getBindings())->toBe([
+        '+Widget* +Blue*',
+        '%Widget%', '\\', '%Widget%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
 });
 
 test('searchByName matches an Arabic term through the fulltext index on mysql', function () {
     $query = mysqlProductSearch('ودجة زرقاء');
 
-    expect($query->getBindings())->toBe(['+ودجة* +زرقاء*', '%ودجة%', '%ودجة%', '%زرقاء%', '%زرقاء%']);
+    expect($query->getBindings())->toBe([
+        '+ودجة* +زرقاء*',
+        '%ودجة%', '\\', '%ودجة%', '\\',
+        '%زرقاء%', '\\', '%زرقاء%', '\\',
+    ]);
 });
 
 test('searchByName also runs a word shorter than the minimum token size through LIKE on mysql', function () {
@@ -223,9 +253,13 @@ test('searchByName also runs a word shorter than the minimum token size through 
 
     expect($query->toSql())->toBe(
         'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
-        .'((`name` like ? or `ar_name` like ?) and (`name` like ? or `ar_name` like ?)))'
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?) and (`name` like ? escape ? or `ar_name` like ? escape ?)))'
     );
-    expect($query->getBindings())->toBe(['+Widget*', '%ab%', '%ab%', '%Widget%', '%Widget%']);
+    expect($query->getBindings())->toBe([
+        '+Widget*',
+        '%ab%', '\\', '%ab%', '\\',
+        '%Widget%', '\\', '%Widget%', '\\',
+    ]);
 });
 
 test('searchByName also runs an InnoDB stopword through LIKE on mysql', function () {
@@ -237,9 +271,9 @@ test('searchByName also runs an InnoDB stopword through LIKE on mysql', function
 
     expect($query->getBindings())->toBe([
         '+Case* +Phone*',
-        '%Case%', '%Case%',
-        '%for%', '%for%',
-        '%Phone%', '%Phone%',
+        '%Case%', '\\', '%Case%', '\\',
+        '%for%', '\\', '%for%', '\\',
+        '%Phone%', '\\', '%Phone%', '\\',
     ]);
 });
 
@@ -249,7 +283,11 @@ test('searchByName also runs a word carrying punctuation through LIKE on mysql',
     // "Wid-get" — but the LIKE branch matches it as a plain infix.
     $query = mysqlProductSearch('Wid-get Blue');
 
-    expect($query->getBindings())->toBe(['+Blue*', '%Wid-get%', '%Wid-get%', '%Blue%', '%Blue%']);
+    expect($query->getBindings())->toBe([
+        '+Blue*',
+        '%Wid-get%', '\\', '%Wid-get%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
 });
 
 test('searchByName matches a term that is only an infix of the stored name, via the LIKE branch on mysql', function () {
@@ -263,9 +301,9 @@ test('searchByName matches a term that is only an infix of the stored name, via 
 
     expect($query->toSql())->toBe(
         'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
-        .'((`name` like ? or `ar_name` like ?)))'
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?)))'
     );
-    expect($query->getBindings())->toBe(['+idget*', '%idget%', '%idget%']);
+    expect($query->getBindings())->toBe(['+idget*', '%idget%', '\\', '%idget%', '\\']);
 });
 
 test('searchByName never lets boolean-mode operators reach the fulltext parser', function () {
@@ -278,7 +316,10 @@ test('searchByName never lets boolean-mode operators reach the fulltext parser',
     $query = mysqlProductSearch('-Widget "Blue"');
 
     expect($query->toSql())->not->toContain('match');
-    expect($query->getBindings())->toBe(['%-Widget%', '%-Widget%', '%"Blue"%', '%"Blue"%']);
+    expect($query->getBindings())->toBe([
+        '%-Widget%', '\\', '%-Widget%', '\\',
+        '%"Blue"%', '\\', '%"Blue"%', '\\',
+    ]);
 });
 
 test('searchByName adds no condition at all for a blank term on mysql', function () {
@@ -294,7 +335,10 @@ test('searchByName stays on LIKE for a connection whose grammar has no fulltext 
 
     expect(DB::connection()->getDriverName())->toBe('sqlite');
     expect($query->toSql())->not->toContain('match');
-    expect($query->getBindings())->toBe(['%Widget%', '%Widget%', '%Blue%', '%Blue%']);
+    expect($query->getBindings())->toBe([
+        '%Widget%', '\\', '%Widget%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
 });
 
 test('image_url resolves through the thumbnail upload, with noise from another product', function () {

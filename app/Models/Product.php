@@ -318,17 +318,37 @@ class Product extends Model
      * into "any word matches" — so each word gets its own nested group, and
      * the groups are still ANDed together.
      *
+     * The word is escaped before it is wrapped in `%...%`, so a literal `%`
+     * or `_` the user typed is matched as a literal character rather than as
+     * a wildcard (`%` would otherwise match every product; `a_b` would match
+     * "aXb"). Both drivers need an explicit `ESCAPE` clause for this to take
+     * effect — sqlite recognizes no escape character at all without one, so
+     * this uses `whereRaw()`/`orWhereRaw()` rather than the plain `like`
+     * operator.
+     *
      * @param  list<string>  $words
      */
     private static function applyLikeWords(QueryBuilder $query, array $words): void
     {
         foreach ($words as $word) {
-            $query->where(function (QueryBuilder $matchesEitherName) use ($word): void {
+            $pattern = '%'.self::escapeLikeWildcards($word).'%';
+
+            $query->where(function (QueryBuilder $matchesEitherName) use ($pattern): void {
                 $matchesEitherName
-                    ->where('name', 'like', '%'.$word.'%')
-                    ->orWhere('ar_name', 'like', '%'.$word.'%');
+                    ->whereRaw('`name` like ? escape ?', [$pattern, '\\'])
+                    ->orWhereRaw('`ar_name` like ? escape ?', [$pattern, '\\']);
             });
         }
+    }
+
+    /**
+     * Escape the LIKE wildcard characters (`%`, `_`) and the escape character
+     * itself (`\`) in a raw search word, so it can be safely wrapped in
+     * `%...%` and matched literally via `LIKE ... ESCAPE '\'`.
+     */
+    private static function escapeLikeWildcards(string $word): string
+    {
+        return addcslashes($word, '\\%_');
     }
 
     /**

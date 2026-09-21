@@ -3,6 +3,12 @@ import { TriangleAlert } from '@lucide/vue';
 import { t } from '@/lib/i18n';
 import FormField from './FormField.vue';
 
+/**
+ * Mirrors Row::MAX_DIMENSION (app/Models/Row.php) — the backend rule stays
+ * authoritative, this is just a client-side flood guard.
+ */
+const MAX_DIMENSION = 500;
+
 const props = withDefaults(
     defineProps<{
         /**
@@ -48,6 +54,7 @@ const props = withDefaults(
             :value="cellsCount"
             :error="errors.cells_count"
             min="1"
+            :max="MAX_DIMENSION"
             step="1"
             :readonly="disableDimensions"
             required
@@ -60,6 +67,7 @@ const props = withDefaults(
             :value="flatsCount"
             :error="errors.flats_count"
             min="1"
+            :max="MAX_DIMENSION"
             step="1"
             :readonly="disableDimensions"
             required
