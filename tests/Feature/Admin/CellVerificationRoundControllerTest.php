@@ -23,9 +23,13 @@ test('an authenticated admin can view the cell verification rounds list with eve
     // Reported against a cell inside the round's own coverage — which is also
     // what keeps the report factory from generating a third row of its own,
     // whose faker-drawn letter could collide with the ones hardcoded above.
+    // user_id is pinned to the round's own worker too, so the report factory
+    // doesn't draw its own extra users, which would make the filterOptions.users
+    // assertion below non-deterministic.
     CellVerificationReport::factory()->count(2)->create([
         'cell_verification_round_id' => $round->id,
         'cell_id' => $rowA->cells()->first()->id,
+        'user_id' => $worker->id,
     ]);
 
     $response = $this->get('/admin/cell-verification-rounds');
