@@ -11,26 +11,28 @@ return new class extends Migration
      *
      * MySQL-only in effect. InnoDB auto-creates a supporting index for a
      * foreign key whenever no suitable index already exists at the time the
-     * constraint is added.
+     * constraint is added, and every explicit index() call below was
+     * originally assumed to be a guaranteed second, redundant B-tree next to
+     * that auto-created one -- true only if the auto-created index actually
+     * exists and is separately named.
      *
-     * `pallets.product_id`'s explicit index was added by a later, separate
-     * migration (2026_09_06_120000) rather than alongside its FK in the same
-     * blueprint, so on MySQL the FK's own auto-created index and that later
-     * explicit one are unambiguously two distinct B-trees -- dropping the
-     * explicit one there is always safe, on every driver.
+     * Two dev deploys proved that assumption wrong twice over, on two
+     * structurally different columns: first `cell_status_logs_cell_id_index`
+     * (explicit index declared in the same Schema::create() blueprint as its
+     * FK), then `pallets_product_id_index` (explicit index added by a wholly
+     * separate, later migration -- previously assumed unconditionally safe
+     * precisely because of that separation). Both failed with "needed in a
+     * foreign key constraint", meaning on this database's actual history
+     * neither ever got a second, separately-named auto-index at all -- the
+     * explicit index was the *only* one MySQL had, whichever migration added
+     * it. Column/migration structure is not a reliable enough signal for
+     * what a given live database actually did.
      *
-     * Every other column below has its explicit `index()` call declared in
-     * the *same* `Schema::create()` blueprint as its `foreignId()->constrained()`
-     * (or `foreign()`) call. A 2026-09-21 dev deploy proved that combination
-     * does not reliably leave two separate indexes behind on every MySQL
-     * version/history the way the pallets case does -- it failed dropping
-     * `cell_status_logs_cell_id_index` with "needed in a foreign key
-     * constraint", meaning that explicit index, not a same-named `_foreign`
-     * one, was the *only* index MySQL had on that column. Rather than assume
-     * a fixed creation order that turned out to be wrong, dropIndexIfRedundant()
-     * checks the live schema and only drops an explicit index when another
-     * index still covers the column afterwards -- safe regardless of exactly
-     * how a given database's indexes came to exist.
+     * dropIndexIfRedundant() checks the live schema instead and only drops an
+     * explicit index when another index still covers the column afterwards --
+     * safe regardless of exactly how a given database's indexes came to
+     * exist, with no exceptions carved out on the theory that some column's
+     * history "must" be different.
      *
      * sqlite does not auto-index foreign keys, so on the test connection none
      * of these columns ever has a second, genuinely redundant index to find --
@@ -59,7 +61,7 @@ return new class extends Migration
 
         $this->dropIndexIfRedundant('cells', 'row_id', 'cells_row_id_foreign');
 
-        $this->dropIndexIfExists('pallets', 'pallets_product_id_index');
+        $this->dropIndexIfRedundant('pallets', 'product_id', 'pallets_product_id_index');
     }
 
     /**
@@ -127,20 +129,5 @@ return new class extends Migration
         }
 
         Schema::table($table, fn (Blueprint $table) => $table->index($column, $indexName));
-    }
-
-    /**
-     * Drop $indexName if it exists, and do nothing (rather than error) if it
-     * doesn't -- used for pallets.product_id, whose redundancy doesn't need
-     * dropIndexIfRedundant()'s live check (see the docblock above), but which
-     * still needs to tolerate up() running again after it already dropped it.
-     */
-    private function dropIndexIfExists(string $table, string $indexName): void
-    {
-        if (! Schema::hasIndex($table, $indexName)) {
-            return;
-        }
-
-        Schema::table($table, fn (Blueprint $table) => $table->dropIndex($indexName));
     }
 };

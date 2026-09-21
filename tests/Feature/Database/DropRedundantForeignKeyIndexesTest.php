@@ -9,26 +9,18 @@ function loadDropRedundantForeignKeyIndexesMigration(): object
 }
 
 /**
- * pallets.product_id's explicit index was added by a later, separate
- * migration rather than alongside its FK in the same blueprint, so it is
- * unconditionally redundant on every driver/history — see the migration's
- * own docblock.
- */
-function unconditionallyRedundantColumn(): array
-{
-    return ['table' => 'pallets', 'column' => 'product_id', 'index' => 'pallets_product_id_index'];
-}
-
-/**
- * Every column whose explicit index() call was declared in the same
- * Schema::create() blueprint as its FK — the case a 2026-09-21 dev deploy
- * proved is NOT reliably backed by a second, separate MySQL auto-index. On
- * sqlite (this suite's connection) none of these ever has a second index
- * covering the column, so the migration must leave all of them alone.
+ * Every column this migration targets. Two separate dev deploys proved that
+ * whether a column's explicit index() call sits in the same Schema::create()
+ * blueprint as its FK (e.g. cell_status_logs.cell_id) or was added later by a
+ * wholly separate migration (pallets.product_id) is NOT a reliable signal for
+ * whether a live database actually has a second, genuinely redundant index —
+ * both shapes have failed with "needed in a foreign key constraint" when the
+ * explicit index turned out to be the *only* one. So every column here is
+ * handled identically by dropIndexIfRedundant(), with no exceptions.
  *
  * @return array<int, array{table: string, column: string, index: string}>
  */
-function conditionallyRedundantColumns(): array
+function foreignKeyIndexColumns(): array
 {
     return [
         ['table' => 'cell_status_logs', 'column' => 'cell_id', 'index' => 'cell_status_logs_cell_id_index'],
@@ -43,6 +35,7 @@ function conditionallyRedundantColumns(): array
         ['table' => 'cell_verification_rounds', 'column' => 'user_id', 'index' => 'cell_verification_rounds_user_id_index'],
         ['table' => 'cell_status_log_flags', 'column' => 'cell_status_log_id', 'index' => 'cell_status_log_flags_cell_status_log_id_index'],
         ['table' => 'cell_verification_round_row', 'column' => 'row_id', 'index' => 'cell_verification_round_row_row_id_index'],
+        ['table' => 'pallets', 'column' => 'product_id', 'index' => 'pallets_product_id_index'],
     ];
 }
 
@@ -56,22 +49,15 @@ function tableHasIndexNamed(string $table, string $name): bool
     return collect(Schema::getIndexes($table))->contains('name', $name);
 }
 
-test('the unconditionally-redundant pallets index is dropped by the full migrate', function () {
-    // RefreshDatabase has already run the whole migration stack, including
-    // this one, by the time the test body runs.
-    $case = unconditionallyRedundantColumn();
-
-    expect(tableHasIndexNamed($case['table'], $case['index']))->toBeFalse();
-});
-
-test('the conditionally-redundant explicit indexes survive the full migrate, since nothing else covers those columns on sqlite', function () {
-    // This is the exact shape of the bug a 2026-09-21 dev deploy hit on
-    // MySQL: cell_status_logs_cell_id_index was the ONLY index on that
-    // column, so dropping it broke the FK constraint it was backing. On
-    // sqlite these columns are in the same position (no auto-created FK
-    // index ever exists to make the explicit one a true duplicate), so the
-    // migration must leave every one of them alone here too.
-    foreach (conditionallyRedundantColumns() as $case) {
+test('every explicit index survives the full migrate, since nothing else covers those columns on sqlite', function () {
+    // This is the exact shape of both bugs two dev deploys hit on MySQL:
+    // cell_status_logs_cell_id_index, then pallets_product_id_index, were
+    // each the ONLY index on their column, so dropping them broke the FK
+    // constraint they were backing. On sqlite every column here is in the
+    // same position (no auto-created FK index ever exists to make the
+    // explicit one a true duplicate), so the migration must leave every one
+    // of them alone.
+    foreach (foreignKeyIndexColumns() as $case) {
         expect(tableHasIndexNamed($case['table'], $case['index']))->toBeTrue(
             "expected {$case['index']} to survive on {$case['table']}"
         );
@@ -105,41 +91,26 @@ test('drops an explicit index only once another index actually covers the column
     // the same column under a different name (standing in for the FK's own
     // auto-created index). Without this, "the migration never breaks
     // anything" would be trivially true by never dropping anything at all.
+    // Covers both column shapes (same-blueprint and separately-migrated),
+    // since both have turned out to need the live check in practice.
     Schema::table('cell_status_logs', fn (Blueprint $table) => $table->index('cell_id', 'cell_status_logs_cell_id_foreign'));
+    Schema::table('pallets', fn (Blueprint $table) => $table->index('product_id', 'pallets_product_id_foreign'));
 
     loadDropRedundantForeignKeyIndexesMigration()->up();
 
     expect(tableHasIndexNamed('cell_status_logs', 'cell_status_logs_cell_id_index'))->toBeFalse();
     expect(tableHasIndexNamed('cell_status_logs', 'cell_status_logs_cell_id_foreign'))->toBeTrue();
+    expect(tableHasIndexNamed('pallets', 'pallets_product_id_index'))->toBeFalse();
+    expect(tableHasIndexNamed('pallets', 'pallets_product_id_foreign'))->toBeTrue();
 });
 
-test('the unconditional pallets drop/restore is reversible and idempotent', function () {
-    $migration = loadDropRedundantForeignKeyIndexesMigration();
-    $case = unconditionallyRedundantColumn();
-
-    $migration->down();
-    expect(tableHasIndexNamed($case['table'], $case['index']))->toBeTrue();
-
-    // Calling down() again while the index is already there must not throw
-    // a duplicate-index error.
-    $migration->down();
-    expect(tableHasIndexNamed($case['table'], $case['index']))->toBeTrue();
-
-    $migration->up();
-    expect(tableHasIndexNamed($case['table'], $case['index']))->toBeFalse();
-
-    // Calling up() again while the index is already gone must not throw.
-    $migration->up();
-    expect(tableHasIndexNamed($case['table'], $case['index']))->toBeFalse();
-});
-
-test('the conditional indexes are untouched, and left untouched again, by a down()/up() cycle when nothing was ever dropped', function () {
+test('every index is untouched, and left untouched again, by a down()/up() cycle when nothing was ever dropped', function () {
     $migration = loadDropRedundantForeignKeyIndexesMigration();
 
     $migration->down();
     $migration->up();
 
-    foreach (conditionallyRedundantColumns() as $case) {
+    foreach (foreignKeyIndexColumns() as $case) {
         expect(tableHasIndexNamed($case['table'], $case['index']))->toBeTrue(
             "expected {$case['index']} to still be there on {$case['table']}"
         );
