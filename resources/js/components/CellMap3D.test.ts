@@ -129,12 +129,35 @@ vi.mock('three', () => {
         }
     }
 
+    /**
+     * Models three's real `InstancedMesh` bounding-sphere semantics, because
+     * they are what makes instances disappear / stop being clickable:
+     * `computeBoundingSphere()` unions ONLY the first `count` instance
+     * matrices, the result is cached on the mesh, and NOTHING in three
+     * invalidates it — not `setMatrixAt`, not assigning `count`. Both
+     * consumers (the renderer's frustum test below, and
+     * `InstancedMesh.raycast`, mirrored by `sphereGatedCellHits`) do
+     * `if (this.boundingSphere === null) this.computeBoundingSphere()`, so a
+     * sphere computed on the first frame is the one used forever unless the
+     * component clears it. Instances are unioned as points (a real box's
+     * extent would only grow the sphere), which keeps this conservative:
+     * anything it reports as out of bounds is out of bounds for real three
+     * too.
+     */
     class InstancedMesh extends Object3D {
         geometry: unknown;
         material: unknown;
         count: number;
         instanceMatrix = { needsUpdate: false };
         matrices: Matrix4[];
+        frustumCulled = true;
+        boundingSphere: {
+            x: number;
+            y: number;
+            z: number;
+            radius: number;
+        } | null = null;
+        drawnInLastFrame = false;
 
         constructor(geometry: unknown, material: unknown, count: number) {
             super();
@@ -157,6 +180,46 @@ vi.mock('three', () => {
                 target.y = matrix.y;
                 target.z = matrix.z;
             }
+        }
+
+        computeBoundingSphere() {
+            const sphere = { x: 0, y: 0, z: 0, radius: -1 };
+
+            for (let index = 0; index < this.count; index += 1) {
+                const matrix = this.matrices[index];
+
+                if (!matrix) {
+                    continue;
+                }
+
+                if (sphere.radius < 0) {
+                    sphere.x = matrix.x;
+                    sphere.y = matrix.y;
+                    sphere.z = matrix.z;
+                    sphere.radius = 0;
+
+                    continue;
+                }
+
+                const distance = Math.hypot(
+                    matrix.x - sphere.x,
+                    matrix.y - sphere.y,
+                    matrix.z - sphere.z,
+                );
+
+                if (distance <= sphere.radius) {
+                    continue;
+                }
+
+                const grownRadius = (sphere.radius + distance) / 2;
+                const ratio = (grownRadius - sphere.radius) / distance;
+                sphere.x += (matrix.x - sphere.x) * ratio;
+                sphere.y += (matrix.y - sphere.y) * ratio;
+                sphere.z += (matrix.z - sphere.z) * ratio;
+                sphere.radius = grownRadius;
+            }
+
+            this.boundingSphere = sphere;
         }
     }
 
@@ -228,7 +291,37 @@ vi.mock('three', () => {
         domElement = document.createElement('canvas');
         setSize = vi.fn();
         dispose = vi.fn();
-        render = vi.fn();
+
+        /**
+         * Stands in for `WebGLRenderer.projectObject` → `Frustum
+         * .intersectsObject`: an object whose `frustumCulled` is left at
+         * three's `true` default is drawn only if its (lazily computed, then
+         * cached) bounding sphere intersects the view frustum. The frustum
+         * itself is stood in for by "the camera sees the whole warehouse", so
+         * the only thing that culls a mesh here is an empty cached sphere —
+         * which is exactly the stale-sphere failure this models. Recording it
+         * per frame lets a test assert that a state's boxes are still drawn
+         * after a cell moves into that state.
+         */
+        render = vi.fn((scene: Object3D) => {
+            scene.traverse((object) => {
+                if (!(object instanceof InstancedMesh)) {
+                    return;
+                }
+
+                if (!object.frustumCulled) {
+                    object.drawnInLastFrame = true;
+
+                    return;
+                }
+
+                if (object.boundingSphere === null) {
+                    object.computeBoundingSphere();
+                }
+
+                object.drawnInLastFrame = object.boundingSphere!.radius >= 0;
+            });
+        });
 
         constructor() {
             registry.renderers.push(this);
@@ -307,6 +400,15 @@ type Registry = {
             opacity: unknown;
             dispose: ReturnType<typeof vi.fn>;
         };
+        frustumCulled: boolean;
+        boundingSphere: {
+            x: number;
+            y: number;
+            z: number;
+            radius: number;
+        } | null;
+        drawnInLastFrame: boolean;
+        computeBoundingSphere: () => void;
     }>;
     raycasters: Array<{
         setFromCamera: ReturnType<typeof vi.fn>;
@@ -360,6 +462,72 @@ function cellBoxMesh(
     }
 
     throw new Error(`No cell-box instance found for cell ${cellNumber}`);
+}
+
+type MockInstancedMesh = Registry['instancedMeshes'][number];
+
+/**
+ * Mirrors three's `InstancedMesh.raycast` gate for a ray aimed at the centre of
+ * the given cell's box: `raycast()` opens with
+ * `if (this.boundingSphere === null) this.computeBoundingSphere();` followed by
+ * `if (raycaster.ray.intersectsSphere(_sphere) === false) return;`, so a mesh
+ * whose cached sphere no longer covers an instance yields NO intersection for
+ * it however solid the box is. Tests that need those real semantics stub
+ * `intersectObjects` with this instead of asserting a hit up front with
+ * `mockReturnValue([cellBoxMesh(n)])`. Real three unions each instance's *box*
+ * sphere, so its sphere is strictly larger than the point union modelled here;
+ * the epsilon keeps a box sitting exactly on the modelled hull from missing on
+ * float noise alone.
+ */
+function sphereGatedCellHits(
+    meshes: MockInstancedMesh[],
+    rowIndex: number,
+    cellNumber: number,
+    flatNumber = 1,
+): Array<{ object: unknown; instanceId: number }> {
+    const target = {
+        x: rowWorldX(rowIndex),
+        y: flatWorldY(flatNumber),
+        z: cellWorldZ(cellNumber),
+    };
+    const hits: Array<{ object: unknown; instanceId: number }> = [];
+
+    for (const mesh of meshes) {
+        if (mesh.boundingSphere === null) {
+            mesh.computeBoundingSphere();
+        }
+
+        const sphere = mesh.boundingSphere;
+
+        if (!sphere || sphere.radius < 0) {
+            continue;
+        }
+
+        const distanceFromSphereCenter = Math.hypot(
+            target.x - sphere.x,
+            target.y - sphere.y,
+            target.z - sphere.z,
+        );
+
+        if (distanceFromSphereCenter > sphere.radius + 1e-9) {
+            continue;
+        }
+
+        const instanceId = mesh.matrices.findIndex(
+            (matrix, index) =>
+                index < mesh.count &&
+                matrix &&
+                matrix.x === target.x &&
+                matrix.y === target.y &&
+                matrix.z === target.z,
+        );
+
+        if (instanceId !== -1) {
+            hits.push({ object: mesh, instanceId });
+        }
+    }
+
+    return hits;
 }
 
 /** jsdom's default getBoundingClientRect is all zeros, which selectAtScreenPoint treats as "not laid out yet" and bails on — stub a real size so click-to-select's NDC math runs. */
@@ -1031,6 +1199,107 @@ describe('CellMap3D', () => {
         );
         expect(fullMesh?.count).toBe(0);
         expect(openedMesh?.count).toBe(1);
+    });
+
+    it('keeps drawing a state whose first cell arrives from a state-only update, instead of leaving it culled by the empty bounding sphere cached on the first frame', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({ items: [item({ cellNumber: 1, state: 'full' })] }),
+                ],
+            },
+        });
+        const openedMesh = () =>
+            cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.opened.hex,
+            );
+
+        // First frame: the renderer computes and caches every mesh's bounding
+        // sphere. "opened" holds no cells yet, so its sphere is empty and the
+        // mesh is correctly skipped for this frame.
+        rafCallback?.(0);
+        expect(openedMesh()?.drawnInLastFrame).toBe(false);
+
+        // A state-only change (an admin opening a pallet) moves the cell into
+        // the "opened" mesh through the in-place fast path, without rebuilding
+        // the group — so nothing but an explicit invalidation can refresh that
+        // cached sphere.
+        await wrapper.setProps({
+            bands: [
+                band({ items: [item({ cellNumber: 1, state: 'opened' })] }),
+            ],
+        });
+        rafCallback?.(16);
+
+        expect(openedMesh()?.count).toBe(1);
+        expect(openedMesh()?.drawnInLastFrame).toBe(true);
+    });
+
+    it('still hit-tests a cell that moved into a state whose bounding sphere was cached around a different row', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [item({ cellNumber: 1, state: 'opened' })],
+                    }),
+                    band({
+                        letter: 'B',
+                        items: [item({ cellNumber: 5, state: 'full' })],
+                    }),
+                ],
+            },
+        });
+        stubViewportRect(wrapper);
+
+        // First frame caches the "opened" sphere around row A's lone opened
+        // cell — the only opened cell in the warehouse so far.
+        rafCallback?.(0);
+        await wrapper.vm.$nextTick();
+
+        // Row B's cell is opened too now, again via the state-only fast path.
+        await wrapper.setProps({
+            bands: [
+                band({
+                    letter: 'A',
+                    items: [item({ cellNumber: 1, state: 'opened' })],
+                }),
+                band({
+                    letter: 'B',
+                    items: [item({ cellNumber: 5, state: 'opened' })],
+                }),
+            ],
+        });
+
+        // Unlike the other click-to-select tests, the hit isn't assumed here:
+        // the raycast is gated by the mesh's cached bounding sphere exactly as
+        // three gates it, so a stale sphere means the click lands on nothing
+        // and clears the selection instead of selecting row B's cell.
+        lastRaycaster().intersectObjects.mockImplementation(
+            (meshes: MockInstancedMesh[]) => sphereGatedCellHits(meshes, 1, 5),
+        );
+
+        const element = wrapper.get('[data-testid="map-3d-viewport"]').element;
+        element.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                pointerId: 1,
+                clientX: 50,
+                clientY: 50,
+            }),
+        );
+        element.dispatchEvent(
+            new PointerEvent('pointerup', {
+                pointerId: 1,
+                clientX: 50,
+                clientY: 50,
+            }),
+        );
+        rafCallback?.(16);
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+        ).toContain(formatSlot('B', 5, 1));
     });
 
     it('updates an outline in place — same instance, new color — rather than creating a new one when a cell switches from highlighted to pulsing', async () => {
