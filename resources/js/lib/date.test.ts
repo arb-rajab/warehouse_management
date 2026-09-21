@@ -83,8 +83,16 @@ describe('formatDuration', () => {
         expect(formatDuration(2 * 86400 + 3 * 3600)).toBe('2d 3h');
     });
 
+    it('drops the hour unit when the day is exact', () => {
+        expect(formatDuration(86400)).toBe('1d');
+    });
+
     it('formats hours and minutes when under a day', () => {
         expect(formatDuration(3 * 3600 + 15 * 60)).toBe('3h 15m');
+    });
+
+    it('drops the minute unit when the hour is exact', () => {
+        expect(formatDuration(3600)).toBe('1h');
     });
 
     it('formats minutes when under an hour', () => {
@@ -99,7 +107,9 @@ describe('formatDuration', () => {
         i18n.global.locale.value = 'ar';
 
         expect(formatDuration(2 * 86400 + 3 * 3600)).toBe('2ي 3س');
+        expect(formatDuration(86400)).toBe('1ي');
         expect(formatDuration(3 * 3600 + 15 * 60)).toBe('3س 15د');
+        expect(formatDuration(3600)).toBe('1س');
         expect(formatDuration(45 * 60)).toBe('45د');
         expect(formatDuration(30)).toBe('30ث');
     });

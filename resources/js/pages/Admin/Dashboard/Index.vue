@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -202,73 +202,61 @@ function onProductIdsChange(ids: string[]): void {
                     tone="warning"
                     :icon="CalendarX"
                 />
-                <div
-                    class="rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
+                <DashboardStatTile
+                    :label="
+                        t('dashboard.expiring.soon', {
+                            days: props.stats.expiring.custom.days,
+                        })
+                    "
+                    :value="props.stats.expiring.custom.count"
+                    :href="cellsIndex().url"
+                    :query="{
+                        expires_within_days: props.stats.expiring.custom.days,
+                        ...productQuery,
+                    }"
+                    tone="warning"
+                    :icon="CalendarX"
                 >
-                    <Link
-                        :href="cellsIndex().url"
-                        :data="{
-                            expires_within_days:
-                                props.stats.expiring.custom.days,
-                            ...productQuery,
-                        }"
-                        method="get"
-                        class="block"
-                    >
-                        <div
-                            class="flex items-center gap-2 text-amber-600 dark:text-amber-400"
+                    <template #footer>
+                        <button
+                            type="button"
+                            :class="['mt-2', filterTriggerButtonClass]"
+                            @click="openCustomExpiringDaysDialog"
                         >
-                            <CalendarX class="h-5 w-5 shrink-0" />
-                            <div class="text-2xl font-semibold">
-                                {{ props.stats.expiring.custom.count }}
-                            </div>
-                        </div>
-                        <div
-                            class="mt-1 text-sm text-gray-500 dark:text-neutral-400"
-                        >
-                            {{
-                                t('dashboard.expiring.soon', {
-                                    days: props.stats.expiring.custom.days,
-                                })
-                            }}
-                        </div>
-                    </Link>
-                    <button
-                        type="button"
-                        :class="['mt-2', filterTriggerButtonClass]"
-                        @click="openCustomExpiringDaysDialog"
-                    >
-                        <SlidersHorizontal class="h-4 w-4" />
-                        {{ t('expiringWindow.label') }}
-                    </button>
+                            <SlidersHorizontal class="h-4 w-4" />
+                            {{ t('expiringWindow.label') }}
+                        </button>
 
-                    <FilterDialog
-                        v-model:open="customExpiringDaysDialogOpen"
-                        :title="t('expiringWindow.label')"
-                        :close-label="t('cellLog.filters.close')"
-                    >
-                        <form
-                            class="space-y-4"
-                            @submit.prevent="submitCustomExpiringDays"
+                        <FilterDialog
+                            v-model:open="customExpiringDaysDialogOpen"
+                            :title="t('expiringWindow.label')"
+                            :close-label="t('cellLog.filters.close')"
                         >
-                            <FilterNumberField
-                                id="dashboard-custom-expiring-days"
-                                v-model="customExpiringDaysDraft"
-                                :label="t('cellHighlight.expiresWithinDays')"
-                                :placeholder="
-                                    t('expiringWindow.customPlaceholder')
-                                "
-                            />
-                            <button
-                                type="submit"
-                                :class="filterApplyButtonClass"
+                            <form
+                                class="space-y-4"
+                                @submit.prevent="submitCustomExpiringDays"
                             >
-                                <Check class="h-4 w-4 shrink-0" />
-                                {{ t('expiringWindow.apply') }}
-                            </button>
-                        </form>
-                    </FilterDialog>
-                </div>
+                                <FilterNumberField
+                                    id="dashboard-custom-expiring-days"
+                                    v-model="customExpiringDaysDraft"
+                                    :label="
+                                        t('cellHighlight.expiresWithinDays')
+                                    "
+                                    :placeholder="
+                                        t('expiringWindow.customPlaceholder')
+                                    "
+                                />
+                                <button
+                                    type="submit"
+                                    :class="filterApplyButtonClass"
+                                >
+                                    <Check class="h-4 w-4 shrink-0" />
+                                    {{ t('expiringWindow.apply') }}
+                                </button>
+                            </form>
+                        </FilterDialog>
+                    </template>
+                </DashboardStatTile>
             </div>
         </section>
 

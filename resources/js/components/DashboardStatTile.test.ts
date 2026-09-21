@@ -84,4 +84,24 @@ describe('DashboardStatTile', () => {
 
         expect(wrapper.find('svg').exists()).toBe(false);
     });
+
+    it('applies the hover/border classes to the root element, not just the link', () => {
+        const wrapper = mount(DashboardStatTile, {
+            props: { label: 'Empty', value: 12, href: '/admin/cells' },
+        });
+
+        expect(wrapper.classes()).toContain('hover:border-gray-300');
+        expect(wrapper.classes()).toContain('hover:bg-gray-50');
+    });
+
+    it('renders footer slot content outside the link', () => {
+        const wrapper = mount(DashboardStatTile, {
+            props: { label: 'Empty', value: 12, href: '/admin/cells' },
+            slots: { footer: '<button>Custom</button>' },
+        });
+
+        const link = wrapper.getComponent(Link);
+        expect(link.text()).not.toContain('Custom');
+        expect(wrapper.text()).toContain('Custom');
+    });
 });

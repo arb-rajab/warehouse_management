@@ -55,6 +55,45 @@ function mountListbox(optionCount = 3) {
 }
 
 describe('useDismissibleListbox', () => {
+    it('defaults optionCount to zero for a dismiss-only caller with no option list', async () => {
+        const wrapper = mount(
+            defineComponent({
+                setup() {
+                    const { open, containerRef } = useDismissibleListbox();
+
+                    return () =>
+                        h('div', [
+                            h('div', { ref: containerRef }, [
+                                h(
+                                    'button',
+                                    {
+                                        onClick: () =>
+                                            (open.value = !open.value),
+                                    },
+                                    open.value ? 'open' : 'closed',
+                                ),
+                            ]),
+                            h('span', { id: 'outside' }, 'outside'),
+                        ]);
+                },
+            }),
+            { attachTo: document.body },
+        );
+
+        expect(wrapper.get('button').text()).toBe('closed');
+
+        await wrapper.get('button').trigger('click');
+        expect(wrapper.get('button').text()).toBe('open');
+
+        document
+            .getElementById('outside')
+            ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.get('button').text()).toBe('closed');
+        wrapper.unmount();
+    });
+
     it('starts closed and opens via the returned open ref', async () => {
         const wrapper = mountListbox();
 

@@ -32,6 +32,18 @@ describe('DataTable', () => {
         );
     });
 
+    it('renders a header cell for each column even when two columns share the same label', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }], {
+            columns: ['Date', 'Cells', 'Date'],
+        });
+
+        expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual([
+            'Date',
+            'Cells',
+            'Date',
+        ]);
+    });
+
     it('renders one body row per row and exposes the row to the slot', () => {
         const wrapper = mountTable([
             { id: 1, letter: 'A' },

@@ -766,6 +766,16 @@ describe('orbitDistanceFromPinch', () => {
         expect(orbitDistanceFromPinch(15, 0, 50, range)).toBe(15);
     });
 
+    it('is a no-op guard against division by zero when fingers pinch fully together', () => {
+        expect(
+            orbitDistanceFromPinch(40, 200, 0, {
+                ...range,
+                minDistance: 6,
+                maxDistance: 150,
+            }),
+        ).toBe(40);
+    });
+
     it('clamps to the range', () => {
         expect(
             orbitDistanceFromPinch(range.minDistance, 200, 1000, range),
