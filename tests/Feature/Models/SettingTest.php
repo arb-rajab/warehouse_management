@@ -8,8 +8,8 @@ test('current creates the singleton row with default QR dimensions the first tim
     $setting = Setting::current();
 
     expect($setting->exists)->toBeTrue();
-    expect($setting->qr_code_width)->toBe(240);
-    expect($setting->qr_code_height)->toBe(320);
+    expect($setting->qr_code_width)->toBe(280);
+    expect($setting->qr_code_height)->toBe(380);
     $this->assertDatabaseCount('wms_settings', 1);
 });
 

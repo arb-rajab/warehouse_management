@@ -32,16 +32,19 @@ class Setting extends Model
      * qr_code_width/qr_code_height are the label's total box — the QR square
      * plus any text below it, not just the QR itself (see
      * BuildsQrLabels::qrLabelImage()). The QR's own square side is always
-     * $qr_code_width minus padding, so the height needs real headroom beyond
-     * the width for the name/Arabic-name lines underneath it; a square
-     * 240x240 box would leave no room at all and silently drop all text.
-     * 320 leaves comfortable space for two lines each of a primary and
-     * secondary field at this trait's font sizes, while 240 keeps a
-     * generously-sized default QR square (200px after padding).
+     * $qr_code_width minus 2*padding (padding=20), so 280 reproduces the
+     * exact 240px QR this app hardcoded before this table existed — that
+     * also keeps the text-wrap width (280-40=240) identical to before,
+     * which matters: a narrower default here was previously observed to
+     * wrap a short cell description ("Row Z · Cell 1 · Level 1", 24 chars)
+     * onto two lines where it used to fit on one. 380 leaves comfortable
+     * room below the 240px QR for a primary line plus a full, unwrapped
+     * secondary line (name + Arabic name) at this trait's font sizes,
+     * without hitting the truncation ceiling for ordinary-length text.
      */
-    public const int DEFAULT_QR_CODE_WIDTH = 240;
+    public const int DEFAULT_QR_CODE_WIDTH = 280;
 
-    public const int DEFAULT_QR_CODE_HEIGHT = 320;
+    public const int DEFAULT_QR_CODE_HEIGHT = 380;
 
     /**
      * Bounds enforced by UpdateSettingRequest on write, and defensively
