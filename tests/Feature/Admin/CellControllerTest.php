@@ -638,6 +638,16 @@ test('toggling a cells active status redirects to the cell map by default', func
     $response->assertRedirect(route('admin.cells.index'));
 });
 
+test('toggling a cells active status preserves the current map query on redirect', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
+
+    $response = $this->post("/admin/cells/{$cell->id}/toggle-active?flat_number=2");
+
+    $response->assertRedirect('/admin/cells?flat_number=2');
+});
+
 test('toggling a cells active status from a row page redirects back to that row page instead of the cell map', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);

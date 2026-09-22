@@ -64,9 +64,9 @@ class CellStatusLogController extends Controller
     private function redirectAfterAcknowledge(AcknowledgeCellStatusLogFlagsRequest $request, CellStatusLog $cellStatusLog): RedirectResponse
     {
         if ($request->input('return_to') === 'user') {
-            return redirect()->route('admin.users.show', ['user' => $cellStatusLog->user_id, ...$request->query()]);
+            return $this->redirectPreservingQuery('admin.users.show', $request, ['user' => $cellStatusLog->user_id]);
         }
 
-        return redirect()->route('admin.cell-logs.index', $request->query());
+        return $this->redirectPreservingQuery('admin.cell-logs.index', $request);
     }
 }

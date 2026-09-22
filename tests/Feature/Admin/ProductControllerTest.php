@@ -753,6 +753,16 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     expect($otherProduct->fresh()->boxes_count)->toBe(9);
 });
 
+test('setting a box count redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
 test('setting a box count creates the settings row for a product that has never had one', function () {
     actingAsAdmin();
 
