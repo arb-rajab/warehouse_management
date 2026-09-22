@@ -91,6 +91,47 @@ trait BuildsQrLabels
     }
 
     /**
+     * $width/$height (Setting::current()'s qr_code_width/qr_code_height) are
+     * the label's total maximum box — the QR square plus any text below it,
+     * not just the QR (see PR review discussion on the QR-size-setting
+     * change). The QR itself is sized from $width alone and never shrinks to
+     * make room for text, so when the configured $height leaves less room
+     * than a wrapped line needs, the line list yields instead: lines beyond
+     * whatever fits get dropped and the last visible one gets an ellipsis,
+     * or the whole block is omitted if not even one line fits. Called
+     * separately for the primary and secondary text blocks in qrLabelImage(),
+     * each against however much vertical budget remains after the other.
+     *
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    private function clampLinesToHeight(array $lines, int $startY, int $lineHeight, int $maxY): array
+    {
+        $visibleCount = 0;
+
+        foreach ($lines as $index => $line) {
+            if ($startY + $index * $lineHeight > $maxY) {
+                break;
+            }
+
+            $visibleCount++;
+        }
+
+        if ($visibleCount === count($lines)) {
+            return $lines;
+        }
+
+        if ($visibleCount === 0) {
+            return [];
+        }
+
+        $visible = array_slice($lines, 0, $visibleCount);
+        $visible[$visibleCount - 1] = rtrim($visible[$visibleCount - 1]).'…';
+
+        return $visible;
+    }
+
+    /**
      * @param  list<string>  $lines
      */
     private function textLinesMarkup(array $lines, int $centerX, int $startY, int $lineHeight, int $fontSize, string $color, string $direction, bool $bold = false): string
@@ -118,50 +159,64 @@ trait BuildsQrLabels
      * printing a whole row at once. $secondaryDirection controls the second
      * line's reading direction independently of the first, since a
      * product's Arabic name is always RTL regardless of the primary
-     * (English) line next to it. Either line wraps onto additional lines
-     * when it's too wide for the fixed-width canvas (see wrapLabelText());
-     * $height (the return value's, i.e. the whole label's height — see the
-     * $height local variable below) grows to fit however many lines that
-     * produces, the same way it already grows to fit an optional secondary
-     * line.
+     * (English) line next to it.
      *
-     * $qrWidth/$qrHeight are the admin-configured QR size (Setting::current()
-     * — see BuildsCellQrLabels/BuildsProductQrLabels) that the rest of this
-     * label's layout (canvas width, text position, padding) derives from —
-     * never a hardcoded value.
+     * $width/$height are Setting::current()'s qr_code_width/qr_code_height —
+     * the label's total maximum box (QR plus any text below it), never a
+     * hardcoded value. The QR itself is always a square sized from $width
+     * alone ($qrSize = $width - padding*2) and never shrinks to make room
+     * for text; text is what yields instead, via clampLinesToHeight(): a
+     * name that wraps onto more lines than fit within $height gets truncated
+     * with an ellipsis, or dropped entirely if not even one line fits. The
+     * returned SVG's actual height still shrinks below $height when the
+     * content is short (unchanged from before) — $height is a ceiling, not
+     * a fixed canvas size — except in the one unavoidable case where $height
+     * is configured smaller than the QR needs on its own (e.g. a much wider
+     * than tall box): the QR is still never clipped, so the label grows past
+     * $height rather than cut it off.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $qrWidth, int $qrHeight): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height): string
     {
         $padding = 20;
-        $width = $qrWidth + $padding * 2;
+        $qrSize = $width - $padding * 2;
+        $qrBottom = $padding + $qrSize;
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
         $primaryFontSize = 18;
         $primaryLineHeight = 22;
-        $primaryY = $qrHeight + $padding + 24;
-        $qrDataUri = $this->qrImageDataUri($qrData, max($qrWidth, $qrHeight));
+        $primaryY = $qrBottom + 24;
+        $maxTextY = $height - 16;
+        $qrDataUri = $this->qrImageDataUri($qrData, $qrSize);
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
+        $primaryLines = $this->clampLinesToHeight($primaryLines, $primaryY, $primaryLineHeight, $maxTextY);
         $primaryMarkup = $this->textLinesMarkup($primaryLines, $centerX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
-        $lastPrimaryY = $primaryY + (count($primaryLines) - 1) * $primaryLineHeight;
-        $height = $lastPrimaryY + 16;
+
+        // The Y just below whatever primary content actually got drawn — the
+        // QR's own bottom edge when no primary line fit at all, otherwise the
+        // last visible primary line.
+        $contentBottom = $primaryLines === [] ? $qrBottom : $primaryY + (count($primaryLines) - 1) * $primaryLineHeight;
+        $labelHeight = $contentBottom + 16;
 
         $secondaryMarkup = '';
 
         if ($secondaryText !== null) {
             $secondaryFontSize = 16;
             $secondaryLineHeight = 20;
-            $secondaryY = $lastPrimaryY + 26;
+            $secondaryY = $contentBottom + ($primaryLines === [] ? 24 : 26);
             $secondaryLines = $this->wrapLabelText($secondaryText, $textMaxWidth, $secondaryFontSize);
+            $secondaryLines = $this->clampLinesToHeight($secondaryLines, $secondaryY, $secondaryLineHeight, $maxTextY);
             $secondaryMarkup = $this->textLinesMarkup($secondaryLines, $centerX, $secondaryY, $secondaryLineHeight, $secondaryFontSize, '#555555', $secondaryDirection);
-            $lastSecondaryY = $secondaryY + (count($secondaryLines) - 1) * $secondaryLineHeight;
-            $height = $lastSecondaryY + 16;
+
+            if ($secondaryLines !== []) {
+                $labelHeight = $secondaryY + (count($secondaryLines) - 1) * $secondaryLineHeight + 16;
+            }
         }
 
         return <<<SVG
-            <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$height}" viewBox="0 0 {$width} {$height}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
-                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrWidth}" height="{$qrHeight}"/>
+                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
                 {$primaryMarkup}
                 {$secondaryMarkup}
             </svg>

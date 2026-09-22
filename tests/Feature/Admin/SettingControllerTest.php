@@ -24,7 +24,7 @@ test('the settings page renders with the default QR code size when never configu
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/Settings/Edit')
             ->where('setting.qr_code_width', 240)
-            ->where('setting.qr_code_height', 240)
+            ->where('setting.qr_code_height', 320)
     );
 });
 

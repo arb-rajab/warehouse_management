@@ -29,15 +29,19 @@ class Setting extends Model
     protected $table = 'wms_settings';
 
     /**
-     * Matches the hardcoded QR sizes every export used before this table
-     * existed — qrImageDataUri()'s size(200) and qrLabelImage()'s
-     * $qrSize = 240 collapse into this one admin-controlled pair (see
-     * BuildsQrLabels), with 240 winning as the default since qrLabelImage()
-     * already treated it as the layout's single source of truth.
+     * qr_code_width/qr_code_height are the label's total box — the QR square
+     * plus any text below it, not just the QR itself (see
+     * BuildsQrLabels::qrLabelImage()). The QR's own square side is always
+     * $qr_code_width minus padding, so the height needs real headroom beyond
+     * the width for the name/Arabic-name lines underneath it; a square
+     * 240x240 box would leave no room at all and silently drop all text.
+     * 320 leaves comfortable space for two lines each of a primary and
+     * secondary field at this trait's font sizes, while 240 keeps a
+     * generously-sized default QR square (200px after padding).
      */
     public const int DEFAULT_QR_CODE_WIDTH = 240;
 
-    public const int DEFAULT_QR_CODE_HEIGHT = 240;
+    public const int DEFAULT_QR_CODE_HEIGHT = 320;
 
     /**
      * Bounds enforced by UpdateSettingRequest on write, and defensively

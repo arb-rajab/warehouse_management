@@ -841,14 +841,15 @@ test('a product QR export uses the configured QR code size instead of the defaul
 
     $response->assertOk();
     $svg = $response->getContent();
-    // The label canvas width is derived from the configured QR width
-    // (qrWidth + 2*padding, padding=20 — see BuildsQrLabels::qrLabelImage()),
-    // and the embedded <image> is placed at the exact configured size.
-    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="440"')
-        ->and($svg)->toContain('width="400" height="500"/>');
+    // The label canvas width is exactly the configured total-box width, and
+    // the embedded QR square is that width minus padding on both sides
+    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
+    // ceiling on the whole label including text, not the QR's own size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('width="360" height="360"/>');
 });
 
-test('a product with a long name has its QR code label text wrapped instead of clipped', function () {
+test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
     actingAsAdmin();
 
     $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
@@ -860,12 +861,37 @@ test('a product with a long name has its QR code label text wrapped instead of c
 
     $svg = $response->getContent();
     // The name wraps across several <text> lines rather than one, so the full
-    // name doesn't appear as one contiguous string — instead assert none of
-    // its words were dropped (a clipped label would lose the tail end) and
-    // that more than one line was actually rendered.
-    expect(substr_count($svg, 'Widget'))->toBe(11);
-    expect(substr_count($svg, 'Component'))->toBe(11);
-    expect(substr_count($svg, '<text'))->toBeGreaterThan(2);
+    // name doesn't appear as one contiguous string — but qr_code_height is a
+    // ceiling on the whole label (see BuildsQrLabels::qrLabelImage()), so a
+    // name that would need more lines than fit within it is truncated with
+    // an ellipsis instead of growing the label past the configured height.
+    expect(substr_count($svg, '<text'))->toBeGreaterThan(1);
+    expect($svg)->toContain('…');
+
+    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
+    expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
+});
+
+test('a QR label never grows past the configured height, even with two long text fields', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 240, 'qr_code_height' => 260]);
+
+    $longName = trim(str_repeat('Widget Component ', 11));
+    $longArName = trim(str_repeat('منتج تجريبي ', 11));
+    $product = Product::factory()->create(['name' => $longName, 'ar_name' => $longArName]);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+
+    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
+    expect((int) $matches[1])->toBeLessThanOrEqual(260);
+    expect($svg)->toContain('…');
+    // The name alone fills the entire text budget at this height, so the
+    // Arabic name is dropped rather than the label growing past the cap —
+    // never shrinking the QR itself to squeeze both fields in.
+    expect($svg)->not->toContain('منتج');
 });
 
 test('a product with no Arabic name ships a QR code image with only the English name', function () {

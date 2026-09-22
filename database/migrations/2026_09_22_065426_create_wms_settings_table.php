@@ -18,17 +18,17 @@ return new class extends Migration
      * DB constraint.
      *
      * qr_code_width/qr_code_height replace the hardcoded QR sizes every
-     * QR-label export used to use — see BuildsQrLabels. The column defaults
-     * match those old hardcoded values so a fresh row (created lazily by
-     * Setting::current(), not seeded here) starts out behaving identically to
-     * before this table existed.
+     * QR-label export used to use — see BuildsQrLabels. They describe the
+     * label's total box (QR plus any text below it), not just the QR square,
+     * so the height default carries real headroom beyond the width — see
+     * App\Models\Setting::DEFAULT_QR_CODE_HEIGHT.
      */
     public function up(): void
     {
         Schema::create('wms_settings', function (Blueprint $table) {
             $table->id();
             $table->unsignedSmallInteger('qr_code_width')->default(240);
-            $table->unsignedSmallInteger('qr_code_height')->default(240);
+            $table->unsignedSmallInteger('qr_code_height')->default(320);
             $table->timestamps();
         });
     }

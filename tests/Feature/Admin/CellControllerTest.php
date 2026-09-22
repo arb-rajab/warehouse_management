@@ -454,11 +454,12 @@ test('a single-cell QR export uses the configured QR code size instead of the de
 
     $response->assertOk();
     $svg = $response->getContent();
-    // The label canvas width is derived from the configured QR width
-    // (qrWidth + 2*padding, padding=20 — see BuildsQrLabels::qrLabelImage()),
-    // and the embedded <image> is placed at the exact configured size.
-    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="440"')
-        ->and($svg)->toContain('width="400" height="500"/>');
+    // The label canvas width is exactly the configured total-box width, and
+    // the embedded QR square is that width minus padding on both sides
+    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
+    // ceiling on the whole label including text, not the QR's own size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('width="360" height="360"/>');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {
