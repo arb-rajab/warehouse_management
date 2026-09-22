@@ -246,7 +246,11 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   path/to/File.test.ts`), not the whole suite. Reserve one full `npx vitest
   run` (all files) plus one full `npx vue-tsc --noEmit` (no per-file mode
   exists for it) for right before each commit, as the final confirmation
-  that nothing else regressed — not after every intermediate edit.
+  that nothing else regressed — not after every intermediate edit. Before
+  every push, run `python3 .claude/scripts/pre_push_check.py` once: it runs
+  ESLint, Prettier, vue-tsc and the full Vitest suite plus `php -l` and the
+  `.claude/scripts/*.py` stand-ins below, in CI's order, as the single
+  command instead of assembling this sequence by hand each time.
 
 ## Sandbox: dependencies cannot be installed, so CI is the test run
 
@@ -300,6 +304,8 @@ in `.claude/scripts/`, so no session has to rebuild them:
 | `vue_unused_imports.py` | eslint's `no-unused-vars` for a `<script setup>` block, template usage included |
 | `vue_prettier_hints.py` | Prettier's print width and its element-opening collapse |
 | `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs |
+| `php_pint_style.py` | other Pint `laravel`-preset fixers — `array_syntax`, `no_trailing_whitespace`, `single_blank_line_at_eof`, `no_closing_tag`, and `trailing_comma_in_multiline` for array literals |
+| `pre_push_check.py` | not a stand-in itself — runs every check above plus `npm run lint:check`/`format:check`/`types:check`/`test:unit` and `php -l`, in CI's order, as the one command to run before every push |
 
 Each script's docstring carries its usage and its limitations; read it before
 trusting a result. Run `python3 .claude/scripts/selftest.py` after changing any
