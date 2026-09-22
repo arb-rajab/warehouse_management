@@ -31,6 +31,7 @@ trait BuildsProductQrLabels
             'rtl',
             $qrWidth,
             $qrHeight,
+            __('messages.qr_label_product_id', ['id' => $product->id]),
         );
     }
 }

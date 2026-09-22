@@ -155,7 +155,7 @@ trait BuildsQrLabels
     }
 
     /**
-     * A single, self-contained SVG "image" label — one QR plus up to two
+     * A single, self-contained SVG "image" label — one QR plus up to three
      * lines of plain legible text below it — for a single-item export
      * (one cell, one product) that a worker downloads and prints directly,
      * as opposed to the multi-label PDF sheet built by cellQrLabels() for
@@ -177,28 +177,54 @@ trait BuildsQrLabels
      * is configured smaller than the QR needs on its own (e.g. a much wider
      * than tall box): the QR is still never clipped, so the label grows past
      * $height rather than cut it off.
+     *
+     * $idText is an optional small caption line drawn directly below the QR,
+     * above the primary line — currently only BuildsProductQrLabels passes
+     * one (the product id), so BuildsCellQrLabels's call sites are unaffected
+     * by leaving it null. It's plain digits/ASCII so it's always drawn LTR
+     * regardless of locale, and it shares the same $height budget as the
+     * other text: when it doesn't fit above $maxTextY it's dropped via
+     * clampLinesToHeight() like any other line, and the primary line's start
+     * position only shifts down when it actually got drawn.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null): string
     {
         $padding = 20;
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
-        $primaryFontSize = 18;
-        $primaryLineHeight = 22;
-        $primaryY = $qrBottom + 24;
         $maxTextY = $height - 16;
         $qrDataUri = $this->qrImageDataUri($qrData, $qrSize);
+
+        $idMarkup = '';
+        $idY = $qrBottom + 24;
+        $idRendered = false;
+
+        if ($idText !== null) {
+            $idFontSize = 13;
+            $idLineHeight = 16;
+            $idLines = $this->clampLinesToHeight([$idText], $idY, $idLineHeight, $maxTextY);
+            $idMarkup = $this->textLinesMarkup($idLines, $centerX, $idY, $idLineHeight, $idFontSize, '#555555', 'ltr');
+            $idRendered = $idLines !== [];
+        }
+
+        $primaryFontSize = 18;
+        $primaryLineHeight = 22;
+        $primaryY = $idRendered ? $idY + 26 : $qrBottom + 24;
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
         $primaryLines = $this->clampLinesToHeight($primaryLines, $primaryY, $primaryLineHeight, $maxTextY);
         $primaryMarkup = $this->textLinesMarkup($primaryLines, $centerX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
 
-        // The Y just below whatever primary content actually got drawn — the
-        // QR's own bottom edge when no primary line fit at all, otherwise the
-        // last visible primary line.
-        $contentBottom = $primaryLines === [] ? $qrBottom : $primaryY + (count($primaryLines) - 1) * $primaryLineHeight;
+        // The Y just below whatever content actually got drawn — the last
+        // visible primary line, or the id caption/QR bottom edge when no
+        // primary line fit at all.
+        $contentBottom = match (true) {
+            $primaryLines !== [] => $primaryY + (count($primaryLines) - 1) * $primaryLineHeight,
+            $idRendered => $idY,
+            default => $qrBottom,
+        };
         $labelHeight = $contentBottom + 16;
 
         $secondaryMarkup = '';
@@ -220,6 +246,7 @@ trait BuildsQrLabels
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
                 <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                {$idMarkup}
                 {$primaryMarkup}
                 {$secondaryMarkup}
             </svg>
