@@ -87,7 +87,8 @@ function onManagePallet(): void {
             <component
                 :is="stateIcon"
                 v-if="stateIcon"
-                class="h-3 w-3 shrink-0"
+                class="h-4 w-4 shrink-0"
+                stroke-width="2.5"
             />
             {{ label }}
         </span>
@@ -97,7 +98,7 @@ function onManagePallet(): void {
             :title="t('cells.inactiveBadge')"
             class="absolute start-1 top-1 flex items-center gap-0.5 rounded bg-red-600 px-1 py-0.5 text-[10px] font-semibold text-white"
         >
-            <Ban class="h-2.5 w-2.5 shrink-0" />
+            <Ban class="h-3 w-3 shrink-0" stroke-width="2.5" />
         </span>
 
         <button
@@ -105,10 +106,10 @@ function onManagePallet(): void {
             type="button"
             :title="toggleActiveLabel"
             :aria-label="toggleActiveLabel"
-            class="absolute end-6 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
+            class="absolute end-7 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
             @click="onToggleActive"
         >
-            <Ban class="h-3.5 w-3.5" />
+            <Ban class="h-5 w-5" stroke-width="2.5" />
         </button>
 
         <a
@@ -117,7 +118,10 @@ function onManagePallet(): void {
             :title="t('rows.show.reprintQr')"
             class="absolute end-1 top-1"
         >
-            <QrCode class="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
+            <QrCode
+                class="h-5 w-5 text-gray-400 dark:text-neutral-500"
+                stroke-width="2.5"
+            />
         </a>
 
         <button
@@ -128,7 +132,7 @@ function onManagePallet(): void {
             class="absolute end-1 bottom-1 cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
             @click="onManagePallet"
         >
-            <PackageSearch class="h-3.5 w-3.5" />
+            <PackageSearch class="h-5 w-5" stroke-width="2.5" />
         </button>
 
         <template v-if="cell?.pallet">
