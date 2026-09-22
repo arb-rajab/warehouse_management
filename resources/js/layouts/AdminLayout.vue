@@ -52,11 +52,6 @@ const navItems = computed(() => [
     },
     { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
-    {
-        labelKey: 'nav.settings',
-        href: settingsEdit().url,
-        icon: Settings,
-    },
 ]);
 
 /**
@@ -161,12 +156,24 @@ function navLinkStateClass(href: string): string[] {
                         :key="item.labelKey"
                         :href="item.href"
                         :aria-current="isActive(item.href) ? 'page' : undefined"
-                        class="flex items-center gap-2 rounded-md border-l-4 px-3 py-2 text-sm transition-colors"
+                        class="flex items-center gap-2 rounded-md border-s-4 px-3 py-2 text-sm transition-colors"
                         :class="navLinkStateClass(item.href)"
                         @click="isMobileMenuOpen = false"
                     >
                         <component :is="item.icon" class="h-4 w-4" />
                         {{ t(item.labelKey) }}
+                    </Link>
+                </div>
+                <div
+                    class="border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
+                >
+                    <Link
+                        :href="settingsEdit().url"
+                        class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                        @click="isMobileMenuOpen = false"
+                    >
+                        <Settings class="h-4 w-4 shrink-0" />
+                        {{ t('nav.settings') }}
                     </Link>
                 </div>
                 <div

@@ -471,6 +471,10 @@
     },
     "products": {
         "title": "Products",
+        "quickSearch": {
+            "label": "Quick product search",
+            "placeholder": "Find a product…"
+        },
         "filters": {
             "sections": {
                 "occupancy": "Occupancy"

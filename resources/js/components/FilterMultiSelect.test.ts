@@ -32,6 +32,12 @@ describe('FilterMultiSelect', () => {
         expect(wrapper.get('button').text()).toBe('All');
     });
 
+    it('uses a logical text-align utility on the trigger so RTL locales flip alignment', () => {
+        const wrapper = mountSelect([]);
+
+        expect(wrapper.get('button').classes()).toContain('text-start');
+    });
+
     it("shows the option's own label when exactly one is selected", () => {
         const wrapper = mountSelect(['opened']);
 

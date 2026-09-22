@@ -2,7 +2,7 @@
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
 import { Check, QrCode, SlidersHorizontal, X } from '@lucide/vue';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -22,6 +22,7 @@ import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
+import ProductSelect from '@/components/ProductSelect.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
@@ -43,6 +44,7 @@ import { t } from '@/lib/i18n';
 import { productName } from '@/lib/productName';
 import type {
     Paginated,
+    ProductFilterOption,
     ProductFilters,
     ProductIndexFilterOptions,
     ProductSummary,
@@ -156,6 +158,25 @@ function applyFilters(): void {
     });
     filtersOpen.value = false;
 }
+
+/**
+ * The always-visible toolbar search — a faster path to the same
+ * `filters.product_id` the column-filter popover's multi-select already
+ * writes to, not a second filter param. Resets to empty once the request is
+ * sent: it's a quick jump into a single product, not a persistent display of
+ * the current filter (the "Product" column's filter icon shows that).
+ */
+const quickSearchProduct = ref<ProductFilterOption | null>(null);
+
+watch(quickSearchProduct, (product) => {
+    if (!product) {
+        return;
+    }
+
+    filters.product_id = [String(product.id)];
+    applyFilters();
+    quickSearchProduct.value = null;
+});
 
 const { openFilterKey } = useColumnFilterPopover(
     filters,
@@ -306,7 +327,14 @@ function submitBoxCount(): void {
 
     <AdminLayout>
         <PageHeader :title="t('products.title')">
-            <div class="flex items-center gap-2">
+            <div class="flex items-end gap-2">
+                <ProductSelect
+                    id="products-quick-search"
+                    class="w-64"
+                    v-model="quickSearchProduct"
+                    :label="t('products.quickSearch.label')"
+                    :placeholder="t('products.quickSearch.placeholder')"
+                />
                 <HelpLink :href="showHelp('products')" />
                 <button
                     type="button"

@@ -24,6 +24,12 @@ function mountTable(rows: TestRow[], extraProps: Record<string, unknown> = {}) {
 }
 
 describe('DataTable', () => {
+    it('uses a logical text-align utility so RTL locales flip alignment', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        expect(wrapper.find('table').classes()).toContain('text-start');
+    });
+
     it('renders a header cell for every column', () => {
         const wrapper = mountTable([{ id: 1, letter: 'A' }]);
 
@@ -242,6 +248,24 @@ describe('DataTable', () => {
         await wrapper.setProps({ openFilterKey: openFilterKey.value });
 
         expect(wrapper.find('.filter-slot').text()).toBe('filters for cells');
+    });
+
+    it('wraps the table in a horizontally scrollable container so wide content can be scrolled to instead of squeezed', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const table = wrapper.get('table');
+        expect(table.classes()).toContain('min-w-full');
+        expect(table.classes()).not.toContain('w-full');
+
+        const scrollContainer = table.element.parentElement;
+        expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(
+            true,
+        );
+
+        const clippingWrapper = scrollContainer?.parentElement;
+        expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
+            true,
+        );
     });
 
     it('renders the popover outside the overflow-hidden table wrapper, so a short table cannot clip it', async () => {

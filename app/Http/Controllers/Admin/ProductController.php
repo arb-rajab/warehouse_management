@@ -127,7 +127,7 @@ class ProductController extends Controller
             'boxes_count' => $request->integer('boxes_count'),
         ]);
 
-        return redirect()->route('admin.products.index', $request->query());
+        return $this->redirectPreservingQuery('admin.products.index', $request);
     }
 
     /**

@@ -60,6 +60,33 @@ VUE_COLLAPSIBLE = """<template>
 </template>
 """
 
+CLEAN_PINT_PHP = """<?php
+
+class Example
+{
+    public function scopes(): array
+    {
+        return [
+            'active',
+            'published', // trailing comment, not a violation
+        ];
+    }
+
+    public function ids(Request $request): array
+    {
+        return array_map('intval', $request->array('ids'));
+    }
+}
+"""
+
+ARRAY_SYNTAX_PHP = "<?php\n\nfunction scopes(): array\n{\n    return array('active');\n}\n"
+
+TRAILING_WHITESPACE_PHP = "<?php\n\n$value = 1;   \n"
+
+MISSING_TRAILING_COMMA_PHP = (
+    "<?php\n\nreturn [\n    'active',\n    'published'\n];\n"
+)
+
 DUPLICATED_PHP = """<?php
 
 class Example
@@ -113,6 +140,13 @@ def main() -> int:
         (root / 'Apostrophe.vue').write_text(VUE_WITH_APOSTROPHE_COMMENT)
         (root / 'Collapsible.vue').write_text(VUE_COLLAPSIBLE)
 
+        (root / 'CleanPint.php').write_text(CLEAN_PINT_PHP)
+        (root / 'ArraySyntax.php').write_text(ARRAY_SYNTAX_PHP)
+        (root / 'TrailingWhitespace.php').write_text(TRAILING_WHITESPACE_PHP)
+        (root / 'MissingComma.php').write_text(MISSING_TRAILING_COMMA_PHP)
+        (root / 'NoTrailingNewline.php').write_text('<?php\n\n$value = 1;')
+        (root / 'ClosingTag.php').write_text('<?php\n\n$value = 1;\n?>\n')
+
         duplicated = root / 'duplicated'
         duplicated.mkdir()
         (duplicated / 'One.php').write_text(DUPLICATED_PHP)
@@ -140,6 +174,25 @@ def main() -> int:
 
         code, out = run('js_balance.py', str(root / 'Apostrophe.vue'))
         check("apostrophe in a // comment doesn't open a string", code == 0, out)
+
+        print('php_pint_style.py')
+        code, out = run('php_pint_style.py', str(root / 'CleanPint.php'))
+        check('clean file (incl. ->array() call and inline comment) passes', code == 0, out)
+
+        code, out = run('php_pint_style.py', str(root / 'ArraySyntax.php'))
+        check('long array(...) syntax is reported', code == 1 and 'array(...)' in out, out)
+
+        code, out = run('php_pint_style.py', str(root / 'TrailingWhitespace.php'))
+        check('trailing whitespace is reported', code == 1 and 'trailing whitespace' in out, out)
+
+        code, out = run('php_pint_style.py', str(root / 'MissingComma.php'))
+        check('missing trailing comma in array is reported', code == 1 and 'trailing comma' in out, out)
+
+        code, out = run('php_pint_style.py', str(root / 'NoTrailingNewline.php'))
+        check('missing trailing newline is reported', code == 1 and 'trailing newline' in out, out)
+
+        code, out = run('php_pint_style.py', str(root / 'ClosingTag.php'))
+        check('stray ?> closing tag is reported', code == 1 and 'closing ?>' in out, out)
 
         print('vue_unused_imports.py')
         code, out = run('vue_unused_imports.py', str(root / 'Apostrophe.vue'))

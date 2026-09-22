@@ -90,7 +90,7 @@ const activityActions: {
                     }}</span>
                     <span
                         tabindex="-1"
-                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
                     >
                         <span class="truncate">{{
                             t('cellLog.filters.all')
