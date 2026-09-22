@@ -191,95 +191,103 @@ onBeforeUnmount(() => {
         <div
             class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
         >
-            <table class="w-full text-start text-sm">
-                <thead
-                    class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
-                >
-                    <tr>
-                        <th
-                            v-for="(column, index) in columns"
-                            :key="index"
-                            class="px-4 py-2 font-medium"
-                        >
-                            <div class="flex items-center gap-1">
-                                <button
-                                    v-if="sortKey(column)"
-                                    type="button"
-                                    class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
-                                    @click="emit('sort', sortKey(column)!)"
-                                >
-                                    {{ columnLabel(column) }}
-                                    <ArrowUp
-                                        v-if="
-                                            sort?.by === sortKey(column) &&
-                                            sort.direction === 'asc'
-                                        "
-                                        class="h-3 w-3 shrink-0"
-                                    />
-                                    <ArrowDown
-                                        v-else-if="sort?.by === sortKey(column)"
-                                        class="h-3 w-3 shrink-0"
-                                    />
-                                    <ArrowUpDown
-                                        v-else
-                                        class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
-                                    />
-                                </button>
-                                <span v-else>{{ columnLabel(column) }}</span>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-start text-sm">
+                    <thead
+                        class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
+                    >
+                        <tr>
+                            <th
+                                v-for="(column, index) in columns"
+                                :key="index"
+                                class="px-4 py-2 font-medium"
+                            >
+                                <div class="flex items-center gap-1">
+                                    <button
+                                        v-if="sortKey(column)"
+                                        type="button"
+                                        class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                                        @click="emit('sort', sortKey(column)!)"
+                                    >
+                                        {{ columnLabel(column) }}
+                                        <ArrowUp
+                                            v-if="
+                                                sort?.by === sortKey(column) &&
+                                                sort.direction === 'asc'
+                                            "
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <ArrowDown
+                                            v-else-if="
+                                                sort?.by === sortKey(column)
+                                            "
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <ArrowUpDown
+                                            v-else
+                                            class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
+                                        />
+                                    </button>
+                                    <span v-else>{{
+                                        columnLabel(column)
+                                    }}</span>
 
-                                <button
-                                    v-if="showsFilterIcon(column)"
-                                    type="button"
-                                    class="cursor-pointer rounded p-0.5"
-                                    :class="
-                                        isFiltered(column)
-                                            ? 'text-blue-600 dark:text-blue-400'
-                                            : 'text-gray-300 hover:text-gray-500 dark:text-neutral-600 dark:hover:text-neutral-400'
-                                    "
-                                    :title="t('common.filteredColumn')"
-                                    :aria-expanded="
-                                        openFilterKey === filterKey(column)
-                                    "
-                                    :ref="
-                                        (el) =>
-                                            setTriggerRef(
-                                                el as Element | null,
+                                    <button
+                                        v-if="showsFilterIcon(column)"
+                                        type="button"
+                                        class="cursor-pointer rounded p-0.5"
+                                        :class="
+                                            isFiltered(column)
+                                                ? 'text-blue-600 dark:text-blue-400'
+                                                : 'text-gray-300 hover:text-gray-500 dark:text-neutral-600 dark:hover:text-neutral-400'
+                                        "
+                                        :title="t('common.filteredColumn')"
+                                        :aria-expanded="
+                                            openFilterKey === filterKey(column)
+                                        "
+                                        :ref="
+                                            (el) =>
+                                                setTriggerRef(
+                                                    el as Element | null,
+                                                    filterKey(column)!,
+                                                    index,
+                                                )
+                                        "
+                                        @click="
+                                            toggleFilterPopover(
                                                 filterKey(column)!,
-                                                index,
+                                                $event,
                                             )
-                                    "
-                                    @click="
-                                        toggleFilterPopover(
-                                            filterKey(column)!,
-                                            $event,
-                                        )
-                                    "
-                                >
-                                    <Filter class="h-3 w-3 shrink-0" />
-                                </button>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-neutral-800">
-                    <tr v-for="row in rows" :key="row.id">
-                        <slot name="row" :row="row" />
-                    </tr>
-                    <tr v-if="rows.length === 0">
-                        <td
-                            :colspan="columns.length"
-                            class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
-                        >
-                            <div class="flex flex-col items-center gap-2">
-                                <PackageSearch
-                                    class="h-6 w-6 text-gray-300 dark:text-neutral-700"
-                                />
-                                <span>{{ emptyMessage }}</span>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                                        "
+                                    >
+                                        <Filter class="h-3 w-3 shrink-0" />
+                                    </button>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody
+                        class="divide-y divide-gray-100 dark:divide-neutral-800"
+                    >
+                        <tr v-for="row in rows" :key="row.id">
+                            <slot name="row" :row="row" />
+                        </tr>
+                        <tr v-if="rows.length === 0">
+                            <td
+                                :colspan="columns.length"
+                                class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
+                            >
+                                <div class="flex flex-col items-center gap-2">
+                                    <PackageSearch
+                                        class="h-6 w-6 text-gray-300 dark:text-neutral-700"
+                                    />
+                                    <span>{{ emptyMessage }}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div
