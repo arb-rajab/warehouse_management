@@ -69,7 +69,12 @@ class Setting extends Model
     }
 
     /**
-     * @return Attribute<int, never>
+     * Unlike Product::boxesCount() (a derived, relation-backed value that is
+     * never assigned directly), qr_code_width is a real fillable column that
+     * current() and mass assignment both write to — so the set side is a
+     * plain int, not `never`.
+     *
+     * @return Attribute<int, int>
      */
     protected function qrCodeWidth(): Attribute
     {
@@ -79,7 +84,7 @@ class Setting extends Model
     }
 
     /**
-     * @return Attribute<int, never>
+     * @return Attribute<int, int>
      */
     protected function qrCodeHeight(): Attribute
     {
