@@ -869,6 +869,9 @@ test('a product with a long name has its QR code label text wrapped across multi
     // an ellipsis instead of growing the label past the configured height.
     expect(substr_count($svg, '<text'))->toBeGreaterThan(1);
     expect($svg)->toContain('…');
+    // The id caption is drawn and budget-clamped before the primary text, so
+    // truncating a long name never costs the id its own line.
+    expect($svg)->toContain("ID: {$product->id}");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
     expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
