@@ -128,7 +128,10 @@ trait BuildsQrLabels
         $visible = array_slice($lines, 0, $visibleCount);
         $visible[$visibleCount - 1] = rtrim($visible[$visibleCount - 1]).'…';
 
-        return $visible;
+        // array_slice() alone is list-shaped, but PHPStan can't prove the
+        // computed-index assignment above kept it that way — array_values()
+        // re-establishes the list<string> guarantee explicitly.
+        return array_values($visible);
     }
 
     /**
