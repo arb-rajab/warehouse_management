@@ -113,11 +113,11 @@ class UserController extends Controller
         abort_if($request->user()->is($user), 403, __('messages.cannot_delete_own_account'));
 
         if ($user->hasHistory()) {
-            return redirect()->route('admin.users.index', $request->query())->withErrors(['user' => __('messages.user_cannot_delete_has_history')]);
+            return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.user_cannot_delete_has_history')]);
         }
 
         $user->delete();
 
-        return redirect()->route('admin.users.index', $request->query());
+        return $this->redirectPreservingQuery('admin.users.index', $request);
     }
 }

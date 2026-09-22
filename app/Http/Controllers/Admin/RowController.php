@@ -135,12 +135,12 @@ class RowController extends Controller
             );
 
             if ($blockReason !== null) {
-                return redirect()->route('admin.rows.index', $request->query())->withErrors(['row' => $blockReason]);
+                return $this->redirectPreservingQuery('admin.rows.index', $request)->withErrors(['row' => $blockReason]);
             }
 
             $row->delete();
 
-            return redirect()->route('admin.rows.index', $request->query());
+            return $this->redirectPreservingQuery('admin.rows.index', $request);
         });
     }
 
