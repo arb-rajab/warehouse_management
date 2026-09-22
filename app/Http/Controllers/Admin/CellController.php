@@ -13,6 +13,7 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
@@ -71,8 +72,9 @@ class CellController extends Controller
     public function exportQr(Cell $cell): HttpResponse
     {
         $cell->loadMissing('row:id,letter');
+        $setting = Setting::current();
 
-        return response($this->cellQrLabelImage($cell->row->letter, $cell))
+        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }

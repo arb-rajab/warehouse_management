@@ -56,6 +56,7 @@ describe('Help Index', () => {
         cellVerificationRounds: '/admin/help/cell-verification-rounds',
         products: '/admin/help/products',
         users: '/admin/help/users',
+        settings: '/admin/help/settings',
     };
 
     it('links each topic to its help page', () => {

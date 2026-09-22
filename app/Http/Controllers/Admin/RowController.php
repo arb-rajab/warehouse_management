@@ -11,6 +11,7 @@ use App\Http\Resources\RowResource;
 use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -89,9 +90,12 @@ class RowController extends Controller
             ->select(['id', 'cell_number', 'flat_number'])
             ->orderedByCoordinates()
             ->get();
+        $setting = Setting::current();
 
         return Pdf::loadView('pdf.qr-labels', [
-            'labels' => $this->cellQrLabels($row->letter, $cells),
+            'labels' => $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height),
+            'qrWidth' => $setting->qr_code_width,
+            'qrHeight' => $setting->qr_code_height,
         ])->download("row-{$row->letter}-qr-codes.pdf");
     }
 

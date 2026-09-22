@@ -8,6 +8,7 @@
         "cellVerificationRounds": "Verification Rounds",
         "products": "Products",
         "users": "Users",
+        "settings": "Settings",
         "logout": "Log out",
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
@@ -142,6 +143,17 @@
             "passwordMismatch": "Passwords do not match.",
             "adminAccess": "Admin access",
             "disabledAdminHint": "You cannot remove your own admin access."
+        }
+    },
+    "settings": {
+        "edit": {
+            "title": "QR code size",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "fields": {
+            "qrCodeWidth": "QR code width (px)",
+            "qrCodeHeight": "QR code height (px)"
         }
     },
     "cellLog": {
@@ -514,6 +526,10 @@
                 "users": {
                     "title": "Users & accounts",
                     "description": "How to create an account and what the Admin and Mobile user roles mean."
+                },
+                "settings": {
+                    "title": "Settings",
+                    "description": "How to change the size of every QR code label this app generates."
                 }
             }
         },
@@ -630,6 +646,13 @@
             "exporting": {
                 "heading": "Exporting a round's reports",
                 "body": "From a round's page, export its reports to a CSV file — useful for sharing results with someone who doesn't use this admin panel, or keeping an offline record."
+            }
+        },
+        "settings": {
+            "title": "Help: Settings",
+            "qrSize": {
+                "heading": "QR code size",
+                "body": "Set the width and height (in pixels) of the whole printed label — the QR code square plus its name text underneath, not just the QR square by itself. The QR square always uses the full configured width; if the name doesn't fit in the remaining height, it's shortened with \"…\" rather than making the label taller than what you set. Enter a value between 100 and 1000 pixels and save; every QR label exported afterward, until you change it again, uses this size. This applies to the single cell/product QR downloads; the printed row sheet's QR sharpness follows it too, though its page layout doesn't change."
             }
         }
     }

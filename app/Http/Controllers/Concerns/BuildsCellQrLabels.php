@@ -16,10 +16,22 @@ trait BuildsCellQrLabels
     use BuildsQrLabels;
 
     /**
+     * $qrWidth/$qrHeight come from Setting::current(), resolved once by the
+     * caller (RowController::exportQrCodes) rather than re-queried per cell
+     * here — a row can hold Row::MAX_DIMENSION² cells.
+     *
+     * The multi-label PDF sheet's grid (see resources/views/pdf/qr-labels.blade.php)
+     * lays each label out at a fixed percentage of the page width, and its
+     * `<img>` is CSS-scaled to fill that box (`width: 100%; height: auto`) —
+     * so an admin-configured $qrWidth/$qrHeight never changes the sheet's
+     * physical grid, only the encoded QR's resolution/sharpness. That's why
+     * this call site is safe to wire up without a stricter bound than the
+     * one UpdateSettingRequest/Setting already enforce.
+     *
      * @param  Collection<int, Cell>  $cells
      * @return array<int, array{label: string, description: string, qrImage: string}>
      */
-    private function cellQrLabels(string $rowLetter, Collection $cells): array
+    private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight): array
     {
         return $cells
             ->map(fn (Cell $cell) => [
@@ -31,7 +43,7 @@ trait BuildsCellQrLabels
                 'description' => $this->shapeArabicForPdf($this->cellQrLabelDescription($rowLetter, $cell)),
                 // The mobile app's custom URL scheme, encoded directly — no web
                 // redirect page in between. Only the app itself can open this link.
-                'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell)),
+                'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell), max($qrWidth, $qrHeight)),
             ])
             ->all();
     }
@@ -41,13 +53,15 @@ trait BuildsCellQrLabels
      * image (see qrLabelImage()) for downloading/printing just this cell's
      * label, rather than a whole PDF sheet.
      */
-    private function cellQrLabelImage(string $rowLetter, Cell $cell): string
+    private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight): string
     {
         return $this->qrLabelImage(
             $this->cellDeepLink($rowLetter, $cell),
             Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
             $this->cellQrLabelDescription($rowLetter, $cell),
             app()->isLocale('ar') ? 'rtl' : 'ltr',
+            $qrWidth,
+            $qrHeight,
         );
     }
 

@@ -16,6 +16,7 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Setting;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -150,7 +151,9 @@ class ProductController extends Controller
      */
     public function exportQr(Product $product): HttpResponse
     {
-        return response($this->productQrLabelImage($product))
+        $setting = Setting::current();
+
+        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
     }

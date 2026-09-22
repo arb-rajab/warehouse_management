@@ -57,7 +57,7 @@
 <body>
     @foreach ($labels as $entry)
         <div class="label">
-            <img src="{{ $entry['qrImage'] }}" width="200" height="200" alt="{{ $entry['label'] }}">
+            <img src="{{ $entry['qrImage'] }}" width="{{ $qrWidth }}" height="{{ $qrHeight }}" alt="{{ $entry['label'] }}">
             <div class="location">{{ $entry['label'] }}</div>
             <div class="description">{{ $entry['description'] }}</div>
         </div>
