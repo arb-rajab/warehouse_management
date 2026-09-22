@@ -185,6 +185,20 @@ describe('PalletActionsDialog', () => {
         expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
     });
 
+    it('shows the remove-boxes submit label by default for an opened cell', async () => {
+        const wrapper = await mountDialog(openedCell(6));
+
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Remove boxes',
+        );
+    });
+
+    it('renders the dialog title interpolated with the cell location', async () => {
+        const wrapper = await mountDialog(emptyCell());
+
+        expect(wrapper.get('h2').text()).toBe('Manage pallet — A2·1');
+    });
+
     it('offers only the store tab for an empty cell, and posts the product/expiration/note fields on submit', async () => {
         const wrapper = await mountDialog(emptyCell());
 
@@ -192,6 +206,9 @@ describe('PalletActionsDialog', () => {
             wrapper.findAll('[data-testid="pallet-action-tab"]'),
         ).toHaveLength(0);
         expect(wrapper.find('#pallet-action-expiration').exists()).toBe(true);
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Store pallet',
+        );
 
         await wrapper.get('#pallet-action-expiration').setValue('2026-12-25');
         await wrapper.get('#pallet-action-note').setValue('Fragile');
@@ -244,6 +261,17 @@ describe('PalletActionsDialog', () => {
         expect(guard.required).toBe(true);
     });
 
+    it('shows a pointer cursor on every action tab, selected or not', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        const tabs = wrapper.findAll('[data-testid="pallet-action-tab"]');
+        expect(tabs.length).toBeGreaterThan(1);
+
+        for (const tab of tabs) {
+            expect(tab.classes()).toContain('cursor-pointer');
+        }
+    });
+
     it('defaults to the open tab for a full cell and posts boxes_count/confirm_empty on submit', async () => {
         const wrapper = await mountDialog(fullCell(6));
 
@@ -251,6 +279,9 @@ describe('PalletActionsDialog', () => {
         expect(tabs).toHaveLength(4);
         expect(tabs[0].attributes('aria-pressed')).toBe('true');
         expect(wrapper.find('#pallet-action-boxes-count').exists()).toBe(true);
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Open pallet',
+        );
 
         await wrapper.get('#pallet-action-boxes-count').setValue('6');
         await wrapper.get('input[type="checkbox"]').setValue(true);
@@ -295,6 +326,9 @@ describe('PalletActionsDialog', () => {
         await wrapper
             .findAll('[data-testid="pallet-action-tab"]')[1]
             .trigger('click');
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Empty pallet',
+        );
         await wrapper.get('#pallet-action-note').setValue('Damaged boxes');
         await wrapper.get('form').trigger('submit');
 
@@ -311,6 +345,19 @@ describe('PalletActionsDialog', () => {
         await wrapper
             .findAll('[data-testid="pallet-action-tab"]')[2]
             .trigger('click');
+
+        expect(wrapper.get('label[for="pallet-action-to-row"]').text()).toBe(
+            'Destination row',
+        );
+        expect(wrapper.get('label[for="pallet-action-to-cell"]').text()).toBe(
+            'Destination cell number',
+        );
+        expect(wrapper.get('label[for="pallet-action-to-flat"]').text()).toBe(
+            'Destination level',
+        );
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Transfer pallet',
+        );
 
         await wrapper.get('#pallet-action-to-row').setValue('A');
         await wrapper.get('#pallet-action-to-cell').setValue('3');
@@ -345,6 +392,9 @@ describe('PalletActionsDialog', () => {
             ).value,
         ).toBe('6');
         expect(wrapper.find('#pallet-action-note').exists()).toBe(false);
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
+            'Save changes',
+        );
     });
 
     it('submits the edit action via PUT with the updated product/expiration/remaining boxes and no note', async () => {

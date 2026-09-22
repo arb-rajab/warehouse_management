@@ -43,8 +43,16 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // `user('sanctum')`, never a bare `user()`: with no guard argument the
+        // resolver uses auth.defaults.guard (`web`, session driver), and the api
+        // middleware group has no StartSession, so that guard resolves null on
+        // every API request and the key always fell back to the IP. A warehouse
+        // whose tablets NAT out through one address then shared a single 60/min
+        // bucket, while an individual abusive token was never throttled at all.
+        // Naming the guard reads the bearer token directly and does not require
+        // `auth:sanctum` (which runs after this middleware) to have resolved yet.
         RateLimiter::for('api', function (Request $request): Limit {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(60)->by($request->user('sanctum')?->id ?: $request->ip());
         });
     }
 

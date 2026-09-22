@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use ArPHP\I18N\Arabic;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -176,6 +178,50 @@ test('creating a row with an invalid flats_count is rejected and nothing changes
 
     $response->assertSessionHasErrors('flats_count');
     $this->assertDatabaseCount('rows', 0);
+});
+
+test('creating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row with a flats_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => Row::MAX_DIMENSION + 1,
+    ]);
+
+    $response->assertSessionHasErrors('flats_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row at exactly the operational maximum dimensions succeeds', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION,
+        'flats_count' => 1,
+    ]);
+
+    $row = Row::query()->where('letter', 'Z')->first();
+
+    $response->assertRedirect(route('admin.rows.show', $row));
+    expect($row)->not->toBeNull();
+    expect($row->cells()->count())->toBe(Row::MAX_DIMENSION);
 });
 
 test('creating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
@@ -365,6 +411,7 @@ test('viewing the edit page for a non-existent row returns a 404', function () {
 test('renaming a rows letter always succeeds', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Y',
@@ -374,6 +421,7 @@ test('renaming a rows letter always succeeds', function () {
 
     $response->assertRedirect(route('admin.rows.show', $row->fresh()));
     expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
 });
 
 test('renaming a row normalizes a lowercase letter to uppercase', function () {
@@ -406,6 +454,44 @@ test('renaming a row to a letter that already exists is rejected and nothing cha
     expect($otherRow->fresh()->letter)->toBe('Y');
 });
 
+test('renaming a row holding a pallet leaves its cells and the pallet untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+});
+
+test('renaming a row holding history but no pallet leaves its cells untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $log = CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($log->fresh()->cell_id)->toBe($cell->id);
+});
+
 test('resizing a row with no pallets regenerates its cells', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
@@ -432,10 +518,31 @@ test('resizing a row that has a pallet is rejected and nothing changes', functio
         'flats_count' => 5,
     ]);
 
+    $response->assertRedirect(route('admin.rows.edit', $row));
     $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('resizing a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 5,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.edit', $row));
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
+    expect($row->fresh()->cells_count)->toBe(2);
+    expect($row->fresh()->flats_count)->toBe(1);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
 });
 
 test('resizing a row with invalid dimensions and an existing pallet reports the dimension error, not the pallet block', function () {
@@ -467,6 +574,20 @@ test('updating a row with an invalid flats_count is rejected and nothing changes
 
     $response->assertSessionHasErrors('flats_count');
     expect($row->fresh()->flats_count)->toBe(1);
+});
+
+test('updating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    expect($row->fresh()->cells_count)->toBe(2);
 });
 
 test('updating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
@@ -553,9 +674,37 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
 
     $response = $this->delete("/admin/rows/{$row->letter}");
 
+    $response->assertRedirect(route('admin.rows.index'));
     $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('deleting a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertRedirect(route('admin.rows.index'));
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_history')]);
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
+});
+
+test('a rejected row deletion redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}?page=2");
+
+    $response->assertRedirect(route('admin.rows.index', ['page' => 2]));
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
 });
 
 test('a mobile app user cannot delete a row and nothing changes', function () {
@@ -603,6 +752,52 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
         expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
     }
+});
+
+test('the row QR export still succeeds with a configured QR code size other than the default', function () {
+    // dompdf's Cpdf::addSvgFromFile() (see vendor/dompdf/dompdf/lib/Cpdf.php)
+    // renders the SVG as vector drawing commands, always affine-transformed
+    // to exactly fill the <img>'s CSS-computed box — and that box is fixed
+    // to a percentage of the page width by .label img's `width: 100%; height:
+    // auto` (see resources/views/pdf/qr-labels.blade.php). So a configured
+    // size change here is never observable in the exported PDF's bytes or
+    // layout, only in the resolution of the underlying SVG source, which is
+    // erased by that same transform — that's what makes this call site safe
+    // to wire up without a tighter bound than Setting's own 100-1000 (see
+    // BuildsCellQrLabels::cellQrLabels()). This test only proves the request
+    // still succeeds end-to-end at a non-default size; the assertion that the
+    // configured size actually reaches the view lives in the next test,
+    // against the Blade source dompdf receives before that transform erases it.
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 900, 'qr_code_height' => 900]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+
+    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
+    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
+        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
+    }
+});
+
+test('the qr-labels Blade view embeds each cell QR image at the configured size', function () {
+    // Renders the exact view RowController::exportQrCodes() feeds to
+    // Pdf::loadView(), bypassing the PDF conversion step — see the previous
+    // test for why the configured size isn't observable past that point.
+    $html = view('pdf.qr-labels', [
+        'labels' => [[
+            'label' => 'Z1·1',
+            'description' => 'Row Z, cell 1, level 1',
+            'qrImage' => 'data:image/svg+xml;base64,'.base64_encode('<svg width="500" height="500"></svg>'),
+        ]],
+        'qrWidth' => 400,
+        'qrHeight' => 500,
+    ])->render();
+
+    expect($html)->toContain('width="400" height="500" alt="Z1·1"');
 });
 
 test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {

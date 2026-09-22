@@ -506,6 +506,31 @@ function disposeCellGroup(): void {
 }
 
 /**
+ * Drops a state mesh's cached bounding sphere after its `.count` or instance
+ * matrices change. `THREE.InstancedMesh` derives that sphere lazily — both
+ * `Frustum.intersectsObject` (the renderer's per-frame culling test) and
+ * `InstancedMesh.raycast` do `if (this.boundingSphere === null)
+ * this.computeBoundingSphere()` — and neither `setMatrixAt` nor assigning
+ * `.count` clears it, so without this a mesh keeps whatever sphere it had on
+ * its first frame forever. A state that started out with no cells keeps an
+ * *empty* sphere and is culled at every camera angle once a cell moves into it
+ * (the cell silently vanishes from the map), and a state whose cells all sat
+ * in one row keeps a sphere around that row and stops hit-testing
+ * (click-to-select, hover outline) cells that later move into it elsewhere.
+ *
+ * Nulling it for a lazy recompute rather than calling `computeBoundingSphere()`
+ * here: that recompute unions every one of the mesh's `.count` instance
+ * matrices, so doing it eagerly per instance would make building a warehouse
+ * O(cells²); nulling is O(1) per mutation and three recomputes once, on the
+ * next frame or raycast that actually needs it. Frustum culling deliberately
+ * stays enabled — clearing `frustumCulled` would only mask the rendering half
+ * and leave raycasting broken, since `raycast()` reads the same cached sphere.
+ */
+function invalidateInstanceBounds(mesh: THREE.InstancedMesh): void {
+    mesh.boundingSphere = null;
+}
+
+/**
  * Occupies the next free instance slot for `state` with a box at
  * (x, y, z), recording it in `instanceSlotByKey` — shared by the initial
  * build (`buildCellGroup`) and by `updateCellStatesAndLookup` when an
@@ -531,6 +556,7 @@ function placeCellInstance(
     );
     stateEntry.mesh.count = index + 1;
     stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    invalidateInstanceBounds(stateEntry.mesh);
     stateEntry.keys[index] = key;
     instanceSlotByKey.set(key, { state, index });
 }
@@ -573,6 +599,7 @@ function removeCellInstance(key: string): void {
     stateEntry.keys.pop();
     stateEntry.mesh.count = lastIndex;
     stateEntry.mesh.instanceMatrix.needsUpdate = true;
+    invalidateInstanceBounds(stateEntry.mesh);
     instanceSlotByKey.delete(key);
 }
 

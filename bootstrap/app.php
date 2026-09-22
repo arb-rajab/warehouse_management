@@ -34,7 +34,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));
 
         if ($trustedProxies !== []) {
-            $middleware->trustProxies(at: array_values($trustedProxies));
+            // Omitting `headers:` keeps the framework default, which includes
+            // HEADER_X_FORWARDED_HOST — a trusted proxy could then have its
+            // X-Forwarded-Host header used verbatim for url()/route() generation,
+            // e.g. redirect()->route('login') issuing a Location on an attacker-
+            // controlled host. FOR|PORT|PROTO is everything this app actually
+            // needs from a real reverse proxy/LB.
+            $middleware->trustProxies(
+                at: array_values($trustedProxies),
+                headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO,
+            );
         }
 
         $middleware->web(append: [

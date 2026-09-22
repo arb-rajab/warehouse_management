@@ -49,7 +49,12 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return;
         }
 
-        Telescope::hideRequestParameters(['_token']);
+        // Telescope's own defaults already hide password/password_confirmation
+        // (see vendor/laravel/telescope/src/Telescope.php), but not current_password,
+        // which UpdatePasswordRequest uses — without this it lands in plaintext in
+        // database/telescope.sqlite on every failed (and, in local, every successful)
+        // password-change request.
+        Telescope::hideRequestParameters(['_token', 'current_password']);
 
         Telescope::hideRequestHeaders([
             'cookie',

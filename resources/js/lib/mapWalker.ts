@@ -709,7 +709,7 @@ export function orbitDistanceFromPinch(
     currentPointerGap: number,
     range: OrbitRange,
 ): number {
-    if (startPointerGap === 0) {
+    if (startPointerGap === 0 || currentPointerGap === 0) {
         return clamp(
             distanceAtPinchStart,
             range.minDistance,

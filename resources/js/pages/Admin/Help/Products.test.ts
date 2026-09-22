@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -32,6 +33,26 @@ describe('Help Products', () => {
         resetMocks({ usePageMock });
     });
 
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('help.products.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('help.products.title'));
+    });
+
+    it('renders every section heading', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(headings).toEqual([
+            t('help.products.defaultBoxes.heading'),
+            t('help.products.settingBoxes.heading'),
+            t('help.products.exportingQr.heading'),
+        ]);
+    });
+
     it('explains why products default to 50 boxes per pallet', () => {
         const wrapper = mountPage();
 
@@ -42,6 +63,12 @@ describe('Help Products', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('help.products.settingBoxes.body'));
+    });
+
+    it('explains how to print a products QR label', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.products.exportingQr.body'));
     });
 
     it('renders a preview of the products table with its real column headers and an example row', () => {
@@ -84,6 +111,15 @@ describe('Help Products', () => {
 
         const input = wrapper.get('#help-products-box-count');
         expect((input.element as HTMLInputElement).value).toBe('50');
+    });
+
+    it('renders a preview of the export-QR control', () => {
+        const wrapper = mountPage();
+
+        const preview = wrapper
+            .findAll('span')
+            .find((s) => s.attributes('title') === t('products.columns.qr'));
+        expect(preview).toBeTruthy();
     });
 
     it('links to the products page', () => {

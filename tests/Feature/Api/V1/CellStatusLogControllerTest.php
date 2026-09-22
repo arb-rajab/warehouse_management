@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -108,7 +109,8 @@ test('the cell log listing includes the flagged boolean for an admin caller, but
     // forListing() deliberately never eager-loads WITH_FLAG_DETAILS on this
     // endpoint (only the admin panel's own listing does), so `flags` stays
     // absent for every viewer via whenLoaded() — only `flagged` itself
-    // (computed via the exists() fallback) actually varies by viewer here.
+    // (computed off the withCount('flags') alias added for an admin caller)
+    // actually varies by viewer here.
     actingAsAdminMobileUser();
     $log = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
@@ -118,6 +120,26 @@ test('the cell log listing includes the flagged boolean for an admin caller, but
     $response->assertOk();
     expect($response->json('data.0.flagged'))->toBeTrue();
     expect($response->json('data.0'))->not->toHaveKey('flags');
+});
+
+test('the cell log listing computes flagged for an admin caller without an exists query per row', function () {
+    actingAsAdminMobileUser();
+    CellStatusLog::factory()->count(10)->create()->each(
+        fn (CellStatusLog $log) => CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id])
+    );
+
+    DB::enableQueryLog();
+    $response = $this->getJson('/api/v1/cell-logs');
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('flagged')->unique()->all())->toBe([true]);
+    // The eager-loaded WITH_DETAILS relations plus withCount('flags') and
+    // pagination put this in the low teens regardless of row count; a
+    // per-row exists() fallback would add one query per row on top of that
+    // (21+ for these 10 rows), so 15 comfortably separates the two.
+    expect($queryCount)->toBeLessThan(15);
 });
 
 test('the flagged filter is ignored for a worker, so it cannot be used to reveal which entries are flagged', function () {

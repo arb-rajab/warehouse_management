@@ -26,7 +26,10 @@ import { productName } from '@/lib/productName';
  *
  * Deliberately multi-root: these are sibling `<td>`s inside DataTable's own
  * `<tr>`, so neither a wrapper element nor the `class="contents"` trick the
- * filter-field groups use would be valid HTML here.
+ * filter-field groups use would be valid HTML here. Vue 3 fragments make this
+ * work; the one cost is that a multi-root component has no attribute
+ * fallthrough target, so callers must not pass `class`/`style` or any other
+ * non-prop attribute to this tag — style the `<td>`s here instead.
  */
 const props = defineProps<{
     log: DisplayCellStatusLog;

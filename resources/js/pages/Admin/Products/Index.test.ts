@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { Check, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -114,6 +115,15 @@ describe('Products Index', () => {
         i18n.global.locale.value = 'en';
     });
 
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('products.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('products.title'));
+    });
+
     it('renders every column header', () => {
         const wrapper = mountPage([]);
 
@@ -127,6 +137,7 @@ describe('Products Index', () => {
             t('products.columns.expiringSoon', { days: 45 }),
             t('products.columns.activityToday'),
             t('products.columns.activityWeek'),
+            t('products.columns.qr'),
         ]);
     });
 
@@ -364,7 +375,13 @@ describe('Products Index', () => {
         ).toBe('24');
     });
 
-    it('saves a changed box count against that product on dialog submit', async () => {
+    it('preserves the current page and filters when saving a changed box count', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/products?row_id=1&per_page=20',
+        );
+
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
 
         await rowCells(wrapper)[1].get('button').trigger('click');
@@ -372,10 +389,12 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).toHaveBeenCalledWith(
-            '/admin/products/42/box-count',
+            '/admin/products/42/box-count?row_id=1&per_page=20',
             { boxes_count: 30 },
             { preserveScroll: true, preserveState: true },
         );
+
+        window.history.pushState({}, '', '/');
     });
 
     it('rejects a box count below one on dialog submit without a round trip', async () => {
@@ -473,6 +492,17 @@ describe('Products Index', () => {
         expect(href).toContain('/admin/cell-logs');
         expect(href).toContain('date_from=2026-08-10');
         expect(href).toContain('date_to=2026-08-13');
+    });
+
+    it('renders a QR export link for the product', () => {
+        const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
+
+        const cell = rowCells(wrapper)[8];
+        const link = cell.get('a');
+        expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
+        expect(link.attributes('aria-label')).toBe(
+            t('products.exportQrLabel', { product: 'Widgets' }),
+        );
     });
 
     it('carries the current row/column/user/action filters into the activity drill-down links', () => {

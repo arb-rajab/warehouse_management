@@ -101,3 +101,18 @@ test('the migration skips dropping columns from the products table in production
     expect(Schema::hasColumn('products', 'thumbnail_img'))->toBeTrue();
     expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
 });
+
+test('down() is a no-op even outside production, since a fresh install is indistinguishable from an already-upgraded stand-in', function () {
+    // No revertProductsToLegacyStandIn(): this is the fresh-install shape
+    // create_products_table already builds — up() never touches it.
+    expect(Schema::hasColumn('products', 'thumbnail_img'))->toBeTrue();
+    expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
+
+    loadUpgradeLegacyProductsStandInMigration()->down();
+
+    // A guess here would re-add image_url/boxes_count and drop
+    // thumbnail_img, breaking every product read on a partial rollback.
+    expect(Schema::hasColumn('products', 'thumbnail_img'))->toBeTrue();
+    expect(Schema::hasColumn('products', 'image_url'))->toBeFalse();
+    expect(Schema::hasColumn('products', 'boxes_count'))->toBeFalse();
+});

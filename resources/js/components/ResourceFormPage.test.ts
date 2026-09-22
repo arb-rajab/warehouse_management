@@ -85,6 +85,33 @@ describe('ResourceFormPage', () => {
         expect(wrapper.get('form button').text()).toBe('Create');
     });
 
+    it('renders the header-actions slot next to the title', () => {
+        usePageMock.mockReturnValue({
+            url: '/admin/rows',
+            props: {
+                locale: 'en',
+                auth: { user: { name: 'Jane Doe', id: 7 } },
+            },
+        });
+
+        const wrapper = mount(ResourceFormPage, {
+            props: {
+                title: 'Add row',
+                action: '/admin/rows',
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+            },
+            slots: {
+                default: '<p>form fields go here</p>',
+                'header-actions': '<a href="/admin/help/rows">Help</a>',
+            },
+        });
+
+        const headerActionsLink = wrapper.get('h1').element
+            .nextElementSibling as HTMLElement;
+        expect(headerActionsLink.textContent).toBe('Help');
+    });
+
     it('renders no cancel link when cancelHref is not given', () => {
         const wrapper = mountPage();
 

@@ -6,10 +6,12 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the cell verification rounds list with every property the table renders', function () {
-    actingAsAdmin();
+    $admin = actingAsAdmin();
+    $admin->update(['name' => 'Zoe Admin']);
 
     $worker = User::factory()->mobileUser()->create(['name' => 'Ada Reporter']);
     $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
@@ -21,9 +23,13 @@ test('an authenticated admin can view the cell verification rounds list with eve
     // Reported against a cell inside the round's own coverage — which is also
     // what keeps the report factory from generating a third row of its own,
     // whose faker-drawn letter could collide with the ones hardcoded above.
+    // user_id is pinned to the round's own worker too, so the report factory
+    // doesn't draw its own extra users, which would make the filterOptions.users
+    // assertion below non-deterministic.
     CellVerificationReport::factory()->count(2)->create([
         'cell_verification_round_id' => $round->id,
         'cell_id' => $rowA->cells()->first()->id,
+        'user_id' => $worker->id,
     ]);
 
     $response = $this->get('/admin/cell-verification-rounds');
@@ -45,6 +51,10 @@ test('an authenticated admin can view the cell verification rounds list with eve
                     ->where('name', 'Ada Reporter')
                 )
             )
+            ->where('filterOptions.users', [
+                ['id' => $worker->id, 'name' => 'Ada Reporter'],
+                ['id' => $admin->id, 'name' => 'Zoe Admin'],
+            ])
     );
 });
 
@@ -157,6 +167,9 @@ test('an authenticated admin can view a single round with its own reports and ev
         fn (Assert $page) => $page->component('Admin/CellVerificationRounds/Show')
             ->where('round.id', $round->id)
             ->where('round.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('filterOptions.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('filterOptions.maxColumnNumber', 1)
+            ->has('filterOptions.products', 0)
             ->has('reports.data', 1)
             ->has('reports.data.0', fn (Assert $reportProp) => $reportProp
                 ->where('id', $report->id)
@@ -363,4 +376,29 @@ test('exporting a rounds reports csv only includes that rounds filtered rows', f
     expect($csv)->toContain('Included row');
     expect($csv)->not->toContain('Excluded row');
     expect($csv)->toContain((string) $report->id);
+});
+
+test('exporting a rounds reports csv eager loads report details instead of an N+1 per report', function () {
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->create();
+    $expectedProduct = Product::factory()->create();
+    $reportedProduct = Product::factory()->create();
+    CellVerificationReport::factory()->count(10)->create([
+        'cell_verification_round_id' => $round->id,
+        'expected_product_id' => $expectedProduct->id,
+        'reported_product_id' => $reportedProduct->id,
+    ]);
+
+    DB::enableQueryLog();
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}/export");
+    $csv = $response->streamedContent();
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    expect(substr_count($csv, "\n"))->toBe(11); // header + 10 report rows
+    // Without eager loading, 10 reports touching cell->row, expectedProduct and
+    // reportedProduct each would push this well past 30 queries.
+    expect($queryCount)->toBeLessThan(15);
 });

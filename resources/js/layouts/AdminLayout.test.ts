@@ -48,6 +48,7 @@ describe('AdminLayout', () => {
             '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
+            '/admin/settings',
         ]);
     });
 
@@ -240,6 +241,7 @@ describe('AdminLayout', () => {
             '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
+            '/admin/settings',
         ]);
 
         await toggle.trigger('click');

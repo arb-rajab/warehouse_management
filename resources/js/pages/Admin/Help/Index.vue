@@ -7,6 +7,7 @@ import {
     Map,
     Package,
     Rows3,
+    Settings,
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
@@ -27,6 +28,7 @@ const topics: { key: string; topic: string; icon: Component }[] = [
     },
     { key: 'products', topic: 'products', icon: Package },
     { key: 'users', topic: 'users', icon: Users },
+    { key: 'settings', topic: 'settings', icon: Settings },
 ];
 </script>
 

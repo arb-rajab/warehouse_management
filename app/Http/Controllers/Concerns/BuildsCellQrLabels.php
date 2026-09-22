@@ -3,23 +3,35 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Cell;
-use ArPHP\I18N\Arabic;
 use Illuminate\Support\Collection;
-use Illuminate\Support\HtmlString;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
- * Shared QR-label building for the row-wide and single-cell QR-export PDFs —
- * used by both Admin\RowController and Admin\CellController so the printed
- * label text and QR payload stay in lockstep.
+ * Shared QR-label building for the row-wide QR-export PDF sheet and the
+ * single-cell QR-export image — used by both Admin\RowController and
+ * Admin\CellController so the printed/exported label text and QR payload
+ * stay in lockstep.
  */
 trait BuildsCellQrLabels
 {
+    use BuildsQrLabels;
+
     /**
+     * $qrWidth/$qrHeight come from Setting::current(), resolved once by the
+     * caller (RowController::exportQrCodes) rather than re-queried per cell
+     * here — a row can hold Row::MAX_DIMENSION² cells.
+     *
+     * The multi-label PDF sheet's grid (see resources/views/pdf/qr-labels.blade.php)
+     * lays each label out at a fixed percentage of the page width, and its
+     * `<img>` is CSS-scaled to fill that box (`width: 100%; height: auto`) —
+     * so an admin-configured $qrWidth/$qrHeight never changes the sheet's
+     * physical grid, only the encoded QR's resolution/sharpness. That's why
+     * this call site is safe to wire up without a stricter bound than the
+     * one UpdateSettingRequest/Setting already enforce.
+     *
      * @param  Collection<int, Cell>  $cells
      * @return array<int, array{label: string, description: string, qrImage: string}>
      */
-    private function cellQrLabels(string $rowLetter, Collection $cells): array
+    private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight): array
     {
         return $cells
             ->map(fn (Cell $cell) => [
@@ -28,62 +40,51 @@ trait BuildsCellQrLabels
                 // worker which digit is the cell and which is the flat once the
                 // sticker is torn off the sheet and stuck on a shelf with no app
                 // around it for context.
-                'description' => $this->shapeArabicForPdf(__('messages.qr_label_description', [
-                    'row' => $rowLetter,
-                    'cell' => $cell->cell_number,
-                    'flat' => $cell->flat_number,
-                ])),
+                'description' => $this->shapeArabicForPdf($this->cellQrLabelDescription($rowLetter, $cell)),
                 // The mobile app's custom URL scheme, encoded directly — no web
                 // redirect page in between. Only the app itself can open this link.
-                'qrImage' => $this->qrImageDataUri("warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}"),
+                'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell), max($qrWidth, $qrHeight)),
             ])
             ->all();
     }
 
     /**
-     * dompdf's text layout has no Arabic contextual shaping or bidi reordering
-     * (see FIXME RTL markers throughout dompdf's FrameReflower/Style code) — it
-     * only draws each character's isolated-form glyph in logical (storage)
-     * order, which renders Arabic as disconnected letters read left-to-right.
-     * `utf8Glyphs()` pre-shapes the string into joined presentation-form
-     * glyphs already reordered into final left-to-right *display* order, so a
-     * naive LTR-drawing engine like dompdf's still renders it correctly. The
-     * font referenced in cell-qr-labels.blade.php must carry glyphs for the
-     * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
-     *
-     * $hindo is false to keep Western digits, matching how the same
-     * translation string renders un-shaped in the Vue/Inertia UI.
+     * The single-cell counterpart to cellQrLabels() — one standalone SVG
+     * image (see qrLabelImage()) for downloading/printing just this cell's
+     * label, rather than a whole PDF sheet.
      */
-    private function shapeArabicForPdf(string $text): string
+    private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight): string
     {
-        if (! app()->isLocale('ar')) {
-            return $text;
-        }
-
-        return (new Arabic)->utf8Glyphs($text, max_chars: 1000, hindo: false, forcertl: true);
+        return $this->qrLabelImage(
+            $this->cellDeepLink($rowLetter, $cell),
+            Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
+            $this->cellQrLabelDescription($rowLetter, $cell),
+            app()->isLocale('ar') ? 'rtl' : 'ltr',
+            $qrWidth,
+            $qrHeight,
+        );
     }
 
     /**
-     * dompdf doesn't render inline `<svg>` markup (its SVG support only
-     * covers rasterizing an SVG *source* referenced by an `<img>` tag), so
-     * the QR is embedded as a base64 SVG data URI rather than inlined.
-     *
-     * SVG (not PNG) is used deliberately: bacon-qr-code's PNG backend renders
-     * through Imagick, drawing each QR module as a separate composite call —
-     * roughly 1.5-2.5s per code — while its SVG backend is plain string
-     * building, ~10x faster. That difference is the gap between a row export
-     * finishing in a few seconds and one timing out for any row of
-     * non-trivial size.
+     * Shared by cellQrLabels() (PDF sheet, needs shapeArabicForPdf()) and
+     * cellQrLabelImage() (SVG, rendered correctly without it) so the
+     * translation parameters can't drift between the two exports.
      */
-    private function qrImageDataUri(string $data): string
+    private function cellQrLabelDescription(string $rowLetter, Cell $cell): string
     {
-        // simplesoftwareio/simple-qrcode's generate() docblock omits the leading
-        // backslash on its Illuminate\Support\HtmlString return type, so Larastan
-        // resolves it relative to the vendor's own namespace into a nonexistent
-        // class — override with the real type generate() actually returns here.
-        /** @var HtmlString|string $svg */
-        $svg = QrCode::format('svg')->size(200)->generate($data);
+        return __('messages.qr_label_description', [
+            'row' => $rowLetter,
+            'cell' => $cell->cell_number,
+            'flat' => $cell->flat_number,
+        ]);
+    }
 
-        return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+    /**
+     * The mobile app's custom URL scheme, encoded directly — no web redirect
+     * page in between. Only the app itself can open this link.
+     */
+    private function cellDeepLink(string $rowLetter, Cell $cell): string
+    {
+        return "warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}";
     }
 }

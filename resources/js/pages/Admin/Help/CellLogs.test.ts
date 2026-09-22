@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { ArrowLeftRight, CalendarPlus } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +34,26 @@ function mountPage() {
 describe('Help CellLogs', () => {
     beforeEach(() => {
         resetMocks({ usePageMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('help.cellLogs.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('help.cellLogs.title'));
+    });
+
+    it('renders every section heading', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(headings).toEqual([
+            t('help.cellLogs.filtering.heading'),
+            t('help.cellLogs.actions.heading'),
+            t('help.cellLogs.legend.heading'),
+        ]);
     });
 
     it('explains how to filter the activity log', () => {
@@ -96,6 +117,22 @@ describe('Help CellLogs', () => {
         expect(wrapper.text()).toContain(t('cellLog.filters.from'));
         expect(wrapper.text()).toContain(t('cellLog.filters.to'));
         expect(wrapper.text()).toContain(t('cellLog.filters.withinDays'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.flaggedOnly'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.expirationFrom'));
+        expect(wrapper.text()).toContain(t('cellLog.filters.expirationTo'));
+        expect(wrapper.text()).toContain(
+            t('cellLog.filters.expiresWithinDays'),
+        );
+    });
+
+    it('previews both of the filter dialog date sections, not just the activity one', () => {
+        const wrapper = mountPage();
+
+        const sectionHeadings = wrapper.findAll('h3').map((h3) => h3.text());
+        expect(sectionHeadings).toEqual([
+            t('cellLog.filters.sections.date'),
+            t('cellLog.filters.sections.expiration'),
+        ]);
     });
 
     it('links to the activity log page', () => {

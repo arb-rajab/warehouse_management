@@ -11,4 +11,5 @@ enum HelpTopic: string
     case Products = 'products';
     case CellLogs = 'cell-logs';
     case CellVerificationRounds = 'cell-verification-rounds';
+    case Settings = 'settings';
 }

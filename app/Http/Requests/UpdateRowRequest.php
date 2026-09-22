@@ -23,8 +23,8 @@ class UpdateRowRequest extends FormRequest
 
         return [
             'letter' => ['required', 'string', 'max:2', 'unique:rows,letter,'.$row->id],
-            'cells_count' => ['required', 'integer', 'min:1'],
-            'flats_count' => ['required', 'integer', 'min:1'],
+            'cells_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
+            'flats_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
         ];
     }
 }

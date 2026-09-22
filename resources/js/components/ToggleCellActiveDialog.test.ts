@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
+import SubmitButton from './SubmitButton.vue';
 import ToggleCellActiveDialog from './ToggleCellActiveDialog.vue';
 
 const { routerPostMock } = vi.hoisted(() => ({
@@ -148,15 +149,7 @@ describe('ToggleCellActiveDialog', () => {
         expect(routerPostMock).not.toHaveBeenCalled();
     });
 
-    it('closes the dialog once the request finishes', async () => {
-        routerPostMock.mockImplementation(
-            (
-                _url: string,
-                _data: unknown,
-                options?: { onFinish?: () => void },
-            ) => options?.onFinish?.(),
-        );
-
+    it('closes the dialog on success, and stops processing regardless once the request finishes', async () => {
         const updateOpen = vi.fn();
         const wrapper = mount(ToggleCellActiveDialog, {
             props: {
@@ -170,6 +163,45 @@ describe('ToggleCellActiveDialog', () => {
 
         await wrapper.get('form').trigger('submit');
 
+        const options = routerPostMock.mock.calls[0][2] as {
+            onSuccess: () => void;
+            onFinish: () => void;
+        };
+        options.onSuccess();
+        await wrapper.vm.$nextTick();
+
         expect(updateOpen).toHaveBeenCalledWith(false);
+
+        options.onFinish();
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
+            false,
+        );
+    });
+
+    it('keeps the dialog open when the request finishes without succeeding', async () => {
+        const updateOpen = vi.fn();
+        const wrapper = mount(ToggleCellActiveDialog, {
+            props: {
+                cell: cell(true),
+                label: 'A2·1',
+                open: false,
+                'onUpdate:open': updateOpen,
+            },
+        });
+        await wrapper.setProps({ open: true });
+
+        await wrapper.get('form').trigger('submit');
+
+        // A failed request (e.g. a 419 after session expiry) calls onFinish
+        // without ever calling onSuccess — the dialog must not close as if
+        // the action had actually gone through.
+        const options = routerPostMock.mock.calls[0][2] as {
+            onFinish: () => void;
+        };
+        options.onFinish();
+
+        expect(updateOpen).not.toHaveBeenCalledWith(false);
     });
 });

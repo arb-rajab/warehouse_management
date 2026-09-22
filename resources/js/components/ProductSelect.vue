@@ -85,14 +85,13 @@ function buttonLabel(): string {
             type="text"
             class="sr-only"
             tabindex="-1"
-            readonly
             required
             :value="model ? String(model.id) : ''"
         />
         <button
             :id="id"
             type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
+            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
             aria-haspopup="listbox"
             :aria-expanded="open"
             @click="toggleOpen"

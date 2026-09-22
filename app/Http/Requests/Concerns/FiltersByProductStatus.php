@@ -49,7 +49,9 @@ trait FiltersByProductStatus
 
     /**
      * The product-published filter derived from `product_status`, or null
-     * when the caller didn't filter by product status.
+     * when the caller didn't filter by product status. `Api\V1\ProductController::index()`
+     * treats null as `true` (active only) — every other consumer of this
+     * trait keeps null meaning "no filter".
      */
     public function productPublished(): ?bool
     {

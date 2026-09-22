@@ -4,8 +4,11 @@ return [
     'admin_cannot_remove_own_access' => 'لا يمكنك إزالة صلاحية المسؤول الخاصة بك.',
     'row_cannot_resize_has_pallets' => 'لا يمكن تغيير أبعاد ممر يحتوي على منصات نقالة.',
     'row_cannot_delete_has_pallets' => 'لا يمكن حذف ممر يحتوي على منصات نقالة.',
+    'row_cannot_resize_has_history' => 'لا يمكن تغيير أبعاد ممر تم تسجيل نشاط على خلاياه.',
+    'row_cannot_delete_has_history' => 'لا يمكن حذف ممر تم تسجيل نشاط على خلاياه.',
     'slot_does_not_exist' => 'هذا الموقع غير موجود في هذا الممر.',
     'cannot_delete_own_account' => 'لا يمكنك حذف حسابك الخاص.',
+    'user_cannot_delete_has_history' => 'لا يمكن حذف مستخدم لديه سجل نشاط.',
     'pallet_already_at_location' => 'المنصات النقالة موجودة بالفعل في هذا الموقع.',
     'slot_not_empty' => 'الموقع المطلوب غير فارغ.',
     'pallet_not_full' => 'يمكن فتح المنصات النقالة الممتلئة فقط.',
@@ -20,5 +23,6 @@ return [
     'rows_already_in_active_round' => 'هذه الممرات يجري جردها بالفعل في جولة أخرى: :rows',
     'cell_outside_round_rows' => 'هذا الموقع ليس ضمن الممرات التي تغطيها هذه الجولة.',
     'qr_label_description' => 'الممر :row · الخلية :cell · المستوى :flat',
+    'qr_label_product_id' => 'المعرف: :id',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
 ];

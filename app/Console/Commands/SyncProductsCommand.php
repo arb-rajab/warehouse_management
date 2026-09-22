@@ -24,6 +24,12 @@ use Throwable;
 class SyncProductsCommand extends Command
 {
     /**
+     * Row count per upsert statement, keeping bindings (4/row) well under
+     * SQLite's SQLITE_MAX_VARIABLE_NUMBER (32766).
+     */
+    private const UPSERT_CHUNK_SIZE = 500;
+
+    /**
      * Execute the console command.
      */
     public function handle(): int
@@ -63,7 +69,12 @@ class SyncProductsCommand extends Command
             return self::SUCCESS;
         }
 
-        Product::query()->upsert($rows, ['id'], ['name', 'ar_name', 'published']);
+        // upsert() compiles one statement with all bindings and never chunks on its
+        // own. At 4 bindings/row this stays comfortably under SQLite's 32766-variable
+        // limit (and MySQL/Postgres's much higher ones) even for a large feed.
+        foreach (array_chunk($rows, self::UPSERT_CHUNK_SIZE) as $chunk) {
+            Product::query()->upsert($chunk, ['id'], ['name', 'ar_name', 'published']);
+        }
 
         $this->components->info(count($rows).' product(s) synced.');
 

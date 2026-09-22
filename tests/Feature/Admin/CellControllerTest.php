@@ -7,9 +7,10 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
-use Smalot\PdfParser\Parser as PdfParser;
 
 test('the warehouse map ships both raw product name columns, whatever the panel locale', function () {
     // `lib/productName.ts` picks the label client-side, so the payload is the
@@ -119,12 +120,12 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
                     ->where('product_id', $product->id)
                     ->where('product_name', 'Widgets')
                     ->where('product_ar_name', 'ودجات')
-                    ->where('product_active', true)
                     ->where('product_image_url', 'https://cdn.example.com/widgets.png')
                     ->where('expiration_date', '2026-09-01')
                     ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('cell_entered_at', null)
                     ->where('remaining_boxes', $pallet->remaining_boxes)
+                    ->missing('product_active')
+                    ->missing('cell_entered_at')
                 )
             )
             ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
@@ -199,6 +200,28 @@ test('the per-flat highlight-match samples cover every flat, unlike the flat-sco
     );
 
     Carbon::setTestNow();
+});
+
+test('cellHighlightSamples skips product.published and the cellEnteredLog join, unlike the current flat\'s cells query', function () {
+    // cellHighlightSamples only ships CellPalletSummary (no product_active,
+    // no cell_entered_at), so it has no need for product.published or the
+    // cellEnteredLog "of many" join Cell::WITH_ROW_AND_CONTENTS pulls in for
+    // the current flat's `cells` prop — narrowing that away is the whole
+    // point, since this query runs once for every cell in the warehouse.
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $row->cells()->first()->id]);
+
+    DB::enableQueryLog();
+    $this->get('/admin/cells')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query');
+    DB::disableQueryLog();
+
+    // Only the current flat's `cells` query touches cell_status_logs
+    // (cellEnteredLog's "of many" join) and selects `published`.
+    expect($queries->filter(fn (string $sql) => str_contains($sql, 'cell_status_logs')))->toHaveCount(1);
+    expect($queries->filter(fn (string $sql) => str_contains($sql, 'published')))->toHaveCount(1);
 });
 
 test('a state and product_id passed from the dashboard seed the initial highlight filter', function () {
@@ -303,6 +326,39 @@ test('a location search without a flat number jumps to the lowest matching flat'
     );
 });
 
+test('a location search with no separator auto-splits the last digit as the flat number', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 15, 'flats_count' => 5]);
+    $targetCell = $row->cells()->where('cell_number', 12)->where('flat_number', 3)->first();
+
+    $response = $this->get('/admin/cells?search=A123');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 3)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 12)
+            ->where('jumpToCell.flat_number', 3)
+            ->where('searchError', false)
+    );
+
+    expect($targetCell)->not->toBeNull();
+});
+
+test('a no-separator search that does not split falls back to the plain cell-number search', function () {
+    actingAsAdmin();
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 99, 'flats_count' => 1]);
+
+    $response = $this->get('/admin/cells?search=C99');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)
+            ->where('jumpToCell.row_letter', 'C')
+            ->where('jumpToCell.cell_number', 99)
+            ->where('jumpToCell.flat_number', 1)
+            ->where('searchError', false)
+    );
+});
+
 test('a search matching nothing reports a searchError without changing the flat', function () {
     actingAsAdmin();
     Row::factory()->create();
@@ -394,7 +450,7 @@ test('an unauthenticated caller is redirected to login when viewing the warehous
     $response->assertRedirect(route('login'));
 });
 
-test('an authenticated user can export a QR code for a single cell', function () {
+test('an authenticated user can export a QR code image for a single cell', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
@@ -402,14 +458,41 @@ test('an authenticated user can export a QR code for a single cell', function ()
     $response = $this->get("/admin/cells/{$cell->id}/export-qr");
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'application/pdf');
-    // A PDF with a real QR code drawn is meaningfully larger than one with just the
-    // label (~1.1KB) — regression guard for the QR silently failing to render (dompdf
-    // doesn't support inline <svg>, only an <img> referencing an image source).
-    expect(strlen($response->getContent()))->toBeGreaterThan(1500);
+    $response->assertHeader('content-type', 'image/svg+xml');
 
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    expect($pdfText)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
+    $svg = $response->getContent();
+    // A real QR is embedded as a base64 SVG data URI — regression guard for the
+    // QR silently failing to render rather than just the surrounding text.
+    expect($svg)->toContain('data:image/svg+xml;base64,');
+    expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
+
+    // Regression guard: the single-cell SVG export and the row-wide PDF sheet
+    // (see RowControllerTest) must describe the same cell identically — both
+    // build the description from BuildsCellQrLabels::cellQrLabelDescription().
+    $description = __('messages.qr_label_description', [
+        'row' => 'Z',
+        'cell' => $cell->cell_number,
+        'flat' => $cell->flat_number,
+    ]);
+    expect($svg)->toContain($description);
+});
+
+test('a single-cell QR export uses the configured QR code size instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // The label canvas width is exactly the configured total-box width, and
+    // the embedded QR square is that width minus padding on both sides
+    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
+    // ceiling on the whole label including text, not the QR's own size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('width="360" height="360"/>');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {

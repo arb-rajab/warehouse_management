@@ -6,6 +6,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 test('an authenticated worker can start a verification round over the rows they name', function () {
     $user = actingAsMobileUser();
@@ -184,6 +185,29 @@ test('only_unfinished filters out completed rounds', function () {
     expect($response->json('data.0.id'))->toBe($unfinished->id);
 });
 
+test('rounds created within the same second are not repeated or skipped across pages, tied off by id', function () {
+    // Without an id tiebreaker, ties on created_at (rounds started in the
+    // same second) can land in a different order per page query, so a round
+    // can be repeated on one page and skipped on the next.
+    $user = actingAsMobileUser();
+
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    $rounds = CellVerificationRound::factory()->for($user)->count(25)->create();
+    Carbon::setTestNow();
+
+    $firstPage = $this->getJson('/api/v1/cell-verification-rounds?page=1');
+    $secondPage = $this->getJson('/api/v1/cell-verification-rounds?page=2');
+
+    $firstPage->assertOk();
+    $secondPage->assertOk();
+
+    $seenIds = collect($firstPage->json('data'))->pluck('id')
+        ->concat(collect($secondPage->json('data'))->pluck('id'));
+
+    expect($seenIds->unique()->count())->toBe(25);
+    expect($seenIds->sort()->values()->all())->toBe($rounds->pluck('id')->sort()->values()->all());
+});
+
 test('the round listing paginates beyond one page', function () {
     $user = actingAsMobileUser();
 
@@ -234,7 +258,13 @@ test('a worker can view one of their own rounds, including its reports in report
         'note' => 'Wrong product on this pallet.',
     ]), '2026-08-01 11:00:00');
 
-    CellVerificationReport::factory()->create(); // noise: another round entirely
+    // Noise: a report on another round entirely. It reuses this row's cell
+    // rather than letting the factory chain create a row of its own — this
+    // test hardcodes letter 'D' because its assertions read it, and a
+    // generated letter can collide with a hardcoded one (see tests.md,
+    // "Don't hardcode a unique column's value beside a factory that generates
+    // its own"); it did, as an intermittent rows.letter UNIQUE violation in CI.
+    CellVerificationReport::factory()->create(['cell_id' => $cell->id]);
 
     $response = $this->getJson("/api/v1/cell-verification-rounds/{$round->id}");
 

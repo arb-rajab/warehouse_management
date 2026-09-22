@@ -7,6 +7,7 @@ import { useProductSearch } from './useProductSearch';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
+    onFinish?: () => void;
 }
 
 const { getMock } = vi.hoisted(() => ({
@@ -36,7 +37,14 @@ function page(
 }
 
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
+    // A real request always calls onFinish after onSuccess (or after
+    // onError), regardless of outcome.
     getMock.mock.calls[index][1]?.onSuccess?.(response);
+    getMock.mock.calls[index][1]?.onFinish?.();
+}
+
+function finishCall(index: number) {
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
 function scrollElement({
@@ -101,6 +109,25 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
 
         expect(getMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears loading once a failed request finishes, without ever calling onSuccess', async () => {
+        const wrapper = mountSearch();
+
+        wrapper.vm.fetchFirstPageIfEmpty();
+        expect(wrapper.vm.loading).toBe(true);
+
+        // A failed request (session expiry, 500, network blip) never calls
+        // onSuccess, only onFinish — loading must still clear so the
+        // dropdown can recover instead of spinning forever.
+        finishCall(0);
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.loading).toBe(false);
+
+        // The recovery paths gated on `loading` work again afterward.
+        wrapper.vm.fetchFirstPageIfEmpty();
+        expect(getMock).toHaveBeenCalledTimes(2);
     });
 
     it('replaces results and remembers names on a fetched page', async () => {

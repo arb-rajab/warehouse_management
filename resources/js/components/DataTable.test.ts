@@ -6,7 +6,7 @@ import {
     PackageSearch,
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import DataTable from './DataTable.vue';
 
@@ -30,6 +30,18 @@ describe('DataTable', () => {
         expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual(
             columns,
         );
+    });
+
+    it('renders a header cell for each column even when two columns share the same label', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }], {
+            columns: ['Date', 'Cells', 'Date'],
+        });
+
+        expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual([
+            'Date',
+            'Cells',
+            'Date',
+        ]);
     });
 
     it('renders one body row per row and exposes the row to the slot', () => {
@@ -335,5 +347,50 @@ describe('DataTable', () => {
         expect(openFilterKeyModel.value).toBe(null);
 
         wrapper.unmount();
+    });
+
+    it('recognizes a click on any trigger sharing an open filterKey as inside, not just the last one registered', () => {
+        const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+        const updates: (string | null)[] = [];
+
+        const wrapper = mount(DataTable<TestRow>, {
+            props: {
+                columns: [
+                    { label: 'Full', filterKey: 'occupancy' },
+                    { label: 'Opened', filterKey: 'occupancy' },
+                ],
+                rows: [{ id: 1, letter: 'A' }],
+                emptyMessage: 'No rows yet.',
+                openFilterKey: 'occupancy',
+                'onUpdate:openFilterKey': (value: string | null) => {
+                    updates.push(value);
+                },
+            },
+            slots: {
+                row: `<td>{{ params.row.letter }}</td>`,
+                'column-filter': `<div class="filter-slot">filters for {{ params.filterKey }}</div>`,
+            },
+        });
+
+        // Grab DataTable's own document-level click listener directly — the
+        // outside-click detection it drives runs from a native `click`
+        // listener registered in `onMounted`, so calling it here exercises
+        // the exact same containment check a real click bubbling to
+        // `document` would trigger, without racing Vue's own (unrelated,
+        // async) v-model prop propagation.
+        const clickHandler = addEventListenerSpy.mock.calls.find(
+            ([type]) => type === 'click',
+        )?.[1] as (event: MouseEvent) => void;
+
+        const buttons = wrapper.findAll('button[title]');
+        expect(buttons).toHaveLength(2);
+
+        // A click landing on the FIRST (non-last-registered) of the two
+        // triggers sharing the 'occupancy' filterKey — with only the
+        // last-registered sibling tracked, this would fail the containment
+        // check and incorrectly close the popover it's a part of.
+        clickHandler({ target: buttons[0].element } as unknown as MouseEvent);
+
+        expect(updates).toEqual([]);
     });
 });

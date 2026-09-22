@@ -9,6 +9,7 @@ import {
     Menu,
     Package,
     Rows3,
+    Settings,
     Users,
     Warehouse,
     X,
@@ -20,6 +21,7 @@ import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Control
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -50,6 +52,11 @@ const navItems = computed(() => [
     },
     { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
     { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
+    {
+        labelKey: 'nav.settings',
+        href: settingsEdit().url,
+        icon: Settings,
+    },
 ]);
 
 /**

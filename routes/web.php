@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
@@ -68,6 +69,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
+        Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
         Route::patch('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
@@ -77,6 +79,9 @@ Route::middleware('auth')->group(function () {
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
         Route::get('help', [HelpController::class, 'index'])->name('help.index');
         Route::get('help/{topic}', [HelpController::class, 'show'])->name('help.show');

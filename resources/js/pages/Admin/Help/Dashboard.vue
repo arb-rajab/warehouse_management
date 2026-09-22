@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -10,12 +9,10 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
-import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellStateLegend from '@/components/CellStateLegend.vue';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
+import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
-import PageHeader from '@/components/PageHeader.vue';
-import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     fieldLabelClass,
     filterSectionHeadingClass as sectionHeadingClass,
@@ -43,83 +40,65 @@ const activityActions: {
 </script>
 
 <template>
-    <Head :title="t('help.dashboard.title')" />
+    <HelpTopicPage
+        :title="t('help.dashboard.title')"
+        :feature-href="dashboardIndex()"
+        :feature-label="t('dashboard.title')"
+    >
+        <section v-for="section in sections" :key="section">
+            <h2 :class="sectionHeadingClass">
+                {{ t(`help.dashboard.${section}.heading`) }}
+            </h2>
+            <p class="text-sm text-gray-700 dark:text-neutral-300">
+                {{ t(`help.dashboard.${section}.body`) }}
+            </p>
 
-    <AdminLayout>
-        <PageHeader :title="t('help.dashboard.title')" />
-
-        <Link
-            :href="helpIndex()"
-            class="mb-6 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
-        >
-            {{ t('help.backToHelp') }}
-        </Link>
-
-        <div class="max-w-2xl space-y-6">
-            <section v-for="section in sections" :key="section">
-                <h2 :class="sectionHeadingClass">
-                    {{ t(`help.dashboard.${section}.heading`) }}
-                </h2>
-                <p class="text-sm text-gray-700 dark:text-neutral-300">
-                    {{ t(`help.dashboard.${section}.body`) }}
-                </p>
-
-                <template v-if="section === 'overview'">
-                    <div class="mt-2">
-                        <CellStateLegend />
-                    </div>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <HelpUiPreview>
-                            <DashboardStatTile
-                                tabindex="-1"
-                                href="#"
-                                :value="0"
-                                tone="danger"
-                                :icon="CalendarX"
-                                :label="t('dashboard.expiring.expired')"
-                            />
-                        </HelpUiPreview>
-                        <HelpUiPreview
-                            v-for="action in activityActions"
-                            :key="action.key"
-                        >
-                            <DashboardStatTile
-                                tabindex="-1"
-                                href="#"
-                                :value="0"
-                                :icon="action.icon"
-                                :label="t(`cellLog.actions.${action.key}`)"
-                            />
-                        </HelpUiPreview>
-                    </div>
-                </template>
-
-                <HelpUiPreview v-if="section === 'productFilter'" class="mt-2">
-                    <div>
-                        <span :class="fieldLabelClass">{{
-                            t('cellLog.filters.product')
-                        }}</span>
-                        <span
+            <template v-if="section === 'overview'">
+                <div class="mt-2">
+                    <CellStateLegend />
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <HelpUiPreview>
+                        <DashboardStatTile
                             tabindex="-1"
-                            class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                        >
-                            <span class="truncate">{{
-                                t('cellLog.filters.all')
-                            }}</span>
-                            <ChevronDown
-                                class="h-4 w-4 shrink-0 text-gray-400"
-                            />
-                        </span>
-                    </div>
-                </HelpUiPreview>
-            </section>
+                            href="#"
+                            :value="0"
+                            tone="danger"
+                            :icon="CalendarX"
+                            :label="t('dashboard.expiring.expired')"
+                        />
+                    </HelpUiPreview>
+                    <HelpUiPreview
+                        v-for="action in activityActions"
+                        :key="action.key"
+                    >
+                        <DashboardStatTile
+                            tabindex="-1"
+                            href="#"
+                            :value="0"
+                            :icon="action.icon"
+                            :label="t(`cellLog.actions.${action.key}`)"
+                        />
+                    </HelpUiPreview>
+                </div>
+            </template>
 
-            <Link
-                :href="dashboardIndex()"
-                class="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
-            >
-                {{ t('dashboard.title') }}
-            </Link>
-        </div>
-    </AdminLayout>
+            <HelpUiPreview v-if="section === 'productFilter'" class="mt-2">
+                <div>
+                    <span :class="fieldLabelClass">{{
+                        t('cellLog.filters.product')
+                    }}</span>
+                    <span
+                        tabindex="-1"
+                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-left text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                    >
+                        <span class="truncate">{{
+                            t('cellLog.filters.all')
+                        }}</span>
+                        <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
+                    </span>
+                </div>
+            </HelpUiPreview>
+        </section>
+    </HelpTopicPage>
 </template>

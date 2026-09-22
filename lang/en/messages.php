@@ -4,8 +4,11 @@ return [
     'admin_cannot_remove_own_access' => 'You cannot remove your own admin access.',
     'row_cannot_resize_has_pallets' => 'Cannot resize a row that has pallets in it.',
     'row_cannot_delete_has_pallets' => 'Cannot delete a row that has pallets in it.',
+    'row_cannot_resize_has_history' => 'Cannot resize a row that has history logged against its cells.',
+    'row_cannot_delete_has_history' => 'Cannot delete a row that has history logged against its cells.',
     'slot_does_not_exist' => 'This slot does not exist for this row.',
     'cannot_delete_own_account' => 'You cannot delete your own account.',
+    'user_cannot_delete_has_history' => 'Cannot delete a user who has activity history.',
     'pallet_already_at_location' => 'Pallet is already at that location.',
     'slot_not_empty' => 'The requested slot is not empty.',
     'pallet_not_full' => 'Only a full pallet can be opened.',
@@ -20,5 +23,6 @@ return [
     'rows_already_in_active_round' => 'These rows are already being verified in another round: :rows',
     'cell_outside_round_rows' => 'This slot is not in one of the rows this round covers.',
     'qr_label_description' => 'Row :row · Cell :cell · Level :flat',
+    'qr_label_product_id' => 'ID: :id',
     'password_same_as_current' => 'The new password must be different from your current password.',
 ];

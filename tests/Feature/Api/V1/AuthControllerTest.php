@@ -129,3 +129,29 @@ test('an unauthenticated caller cannot log out and other users tokens are untouc
     $response->assertUnauthorized();
     $this->assertDatabaseCount('wms_personal_access_tokens', 1);
 });
+
+test('the mobile api deliberately does not enforce must_change_password', function () {
+    // A settled product decision, not an oversight: EnsurePasswordHasBeenChanged
+    // is registered on the `web` group only, and there is no API route to change
+    // a password. Enforcing the flag on api/v1/* would need a mobile
+    // change-password endpoint to escape to, and the mobile client lives outside
+    // this repository — until it can call one, enforcement would lock every
+    // flagged worker out of the app. This test exists so lifting the exemption
+    // is a deliberate change rather than a silent one; see the docblock of
+    // app/Http/Middleware/EnsurePasswordHasBeenChanged.php.
+    $user = User::factory()->mobileUser()->create([
+        'password' => 'temporary-password',
+        'must_change_password' => true,
+    ]);
+
+    $response = $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'temporary-password',
+    ]);
+
+    $response->assertOk();
+
+    $this->withToken($response->json('token'))->getJson('/api/v1/products')->assertOk();
+
+    expect($user->refresh()->must_change_password)->toBeTrue();
+});

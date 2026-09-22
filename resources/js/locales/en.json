@@ -8,6 +8,7 @@
         "cellVerificationRounds": "Verification Rounds",
         "products": "Products",
         "users": "Users",
+        "settings": "Settings",
         "logout": "Log out",
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
@@ -142,6 +143,17 @@
             "passwordMismatch": "Passwords do not match.",
             "adminAccess": "Admin access",
             "disabledAdminHint": "You cannot remove your own admin access."
+        }
+    },
+    "settings": {
+        "edit": {
+            "title": "QR code size",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "fields": {
+            "qrCodeWidth": "QR code width (px)",
+            "qrCodeHeight": "QR code height (px)"
         }
     },
     "cellLog": {
@@ -473,9 +485,11 @@
             "expiringSoon": "Expiring ≤{days}d",
             "activityToday": "Today",
             "activityWeek": "This week",
-            "boxesPerPallet": "Boxes / pallet"
+            "boxesPerPallet": "Boxes / pallet",
+            "qr": "QR"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
+        "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
     },
     "help": {
@@ -512,6 +526,10 @@
                 "users": {
                     "title": "Users & accounts",
                     "description": "How to create an account and what the Admin and Mobile user roles mean."
+                },
+                "settings": {
+                    "title": "Settings",
+                    "description": "How to change the size of every QR code label this app generates."
                 }
             }
         },
@@ -561,7 +579,7 @@
             },
             "managingPallets": {
                 "heading": "Storing, opening, and moving pallets",
-                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, or transfer it to a different cell. Every change is recorded in the activity log automatically."
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically."
             },
             "deactivating": {
                 "heading": "Deactivating a cell",
@@ -588,13 +606,17 @@
             "settingBoxes": {
                 "heading": "Setting the real box count",
                 "body": "Go to the Products page, find the product, and edit the number in its \"Boxes / pallet\" column. Save it once and every full pallet of that product will use the real count from then on — you only need to do this the first time a product's true pallet size is known."
+            },
+            "exportingQr": {
+                "heading": "Printing a product's QR label",
+                "body": "Click the QR icon at the end of a product's row to download a printable QR label for it. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the label in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {
             "title": "Help: Activity log",
             "filtering": {
                 "heading": "Filtering the activity log",
-                "body": "Open the Filters panel to narrow the list by product, pallet, row, column, the person who made the change, the type of action, or a date range. Combine as many filters as you need — for example, one product plus one row shows only that product's activity in that row."
+                "body": "Open the Filters panel to narrow the list by product, pallet, row, column, the person who made the change, the type of action, a date range, or the pallets' expiration window. You can also show only flagged entries. Combine as many filters as you need — for example, one product plus one row shows only that product's activity in that row."
             },
             "actions": {
                 "heading": "What each action means",
@@ -624,6 +646,13 @@
             "exporting": {
                 "heading": "Exporting a round's reports",
                 "body": "From a round's page, export its reports to a CSV file — useful for sharing results with someone who doesn't use this admin panel, or keeping an offline record."
+            }
+        },
+        "settings": {
+            "title": "Help: Settings",
+            "qrSize": {
+                "heading": "QR code size",
+                "body": "Set the width and height (in pixels) of the whole printed label — the QR code square plus its name text underneath, not just the QR square by itself. The QR square always uses the full configured width; if the name doesn't fit in the remaining height, it's shortened with \"…\" rather than making the label taller than what you set. Enter a value between 100 and 1000 pixels and save; every QR label exported afterward, until you change it again, uses this size. This applies to the single cell/product QR downloads; the printed row sheet's QR sharpness follows it too, though its page layout doesn't change."
             }
         }
     }

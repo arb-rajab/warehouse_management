@@ -112,5 +112,5 @@ test('clicking a cell in the 3D map opens its manage actions (toggle-active, exp
         page.waitForEvent('download'),
         panel.getByTitle('Reprint QR code').click(),
     ]);
-    expect(download.suggestedFilename()).toMatch(/qr-code\.pdf$/);
+    expect(download.suggestedFilename()).toMatch(/qr\.svg$/);
 });

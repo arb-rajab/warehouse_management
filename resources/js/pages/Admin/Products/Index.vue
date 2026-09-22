@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
+import { Check, QrCode, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
+    exportQr,
     index as productsIndex,
     updateBoxCount,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -292,7 +293,7 @@ function submitBoxCount(): void {
     }
 
     router.patch(
-        updateBoxCount(product.id).url,
+        updateBoxCount(product.id, { mergeQuery: {} }).url,
         { boxes_count: boxesCount },
         { preserveScroll: true, preserveState: true },
     );
@@ -494,6 +495,9 @@ function submitBoxCount(): void {
                     filterKey: 'activity',
                     filterIconAlwaysVisible: false,
                 },
+                {
+                    label: t('products.columns.qr'),
+                },
             ]"
             :rows="products.data"
             :empty-message="t('products.empty')"
@@ -630,6 +634,23 @@ function submitBoxCount(): void {
                     <TableLink :href="activityHref(product, weekStart, today)">
                         {{ product.activity_week_count }}
                     </TableLink>
+                </td>
+                <td class="px-4 py-2">
+                    <a
+                        :href="exportQr.url(product.id)"
+                        :aria-label="
+                            t('products.exportQrLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :title="t('products.columns.qr')"
+                        class="inline-flex text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                    >
+                        <QrCode class="h-4 w-4" />
+                    </a>
                 </td>
             </template>
         </DataTable>

@@ -265,9 +265,9 @@ class CellStatusLog extends Model
             ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
             ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to') || $request->filled('expires_within_days'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
                 $palletQuery
-                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->whereDate('expiration_date', '>=', $request->date('expiration_date_from')))
-                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')))
-                    ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))));
+                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->where('expiration_date', '>=', $request->date('expiration_date_from')->startOfDay()))
+                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->where('expiration_date', '<=', $request->date('expiration_date_to')))
+                    ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))));
             }))
             ->when($request->filled('row_id') || $request->filled('column_number'), fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $cellQuery

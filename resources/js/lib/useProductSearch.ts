@@ -53,7 +53,11 @@ export function useProductSearch() {
                         : [...results.value, ...body.data];
                     page.value = body;
                     rememberNames(body.data);
-                    loading.value = false;
+                },
+                onFinish: () => {
+                    if (mySeq === requestSeq) {
+                        loading.value = false;
+                    }
                 },
             },
         );

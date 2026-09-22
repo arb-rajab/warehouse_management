@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { defineComponent, ref } from 'vue';
+import type { PropType } from 'vue';
 import { i18n, t } from '@/lib/i18n';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import ProductOptionLabel from './ProductOptionLabel.vue';
@@ -7,6 +9,7 @@ import ProductSelect from './ProductSelect.vue';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
+    onFinish?: () => void;
 }
 
 const { getMock } = vi.hoisted(() => ({
@@ -36,7 +39,10 @@ function page(
 }
 
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
+    // A real request always calls onFinish after onSuccess (or after
+    // onError), regardless of outcome.
     getMock.mock.calls[index][1]?.onSuccess?.(response);
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
 function mountSelect(
@@ -77,6 +83,12 @@ describe('ProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('Choose a product');
     });
 
+    it('shows a pointer cursor on the trigger button', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.get('button').classes()).toContain('cursor-pointer');
+    });
+
     it('renders no required guard input by default', () => {
         const wrapper = mountSelect();
 
@@ -103,6 +115,57 @@ describe('ProductSelect', () => {
         const guard = wrapper.get('#pallet-action-product-guard')
             .element as HTMLInputElement;
         expect(guard.value).toBe('5');
+    });
+
+    function mountSelectInForm(
+        props: Partial<{
+            modelValue: ProductFilterOption | null;
+            required: boolean;
+        }> = {},
+    ) {
+        const Host = defineComponent({
+            components: { ProductSelect },
+            props: {
+                modelValue: {
+                    type: Object as PropType<ProductFilterOption | null>,
+                    default: null,
+                },
+                required: { type: Boolean, default: false },
+            },
+            setup(hostProps) {
+                const selected = ref(hostProps.modelValue);
+
+                return { selected };
+            },
+            template: `<form>
+                <ProductSelect
+                    id="pallet-action-product"
+                    label="Product"
+                    placeholder="Choose a product"
+                    :required="required"
+                    v-model="selected"
+                />
+            </form>`,
+        });
+
+        return mount(Host, { props });
+    }
+
+    it('fails native form validation when required and no product is selected', () => {
+        const wrapper = mountSelectInForm({ required: true });
+
+        const form = wrapper.get('form').element as HTMLFormElement;
+        expect(form.checkValidity()).toBe(false);
+    });
+
+    it('passes native form validation when required and a product is already selected', () => {
+        const wrapper = mountSelectInForm({
+            required: true,
+            modelValue: { id: 5, name: 'Widgets', ar_name: 'ودجات' },
+        });
+
+        const form = wrapper.get('form').element as HTMLFormElement;
+        expect(form.checkValidity()).toBe(true);
     });
 
     it("resolves the selected product's label from the model without fetching", () => {

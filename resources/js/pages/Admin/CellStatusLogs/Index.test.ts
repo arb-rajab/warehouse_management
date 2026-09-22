@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/vue3';
 import { Check, Clock, TriangleAlert, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,6 +78,15 @@ async function openFilters(
 describe('CellStatusLogs Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPostMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('cellLog.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('cellLog.title'));
     });
 
     it('renders every column header', () => {

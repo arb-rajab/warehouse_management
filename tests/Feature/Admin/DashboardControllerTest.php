@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -233,4 +234,23 @@ test('an unauthenticated caller is redirected to login when visiting the dashboa
     $response = $this->get('/admin');
 
     $response->assertRedirect(route('login'));
+});
+
+test('the expired and expiring-soon pallet queries compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column (see the migration adding its
+    // index) — wrapping it in date()/strftime() makes the comparison a
+    // function of the column rather than the column itself, which MySQL
+    // cannot satisfy with a plain index on that column. See
+    // .ai/rules/shared-database.md and the index migration.
+    actingAsAdmin();
+    Pallet::factory()->create(['expiration_date' => now()->addDays(3)]);
+
+    DB::enableQueryLog();
+    $this->get('/admin')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
 });

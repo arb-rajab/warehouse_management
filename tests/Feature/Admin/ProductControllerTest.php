@@ -5,8 +5,10 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
@@ -301,6 +303,28 @@ test('the expired filter narrows the full/opened/expiring-soon counts to already
     Carbon::setTestNow();
 });
 
+test('the expired/expiring-soon pallet subqueries compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column — date()/strftime() around it
+    // makes the comparison a function of the column, which the index added
+    // for it cannot satisfy on MySQL. See .ai/rules/shared-database.md.
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+
+    DB::enableQueryLog();
+    $this->get('/admin/products?expired=true&expires_within_days=7')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
+
+    Carbon::setTestNow();
+});
+
 test('the inactive filter narrows the products index to the store admin\'s deactivated products, regardless of cell occupancy', function () {
     actingAsAdmin();
 
@@ -586,6 +610,21 @@ test('an authenticated admin can search products with every property the filter 
     expect($otherProduct->id)->not->toBeNull();
 });
 
+test('the product search excludes deactivated products', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+    // Noise: a deactivated product matching the same search term must not be returned.
+    $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+
+    $response = $this->getJson('/admin/products/search?q=Widget');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id'))
+        ->toContain($active->id)
+        ->not->toContain($inactive->id);
+});
+
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
     actingAsAdmin();
 
@@ -768,6 +807,152 @@ test('setting a box count for a non-existent product returns a 404', function ()
     actingAsAdmin();
 
     $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+
+    $response->assertNotFound();
+});
+
+test('an authenticated admin can export a QR code image for a product, with both its names', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'image/svg+xml');
+
+    $svg = $response->getContent();
+    // A real QR is embedded as a base64 SVG data URI — regression guard for the
+    // QR silently failing to render rather than just the surrounding text.
+    expect($svg)->toContain('data:image/svg+xml;base64,');
+    expect($svg)->toContain('Widgets');
+    expect($svg)->toContain('ودجات');
+    expect($svg)->toContain("ID: {$product->id}");
+    // Regression guard: a short name must still render as a single line per
+    // field (one <text> for the id caption, one for the name, one for the
+    // Arabic name), not wrapped.
+    expect(substr_count($svg, '<text'))->toBe(3);
+});
+
+test('a product QR export uses the configured QR code size instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // The label canvas width is exactly the configured total-box width, and
+    // the embedded QR square is that width minus padding on both sides
+    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
+    // ceiling on the whole label including text, not the QR's own size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('width="360" height="360"/>');
+});
+
+test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
+    actingAsAdmin();
+
+    $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
+    $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+
+    $svg = $response->getContent();
+    // The name wraps across several <text> lines rather than one, so the full
+    // name doesn't appear as one contiguous string — but qr_code_height is a
+    // ceiling on the whole label (see BuildsQrLabels::qrLabelImage()), so a
+    // name that would need more lines than fit within it is truncated with
+    // an ellipsis instead of growing the label past the configured height.
+    expect(substr_count($svg, '<text'))->toBeGreaterThan(1);
+    expect($svg)->toContain('…');
+    // The id caption is drawn and budget-clamped before the primary text, so
+    // truncating a long name never costs the id its own line.
+    expect($svg)->toContain("ID: {$product->id}");
+
+    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
+    expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
+});
+
+test('a QR label never grows past the configured height, even with three long/mandatory text fields', function () {
+    actingAsAdmin();
+    // 260 was tight enough to fit exactly one primary line before the id
+    // caption existed; now the mandatory id line eats into that same budget,
+    // so the height is raised just enough to keep both the id and one
+    // truncated primary line while still forcing the Arabic name out.
+    Setting::factory()->create(['qr_code_width' => 240, 'qr_code_height' => 300]);
+
+    $longName = trim(str_repeat('Widget Component ', 11));
+    $longArName = trim(str_repeat('منتج تجريبي ', 11));
+    $product = Product::factory()->create(['name' => $longName, 'ar_name' => $longArName]);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+
+    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
+    expect((int) $matches[1])->toBeLessThanOrEqual(300);
+    expect($svg)->toContain("ID: {$product->id}");
+    expect($svg)->toContain('…');
+    // The id caption plus the name alone fill the entire text budget at this
+    // height, so the Arabic name is dropped rather than the label growing
+    // past the cap — never shrinking the QR itself to squeeze all fields in.
+    expect($svg)->not->toContain('منتج');
+});
+
+test('a product QR export label renders the product id as its own visible text line', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+
+    // Not just present somewhere inside the base64-encoded QR data URI —
+    // asserted as its own readable <text> element a person could read off
+    // the printed sticker.
+    expect($svg)->toMatch('/<text[^>]*>ID: '.$product->id.'<\/text>/');
+});
+
+test('a product with no Arabic name ships a QR code image with only the English name', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('Widgets');
+});
+
+test('a mobile app user cannot export a products QR code', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller cannot export a products QR code', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('exporting a QR code for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/products/999999/export-qr');
 
     $response->assertNotFound();
 });
