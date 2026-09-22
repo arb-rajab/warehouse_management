@@ -169,7 +169,9 @@ class CellController extends Controller
 
     /**
      * Parses a row-letter + cell-number (+ optional flat-number) location, matching the
-     * "A12·3" shape rendered on every cell slot — e.g. "A12", "A12·3", "A12-3".
+     * "A12·3" shape rendered on every cell slot — e.g. "A12", "A12·3", "A12-3", "A123"
+     * (no separator: the last digit of the run is treated as the flat number, e.g.
+     * "A123" resolves the same target as "A12·3").
      */
     private function resolveLocationSearch(string $search): ?Cell
     {
@@ -187,6 +189,17 @@ class CellController extends Controller
 
         if (isset($matches[3])) {
             return Cell::query()->atCoordinates($row, $cellNumber, (int) $matches[3])->with('row:id,letter')->first();
+        }
+
+        if (strlen($matches[2]) >= 2) {
+            $splitCell = Cell::query()
+                ->atCoordinates($row, (int) substr($matches[2], 0, -1), (int) substr($matches[2], -1))
+                ->with('row:id,letter')
+                ->first();
+
+            if ($splitCell !== null) {
+                return $splitCell;
+            }
         }
 
         return Cell::query()

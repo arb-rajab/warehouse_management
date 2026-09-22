@@ -326,6 +326,39 @@ test('a location search without a flat number jumps to the lowest matching flat'
     );
 });
 
+test('a location search with no separator auto-splits the last digit as the flat number', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 15, 'flats_count' => 5]);
+    $targetCell = $row->cells()->where('cell_number', 12)->where('flat_number', 3)->first();
+
+    $response = $this->get('/admin/cells?search=A123');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 3)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 12)
+            ->where('jumpToCell.flat_number', 3)
+            ->where('searchError', false)
+    );
+
+    expect($targetCell)->not->toBeNull();
+});
+
+test('a no-separator search that does not split falls back to the plain cell-number search', function () {
+    actingAsAdmin();
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 99, 'flats_count' => 1]);
+
+    $response = $this->get('/admin/cells?search=C99');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)
+            ->where('jumpToCell.row_letter', 'C')
+            ->where('jumpToCell.cell_number', 99)
+            ->where('jumpToCell.flat_number', 1)
+            ->where('searchError', false)
+    );
+});
+
 test('a search matching nothing reports a searchError without changing the flat', function () {
     actingAsAdmin();
     Row::factory()->create();
