@@ -156,6 +156,49 @@ describe('Products Index', () => {
         expect(helpLink?.attributes('href')).toBe('/admin/help/products');
     });
 
+    it('renders the quick product search in the toolbar, without opening the filter dialog', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.get('label[for="products-quick-search"]').text()).toBe(
+            t('products.quickSearch.label'),
+        );
+        expect(wrapper.get('#products-quick-search').text()).toBe(
+            t('products.quickSearch.placeholder'),
+        );
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('narrows the table to the picked product and requests it via product_id when a quick search result is selected', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-search').trigger('click');
+        await wrapper
+            .get('[role="listbox"]')
+            .get('[role="option"]')
+            .trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ product_id: ['10'] }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('resets the quick search box back to its placeholder after a selection is submitted', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-search').trigger('click');
+        await wrapper
+            .get('[role="listbox"]')
+            .get('[role="option"]')
+            .trigger('click');
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.get('#products-quick-search').text()).toBe(
+            t('products.quickSearch.placeholder'),
+        );
+    });
+
     it('hides the filter fields until the Filters button is clicked', () => {
         const wrapper = mountPage([]);
 
