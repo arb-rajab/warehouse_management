@@ -79,10 +79,25 @@ test('an unpublished product ships active as false', function () {
 
     $product = Product::factory()->create(['name' => 'Widget', 'published' => false]);
 
-    $response = $this->getJson('/api/v1/products');
+    $response = $this->getJson('/api/v1/products?product_status=inactive');
 
     $response->assertOk();
     expect(collect($response->json('data'))->firstWhere('id', $product->id)['active'])->toBeFalse();
+});
+
+test('the product listing excludes inactive products by default', function () {
+    actingAsMobileUser();
+
+    $active = Product::factory()->create(['name' => 'Active Widget']);
+    // Noise: an inactive product must not appear when no product_status filter is given.
+    $inactive = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+
+    $response = $this->getJson('/api/v1/products');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id'))
+        ->toContain($active->id)
+        ->not->toContain($inactive->id);
 });
 
 test('the product listing paginates instead of returning everything at once', function () {

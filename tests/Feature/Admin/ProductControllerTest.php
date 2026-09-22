@@ -609,6 +609,21 @@ test('an authenticated admin can search products with every property the filter 
     expect($otherProduct->id)->not->toBeNull();
 });
 
+test('the product search excludes deactivated products', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+    // Noise: a deactivated product matching the same search term must not be returned.
+    $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+
+    $response = $this->getJson('/admin/products/search?q=Widget');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id'))
+        ->toContain($active->id)
+        ->not->toContain($inactive->id);
+});
+
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
     actingAsAdmin();
 

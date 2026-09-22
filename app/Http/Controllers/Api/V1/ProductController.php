@@ -12,14 +12,16 @@ class ProductController extends Controller
 {
     public function index(FilterProductsRequest $request): AnonymousResourceCollection
     {
-        $productPublished = $request->productPublished();
+        // Inactive products are excluded unless the caller explicitly opts in
+        // via product_status=inactive.
+        $productPublished = $request->productPublished() ?? true;
 
         return ProductResource::collection(
             Product::query()
                 ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
                 ->with(Product::WITH_DERIVED_ATTRIBUTES)
                 ->searchByName($request->string('q')->value())
-                ->when($productPublished !== null, fn ($query) => $query->where('published', $productPublished))
+                ->where('published', $productPublished)
                 ->orderBy('name')
                 ->paginate(20)
         );
