@@ -161,7 +161,7 @@ function navLinkStateClass(href: string): string[] {
                         :key="item.labelKey"
                         :href="item.href"
                         :aria-current="isActive(item.href) ? 'page' : undefined"
-                        class="flex items-center gap-2 rounded-md border-l-4 px-3 py-2 text-sm transition-colors"
+                        class="flex items-center gap-2 rounded-md border-s-4 px-3 py-2 text-sm transition-colors"
                         :class="navLinkStateClass(item.href)"
                         @click="isMobileMenuOpen = false"
                     >

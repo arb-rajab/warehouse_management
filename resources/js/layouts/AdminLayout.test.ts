@@ -69,6 +69,19 @@ describe('AdminLayout', () => {
         expect(usersLink?.classes()).not.toContain('border-gray-900');
     });
 
+    it('uses a logical border-inline-start utility on the mobile nav link so RTL locales flip the active indicator', async () => {
+        const wrapper = mountLayout('/admin/rows');
+        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
+        await toggle.trigger('click');
+
+        const rowsLink = wrapper
+            .get('#admin-mobile-menu')
+            .findAll('a')
+            .find((link) => link.attributes('href') === '/admin/rows');
+
+        expect(rowsLink?.classes()).toContain('border-s-4');
+    });
+
     it('marks the dashboard link active on its own URL, not on other sections', () => {
         const wrapper = mountLayout('/admin');
 
