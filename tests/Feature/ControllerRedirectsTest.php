@@ -12,9 +12,30 @@ use Symfony\Component\Finder\Finder;
  * .ai/rules/controllers.md.
  */
 test('no controller redirects with back(), other than the intentional LocaleController exception', function () {
-    $offenders = [];
+    // Whether the source's actual PHP tokens contain a `->back(` method
+    // call — a plain text/regex scan would also match the literal string
+    // inside a docblock explaining why `back()` must not be used, like the
+    // one above.
+    $callsBack = function (string $source): bool {
+        $tokens = token_get_all($source);
 
-    $finder = (new Finder())
+        foreach ($tokens as $index => $token) {
+            if (! is_array($token) || $token[0] !== T_OBJECT_OPERATOR) {
+                continue;
+            }
+
+            $next = $tokens[$index + 1] ?? null;
+            $afterNext = $tokens[$index + 2] ?? null;
+
+            if (is_array($next) && $next[0] === T_STRING && $next[1] === 'back' && $afterNext === '(') {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    $finder = new Finder()
         ->files()
         ->in(app_path('Http/Controllers'))
         ->name('*.php')
@@ -23,8 +44,10 @@ test('no controller redirects with back(), other than the intentional LocaleCont
         // there's no explicit route to redirect to instead.
         ->notName('LocaleController.php');
 
+    $offenders = [];
+
     foreach ($finder as $file) {
-        if (preg_match('/->\s*back\s*\(/', $file->getContents())) {
+        if ($callsBack($file->getContents())) {
             $offenders[] = $file->getRelativePathname();
         }
     }
