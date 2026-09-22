@@ -827,9 +827,11 @@ test('an authenticated admin can export a QR code image for a product, with both
     expect($svg)->toContain('data:image/svg+xml;base64,');
     expect($svg)->toContain('Widgets');
     expect($svg)->toContain('ودجات');
+    expect($svg)->toContain("ID: {$product->id}");
     // Regression guard: a short name must still render as a single line per
-    // field (one <text> for the name, one for the Arabic name), not wrapped.
-    expect(substr_count($svg, '<text'))->toBe(2);
+    // field (one <text> for the id caption, one for the name, one for the
+    // Arabic name), not wrapped.
+    expect(substr_count($svg, '<text'))->toBe(3);
 });
 
 test('a product QR export uses the configured QR code size instead of the default', function () {
@@ -867,14 +869,21 @@ test('a product with a long name has its QR code label text wrapped across multi
     // an ellipsis instead of growing the label past the configured height.
     expect(substr_count($svg, '<text'))->toBeGreaterThan(1);
     expect($svg)->toContain('…');
+    // The id caption is drawn and budget-clamped before the primary text, so
+    // truncating a long name never costs the id its own line.
+    expect($svg)->toContain("ID: {$product->id}");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
     expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
 });
 
-test('a QR label never grows past the configured height, even with two long text fields', function () {
+test('a QR label never grows past the configured height, even with three long/mandatory text fields', function () {
     actingAsAdmin();
-    Setting::factory()->create(['qr_code_width' => 240, 'qr_code_height' => 260]);
+    // 260 was tight enough to fit exactly one primary line before the id
+    // caption existed; now the mandatory id line eats into that same budget,
+    // so the height is raised just enough to keep both the id and one
+    // truncated primary line while still forcing the Arabic name out.
+    Setting::factory()->create(['qr_code_width' => 240, 'qr_code_height' => 300]);
 
     $longName = trim(str_repeat('Widget Component ', 11));
     $longArName = trim(str_repeat('منتج تجريبي ', 11));
@@ -886,12 +895,29 @@ test('a QR label never grows past the configured height, even with two long text
     $svg = $response->getContent();
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
-    expect((int) $matches[1])->toBeLessThanOrEqual(260);
+    expect((int) $matches[1])->toBeLessThanOrEqual(300);
+    expect($svg)->toContain("ID: {$product->id}");
     expect($svg)->toContain('…');
-    // The name alone fills the entire text budget at this height, so the
-    // Arabic name is dropped rather than the label growing past the cap —
-    // never shrinking the QR itself to squeeze both fields in.
+    // The id caption plus the name alone fill the entire text budget at this
+    // height, so the Arabic name is dropped rather than the label growing
+    // past the cap — never shrinking the QR itself to squeeze all fields in.
     expect($svg)->not->toContain('منتج');
+});
+
+test('a product QR export label renders the product id as its own visible text line', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+
+    // Not just present somewhere inside the base64-encoded QR data URI —
+    // asserted as its own readable <text> element a person could read off
+    // the printed sticker.
+    expect($svg)->toMatch('/<text[^>]*>ID: '.$product->id.'<\/text>/');
 });
 
 test('a product with no Arabic name ships a QR code image with only the English name', function () {
