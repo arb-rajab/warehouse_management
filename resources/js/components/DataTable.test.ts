@@ -24,6 +24,12 @@ function mountTable(rows: TestRow[], extraProps: Record<string, unknown> = {}) {
 }
 
 describe('DataTable', () => {
+    it('uses a logical text-align utility so RTL locales flip alignment', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        expect(wrapper.find('table').classes()).toContain('text-start');
+    });
+
     it('renders a header cell for every column', () => {
         const wrapper = mountTable([{ id: 1, letter: 'A' }]);
 

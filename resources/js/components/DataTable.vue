@@ -191,7 +191,7 @@ onBeforeUnmount(() => {
         <div
             class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
         >
-            <table class="w-full text-left text-sm">
+            <table class="w-full text-start text-sm">
                 <thead
                     class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
                 >

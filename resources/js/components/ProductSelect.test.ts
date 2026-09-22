@@ -89,6 +89,12 @@ describe('ProductSelect', () => {
         expect(wrapper.get('button').classes()).toContain('cursor-pointer');
     });
 
+    it('uses a logical text-align utility on the trigger so RTL locales flip alignment', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.get('button').classes()).toContain('text-start');
+    });
+
     it('renders no required guard input by default', () => {
         const wrapper = mountSelect();
 

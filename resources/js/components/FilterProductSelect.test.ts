@@ -82,6 +82,12 @@ describe('FilterProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('All');
     });
 
+    it('uses a logical text-align utility on the trigger so RTL locales flip alignment', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.get('button').classes()).toContain('text-start');
+    });
+
     it("resolves a single selection's label from the `selected` prop without fetching", async () => {
         const wrapper = mountSelect({
             selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
