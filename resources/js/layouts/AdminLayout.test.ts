@@ -48,7 +48,6 @@ describe('AdminLayout', () => {
             '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
-            '/admin/settings',
         ]);
     });
 
@@ -245,7 +244,10 @@ describe('AdminLayout', () => {
         const panel = wrapper.get('#admin-mobile-menu');
         expect(toggle.attributes('aria-expanded')).toBe('true');
         expect(
-            panel.findAll('a').map((link) => link.attributes('href')),
+            panel
+                .findAll('a')
+                .map((link) => link.attributes('href'))
+                .slice(0, 7),
         ).toEqual([
             '/admin',
             '/admin/rows',
@@ -254,8 +256,10 @@ describe('AdminLayout', () => {
             '/admin/cell-verification-rounds',
             '/admin/products',
             '/admin/users',
-            '/admin/settings',
         ]);
+        expect(
+            panel.findAll('a').map((link) => link.attributes('href')),
+        ).toContain('/admin/settings');
 
         await toggle.trigger('click');
 

@@ -63,6 +63,17 @@ describe('AccountMenu', () => {
         expect(wrapper.text()).toContain('Arabic');
     });
 
+    it('links to the settings page inside the panel', async () => {
+        const wrapper = mountMenu();
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
+
+        const settingsLink = wrapper
+            .findAll('a')
+            .find((el) => el.attributes('href') === '/admin/settings');
+
+        expect(settingsLink).toBeTruthy();
+    });
+
     it('links the logout action to the /logout route and closes the menu on click', async () => {
         const wrapper = mountMenu();
         await wrapper.get('button[aria-label="Account"]').trigger('click');
