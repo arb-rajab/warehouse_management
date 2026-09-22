@@ -250,6 +250,24 @@ describe('DataTable', () => {
         expect(wrapper.find('.filter-slot').text()).toBe('filters for cells');
     });
 
+    it('wraps the table in a horizontally scrollable container so wide content can be scrolled to instead of squeezed', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const table = wrapper.get('table');
+        expect(table.classes()).toContain('min-w-full');
+        expect(table.classes()).not.toContain('w-full');
+
+        const scrollContainer = table.element.parentElement;
+        expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(
+            true,
+        );
+
+        const clippingWrapper = scrollContainer?.parentElement;
+        expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
+            true,
+        );
+    });
+
     it('renders the popover outside the overflow-hidden table wrapper, so a short table cannot clip it', async () => {
         const openFilterKey = ref<string | null>(null);
         const wrapper = mountTableWithFilterSlot(
