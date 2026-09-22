@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\SettingFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Singleton app-wide settings row — at most one ever exists. The same shape
+ * as MobileAppVersionRequirement (see SetMinimumAppVersionCommand): current()
+ * mirrors its firstOrNew()-with-no-conditions approach rather than
+ * firstOrCreate(['id' => 1], ...), since 'id' isn't fillable and mass
+ * assigning it on the create path would be silently dropped (or throw, under
+ * strict mode) while the row still gets an auto-increment id anyway.
+ *
+ * @property int $id
+ * @property int $qr_code_width
+ * @property int $qr_code_height
+ */
+#[Fillable(['qr_code_width', 'qr_code_height'])]
+class Setting extends Model
+{
+    /** @use HasFactory<SettingFactory> */
+    use HasFactory;
+
+    protected $table = 'wms_settings';
+
+    /**
+     * Matches the hardcoded QR sizes every export used before this table
+     * existed — qrImageDataUri()'s size(200) and qrLabelImage()'s
+     * $qrSize = 240 collapse into this one admin-controlled pair (see
+     * BuildsQrLabels), with 240 winning as the default since qrLabelImage()
+     * already treated it as the layout's single source of truth.
+     */
+    public const int DEFAULT_QR_CODE_WIDTH = 240;
+
+    public const int DEFAULT_QR_CODE_HEIGHT = 240;
+
+    /**
+     * Bounds enforced by UpdateSettingRequest on write, and defensively
+     * re-applied by the qrCodeWidth()/qrCodeHeight() accessors below on
+     * read, so a stored value from before validation existed (or a direct DB
+     * edit) can't produce a broken/oversized SVG or blow up dompdf.
+     */
+    public const int MIN_QR_CODE_SIZE = 100;
+
+    public const int MAX_QR_CODE_SIZE = 1000;
+
+    /**
+     * The single settings row, created with today's QR-size defaults the
+     * first time anything reads it. Every export/admin read/update goes
+     * through this rather than querying wms_settings directly, so there is
+     * never more than one row.
+     */
+    public static function current(): self
+    {
+        $setting = static::query()->firstOrNew();
+
+        if (! $setting->exists) {
+            $setting->qr_code_width = self::DEFAULT_QR_CODE_WIDTH;
+            $setting->qr_code_height = self::DEFAULT_QR_CODE_HEIGHT;
+            $setting->save();
+        }
+
+        return $setting;
+    }
+
+    /**
+     * @return Attribute<int, never>
+     */
+    protected function qrCodeWidth(): Attribute
+    {
+        return Attribute::make(
+            get: fn (int $value): int => max(self::MIN_QR_CODE_SIZE, min(self::MAX_QR_CODE_SIZE, $value)),
+        );
+    }
+
+    /**
+     * @return Attribute<int, never>
+     */
+    protected function qrCodeHeight(): Attribute
+    {
+        return Attribute::make(
+            get: fn (int $value): int => max(self::MIN_QR_CODE_SIZE, min(self::MAX_QR_CODE_SIZE, $value)),
+        );
+    }
+}

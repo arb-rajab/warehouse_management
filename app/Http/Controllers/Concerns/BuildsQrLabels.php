@@ -52,15 +52,18 @@ trait BuildsQrLabels
      * building, ~10x faster. That difference is the gap between a row export
      * finishing in a few seconds and one timing out for any row of
      * non-trivial size.
+     *
+     * $size is the admin-configured QR size (Setting::current(), see
+     * qrLabelImage()) — never a hardcoded value.
      */
-    private function qrImageDataUri(string $data): string
+    private function qrImageDataUri(string $data, int $size): string
     {
         // simplesoftwareio/simple-qrcode's generate() docblock omits the leading
         // backslash on its Illuminate\Support\HtmlString return type, so Larastan
         // resolves it relative to the vendor's own namespace into a nonexistent
         // class — override with the real type generate() actually returns here.
         /** @var HtmlString|string $svg */
-        $svg = QrCode::format('svg')->size(200)->generate($data);
+        $svg = QrCode::format('svg')->size($size)->generate($data);
 
         return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
     }
@@ -117,20 +120,26 @@ trait BuildsQrLabels
      * product's Arabic name is always RTL regardless of the primary
      * (English) line next to it. Either line wraps onto additional lines
      * when it's too wide for the fixed-width canvas (see wrapLabelText());
-     * $height grows to fit however many lines that produces, the same way
-     * it already grows to fit an optional secondary line.
+     * $height (the return value's, i.e. the whole label's height — see the
+     * $height local variable below) grows to fit however many lines that
+     * produces, the same way it already grows to fit an optional secondary
+     * line.
+     *
+     * $qrWidth/$qrHeight are the admin-configured QR size (Setting::current()
+     * — see BuildsCellQrLabels/BuildsProductQrLabels) that the rest of this
+     * label's layout (canvas width, text position, padding) derives from —
+     * never a hardcoded value.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText = null, string $secondaryDirection = 'ltr'): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $qrWidth, int $qrHeight): string
     {
-        $qrSize = 240;
         $padding = 20;
-        $width = $qrSize + $padding * 2;
+        $width = $qrWidth + $padding * 2;
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
         $primaryFontSize = 18;
         $primaryLineHeight = 22;
-        $primaryY = $qrSize + $padding + 24;
-        $qrDataUri = $this->qrImageDataUri($qrData);
+        $primaryY = $qrHeight + $padding + 24;
+        $qrDataUri = $this->qrImageDataUri($qrData, max($qrWidth, $qrHeight));
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
         $primaryMarkup = $this->textLinesMarkup($primaryLines, $centerX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
@@ -152,7 +161,7 @@ trait BuildsQrLabels
         return <<<SVG
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$height}" viewBox="0 0 {$width} {$height}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
-                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrWidth}" height="{$qrHeight}"/>
                 {$primaryMarkup}
                 {$secondaryMarkup}
             </svg>

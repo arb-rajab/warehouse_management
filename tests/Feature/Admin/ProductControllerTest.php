@@ -5,6 +5,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -829,6 +830,22 @@ test('an authenticated admin can export a QR code image for a product, with both
     // Regression guard: a short name must still render as a single line per
     // field (one <text> for the name, one for the Arabic name), not wrapped.
     expect(substr_count($svg, '<text'))->toBe(2);
+});
+
+test('a product QR export uses the configured QR code size instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // The label canvas width is derived from the configured QR width
+    // (qrWidth + 2*padding, padding=20 — see BuildsQrLabels::qrLabelImage()),
+    // and the embedded <image> is placed at the exact configured size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="440"')
+        ->and($svg)->toContain('width="400" height="500"/>');
 });
 
 test('a product with a long name has its QR code label text wrapped instead of clipped', function () {

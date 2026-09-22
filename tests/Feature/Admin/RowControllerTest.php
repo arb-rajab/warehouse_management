@@ -5,6 +5,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use ArPHP\I18N\Arabic;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -751,6 +752,52 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
         expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
     }
+});
+
+test('the row QR export still succeeds with a configured QR code size other than the default', function () {
+    // dompdf's Cpdf::addSvgFromFile() (see vendor/dompdf/dompdf/lib/Cpdf.php)
+    // renders the SVG as vector drawing commands, always affine-transformed
+    // to exactly fill the <img>'s CSS-computed box — and that box is fixed
+    // to a percentage of the page width by .label img's `width: 100%; height:
+    // auto` (see resources/views/pdf/qr-labels.blade.php). So a configured
+    // size change here is never observable in the exported PDF's bytes or
+    // layout, only in the resolution of the underlying SVG source, which is
+    // erased by that same transform — that's what makes this call site safe
+    // to wire up without a tighter bound than Setting's own 100-1000 (see
+    // BuildsCellQrLabels::cellQrLabels()). This test only proves the request
+    // still succeeds end-to-end at a non-default size; the assertion that the
+    // configured size actually reaches the view lives in the next test,
+    // against the Blade source dompdf receives before that transform erases it.
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 900, 'qr_code_height' => 900]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+
+    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
+    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
+        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
+    }
+});
+
+test('the qr-labels Blade view embeds each cell QR image at the configured size', function () {
+    // Renders the exact view RowController::exportQrCodes() feeds to
+    // Pdf::loadView(), bypassing the PDF conversion step — see the previous
+    // test for why the configured size isn't observable past that point.
+    $html = view('pdf.qr-labels', [
+        'labels' => [[
+            'label' => 'Z1·1',
+            'description' => 'Row Z, cell 1, level 1',
+            'qrImage' => 'data:image/svg+xml;base64,'.base64_encode('<svg width="500" height="500"></svg>'),
+        ]],
+        'qrWidth' => 400,
+        'qrHeight' => 500,
+    ])->render();
+
+    expect($html)->toContain('width="400" height="500" alt="Z1·1"');
 });
 
 test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {

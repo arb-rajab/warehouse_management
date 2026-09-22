@@ -7,6 +7,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -441,6 +442,23 @@ test('an authenticated user can export a QR code image for a single cell', funct
         'flat' => $cell->flat_number,
     ]);
     expect($svg)->toContain($description);
+});
+
+test('a single-cell QR export uses the configured QR code size instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // The label canvas width is derived from the configured QR width
+    // (qrWidth + 2*padding, padding=20 — see BuildsQrLabels::qrLabelImage()),
+    // and the embedded <image> is placed at the exact configured size.
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="440"')
+        ->and($svg)->toContain('width="400" height="500"/>');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {

@@ -22,13 +22,15 @@ trait BuildsProductQrLabels
 {
     use BuildsQrLabels;
 
-    private function productQrLabelImage(Product $product): string
+    private function productQrLabelImage(Product $product, int $qrWidth, int $qrHeight): string
     {
         return $this->qrLabelImage(
             "warehouseapp://product?id={$product->id}",
             $product->name,
             $product->ar_name !== '' ? $product->ar_name : null,
             'rtl',
+            $qrWidth,
+            $qrHeight,
         );
     }
 }

@@ -24,6 +24,7 @@ class HelpController extends Controller
             HelpTopic::Products => 'Products',
             HelpTopic::CellLogs => 'CellLogs',
             HelpTopic::CellVerificationRounds => 'CellVerificationRounds',
+            HelpTopic::Settings => 'Settings',
         };
 
         return Inertia::render("Admin/Help/{$component}");

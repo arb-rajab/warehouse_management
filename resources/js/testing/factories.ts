@@ -5,6 +5,7 @@ import type {
     CellVerificationRound,
     Paginated,
     Row,
+    Setting,
     User,
 } from '@/types/admin';
 
@@ -46,6 +47,14 @@ export function cell(overrides: Partial<Cell> = {}): Cell {
         state: 'empty',
         is_active: true,
         pallet: null,
+        ...overrides,
+    };
+}
+
+export function setting(overrides: Partial<Setting> = {}): Setting {
+    return {
+        qr_code_width: 240,
+        qr_code_height: 240,
         ...overrides,
     };
 }

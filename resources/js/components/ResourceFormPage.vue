@@ -23,7 +23,10 @@ withDefaults(
     <Head :title="title" />
 
     <AdminLayout>
-        <h1 class="mb-6 text-xl font-semibold">{{ title }}</h1>
+        <div class="mb-6 flex items-center justify-between">
+            <h1 class="text-xl font-semibold">{{ title }}</h1>
+            <slot name="header-actions" />
+        </div>
 
         <div class="max-w-sm">
             <Form

@@ -43,6 +43,15 @@ export interface Row {
 }
 
 /**
+ * The persisted, admin-editable size every QR-label export uses — see
+ * App\Models\Setting.
+ */
+export interface Setting {
+    qr_code_width: number;
+    qr_code_height: number;
+}
+
+/**
  * The `filters` prop shape for an admin listing whose only server-driven
  * state is its page size — Rows/Index.vue, Users/Index.vue.
  * A listing with its own filters/sort embeds `per_page` directly into its
