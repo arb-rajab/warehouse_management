@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, CircleUser } from '@lucide/vue';
+import { Link } from '@inertiajs/vue3';
+import { ChevronDown, CircleUser, Settings } from '@lucide/vue';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import { t } from '@/lib/i18n';
@@ -30,8 +32,16 @@ const { open, containerRef } = useDismissibleListbox();
             id="account-menu-panel"
             class="absolute end-0 z-10 mt-1 w-56 rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
         >
+            <Link
+                :href="settingsEdit().url"
+                class="flex items-center gap-1.5 rounded px-1 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
+                @click="open = false"
+            >
+                <Settings class="h-4 w-4 shrink-0" />
+                {{ t('nav.settings') }}
+            </Link>
             <div
-                class="border-b border-gray-200 px-1 pb-2 dark:border-neutral-700"
+                class="mt-2 border-b border-gray-200 px-1 pb-2 dark:border-neutral-700"
             >
                 <LanguageSwitcher />
             </div>
