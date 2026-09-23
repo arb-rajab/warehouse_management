@@ -185,6 +185,7 @@
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
+            "selected": "المحدد",
             "palletHistory": "عرض سجل المنصة رقم #{id}",
             "flaggedOnly": "المُعلَّمة فقط"
         },

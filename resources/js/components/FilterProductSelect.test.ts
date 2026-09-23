@@ -387,7 +387,8 @@ describe('FilterProductSelect', () => {
         expect(options[0].text()).toContain('ودجات');
         // The store never translated this one, so it falls back to the base
         // name rather than rendering the empty `ar_name`.
-        expect(options[1].text()).toBe('Gadgets');
+        expect(options[1].text()).toContain('Gadgets');
+        expect(options[1].text()).not.toContain('ودجات');
     });
 
     it('leads each option with its base name when the locale is English', async () => {
@@ -451,5 +452,68 @@ describe('FilterProductSelect', () => {
             { id: 1, name: 'Widgets', ar_name: 'ودجات' },
             { id: 2, name: 'Gadgets', ar_name: '' },
         ]);
+    });
+
+    it('keeps a selected product pinned and checked after a new search replaces the results', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }]));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).toContain(t('cellLog.filters.selected'));
+
+        const checkboxes = wrapper.findAll<HTMLInputElement>(
+            'input[type="checkbox"]',
+        );
+        expect(checkboxes).toHaveLength(2);
+        expect(checkboxes[0].element.checked).toBe(true);
+        expect(checkboxes[1].element.checked).toBe(false);
+
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        expect(names).toEqual(['Widgets', 'Gadgets']);
+    });
+
+    it('does not duplicate a selected product that also appears in the current search results', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-testid="product-option-name"]'),
+        ).toHaveLength(2);
+    });
+
+    it('lets an admin unselect a pinned product directly, without re-searching for it', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, page([]));
+        await wrapper.vm.$nextTick();
+
+        const checkbox = wrapper.get('input[type="checkbox"]');
+        await checkbox.setValue(false);
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
     });
 });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -34,11 +34,49 @@ const {
     onOptionsScroll,
 } = useProductSearch();
 
-watch(() => props.selected, rememberNames, { immediate: true });
+/**
+ * Every product ever seen with full data (not just its resolved name), so a
+ * checked product keeps rendering in the pinned section below even after a
+ * new search replaces `results` or scrolls it out of view — see the
+ * `pinnedProducts`/`visibleResults` split below.
+ */
+const knownProducts = reactive(new Map<number, ProductFilterOption>());
+
+function rememberProducts(products: ProductFilterOption[]): void {
+    for (const product of products) {
+        knownProducts.set(product.id, product);
+    }
+}
+
+watch(
+    () => props.selected,
+    (products) => {
+        rememberProducts(products);
+        rememberNames(products);
+    },
+    { immediate: true },
+);
+watch(results, rememberProducts);
+
+const { isChecked, toggleValue } = useMultiSelectToggle(model);
+
+const pinnedProducts = computed(() =>
+    Array.from(knownProducts.values()).filter((product) =>
+        isChecked(product.id.toString()),
+    ),
+);
+const visibleResults = computed(() => {
+    const pinnedIds = new Set(
+        pinnedProducts.value.map((product) => product.id),
+    );
+
+    return results.value.filter((product) => !pinnedIds.has(product.id));
+});
 
 const { open, containerRef, setOptionRef, onOptionKeydown } =
-    useDismissibleListbox(() => results.value.length);
-const { isChecked, toggleValue } = useMultiSelectToggle(model);
+    useDismissibleListbox(
+        () => pinnedProducts.value.length + visibleResults.value.length,
+    );
 
 function toggleOpen(): void {
     open.value = !open.value;
@@ -100,40 +138,74 @@ function buttonLabel(): string {
                 class="max-h-64 overflow-y-auto"
                 @scroll="onOptionsScroll(optionsListRef)"
             >
+                <template v-if="pinnedProducts.length > 0">
+                    <p
+                        class="px-2 py-1 text-xs font-medium text-gray-400 dark:text-neutral-500"
+                    >
+                        {{ t('cellLog.filters.selected') }}
+                    </p>
+                    <label
+                        v-for="(product, index) in pinnedProducts"
+                        :key="`pinned-${product.id}`"
+                        role="option"
+                        aria-selected="true"
+                        class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    >
+                        <input
+                            :ref="(el) => setOptionRef(el, index)"
+                            type="checkbox"
+                            class="mt-0.5 shrink-0"
+                            checked
+                            @change="toggleValue(product.id.toString())"
+                            @keydown="onOptionKeydown($event, index)"
+                        />
+                        <ProductOptionLabel :product="product" />
+                    </label>
+                    <hr class="my-1 border-gray-200 dark:border-neutral-700" />
+                </template>
+
                 <p
-                    v-if="loading && results.length === 0"
+                    v-if="loading && visibleResults.length === 0"
                     class="flex items-center gap-2 px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
                 >
                     <LoaderCircle class="h-4 w-4 animate-spin" />
                     {{ t('cellLog.filters.searching') }}
                 </p>
                 <p
-                    v-else-if="!loading && results.length === 0"
+                    v-else-if="!loading && visibleResults.length === 0"
                     class="px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
                 >
                     {{ t('cellLog.filters.noProductsFound') }}
                 </p>
 
                 <label
-                    v-for="(product, index) in results"
+                    v-for="(product, index) in visibleResults"
                     :key="product.id"
                     role="option"
                     :aria-selected="isChecked(product.id.toString())"
                     class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
                 >
                     <input
-                        :ref="(el) => setOptionRef(el, index)"
+                        :ref="
+                            (el) =>
+                                setOptionRef(el, pinnedProducts.length + index)
+                        "
                         type="checkbox"
                         class="mt-0.5 shrink-0"
                         :checked="isChecked(product.id.toString())"
                         @change="toggleValue(product.id.toString())"
-                        @keydown="onOptionKeydown($event, index)"
+                        @keydown="
+                            onOptionKeydown(
+                                $event,
+                                pinnedProducts.length + index,
+                            )
+                        "
                     />
                     <ProductOptionLabel :product="product" />
                 </label>
 
                 <p
-                    v-if="loading && results.length > 0"
+                    v-if="loading && visibleResults.length > 0"
                     class="flex items-center gap-2 px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
                 >
                     <LoaderCircle class="h-4 w-4 animate-spin" />

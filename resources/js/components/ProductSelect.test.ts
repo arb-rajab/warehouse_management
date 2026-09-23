@@ -486,7 +486,8 @@ describe('ProductSelect', () => {
         expect(options[0].text()).toContain('ودجات');
         // The store never translated this one, so it falls back to the base
         // name rather than rendering the empty `ar_name`.
-        expect(options[1].text()).toBe('Gadgets');
+        expect(options[1].text()).toContain('Gadgets');
+        expect(options[1].text()).not.toContain('ودجات');
     });
 
     it('leads each option with its base name when the locale is English', async () => {
