@@ -225,6 +225,25 @@ describe('ProductSelect', () => {
         ]);
     });
 
+    it('separates each option row from the next with a divider', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+        expect(options[0].element.parentElement?.className).toContain(
+            'divide-y',
+        );
+    });
+
     it('closes the panel after selecting an option', async () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');

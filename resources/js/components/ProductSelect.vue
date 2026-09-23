@@ -136,24 +136,29 @@ function buttonLabel(): string {
                     {{ t('cellLog.filters.noProductsFound') }}
                 </p>
 
-                <button
-                    v-for="(product, index) in results"
-                    :key="product.id"
-                    :ref="(el) => setOptionRef(el, index)"
-                    type="button"
-                    role="option"
-                    :aria-selected="model?.id === product.id"
-                    class="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1 text-start text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
-                    :class="
-                        model?.id === product.id
-                            ? 'bg-gray-100 dark:bg-neutral-700'
-                            : ''
-                    "
-                    @click="select(product)"
-                    @keydown="onOptionKeydown($event, index)"
+                <div
+                    v-if="results.length > 0"
+                    class="divide-y divide-gray-100 dark:divide-neutral-700"
                 >
-                    <ProductOptionLabel :product="product" />
-                </button>
+                    <button
+                        v-for="(product, index) in results"
+                        :key="product.id"
+                        :ref="(el) => setOptionRef(el, index)"
+                        type="button"
+                        role="option"
+                        :aria-selected="model?.id === product.id"
+                        class="flex w-full cursor-pointer items-start gap-2 px-2 py-1.5 text-start text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        :class="
+                            model?.id === product.id
+                                ? 'bg-gray-100 dark:bg-neutral-700'
+                                : ''
+                        "
+                        @click="select(product)"
+                        @keydown="onOptionKeydown($event, index)"
+                    >
+                        <ProductOptionLabel :product="product" />
+                    </button>
+                </div>
 
                 <p
                     v-if="loading && results.length > 0"

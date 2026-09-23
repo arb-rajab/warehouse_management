@@ -144,23 +144,27 @@ function buttonLabel(): string {
                     >
                         {{ t('cellLog.filters.selected') }}
                     </p>
-                    <label
-                        v-for="(product, index) in pinnedProducts"
-                        :key="`pinned-${product.id}`"
-                        role="option"
-                        aria-selected="true"
-                        class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    <div
+                        class="divide-y divide-gray-100 dark:divide-neutral-700"
                     >
-                        <input
-                            :ref="(el) => setOptionRef(el, index)"
-                            type="checkbox"
-                            class="mt-0.5 shrink-0"
-                            checked
-                            @change="toggleValue(product.id.toString())"
-                            @keydown="onOptionKeydown($event, index)"
-                        />
-                        <ProductOptionLabel :product="product" />
-                    </label>
+                        <label
+                            v-for="(product, index) in pinnedProducts"
+                            :key="`pinned-${product.id}`"
+                            role="option"
+                            aria-selected="true"
+                            class="flex cursor-pointer items-start gap-2 px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        >
+                            <input
+                                :ref="(el) => setOptionRef(el, index)"
+                                type="checkbox"
+                                class="mt-0.5 shrink-0"
+                                checked
+                                @change="toggleValue(product.id.toString())"
+                                @keydown="onOptionKeydown($event, index)"
+                            />
+                            <ProductOptionLabel :product="product" />
+                        </label>
+                    </div>
                     <hr class="my-1 border-gray-200 dark:border-neutral-700" />
                 </template>
 
@@ -178,31 +182,39 @@ function buttonLabel(): string {
                     {{ t('cellLog.filters.noProductsFound') }}
                 </p>
 
-                <label
-                    v-for="(product, index) in visibleResults"
-                    :key="product.id"
-                    role="option"
-                    :aria-selected="isChecked(product.id.toString())"
-                    class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                <div
+                    v-if="visibleResults.length > 0"
+                    class="divide-y divide-gray-100 dark:divide-neutral-700"
                 >
-                    <input
-                        :ref="
-                            (el) =>
-                                setOptionRef(el, pinnedProducts.length + index)
-                        "
-                        type="checkbox"
-                        class="mt-0.5 shrink-0"
-                        :checked="isChecked(product.id.toString())"
-                        @change="toggleValue(product.id.toString())"
-                        @keydown="
-                            onOptionKeydown(
-                                $event,
-                                pinnedProducts.length + index,
-                            )
-                        "
-                    />
-                    <ProductOptionLabel :product="product" />
-                </label>
+                    <label
+                        v-for="(product, index) in visibleResults"
+                        :key="product.id"
+                        role="option"
+                        :aria-selected="isChecked(product.id.toString())"
+                        class="flex cursor-pointer items-start gap-2 px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    >
+                        <input
+                            :ref="
+                                (el) =>
+                                    setOptionRef(
+                                        el,
+                                        pinnedProducts.length + index,
+                                    )
+                            "
+                            type="checkbox"
+                            class="mt-0.5 shrink-0"
+                            :checked="isChecked(product.id.toString())"
+                            @change="toggleValue(product.id.toString())"
+                            @keydown="
+                                onOptionKeydown(
+                                    $event,
+                                    pinnedProducts.length + index,
+                                )
+                            "
+                        />
+                        <ProductOptionLabel :product="product" />
+                    </label>
+                </div>
 
                 <p
                     v-if="loading && visibleResults.length > 0"
