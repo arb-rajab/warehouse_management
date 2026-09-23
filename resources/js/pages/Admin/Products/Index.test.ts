@@ -214,7 +214,6 @@ describe('Products Index', () => {
         await openFilters(wrapper);
 
         const dialog = wrapper.get('[role="dialog"]');
-        expect(dialog.text()).toContain(t('cellLog.filters.sections.location'));
         expect(dialog.text()).toContain(
             t('products.filters.sections.occupancy'),
         );
@@ -262,24 +261,6 @@ describe('Products Index', () => {
                 button.text().includes(t('cellLog.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
-    });
-
-    it("populates the row and column filter select's options from filterOptions", async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
-
-        expect(
-            wrapper
-                .get('#filter-row')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'A', 'B']);
-        expect(
-            wrapper
-                .get('#filter-column')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), '1', '2', '3']);
     });
 
     it("populates the state filter select's options, without an empty option since an empty cell can't hold a product", async () => {
@@ -414,7 +395,7 @@ describe('Products Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/products?row_id=1&per_page=20',
+            '/admin/products?state=full&per_page=20',
         );
 
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
@@ -424,7 +405,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).toHaveBeenCalledWith(
-            '/admin/products/42/box-count?row_id=1&per_page=20',
+            '/admin/products/42/box-count?state=full&per_page=20',
             { boxes_count: 30 },
             { preserveScroll: true, preserveState: true },
         );
@@ -514,8 +495,6 @@ describe('Products Index', () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
 
-        await wrapper.get('#filter-row').setValue('1');
-        await wrapper.get('#filter-column').setValue('2');
         await wrapper.get('#filter-state').setValue('full');
         await wrapper.get('#filter-expires-within-days').setValue('7');
         await wrapper.get('form').trigger('submit');
@@ -523,8 +502,6 @@ describe('Products Index', () => {
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/products',
             expect.objectContaining({
-                row_id: 1,
-                column_number: 2,
                 state: 'full',
                 expires_within_days: 7,
             }),
@@ -709,19 +686,6 @@ describe('Products Index', () => {
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
-    it('marks every metric column active when a row filter is applied', () => {
-        const wrapper = mountPage([], { row_id: 1 });
-
-        for (const label of [
-            t('products.columns.full'),
-            t('products.columns.opened'),
-            t('products.columns.expired'),
-            t('products.columns.expiringSoon', { days: 45 }),
-        ]) {
-            expect(isColumnActive(wrapper, label)).toBe(true);
-        }
-    });
-
     async function openColumnPopover(
         wrapper: ReturnType<typeof mountPage>,
         label: string,
@@ -833,7 +797,6 @@ describe('Products Index', () => {
 
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage([], {
-            row_id: 1,
             state: 'full',
             expired: true,
             inactive: true,
@@ -855,9 +818,6 @@ describe('Products Index', () => {
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
-        expect(
-            (wrapper.get('#filter-row').element as HTMLSelectElement).value,
-        ).toBe('');
         expect(
             (wrapper.get('#filter-state').element as HTMLSelectElement).value,
         ).toBe('');

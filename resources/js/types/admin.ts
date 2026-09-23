@@ -335,8 +335,6 @@ export type ProductSortBy =
     | 'expiring_soon_count';
 
 export interface ProductFilters {
-    row_id?: number;
-    column_number?: number;
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;

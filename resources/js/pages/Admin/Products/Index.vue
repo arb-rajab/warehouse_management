@@ -17,7 +17,6 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
-import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
@@ -58,8 +57,6 @@ const props = defineProps<{
 }>();
 
 const filters = reactive({
-    row_id: props.filters.row_id?.toString() ?? '',
-    column_number: props.filters.column_number?.toString() ?? '',
     state: props.filters.state ?? '',
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
@@ -82,8 +79,6 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
-        filters.row_id !== '',
-        filters.column_number !== '',
         filters.state !== '',
         filters.expired,
         filters.expires_within_days !== '',
@@ -107,15 +102,13 @@ const productColumnFiltered = computed(
 );
 
 /**
- * Row/column/state narrow every occupancy-derived column identically on the
- * backend (see `ProductController::occupancyCountSubquery()`/
+ * State narrows every occupancy-derived column identically on the backend
+ * (see `ProductController::occupancyCountSubquery()`/
  * `applyHistoryLogFilters()`), so the Full/Opened/Expired/Expiring-soon
  * columns are always marked filtered together.
  */
 const occupancyColumnsFiltered = computed(
     () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
         filters.state !== '' ||
         filters.expired ||
         filters.expires_within_days !== '',
@@ -172,8 +165,6 @@ const { openFilterKey } = useColumnFilterPopover(
 );
 
 function clearFilters(): void {
-    filters.row_id = '';
-    filters.column_number = '';
     filters.state = '';
     filters.expired = false;
     filters.expires_within_days = '';
@@ -203,31 +194,12 @@ function onSort(key: string): void {
     applyFilters();
 }
 
-/**
- * The row/column location filters currently applied, carried into every
- * per-product drill-down link below so the destination page stays scoped
- * the same way the table row was computed.
- */
-function locationQuery(): QueryParams {
-    const query: QueryParams = {};
-
-    if (filters.row_id !== '') {
-        query.row_id = Number(filters.row_id);
-    }
-
-    if (filters.column_number !== '') {
-        query.column_number = Number(filters.column_number);
-    }
-
-    return query;
-}
-
 function occupancyHref(
     product: ProductSummary,
     overrides: QueryParams,
 ): string {
     return cellsIndex.url({
-        query: { ...locationQuery(), product_id: [product.id], ...overrides },
+        query: { product_id: [product.id], ...overrides },
     });
 }
 
@@ -314,20 +286,6 @@ function submitBoxCount(): void {
             :close-label="t('cellLog.filters.close')"
         >
             <form class="space-y-6" @submit.prevent="applyFilters">
-                <div>
-                    <h3 :class="sectionHeadingClass">
-                        {{ t('cellLog.filters.sections.location') }}
-                    </h3>
-                    <LocationFilterFields
-                        id-prefix="filter"
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
-                        v-model:column-number="filters.column_number"
-                        :rows="filterOptions.rows"
-                        :max-column-number="filterOptions.maxColumnNumber"
-                    />
-                </div>
-
                 <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}

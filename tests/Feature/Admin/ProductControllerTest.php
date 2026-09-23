@@ -198,39 +198,6 @@ test('the products index splits the occupancy count into full and opened columns
     );
 });
 
-test('the products index counts only cells in the filtered row toward full/opened counts, not the product\'s cells elsewhere', function () {
-    actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowA->cells()->first()->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowB->cells()->first()->id]);
-
-    $response = $this->get("/admin/products?row_id={$rowA->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
-test('the products index counts only cells in the filtered column toward full/opened counts', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnOneCell->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnTwoCell->id]);
-
-    $response = $this->get('/admin/products?column_number=1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
 test('the state filter zeroes out the opened count while leaving the full count intact', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
@@ -255,47 +222,6 @@ test('the state filter excludes a product with no pallet in that state, instead 
     Pallet::factory()->opened()->create(['product_id' => $excluded->id]);
 
     $response = $this->get('/admin/products?state=full');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('products.data', 1)
-            ->where('products.data.0.id', $matching->id)
-    );
-});
-
-test('the row filter excludes a product with no pallet in that row', function () {
-    actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-
-    $matching = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $matching->id, 'cell_id' => $rowA->cells()->first()->id]);
-
-    // Noise: only occupies a cell in a different row.
-    $excluded = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $excluded->id, 'cell_id' => $rowB->cells()->first()->id]);
-
-    $response = $this->get("/admin/products?row_id={$rowA->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('products.data', 1)
-            ->where('products.data.0.id', $matching->id)
-    );
-});
-
-test('the column filter excludes a product with no pallet in that column', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $matching = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $matching->id, 'cell_id' => $columnOneCell->id]);
-
-    // Noise: only occupies a cell in a different column.
-    $excluded = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $excluded->id, 'cell_id' => $columnTwoCell->id]);
-
-    $response = $this->get('/admin/products?column_number=1');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 1)
@@ -343,31 +269,6 @@ test('the expires_within_days filter excludes a product with no pallet expiring 
     );
 
     Carbon::setTestNow();
-});
-
-test('combining the row filter with the state filter excludes a product matching only one of them', function () {
-    actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $rowACells = $rowA->cells()->orderBy('cell_number')->get();
-
-    $matching = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $matching->id, 'cell_id' => $rowACells[0]->id]);
-
-    // Noise: matches the row but not the state (opened, not full).
-    $wrongState = Product::factory()->create();
-    Pallet::factory()->opened()->create(['product_id' => $wrongState->id, 'cell_id' => $rowACells[1]->id]);
-
-    // Noise: matches the state but not the row.
-    $wrongRow = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $wrongRow->id, 'cell_id' => $rowB->cells()->first()->id]);
-
-    $response = $this->get("/admin/products?row_id={$rowA->id}&state=full");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('products.data', 1)
-            ->where('products.data.0.id', $matching->id)
-    );
 });
 
 test('a product with zero pallets is excluded once any occupancy filter is active', function () {
