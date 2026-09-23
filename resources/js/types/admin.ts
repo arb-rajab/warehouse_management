@@ -229,6 +229,7 @@ export interface CellMap3DItem {
     state: Cell['state'];
     isActive: boolean;
     highlighted: boolean;
+    dimmed: boolean;
     pulsing: boolean;
     pallet: CellPalletSummary | null;
 }

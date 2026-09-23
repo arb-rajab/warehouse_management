@@ -198,6 +198,25 @@ describe('CellSlot', () => {
         );
     });
 
+    it('fades a non-matching cell when told it is dimmed', () => {
+        expect(mountSlot({ dimmed: false }).classes()).not.toContain(
+            'opacity-40',
+        );
+        const dimmed = mountSlot({ dimmed: true });
+        expect(dimmed.classes()).toContain('opacity-40');
+        expect(dimmed.classes()).toContain('grayscale');
+    });
+
+    it('keeps the inactive-cell opacity instead of stacking the dimmed fade on top of it', () => {
+        const wrapper = mountSlot({
+            cell: cell({ state: 'full', is_active: false }),
+            dimmed: true,
+        });
+
+        expect(wrapper.classes()).toContain('opacity-60');
+        expect(wrapper.classes()).not.toContain('opacity-40');
+    });
+
     it('always shows the QR reprint link for an existing cell, not just on hover, since touch devices have no hover state', () => {
         const wrapper = mountSlot({ cell: cell({ id: 7 }) });
 
