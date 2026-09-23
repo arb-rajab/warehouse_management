@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import FilterDialog from './FilterDialog.vue';
 
@@ -126,6 +126,33 @@ describe('FilterDialog', () => {
         await wrapper.setProps({ open: false });
 
         expect(document.activeElement).toBe(outsideButton);
+
+        wrapper.unmount();
+        outsideButton.remove();
+    });
+
+    it('restores focus without scrolling the page, so a scroll position set while the dialog was open survives closing it', async () => {
+        const outsideButton = document.createElement('button');
+        document.body.appendChild(outsideButton);
+        outsideButton.focus();
+        const focusSpy = vi.spyOn(outsideButton, 'focus');
+
+        const wrapper = mount(FilterDialog, {
+            attachTo: document.body,
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: false,
+                'onUpdate:open': () => {},
+            },
+            slots: { default: '<input id="first-field" />' },
+        });
+
+        await wrapper.setProps({ open: true });
+        await nextTick();
+        await wrapper.setProps({ open: false });
+
+        expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
 
         wrapper.unmount();
         outsideButton.remove();

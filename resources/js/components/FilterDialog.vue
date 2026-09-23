@@ -64,7 +64,11 @@ watch(open, async (isOpen) => {
         );
         (firstInContent ?? closeButtonRef.value)?.focus();
     } else {
-        previouslyFocused?.focus();
+        // preventScroll: closing the dialog shouldn't snap the page back to
+        // wherever the trigger button sits — e.g. the cell-highlight filter
+        // dialog can scroll the page to a matching cell while it's open
+        // (see Rows/Show.vue), and restoring focus must not undo that.
+        previouslyFocused?.focus({ preventScroll: true });
         previouslyFocused = null;
     }
 });
