@@ -93,7 +93,7 @@ class ProductController extends Controller
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
-                    'row_id', 'column_number', 'state', 'expired', 'expires_within_days', 'inactive', 'product_id',
+                    'state', 'expired', 'expires_within_days', 'inactive', 'product_id',
                     'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                     'sort_by', 'sort_direction',
                 ]),
@@ -157,16 +157,14 @@ class ProductController extends Controller
     }
 
     /**
-     * Whether any occupancy filter (row/column/state/expired/expiring) is
-     * active — used to gate both {@see occupancyExistsSubquery()}, which
-     * restricts which products appear at all, and the frontend's shared
-     * `occupancy` column-filter indicator.
+     * Whether any occupancy filter (state/expired/expiring) is active — used
+     * to gate both {@see occupancyExistsSubquery()}, which restricts which
+     * products appear at all, and the frontend's shared `occupancy`
+     * column-filter indicator.
      */
     private function occupancyFiltersActive(Request $request): bool
     {
-        return $request->filled('row_id')
-            || $request->filled('column_number')
-            || $request->filled('state')
+        return $request->filled('state')
             || $request->filled('expired')
             || $request->filled('expires_within_days');
     }
@@ -174,13 +172,13 @@ class ProductController extends Controller
     /**
      * A correlated existence check for whether the product on each outer row
      * has at least one pallet matching the active occupancy filters
-     * (row/column/state/expired/expiring). Applied to the base product query
-     * so that, e.g., filtering by `state=full` only returns products that
-     * actually have a full pallet — unlike {@see occupancyCountSubquery()},
-     * which only feeds the displayed per-column counts and never restricts
-     * which products appear. Deliberately does not force a specific
-     * `CellState` the way that method does per column: this check means
-     * "matches everything the user filtered by," not "matches one column."
+     * (state/expired/expiring). Applied to the base product query so that,
+     * e.g., filtering by `state=full` only returns products that actually
+     * have a full pallet — unlike {@see occupancyCountSubquery()}, which
+     * only feeds the displayed per-column counts and never restricts which
+     * products appear. Deliberately does not force a specific `CellState`
+     * the way that method does per column: this check means "matches
+     * everything the user filtered by," not "matches one column."
      *
      * @return Builder<Pallet>
      */
@@ -198,8 +196,8 @@ class ProductController extends Controller
 
     /**
      * A correlated count of the currently-occupied cells matching the
-     * occupancy filters (row/column/state/expiration) for the product on
-     * each outer row — added as a scalar subquery select, the same idiom
+     * occupancy filters (state/expiration) for the product on each outer
+     * row — added as a scalar subquery select, the same idiom
      * `CellStatusLog::sorted()` uses to sort by a related pallet's column.
      *
      * `$forcedState` fixes the cell state a particular column counts
@@ -227,7 +225,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Filters a cells-table query by row/column/state. Deliberately typed as
+     * Filters a cells-table query by state. Deliberately typed as
      * `Builder<Model>` rather than `Builder<Cell>`: both call sites reach
      * this via a `whereHas('cell', ...)` relation closure, and Larastan
      * cannot trace the relation's target model through a query builder that
@@ -239,10 +237,7 @@ class ProductController extends Controller
      */
     private function applyOccupancyCellFilters(Builder $query, Request $request): void
     {
-        $query
-            ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
-            ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')))
-            ->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->string('state')->value()));
+        $query->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->string('state')->value()));
     }
 
     /**
@@ -257,7 +252,7 @@ class ProductController extends Controller
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
             ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
             ->when(
-                $request->filled('row_id') || $request->filled('column_number') || $request->filled('state'),
+                $request->filled('state'),
                 fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                     $this->applyOccupancyCellFilters($cellQuery, $request);
                 }),

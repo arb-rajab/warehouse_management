@@ -5,7 +5,6 @@ namespace App\Http\Requests\Admin;
 use App\Http\Requests\Concerns\FiltersByDateRange;
 use App\Http\Requests\Concerns\FiltersByLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
-use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\FiltersByUserIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
@@ -19,7 +18,6 @@ class FilterProductsRequest extends FormRequest
     use FiltersByDateRange;
     use FiltersByLogAction;
     use FiltersByProductIds;
-    use FiltersByRowAndColumn;
     use FiltersByUserIds;
     use FiltersPerPage;
     use NormalizesBooleanFilters;
@@ -40,7 +38,6 @@ class FilterProductsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            ...$this->rowAndColumnFilterRules(),
             // No `empty` option here (unlike the cells map) — an empty cell
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
