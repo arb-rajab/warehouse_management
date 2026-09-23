@@ -33,23 +33,23 @@ test('the dashboard shows expired and per-window expiring-soon pallet counts, ex
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.expiring.expired', 1)
             ->has('stats.expiring.windows', 4)
-            ->where('stats.expiring.windows.0.days', 7)
-            ->where('stats.expiring.windows.0.until', '2026-08-20')
+            ->where('stats.expiring.windows.0.months', 1)
+            ->where('stats.expiring.windows.0.until', '2026-09-13')
             ->where('stats.expiring.windows.0.count', 1)
-            ->where('stats.expiring.windows.2.days', 30)
-            ->where('stats.expiring.windows.2.until', '2026-09-12')
+            ->where('stats.expiring.windows.2.months', 4)
+            ->where('stats.expiring.windows.2.until', '2026-12-13')
             ->where('stats.expiring.windows.2.count', 2)
     );
 
     Carbon::setTestNow();
 });
 
-test('the 7-day window includes a pallet expiring exactly 7 days out and excludes one expiring 8 days out', function () {
+test('the 1-month window includes a pallet expiring exactly 1 month out and excludes one expiring a day later', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
-    Pallet::factory()->create(['expiration_date' => '2026-08-20']);
-    Pallet::factory()->create(['expiration_date' => '2026-08-21']);
+    Pallet::factory()->create(['expiration_date' => '2026-09-13']);
+    Pallet::factory()->create(['expiration_date' => '2026-09-14']);
 
     $response = $this->get('/admin');
 
@@ -60,7 +60,7 @@ test('the 7-day window includes a pallet expiring exactly 7 days out and exclude
     Carbon::setTestNow();
 });
 
-test('the expired count excludes a pallet expiring today, but the 7-day window includes it', function () {
+test('the expired count excludes a pallet expiring today, but the 1-month window includes it', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
@@ -103,7 +103,7 @@ test('a caller-chosen expiring_days widens or narrows the custom expiring-soon w
         fn (Assert $page) => $page->where('stats.expiring.custom.days', 7)
             ->where('stats.expiring.custom.until', '2026-08-20')
             ->where('stats.expiring.custom.count', 0)
-            ->where('stats.expiring.windows.0.days', 7)
+            ->where('stats.expiring.windows.0.months', 1)
     );
 
     $wide = $this->get('/admin?expiring_days=30');
@@ -116,7 +116,7 @@ test('a caller-chosen expiring_days widens or narrows the custom expiring-soon w
     Carbon::setTestNow();
 });
 
-test('the custom expiring-soon window defaults to 45 days, distinct from the 7-day fixed window', function () {
+test('the custom expiring-soon window defaults to 45 days, distinct from the 1-month fixed window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 

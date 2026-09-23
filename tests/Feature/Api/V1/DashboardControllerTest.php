@@ -34,13 +34,15 @@ test('the mobile dashboard shows expired and per-window expiring-soon pallet cou
     expect($response->json('stats.expiring.expired'))->toBe(1);
     expect($response->json('stats.expiring.windows'))->toHaveCount(4);
     expect($response->json('stats.expiring.windows.0'))->toEqual([
-        'days' => 7,
-        'until' => '2026-08-20',
+        'months' => 1,
+        'days' => 31,
+        'until' => '2026-09-13',
         'count' => 1,
     ]);
     expect($response->json('stats.expiring.windows.2'))->toEqual([
-        'days' => 30,
-        'until' => '2026-09-12',
+        'months' => 4,
+        'days' => 122,
+        'until' => '2026-12-13',
         'count' => 2,
     ]);
 

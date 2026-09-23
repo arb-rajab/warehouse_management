@@ -61,10 +61,10 @@ const stats = {
     expiring: {
         expired: 2,
         windows: [
-            { days: 7, until: '2026-08-20', count: 4 },
-            { days: 14, until: '2026-08-27', count: 6 },
-            { days: 30, until: '2026-09-12', count: 9 },
-            { days: 60, until: '2026-10-12', count: 11 },
+            { months: 1, days: 31, until: '2026-09-13', count: 4 },
+            { months: 2, days: 61, until: '2026-10-13', count: 6 },
+            { months: 4, days: 122, until: '2026-12-13', count: 9 },
+            { months: 6, days: 184, until: '2027-02-13', count: 11 },
         ],
         custom: { days: 45, until: '2026-09-27', count: 8 },
     },
@@ -210,7 +210,7 @@ describe('Dashboard Index', () => {
         for (const window of stats.expiring.windows) {
             const tile = tileByLabelAndQuery(
                 wrapper,
-                t('dashboard.expiring.soon', { days: window.days }),
+                t('dashboard.expiring.soonMonths', { months: window.months }),
                 { expires_within_days: window.days },
             );
             expect(tile?.props('value')).toBe(window.count);

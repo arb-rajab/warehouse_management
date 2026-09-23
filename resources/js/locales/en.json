@@ -460,7 +460,8 @@
         "expiring": {
             "title": "Expiring pallets",
             "expired": "Expired",
-            "soon": "Expiring within {days} days"
+            "soon": "Expiring within {days} days",
+            "soonMonths": "Expiring within {months} month(s)"
         },
         "activityToday": {
             "title": "Today's activity"
