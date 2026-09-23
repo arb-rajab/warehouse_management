@@ -152,8 +152,8 @@
             "submitting": "جارٍ الحفظ..."
         },
         "fields": {
-            "qrCodeWidth": "عرض رمز QR (بكسل)",
-            "qrCodeHeight": "ارتفاع رمز QR (بكسل)"
+            "qrCodeWidth": "عرض رمز QR (سم)",
+            "qrCodeHeight": "ارتفاع رمز QR (سم)"
         }
     },
     "cellLog": {

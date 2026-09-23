@@ -152,8 +152,8 @@
             "submitting": "Saving..."
         },
         "fields": {
-            "qrCodeWidth": "QR code width (px)",
-            "qrCodeHeight": "QR code height (px)"
+            "qrCodeWidth": "QR code width (cm)",
+            "qrCodeHeight": "QR code height (cm)"
         }
     },
     "cellLog": {
