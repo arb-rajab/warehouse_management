@@ -19,11 +19,12 @@ const props = withDefaults(
         cell: Cell | null;
         label: string;
         highlighted: boolean;
+        dimmed?: boolean;
         pulsing?: boolean;
         toggleable?: boolean;
         manageable?: boolean;
     }>(),
-    { pulsing: false, toggleable: false, manageable: false },
+    { dimmed: false, pulsing: false, toggleable: false, manageable: false },
 );
 
 const emit = defineEmits<{
@@ -43,6 +44,20 @@ const borderClass = computed(() => {
     return props.cell.is_active
         ? `border ${CELL_STATE_COLOR[props.cell.state].borderClass}`
         : 'border-2 border-red-500 dark:border-red-600';
+});
+
+/**
+ * An inactive cell already reads as de-emphasized via its own opacity, so a
+ * non-matching highlight filter doesn't pile a second, weaker opacity on top
+ * of it — it would just look identical to the inactive-only case while
+ * fighting the same CSS property.
+ */
+const fadeClass = computed(() => {
+    if (props.cell && !props.cell.is_active) {
+        return 'opacity-60';
+    }
+
+    return props.dimmed ? 'opacity-40 grayscale' : '';
 });
 
 const toggleActiveLabel = computed(() =>
@@ -72,7 +87,7 @@ function onManagePallet(): void {
         :class="[
             cell ? CELL_STATE_COLOR[cell.state].backgroundClass : '',
             borderClass,
-            cell && !cell.is_active ? 'opacity-60' : '',
+            fadeClass,
             highlighted
                 ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-neutral-950'
                 : '',

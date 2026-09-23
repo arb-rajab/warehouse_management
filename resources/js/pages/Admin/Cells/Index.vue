@@ -40,6 +40,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
+    isCellDimmedByHighlight,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
@@ -109,6 +110,10 @@ function highlighted(cell: CellWithLocation | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
 }
 
+function dimmed(cell: CellWithLocation | null): boolean {
+    return isCellDimmedByHighlight(cell, highlightFilters, props.today);
+}
+
 const hasActiveHighlight = computed(
     () => countActiveCellHighlightFilters(highlightFilters) > 0,
 );
@@ -174,7 +179,19 @@ const orderedMatches = computed(() =>
 
 const focusedMatchIndex = ref<number | null>(null);
 
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * (in `orderedMatches` order) instead of leaving the admin to hunt for one
+ * via the next/previous-match buttons — falls back to clearing focus when
+ * the new filters match nothing.
+ */
 watch(highlightFilters, () => {
+    if (orderedMatches.value.length > 0) {
+        focusMatchAt(0);
+
+        return;
+    }
+
     focusedMatchIndex.value = null;
 });
 
@@ -525,6 +542,11 @@ const map3DBands = computed<CellMap3DBand[]>(() => {
             state: sample.state,
             isActive: sample.is_active,
             highlighted: matchesCellHighlight(
+                sample,
+                highlightFilters,
+                props.today,
+            ),
+            dimmed: isCellDimmedByHighlight(
                 sample,
                 highlightFilters,
                 props.today,
@@ -996,6 +1018,7 @@ watch(
                                         :cell="item.cell"
                                         :label="item.label"
                                         :highlighted="highlighted(item.cell)"
+                                        :dimmed="dimmed(item.cell)"
                                         :pulsing="pulsingLabel === item.label"
                                         toggleable
                                         manageable

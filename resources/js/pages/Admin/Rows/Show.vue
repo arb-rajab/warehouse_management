@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
@@ -12,6 +12,7 @@ import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     emptyCellHighlightFilters,
+    isCellDimmedByHighlight,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
@@ -35,6 +36,10 @@ const highlightFilters = reactive(emptyCellHighlightFilters());
 
 function highlighted(cell: Cell | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
+}
+
+function dimmed(cell: Cell | null): boolean {
+    return isCellDimmedByHighlight(cell, highlightFilters, props.today);
 }
 
 const grid = computed(() => {
@@ -71,6 +76,52 @@ const toggleActiveLabel = ref('');
 function slotLabel(cellIndex: number, flatNumber: number): string {
     return formatSlot(props.row.letter, cellIndex + 1, flatNumber);
 }
+
+/**
+ * The label of the first cell matching the active highlight filters, in the
+ * same order the grid renders them (left to right by cell number, then top
+ * to bottom within a column) — what applying a filter jumps to.
+ */
+function firstHighlightMatchLabel(): string | null {
+    for (const [cellIndex, column] of grid.value.entries()) {
+        for (const entry of column) {
+            if (highlighted(entry.cell)) {
+                return slotLabel(cellIndex, entry.flatNumber);
+            }
+        }
+    }
+
+    return null;
+}
+
+const pulsingLabel = ref<string | null>(null);
+let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * instead of leaving the admin to scroll the grid manually — this page has
+ * no camera/viewport to recenter (unlike the Cells map), so "jump" here
+ * means scrolling the matching slot into view and briefly pulsing it.
+ */
+watch(highlightFilters, () => {
+    const label = firstHighlightMatchLabel();
+
+    if (!label) {
+        return;
+    }
+
+    pulsingLabel.value = label;
+    document.querySelector(`[data-slot-label="${label}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+    });
+
+    clearTimeout(pulseTimeout);
+    pulseTimeout = setTimeout(() => {
+        pulsingLabel.value = null;
+    }, 1500);
+});
 
 function openToggleActiveDialog(cell: Cell | null, label: string): void {
     if (!cell) {
@@ -163,6 +214,11 @@ const palletActionError = computed(
                             :cell="entry.cell"
                             :label="slotLabel(cellIndex, entry.flatNumber)"
                             :highlighted="highlighted(entry.cell)"
+                            :dimmed="dimmed(entry.cell)"
+                            :pulsing="
+                                pulsingLabel ===
+                                slotLabel(cellIndex, entry.flatNumber)
+                            "
                             toggleable
                             manageable
                             @toggle-active="

@@ -95,3 +95,20 @@ export function matchesCellHighlight(
 
     return true;
 }
+
+/**
+ * Whether a cell should be de-emphasized because a highlight filter is
+ * active and this cell doesn't match it — lets callers grey out non-matches
+ * instead of leaving every cell rendered identically once a filter is
+ * applied. Always false when no filter is active at all.
+ */
+export function isCellDimmedByHighlight(
+    cell: MatchableCell | null,
+    filters: CellHighlightFiltersValue,
+    today: string,
+): boolean {
+    return (
+        countActiveCellHighlightFilters(filters) > 0 &&
+        !matchesCellHighlight(cell, filters, today)
+    );
+}

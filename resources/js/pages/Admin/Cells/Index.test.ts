@@ -610,6 +610,60 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('automatically jumps to the first match when a highlight filter is applied, without clicking next', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 2 }),
+                }),
+            ],
+            {
+                cellHighlightSamples: [
+                    highlightSample({
+                        row_letter: 'A',
+                        cell_number: 1,
+                        flat_number: 1,
+                        state: 'full',
+                        pallet: pallet({ product_id: 1 }),
+                    }),
+                    highlightSample({
+                        row_letter: 'A',
+                        cell_number: 2,
+                        flat_number: 1,
+                        state: 'full',
+                        pallet: pallet({ product_id: 2 }),
+                    }),
+                ],
+            },
+        );
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+        await flushPromises();
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 1, total: 1 }),
+        );
+    });
+
     it('reloads onto the matching flat when the next match is on a different flat, keeping the highlight filters in the query', async () => {
         const seed: CellHighlightSeed = {
             state: 'full',
@@ -946,6 +1000,52 @@ describe('Cells Index (warehouse map)', () => {
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
             'ring-blue-500',
+        );
+    });
+
+    it('greys out cells not matching the active highlight filter, leaving matches undimmed', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 2 }),
+                }),
+            ],
+        );
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+            'opacity-40',
+        );
+    });
+
+    it('does not grey out any cell when no highlight filter is active', () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [cell({ row_letter: 'A', cell_number: 1, flat_number: 1 })],
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
         );
     });
 
@@ -1442,6 +1542,7 @@ describe('Cells Index (warehouse map)', () => {
                             state: 'full',
                             isActive: true,
                             highlighted: true,
+                            dimmed: false,
                             pulsing: false,
                             pallet: null,
                         },
@@ -1452,6 +1553,7 @@ describe('Cells Index (warehouse map)', () => {
                             state: 'empty',
                             isActive: true,
                             highlighted: false,
+                            dimmed: true,
                             pulsing: false,
                             pallet: null,
                         },
