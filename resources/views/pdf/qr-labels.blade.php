@@ -12,20 +12,21 @@
             }
         @endif
 
+        @page {
+            size: {{ $qrWidth }}px {{ $qrHeight }}px;
+            margin: 0;
+        }
+
         body {
             margin: 0;
             font-family: sans-serif;
         }
 
         .label {
-            display: inline-block;
-            width: 30%;
+            width: 100%;
             box-sizing: border-box;
-            margin: 1%;
             padding: 8px;
             text-align: center;
-            vertical-align: top;
-            border: 1px dashed #999;
         }
 
         .label img {
@@ -56,7 +57,7 @@
 </head>
 <body>
     @foreach ($labels as $entry)
-        <div class="label">
+        <div class="label" @unless ($loop->last) style="page-break-after: always;" @endunless>
             <img src="{{ $entry['qrImage'] }}" width="{{ $qrWidth }}" height="{{ $qrHeight }}" alt="{{ $entry['label'] }}">
             <div class="location">{{ $entry['label'] }}</div>
             <div class="description">{{ $entry['description'] }}</div>
