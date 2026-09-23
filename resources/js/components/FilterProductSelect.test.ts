@@ -479,6 +479,25 @@ describe('FilterProductSelect', () => {
         expect(names).toEqual(['Widgets', 'Gadgets']);
     });
 
+    it('separates each option row from the next with a divider', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+        expect(options[0].element.parentElement?.className).toContain(
+            'divide-y',
+        );
+    });
+
     it('does not duplicate a selected product that also appears in the current search results', async () => {
         const wrapper = mountSelect({
             selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
