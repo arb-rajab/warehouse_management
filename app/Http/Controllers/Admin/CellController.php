@@ -14,6 +14,8 @@ use App\Models\CellStatusLog;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +39,26 @@ class CellController extends Controller
         $flatNumber = $matchedCell !== null
             ? $matchedCell->flat_number
             : min(max($request->integer('flat_number', 1), 1), max($maxFlatNumber, 1));
+
+        $hasHighlightFilter = $request->filled('state')
+            || $request->filled('is_active')
+            || $request->boolean('expired')
+            || $request->filled('expires_within_days')
+            || $request->filled('stale_after_days')
+            || $request->productIds() !== null;
+
+        // Only for a bare deep-link (no flat_number, no search) — a flat the
+        // client itself navigated to (every in-page flat switch/search always
+        // sends flat_number, see .ai/rules/lib.md) is left exactly where the
+        // admin put it, even if the active filter matches nothing there.
+        if ($matchedCell === null && ! $request->filled('flat_number') && $hasHighlightFilter) {
+            $firstMatch = $this->firstHighlightMatch($request, $today);
+
+            if ($firstMatch !== null) {
+                $matchedCell = $firstMatch;
+                $flatNumber = $firstMatch->flat_number;
+            }
+        }
 
         $cells = Cell::query()
             ->select(Cell::SELECT_COLUMNS)
@@ -168,6 +190,76 @@ class CellController extends Controller
                 ],
             ])
             ->all();
+    }
+
+    /**
+     * The first cell matching the request's highlight-filter query params, in
+     * the same row-letter -> cell-number -> flat-number order the client's
+     * `orderedMatches` (Cells/Index.vue) jumps through — used only to pick
+     * which flat a highlight-filtered deep-link with no `flat_number` (e.g. a
+     * dashboard tile) should land on, so the first response already shows a
+     * match instead of the client needing a second `router.get` once it
+     * notices the landing flat has none.
+     *
+     * This is a deliberate, narrow exception to "highlight matching stays
+     * client-side" (see .ai/rules/lib.md and controllers-admin.md): the ring
+     * highlighting, per-flat match-count badges, and dashboard counts still
+     * only ever come from the client's `matchesCellHighlight()`/
+     * `cellStatus.ts`. This method exists solely to resolve the *initial*
+     * `flat_number` in one request, and its conditions must stay in lockstep
+     * with `matchesCellHighlight()`/`isCellExpired()`/
+     * `isCellExpiringWithin()`/`isCellStale()` if either side's semantics
+     * change.
+     */
+    private function firstHighlightMatch(ShowCellMapRequest $request, CarbonImmutable $today): ?Cell
+    {
+        $query = Cell::query()->with('row:id,letter');
+
+        if ($state = $request->string('state')->value()) {
+            $query->where('state', $state);
+        }
+
+        if ($request->filled('is_active') && ! $request->boolean('is_active')) {
+            $query->where('is_active', false);
+        }
+
+        $productIds = $request->productIds();
+
+        if (
+            $request->boolean('expired')
+            || $request->filled('expires_within_days')
+            || $request->filled('stale_after_days')
+            || $productIds !== null
+        ) {
+            $query->whereHas('pallet', function (Builder $pallet) use ($request, $today, $productIds): void {
+                if ($request->boolean('expired')) {
+                    $pallet->where('expiration_date', '<', $today);
+                }
+
+                if ($request->filled('expires_within_days')) {
+                    $pallet->whereBetween('expiration_date', [
+                        $today,
+                        $today->copy()->addDays($request->integer('expires_within_days')),
+                    ]);
+                }
+
+                if ($request->filled('stale_after_days')) {
+                    $pallet->where('created_at', '<=', $today->copy()->subDays($request->integer('stale_after_days')));
+                }
+
+                if ($productIds !== null) {
+                    $pallet->whereIn('product_id', $productIds);
+                }
+            });
+        }
+
+        return $query->get()
+            ->sortBy([
+                ['row.letter', 'asc'],
+                ['cell_number', 'asc'],
+                ['flat_number', 'asc'],
+            ])
+            ->first();
     }
 
     /**
