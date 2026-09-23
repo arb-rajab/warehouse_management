@@ -116,7 +116,7 @@ test('a caller-chosen expiring_days widens or narrows the custom expiring-soon w
     Carbon::setTestNow();
 });
 
-test('the custom expiring-soon window defaults to 45 days, distinct from the 7-day fixed window', function () {
+test('the custom expiring-soon window defaults to 45 days, distinct from the 1-month fixed window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 

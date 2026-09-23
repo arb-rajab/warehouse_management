@@ -27,8 +27,8 @@ trait BuildsDashboardStats
     private const array EXPIRING_WINDOW_MONTHS = [1, 2, 4, 6];
 
     /**
-     * The custom card's default day count — distinct from the 7-day fixed card already in
-     * EXPIRING_WINDOW_DAYS. Defined on ExpiringSoonDefaults (not here) so
+     * The custom card's default day count — distinct from the 1-month fixed card already in
+     * EXPIRING_WINDOW_MONTHS. Defined on ExpiringSoonDefaults (not here) so
      * Admin\ProductController's "expiring soon" column can share it without using this trait.
      */
     public const int DEFAULT_CUSTOM_EXPIRING_DAYS = ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
@@ -130,7 +130,7 @@ trait BuildsDashboardStats
 
         return [
             'months' => $months,
-            'days' => $today->diffInDays($until),
+            'days' => (int) $today->diffInDays($until),
             ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
         ];
     }
