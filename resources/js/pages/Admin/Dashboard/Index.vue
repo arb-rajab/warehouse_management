@@ -32,7 +32,14 @@ import {
 import { t } from '@/lib/i18n';
 import type { ProductFilterOptions } from '@/types/admin';
 
-interface ExpiringWindow {
+interface ExpiringMonthWindow {
+    months: number;
+    days: number;
+    until: string;
+    count: number;
+}
+
+interface ExpiringDayWindow {
     days: number;
     until: string;
     count: number;
@@ -43,8 +50,8 @@ const props = defineProps<{
         occupancy: { empty: number; full: number; opened: number };
         expiring: {
             expired: number;
-            windows: ExpiringWindow[];
-            custom: ExpiringWindow;
+            windows: ExpiringMonthWindow[];
+            custom: ExpiringDayWindow;
         };
         activity_today: {
             stored: number;
@@ -191,8 +198,12 @@ function onProductIdsChange(ids: string[]): void {
                 />
                 <DashboardStatTile
                     v-for="window in props.stats.expiring.windows"
-                    :key="window.days"
-                    :label="t('dashboard.expiring.soon', { days: window.days })"
+                    :key="window.months"
+                    :label="
+                        t('dashboard.expiring.soonMonths', {
+                            months: window.months,
+                        })
+                    "
                     :value="window.count"
                     :href="cellsIndex().url"
                     :query="{

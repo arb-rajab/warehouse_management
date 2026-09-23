@@ -24,7 +24,7 @@ trait BuildsDashboardStats
      *
      * @var list<int>
      */
-    private const array EXPIRING_WINDOW_DAYS = [7, 14, 30, 60];
+    private const array EXPIRING_WINDOW_MONTHS = [1, 2, 4, 6];
 
     /**
      * The custom card's default day count — distinct from the 7-day fixed card already in
@@ -37,14 +37,14 @@ trait BuildsDashboardStats
      * @param  list<int>|null  $productIds
      * @return array{
      *     occupancy: array{empty: int, full: int, opened: int},
-     *     expiring: array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
      *
      * @scramble-return array{
      *     occupancy: array{empty: int, full: int, opened: int},
-     *     expiring: array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -100,7 +100,7 @@ trait BuildsDashboardStats
 
     /**
      * @param  list<int>|null  $productIds
-     * @return array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}}
+     * @return array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}}
      */
     private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?bool $productPublished = null): array
     {
@@ -110,25 +110,57 @@ trait BuildsDashboardStats
         return [
             'expired' => $expired->count(),
             'windows' => array_map(
-                fn (int $days) => $this->expiringWindow($today, $days, $productIds, $productPublished),
-                self::EXPIRING_WINDOW_DAYS,
+                fn (int $months) => $this->expiringMonthWindow($today, $months, $productIds, $productPublished),
+                self::EXPIRING_WINDOW_MONTHS,
             ),
-            'custom' => $this->expiringWindow($today, $customDays, $productIds, $productPublished),
+            'custom' => $this->expiringDayWindow($today, $customDays, $productIds, $productPublished),
+        ];
+    }
+
+    /**
+     * A fixed expiring-soon window expressed in calendar months (`addMonths`, not `addDays($months * 30)`,
+     * so `until` lands on the correct calendar date regardless of month length).
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{months: int, days: int, until: string, count: int}
+     */
+    private function expiringMonthWindow(CarbonImmutable $today, int $months, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $until = $today->copy()->addMonths($months);
+
+        return [
+            'months' => $months,
+            'days' => $today->diffInDays($until),
+            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
+        ];
+    }
+
+    /**
+     * The caller-adjustable custom expiring-soon window, expressed in days.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{days: int, until: string, count: int}
+     */
+    private function expiringDayWindow(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $until = $today->copy()->addDays($days);
+
+        return [
+            'days' => $days,
+            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
         ];
     }
 
     /**
      * @param  list<int>|null  $productIds
-     * @return array{days: int, until: string, count: int}
+     * @return array{until: string, count: int}
      */
-    private function expiringWindow(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    private function expiringWindowCounts(CarbonImmutable $today, CarbonImmutable $until, ?array $productIds, ?bool $productPublished): array
     {
-        $until = $today->copy()->addDays($days);
         $query = Pallet::query()->whereBetween('expiration_date', [$today, $until]);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
-            'days' => $days,
             'until' => $until->toDateString(),
             'count' => $query->count(),
         ];

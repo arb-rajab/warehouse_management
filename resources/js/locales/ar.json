@@ -460,7 +460,8 @@
         "expiring": {
             "title": "المنصات القريبة من الانتهاء",
             "expired": "منتهية الصلاحية",
-            "soon": "تنتهي خلال {days} أيام"
+            "soon": "تنتهي خلال {days} أيام",
+            "soonMonths": "تنتهي خلال {months} شهر"
         },
         "activityToday": {
             "title": "نشاط اليوم"

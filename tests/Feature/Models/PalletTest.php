@@ -52,7 +52,7 @@ test('the factory default expiration_date has no time component', function () {
     // must format it down to a bare date, or the raw stored value carries
     // that random time — which SQLite (unlike MySQL's DATE column) keeps
     // verbatim, breaking `expiration_date <= $until` boundary comparisons
-    // like BuildsDashboardStats::expiringWindow()'s.
+    // like BuildsDashboardStats::expiringWindowCounts()'s.
     $pallet = Pallet::factory()->create();
 
     $raw = DB::table('pallets')->where('id', $pallet->id)->value('expiration_date');

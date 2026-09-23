@@ -256,8 +256,8 @@ trait SeedsCellStatusLogFixtures
     public function seedExpiringWindowsFixture(): void
     {
         Pallet::factory()->create(['expiration_date' => '2026-08-12']);
-        Pallet::factory()->create(['expiration_date' => '2026-08-16']);
-        Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+        Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+        Pallet::factory()->create(['expiration_date' => '2026-11-01']);
     }
 
     public function seedCustomExpiringWindowFixture(): void
