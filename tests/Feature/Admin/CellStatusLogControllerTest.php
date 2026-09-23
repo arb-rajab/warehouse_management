@@ -374,11 +374,29 @@ test('the cell log can be filtered by row, excluding entries for other rows', fu
     actingAsAdmin();
     ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
-    $response = $this->get("/admin/cell-logs?row_id={$row->id}");
+    $response = $this->get("/admin/cell-logs?row_id[]={$row->id}");
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by multiple rows at once, excluding entries for the remaining row', function () {
+    actingAsAdmin();
+    [
+        'rowA' => $rowA,
+        'rowB' => $rowB,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleRowFilterFixture();
+
+    $response = $this->get("/admin/cell-logs?row_id[]={$rowA->id}&row_id[]={$rowB->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $matchingB->id)
+            ->where('logs.data.1.id', $matchingA->id)
     );
 });
 

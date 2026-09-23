@@ -84,6 +84,22 @@ trait SeedsCellStatusLogFixtures
     }
 
     /**
+     * @return array{rowA: Row, rowB: Row, matchingA: CellStatusLog, matchingB: CellStatusLog}
+     */
+    public function seedMultipleRowFilterFixture(): array
+    {
+        $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+        $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+        $thirdRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+        $matchingA = CellStatusLog::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+        $matchingB = CellStatusLog::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+        CellStatusLog::factory()->create(['cell_id' => $thirdRow->cells()->first()->id]);
+
+        return compact('rowA', 'rowB', 'matchingA', 'matchingB');
+    }
+
+    /**
      * @return array{matching: CellStatusLog}
      */
     public function seedColumnFilterFixture(): array

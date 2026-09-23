@@ -285,7 +285,7 @@ export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
 export interface CellStatusLogFilters {
     product_id?: number[];
     pallet_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     user_id?: number[];
     action?: CellLogAction[];
@@ -407,7 +407,7 @@ export interface CellVerificationRoundFilterOptions {
  */
 export interface CellVerificationReportFilters {
     cell_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     product_id?: number[];
     is_correct?: boolean;

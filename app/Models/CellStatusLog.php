@@ -271,7 +271,7 @@ class CellStatusLog extends Model
             }))
             ->when($request->filled('row_id') || $request->filled('column_number'), fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $cellQuery
-                    ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
+                    ->when($request->filled('row_id'), fn (Builder $q) => $q->whereIn('row_id', array_map('intval', $request->array('row_id'))))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
             }))
             ->when($request->boolean('flagged'), fn (Builder $q) => $q->whereHas('flags'));

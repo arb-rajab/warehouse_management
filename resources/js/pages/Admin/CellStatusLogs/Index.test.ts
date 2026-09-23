@@ -254,7 +254,7 @@ describe('CellStatusLogs Index', () => {
     });
 
     it('marks the cell column active when a row filter is applied', () => {
-        const wrapper = mountPage([], { row_id: 1 });
+        const wrapper = mountPage([], { row_id: [1] });
 
         expect(isColumnActive(wrapper, t('cellLog.columns.cell'))).toBe(true);
     });
@@ -350,12 +350,13 @@ describe('CellStatusLogs Index', () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
 
+        await wrapper.get('#filter-row').trigger('click');
         expect(
             wrapper
-                .get('#filter-row')
-                .findAll('option')
+                .get('[role="listbox"]')
+                .findAll('[role="option"]')
                 .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'A', 'B']);
+        ).toEqual(['A', 'B']);
         expect(
             wrapper
                 .get('#filter-column')
