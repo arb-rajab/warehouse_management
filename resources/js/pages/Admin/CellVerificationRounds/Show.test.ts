@@ -301,7 +301,7 @@ describe('CellVerificationRounds Show', () => {
 
     it('shows a filter count badge for each distinct active filter', () => {
         const wrapper = mountPage(cellVerificationRound(), [], {
-            row_id: 1,
+            row_id: [1],
             product_id: [10],
             is_correct: false,
             date_from: '2026-08-01',
@@ -321,12 +321,13 @@ describe('CellVerificationRounds Show', () => {
         const wrapper = mountPage(cellVerificationRound(), []);
         await openFilters(wrapper);
 
+        await wrapper.get('#filter-row').trigger('click');
         expect(
             wrapper
-                .get('#filter-row')
-                .findAll('option')
+                .get('[role="listbox"]')
+                .findAll('[role="option"]')
                 .map((o) => o.text()),
-        ).toEqual([t('cellVerificationReport.filters.all'), 'A', 'B']);
+        ).toEqual(['A', 'B']);
         expect(
             wrapper
                 .get('#filter-column')
@@ -488,7 +489,8 @@ describe('CellVerificationRounds Show', () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), []);
         await openFilters(wrapper);
 
-        await wrapper.get('#filter-row').setValue('1');
+        await wrapper.get('#filter-row').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
         await wrapper.get('#filter-column').setValue('2');
         await wrapper.get('#filter-correctness').setValue('true');
         await wrapper.get('#filter-date-from').setValue('2026-08-01');
@@ -498,7 +500,7 @@ describe('CellVerificationRounds Show', () => {
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/cell-verification-rounds/42',
             expect.objectContaining({
-                row_id: 1,
+                row_id: ['1'],
                 column_number: 2,
                 is_correct: true,
                 date_from: '2026-08-01',
@@ -565,7 +567,7 @@ describe('CellVerificationRounds Show', () => {
 
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), [], {
-            row_id: 1,
+            row_id: [1],
             product_id: [10],
             is_correct: true,
             date_from: '2026-08-01',
@@ -586,9 +588,9 @@ describe('CellVerificationRounds Show', () => {
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
-        expect(
-            (wrapper.get('#filter-row').element as HTMLSelectElement).value,
-        ).toBe('');
+        expect(wrapper.get('#filter-row').text()).toBe(
+            t('cellVerificationReport.filters.all'),
+        );
         expect(wrapper.get('#filter-product').text()).toBe(
             t('cellVerificationReport.filters.all'),
         );

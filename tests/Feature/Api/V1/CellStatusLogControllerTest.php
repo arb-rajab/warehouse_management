@@ -386,11 +386,27 @@ test('the cell log listing can be filtered by row, excluding entries for other r
     actingAsMobileUser();
     ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
-    $response = $this->getJson("/api/v1/cell-logs?row_id={$row->id}");
+    $response = $this->getJson("/api/v1/cell-logs?row_id[]={$row->id}");
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the cell log listing can be filtered by multiple rows at once, excluding entries for the remaining row', function () {
+    actingAsMobileUser();
+    [
+        'rowA' => $rowA,
+        'rowB' => $rowB,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleRowFilterFixture();
+
+    $response = $this->getJson("/api/v1/cell-logs?row_id[]={$rowA->id}&row_id[]={$rowB->id}");
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+    expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$matchingB->id, $matchingA->id]);
 });
 
 test('the cell log listing can be filtered by column number, excluding entries for other columns', function () {

@@ -58,7 +58,7 @@ const props = defineProps<{
 
 const filters = reactive({
     cell_id: props.filters.cell_id?.toString() ?? '',
-    row_id: props.filters.row_id?.toString() ?? '',
+    row_id: (props.filters.row_id ?? []).map(String),
     column_number: props.filters.column_number?.toString() ?? '',
     product_id: (props.filters.product_id ?? []).map(String),
     is_correct:
@@ -81,7 +81,7 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
-        filters.row_id !== '' || filters.column_number !== '',
+        filters.row_id.length > 0 || filters.column_number !== '',
         filters.product_id.length > 0,
         filters.is_correct !== '',
         dateRangeActive(filters),
@@ -109,7 +109,7 @@ function applyFilters(): void {
 
 function clearFilters(): void {
     filters.cell_id = '';
-    filters.row_id = '';
+    filters.row_id = [];
     filters.column_number = '';
     filters.product_id = [];
     filters.is_correct = '';
@@ -247,7 +247,7 @@ function onPerPageChange(perPage: number): void {
                     <LocationFilterFields
                         id-prefix="filter"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
+                        v-model:row-ids="filters.row_id"
                         v-model:column-number="filters.column_number"
                         :rows="filterOptions.rows"
                         :max-column-number="filterOptions.maxColumnNumber"
