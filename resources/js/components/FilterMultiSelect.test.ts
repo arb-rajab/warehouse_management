@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import FilterMultiSelect from './FilterMultiSelect.vue';
 
@@ -65,6 +65,21 @@ describe('FilterMultiSelect', () => {
         expect(panel.findAll('input[type="checkbox"]')).toHaveLength(
             options.length,
         );
+    });
+
+    it('caps the panel width to the room available so it cannot overflow past the viewport edge it grows toward', async () => {
+        const wrapper = mountSelect([]);
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 200,
+            right: 208,
+        } as DOMRect);
+        container.style.direction = 'rtl';
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]');
+        expect(panel.attributes('style')).toContain('max-width: 192px');
     });
 
     it('checks the checkboxes matching the current selection', async () => {

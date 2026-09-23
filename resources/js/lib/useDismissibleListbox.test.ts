@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
+    usePanelMaxWidth,
 } from './useDismissibleListbox';
 
 function mountListbox(optionCount = 3) {
@@ -199,6 +200,68 @@ describe('useDismissibleListbox', () => {
         expect(document.activeElement).toBe(inputs[0]);
 
         wrapper.unmount();
+    });
+});
+
+describe('usePanelMaxWidth', () => {
+    function elementWithRect(
+        rect: Pick<DOMRect, 'left' | 'right'>,
+        direction: 'ltr' | 'rtl' = 'ltr',
+    ): HTMLElement {
+        const el = document.createElement('div');
+        el.style.direction = direction;
+        vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect as DOMRect);
+
+        return el;
+    }
+
+    it('caps at the default max-width when there is plenty of room', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const containerRef = ref(elementWithRect({ left: 100, right: 300 }));
+        const { panelMaxWidthPx, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelMaxWidthPx.value).toBe(320);
+    });
+
+    it('shrinks to the room left of a trigger under RTL, where the panel grows leftward', () => {
+        const containerRef = ref(
+            elementWithRect({ left: 200, right: 208 }, 'rtl'),
+        );
+        const { panelMaxWidthPx, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelMaxWidthPx.value).toBe(208 - 16);
+    });
+
+    it('shrinks to the room right of a trigger under LTR, where the panel grows rightward', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const containerRef = ref(elementWithRect({ left: 900, right: 950 }));
+        const { panelMaxWidthPx, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelMaxWidthPx.value).toBe(1024 - 900 - 16);
+    });
+
+    it('never goes negative when there is no room at all', () => {
+        const containerRef = ref(elementWithRect({ left: 0, right: 5 }, 'rtl'));
+        const { panelMaxWidthPx, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelMaxWidthPx.value).toBe(0);
+    });
+
+    it('leaves the max-width untouched when the container ref is not yet mounted', () => {
+        const containerRef = ref<HTMLElement | null>(null);
+        const { panelMaxWidthPx, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelMaxWidthPx.value).toBe(320);
     });
 });
 

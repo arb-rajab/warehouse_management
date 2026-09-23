@@ -7,6 +7,7 @@ import { t } from '@/lib/i18n';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
+    usePanelMaxWidth,
 } from '@/lib/useDismissibleListbox';
 import { useProductSearch } from '@/lib/useProductSearch';
 import type { ProductFilterOption } from '@/types/admin';
@@ -77,11 +78,14 @@ const { open, containerRef, setOptionRef, onOptionKeydown } =
     useDismissibleListbox(
         () => pinnedProducts.value.length + visibleResults.value.length,
     );
+const { panelMaxWidthPx, recompute: recomputePanelMaxWidth } =
+    usePanelMaxWidth(containerRef);
 
 function toggleOpen(): void {
     open.value = !open.value;
 
     if (open.value) {
+        recomputePanelMaxWidth();
         fetchFirstPageIfEmpty();
 
         nextTick(() => searchInputRef.value?.focus());
@@ -117,7 +121,8 @@ function buttonLabel(): string {
         </button>
         <div
             v-if="open"
-            class="absolute z-10 mt-1 w-max max-w-xs min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            class="absolute z-10 mt-1 w-max min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            :style="{ maxWidth: `${panelMaxWidthPx}px` }"
         >
             <div class="relative mb-2">
                 <Search

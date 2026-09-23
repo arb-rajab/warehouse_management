@@ -4,6 +4,7 @@ import { fieldLabelClass } from '@/lib/filters';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
+    usePanelMaxWidth,
 } from '@/lib/useDismissibleListbox';
 
 const props = defineProps<{
@@ -19,6 +20,16 @@ const model = defineModel<string[]>({ required: true });
 const { open, containerRef, setOptionRef, onOptionKeydown } =
     useDismissibleListbox(() => props.options.length);
 const { isChecked, toggleValue } = useMultiSelectToggle(model);
+const { panelMaxWidthPx, recompute: recomputePanelMaxWidth } =
+    usePanelMaxWidth(containerRef);
+
+function toggleOpen(): void {
+    open.value = !open.value;
+
+    if (open.value) {
+        recomputePanelMaxWidth();
+    }
+}
 
 function buttonLabel(): string {
     if (model.value.length === 0) {
@@ -45,7 +56,7 @@ function buttonLabel(): string {
             class="flex w-full min-w-48 cursor-pointer items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
             aria-haspopup="listbox"
             :aria-expanded="open"
-            @click="open = !open"
+            @click="toggleOpen"
         >
             <span class="truncate">{{ buttonLabel() }}</span>
             <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
@@ -53,7 +64,8 @@ function buttonLabel(): string {
         <div
             v-if="open"
             role="listbox"
-            class="absolute z-10 mt-1 w-max max-w-xs min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            class="absolute z-10 mt-1 w-max min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            :style="{ maxWidth: `${panelMaxWidthPx}px` }"
         >
             <label
                 v-for="(option, index) in options"

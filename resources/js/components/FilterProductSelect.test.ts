@@ -110,6 +110,22 @@ describe('FilterProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('2 selected');
     });
 
+    it('caps the panel width to the room available so it cannot overflow past the viewport edge it grows toward', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 200,
+            right: 208,
+        } as DOMRect);
+        container.style.direction = 'rtl';
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.style.maxWidth).toBe('192px');
+    });
+
     it('renders the search input and fetches the first page when opened', async () => {
         const wrapper = mountSelect();
 
