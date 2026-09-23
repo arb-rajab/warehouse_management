@@ -655,18 +655,12 @@ test('an authenticated user can export a QR code image for a single cell', funct
     // With no description line to share the label with, the slot label grows
     // to fill the freed vertical space (BuildsQrLabels::qrLabelImage()'s
     // expandPrimaryText) — well past the 18px used everywhere else (e.g. the
-    // product QR export's primary line).
+    // product QR export's primary line). Neither this single-cell SVG export
+    // nor the row-wide PDF sheet (see RowControllerTest, which now embeds
+    // this exact same SVG verbatim on each cell's page — see
+    // BuildsCellQrLabels::cellQrLabels()) carries a spelled-out description
+    // line at all any more.
     expect($svg)->toContain('font-size="64"');
-
-    // The single-cell SVG export carries no spelled-out description line —
-    // only the row-wide PDF sheet (see RowControllerTest) still describes the
-    // cell via BuildsCellQrLabels::cellQrLabelDescription().
-    $description = __('messages.qr_label_description', [
-        'row' => 'Z',
-        'cell' => $cell->cell_number,
-        'flat' => $cell->flat_number,
-    ]);
-    expect($svg)->not->toContain($description);
 });
 
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {

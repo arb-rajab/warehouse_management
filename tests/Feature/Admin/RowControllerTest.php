@@ -1,12 +1,10 @@
 <?php
 
-use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
-use ArPHP\I18N\Arabic;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -751,12 +749,13 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     $pdf = (new PdfParser)->parseContent($response->getContent());
     // Each cell gets its own page (see resources/views/pdf/qr-labels.blade.php) —
     // a row of 2x2=4 cells must produce exactly 4 pages, not one page holding a grid.
+    //
+    // The slot label itself is drawn inside each page's embedded label SVG (see
+    // BuildsCellQrLabels::cellQrLabelImage()) rather than as plain PDF text, so
+    // it isn't asserted here via PdfParser::getText() — CellControllerTest
+    // covers that SVG's content directly against the single-cell export, which
+    // the row-wide PDF sheet now embeds verbatim (see cellQrLabels()).
     expect($pdf->getPages())->toHaveCount(4);
-
-    $pdfText = $pdf->getText();
-    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
-        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
-    }
 });
 
 test('the row QR export still succeeds and produces one page per cell with a configured QR code size other than the default', function () {
@@ -764,17 +763,15 @@ test('the row QR export still succeeds and produces one page per cell with a con
     // rule in resources/views/pdf/qr-labels.blade.php (dompdf converts the CSS
     // px values into PDF points internally, so the exact PDF-point MediaBox
     // isn't asserted here). This test proves the request still succeeds
-    // end-to-end at a non-default size, still yielding one page per cell; the
-    // next test proves the `@page` rule itself is rendered with the correct
-    // configured values against the Blade source dompdf receives, without
-    // needing to go through the PDF conversion step.
+    // end-to-end at a non-default size, still yielding one page per cell.
     //
-    // 900x950 (width close to height) is a deliberate regression guard: the
-    // QR is square and scaled to the label's full width, so with little gap
-    // between $qrWidth and $qrHeight there's barely any room left below it
-    // for the location/description text. Without a reserved text zone
-    // shrinking the QR to make room (see the Blade view), dompdf silently
-    // overflows each label onto a second page, doubling 4 cells into 8 pages.
+    // 900x950 (width close to height) is a deliberate regression guard: each
+    // page's embedded label SVG (cellQrLabelImage(), same one the single-cell
+    // export uses) guarantees the QR shrinks to leave room for the slot label
+    // within $qrHeight — without that guarantee, a $qrWidth close to $qrHeight
+    // left dompdf silently overflowing each label onto a second page, doubling
+    // 4 cells into 8 pages (see CellControllerTest for that shrink guarantee's
+    // own coverage).
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 900, 'qr_code_height' => 950]);
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
@@ -786,63 +783,27 @@ test('the row QR export still succeeds and produces one page per cell with a con
 
     $pdf = (new PdfParser)->parseContent($response->getContent());
     expect($pdf->getPages())->toHaveCount(4);
-
-    $pdfText = $pdf->getText();
-    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
-        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
-    }
 });
 
-test('the qr-labels Blade view sizes the PDF page and embeds each cell QR image at the configured size', function () {
+test('the qr-labels Blade view sizes the PDF page from the configured QR settings and embeds each label image verbatim', function () {
     // Renders the exact view RowController::exportQrCodes() feeds to
-    // Pdf::loadView(), bypassing the PDF conversion step — asserting the
-    // `@page` rule here, against the Blade source dompdf receives, avoids
-    // depending on how dompdf converts CSS px into the PDF's internal point
-    // units (see the previous test).
+    // Pdf::loadView(), bypassing the PDF conversion step. Each entry's
+    // labelImage is whatever BuildsCellQrLabels::cellQrLabels() produced (the
+    // same SVG the single-cell export returns, base64-encoded) — this view has
+    // no sizing/layout logic of its own left to duplicate that, it just embeds
+    // the image as-is, so this test only proves the page size and the <img>
+    // wiring, not the label's own content (see CellControllerTest for that).
     $html = view('pdf.qr-labels', [
         'labels' => [[
             'label' => 'Z1·1',
-            'description' => 'Row Z, cell 1, level 1',
-            'qrImage' => 'data:image/svg+xml;base64,'.base64_encode('<svg width="500" height="500"></svg>'),
+            'labelImage' => 'data:image/svg+xml;base64,Zm9v',
         ]],
         'qrWidth' => 400,
         'qrHeight' => 500,
     ])->render();
 
     expect($html)->toContain('size: 400px 500px;');
-    // The rendered QR image is capped below $qrWidth/$qrHeight directly — it's
-    // shrunk to leave the reserved text zone the Blade view computes (see
-    // $qrDisplaySize there): min(400-16, 500-16-64) = 384.
-    expect($html)->toContain('width="384" height="384" alt="Z1·1"');
-});
-
-test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {
-    app()->setLocale('ar');
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-
-    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
-
-    $response->assertOk();
-    $response->assertHeader('content-type', 'application/pdf');
-
-    $rawDescription = __('messages.qr_label_description', [
-        'row' => $row->letter,
-        'cell' => $cell->cell_number,
-        'flat' => $cell->flat_number,
-    ]);
-    // Mirrors BuildsCellQrLabels::shapeArabicForPdf() — dompdf has no Arabic
-    // shaping/bidi engine of its own, so the trait pre-shapes the string into
-    // joined presentation-form glyphs in final display order before dompdf
-    // ever sees it.
-    $shapedDescription = (new Arabic)->utf8Glyphs($rawDescription, max_chars: 1000, hindo: false, forcertl: true);
-
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    expect($pdfText)->toContain($shapedDescription);
-    // Regression guard: the un-shaped translation string must never reach the
-    // PDF verbatim — that produces disconnected, logical-order Arabic letters.
-    expect($pdfText)->not->toContain($rawDescription);
+    expect($html)->toContain('<img src="data:image/svg+xml;base64,Zm9v" alt="Z1·1">');
 });
 
 test('a mobile app user cannot export QR codes for a row', function () {

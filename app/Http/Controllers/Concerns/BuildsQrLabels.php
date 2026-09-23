@@ -2,45 +2,16 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use ArPHP\I18N\Arabic;
 use Illuminate\Support\HtmlString;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
  * Low-level PDF/QR helpers shared by every QR-label export — BuildsCellQrLabels
- * (row/cell labels) and BuildsProductQrLabels (product labels). Neither the SVG
- * QR encoding nor the Arabic PDF shaping is specific to what a label encodes.
+ * (row/cell labels) and BuildsProductQrLabels (product labels). The SVG QR
+ * encoding here isn't specific to what a label encodes.
  */
 trait BuildsQrLabels
 {
-    /**
-     * dompdf's text layout has no Arabic contextual shaping or bidi reordering
-     * (see FIXME RTL markers throughout dompdf's FrameReflower/Style code) — it
-     * only draws each character's isolated-form glyph in logical (storage)
-     * order, which renders Arabic as disconnected letters read left-to-right.
-     * `utf8Glyphs()` pre-shapes the string into joined presentation-form
-     * glyphs already reordered into final left-to-right *display* order, so a
-     * naive LTR-drawing engine like dompdf's still renders it correctly. The
-     * font referenced in the qr-labels PDF view must carry glyphs for the
-     * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
-     *
-     * Only the dompdf-rendered multi-label sheet (RowController's row-wide
-     * export, via cellQrLabels()) needs this — a standalone SVG label image
-     * (qrLabelImage()) is drawn by a standards-compliant SVG renderer, which
-     * already shapes and bidi-reorders Arabic text correctly on its own.
-     *
-     * $hindo is false to keep Western digits, matching how the same
-     * translation string renders un-shaped in the Vue/Inertia UI.
-     */
-    private function shapeArabicForPdf(string $text): string
-    {
-        if (! app()->isLocale('ar')) {
-            return $text;
-        }
-
-        return (new Arabic)->utf8Glyphs($text, max_chars: 1000, hindo: false, forcertl: true);
-    }
-
     /**
      * dompdf doesn't render inline `<svg>` markup (its SVG support only
      * covers rasterizing an SVG *source* referenced by an `<img>` tag), so
