@@ -20,13 +20,14 @@ trait BuildsCellQrLabels
      * caller (RowController::exportQrCodes) rather than re-queried per cell
      * here — a row can hold Row::MAX_DIMENSION² cells.
      *
-     * The multi-label PDF sheet's grid (see resources/views/pdf/qr-labels.blade.php)
-     * lays each label out at a fixed percentage of the page width, and its
-     * `<img>` is CSS-scaled to fill that box (`width: 100%; height: auto`) —
-     * so an admin-configured $qrWidth/$qrHeight never changes the sheet's
-     * physical grid, only the encoded QR's resolution/sharpness. That's why
-     * this call site is safe to wire up without a stricter bound than the
-     * one UpdateSettingRequest/Setting already enforce.
+     * The multi-label PDF sheet (see resources/views/pdf/qr-labels.blade.php)
+     * gives every cell its own page, sized via `@page { size: $qrWidth
+     * $qrHeight }` to exactly the admin-configured dimensions — so
+     * $qrWidth/$qrHeight drive both the physical page size and the encoded
+     * QR's resolution/sharpness (the `<img>` is still CSS-scaled to
+     * `width: 100%; height: auto` within that page). That's why this call
+     * site is safe to wire up without a stricter bound than the one
+     * UpdateSettingRequest/Setting already enforce.
      *
      * @param  Collection<int, Cell>  $cells
      * @return array<int, array{label: string, description: string, qrImage: string}>
