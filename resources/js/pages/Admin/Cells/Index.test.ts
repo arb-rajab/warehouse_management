@@ -874,6 +874,79 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('jumps to the first matching flat on mount when a highlight filter deep-links here with no matches on the landing flat', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: null,
+            expired: true,
+            inactive: false,
+        };
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            maxFlatNumber: 3,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 2,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-01' }),
+                }),
+            ],
+        });
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            { flat_number: 2, search: 'A1·2', expired: true },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('does not reload on mount when the landing flat already has a highlight match', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: null,
+            expired: true,
+            inactive: false,
+        };
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-01' }),
+                }),
+            ],
+        });
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+    });
+
+    it('does not reload on mount when there is no highlight filter at all', () => {
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 2,
+                    state: 'full',
+                }),
+            ],
+        });
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+    });
+
     it('keeps the active highlight filters in the query when switching flats', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
             initialHighlight: {
