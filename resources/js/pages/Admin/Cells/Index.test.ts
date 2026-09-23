@@ -158,6 +158,7 @@ function mountPage(
                 state: null,
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             },
@@ -391,6 +392,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -416,6 +418,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -456,6 +459,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -493,6 +497,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'opened',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -512,6 +517,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -570,6 +576,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -608,6 +615,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -666,6 +674,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -702,6 +711,7 @@ describe('Cells Index (warehouse map)', () => {
             state: null,
             productIds: [],
             expiresWithinDays: 7,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -734,11 +744,50 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('pre-highlights cells by a stale-after-days seed from the dashboard link', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: 30,
+            expired: false,
+            inactive: false,
+        };
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ added_at: '2026-06-01T10:00:00Z' }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ added_at: '2026-08-10T10:00:00Z' }),
+                }),
+            ],
+            { today: '2026-08-13', initialHighlight: seed },
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
     it('pre-highlights only already-expired cells from an expired seed, not future ones', () => {
         const seed: CellHighlightSeed = {
             state: null,
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: true,
             inactive: false,
         };
@@ -777,6 +826,7 @@ describe('Cells Index (warehouse map)', () => {
                 state: null,
                 productIds: [1, 2],
                 expiresWithinDays: 7,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             },
@@ -795,12 +845,37 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('keeps a stale-after-days highlight filter in the query when switching flats', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            initialHighlight: {
+                state: null,
+                productIds: [],
+                expiresWithinDays: null,
+                staleAfterDays: 30,
+                expired: false,
+                inactive: false,
+            },
+        });
+
+        await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/cells',
+            {
+                flat_number: 2,
+                stale_after_days: 30,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+
     it('keeps the active highlight filters in the query when submitting a search', async () => {
         const wrapper = mountPage([row()], [], {
             initialHighlight: {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: true,
                 inactive: false,
             },
@@ -1323,6 +1398,7 @@ describe('Cells Index (warehouse map)', () => {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             };
@@ -1454,6 +1530,7 @@ describe('Cells Index (warehouse map)', () => {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             };

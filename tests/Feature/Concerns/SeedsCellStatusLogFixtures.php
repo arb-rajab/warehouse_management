@@ -265,6 +265,17 @@ trait SeedsCellStatusLogFixtures
         Pallet::factory()->create(['expiration_date' => '2026-08-25']);
     }
 
+    /**
+     * @return array{matching: Pallet}
+     */
+    public function seedStaleWindowFixture(): array
+    {
+        $matching = Pallet::factory()->stale()->create();
+        Pallet::factory()->create();
+
+        return compact('matching');
+    }
+
     public function seedActivityWindowsFixture(): void
     {
         $cell = Cell::factory()->create();

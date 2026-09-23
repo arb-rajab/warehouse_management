@@ -57,6 +57,9 @@ class CellController extends Controller
                 'expiresWithinDays' => $request->filled('expires_within_days')
                     ? $request->integer('expires_within_days')
                     : null,
+                'staleAfterDays' => $request->filled('stale_after_days')
+                    ? $request->integer('stale_after_days')
+                    : null,
                 'expired' => $request->boolean('expired'),
                 'inactive' => $request->filled('is_active') && ! $request->boolean('is_active'),
             ],

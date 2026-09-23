@@ -95,6 +95,44 @@ test('an invalid expiring_days is rejected on the mobile dashboard', function ()
     $response->assertJsonValidationErrors(['expiring_days']);
 });
 
+test('a caller-chosen stale_days raises or lowers the pallet-age bar for the mobile dashboard stale count', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    $this->seedStaleWindowFixture();
+
+    $stricter = $this->getJson('/api/v1/dashboard?stale_days=45');
+    $stricter->assertOk();
+    expect($stricter->json('stats.stale'))->toEqual(['days' => 45, 'count' => 0]);
+
+    $looser = $this->getJson('/api/v1/dashboard?stale_days=20');
+    $looser->assertOk();
+    expect($looser->json('stats.stale'))->toEqual(['days' => 20, 'count' => 1]);
+
+    Carbon::setTestNow();
+});
+
+test('the mobile dashboard stale count defaults to 21 days', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    $this->seedStaleWindowFixture();
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.stale'))->toEqual(['days' => 21, 'count' => 1]);
+
+    Carbon::setTestNow();
+});
+
+test('an invalid stale_days is rejected on the mobile dashboard', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/dashboard?stale_days=0');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['stale_days']);
+});
+
 test("the mobile dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsMobileUser();

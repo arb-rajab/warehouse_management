@@ -322,6 +322,11 @@
         "customPlaceholder": "e.g. 45",
         "apply": "Apply"
     },
+    "staleWindow": {
+        "label": "Stale window",
+        "customPlaceholder": "e.g. 30",
+        "apply": "Apply"
+    },
     "cells": {
         "title": "Cells",
         "filters": {
@@ -462,6 +467,10 @@
             "expired": "Expired",
             "soon": "Expiring within {days} days",
             "soonMonths": "Expiring within {months} month(s)"
+        },
+        "stale": {
+            "title": "Stale pallets",
+            "soon": "Stale for at least {days} days"
         },
         "activityToday": {
             "title": "Today's activity"

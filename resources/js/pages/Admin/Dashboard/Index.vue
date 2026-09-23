@@ -6,6 +6,7 @@ import {
     CalendarX,
     Check,
     CircleDashed,
+    Clock,
     PackageOpen,
     SlidersHorizontal,
 } from '@lucide/vue';
@@ -45,6 +46,11 @@ interface ExpiringDayWindow {
     count: number;
 }
 
+interface StaleDayWindow {
+    days: number;
+    count: number;
+}
+
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
@@ -53,6 +59,7 @@ const props = defineProps<{
             windows: ExpiringMonthWindow[];
             custom: ExpiringDayWindow;
         };
+        stale: StaleDayWindow;
         activity_today: {
             stored: number;
             opened: number;
@@ -117,16 +124,46 @@ function submitCustomExpiringDays(): void {
         {
             product_id: props.filters.product_id ?? [],
             expiring_days: Number(customExpiringDaysDraft.value),
+            stale_days: props.stats.stale.days,
         },
         { preserveState: true, replace: true },
     );
     customExpiringDaysDialogOpen.value = false;
 }
 
+const customStaleDaysDialogOpen = ref(false);
+const customStaleDaysDraft = ref(String(props.stats.stale.days));
+
+function openCustomStaleDaysDialog(): void {
+    customStaleDaysDraft.value = String(props.stats.stale.days);
+    customStaleDaysDialogOpen.value = true;
+}
+
+function submitCustomStaleDays(): void {
+    if (customStaleDaysDraft.value === '') {
+        return;
+    }
+
+    router.get(
+        dashboardIndex().url,
+        {
+            product_id: props.filters.product_id ?? [],
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: Number(customStaleDaysDraft.value),
+        },
+        { preserveState: true, replace: true },
+    );
+    customStaleDaysDialogOpen.value = false;
+}
+
 function onProductIdsChange(ids: string[]): void {
     router.get(
         dashboardIndex().url,
-        { product_id: ids, expiring_days: props.stats.expiring.custom.days },
+        {
+            product_id: ids,
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: props.stats.stale.days,
+        },
         { preserveState: true, replace: true },
     );
 }
@@ -263,6 +300,67 @@ function onProductIdsChange(ids: string[]): void {
                                 >
                                     <Check class="h-4 w-4 shrink-0" />
                                     {{ t('expiringWindow.apply') }}
+                                </button>
+                            </form>
+                        </FilterDialog>
+                    </template>
+                </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.stale.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="
+                        t('dashboard.stale.soon', {
+                            days: props.stats.stale.days,
+                        })
+                    "
+                    :value="props.stats.stale.count"
+                    :href="cellsIndex().url"
+                    :query="{
+                        stale_after_days: props.stats.stale.days,
+                        ...productQuery,
+                    }"
+                    tone="warning"
+                    :icon="Clock"
+                >
+                    <template #footer>
+                        <button
+                            type="button"
+                            :class="['mt-2', filterTriggerButtonClass]"
+                            @click="openCustomStaleDaysDialog"
+                        >
+                            <SlidersHorizontal class="h-4 w-4" />
+                            {{ t('staleWindow.label') }}
+                        </button>
+
+                        <FilterDialog
+                            v-model:open="customStaleDaysDialogOpen"
+                            :title="t('staleWindow.label')"
+                            :close-label="t('cellLog.filters.close')"
+                        >
+                            <form
+                                class="space-y-4"
+                                @submit.prevent="submitCustomStaleDays"
+                            >
+                                <FilterNumberField
+                                    id="dashboard-custom-stale-days"
+                                    v-model="customStaleDaysDraft"
+                                    :label="t('cellHighlight.staleAfterDays')"
+                                    :placeholder="
+                                        t('staleWindow.customPlaceholder')
+                                    "
+                                />
+                                <button
+                                    type="submit"
+                                    :class="filterApplyButtonClass"
+                                >
+                                    <Check class="h-4 w-4 shrink-0" />
+                                    {{ t('staleWindow.apply') }}
                                 </button>
                             </form>
                         </FilterDialog>
