@@ -186,8 +186,14 @@ trait BuildsQrLabels
      * other text: when it doesn't fit above $maxTextY it's dropped via
      * clampLinesToHeight() like any other line, and the primary line's start
      * position only shifts down when it actually got drawn.
+     *
+     * $expandPrimaryText grows the primary line's font size to fill whatever
+     * vertical space is left below it (only BuildsCellQrLabels passes true,
+     * since a cell label carries no secondary/explanation line to occupy
+     * that space) — clampLinesToHeight() still guards against overflow, so a
+     * larger font just wraps/truncates like any other size would.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false): string
     {
         $padding = 20;
         $qrSize = $width - $padding * 2;
@@ -212,6 +218,12 @@ trait BuildsQrLabels
         $primaryFontSize = 18;
         $primaryLineHeight = 22;
         $primaryY = $idRendered ? $idY + 26 : $qrBottom + 24;
+
+        if ($expandPrimaryText) {
+            $availableHeight = max($primaryFontSize, $maxTextY - $primaryY);
+            $primaryFontSize = (int) min(64, max($primaryFontSize, floor($availableHeight * 0.7)));
+            $primaryLineHeight = (int) round($primaryFontSize * 1.2);
+        }
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
         $primaryLines = $this->clampLinesToHeight($primaryLines, $primaryY, $primaryLineHeight, $maxTextY);

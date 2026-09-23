@@ -51,24 +51,28 @@ trait BuildsCellQrLabels
     /**
      * The single-cell counterpart to cellQrLabels() — one standalone SVG
      * image (see qrLabelImage()) for downloading/printing just this cell's
-     * label, rather than a whole PDF sheet.
+     * label, rather than a whole PDF sheet. Unlike the PDF sheet, it carries
+     * no spelled-out description line below the label — the slot label is
+     * the only text, drawn large enough (expandPrimaryText) to fill the
+     * space the description would otherwise have left blank.
      */
     private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight): string
     {
         return $this->qrLabelImage(
             $this->cellDeepLink($rowLetter, $cell),
             Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
-            $this->cellQrLabelDescription($rowLetter, $cell),
+            null,
             app()->isLocale('ar') ? 'rtl' : 'ltr',
             $qrWidth,
             $qrHeight,
+            expandPrimaryText: true,
         );
     }
 
     /**
-     * Shared by cellQrLabels() (PDF sheet, needs shapeArabicForPdf()) and
-     * cellQrLabelImage() (SVG, rendered correctly without it) so the
-     * translation parameters can't drift between the two exports.
+     * The PDF sheet's spelled-out description line (see cellQrLabels()).
+     * cellQrLabelImage() no longer uses this — the single-cell SVG export
+     * carries no description text at all.
      */
     private function cellQrLabelDescription(string $rowLetter, Cell $cell): string
     {
