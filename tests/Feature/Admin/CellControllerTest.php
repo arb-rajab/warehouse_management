@@ -704,6 +704,24 @@ test('a single-cell QR export keeps the full slot label visible for large cell/f
         ->and($svg)->not->toContain('…');
 });
 
+test('a single-cell QR export shrinks the QR slightly to keep the label visible when width and height are equal', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 280]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // Equal width/height used to leave no room below the QR at all, so
+    // clampLinesToHeight() dropped the label entirely (see BuildsQrLabels'
+    // $minPrimaryZone guard). The QR now shrinks just enough to guarantee
+    // the label always has room, rather than disappearing.
+    expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number))
+        ->and($svg)->not->toContain('width="240" height="240"/>');
+});
+
 test('a mobile app user cannot export a single cells QR code', function () {
     actingAsMobilePanelUser();
     $row = Row::factory()->create();

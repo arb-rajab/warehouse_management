@@ -204,17 +204,19 @@ trait BuildsQrLabels
      *
      * $width/$height are Setting::current()'s qr_code_width/qr_code_height —
      * the label's total maximum box (QR plus any text below it), never a
-     * hardcoded value. The QR itself is always a square sized from $width
-     * alone ($qrSize = $width - padding*2) and never shrinks to make room
-     * for text; text is what yields instead, via clampLinesToHeight(): a
-     * name that wraps onto more lines than fit within $height gets truncated
-     * with an ellipsis, or dropped entirely if not even one line fits. The
-     * returned SVG's actual height still shrinks below $height when the
-     * content is short (unchanged from before) — $height is a ceiling, not
-     * a fixed canvas size — except in the one unavoidable case where $height
-     * is configured smaller than the QR needs on its own (e.g. a much wider
-     * than tall box): the QR is still never clipped, so the label grows past
-     * $height rather than cut it off.
+     * hardcoded value. The QR is a square sized from $width alone ($qrSize =
+     * $width - padding*2), shrunk slightly below that only when $height
+     * leaves less than $minPrimaryZone of room below it (e.g. $width and
+     * $height configured equal) — see the guard right after $qrSize/$qrBottom
+     * below. Beyond that guaranteed minimum, text is still what yields via
+     * clampLinesToHeight(): a name that wraps onto more lines than fit within
+     * $height gets truncated with an ellipsis, or dropped entirely if not
+     * even one line fits. The returned SVG's actual height still shrinks
+     * below $height when the content is short (unchanged from before) —
+     * $height is a ceiling, not a fixed canvas size — except in the one
+     * unavoidable case where $height is configured smaller than the
+     * (possibly already-shrunk) QR needs on its own: the QR is still never
+     * clipped, so the label grows past $height rather than cut it off.
      *
      * $idText is an optional small caption line drawn directly below the QR,
      * above the primary line — currently only BuildsProductQrLabels passes
@@ -236,9 +238,35 @@ trait BuildsQrLabels
         $padding = 20;
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
+        $qrX = $padding;
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
         $maxTextY = $height - 16;
+
+        // The primary line's default (unexpanded) layout needs a 24px gap
+        // below the QR plus its own 22px line height — 46px total. Without
+        // this guard, a $width/$height configured equal (or otherwise close)
+        // leaves $qrBottom past $maxTextY, and clampLinesToHeight() drops the
+        // primary line entirely rather than truncating it, since it never
+        // gets so much as its first line's worth of room. Shrinking the QR
+        // itself is a last resort — only enough to guarantee that minimum,
+        // and never below 60% of $width, so the QR stays comfortably
+        // scannable at any configured size.
+        $minPrimaryZone = 24 + 22;
+        $tightestAllowedQrBottom = $maxTextY - $minPrimaryZone;
+
+        if ($qrBottom > $tightestAllowedQrBottom) {
+            $deficit = $qrBottom - $tightestAllowedQrBottom;
+            $shrinkBy = max(0, min($deficit, $qrSize - (int) ($width * 0.6)));
+            $qrSize -= $shrinkBy;
+            $qrBottom = $padding + $qrSize;
+            // Re-center horizontally — $qrX started at $padding on the
+            // assumption that $qrSize filled the full $width - padding*2
+            // span; a shrunk QR no longer does, so it must move inward to
+            // stay centered rather than hug the left/start edge.
+            $qrX = (int) (($width - $qrSize) / 2);
+        }
+
         $qrDataUri = $this->qrImageDataUri($qrData, $qrSize);
 
         $idMarkup = '';
@@ -301,7 +329,7 @@ trait BuildsQrLabels
         return <<<SVG
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
-                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                <image href="{$qrDataUri}" x="{$qrX}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
                 {$idMarkup}
                 {$primaryMarkup}
                 {$secondaryMarkup}
