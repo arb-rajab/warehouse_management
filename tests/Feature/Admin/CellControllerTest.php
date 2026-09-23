@@ -314,6 +314,172 @@ test('an invalid expired value passed from the dashboard is rejected', function 
     $response->assertInvalid(['expired']);
 });
 
+test('a highlight-filtered deep-link with no flat_number jumps to the first matching flat, in row/cell-number order', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 3]);
+
+    // Deliberately gives the lower cell_number the later flat, so the test
+    // proves cell_number outranks flat_number in the tie-break — matching
+    // the client's `orderedMatches` sort in Cells/Index.vue.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 2)->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 1)->where('flat_number', 3)->first()->id,
+        'expiration_date' => '2026-08-05',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 3)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 1)
+            ->where('jumpToCell.flat_number', 3)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('an explicit flat_number is respected even when the highlight filter matches nothing on it', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true&flat_number=1');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)->where('jumpToCell', null)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a highlight-filtered deep-link stays on flat 1 (still pulsing the match) when flat 1 already holds the first match', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+    // Noise: a later match on another flat that must not win the jump ahead
+    // of the one already on the default landing flat.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true');
+
+    // flatNumber doesn't change, but jumpToCell is still populated — the
+    // deep-link's match gets pulsed into focus even when it was already on
+    // the landing flat, same as it would be for any other resolved match.
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 1)
+            ->where('jumpToCell.flat_number', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a product-id deep-link jumps to the flat holding that product, excluding other products', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $matching = Product::factory()->create();
+    $other = Product::factory()->create();
+    // Noise: a different product on flat 1, which must not win the jump.
+    Pallet::factory()->create([
+        'product_id' => $other->id,
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+    ]);
+    Pallet::factory()->create([
+        'product_id' => $matching->id,
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+    ]);
+
+    $response = $this->get("/admin/cells?product_id[]={$matching->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('a state deep-link jumps to the flat holding a cell in that state, excluding other states', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: flat 1 stays "empty" (the default), which must not match "opened".
+    $row->cells()->where('flat_number', 2)->first()->update(['state' => CellState::Opened]);
+
+    $response = $this->get('/admin/cells?state=opened');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('an inactive-only deep-link jumps to the flat holding the inactive cell, excluding active ones', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: flat 1 stays active, which must not match "inactive only".
+    $row->cells()->where('flat_number', 2)->first()->update(['is_active' => false]);
+
+    $response = $this->get('/admin/cells?is_active=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('an expires_within_days deep-link jumps to the flat holding the soon-to-expire pallet, excluding one expiring later', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: expires well outside the 7-day window.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-09-01',
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-15',
+    ]);
+
+    $response = $this->get('/admin/cells?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a stale_after_days deep-link jumps to the flat holding the stale pallet, excluding a fresh one', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: a freshly-stored pallet, nowhere near the staleness threshold.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+    ]);
+    Pallet::factory()->stale()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+    ]);
+
+    $response = $this->get('/admin/cells?stale_after_days=25');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
 test('a location search with a flat number jumps to that exact cell', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 3]);
