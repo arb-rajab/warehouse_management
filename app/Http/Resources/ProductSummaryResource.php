@@ -16,8 +16,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int $opened_cells_count
  * @property-read int $expired_cells_count
  * @property-read int $expiring_soon_count
- * @property-read int $activity_today_count
- * @property-read int $activity_week_count
  */
 class ProductSummaryResource extends JsonResource
 {
@@ -39,8 +37,6 @@ class ProductSummaryResource extends JsonResource
             'opened_cells_count' => (int) $this->opened_cells_count,
             'expired_cells_count' => (int) $this->expired_cells_count,
             'expiring_soon_count' => (int) $this->expiring_soon_count,
-            'activity_today_count' => (int) $this->activity_today_count,
-            'activity_week_count' => (int) $this->activity_week_count,
         ];
     }
 }

@@ -498,8 +498,6 @@
             "opened": "مفتوحة",
             "expired": "منتهية الصلاحية",
             "expiringSoon": "تنتهي ≤{days} يوم",
-            "activityToday": "اليوم",
-            "activityWeek": "هذا الأسبوع",
             "boxesPerPallet": "صناديق / منصة",
             "qr": "رمز QR"
         },

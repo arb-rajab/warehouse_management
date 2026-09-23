@@ -52,7 +52,7 @@ class FilterProductsRequest extends FormRequest
             ...$this->userIdsFilterRules(),
             ...$this->logActionFilterRules(),
             ...$this->dateRangeFilterRules(),
-            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count,activity_today_count,activity_week_count'],
+            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count'],
             ...$this->sortDirectionRules(),
             ...$this->perPageRules(),
         ];

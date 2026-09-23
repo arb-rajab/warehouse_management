@@ -325,8 +325,6 @@ export interface ProductSummary {
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
-    activity_today_count: number;
-    activity_week_count: number;
 }
 
 export type ProductSortBy =
@@ -334,9 +332,7 @@ export type ProductSortBy =
     | 'full_cells_count'
     | 'opened_cells_count'
     | 'expired_cells_count'
-    | 'expiring_soon_count'
-    | 'activity_today_count'
-    | 'activity_week_count';
+    | 'expiring_soon_count';
 
 export interface ProductFilters {
     row_id?: number;

@@ -17,7 +17,6 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Setting;
-use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -35,13 +34,12 @@ class ProductController extends Controller
      */
     private const array SORTABLE_COLUMNS = [
         'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
-        'expiring_soon_count', 'activity_today_count', 'activity_week_count',
+        'expiring_soon_count',
     ];
 
     public function index(FilterProductsRequest $request): Response
     {
         $today = today();
-        $weekStart = $today->copy()->startOfWeek();
         $expiringSoonDays = $request->filled('expires_within_days')
             ? $request->integer('expires_within_days')
             : ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
@@ -73,8 +71,6 @@ class ProductController extends Controller
                 null,
                 fn (Builder $query) => $query->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
             )])
-            ->addSelect(['activity_today_count' => $this->activityCountSubquery($request, $today->copy()->startOfDay(), $today->copy()->endOfDay())])
-            ->addSelect(['activity_week_count' => $this->activityCountSubquery($request, $weekStart->copy()->startOfDay(), $today->copy()->endOfDay())])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
             ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false))
             ->when($historyFiltersActive, function (Builder $query) use ($request) {
@@ -90,8 +86,6 @@ class ProductController extends Controller
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $this->paginated(ProductSummaryResource::collection($products)),
-            'today' => $today->toDateString(),
-            'weekStart' => $weekStart->toDateString(),
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
@@ -186,25 +180,6 @@ class ProductController extends Controller
                     $cellQuery->where('state', $forcedState->value);
                 }
             });
-    }
-
-    /**
-     * A correlated count of `cell_status_logs` rows within the given date
-     * window, matching the history filters (row/column/user/action/date
-     * range) for the product on each outer row.
-     *
-     * @return Builder<CellStatusLog>
-     */
-    private function activityCountSubquery(Request $request, CarbonInterface $from, CarbonInterface $to): Builder
-    {
-        $query = CellStatusLog::query()
-            ->selectRaw('count(*)')
-            ->whereColumn('cell_status_logs.product_id', 'products.id')
-            ->whereBetween('created_at', [$from, $to]);
-
-        $this->applyHistoryLogFilters($query, $request);
-
-        return $query;
     }
 
     /**
