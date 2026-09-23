@@ -656,7 +656,7 @@ test('an authenticated user can export a QR code image for a single cell', funct
     // to fill the freed vertical space (BuildsQrLabels::qrLabelImage()'s
     // expandPrimaryText) — well past the 18px used everywhere else (e.g. the
     // product QR export's primary line).
-    expect($svg)->toContain('font-size="56"');
+    expect($svg)->toContain('font-size="64"');
 
     // The single-cell SVG export carries no spelled-out description line —
     // only the row-wide PDF sheet (see RowControllerTest) still describes the
@@ -685,6 +685,23 @@ test('a single-cell QR export uses the configured QR code size instead of the de
     // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
         ->and($svg)->toContain('width="360" height="360"/>');
+});
+
+test('a single-cell QR export keeps the full slot label visible for large cell/flat numbers', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+    $cell = Cell::factory()->for($row)->create(['cell_number' => 123, 'flat_number' => 456]);
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // BuildsQrLabels::pickExpandedPrimaryFontSize() must shrink the font
+    // rather than let clampLinesToHeight() truncate the label — a fixed
+    // large font size would cut the flat number off behind an ellipsis for
+    // a label this long, silently hiding real cell coordinates.
+    expect($svg)->toContain('Z123·456')
+        ->and($svg)->not->toContain('…');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {
