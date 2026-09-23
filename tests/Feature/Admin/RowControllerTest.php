@@ -768,6 +768,13 @@ test('the row QR export still succeeds and produces one page per cell with a con
     // next test proves the `@page` rule itself is rendered with the correct
     // configured values against the Blade source dompdf receives, without
     // needing to go through the PDF conversion step.
+    //
+    // 900x950 (width close to height) is a deliberate regression guard: the
+    // QR is square and scaled to the label's full width, so with little gap
+    // between $qrWidth and $qrHeight there's barely any room left below it
+    // for the location/description text. Without a reserved text zone
+    // shrinking the QR to make room (see the Blade view), dompdf silently
+    // overflows each label onto a second page, doubling 4 cells into 8 pages.
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 900, 'qr_code_height' => 950]);
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
@@ -803,7 +810,10 @@ test('the qr-labels Blade view sizes the PDF page and embeds each cell QR image 
     ])->render();
 
     expect($html)->toContain('size: 400px 500px;');
-    expect($html)->toContain('width="400" height="500" alt="Z1·1"');
+    // The rendered QR image is capped below $qrWidth/$qrHeight directly — it's
+    // shrunk to leave the reserved text zone the Blade view computes (see
+    // $qrDisplaySize there): min(400-16, 500-16-64) = 384.
+    expect($html)->toContain('width="384" height="384" alt="Z1·1"');
 });
 
 test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {
