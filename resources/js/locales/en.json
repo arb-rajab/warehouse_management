@@ -185,6 +185,7 @@
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found.",
+            "selected": "Selected",
             "palletHistory": "Showing history for pallet #{id}",
             "flaggedOnly": "Flagged only"
         },
