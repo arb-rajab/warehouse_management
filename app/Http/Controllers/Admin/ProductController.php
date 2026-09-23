@@ -73,6 +73,10 @@ class ProductController extends Controller
             )])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
             ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false))
+            ->when(
+                $this->occupancyFiltersActive($request),
+                fn (Builder $query) => $query->whereExists($this->occupancyExistsSubquery($request)),
+            )
             ->when($historyFiltersActive, function (Builder $query) use ($request) {
                 $existsSubquery = CellStatusLog::query()->whereColumn('cell_status_logs.product_id', 'products.id');
                 $this->applyHistoryLogFilters($existsSubquery, $request);
@@ -150,6 +154,46 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
+    }
+
+    /**
+     * Whether any occupancy filter (row/column/state/expired/expiring) is
+     * active — used to gate both {@see occupancyExistsSubquery()}, which
+     * restricts which products appear at all, and the frontend's shared
+     * `occupancy` column-filter indicator.
+     */
+    private function occupancyFiltersActive(Request $request): bool
+    {
+        return $request->filled('row_id')
+            || $request->filled('column_number')
+            || $request->filled('state')
+            || $request->filled('expired')
+            || $request->filled('expires_within_days');
+    }
+
+    /**
+     * A correlated existence check for whether the product on each outer row
+     * has at least one pallet matching the active occupancy filters
+     * (row/column/state/expired/expiring). Applied to the base product query
+     * so that, e.g., filtering by `state=full` only returns products that
+     * actually have a full pallet — unlike {@see occupancyCountSubquery()},
+     * which only feeds the displayed per-column counts and never restricts
+     * which products appear. Deliberately does not force a specific
+     * `CellState` the way that method does per column: this check means
+     * "matches everything the user filtered by," not "matches one column."
+     *
+     * @return Builder<Pallet>
+     */
+    private function occupancyExistsSubquery(Request $request): Builder
+    {
+        return Pallet::query()
+            ->selectRaw('1')
+            ->whereColumn('pallets.product_id', 'products.id')
+            ->when($request->filled('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
+            ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
+            ->whereHas('cell', function (Builder $cellQuery) use ($request) {
+                $this->applyOccupancyCellFilters($cellQuery, $request);
+            });
     }
 
     /**
