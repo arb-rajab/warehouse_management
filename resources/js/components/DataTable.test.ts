@@ -284,6 +284,41 @@ describe('DataTable', () => {
         expect(clippedAncestor).toBeNull();
     });
 
+    it('positions the popover using the physical `left` CSS property, not the logical `insetInlineStart`', async () => {
+        // `insetInlineStart` resolves to `right` under `dir="rtl"`, so
+        // assigning it the same physical-left-based offset used in LTR
+        // silently reinterprets that offset as a distance from the *right*
+        // edge instead, throwing the popover far from its trigger (or off
+        // the page's physical left edge for a trigger near the table's
+        // visual right side). `positionPopover` computes the offset from
+        // `getBoundingClientRect().left`, which is always physical, so it
+        // must land on the physical `left` property in both directions.
+        const openFilterKey = ref<string | null>(null);
+        const wrapper = mountTableWithFilterSlot(
+            [{ label: 'Cells', filterKey: 'cells' }],
+            openFilterKey,
+        );
+
+        const trigger = wrapper.get('button[title]').element;
+        const outer = wrapper.element as HTMLElement;
+        vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+            left: 900,
+            bottom: 40,
+        } as DOMRect);
+        vi.spyOn(outer, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            top: 0,
+        } as DOMRect);
+
+        await wrapper.get('button[title]').trigger('click');
+        await wrapper.setProps({ openFilterKey: openFilterKey.value });
+
+        const popover = wrapper.get('.filter-slot').element
+            .parentElement as HTMLElement;
+        expect(popover.style.left).toBe('800px');
+        expect(popover.style.getPropertyValue('inset-inline-start')).toBe('');
+    });
+
     it('closes the popover when its icon is clicked again', async () => {
         const openFilterKey = ref<string | null>(null);
         const wrapper = mountTableWithFilterSlot(
