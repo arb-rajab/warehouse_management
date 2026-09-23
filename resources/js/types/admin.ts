@@ -165,6 +165,7 @@ export interface CellHighlightSeed {
     state: Cell['state'] | null;
     productIds: number[];
     expiresWithinDays: number | null;
+    staleAfterDays: number | null;
     expired: boolean;
     inactive: boolean;
 }

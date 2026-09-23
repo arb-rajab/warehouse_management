@@ -138,6 +138,69 @@ test('an invalid expiring_days is rejected', function () {
     $response->assertInvalid(['expiring_days']);
 });
 
+test('a caller-chosen stale_days raises or lowers the pallet-age bar for the stale pallet count', function () {
+    actingAsAdmin();
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    $this->seedStaleWindowFixture();
+
+    // A higher bar (45 days old) excludes the 30-day-old fixture pallet.
+    $stricter = $this->get('/admin?stale_days=45');
+    $stricter->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 45)
+            ->where('stats.stale.count', 0)
+    );
+
+    // A lower bar (20 days old) includes it.
+    $looser = $this->get('/admin?stale_days=20');
+    $looser->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 20)
+            ->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the stale pallet count defaults to 21 days when no stale_days is given', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $this->seedStaleWindowFixture();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 21)
+            ->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('an invalid stale_days is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin?stale_days=0');
+
+    $response->assertInvalid(['stale_days']);
+});
+
+test('a product filter narrows the stale pallet count to that product, excluding other products', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    $matchingProduct = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    Pallet::factory()->stale()->create(['product_id' => $matchingProduct->id]);
+    Pallet::factory()->stale()->create(['product_id' => $otherProduct->id]);
+
+    $response = $this->get("/admin?product_id[]={$matchingProduct->id}&stale_days=25");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
 test("the dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();

@@ -97,6 +97,10 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
         props.initialHighlight.expiresWithinDays !== null
             ? String(props.initialHighlight.expiresWithinDays)
             : '',
+    staleAfterDays:
+        props.initialHighlight.staleAfterDays !== null
+            ? String(props.initialHighlight.staleAfterDays)
+            : '',
     expired: props.initialHighlight.expired,
     inactive: props.initialHighlight.inactive,
 });
@@ -257,6 +261,10 @@ function highlightQuery(): Record<string, FormDataConvertible> {
 
     if (highlightFilters.expiresWithinDays !== '') {
         query.expires_within_days = Number(highlightFilters.expiresWithinDays);
+    }
+
+    if (highlightFilters.staleAfterDays !== '') {
+        query.stale_after_days = Number(highlightFilters.staleAfterDays);
     }
 
     if (highlightFilters.expired) {

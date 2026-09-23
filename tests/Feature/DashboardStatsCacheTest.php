@@ -45,6 +45,20 @@ test('the dashboard cache is invalidated the moment a cell status log is written
     );
 });
 
+test('dashboard stats are cached separately per stale_days, not shared across custom windows', function () {
+    actingAsAdmin();
+
+    $this->get('/admin?stale_days=10')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 10)
+    );
+
+    // If the cache key ignored staleDays, this would come back with the
+    // stale_days=10 cached response instead of recomputing for 40.
+    $this->get('/admin?stale_days=40')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 40)
+    );
+});
+
 test('dashboard stats are cached separately per product filter, not shared across filters', function () {
     actingAsAdmin();
 

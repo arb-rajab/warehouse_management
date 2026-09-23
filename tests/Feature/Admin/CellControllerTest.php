@@ -102,6 +102,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('initialHighlight.state', null)
             ->where('initialHighlight.productIds', [])
             ->where('initialHighlight.expiresWithinDays', null)
+            ->where('initialHighlight.staleAfterDays', null)
             ->where('initialHighlight.expired', false)
             ->where('initialHighlight.inactive', false)
             ->where('jumpToCell', null)
@@ -262,6 +263,25 @@ test('an invalid expires_within_days passed from the dashboard is rejected', fun
     $response = $this->get('/admin/cells?expires_within_days=-1');
 
     $response->assertInvalid(['expires_within_days']);
+});
+
+test('a stale_after_days passed from the dashboard seeds the initial highlight filter', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?stale_after_days=30');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.staleAfterDays', 30)
+    );
+});
+
+test('an invalid stale_after_days passed from the dashboard is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cells?stale_after_days=-1');
+
+    $response->assertInvalid(['stale_after_days']);
 });
 
 test('expired passed from the dashboard seeds the initial highlight filter', function () {

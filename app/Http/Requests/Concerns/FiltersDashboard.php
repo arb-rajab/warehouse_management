@@ -29,6 +29,7 @@ trait FiltersDashboard
     {
         return [
             'expiring_days' => ['nullable', 'integer', 'min:1'],
+            'stale_days' => ['nullable', 'integer', 'min:1'],
             ...$this->productIdsFilterRules(),
         ];
     }

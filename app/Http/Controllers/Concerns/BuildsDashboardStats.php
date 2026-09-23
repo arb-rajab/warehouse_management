@@ -34,10 +34,18 @@ trait BuildsDashboardStats
     public const int DEFAULT_CUSTOM_EXPIRING_DAYS = ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
 
     /**
+     * The custom stale-window card's default day count — see StaleSoonDefaults'
+     * doc comment for why this is a controller-level default rather than a
+     * Pallet model constant.
+     */
+    public const int DEFAULT_CUSTOM_STALE_DAYS = StaleSoonDefaults::CUSTOM_WINDOW_DAYS;
+
+    /**
      * @param  list<int>|null  $productIds
      * @return array{
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     stale: array{days: int, count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -45,20 +53,22 @@ trait BuildsDashboardStats
      * @scramble-return array{
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     stale: array{days: int, count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
      */
-    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, ?array $productIds, ?bool $productPublished = null): array
+    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, int $staleDays, ?array $productIds, ?bool $productPublished = null): array
     {
         return DashboardStatsCache::remember(
-            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'productIds' => $productIds, 'productPublished' => $productPublished],
-            function () use ($today, $customExpiringDays, $productIds, $productPublished): array {
+            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'staleDays' => $staleDays, 'productIds' => $productIds, 'productPublished' => $productPublished],
+            function () use ($today, $customExpiringDays, $staleDays, $productIds, $productPublished): array {
                 $startOfWeek = $this->dashboardWeekStart($today);
 
                 return [
                     'occupancy' => $this->occupancy($productIds, $productPublished),
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
+                    'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
                     'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
                 ];
@@ -162,6 +172,26 @@ trait BuildsDashboardStats
 
         return [
             'until' => $until->toDateString(),
+            'count' => $query->count(),
+        ];
+    }
+
+    /**
+     * The caller-adjustable "stale within days" card — mirrors Pallet::isStaleAfter()'s
+     * definition (created_at at least $days ago) as a count query rather than
+     * per-row hydration. There is no fixed stale threshold (see
+     * .ai/rules/models.md); $days always comes from the caller.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{days: int, count: int}
+     */
+    private function stale(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $query = Pallet::query()->where('created_at', '<=', $today->copy()->subDays($days));
+        $this->applyProductFilters($query, $productIds, $productPublished);
+
+        return [
+            'days' => $days,
             'count' => $query->count(),
         ];
     }

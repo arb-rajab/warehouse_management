@@ -17,10 +17,11 @@ class DashboardController extends Controller
     {
         $today = today();
         $customExpiringDays = $request->integer('expiring_days') ?: self::DEFAULT_CUSTOM_EXPIRING_DAYS;
+        $staleDays = $request->integer('stale_days') ?: self::DEFAULT_CUSTOM_STALE_DAYS;
         $productIds = $request->productIds();
 
         return Inertia::render('Admin/Dashboard/Index', [
-            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $productIds),
+            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $staleDays, $productIds),
             'today' => $today->toDateString(),
             'weekStart' => $this->dashboardWeekStart($today)->toDateString(),
             'filters' => [
