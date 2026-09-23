@@ -155,6 +155,44 @@ trait BuildsQrLabels
     }
 
     /**
+     * Picks the largest primary-line font size (down to the default $minFontSize)
+     * whose wrapped lines fit entirely within the vertical space below the QR,
+     * without needing clampLinesToHeight() to truncate any of them. Cell slot
+     * labels vary a lot in length (Row::MAX_DIMENSION allows 3-digit cell/flat
+     * numbers), so a single fixed "large" size would silently drop the flat
+     * number behind an ellipsis for a cell like "Z123·456" while looking fine
+     * for "Z1·2" — trying sizes from the top down guarantees the full label is
+     * always visible, just smaller when it needs to be.
+     *
+     * A bigger font also needs more clearance above its own baseline (glyphs
+     * extend roughly 0.8x the font size above it), so each candidate's start
+     * Y is computed from the font size itself rather than the fixed 24px gap
+     * the default $minFontSize uses — otherwise a large font's text would
+     * draw up into the QR instead of sitting below it.
+     *
+     * @return array{0: int, 1: int, 2: int} [fontSize, lineHeight, startY]
+     */
+    private function pickExpandedPrimaryFontSize(string $text, int $textMaxWidth, int $qrBottom, int $maxTextY, int $minFontSize, int $minLineHeight, int $minStartY): array
+    {
+        $topGap = 12;
+        $bottomGap = 12;
+        $maxFontSize = 64;
+
+        for ($fontSize = $maxFontSize; $fontSize >= $minFontSize; $fontSize--) {
+            $lineHeight = (int) round($fontSize * 1.2);
+            $startY = $qrBottom + $topGap + (int) round($fontSize * 0.8);
+            $lines = $this->wrapLabelText($text, $textMaxWidth, $fontSize);
+            $bottom = $startY + (count($lines) - 1) * $lineHeight + $bottomGap;
+
+            if ($bottom <= $maxTextY) {
+                return [$fontSize, $lineHeight, $startY];
+            }
+        }
+
+        return [$minFontSize, $minLineHeight, $minStartY];
+    }
+
+    /**
      * A single, self-contained SVG "image" label — one QR plus up to three
      * lines of plain legible text below it — for a single-item export
      * (one cell, one product) that a worker downloads and prints directly,
@@ -188,10 +226,10 @@ trait BuildsQrLabels
      * position only shifts down when it actually got drawn.
      *
      * $expandPrimaryText grows the primary line's font size to fill whatever
-     * vertical space is left below it (only BuildsCellQrLabels passes true,
-     * since a cell label carries no secondary/explanation line to occupy
-     * that space) — clampLinesToHeight() still guards against overflow, so a
-     * larger font just wraps/truncates like any other size would.
+     * vertical space is left below the QR (only BuildsCellQrLabels passes
+     * true, since a cell label carries no secondary/explanation line to
+     * occupy that space) — see pickExpandedPrimaryFontSize() for how the size
+     * is chosen.
      */
     private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false): string
     {
@@ -219,10 +257,16 @@ trait BuildsQrLabels
         $primaryLineHeight = 22;
         $primaryY = $idRendered ? $idY + 26 : $qrBottom + 24;
 
-        if ($expandPrimaryText) {
-            $availableHeight = max($primaryFontSize, $maxTextY - $primaryY);
-            $primaryFontSize = (int) min(64, max($primaryFontSize, floor($availableHeight * 0.7)));
-            $primaryLineHeight = (int) round($primaryFontSize * 1.2);
+        if ($expandPrimaryText && ! $idRendered) {
+            [$primaryFontSize, $primaryLineHeight, $primaryY] = $this->pickExpandedPrimaryFontSize(
+                $primaryText,
+                $textMaxWidth,
+                $qrBottom,
+                $maxTextY,
+                $primaryFontSize,
+                $primaryLineHeight,
+                $primaryY,
+            );
         }
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
