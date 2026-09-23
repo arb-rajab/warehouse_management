@@ -347,15 +347,16 @@ test('the expires_within_days filter excludes a product with no pallet expiring 
 
 test('combining the row filter with the state filter excludes a product matching only one of them', function () {
     actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowA = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
     $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowACells = $rowA->cells()->orderBy('cell_number')->get();
 
     $matching = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $matching->id, 'cell_id' => $rowA->cells()->first()->id]);
+    Pallet::factory()->create(['product_id' => $matching->id, 'cell_id' => $rowACells[0]->id]);
 
     // Noise: matches the row but not the state (opened, not full).
     $wrongState = Product::factory()->create();
-    Pallet::factory()->opened()->create(['product_id' => $wrongState->id, 'cell_id' => $rowA->cells()->first()->id]);
+    Pallet::factory()->opened()->create(['product_id' => $wrongState->id, 'cell_id' => $rowACells[1]->id]);
 
     // Noise: matches the state but not the row.
     $wrongRow = Product::factory()->create();
