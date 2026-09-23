@@ -863,6 +863,14 @@ test('a product QR export uses the configured QR code size instead of the defaul
 
 test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
     actingAsAdmin();
+    // Pinned to a box this specific name is known to overflow, rather than
+    // relying on whatever Setting::DEFAULT_QR_CODE_WIDTH/HEIGHT happens to be
+    // — the current defaults are sized generously (for cell QR scan distance,
+    // see Setting::DEFAULT_QR_CODE_WIDTH's docblock), large enough that even
+    // this column's 200-char max name never needs to wrap, let alone
+    // truncate. This test needs a genuinely tight box to exercise
+    // clampLinesToHeight()'s truncation path at all.
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 380]);
 
     $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
     $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
@@ -884,7 +892,7 @@ test('a product with a long name has its QR code label text wrapped across multi
     expect($svg)->toContain("ID: {$product->id}");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
-    expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
+    expect((int) $matches[1])->toBeLessThanOrEqual(380);
 });
 
 test('a QR label never grows past the configured height, even with three long/mandatory text fields', function () {
