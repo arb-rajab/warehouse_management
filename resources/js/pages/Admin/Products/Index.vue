@@ -4,7 +4,6 @@ import { Head, router } from '@inertiajs/vue3';
 import { Check, QrCode, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
-import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     exportQr,
@@ -53,8 +52,6 @@ import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     products: Paginated<ProductSummary>;
-    today: string;
-    weekStart: string;
     expiringSoonDays: number;
     filters: ProductFilters;
     filterOptions: ProductIndexFilterOptions;
@@ -122,16 +119,6 @@ const occupancyColumnsFiltered = computed(
         filters.state !== '' ||
         filters.expired ||
         filters.expires_within_days !== '',
-);
-
-const activityColumnsFiltered = computed(
-    () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
-        filters.state !== '' ||
-        filters.user_id.length > 0 ||
-        filters.action.length > 0 ||
-        dateRangeActive(filters),
 );
 
 /**
@@ -242,35 +229,6 @@ function occupancyHref(
     return cellsIndex.url({
         query: { ...locationQuery(), product_id: [product.id], ...overrides },
     });
-}
-
-/**
- * The user/action filters currently applied, carried into the activity
- * drill-down links below alongside a fixed date range — `date_from`/
- * `date_to` deliberately override rather than merge with the page's own
- * date filter, since "today"/"this week" are each a specific window.
- */
-function activityHref(
-    product: ProductSummary,
-    dateFrom: string,
-    dateTo: string,
-): string {
-    const query: QueryParams = {
-        ...locationQuery(),
-        product_id: [product.id],
-        date_from: dateFrom,
-        date_to: dateTo,
-    };
-
-    if (filters.user_id.length > 0) {
-        query.user_id = filters.user_id.map(Number);
-    }
-
-    if (filters.action.length > 0) {
-        query.action = filters.action;
-    }
-
-    return cellLogsIndex.url({ query });
 }
 
 const boxCountDialogProduct = ref<ProductSummary | null>(null);
@@ -511,19 +469,6 @@ function submitBoxCount(): void {
                     filterIconAlwaysVisible: false,
                 },
                 {
-                    label: t('products.columns.activityToday'),
-                    sortKey: 'activity_today_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
-                },
-                {
-                    label: t('products.columns.activityWeek'),
-                    sortKey: 'activity_week_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
-                    filterIconAlwaysVisible: false,
-                },
-                {
                     label: t('products.columns.qr'),
                 },
             ]"
@@ -562,30 +507,6 @@ function submitBoxCount(): void {
                         "
                         v-model:inactive="filters.inactive"
                         :expiring-soon-days="expiringSoonDays"
-                    />
-                </div>
-
-                <div v-else-if="key === 'activity'" class="space-y-3">
-                    <CellLogActivityFilterFields
-                        id-prefix="popover-filter"
-                        v-model:action="filters.action"
-                        v-model:user-id="filters.user_id"
-                        :actions="filterOptions.actions"
-                        :users="filterOptions.users"
-                    />
-
-                    <DateRangeFilterFields
-                        from-id="popover-filter-date-from"
-                        to-id="popover-filter-date-to"
-                        within-days-id="popover-filter-created-within-days"
-                        :from-label="t('cellLog.filters.from')"
-                        :to-label="t('cellLog.filters.to')"
-                        :within-days-label="t('cellLog.filters.withinDays')"
-                        v-model:from="filters.date_from"
-                        v-model:to="filters.date_to"
-                        v-model:within-days="filters.created_within_days"
-                        :range-disabled="dateRangeDisabled"
-                        :days-disabled="createdWithinDaysDisabled"
                     />
                 </div>
             </template>
@@ -651,16 +572,6 @@ function submitBoxCount(): void {
                         "
                     >
                         {{ product.expiring_soon_count }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, today, today)">
-                        {{ product.activity_today_count }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, weekStart, today)">
-                        {{ product.activity_week_count }}
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">

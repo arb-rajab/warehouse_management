@@ -498,8 +498,6 @@
             "opened": "Opened",
             "expired": "Expired",
             "expiringSoon": "Expiring ≤{days}d",
-            "activityToday": "Today",
-            "activityWeek": "This week",
             "boxesPerPallet": "Boxes / pallet",
             "qr": "QR"
         },

@@ -32,8 +32,6 @@ const previewProducts = [
         opened_cells_count: 3,
         expired_cells_count: 1,
         expiring_soon_count: 2,
-        activity_today_count: 4,
-        activity_week_count: 15,
     },
 ];
 </script>
@@ -78,14 +76,6 @@ const previewProducts = [
                             }),
                             sortKey: 'expiring_soon_count',
                         },
-                        {
-                            label: t('products.columns.activityToday'),
-                            sortKey: 'activity_today_count',
-                        },
-                        {
-                            label: t('products.columns.activityWeek'),
-                            sortKey: 'activity_week_count',
-                        },
                     ]"
                     :rows="previewProducts"
                     :empty-message="t('products.empty')"
@@ -108,12 +98,6 @@ const previewProducts = [
                         </td>
                         <td class="px-4 py-2">
                             {{ row.expiring_soon_count }}
-                        </td>
-                        <td class="px-4 py-2">
-                            {{ row.activity_today_count }}
-                        </td>
-                        <td class="px-4 py-2">
-                            {{ row.activity_week_count }}
                         </td>
                     </template>
                 </DataTable>

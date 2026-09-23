@@ -44,11 +44,7 @@ test('an authenticated admin can view the products index with every property the
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
             )
-            ->where('today', '2026-08-13')
-            ->where('weekStart', '2026-08-10')
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
             ->has('filterOptions.actions', 8)
@@ -92,8 +88,6 @@ test('the products index ships both raw name columns under the Arabic panel loca
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
             )
     );
 
@@ -394,64 +388,6 @@ test('the expiring-soon count and window use expires_within_days when it is fill
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.expiring_soon_count', 1)
             ->where('expiringSoonDays', 7)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the products index counts today\'s and this week\'s activity separately', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-11 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-07-01 09:00:00');
-
-    $response = $this->get('/admin/products');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 2)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the action filter narrows today\'s and this week\'s activity counts', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Opened]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Emptied]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?action[]=opened');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the state filter alone narrows today\'s and this week\'s activity counts, without needing a row/column filter too', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    $fullPallet = Pallet::factory()->create(['product_id' => $product->id]);
-    $openedPallet = Pallet::factory()->opened()->create(['product_id' => $product->id]);
-
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $fullPallet->cell_id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $openedPallet->cell_id]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?state=full');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
     );
 
     Carbon::setTestNow();

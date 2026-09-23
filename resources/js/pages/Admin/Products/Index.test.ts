@@ -48,8 +48,6 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         opened_cells_count: 1,
         expired_cells_count: 0,
         expiring_soon_count: 0,
-        activity_today_count: 0,
-        activity_week_count: 0,
         ...overrides,
     };
 }
@@ -75,8 +73,6 @@ function mountPage(
     products: ProductSummary[],
     filters: ProductFilters = {},
     overrides: {
-        today?: string;
-        weekStart?: string;
         expiringSoonDays?: number;
     } = {},
 ) {
@@ -88,8 +84,6 @@ function mountPage(
     return mount(Index, {
         props: {
             products: paginated(products),
-            today: overrides.today ?? '2026-08-13',
-            weekStart: overrides.weekStart ?? '2026-08-10',
             expiringSoonDays: overrides.expiringSoonDays ?? 45,
             filters,
             filterOptions,
@@ -135,8 +129,6 @@ describe('Products Index', () => {
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityToday'),
-            t('products.columns.activityWeek'),
             t('products.columns.qr'),
         ]);
     });
@@ -507,58 +499,15 @@ describe('Products Index', () => {
         expect(href).toContain('expires_within_days=30');
     });
 
-    it('renders the today activity count linking to the cell log with today as both ends of the date range', () => {
-        const wrapper = mountPage(
-            [product({ id: 42, activity_today_count: 4 })],
-            {},
-            { today: '2026-08-13' },
-        );
-
-        const cell = rowCells(wrapper)[6];
-        expect(cell.text()).toBe('4');
-        const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cell-logs');
-        expect(href).toContain('date_from=2026-08-13');
-        expect(href).toContain('date_to=2026-08-13');
-    });
-
-    it('renders the this-week activity count linking to the cell log from the week start through today', () => {
-        const wrapper = mountPage(
-            [product({ id: 42, activity_week_count: 9 })],
-            {},
-            { today: '2026-08-13', weekStart: '2026-08-10' },
-        );
-
-        const cell = rowCells(wrapper)[7];
-        expect(cell.text()).toBe('9');
-        const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cell-logs');
-        expect(href).toContain('date_from=2026-08-10');
-        expect(href).toContain('date_to=2026-08-13');
-    });
-
     it('renders a QR export link for the product', () => {
         const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
 
-        const cell = rowCells(wrapper)[8];
+        const cell = rowCells(wrapper)[6];
         const link = cell.get('a');
         expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
         expect(link.attributes('aria-label')).toBe(
             t('products.exportQrLabel', { product: 'Widgets' }),
         );
-    });
-
-    it('carries the current row/column/user/action filters into the activity drill-down links', () => {
-        const wrapper = mountPage([product({ id: 42 })], {
-            row_id: 1,
-            user_id: [7],
-            action: ['opened'],
-        });
-
-        const href = rowCells(wrapper)[6].get('a').attributes('href') ?? '';
-        expect(href).toContain('row_id=1');
-        expect(href).toContain('user_id%5B%5D=7');
-        expect(href).toContain('action%5B%5D=opened');
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {
@@ -679,7 +628,6 @@ describe('Products Index', () => {
         for (const label of [
             t('products.columns.product'),
             t('products.columns.full'),
-            t('products.columns.activityToday'),
         ]) {
             expect(
                 columnHeader(wrapper, label).findComponent(Filter).exists(),
@@ -695,7 +643,6 @@ describe('Products Index', () => {
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityWeek'),
         ]) {
             expect(
                 columnHeader(wrapper, label).findComponent(Filter).exists(),
@@ -735,7 +682,7 @@ describe('Products Index', () => {
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
-    it('marks every occupancy column active when the state filter is applied, but leaves the activity columns alone', () => {
+    it('marks every occupancy column active when the state filter is applied', () => {
         const wrapper = mountPage([], { state: 'full' });
 
         for (const label of [
@@ -746,13 +693,6 @@ describe('Products Index', () => {
         ]) {
             expect(isColumnActive(wrapper, label)).toBe(true);
         }
-
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityToday')),
-        ).toBe(true);
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityWeek')),
-        ).toBe(true);
     });
 
     it('marks the product column (not the occupancy columns) active when the inactive filter is applied', () => {
@@ -769,15 +709,6 @@ describe('Products Index', () => {
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
-    it('marks only the activity columns active when only an action filter is applied', () => {
-        const wrapper = mountPage([], { action: ['opened'] });
-
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityToday')),
-        ).toBe(true);
-        expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
-    });
-
     it('marks every metric column active when a row filter is applied', () => {
         const wrapper = mountPage([], { row_id: 1 });
 
@@ -786,8 +717,6 @@ describe('Products Index', () => {
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityToday'),
-            t('products.columns.activityWeek'),
         ]) {
             expect(isColumnActive(wrapper, label)).toBe(true);
         }
@@ -824,26 +753,15 @@ describe('Products Index', () => {
         expect(wrapper.find('#popover-filter-state').exists()).toBe(false);
     });
 
-    it('opens the activity popover with the action/user/date fields when the Activity Today column icon is clicked', async () => {
-        const wrapper = mountPage([]);
-
-        await openColumnPopover(wrapper, t('products.columns.activityToday'));
-
-        expect(wrapper.find('#popover-filter-action').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-user').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-date-from').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-state').exists()).toBe(false);
-    });
-
     it('closes one popover and opens another when a different column icon is clicked', async () => {
         const wrapper = mountPage([]);
 
         await openColumnPopover(wrapper, t('products.columns.product'));
         expect(wrapper.find('#popover-filter-product').exists()).toBe(true);
 
-        await openColumnPopover(wrapper, t('products.columns.activityToday'));
+        await openColumnPopover(wrapper, t('products.columns.full'));
         expect(wrapper.find('#popover-filter-product').exists()).toBe(false);
-        expect(wrapper.find('#popover-filter-action').exists()).toBe(true);
+        expect(wrapper.find('#popover-filter-state').exists()).toBe(true);
     });
 
     it('auto-applies, debounced, when a field is changed inside an open column popover', async () => {
