@@ -361,7 +361,7 @@ test('an explicit flat_number is respected even when the highlight filter matche
     Carbon::setTestNow();
 });
 
-test('a highlight-filtered deep-link lands on flat 1 unchanged when it already holds the first match', function () {
+test('a highlight-filtered deep-link stays on flat 1 (still pulsing the match) when flat 1 already holds the first match', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
@@ -378,8 +378,14 @@ test('a highlight-filtered deep-link lands on flat 1 unchanged when it already h
 
     $response = $this->get('/admin/cells?expired=true');
 
+    // flatNumber doesn't change, but jumpToCell is still populated — the
+    // deep-link's match gets pulsed into focus even when it was already on
+    // the landing flat, same as it would be for any other resolved match.
     $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)->where('jumpToCell', null)
+        fn (Assert $page) => $page->where('flatNumber', 1)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 1)
+            ->where('jumpToCell.flat_number', 1)
     );
 
     Carbon::setTestNow();
