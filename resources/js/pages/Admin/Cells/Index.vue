@@ -196,6 +196,28 @@ watch(highlightFilters, () => {
 });
 
 /**
+ * A highlight filter can also arrive already applied — the dashboard's
+ * "expired pallets"/expiring-window/occupancy tiles deep-link here with a
+ * highlight filter but no `flat_number`, so the page loads on flat 1
+ * regardless of where the matches actually are. If flat 1 (or whatever
+ * flat the request landed on) has none of the seeded filter's matches,
+ * jump to the first one on mount the same way a live filter change does —
+ * otherwise the admin lands on a flat that looks like the filter matched
+ * nothing. Left alone when the landing flat already has a match, so this
+ * never fires for a plain flat-number deep link with no highlight seed.
+ */
+onMounted(() => {
+    if (
+        orderedMatches.value.length > 0 &&
+        !matchingSamples.value.some(
+            (sample) => sample.flat_number === props.flatNumber,
+        )
+    ) {
+        focusMatchAt(0);
+    }
+});
+
+/**
  * Jumps to the match at `index` (wrapping is the caller's job). In 3D mode
  * every flat is already rendered, so it always just moves/pitches the
  * camera locally; in 2D it recenters in place when the match is already on
