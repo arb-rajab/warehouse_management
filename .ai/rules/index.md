@@ -39,6 +39,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts,app/Http/Controllers/Admin/CellController.php,resources/js/types/admin.ts | .ai/rules/js-types.md |
 | resources/js/** | .ai/rules/js.md |
 | lang/** | .ai/rules/lang.md |
+| legacy/albaraka-holland/**,compose.yaml,pint.json,eslint.config.js,.semgrepignore,resources/css/app.css,.claude/scripts/pre_push_check.py | .ai/rules/legacy-albaraka-holland.md |
 | resources/js/layouts/** | .ai/rules/layouts.md |
 | database/migrations/**,config/database.php,config/permission.php,config/session.php,config/cache.php,config/queue.php,config/auth.php,app/Models/PersonalAccessToken.php,app/Models/Product.php,app/Providers/AppServiceProvider.php,resources/js/lib/productName.ts,resources/js/components/ProductOptionLabel.vue,app/Console/Commands/SyncProductsCommand.php,config/store.php | .ai/rules/shared-database.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellSlot.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellStatus.ts,resources/js/lib/cellHighlight.ts | .ai/rules/lib.md |

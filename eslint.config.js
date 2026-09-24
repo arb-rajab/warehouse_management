@@ -95,6 +95,7 @@ export default defineConfigWithVueTs(
             'node_modules',
             'public',
             'bootstrap/ssr',
+            'legacy',
             'vite.config.ts',
             'vitest.config.ts',
             'playwright.config.ts',

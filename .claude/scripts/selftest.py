@@ -210,6 +210,14 @@ def main() -> int:
         code, out = run('php_duplicate_blocks.py', str(alone))
         check('single-file repetition not reported', '0 block(s)' in out, out)
 
+    print('pre_push_check.py')
+    sys.path.insert(0, str(SCRIPTS))
+    from pre_push_check import is_root_project_path
+
+    check('vendored legacy app path is skipped', not is_root_project_path('legacy/albaraka-holland/app/User.php'))
+    check('root app path is kept', is_root_project_path('app/Models/Pallet.php'))
+    check('look-alike root path is kept', is_root_project_path('app/legacy/Thing.php'))
+
     print()
     if failures:
         print(f'{len(failures)} case(s) failed: {", ".join(failures)}')

@@ -29,6 +29,10 @@ whole project, matching what CI actually gates on; the changed-file list only
 scopes the per-file stand-in scripts, which are too slow/noisy to run over
 every file in the repo on each push.
 
+Anything under `legacy/` is left out of the changed-file list: it is a
+vendored copy of a separate PHP 7 / Laravel 8 app with its own toolchain
+(see `.ai/rules/legacy-albaraka-holland.md`), not this app's code.
+
 `php_duplicate_blocks.py` is intentionally NOT included here — its own
 docstring says it is for a deliberate cross-cutting review against the
 duplication threshold in CLAUDE.md, not a per-push gate.
@@ -46,6 +50,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = Path(__file__).parent
+
+VENDORED_PREFIXES = ('legacy/',)
+
+
+def is_root_project_path(path: str) -> bool:
+    """Whether a repo-relative path belongs to this app rather than a vendored legacy app."""
+    return not path.startswith(VENDORED_PREFIXES)
 
 
 def changed_files() -> list[str]:
@@ -85,7 +96,9 @@ def changed_files() -> list[str]:
         cwd=ROOT, capture_output=True, text=True,
     )
 
-    return sorted(set(tracked) | {line for line in untracked.stdout.splitlines() if line})
+    paths = set(tracked) | {line for line in untracked.stdout.splitlines() if line}
+
+    return sorted(path for path in paths if is_root_project_path(path))
 
 
 def run_step(label: str, command: list[str], *, advisory: bool = False) -> bool:
