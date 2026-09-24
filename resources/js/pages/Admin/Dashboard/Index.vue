@@ -9,6 +9,7 @@ import {
     Clock,
     PackageOpen,
     SlidersHorizontal,
+    TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
@@ -16,6 +17,7 @@ import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellCo
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
@@ -51,6 +53,10 @@ interface StaleDayWindow {
     count: number;
 }
 
+interface LowStockStats {
+    count: number;
+}
+
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
@@ -60,6 +66,7 @@ const props = defineProps<{
             custom: ExpiringDayWindow;
         };
         stale: StaleDayWindow;
+        low_stock: LowStockStats;
         activity_today: {
             stored: number;
             opened: number;
@@ -376,6 +383,22 @@ function onProductIdsChange(ids: string[]): void {
                         </FilterDialog>
                     </template>
                 </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.lowStock.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.lowStock.count')"
+                    :value="props.stats.low_stock.count"
+                    :href="productsIndex().url"
+                    :query="{ low_stock: true, ...productQuery }"
+                    tone="danger"
+                    :icon="TriangleAlert"
+                />
             </div>
         </section>
 

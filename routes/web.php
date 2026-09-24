@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
         Route::patch('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
+        Route::patch('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');

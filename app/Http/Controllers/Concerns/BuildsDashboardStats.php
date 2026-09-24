@@ -7,6 +7,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
+use App\Models\Product;
 use App\Services\DashboardStatsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,6 +47,7 @@ trait BuildsDashboardStats
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
+     *     low_stock: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -54,6 +56,7 @@ trait BuildsDashboardStats
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
+     *     low_stock: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -69,6 +72,7 @@ trait BuildsDashboardStats
                     'occupancy' => $this->occupancy($productIds, $productPublished),
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
                     'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
+                    'low_stock' => $this->lowStock($productIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
                     'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
                 ];
@@ -194,6 +198,36 @@ trait BuildsDashboardStats
             'days' => $days,
             'count' => $query->count(),
         ];
+    }
+
+    /**
+     * How many products currently have fewer pallets in the warehouse than
+     * their configured minimum — see Product::minimumPallets() and
+     * Admin\ProductController::lowStockExistsSubquery(), which mirrors this
+     * comparison for the products index's own `low_stock` filter. A product
+     * with no threshold configured never counts, whatever its pallet count.
+     *
+     * Filtered by `$productIds`/`$productPublished` directly (Product's own
+     * `id`/`published` columns) rather than via
+     * {@see self::applyProductFilters()}, which assumes a `product_id`
+     * column/`product` relation that Product itself doesn't have.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{count: int}
+     */
+    private function lowStock(?array $productIds, ?bool $productPublished = null): array
+    {
+        $count = Product::query()
+            ->whereHas('setting', fn ($q) => $q->whereNotNull('minimum_pallets'))
+            ->whereRaw('
+                (select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id)
+                > (select count(*) from pallets where pallets.product_id = products.id)
+            ')
+            ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
+            ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
+            ->count();
+
+        return ['count' => $count];
     }
 
     /**

@@ -70,6 +70,7 @@ const stats = {
         custom: { days: 45, until: '2026-09-27', count: 8 },
     },
     stale: { days: 30, count: 5 },
+    low_stock: { count: 4 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
     activity_week: { stored: 20, opened: 8, emptied: 4, transferred: 9 },
 };
@@ -450,10 +451,10 @@ describe('Dashboard Index', () => {
         expect(stale?.exists()).toBe(true);
     });
 
-    it('renders exactly five sections, including the stale section', () => {
+    it('renders exactly six sections, including the stale and low-stock sections', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findAll('section')).toHaveLength(5);
+        expect(wrapper.findAll('section')).toHaveLength(6);
     });
 
     it('renders every section heading', () => {
@@ -462,8 +463,36 @@ describe('Dashboard Index', () => {
         expect(wrapper.text()).toContain(t('dashboard.occupancy.title'));
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
         expect(wrapper.text()).toContain(t('dashboard.stale.title'));
+        expect(wrapper.text()).toContain(t('dashboard.lowStock.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityToday.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityWeek.title'));
+    });
+
+    it('renders the low-stock tile linking to the products page filtered to low_stock=true', () => {
+        const wrapper = mountPage();
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.lowStock.count'),
+            { low_stock: true },
+        );
+        expect(tile?.props('value')).toBe(4);
+        expect(tile?.props('href')).toBe('/admin/products');
+        expect(tile?.props('tone')).toBe('danger');
+    });
+
+    it('includes the active product filter in the low-stock tile link', () => {
+        const wrapper = mountPage({ filters: { product_id: [1, 2] } });
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.lowStock.count'),
+            {
+                low_stock: true,
+                product_id: [1, 2],
+            },
+        );
+        expect(tile?.exists()).toBe(true);
     });
 
     it('reloads with the selected products when the product filter changes, preserving the custom day counts', async () => {

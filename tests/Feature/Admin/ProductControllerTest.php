@@ -18,7 +18,7 @@ test('an authenticated admin can view the products index with every property the
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -40,6 +40,8 @@ test('an authenticated admin can view the products index with every property the
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
@@ -397,6 +399,169 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 2)
     );
+});
+
+test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id]);
+    Pallet::factory()->opened()->create(['product_id' => $product->id]);
+
+    // Noise: another product's pallets must not be counted here.
+    $other = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $other->id]);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.pallets_count', 2)
+    );
+});
+
+test('minimum_pallets is null in the index response for a product nobody has configured a threshold for', function () {
+    actingAsAdmin();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.minimum_pallets', null)
+    );
+});
+
+test('the low_stock filter narrows the products index to products below their configured minimum, excluding a fully-stocked product', function () {
+    actingAsAdmin();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at (not below) its minimum, so it must not be matched.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products?low_stock=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $low->id)
+    );
+});
+
+test('the low_stock filter is omitted (all products shown) when not sent', function () {
+    actingAsAdmin();
+
+    Product::factory()->minimumPallets(5)->create();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+    );
+});
+
+test('an authenticated admin can set a minimum pallets threshold for a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->minimumPallets(9)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseHas('wms_product_settings', [
+        'product_id' => $product->id,
+        'minimum_pallets' => 10,
+    ]);
+    expect($otherProduct->fresh()->minimum_pallets)->toBe(9);
+});
+
+test('an authenticated admin can clear a product\'s minimum pallets threshold by sending null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(10)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    expect($product->fresh()->minimum_pallets)->toBeNull();
+});
+
+test('setting a minimum pallets threshold redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('setting a minimum pallets threshold creates the settings row for a product that has never had one', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->unconfigured()->create();
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    expect($product->fresh()->minimum_pallets)->toBe(15);
+    $this->assertDatabaseCount('wms_product_settings', 1);
+});
+
+test('the minimum pallets threshold, when sent, must be a whole number of at least one', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    foreach ([0, -3, 'many'] as $invalid) {
+        $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
+
+        $response->assertSessionHasErrors('minimum_pallets');
+    }
+
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('omitting the minimum_pallets field entirely is rejected, unlike sending an explicit null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", []);
+
+    $response->assertSessionHasErrors('minimum_pallets');
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('a mobile app user cannot set a minimum pallets threshold', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertForbidden();
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('an unauthenticated caller cannot set a minimum pallets threshold', function () {
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('login'));
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('setting a minimum pallets threshold for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->patch('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
+
+    $response->assertNotFound();
 });
 
 test('the expiring-soon count defaults to a 45-day window when expires_within_days is not filled in', function () {
