@@ -10,8 +10,8 @@ use App\Models\Row;
 test('an authenticated admin can store a pallet into an empty cell', function () {
     $admin = actingAsAdmin();
 
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
     $product = Product::factory()->boxesCount(10)->create();
     $expirationDate = now()->addMonth()->toDateString();
 
@@ -38,6 +38,34 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
         'boxes_count' => 10,
         'user_id' => $admin->id,
         'note' => 'Admin backfill.',
+    ]);
+});
+
+test('storing a pallet into a first-level cell opens it automatically', function () {
+    $admin = actingAsAdmin();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+
+    $pallet = Pallet::query()->sole();
+    expect($cell->refresh()->state)->toBe(CellState::Opened);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Stored->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
     ]);
 });
 
@@ -199,6 +227,25 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
         'action' => CellLogAction::Opened->value,
         'pallet_id' => $pallet->id,
         'boxes_count' => 7,
+        'user_id' => $admin->id,
+    ]);
+});
+
+test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
+    $admin = actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open");
+
+    $response->assertRedirect(route('admin.cells.index'));
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'action' => CellLogAction::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 10,
         'user_id' => $admin->id,
     ]);
 });
@@ -493,8 +540,8 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
     $sourceCell = $sourceRow->cells()->first();
     $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 7]);
 
-    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
-    $destinationCell = $destinationRow->cells()->first();
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('flat_number', 2)->first();
 
     $response = $this->post("/admin/pallets/{$pallet->id}/transfer", [
         'row_letter' => $destinationRow->letter,
@@ -521,6 +568,46 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
         'action' => CellLogAction::TransferredIn->value,
         'user_id' => $admin->id,
         'note' => 'Consolidating.',
+    ]);
+});
+
+test('transferring a full pallet into a first-level destination opens it automatically', function () {
+    $admin = actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $sourceCell = $sourceRow->cells()->where('flat_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 7]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $destinationCell = $destinationRow->cells()->first();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => $destinationRow->letter,
+        'cell_number' => $destinationCell->cell_number,
+        'flat_number' => $destinationCell->flat_number,
+    ]);
+
+    $response->assertRedirect(route('admin.cells.index'));
+    expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $sourceCell->id,
+        'related_cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredOut->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Empty->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $admin->id,
+    ]);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $admin->id,
     ]);
 });
 

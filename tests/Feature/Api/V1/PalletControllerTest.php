@@ -14,18 +14,18 @@ use Illuminate\Support\Facades\DB;
 test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
 
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
-    $cell = $row->cells()->where('cell_number', 1)->first();
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 2)->first();
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => $expirationDate,
     ]);
@@ -53,7 +53,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
         'location' => [
             'row_letter' => 'Z',
             'cell_number' => 1,
-            'flat_number' => 1,
+            'flat_number' => 2,
         ],
     ]);
 
@@ -65,17 +65,17 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
 test('an authenticated worker can add a pallet to an empty slot with no expiration date', function () {
     actingAsMobileUser();
 
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 2]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('flat_number', 2)->first();
 
     $response = $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => null,
     ]);
@@ -103,7 +103,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
         'location' => [
             'row_letter' => 'Z',
             'cell_number' => 1,
-            'flat_number' => 1,
+            'flat_number' => 2,
         ],
     ]);
 
@@ -134,14 +134,14 @@ test('a submitted expiration_date carrying a time component is normalized to a b
 test('adding a pallet logs the status change, with an optional note', function () {
     $user = actingAsMobileUser();
 
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
     $product = Product::factory()->boxesCount(8)->create();
 
     $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
         'note' => 'Arrived on the morning truck.',
@@ -306,6 +306,37 @@ test('an unauthenticated caller cannot add a pallet and nothing changes', functi
     $this->assertDatabaseCount('pallets', 0);
 });
 
+test('adding a pallet to a first-level cell opens it automatically', function () {
+    $user = actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertCreated()->assertJsonPath('state', 'opened');
+
+    $pallet = Pallet::query()->sole();
+    expect($cell->refresh()->state)->toBe(CellState::Opened);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Stored->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'user_id' => $user->id,
+    ]);
+});
+
 test('an authenticated worker can view a pallet with every property the app reads', function () {
     actingAsMobileUser();
 
@@ -468,15 +499,25 @@ test('opening a pallet without a note logs a null note', function () {
     expect(CellStatusLog::query()->where('cell_id', $pallet->cell_id)->sole()->note)->toBeNull();
 });
 
-test('opening a pallet without a boxes_count is rejected', function () {
-    actingAsMobileUser();
+test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
+    $user = actingAsMobileUser();
 
-    $pallet = Pallet::factory()->create();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open");
 
-    $response->assertStatus(422)->assertJsonValidationErrors('boxes_count');
-    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    $response->assertOk()->assertJsonPath('state', 'opened');
+    $response->assertJsonPath('remaining_boxes', 10);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'action' => CellLogAction::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 10,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('opening a pallet with more boxes than remain is rejected and nothing changes', function () {
@@ -860,13 +901,13 @@ test('an authenticated worker can transfer a full pallet to an empty slot', func
     $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'product_id' => $product->id, 'remaining_boxes' => 7]);
 
-    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
-    $destinationCell = $destinationRow->cells()->first();
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('flat_number', 2)->first();
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
         'to_row_letter' => $destinationRow->letter,
         'to_cell_number' => 1,
-        'to_flat_number' => 1,
+        'to_flat_number' => 2,
         'note' => 'Consolidating widgets onto row B.',
     ]);
 
@@ -875,7 +916,7 @@ test('an authenticated worker can transfer a full pallet to an empty slot', func
     expect($response->json('location'))->toEqual([
         'row_letter' => 'B',
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
     ]);
 
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
@@ -940,7 +981,28 @@ test('transferring an opened pallet leaves the destination opened, not full', fu
     $sourceCell = $sourceRow->cells()->first();
     $pallet = Pallet::factory()->opened()->create(['cell_id' => $sourceCell->id]);
 
-    $destinationRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $destinationRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('flat_number', 2)->first();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 2,
+    ]);
+
+    $response->assertOk()->assertJsonPath('state', 'opened');
+    expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
+    expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('transferring a full pallet into a first-level destination opens it, without changing the source log\'s prior state', function () {
+    $user = actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $sourceCell = $sourceRow->cells()->where('flat_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 7]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
     $destinationCell = $destinationRow->cells()->first();
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
@@ -952,6 +1014,27 @@ test('transferring an opened pallet leaves the destination opened, not full', fu
     $response->assertOk()->assertJsonPath('state', 'opened');
     expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $sourceCell->id,
+        'related_cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredOut->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Empty->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $user->id,
+    ]);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('transferring to a non-empty destination is rejected and nothing changes', function () {

@@ -65,7 +65,7 @@ class PalletController extends Controller
 
         $result = $this->palletActions->open(
             $pallet,
-            $request->integer('boxes_count'),
+            $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
