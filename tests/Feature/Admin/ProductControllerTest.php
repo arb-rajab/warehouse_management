@@ -879,6 +879,19 @@ test('the product search matches a multi-word term split across the two name col
     expect($response->json('data.0.id'))->toBe($matching->id);
 });
 
+test('the product search matches a product by its numeric id, excluding a non-matching product', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات', 'published' => true]);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات', 'published' => true]);
+
+    $response = $this->getJson('/admin/products/search?q='.$matching->id);
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
 test('the product search returns every product for a blank term', function () {
     actingAsAdmin();
 

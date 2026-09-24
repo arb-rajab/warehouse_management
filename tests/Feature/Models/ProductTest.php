@@ -196,6 +196,55 @@ test('searchByName matches a multi-word term whose words split across name and a
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
 
+test('searchByName also matches a product whose id equals the term, even though the term matches no name', function () {
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName((string) $matching->id)->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName tolerates surrounding whitespace when the term is a product id', function () {
+    // ar_name is pinned on both rows (rather than left at the factory
+    // default, which embeds a random 1-999999 number) so the noise product
+    // can never accidentally LIKE-match the id being searched for.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName(' '.$matching->id.' ')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName returns nothing for a digits-only term matching neither an id nor a name', function () {
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $nonExistentId = Product::max('id') + 1000;
+
+    expect(Product::query()->searchByName((string) $nonExistentId)->count())->toBe(0);
+});
+
+test('searchByName does not treat a negative number or a decimal as a product id lookup', function () {
+    Product::factory()->create(['name' => 'Widgets']);
+
+    expect(Product::query()->searchByName('-1')->count())->toBe(0);
+    expect(Product::query()->searchByName('1.5')->count())->toBe(0);
+});
+
+test('searchByName does not treat a multi-word term as a product id lookup even when one word is numeric', function () {
+    // Regression: a term like "42 Widgets" must still go through ordinary
+    // name matching (and only match a product actually named that), not
+    // short-circuit into an id lookup on "42".
+    $matching = Product::factory()->create(['name' => '42 Widgets']);
+    Product::factory()->create(['name' => 'Gadgets']);
+
+    $results = Product::query()->searchByName('42 Widgets')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
 /**
  * The MySQL/MariaDB half of the search cannot be executed here — CI and the
  * local test connection are sqlite (phpunit.xml), which has no
@@ -325,6 +374,35 @@ test('searchByName never lets boolean-mode operators reach the fulltext parser',
 test('searchByName adds no condition at all for a blank term on mysql', function () {
     expect(mysqlProductSearch(null)->toSql())->toBe('select * from `products`');
     expect(mysqlProductSearch('   ')->toSql())->toBe('select * from `products`');
+});
+
+test('searchByName ORs an id match onto the name condition on mysql when the term is digits-only', function () {
+    // "123" is long enough to also be an indexable FULLTEXT word (unlike "42"
+    // in the shorter-than-minimum-token test below), so this exercises the id
+    // OR sitting alongside the full FULLTEXT-or-LIKE group, not just LIKE.
+    $query = mysqlProductSearch('123');
+
+    // The whole name-match condition (itself the FULLTEXT-or-LIKE group) sits
+    // in one nested group, OR'd against the bare `id = ?` — so an id match
+    // never has to satisfy any word condition, and vice versa.
+    expect($query->toSql())->toBe(
+        'select * from `products` where ((match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?))) or `id` = ?)'
+    );
+    expect($query->getBindings())->toBe(['+123*', '%123%', '\\', '%123%', '\\', 123]);
+});
+
+test('searchByName ORs an id match onto a LIKE-only name condition on mysql when the term is too short to be indexable', function () {
+    // "42" is shorter than FULL_TEXT_MIN_WORD_LENGTH, so it never enters the
+    // FULLTEXT expression — `applyNameMatch()` takes the plain-LIKE branch,
+    // with no extra wrapping group around it, and the id OR sits directly
+    // beside that.
+    $query = mysqlProductSearch('42');
+
+    expect($query->toSql())->toBe(
+        'select * from `products` where ((`name` like ? escape ? or `ar_name` like ? escape ?) or `id` = ?)'
+    );
+    expect($query->getBindings())->toBe(['%42%', '\\', '%42%', '\\', 42]);
 });
 
 test('searchByName stays on LIKE for a connection whose grammar has no fulltext support', function () {
