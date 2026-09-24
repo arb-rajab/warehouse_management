@@ -379,7 +379,7 @@
                 "submit": "حفظ التغييرات"
             },
             "open": {
-                "boxesCountLabel": "عدد الصناديق المراد إزالتها",
+                "boxesCountLabel": "عدد الصناديق المراد إزالتها (اختياري)",
                 "remainingBoxesHint": "{count} صندوق متبقٍ",
                 "confirmEmptyLabel": "سيؤدي هذا إلى تفريغ المنصة النقالة — حدد للتأكيد",
                 "submit": "فتح المنصة النقالة"

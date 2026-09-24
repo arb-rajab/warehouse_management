@@ -48,7 +48,7 @@ class PalletController extends Controller
         return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->open(
                 $pallet,
-                $request->integer('boxes_count'),
+                $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
                 $request->boolean('confirm_empty'),
                 $user->id,
                 $request->input('note'),

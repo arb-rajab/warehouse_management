@@ -20,7 +20,7 @@ class OpenPalletRequest extends FormRequest
     public function rules(): array
     {
         return [
-            ...$this->boxesCountRules(),
+            ...$this->optionalBoxesCountRules(),
             ...$this->confirmEmptyRules(),
             ...$this->noteRules(),
             ...$this->returnToRules(),

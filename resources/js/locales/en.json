@@ -379,7 +379,7 @@
                 "submit": "Save changes"
             },
             "open": {
-                "boxesCountLabel": "Boxes to remove",
+                "boxesCountLabel": "Boxes to remove (optional)",
                 "remainingBoxesHint": "{count} boxes remaining",
                 "confirmEmptyLabel": "This would empty the pallet — check to confirm",
                 "submit": "Open pallet"

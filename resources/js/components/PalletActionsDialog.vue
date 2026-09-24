@@ -106,6 +106,10 @@ function noteOrNull(): string | null {
     return note.value === '' ? null : note.value;
 }
 
+function boxesCountOrNull(): string | null {
+    return boxesCount.value === '' ? null : boxesCount.value;
+}
+
 function submit(): void {
     if (!props.cell) {
         return;
@@ -149,7 +153,7 @@ function submit(): void {
         router.post(
             openPallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
             {
-                boxes_count: boxesCount.value,
+                boxes_count: boxesCountOrNull(),
                 confirm_empty: confirmEmpty.value,
                 note: noteOrNull(),
                 return_to: props.returnTo ?? null,
@@ -362,7 +366,7 @@ const submitLabel = computed(() => {
                         v-model="boxesCount"
                         type="number"
                         min="1"
-                        required
+                        :required="selectedAction === 'remove-boxes'"
                         :class="plainFieldInputClass"
                     />
                 </div>
