@@ -1,0 +1,23 @@
+{
+  "Serial": "123",
+  "enName": "Test Product",
+  "arName": "منتج تجريبي",
+  "Price": 100,
+  "UnitID": 1,
+  "UnitEnName": "Box",
+  "UnitArName": "علبة",
+  "TaxPercent": 5,
+  "Desc": "تفاصيل المنتج",
+  "enCatName": "Electronics",
+  "Active": true,
+  "Mat_Class4_ID": "456",
+  "Mat_ID": "MAT-789",
+  "Unit_Equal": 12,
+  "Barcodes": [
+    { "Barcode": "111111111" }
+  ],
+  "Variations": [
+    { "VName": "Green" },
+    { "VName": "Small" }
+  ]
+}
