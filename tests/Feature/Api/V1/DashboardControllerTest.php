@@ -2,6 +2,7 @@
 
 use App\Enums\CellLogAction;
 use App\Models\CellStatusLog;
+use App\Models\Pallet;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -131,6 +132,25 @@ test('an invalid stale_days is rejected on the mobile dashboard', function () {
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors(['stale_days']);
+});
+
+test('the mobile dashboard counts products below their configured minimum pallets, excluding a fully-stocked product and one with no threshold', function () {
+    actingAsMobileUser();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at its minimum, so it must not count as low-stock.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.low_stock'))->toEqual(['count' => 1]);
 });
 
 test("the mobile dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {

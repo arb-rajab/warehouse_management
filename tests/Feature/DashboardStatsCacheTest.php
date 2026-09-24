@@ -78,6 +78,21 @@ test('dashboard stats are cached separately per product filter, not shared acros
     );
 });
 
+test('the dashboard cache is invalidated the moment a minimum pallets threshold is set, so a newly low-stock product shows up immediately', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 0)
+    );
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 5]);
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
+    );
+});
+
 test('the dashboard cache is invalidated when a row is created, so its new empty cells are counted immediately', function () {
     actingAsAdmin();
 

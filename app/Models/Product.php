@@ -39,6 +39,7 @@ use Illuminate\Support\Collection;
  * @property bool $published
  * @property-read string|null $image_url
  * @property-read int $boxes_count
+ * @property-read int|null $minimum_pallets
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
  */
@@ -64,7 +65,7 @@ class Product extends Model
      */
     public const array WITH_DERIVED_ATTRIBUTES = [
         'thumbnailUpload:id,file_name,external_link',
-        'setting:product_id,boxes_count',
+        'setting:product_id,boxes_count,minimum_pallets',
     ];
 
     /**
@@ -163,6 +164,21 @@ class Product extends Model
         // semantics to the whole left operand, so a product with no settings
         // row falls through to the default without a warning.
         return Attribute::make(get: fn (): int => $this->setting->boxes_count ?? self::DEFAULT_BOXES_COUNT);
+    }
+
+    /**
+     * How many pallets of this product should be in the warehouse at
+     * minimum, or `null` when nobody has configured one. Unlike
+     * {@see self::boxesCount()} there is no fallback default: "not
+     * configured" must never be treated as "always below the minimum" — a
+     * product only counts as low-stock once an admin has actually set a
+     * threshold for it (see Admin\ProductController::updateMinimumPallets()).
+     *
+     * @return Attribute<int|null, never>
+     */
+    protected function minimumPallets(): Attribute
+    {
+        return Attribute::make(get: fn (): ?int => $this->setting->minimum_pallets ?? null);
     }
 
     /**

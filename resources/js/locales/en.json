@@ -473,6 +473,10 @@
             "title": "Stale pallets",
             "soon": "Stale for at least {days} days"
         },
+        "lowStock": {
+            "title": "Low stock",
+            "count": "Below minimum pallets"
+        },
         "activityToday": {
             "title": "Today's activity"
         },
@@ -490,7 +494,8 @@
             "sections": {
                 "occupancy": "Occupancy"
             },
-            "inactive": "Inactive"
+            "inactive": "Inactive",
+            "lowStock": "Low stock"
         },
         "columns": {
             "product": "Product",
@@ -499,9 +504,12 @@
             "expired": "Expired",
             "expiringSoon": "Expiring ≤{days}d",
             "boxesPerPallet": "Boxes / pallet",
+            "minimumPallets": "Min. pallets",
             "qr": "QR"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
+        "minimumPalletsLabel": "Minimum pallets for {product}",
+        "minimumPalletsPlaceholder": "e.g. 10",
         "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
     },

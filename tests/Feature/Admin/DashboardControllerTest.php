@@ -201,6 +201,41 @@ test('a product filter narrows the stale pallet count to that product, excluding
     Carbon::setTestNow();
 });
 
+test('the dashboard counts products below their configured minimum pallets, excluding a fully-stocked product and one with no threshold', function () {
+    actingAsAdmin();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at its minimum, so it must not count as low-stock.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
+    );
+});
+
+test('a product filter narrows the low-stock count to that product, excluding other low-stock products', function () {
+    actingAsAdmin();
+
+    $matchingProduct = Product::factory()->minimumPallets(5)->create();
+    $otherProduct = Product::factory()->minimumPallets(5)->create();
+
+    $response = $this->get("/admin?product_id[]={$matchingProduct->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
+    );
+
+    expect($otherProduct->id)->not->toBeNull();
+});
+
 test("the dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();

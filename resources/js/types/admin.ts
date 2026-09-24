@@ -321,6 +321,14 @@ export interface ProductSummary {
      * falls back to 1 for a product nobody has configured yet.
      */
     boxes_count: number;
+    /**
+     * How many pallets of this product should be in the warehouse at
+     * minimum, or `null` when nobody has configured one — such a product
+     * never counts as low-stock, whatever `pallets_count` is.
+     */
+    minimum_pallets: number | null;
+    /** How many pallets of this product are currently in the warehouse, across every cell state — not just full/opened. */
+    pallets_count: number;
     full_cells_count: number;
     opened_cells_count: number;
     expired_cells_count: number;
@@ -339,6 +347,7 @@ export interface ProductFilters {
     expired?: boolean;
     expires_within_days?: number;
     inactive?: boolean;
+    low_stock?: boolean;
     product_id?: number[];
     user_id?: number[];
     action?: CellLogAction[];

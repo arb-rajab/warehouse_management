@@ -391,6 +391,29 @@ test('boxes_count falls back to its default for a product this app has never con
         ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
 });
 
+test('minimum_pallets reads the wms-owned settings row, with noise from another product', function () {
+    $product = Product::factory()->minimumPallets(10)->create();
+    Product::factory()->minimumPallets(3)->create();
+
+    expect($product->fresh()->minimum_pallets)->toBe(10);
+});
+
+test('minimum_pallets is null for a product nobody has configured a threshold for', function () {
+    // Unlike boxes_count, there is no fallback default: "not configured" must
+    // stay null rather than resolving to some assumed minimum.
+    $product = Product::factory()->create();
+
+    expect($product->fresh()->minimum_pallets)->toBeNull();
+});
+
+test('minimum_pallets stays null even for a product this app has never configured any settings for at all', function () {
+    $product = Product::factory()->unconfigured()->create();
+
+    expect($product->fresh())
+        ->setting->toBeNull()
+        ->minimum_pallets->toBeNull();
+});
+
 test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
     $product = Product::factory()->create();
 

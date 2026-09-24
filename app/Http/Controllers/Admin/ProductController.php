@@ -10,12 +10,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
 use App\Http\Requests\Admin\UpdateProductBoxCountRequest;
+use App\Http\Requests\Admin\UpdateProductMinimumPalletsRequest;
 use App\Http\Resources\ProductOptionResource;
 use App\Http\Resources\ProductSummaryResource;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -71,8 +73,12 @@ class ProductController extends Controller
                 null,
                 fn (Builder $query) => $query->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
             )])
+            ->addSelect(['pallets_count' => Pallet::query()
+                ->selectRaw('count(*)')
+                ->whereColumn('pallets.product_id', 'products.id')])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
             ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false))
+            ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->when(
                 $this->occupancyFiltersActive($request),
                 fn (Builder $query) => $query->whereExists($this->occupancyExistsSubquery($request)),
@@ -93,7 +99,7 @@ class ProductController extends Controller
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
-                    'state', 'expired', 'expires_within_days', 'inactive', 'product_id',
+                    'state', 'expired', 'expires_within_days', 'inactive', 'low_stock', 'product_id',
                     'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                     'sort_by', 'sort_direction',
                 ]),
@@ -123,6 +129,21 @@ class ProductController extends Controller
     {
         $product->setting()->updateOrCreate([], [
             'boxes_count' => $request->integer('boxes_count'),
+        ]);
+
+        return $this->redirectPreservingQuery('admin.products.index', $request);
+    }
+
+    /**
+     * Sets, or clears (with `null`), how many pallets of this product should
+     * be in the warehouse at minimum. WMS-owned data in
+     * `wms_product_settings`, the same as `updateBoxCount()` above — see
+     * .ai/rules/shared-database.md.
+     */
+    public function updateMinimumPallets(UpdateProductMinimumPalletsRequest $request, Product $product): RedirectResponse
+    {
+        $product->setting()->updateOrCreate([], [
+            'minimum_pallets' => $request->input('minimum_pallets'),
         ]);
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
@@ -192,6 +213,25 @@ class ProductController extends Controller
             ->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $this->applyOccupancyCellFilters($cellQuery, $request);
             });
+    }
+
+    /**
+     * A correlated existence check for whether the product on each outer row
+     * has a configured minimum-pallets threshold that its current pallet
+     * count (across every state, not just full/opened — this is a stock
+     * level, not an occupancy filter) falls below. A product with no
+     * threshold configured (`minimum_pallets` null) never matches — see
+     * Product::minimumPallets().
+     *
+     * @return Builder<ProductSetting>
+     */
+    private function lowStockExistsSubquery(): Builder
+    {
+        return ProductSetting::query()
+            ->selectRaw('1')
+            ->whereColumn('wms_product_settings.product_id', 'products.id')
+            ->whereNotNull('minimum_pallets')
+            ->whereRaw('minimum_pallets > (select count(*) from pallets where pallets.product_id = products.id)');
     }
 
     /**

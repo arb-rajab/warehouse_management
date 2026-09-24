@@ -473,6 +473,10 @@
             "title": "المنصات الراكدة",
             "soon": "راكدة منذ {days} يومًا على الأقل"
         },
+        "lowStock": {
+            "title": "مخزون منخفض",
+            "count": "أقل من الحد الأدنى للمنصات"
+        },
         "activityToday": {
             "title": "نشاط اليوم"
         },
@@ -490,7 +494,8 @@
             "sections": {
                 "occupancy": "الإشغال"
             },
-            "inactive": "غير نشط"
+            "inactive": "غير نشط",
+            "lowStock": "مخزون منخفض"
         },
         "columns": {
             "product": "المنتج",
@@ -499,9 +504,12 @@
             "expired": "منتهية الصلاحية",
             "expiringSoon": "تنتهي ≤{days} يوم",
             "boxesPerPallet": "صناديق / منصة",
+            "minimumPallets": "الحد الأدنى للمنصات",
             "qr": "رمز QR"
         },
         "boxesPerPalletLabel": "عدد الصناديق لكل منصة لـ {product}",
+        "minimumPalletsLabel": "الحد الأدنى للمنصات لـ {product}",
+        "minimumPalletsPlaceholder": "مثال: 10",
         "exportQrLabel": "تصدير رمز QR لـ {product}",
         "empty": "لا توجد منتجات بعد."
     },

@@ -9,6 +9,7 @@ import {
     exportQr,
     index as productsIndex,
     updateBoxCount,
+    updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -62,6 +63,7 @@ const filters = reactive({
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     inactive: props.filters.inactive ?? false,
+    low_stock: props.filters.low_stock ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -84,6 +86,7 @@ const activeFilterCount = computed(() =>
         filters.expired,
         filters.expires_within_days !== '',
         filters.inactive,
+        filters.low_stock,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -92,14 +95,15 @@ const activeFilterCount = computed(() =>
 );
 
 /**
- * `inactive` filters to the store admin's `published = 0` products — it
- * restricts which product rows appear, like `product_id`, rather than
- * narrowing what counts as full/opened/expired for a shown row. So it marks
- * the product column filtered, not the occupancy columns (see
- * .ai/rules/products.md — `inactive` is unrelated to cell occupancy).
+ * `inactive`/`low_stock` both restrict which product rows appear, like
+ * `product_id`, rather than narrowing what counts as full/opened/expired for
+ * a shown row. So they mark the product column filtered, not the occupancy
+ * columns (see .ai/rules/products.md — `inactive` is unrelated to cell
+ * occupancy, and `low_stock` is a stock-level check, not an occupancy one).
  */
 const productColumnFiltered = computed(
-    () => filters.product_id.length > 0 || filters.inactive,
+    () =>
+        filters.product_id.length > 0 || filters.inactive || filters.low_stock,
 );
 
 /**
@@ -116,19 +120,20 @@ const occupancyColumnsFiltered = computed(
 );
 
 /**
- * `expired`/`inactive` are only ever included when checked — sending the
- * unchecked `false` would still be a non-empty query value the backend
- * treats as "filled" (see FilterProductsRequest), so each must be omitted
- * rather than sent as literal `false`. Mirrors Cells/Index.vue's
+ * `expired`/`inactive`/`low_stock` are only ever included when checked —
+ * sending the unchecked `false` would still be a non-empty query value the
+ * backend treats as "filled" (see FilterProductsRequest), so each must be
+ * omitted rather than sent as literal `false`. Mirrors Cells/Index.vue's
  * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, inactive, ...rest } = filters;
+    const { expired, inactive, low_stock, ...rest } = filters;
 
     return {
         ...rest,
         ...(expired ? { expired: true } : {}),
         ...(inactive ? { inactive: true } : {}),
+        ...(low_stock ? { low_stock: true } : {}),
     };
 }
 
@@ -170,6 +175,7 @@ function clearFilters(): void {
     filters.expired = false;
     filters.expires_within_days = '';
     filters.inactive = false;
+    filters.low_stock = false;
     filters.product_id = [];
     filters.user_id = [];
     filters.action = [];
@@ -251,6 +257,74 @@ function submitBoxCount(): void {
     );
     boxCountDialogProduct.value = null;
 }
+
+const minimumPalletsDialogProduct = ref<ProductSummary | null>(null);
+const minimumPalletsDraft = ref('');
+
+/**
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
+ */
+const minimumPalletsDialogOpen = computed({
+    get: () => minimumPalletsDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            minimumPalletsDialogProduct.value = null;
+        }
+    },
+});
+
+function openMinimumPalletsDialog(product: ProductSummary): void {
+    minimumPalletsDraft.value =
+        product.minimum_pallets === null ? '' : String(product.minimum_pallets);
+    minimumPalletsDialogProduct.value = product;
+}
+
+/**
+ * Saves (or, with a cleared field, removes) a product's warehouse-stock
+ * minimum. `preserveScroll`/`preserveState` keep the row in view and the
+ * page filter state intact across the redirect. An empty draft submits
+ * `null` rather than being rejected — clearing the threshold is a valid
+ * action here, unlike the box count, which is always required.
+ */
+function submitMinimumPallets(): void {
+    const product = minimumPalletsDialogProduct.value;
+
+    if (product === null) {
+        return;
+    }
+
+    if (minimumPalletsDraft.value === '') {
+        router.patch(
+            updateMinimumPallets(product.id, { mergeQuery: {} }).url,
+            { minimum_pallets: null },
+            { preserveScroll: true, preserveState: true },
+        );
+        minimumPalletsDialogProduct.value = null;
+
+        return;
+    }
+
+    const minimumPallets = Number(minimumPalletsDraft.value);
+
+    if (!Number.isInteger(minimumPallets) || minimumPallets < 1) {
+        return;
+    }
+
+    router.patch(
+        updateMinimumPallets(product.id, { mergeQuery: {} }).url,
+        { minimum_pallets: minimumPallets },
+        { preserveScroll: true, preserveState: true },
+    );
+    minimumPalletsDialogProduct.value = null;
+}
+
+function isLowStock(product: ProductSummary): boolean {
+    return (
+        product.minimum_pallets !== null &&
+        product.pallets_count < product.minimum_pallets
+    );
+}
 </script>
 
 <template>
@@ -270,6 +344,12 @@ function submitBoxCount(): void {
                     id="products-quick-inactive"
                     v-model="filters.inactive"
                     :label="t('products.filters.inactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
+                    id="products-quick-low-stock"
+                    v-model="filters.low_stock"
+                    :label="t('products.filters.lowStock')"
                     @update:model-value="applyFilters"
                 />
                 <HelpLink :href="showHelp('products')" />
@@ -414,6 +494,45 @@ function submitBoxCount(): void {
             </template>
         </FilterDialog>
 
+        <FilterDialog
+            v-model:open="minimumPalletsDialogOpen"
+            :title="t('products.columns.minimumPallets')"
+            :close-label="t('cellLog.filters.close')"
+        >
+            <form
+                id="products-minimum-pallets-form"
+                class="space-y-4"
+                @submit.prevent="submitMinimumPallets"
+            >
+                <FilterNumberField
+                    id="products-minimum-pallets"
+                    v-model="minimumPalletsDraft"
+                    :label="
+                        t('products.minimumPalletsLabel', {
+                            product: minimumPalletsDialogProduct
+                                ? productName(
+                                      minimumPalletsDialogProduct.name,
+                                      minimumPalletsDialogProduct.ar_name,
+                                  )
+                                : '',
+                        })
+                    "
+                    :placeholder="t('products.minimumPalletsPlaceholder')"
+                />
+            </form>
+
+            <template #footer>
+                <button
+                    type="submit"
+                    form="products-minimum-pallets-form"
+                    :class="filterApplyButtonClass"
+                >
+                    <Check class="h-4 w-4 shrink-0" />
+                    {{ t('expiringWindow.apply') }}
+                </button>
+            </template>
+        </FilterDialog>
+
         <DataTable
             v-model:open-filter-key="openFilterKey"
             :columns="[
@@ -424,6 +543,9 @@ function submitBoxCount(): void {
                 },
                 {
                     label: t('products.columns.boxesPerPallet'),
+                },
+                {
+                    label: t('products.columns.minimumPallets'),
                 },
                 {
                     label: t('products.columns.full'),
@@ -526,6 +648,28 @@ function submitBoxCount(): void {
                         @click="openBoxCountDialog(product)"
                     >
                         {{ product.boxes_count }}
+                    </button>
+                </td>
+                <td class="px-4 py-2">
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.minimumPalletsLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :class="[
+                            filterTriggerButtonClass,
+                            isLowStock(product)
+                                ? 'text-red-600 dark:text-red-400'
+                                : '',
+                        ]"
+                        @click="openMinimumPalletsDialog(product)"
+                    >
+                        {{ product.minimum_pallets ?? '—' }}
                     </button>
                 </td>
                 <td class="px-4 py-2">
