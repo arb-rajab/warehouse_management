@@ -502,15 +502,35 @@ test('setting a minimum pallets threshold redirects back with the current page a
     $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
 });
 
-test('setting a minimum pallets threshold creates the settings row for a product that has never had one', function () {
+test('setting a minimum pallets threshold creates the settings row for a product that has never had one, without dropping its box count to the database default', function () {
     actingAsAdmin();
 
+    // The store can add a product at any time without this app knowing.
     $product = Product::factory()->unconfigured()->create();
+    expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
     $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
 
-    expect($product->fresh()->minimum_pallets)->toBe(15);
+    // Regression: wms_product_settings.boxes_count has its own DB-level
+    // default of 1, divorced from Product::DEFAULT_BOXES_COUNT (50) — an
+    // insert that omits boxes_count would silently show 1 instead of the 50
+    // the product displayed before this row existed.
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
     $this->assertDatabaseCount('wms_product_settings', 1);
+});
+
+test('setting a minimum pallets threshold on a product with an already-configured box count leaves that box count untouched', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(24)->create();
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(24);
 });
 
 test('the minimum pallets threshold, when sent, must be a whole number of at least one', function () {
