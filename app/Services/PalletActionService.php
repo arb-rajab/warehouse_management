@@ -147,7 +147,7 @@ class PalletActionService
      * keeps that time component intact instead of truncating it, so the
      * pallet reads back as its correct date everywhere the app formats it via
      * toDateString(), but a raw `expiration_date <= $until` comparison
-     * (BuildsDashboardStats::expiringWindow()) can then exclude it right at
+     * (BuildsDashboardStats::expiringWindowCounts()) can then exclude it right at
      * the boundary.
      */
     private function normalizeExpirationDate(?string $expirationDate): ?string

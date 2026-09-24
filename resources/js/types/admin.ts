@@ -165,6 +165,7 @@ export interface CellHighlightSeed {
     state: Cell['state'] | null;
     productIds: number[];
     expiresWithinDays: number | null;
+    staleAfterDays: number | null;
     expired: boolean;
     inactive: boolean;
 }
@@ -228,6 +229,7 @@ export interface CellMap3DItem {
     state: Cell['state'];
     isActive: boolean;
     highlighted: boolean;
+    dimmed: boolean;
     pulsing: boolean;
     pallet: CellPalletSummary | null;
 }
@@ -283,7 +285,7 @@ export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
 export interface CellStatusLogFilters {
     product_id?: number[];
     pallet_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     user_id?: number[];
     action?: CellLogAction[];
@@ -319,12 +321,18 @@ export interface ProductSummary {
      * falls back to 1 for a product nobody has configured yet.
      */
     boxes_count: number;
+    /**
+     * How many pallets of this product should be in the warehouse at
+     * minimum, or `null` when nobody has configured one — such a product
+     * never counts as low-stock, whatever `pallets_count` is.
+     */
+    minimum_pallets: number | null;
+    /** How many pallets of this product are currently in the warehouse, across every cell state — not just full/opened. */
+    pallets_count: number;
     full_cells_count: number;
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
-    activity_today_count: number;
-    activity_week_count: number;
 }
 
 export type ProductSortBy =
@@ -332,17 +340,14 @@ export type ProductSortBy =
     | 'full_cells_count'
     | 'opened_cells_count'
     | 'expired_cells_count'
-    | 'expiring_soon_count'
-    | 'activity_today_count'
-    | 'activity_week_count';
+    | 'expiring_soon_count';
 
 export interface ProductFilters {
-    row_id?: number;
-    column_number?: number;
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;
     inactive?: boolean;
+    low_stock?: boolean;
     product_id?: number[];
     user_id?: number[];
     action?: CellLogAction[];
@@ -411,7 +416,7 @@ export interface CellVerificationRoundFilterOptions {
  */
 export interface CellVerificationReportFilters {
     cell_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     product_id?: number[];
     is_correct?: boolean;

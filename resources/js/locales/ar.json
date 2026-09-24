@@ -152,8 +152,8 @@
             "submitting": "جارٍ الحفظ..."
         },
         "fields": {
-            "qrCodeWidth": "عرض رمز QR (بكسل)",
-            "qrCodeHeight": "ارتفاع رمز QR (بكسل)"
+            "qrCodeWidth": "عرض رمز QR (سم)",
+            "qrCodeHeight": "ارتفاع رمز QR (سم)"
         }
     },
     "cellLog": {
@@ -185,6 +185,7 @@
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
+            "selected": "المحدد",
             "palletHistory": "عرض سجل المنصة رقم #{id}",
             "flaggedOnly": "المُعلَّمة فقط"
         },
@@ -320,6 +321,11 @@
     "expiringWindow": {
         "label": "فترة الاقتراب من الانتهاء",
         "customPlaceholder": "مثال: 45",
+        "apply": "تطبيق"
+    },
+    "staleWindow": {
+        "label": "فترة الركود",
+        "customPlaceholder": "مثال: 30",
         "apply": "تطبيق"
     },
     "cells": {
@@ -460,7 +466,16 @@
         "expiring": {
             "title": "المنصات القريبة من الانتهاء",
             "expired": "منتهية الصلاحية",
-            "soon": "تنتهي خلال {days} أيام"
+            "soon": "تنتهي خلال {days} أيام",
+            "soonMonths": "تنتهي خلال {months} شهر"
+        },
+        "stale": {
+            "title": "المنصات الراكدة",
+            "soon": "راكدة منذ {days} يومًا على الأقل"
+        },
+        "lowStock": {
+            "title": "مخزون منخفض",
+            "count": "أقل من الحد الأدنى للمنصات"
         },
         "activityToday": {
             "title": "نشاط اليوم"
@@ -479,7 +494,8 @@
             "sections": {
                 "occupancy": "الإشغال"
             },
-            "inactive": "غير نشط"
+            "inactive": "غير نشط",
+            "lowStock": "مخزون منخفض"
         },
         "columns": {
             "product": "المنتج",
@@ -487,12 +503,13 @@
             "opened": "مفتوحة",
             "expired": "منتهية الصلاحية",
             "expiringSoon": "تنتهي ≤{days} يوم",
-            "activityToday": "اليوم",
-            "activityWeek": "هذا الأسبوع",
             "boxesPerPallet": "صناديق / منصة",
+            "minimumPallets": "الحد الأدنى للمنصات",
             "qr": "رمز QR"
         },
         "boxesPerPalletLabel": "عدد الصناديق لكل منصة لـ {product}",
+        "minimumPalletsLabel": "الحد الأدنى للمنصات لـ {product}",
+        "minimumPalletsPlaceholder": "مثال: 10",
         "exportQrLabel": "تصدير رمز QR لـ {product}",
         "empty": "لا توجد منتجات بعد."
     },

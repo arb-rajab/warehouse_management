@@ -4,6 +4,7 @@ import {
     CalendarPlus,
     CalendarX,
     CircleDashed,
+    Clock,
     Inbox,
     PackageOpen,
 } from '@lucide/vue';
@@ -61,13 +62,15 @@ const stats = {
     expiring: {
         expired: 2,
         windows: [
-            { days: 7, until: '2026-08-20', count: 4 },
-            { days: 14, until: '2026-08-27', count: 6 },
-            { days: 30, until: '2026-09-12', count: 9 },
-            { days: 60, until: '2026-10-12', count: 11 },
+            { months: 1, days: 31, until: '2026-09-13', count: 4 },
+            { months: 2, days: 61, until: '2026-10-13', count: 6 },
+            { months: 4, days: 122, until: '2026-12-13', count: 9 },
+            { months: 6, days: 184, until: '2027-02-13', count: 11 },
         ],
         custom: { days: 45, until: '2026-09-27', count: 8 },
     },
+    stale: { days: 30, count: 5 },
+    low_stock: { count: 4 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
     activity_week: { stored: 20, opened: 8, emptied: 4, transferred: 9 },
 };
@@ -120,6 +123,15 @@ async function openCustomExpiringDaysDialog(
     const trigger = wrapper
         .findAll('button')
         .find((button) => button.text().includes(t('expiringWindow.label')));
+    await trigger?.trigger('click');
+}
+
+async function openCustomStaleDaysDialog(
+    wrapper: ReturnType<typeof mountPage>,
+): Promise<void> {
+    const trigger = wrapper
+        .findAll('button')
+        .find((button) => button.text().includes(t('staleWindow.label')));
     await trigger?.trigger('click');
 }
 
@@ -210,7 +222,7 @@ describe('Dashboard Index', () => {
         for (const window of stats.expiring.windows) {
             const tile = tileByLabelAndQuery(
                 wrapper,
-                t('dashboard.expiring.soon', { days: window.days }),
+                t('dashboard.expiring.soonMonths', { months: window.months }),
                 { expires_within_days: window.days },
             );
             expect(tile?.props('value')).toBe(window.count);
@@ -277,7 +289,77 @@ describe('Dashboard Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
-            { product_id: [], expiring_days: 90 },
+            { product_id: [], expiring_days: 90, stale_days: 30 },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('keeps the custom stale-days field out of the DOM until its dialog is opened', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.find('#dashboard-custom-stale-days').exists()).toBe(
+            false,
+        );
+        expect(wrapper.text()).toContain(t('staleWindow.label'));
+    });
+
+    it('renders the custom stale card with its current count and day count', () => {
+        const wrapper = mountPage();
+
+        const customLink = wrapper
+            .findAll('a')
+            .find(
+                (link) =>
+                    link.attributes('data-query') ===
+                    JSON.stringify({ stale_after_days: 30 }),
+            );
+        expect(customLink?.attributes('href')).toBe('/admin/cells');
+        expect(customLink?.find('svg.lucide-clock').exists()).toBe(true);
+        expect(wrapper.text()).toContain('5');
+        expect(wrapper.text()).toContain(
+            t('dashboard.stale.soon', { days: 30 }),
+        );
+
+        const staleTile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.stale.soon', { days: 30 }),
+            { stale_after_days: 30 },
+        );
+        expect(staleTile?.props('icon')).toBe(Clock);
+    });
+
+    it('opens the custom stale-days dialog pre-filled with the current day count, and shows a visible label', async () => {
+        const wrapper = mountPage();
+
+        await openCustomStaleDaysDialog(wrapper);
+
+        expect(
+            wrapper.get('label[for="dashboard-custom-stale-days"]').text(),
+        ).toBe(t('cellHighlight.staleAfterDays'));
+        expect(
+            (
+                wrapper.get('#dashboard-custom-stale-days')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('30');
+    });
+
+    it("doesn't reload while the custom stale-days field is being edited, only once the dialog form is submitted", async () => {
+        const wrapper = mountPage();
+
+        await openCustomStaleDaysDialog(wrapper);
+
+        const input = wrapper.get('#dashboard-custom-stale-days');
+        await input.setValue('60');
+        await input.trigger('change');
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin',
+            { product_id: [], expiring_days: 45, stale_days: 60 },
             { preserveState: true, replace: true },
         );
     });
@@ -339,7 +421,7 @@ describe('Dashboard Index', () => {
         expect(emptied?.props('icon')).toBe(CircleDashed);
     });
 
-    it('includes the active product filter in every activity/expiring tile link', () => {
+    it('includes the active product filter in every activity/expiring/stale tile link', () => {
         const wrapper = mountPage({ filters: { product_id: [1, 2] } });
 
         const stored = tileByLabelAndQuery(
@@ -360,12 +442,19 @@ describe('Dashboard Index', () => {
             { expired: true, product_id: [1, 2] },
         );
         expect(expired?.exists()).toBe(true);
+
+        const stale = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.stale.soon', { days: 30 }),
+            { stale_after_days: 30, product_id: [1, 2] },
+        );
+        expect(stale?.exists()).toBe(true);
     });
 
-    it('renders exactly four sections, with the stale section removed', () => {
+    it('renders exactly six sections, including the stale and low-stock sections', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findAll('section')).toHaveLength(4);
+        expect(wrapper.findAll('section')).toHaveLength(6);
     });
 
     it('renders every section heading', () => {
@@ -373,11 +462,40 @@ describe('Dashboard Index', () => {
 
         expect(wrapper.text()).toContain(t('dashboard.occupancy.title'));
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
+        expect(wrapper.text()).toContain(t('dashboard.stale.title'));
+        expect(wrapper.text()).toContain(t('dashboard.lowStock.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityToday.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityWeek.title'));
     });
 
-    it('reloads with the selected products when the product filter changes, preserving the custom day count', async () => {
+    it('renders the low-stock tile linking to the products page filtered to low_stock=true', () => {
+        const wrapper = mountPage();
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.lowStock.count'),
+            { low_stock: true },
+        );
+        expect(tile?.props('value')).toBe(4);
+        expect(tile?.props('href')).toBe('/admin/products');
+        expect(tile?.props('tone')).toBe('danger');
+    });
+
+    it('includes the active product filter in the low-stock tile link', () => {
+        const wrapper = mountPage({ filters: { product_id: [1, 2] } });
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.lowStock.count'),
+            {
+                low_stock: true,
+                product_id: [1, 2],
+            },
+        );
+        expect(tile?.exists()).toBe(true);
+    });
+
+    it('reloads with the selected products when the product filter changes, preserving the custom day counts', async () => {
         const wrapper = mountPage();
 
         await wrapper.get('#dashboard-product').trigger('click');
@@ -385,7 +503,7 @@ describe('Dashboard Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
-            { product_id: ['1'], expiring_days: 45 },
+            { product_id: ['1'], expiring_days: 45, stale_days: 30 },
             { preserveState: true, replace: true },
         );
     });

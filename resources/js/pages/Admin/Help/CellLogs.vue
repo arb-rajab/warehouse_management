@@ -30,7 +30,7 @@ import type { CellLogAction } from '@/types/admin';
 
 const previewFilters = reactive({
     product_id: [] as string[],
-    row_id: '',
+    row_id: [] as string[],
     column_number: '',
     action: [] as CellLogAction[],
     user_id: [] as string[],
@@ -170,7 +170,7 @@ const previewLogs = [
                     />
                     <LocationFilterFields
                         id-prefix="help-cell-log-filter"
-                        v-model:row-id="previewFilters.row_id"
+                        v-model:row-ids="previewFilters.row_id"
                         v-model:column-number="previewFilters.column_number"
                         :rows="[]"
                         :max-column-number="1"

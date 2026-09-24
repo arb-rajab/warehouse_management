@@ -1,3 +1,5 @@
+import type { FormDataConvertible } from '@inertiajs/core';
+import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ResourceFormPage from './ResourceFormPage.vue';
@@ -110,6 +112,30 @@ describe('ResourceFormPage', () => {
         const headerActionsLink = wrapper.get('h1').element
             .nextElementSibling as HTMLElement;
         expect(headerActionsLink.textContent).toBe('Help');
+    });
+
+    it('forwards a given transform function to the underlying Form component', () => {
+        usePageMock.mockReturnValue({
+            url: '/admin/rows',
+            props: {
+                locale: 'en',
+                auth: { user: { name: 'Jane Doe', id: 7 } },
+            },
+        });
+        const transform = (data: Record<string, FormDataConvertible>) => data;
+
+        const wrapper = mount(ResourceFormPage, {
+            props: {
+                title: 'Add row',
+                action: '/admin/rows',
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+                transform,
+            },
+            slots: { default: '<p>form fields go here</p>' },
+        });
+
+        expect(wrapper.findComponent(Form).props('transform')).toBe(transform);
     });
 
     it('renders no cancel link when cancelHref is not given', () => {

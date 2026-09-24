@@ -18,7 +18,7 @@ test('an authenticated admin can view the products index with every property the
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -40,15 +40,13 @@ test('an authenticated admin can view the products index with every property the
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
             )
-            ->where('today', '2026-08-13')
-            ->where('weekStart', '2026-08-10')
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
             ->has('filterOptions.actions', 8)
@@ -66,7 +64,7 @@ test('the products index ships both raw name columns under the Arabic panel loca
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -88,12 +86,12 @@ test('the products index ships both raw name columns under the Arabic panel loca
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
             )
     );
 
@@ -204,39 +202,6 @@ test('the products index splits the occupancy count into full and opened columns
     );
 });
 
-test('the products index counts only cells in the filtered row toward full/opened counts, not the product\'s cells elsewhere', function () {
-    actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowA->cells()->first()->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowB->cells()->first()->id]);
-
-    $response = $this->get("/admin/products?row_id={$rowA->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
-test('the products index counts only cells in the filtered column toward full/opened counts', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnOneCell->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnTwoCell->id]);
-
-    $response = $this->get('/admin/products?column_number=1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
 test('the state filter zeroes out the opened count while leaving the full count intact', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
@@ -248,6 +213,81 @@ test('the state filter zeroes out the opened count while leaving the full count 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
             ->where('products.data.0.opened_cells_count', 0)
+    );
+});
+
+test('the state filter excludes a product with no pallet in that state, instead of just zeroing its count', function () {
+    actingAsAdmin();
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id]);
+
+    // Noise: only has an opened pallet, so it must not appear under state=full.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->opened()->create(['product_id' => $excluded->id]);
+
+    $response = $this->get('/admin/products?state=full');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+});
+
+test('the expired filter excludes a product with no expired pallet', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id, 'expiration_date' => '2026-08-01']);
+
+    // Noise: only has a not-yet-expired pallet.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $excluded->id, 'expiration_date' => '2026-09-01']);
+
+    $response = $this->get('/admin/products?expired=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the expires_within_days filter excludes a product with no pallet expiring within that window', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id, 'expiration_date' => '2026-08-20']);
+
+    // Noise: only has a pallet expiring well outside the requested window.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $excluded->id, 'expiration_date' => '2026-12-01']);
+
+    $response = $this->get('/admin/products?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a product with zero pallets is excluded once any occupancy filter is active', function () {
+    actingAsAdmin();
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id]);
+
+    // Noise: no pallets at all, so it must not appear under any occupancy filter.
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products?state=full');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
     );
 });
 
@@ -363,6 +403,192 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
     );
 });
 
+test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
+    actingAsAdmin();
+    // Fixed names pin the default name-ascending order, so products.data.0 is
+    // always $product — random factory names let $other sort first about
+    // half the time.
+    $product = Product::factory()->create(['name' => 'Alpha Widgets']);
+    Pallet::factory()->create(['product_id' => $product->id]);
+    Pallet::factory()->opened()->create(['product_id' => $product->id]);
+
+    // Noise: another product's pallets must not be counted here.
+    $other = Product::factory()->create(['name' => 'Zulu Widgets']);
+    Pallet::factory()->create(['product_id' => $other->id]);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.pallets_count', 2)
+    );
+});
+
+test('minimum_pallets is null in the index response for a product nobody has configured a threshold for', function () {
+    actingAsAdmin();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.minimum_pallets', null)
+    );
+});
+
+test('the low_stock filter narrows the products index to products below their configured minimum, excluding a fully-stocked product', function () {
+    actingAsAdmin();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at (not below) its minimum, so it must not be matched.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products?low_stock=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $low->id)
+    );
+});
+
+test('the low_stock filter is omitted (all products shown) when not sent', function () {
+    actingAsAdmin();
+
+    Product::factory()->minimumPallets(5)->create();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+    );
+});
+
+test('an authenticated admin can set a minimum pallets threshold for a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->minimumPallets(9)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseHas('wms_product_settings', [
+        'product_id' => $product->id,
+        'minimum_pallets' => 10,
+    ]);
+    expect($otherProduct->fresh()->minimum_pallets)->toBe(9);
+});
+
+test('an authenticated admin can clear a product\'s minimum pallets threshold by sending null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(10)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    expect($product->fresh()->minimum_pallets)->toBeNull();
+});
+
+test('setting a minimum pallets threshold redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('setting a minimum pallets threshold creates the settings row for a product that has never had one, without dropping its box count to the database default', function () {
+    actingAsAdmin();
+
+    // The store can add a product at any time without this app knowing.
+    $product = Product::factory()->unconfigured()->create();
+    expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    // Regression: wms_product_settings.boxes_count has its own DB-level
+    // default of 1, divorced from Product::DEFAULT_BOXES_COUNT (50) — an
+    // insert that omits boxes_count would silently show 1 instead of the 50
+    // the product displayed before this row existed.
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
+    $this->assertDatabaseCount('wms_product_settings', 1);
+});
+
+test('setting a minimum pallets threshold on a product with an already-configured box count leaves that box count untouched', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(24)->create();
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(24);
+});
+
+test('the minimum pallets threshold, when sent, must be a whole number of at least one', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    foreach ([0, -3, 'many'] as $invalid) {
+        $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
+
+        $response->assertSessionHasErrors('minimum_pallets');
+    }
+
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('omitting the minimum_pallets field entirely is rejected, unlike sending an explicit null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", []);
+
+    $response->assertSessionHasErrors('minimum_pallets');
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('a mobile app user cannot set a minimum pallets threshold', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertForbidden();
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('an unauthenticated caller cannot set a minimum pallets threshold', function () {
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('login'));
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('setting a minimum pallets threshold for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->patch('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
+
+    $response->assertNotFound();
+});
+
 test('the expiring-soon count defaults to a 45-day window when expires_within_days is not filled in', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();
@@ -394,64 +620,6 @@ test('the expiring-soon count and window use expires_within_days when it is fill
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.expiring_soon_count', 1)
             ->where('expiringSoonDays', 7)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the products index counts today\'s and this week\'s activity separately', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-11 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-07-01 09:00:00');
-
-    $response = $this->get('/admin/products');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 2)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the action filter narrows today\'s and this week\'s activity counts', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Opened]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Emptied]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?action[]=opened');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the state filter alone narrows today\'s and this week\'s activity counts, without needing a row/column filter too', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    $fullPallet = Pallet::factory()->create(['product_id' => $product->id]);
-    $openedPallet = Pallet::factory()->opened()->create(['product_id' => $product->id]);
-
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $fullPallet->cell_id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $openedPallet->cell_id]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?state=full');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
     );
 
     Carbon::setTestNow();
@@ -832,9 +1000,13 @@ test('an authenticated admin can export a QR code image for a product, with both
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is embedded as a base64 SVG data URI — regression guard for the
-    // QR silently failing to render rather than just the surrounding text.
-    expect($svg)->toContain('data:image/svg+xml;base64,');
+    // A real QR is spliced in as inline SVG markup rather than a nested
+    // `<image>` reference, which dompdf silently skips (see
+    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
+    // failing to render rather than just the surrounding text.
+    expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
+        ->and($svg)->toContain('<path fill-rule="evenodd"')
+        ->and($svg)->not->toContain('<image');
     expect($svg)->toContain('Widgets');
     expect($svg)->toContain('ودجات');
     expect($svg)->toContain("ID: {$product->id}");
@@ -858,11 +1030,19 @@ test('a product QR export uses the configured QR code size instead of the defaul
     // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
     // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('width="360" height="360"/>');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
 });
 
 test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
     actingAsAdmin();
+    // Pinned to a box this specific name is known to overflow, rather than
+    // relying on whatever Setting::DEFAULT_QR_CODE_WIDTH/HEIGHT happens to be
+    // — the current defaults are sized generously (for cell QR scan distance,
+    // see Setting::DEFAULT_QR_CODE_WIDTH's docblock), large enough that even
+    // this column's 200-char max name never needs to wrap, let alone
+    // truncate. This test needs a genuinely tight box to exercise
+    // clampLinesToHeight()'s truncation path at all.
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 380]);
 
     $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
     $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
@@ -884,7 +1064,7 @@ test('a product with a long name has its QR code label text wrapped across multi
     expect($svg)->toContain("ID: {$product->id}");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
-    expect((int) $matches[1])->toBeLessThanOrEqual(Setting::DEFAULT_QR_CODE_HEIGHT);
+    expect((int) $matches[1])->toBeLessThanOrEqual(380);
 });
 
 test('a QR label never grows past the configured height, even with three long/mandatory text fields', function () {
@@ -924,7 +1104,7 @@ test('a product QR export label renders the product id as its own visible text l
     $response->assertOk();
     $svg = $response->getContent();
 
-    // Not just present somewhere inside the base64-encoded QR data URI —
+    // Not just encoded somewhere inside the QR's own markup —
     // asserted as its own readable <text> element a person could read off
     // the printed sticker.
     expect($svg)->toMatch('/<text[^>]*>ID: '.$product->id.'<\/text>/');

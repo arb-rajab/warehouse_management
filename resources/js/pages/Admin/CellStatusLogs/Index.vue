@@ -55,7 +55,7 @@ const props = defineProps<{
 const filters = reactive({
     product_id: (props.filters.product_id ?? []).map(String),
     pallet_id: props.filters.pallet_id?.toString() ?? '',
-    row_id: props.filters.row_id?.toString() ?? '',
+    row_id: (props.filters.row_id ?? []).map(String),
     column_number: props.filters.column_number?.toString() ?? '',
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -89,7 +89,7 @@ const filtersOpen = ref(false);
 const activeFilterCount = computed(() =>
     countActive([
         filters.product_id.length > 0,
-        filters.row_id !== '',
+        filters.row_id.length > 0,
         filters.column_number !== '',
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -102,7 +102,7 @@ const activeFilterCount = computed(() =>
 );
 
 const cellColumnFiltered = computed(
-    () => filters.row_id !== '' || filters.column_number !== '',
+    () => filters.row_id.length > 0 || filters.column_number !== '',
 );
 const productColumnFiltered = computed(() => filters.product_id.length > 0);
 const actionColumnFiltered = computed(() => filters.action.length > 0);
@@ -144,7 +144,7 @@ const { openFilterKey } = useColumnFilterPopover(
 function clearFilters(): void {
     filters.product_id = [];
     filters.pallet_id = '';
-    filters.row_id = '';
+    filters.row_id = [];
     filters.column_number = '';
     filters.user_id = [];
     filters.action = [];
@@ -211,7 +211,11 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             :title="t('cellLog.filters.title')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-status-logs-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
@@ -219,7 +223,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     <LocationFilterFields
                         id-prefix="filter"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
+                        v-model:row-ids="filters.row_id"
                         v-model:column-number="filters.column_number"
                         :rows="filterOptions.rows"
                         :max-column-number="filterOptions.maxColumnNumber"
@@ -300,9 +304,15 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         />
                     </div>
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="cell-status-logs-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>
@@ -315,7 +325,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <div
@@ -390,7 +400,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     v-if="key === 'location'"
                     id-prefix="popover-filter"
                     class="space-y-3"
-                    v-model:row-id="filters.row_id"
+                    v-model:row-ids="filters.row_id"
                     v-model:column-number="filters.column_number"
                     :rows="filterOptions.rows"
                     :max-column-number="filterOptions.maxColumnNumber"

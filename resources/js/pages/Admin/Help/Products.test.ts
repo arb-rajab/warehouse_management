@@ -82,8 +82,6 @@ describe('Help Products', () => {
         expect(wrapper.text()).toContain(
             t('products.columns.expiringSoon', { days: 45 }),
         );
-        expect(wrapper.text()).toContain(t('products.columns.activityToday'));
-        expect(wrapper.text()).toContain(t('products.columns.activityWeek'));
 
         const table = wrapper.find('table');
         expect(table.text()).toContain('Example product');

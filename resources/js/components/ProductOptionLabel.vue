@@ -26,12 +26,19 @@ const alternateLabel = computed(() =>
             its own isolation. Two elements rather than one interpolated string
             for the same reason: no shared punctuation to be reordered.
         -->
-        <span
-            dir="auto"
-            class="block break-words"
-            data-testid="product-option-name"
-            >{{ label }}</span
-        >
+        <span class="flex items-baseline gap-1">
+            <span
+                dir="auto"
+                class="block break-words"
+                data-testid="product-option-name"
+                >{{ label }}</span
+            >
+            <span
+                class="shrink-0 text-xs text-gray-400 dark:text-neutral-500"
+                data-testid="product-option-id"
+                >#{{ product.id }}</span
+            >
+        </span>
         <span
             v-if="alternateLabel"
             dir="auto"

@@ -45,6 +45,20 @@ test('the dashboard cache is invalidated the moment a cell status log is written
     );
 });
 
+test('dashboard stats are cached separately per stale_days, not shared across custom windows', function () {
+    actingAsAdmin();
+
+    $this->get('/admin?stale_days=10')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 10)
+    );
+
+    // If the cache key ignored staleDays, this would come back with the
+    // stale_days=10 cached response instead of recomputing for 40.
+    $this->get('/admin?stale_days=40')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 40)
+    );
+});
+
 test('dashboard stats are cached separately per product filter, not shared across filters', function () {
     actingAsAdmin();
 
@@ -61,6 +75,21 @@ test('dashboard stats are cached separately per product filter, not shared acros
     // cached full count (2) instead of productB's own (1).
     $this->get("/admin?product_id[]={$productB->id}")->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.occupancy.full', 1)
+    );
+});
+
+test('the dashboard cache is invalidated the moment a minimum pallets threshold is set, so a newly low-stock product shows up immediately', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 0)
+    );
+
+    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 5]);
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
     );
 });
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { UrlMethodPair } from '@inertiajs/core';
+import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { t } from '@/lib/i18n';
@@ -12,9 +12,18 @@ withDefaults(
         submitLabel: string;
         submittingLabel: string;
         cancelHref?: string | UrlMethodPair;
+        /**
+         * Forwarded to the underlying Inertia `<Form>` — lets a caller convert
+         * form values (e.g. Settings/Edit.vue converting cm back to the pixel
+         * integers the backend expects) before they're submitted.
+         */
+        transform?: (
+            data: Record<string, FormDataConvertible>,
+        ) => Record<string, FormDataConvertible>;
     }>(),
     {
         cancelHref: undefined,
+        transform: (data: Record<string, FormDataConvertible>) => data,
     },
 );
 </script>
@@ -31,6 +40,7 @@ withDefaults(
         <div class="max-w-sm">
             <Form
                 :action="action"
+                :transform="transform"
                 #default="{ errors, processing }"
                 class="space-y-4"
             >

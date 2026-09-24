@@ -40,6 +40,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
+    isCellDimmedByHighlight,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
@@ -97,12 +98,20 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
         props.initialHighlight.expiresWithinDays !== null
             ? String(props.initialHighlight.expiresWithinDays)
             : '',
+    staleAfterDays:
+        props.initialHighlight.staleAfterDays !== null
+            ? String(props.initialHighlight.staleAfterDays)
+            : '',
     expired: props.initialHighlight.expired,
     inactive: props.initialHighlight.inactive,
 });
 
 function highlighted(cell: CellWithLocation | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
+}
+
+function dimmed(cell: CellWithLocation | null): boolean {
+    return isCellDimmedByHighlight(cell, highlightFilters, props.today);
 }
 
 const hasActiveHighlight = computed(
@@ -170,8 +179,42 @@ const orderedMatches = computed(() =>
 
 const focusedMatchIndex = ref<number | null>(null);
 
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * (in `orderedMatches` order) instead of leaving the admin to hunt for one
+ * via the next/previous-match buttons — falls back to clearing focus when
+ * the new filters match nothing.
+ */
 watch(highlightFilters, () => {
+    if (orderedMatches.value.length > 0) {
+        focusMatchAt(0);
+
+        return;
+    }
+
     focusedMatchIndex.value = null;
+});
+
+/**
+ * A highlight filter can also arrive already applied — the dashboard's
+ * "expired pallets"/expiring-window/occupancy tiles deep-link here with a
+ * highlight filter but no `flat_number`, so the page loads on flat 1
+ * regardless of where the matches actually are. If flat 1 (or whatever
+ * flat the request landed on) has none of the seeded filter's matches,
+ * jump to the first one on mount the same way a live filter change does —
+ * otherwise the admin lands on a flat that looks like the filter matched
+ * nothing. Left alone when the landing flat already has a match, so this
+ * never fires for a plain flat-number deep link with no highlight seed.
+ */
+onMounted(() => {
+    if (
+        orderedMatches.value.length > 0 &&
+        !matchingSamples.value.some(
+            (sample) => sample.flat_number === props.flatNumber,
+        )
+    ) {
+        focusMatchAt(0);
+    }
 });
 
 /**
@@ -257,6 +300,10 @@ function highlightQuery(): Record<string, FormDataConvertible> {
 
     if (highlightFilters.expiresWithinDays !== '') {
         query.expires_within_days = Number(highlightFilters.expiresWithinDays);
+    }
+
+    if (highlightFilters.staleAfterDays !== '') {
+        query.stale_after_days = Number(highlightFilters.staleAfterDays);
     }
 
     if (highlightFilters.expired) {
@@ -517,6 +564,11 @@ const map3DBands = computed<CellMap3DBand[]>(() => {
             state: sample.state,
             isActive: sample.is_active,
             highlighted: matchesCellHighlight(
+                sample,
+                highlightFilters,
+                props.today,
+            ),
+            dimmed: isCellDimmedByHighlight(
                 sample,
                 highlightFilters,
                 props.today,
@@ -988,6 +1040,7 @@ watch(
                                         :cell="item.cell"
                                         :label="item.label"
                                         :highlighted="highlighted(item.cell)"
+                                        :dimmed="dimmed(item.cell)"
                                         :pulsing="pulsingLabel === item.label"
                                         toggleable
                                         manageable

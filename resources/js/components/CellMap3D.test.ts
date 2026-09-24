@@ -158,6 +158,8 @@ vi.mock('three', () => {
             radius: number;
         } | null = null;
         drawnInLastFrame = false;
+        instanceColor: { needsUpdate: boolean } | null = null;
+        colors: (Color | undefined)[] = [];
 
         constructor(geometry: unknown, material: unknown, count: number) {
             super();
@@ -179,6 +181,22 @@ vi.mock('three', () => {
                 target.x = matrix.x;
                 target.y = matrix.y;
                 target.z = matrix.z;
+            }
+        }
+
+        setColorAt(index: number, color: Color) {
+            if (!this.instanceColor) {
+                this.instanceColor = { needsUpdate: false };
+            }
+
+            this.colors[index] = color;
+        }
+
+        getColorAt(index: number, target: Color) {
+            const color = this.colors[index];
+
+            if (color) {
+                target.value = color.value;
             }
         }
 
@@ -394,6 +412,7 @@ type Registry = {
         name: string;
         count: number;
         matrices: Array<{ x: number; y: number; z: number }>;
+        colors: Array<{ value: unknown } | undefined>;
         material: {
             color: unknown;
             transparent: unknown;
@@ -608,6 +627,7 @@ function item(overrides: Partial<CellMap3DItem> = {}): CellMap3DItem {
         state: 'empty',
         isActive: true,
         highlighted: false,
+        dimmed: false,
         pulsing: false,
         pallet: null,
         ...overrides,
@@ -1025,6 +1045,70 @@ describe('CellMap3D', () => {
             (line) => line.material.color,
         );
         expect(new Set(outlineColors).size).toBe(2); // highlight vs pulse use distinct colors
+    });
+
+    it('tints a non-matching (dimmed) cell differently from a normal one within the same state mesh', () => {
+        mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [
+                            item({ cellNumber: 1, state: 'full' }),
+                            item({
+                                cellNumber: 2,
+                                state: 'full',
+                                dimmed: true,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const fullMesh = cellBoxInstancedMeshes().find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        );
+
+        expect(fullMesh?.colors[0]?.value).not.toBe(fullMesh?.colors[1]?.value);
+    });
+
+    it("updates an instance's tint in place when dimmed flips without a state change", async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [
+                            item({
+                                cellNumber: 1,
+                                state: 'full',
+                                dimmed: true,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const fullMesh = () =>
+            cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+            );
+        const dimmedTint = fullMesh()?.colors[0]?.value;
+
+        await wrapper.setProps({
+            bands: [
+                band({
+                    letter: 'A',
+                    items: [
+                        item({ cellNumber: 1, state: 'full', dimmed: false }),
+                    ],
+                }),
+            ],
+        });
+
+        expect(fullMesh()?.colors[0]?.value).not.toBe(dimmedTint);
     });
 
     it('outlines an inactive cell, but highlighted/pulsing take priority over the inactive outline', () => {
@@ -1547,6 +1631,24 @@ describe('CellMap3D', () => {
             expect(
                 wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
             ).toBe(false);
+        });
+
+        it("passes the faced item's dimmed flag straight through to the faced-cell panel", async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1, dimmed: true })],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.getComponent(CellSlot).props('dimmed')).toBe(true);
         });
 
         it('faces a cell behind you after dragging to turn 180°', async () => {

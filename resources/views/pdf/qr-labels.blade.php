@@ -3,63 +3,36 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @if (app()->isLocale('ar'))
-            @font-face {
-                font-family: 'NotoNaskhArabic';
-                src: url('{{ resource_path('fonts/NotoNaskhArabic-Regular.ttf') }}');
-                font-weight: normal;
-                font-style: normal;
-            }
-        @endif
+        @page {
+            size: {{ $qrWidth }}px {{ $qrHeight }}px;
+            margin: 0;
+        }
 
         body {
             margin: 0;
-            font-family: sans-serif;
         }
 
         .label {
-            display: inline-block;
-            width: 30%;
-            box-sizing: border-box;
-            margin: 1%;
-            padding: 8px;
             text-align: center;
-            vertical-align: top;
-            border: 1px dashed #999;
         }
 
         .label img {
-            width: 100%;
-            height: auto;
+            display: block;
+            margin: 0 auto;
         }
-
-        .location {
-            margin-top: 4px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .description {
-            margin-top: 2px;
-            font-size: 10px;
-            color: #555;
-        }
-
-        @if (app()->isLocale('ar'))
-            .description {
-                font-family: 'NotoNaskhArabic', sans-serif;
-                direction: rtl;
-                text-align: right;
-            }
-        @endif
     </style>
 </head>
 <body>
+    {{-- Each entry's labelImage is the exact same SVG cellQrLabelImage() produces
+         for the single-cell download (see BuildsCellQrLabels::cellQrLabels()) —
+         QR plus the expanded slot label, no separate description line — so this
+         sheet can't drift from what the single-cell export renders. That SVG
+         already sizes/pads/shrinks itself to fit within $qrWidth/$qrHeight, so
+         the <img> is embedded at its own intrinsic size rather than re-scaled
+         here. --}}
     @foreach ($labels as $entry)
-        <div class="label">
-            <img src="{{ $entry['qrImage'] }}" width="{{ $qrWidth }}" height="{{ $qrHeight }}" alt="{{ $entry['label'] }}">
-            <div class="location">{{ $entry['label'] }}</div>
-            <div class="description">{{ $entry['description'] }}</div>
+        <div class="label" @unless ($loop->last) style="page-break-after: always;" @endunless>
+            <img src="{{ $entry['labelImage'] }}" alt="{{ $entry['label'] }}">
         </div>
     @endforeach
 </body>

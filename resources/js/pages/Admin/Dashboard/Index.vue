@@ -6,8 +6,10 @@ import {
     CalendarX,
     Check,
     CircleDashed,
+    Clock,
     PackageOpen,
     SlidersHorizontal,
+    TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
@@ -15,6 +17,7 @@ import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellCo
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
@@ -32,9 +35,25 @@ import {
 import { t } from '@/lib/i18n';
 import type { ProductFilterOptions } from '@/types/admin';
 
-interface ExpiringWindow {
+interface ExpiringMonthWindow {
+    months: number;
     days: number;
     until: string;
+    count: number;
+}
+
+interface ExpiringDayWindow {
+    days: number;
+    until: string;
+    count: number;
+}
+
+interface StaleDayWindow {
+    days: number;
+    count: number;
+}
+
+interface LowStockStats {
     count: number;
 }
 
@@ -43,9 +62,11 @@ const props = defineProps<{
         occupancy: { empty: number; full: number; opened: number };
         expiring: {
             expired: number;
-            windows: ExpiringWindow[];
-            custom: ExpiringWindow;
+            windows: ExpiringMonthWindow[];
+            custom: ExpiringDayWindow;
         };
+        stale: StaleDayWindow;
+        low_stock: LowStockStats;
         activity_today: {
             stored: number;
             opened: number;
@@ -110,16 +131,46 @@ function submitCustomExpiringDays(): void {
         {
             product_id: props.filters.product_id ?? [],
             expiring_days: Number(customExpiringDaysDraft.value),
+            stale_days: props.stats.stale.days,
         },
         { preserveState: true, replace: true },
     );
     customExpiringDaysDialogOpen.value = false;
 }
 
+const customStaleDaysDialogOpen = ref(false);
+const customStaleDaysDraft = ref(String(props.stats.stale.days));
+
+function openCustomStaleDaysDialog(): void {
+    customStaleDaysDraft.value = String(props.stats.stale.days);
+    customStaleDaysDialogOpen.value = true;
+}
+
+function submitCustomStaleDays(): void {
+    if (customStaleDaysDraft.value === '') {
+        return;
+    }
+
+    router.get(
+        dashboardIndex().url,
+        {
+            product_id: props.filters.product_id ?? [],
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: Number(customStaleDaysDraft.value),
+        },
+        { preserveState: true, replace: true },
+    );
+    customStaleDaysDialogOpen.value = false;
+}
+
 function onProductIdsChange(ids: string[]): void {
     router.get(
         dashboardIndex().url,
-        { product_id: ids, expiring_days: props.stats.expiring.custom.days },
+        {
+            product_id: ids,
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: props.stats.stale.days,
+        },
         { preserveState: true, replace: true },
     );
 }
@@ -191,8 +242,12 @@ function onProductIdsChange(ids: string[]): void {
                 />
                 <DashboardStatTile
                     v-for="window in props.stats.expiring.windows"
-                    :key="window.days"
-                    :label="t('dashboard.expiring.soon', { days: window.days })"
+                    :key="window.months"
+                    :label="
+                        t('dashboard.expiring.soonMonths', {
+                            months: window.months,
+                        })
+                    "
                     :value="window.count"
                     :href="cellsIndex().url"
                     :query="{
@@ -233,6 +288,7 @@ function onProductIdsChange(ids: string[]): void {
                             :close-label="t('cellLog.filters.close')"
                         >
                             <form
+                                id="dashboard-custom-expiring-days-form"
                                 class="space-y-4"
                                 @submit.prevent="submitCustomExpiringDays"
                             >
@@ -246,17 +302,103 @@ function onProductIdsChange(ids: string[]): void {
                                         t('expiringWindow.customPlaceholder')
                                     "
                                 />
+                            </form>
+
+                            <template #footer>
                                 <button
                                     type="submit"
+                                    form="dashboard-custom-expiring-days-form"
                                     :class="filterApplyButtonClass"
                                 >
                                     <Check class="h-4 w-4 shrink-0" />
                                     {{ t('expiringWindow.apply') }}
                                 </button>
-                            </form>
+                            </template>
                         </FilterDialog>
                     </template>
                 </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.stale.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="
+                        t('dashboard.stale.soon', {
+                            days: props.stats.stale.days,
+                        })
+                    "
+                    :value="props.stats.stale.count"
+                    :href="cellsIndex().url"
+                    :query="{
+                        stale_after_days: props.stats.stale.days,
+                        ...productQuery,
+                    }"
+                    tone="warning"
+                    :icon="Clock"
+                >
+                    <template #footer>
+                        <button
+                            type="button"
+                            :class="['mt-2', filterTriggerButtonClass]"
+                            @click="openCustomStaleDaysDialog"
+                        >
+                            <SlidersHorizontal class="h-4 w-4" />
+                            {{ t('staleWindow.label') }}
+                        </button>
+
+                        <FilterDialog
+                            v-model:open="customStaleDaysDialogOpen"
+                            :title="t('staleWindow.label')"
+                            :close-label="t('cellLog.filters.close')"
+                        >
+                            <form
+                                id="dashboard-custom-stale-days-form"
+                                class="space-y-4"
+                                @submit.prevent="submitCustomStaleDays"
+                            >
+                                <FilterNumberField
+                                    id="dashboard-custom-stale-days"
+                                    v-model="customStaleDaysDraft"
+                                    :label="t('cellHighlight.staleAfterDays')"
+                                    :placeholder="
+                                        t('staleWindow.customPlaceholder')
+                                    "
+                                />
+                            </form>
+
+                            <template #footer>
+                                <button
+                                    type="submit"
+                                    form="dashboard-custom-stale-days-form"
+                                    :class="filterApplyButtonClass"
+                                >
+                                    <Check class="h-4 w-4 shrink-0" />
+                                    {{ t('staleWindow.apply') }}
+                                </button>
+                            </template>
+                        </FilterDialog>
+                    </template>
+                </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.lowStock.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.lowStock.count')"
+                    :value="props.stats.low_stock.count"
+                    :href="productsIndex().url"
+                    :query="{ low_stock: true, ...productQuery }"
+                    tone="danger"
+                    :icon="TriangleAlert"
+                />
             </div>
         </section>
 

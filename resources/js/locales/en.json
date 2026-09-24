@@ -152,8 +152,8 @@
             "submitting": "Saving..."
         },
         "fields": {
-            "qrCodeWidth": "QR code width (px)",
-            "qrCodeHeight": "QR code height (px)"
+            "qrCodeWidth": "QR code width (cm)",
+            "qrCodeHeight": "QR code height (cm)"
         }
     },
     "cellLog": {
@@ -185,6 +185,7 @@
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found.",
+            "selected": "Selected",
             "palletHistory": "Showing history for pallet #{id}",
             "flaggedOnly": "Flagged only"
         },
@@ -320,6 +321,11 @@
     "expiringWindow": {
         "label": "Expiring soon window",
         "customPlaceholder": "e.g. 45",
+        "apply": "Apply"
+    },
+    "staleWindow": {
+        "label": "Stale window",
+        "customPlaceholder": "e.g. 30",
         "apply": "Apply"
     },
     "cells": {
@@ -460,7 +466,16 @@
         "expiring": {
             "title": "Expiring pallets",
             "expired": "Expired",
-            "soon": "Expiring within {days} days"
+            "soon": "Expiring within {days} days",
+            "soonMonths": "Expiring within {months} month(s)"
+        },
+        "stale": {
+            "title": "Stale pallets",
+            "soon": "Stale for at least {days} days"
+        },
+        "lowStock": {
+            "title": "Low stock",
+            "count": "Below minimum pallets"
         },
         "activityToday": {
             "title": "Today's activity"
@@ -479,7 +494,8 @@
             "sections": {
                 "occupancy": "Occupancy"
             },
-            "inactive": "Inactive"
+            "inactive": "Inactive",
+            "lowStock": "Low stock"
         },
         "columns": {
             "product": "Product",
@@ -487,12 +503,13 @@
             "opened": "Opened",
             "expired": "Expired",
             "expiringSoon": "Expiring ≤{days}d",
-            "activityToday": "Today",
-            "activityWeek": "This week",
             "boxesPerPallet": "Boxes / pallet",
+            "minimumPallets": "Min. pallets",
             "qr": "QR"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
+        "minimumPalletsLabel": "Minimum pallets for {product}",
+        "minimumPalletsPlaceholder": "e.g. 10",
         "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
     },

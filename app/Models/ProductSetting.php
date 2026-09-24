@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Observers\ProductSettingObserver;
 use Database\Factories\ProductSettingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,8 +18,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $product_id
  * @property int $boxes_count
+ * @property int|null $minimum_pallets
  */
-#[Fillable(['product_id', 'boxes_count'])]
+#[Fillable(['product_id', 'boxes_count', 'minimum_pallets'])]
+#[ObservedBy(ProductSettingObserver::class)]
 class ProductSetting extends Model
 {
     /** @use HasFactory<ProductSettingFactory> */

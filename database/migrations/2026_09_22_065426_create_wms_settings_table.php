@@ -27,8 +27,8 @@ return new class extends Migration
     {
         Schema::create('wms_settings', function (Blueprint $table) {
             $table->id();
-            $table->unsignedSmallInteger('qr_code_width')->default(280);
-            $table->unsignedSmallInteger('qr_code_height')->default(380);
+            $table->unsignedSmallInteger('qr_code_width')->default(850);
+            $table->unsignedSmallInteger('qr_code_height')->default(1000);
             $table->timestamps();
         });
     }

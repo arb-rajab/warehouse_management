@@ -20,63 +20,52 @@ trait BuildsCellQrLabels
      * caller (RowController::exportQrCodes) rather than re-queried per cell
      * here — a row can hold Row::MAX_DIMENSION² cells.
      *
-     * The multi-label PDF sheet's grid (see resources/views/pdf/qr-labels.blade.php)
-     * lays each label out at a fixed percentage of the page width, and its
-     * `<img>` is CSS-scaled to fill that box (`width: 100%; height: auto`) —
-     * so an admin-configured $qrWidth/$qrHeight never changes the sheet's
-     * physical grid, only the encoded QR's resolution/sharpness. That's why
-     * this call site is safe to wire up without a stricter bound than the
-     * one UpdateSettingRequest/Setting already enforce.
+     * The multi-label PDF sheet (see resources/views/pdf/qr-labels.blade.php)
+     * gives every cell its own page, sized via `@page { size: $qrWidth
+     * $qrHeight }` to exactly the admin-configured dimensions, and each page
+     * embeds exactly the same label image cellQrLabelImage() produces for the
+     * single-cell download — same QR, same expanded slot label, no separate
+     * description line. Reusing that one label-rendering method rather than
+     * re-deriving similar layout here keeps the row-wide PDF sheet and the
+     * single-cell export permanently in lockstep: any future change to
+     * qrLabelImage()'s padding/font-sizing/QR-shrink behavior applies to both
+     * automatically, and the sheet can't silently drift from what a worker
+     * gets from the single-cell button. That's also why this call site is
+     * safe to wire up without a stricter bound than the one
+     * UpdateSettingRequest/Setting already enforce.
      *
      * @param  Collection<int, Cell>  $cells
-     * @return array<int, array{label: string, description: string, qrImage: string}>
+     * @return array<int, array{label: string, labelImage: string}>
      */
     private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight): array
     {
         return $cells
             ->map(fn (Cell $cell) => [
                 'label' => Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
-                // Spelled out below the compact label — "A1·2" alone doesn't tell a
-                // worker which digit is the cell and which is the flat once the
-                // sticker is torn off the sheet and stuck on a shelf with no app
-                // around it for context.
-                'description' => $this->shapeArabicForPdf($this->cellQrLabelDescription($rowLetter, $cell)),
-                // The mobile app's custom URL scheme, encoded directly — no web
-                // redirect page in between. Only the app itself can open this link.
-                'qrImage' => $this->qrImageDataUri($this->cellDeepLink($rowLetter, $cell), max($qrWidth, $qrHeight)),
+                'labelImage' => 'data:image/svg+xml;base64,'.base64_encode(
+                    $this->cellQrLabelImage($rowLetter, $cell, $qrWidth, $qrHeight)
+                ),
             ])
             ->all();
     }
 
     /**
-     * The single-cell counterpart to cellQrLabels() — one standalone SVG
-     * image (see qrLabelImage()) for downloading/printing just this cell's
-     * label, rather than a whole PDF sheet.
+     * One standalone SVG label (see qrLabelImage()) — QR plus the slot label
+     * expanded to fill the space a description line would otherwise leave
+     * blank — for downloading/printing just this cell, and (base64-encoded,
+     * see cellQrLabels()) for embedding as-is into the row-wide PDF sheet.
      */
     private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight): string
     {
         return $this->qrLabelImage(
             $this->cellDeepLink($rowLetter, $cell),
             Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
-            $this->cellQrLabelDescription($rowLetter, $cell),
+            null,
             app()->isLocale('ar') ? 'rtl' : 'ltr',
             $qrWidth,
             $qrHeight,
+            expandPrimaryText: true,
         );
-    }
-
-    /**
-     * Shared by cellQrLabels() (PDF sheet, needs shapeArabicForPdf()) and
-     * cellQrLabelImage() (SVG, rendered correctly without it) so the
-     * translation parameters can't drift between the two exports.
-     */
-    private function cellQrLabelDescription(string $rowLetter, Cell $cell): string
-    {
-        return __('messages.qr_label_description', [
-            'row' => $rowLetter,
-            'cell' => $cell->cell_number,
-            'flat' => $cell->flat_number,
-        ]);
     }
 
     /**

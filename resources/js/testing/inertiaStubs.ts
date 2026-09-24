@@ -31,7 +31,7 @@ export function createFormStub(
     },
 ) {
     return defineComponent({
-        props: ['action'],
+        props: ['action', 'transform'],
         setup(props, { slots }) {
             return () =>
                 h(

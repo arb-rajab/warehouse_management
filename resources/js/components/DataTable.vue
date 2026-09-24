@@ -85,9 +85,9 @@ function showsFilterIcon(column: Column): boolean {
 
 const outerRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
-const popoverStyle = ref<{ top: string; insetInlineStart: string }>({
+const popoverStyle = ref<{ top: string; left: string }>({
     top: '0px',
-    insetInlineStart: '0px',
+    left: '0px',
 });
 
 /**
@@ -123,6 +123,14 @@ function setTriggerRef(el: Element | null, key: string, index: number): void {
  * relative` anchor — nesting it there clipped the popover itself whenever
  * the table was shorter than the popover. Its position is computed here
  * from the clicked trigger's own rect instead.
+ *
+ * `getBoundingClientRect().left` is always the physical left edge regardless
+ * of direction, so the offset below must land on the physical `left` CSS
+ * property. It was previously assigned to the logical `insetInlineStart`,
+ * which resolves to `right` under `dir="rtl"` — silently reinterpreting a
+ * physical-left offset as a distance from the *right* edge and throwing the
+ * popover far from its trigger (and, for a trigger near the table's visual
+ * right side, off the physical left edge of the page entirely).
  */
 function positionPopover(trigger: HTMLElement): void {
     const outer = outerRef.value;
@@ -136,7 +144,7 @@ function positionPopover(trigger: HTMLElement): void {
 
     popoverStyle.value = {
         top: `${triggerRect.bottom - outerRect.top + 4}px`,
-        insetInlineStart: `${triggerRect.left - outerRect.left}px`,
+        left: `${triggerRect.left - outerRect.left}px`,
     };
 }
 

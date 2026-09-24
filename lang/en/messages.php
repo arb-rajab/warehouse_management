@@ -22,7 +22,6 @@ return [
     'verification_round_completed' => 'This verification round has already been completed.',
     'rows_already_in_active_round' => 'These rows are already being verified in another round: :rows',
     'cell_outside_round_rows' => 'This slot is not in one of the rows this round covers.',
-    'qr_label_description' => 'Row :row · Cell :cell · Level :flat',
     'qr_label_product_id' => 'ID: :id',
     'password_same_as_current' => 'The new password must be different from your current password.',
 ];

@@ -110,6 +110,67 @@ describe('FilterProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('2 selected');
     });
 
+    it('caps the panel width to the room available so it cannot overflow past the viewport edge it grows toward', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 200,
+            right: 208,
+            bottom: 40,
+            width: 8,
+        } as DOMRect);
+        container.style.direction = 'rtl';
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.style.maxWidth).toBe('192px');
+    });
+
+    it('positions the panel as a fixed overlay anchored under the trigger, so it can escape a scrolling ancestor instead of being clipped by it', async () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            right: 300,
+            bottom: 250,
+            width: 200,
+        } as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.className).toContain('fixed');
+        expect(panel.style.top).toBe('254px');
+        expect(panel.style.insetInlineStart).toBe('100px');
+        expect(panel.style.minWidth).toBe('200px');
+    });
+
+    it('re-anchors the panel when its scrolling ancestor scrolls while open, and stops tracking once closed', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        const rect = { left: 100, right: 300, bottom: 250, width: 200 };
+        const getRectSpy = vi
+            .spyOn(container, 'getBoundingClientRect')
+            .mockReturnValue(rect as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+        const callsAfterOpen = getRectSpy.mock.calls.length;
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBeGreaterThan(callsAfterOpen);
+
+        const callsAfterResize = getRectSpy.mock.calls.length;
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBe(callsAfterResize);
+    });
+
     it('renders the search input and fetches the first page when opened', async () => {
         const wrapper = mountSelect();
 
@@ -387,7 +448,8 @@ describe('FilterProductSelect', () => {
         expect(options[0].text()).toContain('ودجات');
         // The store never translated this one, so it falls back to the base
         // name rather than rendering the empty `ar_name`.
-        expect(options[1].text()).toBe('Gadgets');
+        expect(options[1].text()).toContain('Gadgets');
+        expect(options[1].text()).not.toContain('ودجات');
     });
 
     it('leads each option with its base name when the locale is English', async () => {
@@ -451,5 +513,87 @@ describe('FilterProductSelect', () => {
             { id: 1, name: 'Widgets', ar_name: 'ودجات' },
             { id: 2, name: 'Gadgets', ar_name: '' },
         ]);
+    });
+
+    it('keeps a selected product pinned and checked after a new search replaces the results', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }]));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).toContain(t('cellLog.filters.selected'));
+
+        const checkboxes = wrapper.findAll<HTMLInputElement>(
+            'input[type="checkbox"]',
+        );
+        expect(checkboxes).toHaveLength(2);
+        expect(checkboxes[0].element.checked).toBe(true);
+        expect(checkboxes[1].element.checked).toBe(false);
+
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        expect(names).toEqual(['Widgets', 'Gadgets']);
+    });
+
+    it('separates each option row from the next with a divider', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+        expect(options[0].element.parentElement?.className).toContain(
+            'divide-y',
+        );
+    });
+
+    it('does not duplicate a selected product that also appears in the current search results', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-testid="product-option-name"]'),
+        ).toHaveLength(2);
+    });
+
+    it('lets an admin unselect a pinned product directly, without re-searching for it', async () => {
+        const wrapper = mountSelect({
+            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, page([]));
+        await wrapper.vm.$nextTick();
+
+        const checkbox = wrapper.get('input[type="checkbox"]');
+        await checkbox.setValue(false);
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
     });
 });

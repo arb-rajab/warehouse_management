@@ -1,8 +1,10 @@
+import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingFormFields from '@/components/SettingFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
+import { cmToPx } from '@/lib/qrCodeSize';
 import { setting } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Edit from './Edit.vue';
@@ -66,6 +68,21 @@ describe('Settings Edit', () => {
         expect(wrapper.findComponent(SettingFormFields).props()).toMatchObject({
             qrCodeWidth: 300,
             qrCodeHeight: 350,
+        });
+    });
+
+    it('converts the entered cm values to pixel integers before submitting', () => {
+        const wrapper = mountPage();
+
+        const transform = wrapper.findComponent(Form).props('transform') as (
+            data: Record<string, unknown>,
+        ) => Record<string, unknown>;
+
+        expect(
+            transform({ qr_code_width: '10', qr_code_height: '12.5' }),
+        ).toEqual({
+            qr_code_width: cmToPx(10),
+            qr_code_height: cmToPx(12.5),
         });
     });
 

@@ -1,26 +1,27 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { pxToCm } from '@/lib/qrCodeSize';
 import SettingFormFields from './SettingFormFields.vue';
 
 describe('SettingFormFields', () => {
     it('renders its labels', () => {
         const wrapper = mount(SettingFormFields, { props: { errors: {} } });
 
-        expect(wrapper.text()).toContain('QR code width (px)');
-        expect(wrapper.text()).toContain('QR code height (px)');
+        expect(wrapper.text()).toContain('QR code width (cm)');
+        expect(wrapper.text()).toContain('QR code height (cm)');
     });
 
-    it('pre-fills the current values', () => {
+    it('pre-fills the current values converted from pixels to centimeters', () => {
         const wrapper = mount(SettingFormFields, {
             props: { errors: {}, qrCodeWidth: 300, qrCodeHeight: 350 },
         });
 
         expect(
             (wrapper.find('#qr_code_width').element as HTMLInputElement).value,
-        ).toBe('300');
+        ).toBe(String(pxToCm(300)));
         expect(
             (wrapper.find('#qr_code_height').element as HTMLInputElement).value,
-        ).toBe('350');
+        ).toBe(String(pxToCm(350)));
     });
 
     it('shows validation error messages', () => {
@@ -44,8 +45,8 @@ describe('SettingFormFields', () => {
     it('retains values the user typed when the errors prop changes after a failed submit', async () => {
         const wrapper = mount(SettingFormFields, { props: { errors: {} } });
 
-        await wrapper.find('#qr_code_width').setValue('400');
-        await wrapper.find('#qr_code_height').setValue('500');
+        await wrapper.find('#qr_code_width').setValue('10.5');
+        await wrapper.find('#qr_code_height').setValue('12.5');
 
         await wrapper.setProps({
             errors: { qr_code_width: 'The qr code width field is required.' },
@@ -53,13 +54,13 @@ describe('SettingFormFields', () => {
 
         expect(
             (wrapper.find('#qr_code_width').element as HTMLInputElement).value,
-        ).toBe('400');
+        ).toBe('10.5');
         expect(
             (wrapper.find('#qr_code_height').element as HTMLInputElement).value,
-        ).toBe('500');
+        ).toBe('12.5');
     });
 
-    it('marks both fields as required and whole numbers, mirroring the backend rules', () => {
+    it('marks both fields as required and entered in tenths of a centimeter', () => {
         const wrapper = mount(SettingFormFields, { props: { errors: {} } });
 
         expect(
@@ -70,17 +71,19 @@ describe('SettingFormFields', () => {
             (wrapper.find('#qr_code_height').element as HTMLInputElement)
                 .required,
         ).toBe(true);
-        expect(wrapper.find('#qr_code_width').attributes('step')).toBe('1');
-        expect(wrapper.find('#qr_code_height').attributes('step')).toBe('1');
+        expect(wrapper.find('#qr_code_width').attributes('step')).toBe('0.1');
+        expect(wrapper.find('#qr_code_height').attributes('step')).toBe('0.1');
     });
 
-    it('bounds both fields to 100-1000, mirroring the backend rule', () => {
+    it('bounds both fields to the cm equivalent of the backend 100-1000px rule', () => {
         const wrapper = mount(SettingFormFields, { props: { errors: {} } });
+        const minCm = String(pxToCm(100));
+        const maxCm = String(pxToCm(1000));
 
-        expect(wrapper.find('#qr_code_width').attributes('min')).toBe('100');
-        expect(wrapper.find('#qr_code_width').attributes('max')).toBe('1000');
-        expect(wrapper.find('#qr_code_height').attributes('min')).toBe('100');
-        expect(wrapper.find('#qr_code_height').attributes('max')).toBe('1000');
+        expect(wrapper.find('#qr_code_width').attributes('min')).toBe(minCm);
+        expect(wrapper.find('#qr_code_width').attributes('max')).toBe(maxCm);
+        expect(wrapper.find('#qr_code_height').attributes('min')).toBe(minCm);
+        expect(wrapper.find('#qr_code_height').attributes('max')).toBe(maxCm);
     });
 
     it('prefixes its ids when idPrefix is given, so it can render more than once on the same page', () => {

@@ -44,12 +44,12 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         image_url: null,
         active: true,
         boxes_count: 12,
+        minimum_pallets: null,
+        pallets_count: 3,
         full_cells_count: 2,
         opened_cells_count: 1,
         expired_cells_count: 0,
         expiring_soon_count: 0,
-        activity_today_count: 0,
-        activity_week_count: 0,
         ...overrides,
     };
 }
@@ -75,8 +75,6 @@ function mountPage(
     products: ProductSummary[],
     filters: ProductFilters = {},
     overrides: {
-        today?: string;
-        weekStart?: string;
         expiringSoonDays?: number;
     } = {},
 ) {
@@ -88,8 +86,6 @@ function mountPage(
     return mount(Index, {
         props: {
             products: paginated(products),
-            today: overrides.today ?? '2026-08-13',
-            weekStart: overrides.weekStart ?? '2026-08-10',
             expiringSoonDays: overrides.expiringSoonDays ?? 45,
             filters,
             filterOptions,
@@ -131,12 +127,11 @@ describe('Products Index', () => {
         expect(headers).toEqual([
             t('products.columns.product'),
             t('products.columns.boxesPerPallet'),
+            t('products.columns.minimumPallets'),
             t('products.columns.full'),
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityToday'),
-            t('products.columns.activityWeek'),
             t('products.columns.qr'),
         ]);
     });
@@ -166,6 +161,102 @@ describe('Products Index', () => {
             t('products.quickSearch.placeholder'),
         );
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('renders the quick inactive checkbox in the toolbar, without opening the filter dialog', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.get('label[for="products-quick-inactive"]').text()).toBe(
+            t('products.filters.inactive'),
+        );
+        expect(
+            (
+                wrapper.get('#products-quick-inactive')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(false);
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('checks the quick inactive checkbox when the inactive filter is already applied', () => {
+        const wrapper = mountPage([], { inactive: true });
+
+        expect(
+            (
+                wrapper.get('#products-quick-inactive')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+    });
+
+    it('immediately requests inactive products when the toolbar checkbox is checked, without opening the filter dialog', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-inactive').setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ inactive: true }),
+            { preserveState: true, replace: true },
+        );
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('immediately omits inactive when the toolbar checkbox is unchecked again', async () => {
+        const wrapper = mountPage([], { inactive: true });
+
+        await wrapper.get('#products-quick-inactive').setValue(false);
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('inactive');
+    });
+
+    it('renders the quick low-stock checkbox in the toolbar, without opening the filter dialog', () => {
+        const wrapper = mountPage([]);
+
+        expect(
+            wrapper.get('label[for="products-quick-low-stock"]').text(),
+        ).toBe(t('products.filters.lowStock'));
+        expect(
+            (
+                wrapper.get('#products-quick-low-stock')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(false);
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('checks the quick low-stock checkbox when the low_stock filter is already applied', () => {
+        const wrapper = mountPage([], { low_stock: true });
+
+        expect(
+            (
+                wrapper.get('#products-quick-low-stock')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+    });
+
+    it('immediately requests low-stock products when the toolbar checkbox is checked, without opening the filter dialog', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-low-stock').setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ low_stock: true }),
+            { preserveState: true, replace: true },
+        );
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('immediately omits low_stock when the toolbar checkbox is unchecked again', async () => {
+        const wrapper = mountPage([], { low_stock: true });
+
+        await wrapper.get('#products-quick-low-stock').setValue(false);
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('low_stock');
     });
 
     it('narrows the table to the picked product and requests it via product_id when a quick search result is selected', async () => {
@@ -222,7 +313,6 @@ describe('Products Index', () => {
         await openFilters(wrapper);
 
         const dialog = wrapper.get('[role="dialog"]');
-        expect(dialog.text()).toContain(t('cellLog.filters.sections.location'));
         expect(dialog.text()).toContain(
             t('products.filters.sections.occupancy'),
         );
@@ -234,7 +324,6 @@ describe('Products Index', () => {
         await openFilters(wrapper);
 
         const applyButton = wrapper
-            .get('form')
             .findAll('button')
             .find((button) =>
                 button.text().includes(t('cellLog.filters.apply')),
@@ -270,24 +359,6 @@ describe('Products Index', () => {
                 button.text().includes(t('cellLog.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
-    });
-
-    it("populates the row and column filter select's options from filterOptions", async () => {
-        const wrapper = mountPage([]);
-        await openFilters(wrapper);
-
-        expect(
-            wrapper
-                .get('#filter-row')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), 'A', 'B']);
-        expect(
-            wrapper
-                .get('#filter-column')
-                .findAll('option')
-                .map((o) => o.text()),
-        ).toEqual([t('cellLog.filters.all'), '1', '2', '3']);
     });
 
     it("populates the state filter select's options, without an empty option since an empty cell can't hold a product", async () => {
@@ -407,6 +478,14 @@ describe('Products Index', () => {
         expect(header.find('button[title]').exists()).toBe(false);
     });
 
+    it('offers no column filter on the minimum-pallets threshold either', () => {
+        const wrapper = mountPage([]);
+
+        const header = wrapper.findAll('thead th')[2];
+        expect(header.text()).toBe(t('products.columns.minimumPallets'));
+        expect(header.find('button[title]').exists()).toBe(false);
+    });
+
     it("opens the box-count dialog pre-seeded with the product's stored count", async () => {
         const wrapper = mountPage([product({ boxes_count: 24 })]);
 
@@ -422,7 +501,7 @@ describe('Products Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/products?row_id=1&per_page=20',
+            '/admin/products?state=full&per_page=20',
         );
 
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
@@ -432,7 +511,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerPatchMock).toHaveBeenCalledWith(
-            '/admin/products/42/box-count?row_id=1&per_page=20',
+            '/admin/products/42/box-count?state=full&per_page=20',
             { boxes_count: 30 },
             { preserveScroll: true, preserveState: true },
         );
@@ -460,10 +539,93 @@ describe('Products Index', () => {
         expect(routerPatchMock).not.toHaveBeenCalled();
     });
 
+    it("renders the product's stored minimum-pallets threshold as a clickable trigger button, or a dash when unconfigured", () => {
+        const wrapper = mountPage([
+            product({ minimum_pallets: 10 }),
+            product({ id: 11, minimum_pallets: null }),
+        ]);
+
+        expect(rowCells(wrapper, 0)[2].get('button').text()).toBe('10');
+        expect(rowCells(wrapper, 1)[2].get('button').text()).toBe('—');
+    });
+
+    it('flags the minimum-pallets trigger button when the current pallet count is below the threshold', () => {
+        const wrapper = mountPage([
+            product({ id: 42, minimum_pallets: 5, pallets_count: 2 }),
+            product({ id: 43, minimum_pallets: 5, pallets_count: 5 }),
+        ]);
+
+        expect(rowCells(wrapper, 0)[2].get('button').classes()).toContain(
+            'text-red-600',
+        );
+        expect(rowCells(wrapper, 1)[2].get('button').classes()).not.toContain(
+            'text-red-600',
+        );
+    });
+
+    it("opens the minimum-pallets dialog pre-seeded with the product's stored threshold, or empty when unconfigured", async () => {
+        const wrapper = mountPage([product({ minimum_pallets: 10 })]);
+
+        await rowCells(wrapper)[2].get('button').trigger('click');
+
+        expect(
+            (
+                wrapper.get('#products-minimum-pallets')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('10');
+    });
+
+    it('preserves the current page and filters when saving a changed minimum-pallets threshold', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/products?state=full&per_page=20',
+        );
+
+        const wrapper = mountPage([product({ id: 42, minimum_pallets: 5 })]);
+
+        await rowCells(wrapper)[2].get('button').trigger('click');
+        await wrapper.get('#products-minimum-pallets').setValue('10');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPatchMock).toHaveBeenCalledWith(
+            '/admin/products/42/minimum-pallets?state=full&per_page=20',
+            { minimum_pallets: 10 },
+            { preserveScroll: true, preserveState: true },
+        );
+
+        window.history.pushState({}, '', '/');
+    });
+
+    it('submits null to clear the minimum-pallets threshold when the field is emptied', async () => {
+        const wrapper = mountPage([product({ id: 42, minimum_pallets: 10 })]);
+
+        await rowCells(wrapper)[2].get('button').trigger('click');
+        await wrapper.get('#products-minimum-pallets').setValue('');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPatchMock).toHaveBeenCalledWith(
+            '/admin/products/42/minimum-pallets',
+            { minimum_pallets: null },
+            { preserveScroll: true, preserveState: true },
+        );
+    });
+
+    it('rejects a minimum-pallets threshold below one on dialog submit without a round trip', async () => {
+        const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+        await rowCells(wrapper)[2].get('button').trigger('click');
+        await wrapper.get('#products-minimum-pallets').setValue('0');
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPatchMock).not.toHaveBeenCalled();
+    });
+
     it('renders the full count linking to the map filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
-        const cell = rowCells(wrapper)[2];
+        const cell = rowCells(wrapper)[3];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -474,7 +636,7 @@ describe('Products Index', () => {
     it('renders the opened count linking to the map filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
-        const cell = rowCells(wrapper)[3];
+        const cell = rowCells(wrapper)[4];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -486,7 +648,7 @@ describe('Products Index', () => {
             product({ id: 42, expired_cells_count: 1 }),
         ]);
 
-        const cell = rowCells(wrapper)[4];
+        const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -500,47 +662,17 @@ describe('Products Index', () => {
             { expiringSoonDays: 30 },
         );
 
-        const cell = rowCells(wrapper)[5];
+        const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
         expect(href).toContain('expires_within_days=30');
     });
 
-    it('renders the today activity count linking to the cell log with today as both ends of the date range', () => {
-        const wrapper = mountPage(
-            [product({ id: 42, activity_today_count: 4 })],
-            {},
-            { today: '2026-08-13' },
-        );
-
-        const cell = rowCells(wrapper)[6];
-        expect(cell.text()).toBe('4');
-        const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cell-logs');
-        expect(href).toContain('date_from=2026-08-13');
-        expect(href).toContain('date_to=2026-08-13');
-    });
-
-    it('renders the this-week activity count linking to the cell log from the week start through today', () => {
-        const wrapper = mountPage(
-            [product({ id: 42, activity_week_count: 9 })],
-            {},
-            { today: '2026-08-13', weekStart: '2026-08-10' },
-        );
-
-        const cell = rowCells(wrapper)[7];
-        expect(cell.text()).toBe('9');
-        const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cell-logs');
-        expect(href).toContain('date_from=2026-08-10');
-        expect(href).toContain('date_to=2026-08-13');
-    });
-
     it('renders a QR export link for the product', () => {
         const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
 
-        const cell = rowCells(wrapper)[8];
+        const cell = rowCells(wrapper)[7];
         const link = cell.get('a');
         expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
         expect(link.attributes('aria-label')).toBe(
@@ -548,25 +680,10 @@ describe('Products Index', () => {
         );
     });
 
-    it('carries the current row/column/user/action filters into the activity drill-down links', () => {
-        const wrapper = mountPage([product({ id: 42 })], {
-            row_id: 1,
-            user_id: [7],
-            action: ['opened'],
-        });
-
-        const href = rowCells(wrapper)[6].get('a').attributes('href') ?? '';
-        expect(href).toContain('row_id=1');
-        expect(href).toContain('user_id%5B%5D=7');
-        expect(href).toContain('action%5B%5D=opened');
-    });
-
     it('requests the current filter values when the filter form is submitted', async () => {
         const wrapper = mountPage([]);
         await openFilters(wrapper);
 
-        await wrapper.get('#filter-row').setValue('1');
-        await wrapper.get('#filter-column').setValue('2');
         await wrapper.get('#filter-state').setValue('full');
         await wrapper.get('#filter-expires-within-days').setValue('7');
         await wrapper.get('form').trigger('submit');
@@ -574,8 +691,6 @@ describe('Products Index', () => {
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin/products',
             expect.objectContaining({
-                row_id: 1,
-                column_number: 2,
                 state: 'full',
                 expires_within_days: 7,
             }),
@@ -679,7 +794,6 @@ describe('Products Index', () => {
         for (const label of [
             t('products.columns.product'),
             t('products.columns.full'),
-            t('products.columns.activityToday'),
         ]) {
             expect(
                 columnHeader(wrapper, label).findComponent(Filter).exists(),
@@ -695,7 +809,6 @@ describe('Products Index', () => {
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityWeek'),
         ]) {
             expect(
                 columnHeader(wrapper, label).findComponent(Filter).exists(),
@@ -735,7 +848,7 @@ describe('Products Index', () => {
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
-    it('marks every occupancy column active when the state filter is applied, but leaves the activity columns alone', () => {
+    it('marks every occupancy column active when the state filter is applied', () => {
         const wrapper = mountPage([], { state: 'full' });
 
         for (const label of [
@@ -746,13 +859,6 @@ describe('Products Index', () => {
         ]) {
             expect(isColumnActive(wrapper, label)).toBe(true);
         }
-
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityToday')),
-        ).toBe(true);
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityWeek')),
-        ).toBe(true);
     });
 
     it('marks the product column (not the occupancy columns) active when the inactive filter is applied', () => {
@@ -769,28 +875,13 @@ describe('Products Index', () => {
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
     });
 
-    it('marks only the activity columns active when only an action filter is applied', () => {
-        const wrapper = mountPage([], { action: ['opened'] });
+    it('marks the product column (not the occupancy columns) active when the low_stock filter is applied', () => {
+        const wrapper = mountPage([], { low_stock: true });
 
-        expect(
-            isColumnActive(wrapper, t('products.columns.activityToday')),
-        ).toBe(true);
+        expect(isColumnActive(wrapper, t('products.columns.product'))).toBe(
+            true,
+        );
         expect(isColumnActive(wrapper, t('products.columns.full'))).toBe(false);
-    });
-
-    it('marks every metric column active when a row filter is applied', () => {
-        const wrapper = mountPage([], { row_id: 1 });
-
-        for (const label of [
-            t('products.columns.full'),
-            t('products.columns.opened'),
-            t('products.columns.expired'),
-            t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.activityToday'),
-            t('products.columns.activityWeek'),
-        ]) {
-            expect(isColumnActive(wrapper, label)).toBe(true);
-        }
     });
 
     async function openColumnPopover(
@@ -824,26 +915,15 @@ describe('Products Index', () => {
         expect(wrapper.find('#popover-filter-state').exists()).toBe(false);
     });
 
-    it('opens the activity popover with the action/user/date fields when the Activity Today column icon is clicked', async () => {
-        const wrapper = mountPage([]);
-
-        await openColumnPopover(wrapper, t('products.columns.activityToday'));
-
-        expect(wrapper.find('#popover-filter-action').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-user').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-date-from').exists()).toBe(true);
-        expect(wrapper.find('#popover-filter-state').exists()).toBe(false);
-    });
-
     it('closes one popover and opens another when a different column icon is clicked', async () => {
         const wrapper = mountPage([]);
 
         await openColumnPopover(wrapper, t('products.columns.product'));
         expect(wrapper.find('#popover-filter-product').exists()).toBe(true);
 
-        await openColumnPopover(wrapper, t('products.columns.activityToday'));
+        await openColumnPopover(wrapper, t('products.columns.full'));
         expect(wrapper.find('#popover-filter-product').exists()).toBe(false);
-        expect(wrapper.find('#popover-filter-action').exists()).toBe(true);
+        expect(wrapper.find('#popover-filter-state').exists()).toBe(true);
     });
 
     it('auto-applies, debounced, when a field is changed inside an open column popover', async () => {
@@ -915,7 +995,6 @@ describe('Products Index', () => {
 
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage([], {
-            row_id: 1,
             state: 'full',
             expired: true,
             inactive: true,
@@ -937,9 +1016,6 @@ describe('Products Index', () => {
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
-        expect(
-            (wrapper.get('#filter-row').element as HTMLSelectElement).value,
-        ).toBe('');
         expect(
             (wrapper.get('#filter-state').element as HTMLSelectElement).value,
         ).toBe('');

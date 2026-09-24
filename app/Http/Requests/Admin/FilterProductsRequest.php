@@ -5,7 +5,6 @@ namespace App\Http\Requests\Admin;
 use App\Http\Requests\Concerns\FiltersByDateRange;
 use App\Http\Requests\Concerns\FiltersByLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
-use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\FiltersByUserIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
@@ -19,7 +18,6 @@ class FilterProductsRequest extends FormRequest
     use FiltersByDateRange;
     use FiltersByLogAction;
     use FiltersByProductIds;
-    use FiltersByRowAndColumn;
     use FiltersByUserIds;
     use FiltersPerPage;
     use NormalizesBooleanFilters;
@@ -30,6 +28,7 @@ class FilterProductsRequest extends FormRequest
     {
         $this->normalizeExpiredFilter();
         $this->normalizeBooleanFilter('inactive');
+        $this->normalizeBooleanFilter('low_stock');
     }
 
     /**
@@ -40,7 +39,6 @@ class FilterProductsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            ...$this->rowAndColumnFilterRules(),
             // No `empty` option here (unlike the cells map) — an empty cell
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
@@ -48,11 +46,12 @@ class FilterProductsRequest extends FormRequest
             'expired' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'inactive' => ['nullable', 'boolean'],
+            'low_stock' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),
             ...$this->userIdsFilterRules(),
             ...$this->logActionFilterRules(),
             ...$this->dateRangeFilterRules(),
-            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count,activity_today_count,activity_week_count'],
+            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count'],
             ...$this->sortDirectionRules(),
             ...$this->perPageRules(),
         ];

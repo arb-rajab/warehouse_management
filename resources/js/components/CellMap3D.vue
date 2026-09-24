@@ -113,6 +113,15 @@ const HOVER_COLOR = 0xffffff;
  * an empty cell has an actual box to frame instead of floating in open air.
  */
 const EMPTY_CELL_OPACITY = 0.18;
+/**
+ * Per-instance color tint (multiplied onto the state's base material color
+ * via `InstancedMesh.setColorAt`) for a cell that doesn't match an active
+ * highlight filter — mirrors the 2D grid's `grayscale opacity-40` fade
+ * (CellSlot.vue) so a non-match reads the same way in both views. White
+ * (no-op multiply) is the untinted default.
+ */
+const NORMAL_TINT = 0xffffff;
+const DIMMED_TINT = 0x666666;
 /** Walk-mode mini-map: below this delta the reactive mirror isn't updated, to avoid a reactive write on every animation frame. */
 const MINI_MAP_UPDATE_EPSILON = 0.05;
 const MINI_MAP_UPDATE_EPSILON_DEGREES = 1;
@@ -531,6 +540,32 @@ function invalidateInstanceBounds(mesh: THREE.InstancedMesh): void {
 }
 
 /**
+ * Sets (or clears) the dimmed tint on an already-placed instance — used both
+ * when a cell is first placed and whenever a highlight-filter change flips
+ * `dimmed` without the cell's state/position changing at all.
+ */
+function setInstanceTint(
+    state: Cell['state'],
+    index: number,
+    dimmed: boolean,
+): void {
+    const stateEntry = instancesByState.get(state);
+
+    if (!stateEntry) {
+        return;
+    }
+
+    stateEntry.mesh.setColorAt(
+        index,
+        new THREE.Color(dimmed ? DIMMED_TINT : NORMAL_TINT),
+    );
+
+    if (stateEntry.mesh.instanceColor) {
+        stateEntry.mesh.instanceColor.needsUpdate = true;
+    }
+}
+
+/**
  * Occupies the next free instance slot for `state` with a box at
  * (x, y, z), recording it in `instanceSlotByKey` — shared by the initial
  * build (`buildCellGroup`) and by `updateCellStatesAndLookup` when an
@@ -542,6 +577,7 @@ function placeCellInstance(
     x: number,
     y: number,
     z: number,
+    dimmed: boolean,
 ): void {
     const stateEntry = instancesByState.get(state);
 
@@ -559,6 +595,7 @@ function placeCellInstance(
     invalidateInstanceBounds(stateEntry.mesh);
     stateEntry.keys[index] = key;
     instanceSlotByKey.set(key, { state, index });
+    setInstanceTint(state, index, dimmed);
 }
 
 /**
@@ -587,6 +624,12 @@ function removeCellInstance(key: string): void {
         const movedMatrix = new THREE.Matrix4();
         stateEntry.mesh.getMatrixAt(lastIndex, movedMatrix);
         stateEntry.mesh.setMatrixAt(slot.index, movedMatrix);
+
+        if (stateEntry.mesh.instanceColor) {
+            const movedColor = new THREE.Color();
+            stateEntry.mesh.getColorAt(lastIndex, movedColor);
+            stateEntry.mesh.setColorAt(slot.index, movedColor);
+        }
 
         const movedKey = stateEntry.keys[lastIndex];
         stateEntry.keys[slot.index] = movedKey;
@@ -632,7 +675,7 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
             const x = rowWorldX(rowIndex);
             const y = flatWorldY(item.flatNumber);
             const z = cellWorldZ(item.cellNumber);
-            placeCellInstance(key, item.state, x, y, z);
+            placeCellInstance(key, item.state, x, y, z, item.dimmed);
 
             const outlineKind = outlineKindFor(item);
 
@@ -845,7 +888,10 @@ function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
                     rowWorldX(rowIndex),
                     flatWorldY(item.flatNumber),
                     cellWorldZ(item.cellNumber),
+                    item.dimmed,
                 );
+            } else {
+                setInstanceTint(slot.state, slot.index, item.dimmed);
             }
 
             const existingOutline = cellOutlineLookup.get(key);
@@ -1961,6 +2007,7 @@ onBeforeUnmount(() => {
                 :cell="displayedCellForSlot"
                 :label="displayedLabel"
                 :highlighted="displayedItem.item.highlighted"
+                :dimmed="displayedItem.item.dimmed"
                 :pulsing="displayedItem.item.pulsing"
                 toggleable
                 manageable

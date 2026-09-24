@@ -2,49 +2,33 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use ArPHP\I18N\Arabic;
 use Illuminate\Support\HtmlString;
+use LogicException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
  * Low-level PDF/QR helpers shared by every QR-label export — BuildsCellQrLabels
- * (row/cell labels) and BuildsProductQrLabels (product labels). Neither the SVG
- * QR encoding nor the Arabic PDF shaping is specific to what a label encodes.
+ * (row/cell labels) and BuildsProductQrLabels (product labels). The SVG QR
+ * encoding here isn't specific to what a label encodes.
  */
 trait BuildsQrLabels
 {
     /**
-     * dompdf's text layout has no Arabic contextual shaping or bidi reordering
-     * (see FIXME RTL markers throughout dompdf's FrameReflower/Style code) — it
-     * only draws each character's isolated-form glyph in logical (storage)
-     * order, which renders Arabic as disconnected letters read left-to-right.
-     * `utf8Glyphs()` pre-shapes the string into joined presentation-form
-     * glyphs already reordered into final left-to-right *display* order, so a
-     * naive LTR-drawing engine like dompdf's still renders it correctly. The
-     * font referenced in the qr-labels PDF view must carry glyphs for the
-     * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
+     * The QR's own SVG markup, minus its outer `<svg>` wrapper, for splicing
+     * straight into qrLabelImage()'s label SVG. It can't be referenced from
+     * there as a nested `<image href="data:image/svg+xml...">` instead:
+     * browsers render that fine, but dompdf (the row-wide PDF sheet, see
+     * BuildsCellQrLabels::cellQrLabels()) draws an `<image>` found *inside*
+     * an SVG through php-svg-lib's SurfaceCpdf::image(), which only handles
+     * raster formats and silently draws nothing for an SVG source — the PDF
+     * got every label's text but no QR at all. Inlined, the QR is parsed as
+     * part of the same top-level SVG document, which both render.
      *
-     * Only the dompdf-rendered multi-label sheet (RowController's row-wide
-     * export, via cellQrLabels()) needs this — a standalone SVG label image
-     * (qrLabelImage()) is drawn by a standards-compliant SVG renderer, which
-     * already shapes and bidi-reorders Arabic text correctly on its own.
-     *
-     * $hindo is false to keep Western digits, matching how the same
-     * translation string renders un-shaped in the Vue/Inertia UI.
-     */
-    private function shapeArabicForPdf(string $text): string
-    {
-        if (! app()->isLocale('ar')) {
-            return $text;
-        }
-
-        return (new Arabic)->utf8Glyphs($text, max_chars: 1000, hindo: false, forcertl: true);
-    }
-
-    /**
-     * dompdf doesn't render inline `<svg>` markup (its SVG support only
-     * covers rasterizing an SVG *source* referenced by an `<img>` tag), so
-     * the QR is embedded as a base64 SVG data URI rather than inlined.
+     * The wrapper is stripped rather than kept as a nested `<svg x y>`
+     * viewport because php-svg-lib treats a nested `<svg>` as a plain group,
+     * ignoring its x/y/viewBox — the caller positions this markup with a
+     * `<g transform>` instead. No scaling is needed on top of that: the QR
+     * is generated at exactly $size, so its own coordinates are already px.
      *
      * SVG (not PNG) is used deliberately: bacon-qr-code's PNG backend renders
      * through Imagick, drawing each QR module as a separate composite call —
@@ -56,7 +40,7 @@ trait BuildsQrLabels
      * $size is the admin-configured QR size (Setting::current(), see
      * qrLabelImage()) — never a hardcoded value.
      */
-    private function qrImageDataUri(string $data, int $size): string
+    private function qrSvgInnerMarkup(string $data, int $size): string
     {
         // simplesoftwareio/simple-qrcode's generate() docblock omits the leading
         // backslash on its Illuminate\Support\HtmlString return type, so Larastan
@@ -65,7 +49,11 @@ trait BuildsQrLabels
         /** @var HtmlString|string $svg */
         $svg = QrCode::format('svg')->size($size)->generate($data);
 
-        return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+        if (preg_match('/<svg\b[^>]*>(.*)<\/svg>/s', (string) $svg, $matches) !== 1) {
+            throw new LogicException('QR code generator returned no <svg> element.');
+        }
+
+        return $matches[1];
     }
 
     /**
@@ -155,6 +143,44 @@ trait BuildsQrLabels
     }
 
     /**
+     * Picks the largest primary-line font size (down to the default $minFontSize)
+     * whose wrapped lines fit entirely within the vertical space below the QR,
+     * without needing clampLinesToHeight() to truncate any of them. Cell slot
+     * labels vary a lot in length (Row::MAX_DIMENSION allows 3-digit cell/flat
+     * numbers), so a single fixed "large" size would silently drop the flat
+     * number behind an ellipsis for a cell like "Z123·456" while looking fine
+     * for "Z1·2" — trying sizes from the top down guarantees the full label is
+     * always visible, just smaller when it needs to be.
+     *
+     * A bigger font also needs more clearance above its own baseline (glyphs
+     * extend roughly 0.8x the font size above it), so each candidate's start
+     * Y is computed from the font size itself rather than the fixed 24px gap
+     * the default $minFontSize uses — otherwise a large font's text would
+     * draw up into the QR instead of sitting below it.
+     *
+     * @return array{0: int, 1: int, 2: int} [fontSize, lineHeight, startY]
+     */
+    private function pickExpandedPrimaryFontSize(string $text, int $textMaxWidth, int $qrBottom, int $maxTextY, int $minFontSize, int $minLineHeight, int $minStartY): array
+    {
+        $topGap = 12;
+        $bottomGap = 12;
+        $maxFontSize = 64;
+
+        for ($fontSize = $maxFontSize; $fontSize >= $minFontSize; $fontSize--) {
+            $lineHeight = (int) round($fontSize * 1.2);
+            $startY = $qrBottom + $topGap + (int) round($fontSize * 0.8);
+            $lines = $this->wrapLabelText($text, $textMaxWidth, $fontSize);
+            $bottom = $startY + (count($lines) - 1) * $lineHeight + $bottomGap;
+
+            if ($bottom <= $maxTextY) {
+                return [$fontSize, $lineHeight, $startY];
+            }
+        }
+
+        return [$minFontSize, $minLineHeight, $minStartY];
+    }
+
+    /**
      * A single, self-contained SVG "image" label — one QR plus up to three
      * lines of plain legible text below it — for a single-item export
      * (one cell, one product) that a worker downloads and prints directly,
@@ -166,17 +192,19 @@ trait BuildsQrLabels
      *
      * $width/$height are Setting::current()'s qr_code_width/qr_code_height —
      * the label's total maximum box (QR plus any text below it), never a
-     * hardcoded value. The QR itself is always a square sized from $width
-     * alone ($qrSize = $width - padding*2) and never shrinks to make room
-     * for text; text is what yields instead, via clampLinesToHeight(): a
-     * name that wraps onto more lines than fit within $height gets truncated
-     * with an ellipsis, or dropped entirely if not even one line fits. The
-     * returned SVG's actual height still shrinks below $height when the
-     * content is short (unchanged from before) — $height is a ceiling, not
-     * a fixed canvas size — except in the one unavoidable case where $height
-     * is configured smaller than the QR needs on its own (e.g. a much wider
-     * than tall box): the QR is still never clipped, so the label grows past
-     * $height rather than cut it off.
+     * hardcoded value. The QR is a square sized from $width alone ($qrSize =
+     * $width - padding*2), shrunk slightly below that only when $height
+     * leaves less than $minPrimaryZone of room below it (e.g. $width and
+     * $height configured equal) — see the guard right after $qrSize/$qrBottom
+     * below. Beyond that guaranteed minimum, text is still what yields via
+     * clampLinesToHeight(): a name that wraps onto more lines than fit within
+     * $height gets truncated with an ellipsis, or dropped entirely if not
+     * even one line fits. The returned SVG's actual height still shrinks
+     * below $height when the content is short (unchanged from before) —
+     * $height is a ceiling, not a fixed canvas size — except in the one
+     * unavoidable case where $height is configured smaller than the
+     * (possibly already-shrunk) QR needs on its own: the QR is still never
+     * clipped, so the label grows past $height rather than cut it off.
      *
      * $idText is an optional small caption line drawn directly below the QR,
      * above the primary line — currently only BuildsProductQrLabels passes
@@ -186,16 +214,48 @@ trait BuildsQrLabels
      * other text: when it doesn't fit above $maxTextY it's dropped via
      * clampLinesToHeight() like any other line, and the primary line's start
      * position only shifts down when it actually got drawn.
+     *
+     * $expandPrimaryText grows the primary line's font size to fill whatever
+     * vertical space is left below the QR (only BuildsCellQrLabels passes
+     * true, since a cell label carries no secondary/explanation line to
+     * occupy that space) — see pickExpandedPrimaryFontSize() for how the size
+     * is chosen.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false): string
     {
         $padding = 20;
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
+        $qrX = $padding;
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
         $maxTextY = $height - 16;
-        $qrDataUri = $this->qrImageDataUri($qrData, $qrSize);
+
+        // The primary line's default (unexpanded) layout needs a 24px gap
+        // below the QR plus its own 22px line height — 46px total. Without
+        // this guard, a $width/$height configured equal (or otherwise close)
+        // leaves $qrBottom past $maxTextY, and clampLinesToHeight() drops the
+        // primary line entirely rather than truncating it, since it never
+        // gets so much as its first line's worth of room. Shrinking the QR
+        // itself is a last resort — only enough to guarantee that minimum,
+        // and never below 60% of $width, so the QR stays comfortably
+        // scannable at any configured size.
+        $minPrimaryZone = 24 + 22;
+        $tightestAllowedQrBottom = $maxTextY - $minPrimaryZone;
+
+        if ($qrBottom > $tightestAllowedQrBottom) {
+            $deficit = $qrBottom - $tightestAllowedQrBottom;
+            $shrinkBy = max(0, min($deficit, $qrSize - (int) ($width * 0.6)));
+            $qrSize -= $shrinkBy;
+            $qrBottom = $padding + $qrSize;
+            // Re-center horizontally — $qrX started at $padding on the
+            // assumption that $qrSize filled the full $width - padding*2
+            // span; a shrunk QR no longer does, so it must move inward to
+            // stay centered rather than hug the left/start edge.
+            $qrX = (int) (($width - $qrSize) / 2);
+        }
+
+        $qrMarkup = $this->qrSvgInnerMarkup($qrData, $qrSize);
 
         $idMarkup = '';
         $idY = $qrBottom + 24;
@@ -212,6 +272,18 @@ trait BuildsQrLabels
         $primaryFontSize = 18;
         $primaryLineHeight = 22;
         $primaryY = $idRendered ? $idY + 26 : $qrBottom + 24;
+
+        if ($expandPrimaryText && ! $idRendered) {
+            [$primaryFontSize, $primaryLineHeight, $primaryY] = $this->pickExpandedPrimaryFontSize(
+                $primaryText,
+                $textMaxWidth,
+                $qrBottom,
+                $maxTextY,
+                $primaryFontSize,
+                $primaryLineHeight,
+                $primaryY,
+            );
+        }
 
         $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
         $primaryLines = $this->clampLinesToHeight($primaryLines, $primaryY, $primaryLineHeight, $maxTextY);
@@ -245,7 +317,7 @@ trait BuildsQrLabels
         return <<<SVG
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
-                <image href="{$qrDataUri}" x="{$padding}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                <g transform="translate({$qrX},{$padding})">{$qrMarkup}</g>
                 {$idMarkup}
                 {$primaryMarkup}
                 {$secondaryMarkup}

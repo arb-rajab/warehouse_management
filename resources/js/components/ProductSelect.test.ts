@@ -225,6 +225,25 @@ describe('ProductSelect', () => {
         ]);
     });
 
+    it('separates each option row from the next with a divider', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            page([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+        expect(options[0].element.parentElement?.className).toContain(
+            'divide-y',
+        );
+    });
+
     it('closes the panel after selecting an option', async () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');
@@ -486,7 +505,8 @@ describe('ProductSelect', () => {
         expect(options[0].text()).toContain('ودجات');
         // The store never translated this one, so it falls back to the base
         // name rather than rendering the empty `ar_name`.
-        expect(options[1].text()).toBe('Gadgets');
+        expect(options[1].text()).toContain('Gadgets');
+        expect(options[1].text()).not.toContain('ودجات');
     });
 
     it('leads each option with its base name when the locale is English', async () => {

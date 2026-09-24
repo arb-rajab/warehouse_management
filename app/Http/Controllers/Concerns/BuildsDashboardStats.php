@@ -7,6 +7,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
+use App\Models\Product;
 use App\Services\DashboardStatsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,41 +25,54 @@ trait BuildsDashboardStats
      *
      * @var list<int>
      */
-    private const array EXPIRING_WINDOW_DAYS = [7, 14, 30, 60];
+    private const array EXPIRING_WINDOW_MONTHS = [1, 2, 4, 6];
 
     /**
-     * The custom card's default day count — distinct from the 7-day fixed card already in
-     * EXPIRING_WINDOW_DAYS. Defined on ExpiringSoonDefaults (not here) so
+     * The custom card's default day count — distinct from the 1-month fixed card already in
+     * EXPIRING_WINDOW_MONTHS. Defined on ExpiringSoonDefaults (not here) so
      * Admin\ProductController's "expiring soon" column can share it without using this trait.
      */
     public const int DEFAULT_CUSTOM_EXPIRING_DAYS = ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
 
     /**
+     * The custom stale-window card's default day count — see StaleSoonDefaults'
+     * doc comment for why this is a controller-level default rather than a
+     * Pallet model constant.
+     */
+    public const int DEFAULT_CUSTOM_STALE_DAYS = StaleSoonDefaults::CUSTOM_WINDOW_DAYS;
+
+    /**
      * @param  list<int>|null  $productIds
      * @return array{
      *     occupancy: array{empty: int, full: int, opened: int},
-     *     expiring: array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     stale: array{days: int, count: int},
+     *     low_stock: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
      *
      * @scramble-return array{
      *     occupancy: array{empty: int, full: int, opened: int},
-     *     expiring: array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
+     *     stale: array{days: int, count: int},
+     *     low_stock: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
      */
-    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, ?array $productIds, ?bool $productPublished = null): array
+    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, int $staleDays, ?array $productIds, ?bool $productPublished = null): array
     {
         return DashboardStatsCache::remember(
-            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'productIds' => $productIds, 'productPublished' => $productPublished],
-            function () use ($today, $customExpiringDays, $productIds, $productPublished): array {
+            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'staleDays' => $staleDays, 'productIds' => $productIds, 'productPublished' => $productPublished],
+            function () use ($today, $customExpiringDays, $staleDays, $productIds, $productPublished): array {
                 $startOfWeek = $this->dashboardWeekStart($today);
 
                 return [
                     'occupancy' => $this->occupancy($productIds, $productPublished),
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
+                    'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
+                    'low_stock' => $this->lowStock($productIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
                     'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
                 ];
@@ -100,7 +114,7 @@ trait BuildsDashboardStats
 
     /**
      * @param  list<int>|null  $productIds
-     * @return array{expired: int, windows: list<array{days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}}
+     * @return array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}}
      */
     private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?bool $productPublished = null): array
     {
@@ -110,28 +124,110 @@ trait BuildsDashboardStats
         return [
             'expired' => $expired->count(),
             'windows' => array_map(
-                fn (int $days) => $this->expiringWindow($today, $days, $productIds, $productPublished),
-                self::EXPIRING_WINDOW_DAYS,
+                fn (int $months) => $this->expiringMonthWindow($today, $months, $productIds, $productPublished),
+                self::EXPIRING_WINDOW_MONTHS,
             ),
-            'custom' => $this->expiringWindow($today, $customDays, $productIds, $productPublished),
+            'custom' => $this->expiringDayWindow($today, $customDays, $productIds, $productPublished),
+        ];
+    }
+
+    /**
+     * A fixed expiring-soon window expressed in calendar months (`addMonths`, not `addDays($months * 30)`,
+     * so `until` lands on the correct calendar date regardless of month length).
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{months: int, days: int, until: string, count: int}
+     */
+    private function expiringMonthWindow(CarbonImmutable $today, int $months, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $until = $today->copy()->addMonths($months);
+
+        return [
+            'months' => $months,
+            'days' => (int) $today->diffInDays($until),
+            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
+        ];
+    }
+
+    /**
+     * The caller-adjustable custom expiring-soon window, expressed in days.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{days: int, until: string, count: int}
+     */
+    private function expiringDayWindow(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $until = $today->copy()->addDays($days);
+
+        return [
+            'days' => $days,
+            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
         ];
     }
 
     /**
      * @param  list<int>|null  $productIds
-     * @return array{days: int, until: string, count: int}
+     * @return array{until: string, count: int}
      */
-    private function expiringWindow(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    private function expiringWindowCounts(CarbonImmutable $today, CarbonImmutable $until, ?array $productIds, ?bool $productPublished): array
     {
-        $until = $today->copy()->addDays($days);
         $query = Pallet::query()->whereBetween('expiration_date', [$today, $until]);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
-            'days' => $days,
             'until' => $until->toDateString(),
             'count' => $query->count(),
         ];
+    }
+
+    /**
+     * The caller-adjustable "stale within days" card — mirrors Pallet::isStaleAfter()'s
+     * definition (created_at at least $days ago) as a count query rather than
+     * per-row hydration. There is no fixed stale threshold (see
+     * .ai/rules/models.md); $days always comes from the caller.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{days: int, count: int}
+     */
+    private function stale(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    {
+        $query = Pallet::query()->where('created_at', '<=', $today->copy()->subDays($days));
+        $this->applyProductFilters($query, $productIds, $productPublished);
+
+        return [
+            'days' => $days,
+            'count' => $query->count(),
+        ];
+    }
+
+    /**
+     * How many products currently have fewer pallets in the warehouse than
+     * their configured minimum — see Product::minimumPallets() and
+     * Admin\ProductController::lowStockExistsSubquery(), which mirrors this
+     * comparison for the products index's own `low_stock` filter. A product
+     * with no threshold configured never counts, whatever its pallet count.
+     *
+     * Filtered by `$productIds`/`$productPublished` directly (Product's own
+     * `id`/`published` columns) rather than via
+     * {@see self::applyProductFilters()}, which assumes a `product_id`
+     * column/`product` relation that Product itself doesn't have.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{count: int}
+     */
+    private function lowStock(?array $productIds, ?bool $productPublished = null): array
+    {
+        $count = Product::query()
+            ->whereHas('setting', fn ($q) => $q->whereNotNull('minimum_pallets'))
+            ->whereRaw('
+                (select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id)
+                > (select count(*) from pallets where pallets.product_id = products.id)
+            ')
+            ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
+            ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
+            ->count();
+
+        return ['count' => $count];
     }
 
     /**

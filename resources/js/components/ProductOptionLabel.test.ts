@@ -16,6 +16,10 @@ function alternate(wrapper: ReturnType<typeof mountLabel>) {
     return wrapper.find('[data-testid="product-option-alternate-name"]');
 }
 
+function idBadge(wrapper: ReturnType<typeof mountLabel>) {
+    return wrapper.get('[data-testid="product-option-id"]');
+}
+
 describe('ProductOptionLabel', () => {
     afterEach(() => {
         i18n.global.locale.value = 'en';
@@ -82,6 +86,16 @@ describe('ProductOptionLabel', () => {
 
         expect(primary(wrapper).attributes('dir')).toBe('auto');
         expect(alternate(wrapper).attributes('dir')).toBe('auto');
+    });
+
+    it("shows the product's id alongside its name", () => {
+        const wrapper = mountLabel({
+            id: 42,
+            name: 'Widgets',
+            ar_name: 'ودجات',
+        });
+
+        expect(idBadge(wrapper).text()).toBe('#42');
     });
 
     it('re-resolves both lines when the locale changes under it', async () => {

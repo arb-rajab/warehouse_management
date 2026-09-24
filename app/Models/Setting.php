@@ -31,20 +31,32 @@ class Setting extends Model
     /**
      * qr_code_width/qr_code_height are the label's total box — the QR square
      * plus any text below it, not just the QR itself (see
-     * BuildsQrLabels::qrLabelImage()). The QR's own square side is always
-     * $qr_code_width minus 2*padding (padding=20), so 280 reproduces the
-     * exact 240px QR this app hardcoded before this table existed — that
-     * also keeps the text-wrap width (280-40=240) identical to before,
-     * which matters: a narrower default here was previously observed to
-     * wrap a short cell description ("Row Z · Cell 1 · Level 1", 24 chars)
-     * onto two lines where it used to fit on one. 380 leaves comfortable
-     * room below the 240px QR for a primary line plus a full, unwrapped
-     * secondary line (name + Arabic name) at this trait's font sizes,
-     * without hitting the truncation ceiling for ordinary-length text.
+     * BuildsQrLabels::qrLabelImage()). These were raised from this table's
+     * original 280x380 (which only reproduced the 240px QR this app
+     * hardcoded before the table existed) once a worker scanning from
+     * 1-3m away with a phone camera turned out not to reliably resolve a
+     * ~7.4cm-wide QR — the common rule of thumb for phone-camera QR
+     * scanning is roughly a 10:1 distance:size ratio, which wants a QR
+     * closer to 20-30cm wide for that range.
+     *
+     * 850 keeps the QR's own square side (qr_code_width - 2*padding,
+     * padding=20 — see BuildsQrLabels::qrLabelImage()) at 810px (~21.4cm),
+     * comfortably inside the confirmed-workable 20-27cm physical label
+     * size, while 1000 (the maximum this field allows at all — see
+     * MAX_QR_CODE_SIZE) leaves ~154px of headroom below the QR for the
+     * primary slot label to grow into (BuildsCellQrLabels' expandPrimaryText,
+     * via pickExpandedPrimaryFontSize()) without needing qrLabelImage()'s
+     * QR-shrink safety net. Pushing qr_code_width closer to the 1000 ceiling
+     * to chase the full 30cm figure would eat into that headroom and shrink
+     * the label back down — the QR's scan distance and the label's read
+     * distance are competing for the same fixed 1000px ceiling, and this
+     * split favors a QR that's clearly the harder of the two to satisfy
+     * (a label read from 1-3m only needs ~1-2cm tall text, well within
+     * what 1000-810=190px of budget already provides).
      */
-    public const int DEFAULT_QR_CODE_WIDTH = 280;
+    public const int DEFAULT_QR_CODE_WIDTH = 850;
 
-    public const int DEFAULT_QR_CODE_HEIGHT = 380;
+    public const int DEFAULT_QR_CODE_HEIGHT = 1000;
 
     /**
      * Bounds enforced by UpdateSettingRequest on write, and defensively

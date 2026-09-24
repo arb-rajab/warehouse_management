@@ -107,6 +107,7 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 describe('Rows Show', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        Element.prototype.scrollIntoView = vi.fn();
     });
 
     it('renders the title with the row letter', () => {
@@ -292,6 +293,57 @@ describe('Rows Show', () => {
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
             'ring-blue-500',
         );
+    });
+
+    it('greys out cells not matching the active highlight filter, leaving matches undimmed', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+            cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-state').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'opacity-40',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+    });
+
+    it('does not grey out any cell when no highlight filter is active', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+        ]);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+    });
+
+    it('scrolls the first matching cell into view and pulses it when a highlight filter is applied', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+            cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+        ]);
+        // document.querySelector only finds the matched slot once the
+        // rendered tree is actually attached to the document.
+        document.body.appendChild(wrapper.element);
+
+        try {
+            await openHighlightFilters(wrapper);
+            await wrapper.get('#highlight-state').trigger('click');
+            await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+
+            expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+                'ring-emerald-500',
+            );
+            expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+        } finally {
+            document.body.removeChild(wrapper.element);
+        }
     });
 
     it('highlights only cells expiring within the given number of days', async () => {

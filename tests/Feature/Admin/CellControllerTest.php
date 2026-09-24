@@ -102,6 +102,7 @@ test('an authenticated admin can view the warehouse map for the default flat, wi
             ->where('initialHighlight.state', null)
             ->where('initialHighlight.productIds', [])
             ->where('initialHighlight.expiresWithinDays', null)
+            ->where('initialHighlight.staleAfterDays', null)
             ->where('initialHighlight.expired', false)
             ->where('initialHighlight.inactive', false)
             ->where('jumpToCell', null)
@@ -264,6 +265,25 @@ test('an invalid expires_within_days passed from the dashboard is rejected', fun
     $response->assertInvalid(['expires_within_days']);
 });
 
+test('a stale_after_days passed from the dashboard seeds the initial highlight filter', function () {
+    actingAsAdmin();
+    Row::factory()->create();
+
+    $response = $this->get('/admin/cells?stale_after_days=30');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('initialHighlight.staleAfterDays', 30)
+    );
+});
+
+test('an invalid stale_after_days passed from the dashboard is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/cells?stale_after_days=-1');
+
+    $response->assertInvalid(['stale_after_days']);
+});
+
 test('expired passed from the dashboard seeds the initial highlight filter', function () {
     actingAsAdmin();
     Row::factory()->create();
@@ -292,6 +312,172 @@ test('an invalid expired value passed from the dashboard is rejected', function 
     $response = $this->get('/admin/cells?expired=bogus');
 
     $response->assertInvalid(['expired']);
+});
+
+test('a highlight-filtered deep-link with no flat_number jumps to the first matching flat, in row/cell-number order', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 3]);
+
+    // Deliberately gives the lower cell_number the later flat, so the test
+    // proves cell_number outranks flat_number in the tie-break — matching
+    // the client's `orderedMatches` sort in Cells/Index.vue.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 2)->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('cell_number', 1)->where('flat_number', 3)->first()->id,
+        'expiration_date' => '2026-08-05',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 3)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 1)
+            ->where('jumpToCell.flat_number', 3)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('an explicit flat_number is respected even when the highlight filter matches nothing on it', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true&flat_number=1');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)->where('jumpToCell', null)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a highlight-filtered deep-link stays on flat 1 (still pulsing the match) when flat 1 already holds the first match', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+    // Noise: a later match on another flat that must not win the jump ahead
+    // of the one already on the default landing flat.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/cells?expired=true');
+
+    // flatNumber doesn't change, but jumpToCell is still populated — the
+    // deep-link's match gets pulsed into focus even when it was already on
+    // the landing flat, same as it would be for any other resolved match.
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 1)
+            ->where('jumpToCell.row_letter', 'A')
+            ->where('jumpToCell.cell_number', 1)
+            ->where('jumpToCell.flat_number', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a product-id deep-link jumps to the flat holding that product, excluding other products', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $matching = Product::factory()->create();
+    $other = Product::factory()->create();
+    // Noise: a different product on flat 1, which must not win the jump.
+    Pallet::factory()->create([
+        'product_id' => $other->id,
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+    ]);
+    Pallet::factory()->create([
+        'product_id' => $matching->id,
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+    ]);
+
+    $response = $this->get("/admin/cells?product_id[]={$matching->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('a state deep-link jumps to the flat holding a cell in that state, excluding other states', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: flat 1 stays "empty" (the default), which must not match "opened".
+    $row->cells()->where('flat_number', 2)->first()->update(['state' => CellState::Opened]);
+
+    $response = $this->get('/admin/cells?state=opened');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('an inactive-only deep-link jumps to the flat holding the inactive cell, excluding active ones', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: flat 1 stays active, which must not match "inactive only".
+    $row->cells()->where('flat_number', 2)->first()->update(['is_active' => false]);
+
+    $response = $this->get('/admin/cells?is_active=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+});
+
+test('an expires_within_days deep-link jumps to the flat holding the soon-to-expire pallet, excluding one expiring later', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: expires well outside the 7-day window.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-09-01',
+    ]);
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-15',
+    ]);
+
+    $response = $this->get('/admin/cells?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a stale_after_days deep-link jumps to the flat holding the stale pallet, excluding a fresh one', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    // Noise: a freshly-stored pallet, nowhere near the staleness threshold.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+    ]);
+    Pallet::factory()->stale()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+    ]);
+
+    $response = $this->get('/admin/cells?stale_after_days=25');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
+    );
 });
 
 test('a location search with a flat number jumps to that exact cell', function () {
@@ -461,20 +647,24 @@ test('an authenticated user can export a QR code image for a single cell', funct
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is embedded as a base64 SVG data URI — regression guard for the
-    // QR silently failing to render rather than just the surrounding text.
-    expect($svg)->toContain('data:image/svg+xml;base64,');
+    // A real QR is spliced in as inline SVG markup rather than a nested
+    // `<image>` reference, which dompdf silently skips (see
+    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
+    // failing to render rather than just the surrounding text.
+    expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
+        ->and($svg)->toContain('<path fill-rule="evenodd"')
+        ->and($svg)->not->toContain('<image');
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
 
-    // Regression guard: the single-cell SVG export and the row-wide PDF sheet
-    // (see RowControllerTest) must describe the same cell identically — both
-    // build the description from BuildsCellQrLabels::cellQrLabelDescription().
-    $description = __('messages.qr_label_description', [
-        'row' => 'Z',
-        'cell' => $cell->cell_number,
-        'flat' => $cell->flat_number,
-    ]);
-    expect($svg)->toContain($description);
+    // With no description line to share the label with, the slot label grows
+    // to fill the freed vertical space (BuildsQrLabels::qrLabelImage()'s
+    // expandPrimaryText) — well past the 18px used everywhere else (e.g. the
+    // product QR export's primary line). Neither this single-cell SVG export
+    // nor the row-wide PDF sheet (see RowControllerTest, which now embeds
+    // this exact same SVG verbatim on each cell's page — see
+    // BuildsCellQrLabels::cellQrLabels()) carries a spelled-out description
+    // line at all any more.
+    expect($svg)->toContain('font-size="64"');
 });
 
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
@@ -492,7 +682,46 @@ test('a single-cell QR export uses the configured QR code size instead of the de
     // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
     // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('width="360" height="360"/>');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
+});
+
+test('a single-cell QR export keeps the full slot label visible for large cell/flat numbers', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+    $cell = Cell::factory()->for($row)->create(['cell_number' => 123, 'flat_number' => 456]);
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // BuildsQrLabels::pickExpandedPrimaryFontSize() must shrink the font
+    // rather than let clampLinesToHeight() truncate the label — a fixed
+    // large font size would cut the flat number off behind an ellipsis for
+    // a label this long, silently hiding real cell coordinates.
+    expect($svg)->toContain('Z123·456')
+        ->and($svg)->not->toContain('…');
+});
+
+test('a single-cell QR export shrinks the QR slightly to keep the label visible when width and height are equal', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 280]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    // Equal width/height used to leave no room below the QR at all, so
+    // clampLinesToHeight() dropped the label entirely (see BuildsQrLabels'
+    // $minPrimaryZone guard). The QR now shrinks just enough to guarantee
+    // the label always has room, rather than disappearing.
+    // 280 - 16 (bottom margin) - 46 ($minPrimaryZone) = 218 is the lowest the
+    // QR's bottom edge may sit; the unshrunk 240px QR ends at 20+240=260, so
+    // it shrinks by 42px to 198px and re-centers at x=(280-198)/2=41.
+    expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number))
+        ->and($svg)->toContain('<g transform="translate(41,20)"><rect x="0" y="0" width="198" height="198"')
+        ->and($svg)->not->toContain('width="240" height="240"');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {

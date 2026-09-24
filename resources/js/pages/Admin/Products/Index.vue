@@ -4,21 +4,21 @@ import { Head, router } from '@inertiajs/vue3';
 import { Check, QrCode, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
-import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     exportQr,
     index as productsIndex,
     updateBoxCount,
+    updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
+import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
-import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
@@ -53,20 +53,17 @@ import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     products: Paginated<ProductSummary>;
-    today: string;
-    weekStart: string;
     expiringSoonDays: number;
     filters: ProductFilters;
     filterOptions: ProductIndexFilterOptions;
 }>();
 
 const filters = reactive({
-    row_id: props.filters.row_id?.toString() ?? '',
-    column_number: props.filters.column_number?.toString() ?? '',
     state: props.filters.state ?? '',
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     inactive: props.filters.inactive ?? false,
+    low_stock: props.filters.low_stock ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -85,12 +82,11 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
-        filters.row_id !== '',
-        filters.column_number !== '',
         filters.state !== '',
         filters.expired,
         filters.expires_within_days !== '',
         filters.inactive,
+        filters.low_stock,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -99,55 +95,45 @@ const activeFilterCount = computed(() =>
 );
 
 /**
- * `inactive` filters to the store admin's `published = 0` products — it
- * restricts which product rows appear, like `product_id`, rather than
- * narrowing what counts as full/opened/expired for a shown row. So it marks
- * the product column filtered, not the occupancy columns (see
- * .ai/rules/products.md — `inactive` is unrelated to cell occupancy).
+ * `inactive`/`low_stock` both restrict which product rows appear, like
+ * `product_id`, rather than narrowing what counts as full/opened/expired for
+ * a shown row. So they mark the product column filtered, not the occupancy
+ * columns (see .ai/rules/products.md — `inactive` is unrelated to cell
+ * occupancy, and `low_stock` is a stock-level check, not an occupancy one).
  */
 const productColumnFiltered = computed(
-    () => filters.product_id.length > 0 || filters.inactive,
+    () =>
+        filters.product_id.length > 0 || filters.inactive || filters.low_stock,
 );
 
 /**
- * Row/column/state narrow every occupancy-derived column identically on the
- * backend (see `ProductController::occupancyCountSubquery()`/
+ * State narrows every occupancy-derived column identically on the backend
+ * (see `ProductController::occupancyCountSubquery()`/
  * `applyHistoryLogFilters()`), so the Full/Opened/Expired/Expiring-soon
  * columns are always marked filtered together.
  */
 const occupancyColumnsFiltered = computed(
     () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
         filters.state !== '' ||
         filters.expired ||
         filters.expires_within_days !== '',
 );
 
-const activityColumnsFiltered = computed(
-    () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
-        filters.state !== '' ||
-        filters.user_id.length > 0 ||
-        filters.action.length > 0 ||
-        dateRangeActive(filters),
-);
-
 /**
- * `expired`/`inactive` are only ever included when checked — sending the
- * unchecked `false` would still be a non-empty query value the backend
- * treats as "filled" (see FilterProductsRequest), so each must be omitted
- * rather than sent as literal `false`. Mirrors Cells/Index.vue's
+ * `expired`/`inactive`/`low_stock` are only ever included when checked —
+ * sending the unchecked `false` would still be a non-empty query value the
+ * backend treats as "filled" (see FilterProductsRequest), so each must be
+ * omitted rather than sent as literal `false`. Mirrors Cells/Index.vue's
  * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, inactive, ...rest } = filters;
+    const { expired, inactive, low_stock, ...rest } = filters;
 
     return {
         ...rest,
         ...(expired ? { expired: true } : {}),
         ...(inactive ? { inactive: true } : {}),
+        ...(low_stock ? { low_stock: true } : {}),
     };
 }
 
@@ -185,12 +171,11 @@ const { openFilterKey } = useColumnFilterPopover(
 );
 
 function clearFilters(): void {
-    filters.row_id = '';
-    filters.column_number = '';
     filters.state = '';
     filters.expired = false;
     filters.expires_within_days = '';
     filters.inactive = false;
+    filters.low_stock = false;
     filters.product_id = [];
     filters.user_id = [];
     filters.action = [];
@@ -216,61 +201,13 @@ function onSort(key: string): void {
     applyFilters();
 }
 
-/**
- * The row/column location filters currently applied, carried into every
- * per-product drill-down link below so the destination page stays scoped
- * the same way the table row was computed.
- */
-function locationQuery(): QueryParams {
-    const query: QueryParams = {};
-
-    if (filters.row_id !== '') {
-        query.row_id = Number(filters.row_id);
-    }
-
-    if (filters.column_number !== '') {
-        query.column_number = Number(filters.column_number);
-    }
-
-    return query;
-}
-
 function occupancyHref(
     product: ProductSummary,
     overrides: QueryParams,
 ): string {
     return cellsIndex.url({
-        query: { ...locationQuery(), product_id: [product.id], ...overrides },
+        query: { product_id: [product.id], ...overrides },
     });
-}
-
-/**
- * The user/action filters currently applied, carried into the activity
- * drill-down links below alongside a fixed date range — `date_from`/
- * `date_to` deliberately override rather than merge with the page's own
- * date filter, since "today"/"this week" are each a specific window.
- */
-function activityHref(
-    product: ProductSummary,
-    dateFrom: string,
-    dateTo: string,
-): string {
-    const query: QueryParams = {
-        ...locationQuery(),
-        product_id: [product.id],
-        date_from: dateFrom,
-        date_to: dateTo,
-    };
-
-    if (filters.user_id.length > 0) {
-        query.user_id = filters.user_id.map(Number);
-    }
-
-    if (filters.action.length > 0) {
-        query.action = filters.action;
-    }
-
-    return cellLogsIndex.url({ query });
 }
 
 const boxCountDialogProduct = ref<ProductSummary | null>(null);
@@ -320,6 +257,74 @@ function submitBoxCount(): void {
     );
     boxCountDialogProduct.value = null;
 }
+
+const minimumPalletsDialogProduct = ref<ProductSummary | null>(null);
+const minimumPalletsDraft = ref('');
+
+/**
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
+ */
+const minimumPalletsDialogOpen = computed({
+    get: () => minimumPalletsDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            minimumPalletsDialogProduct.value = null;
+        }
+    },
+});
+
+function openMinimumPalletsDialog(product: ProductSummary): void {
+    minimumPalletsDraft.value =
+        product.minimum_pallets === null ? '' : String(product.minimum_pallets);
+    minimumPalletsDialogProduct.value = product;
+}
+
+/**
+ * Saves (or, with a cleared field, removes) a product's warehouse-stock
+ * minimum. `preserveScroll`/`preserveState` keep the row in view and the
+ * page filter state intact across the redirect. An empty draft submits
+ * `null` rather than being rejected — clearing the threshold is a valid
+ * action here, unlike the box count, which is always required.
+ */
+function submitMinimumPallets(): void {
+    const product = minimumPalletsDialogProduct.value;
+
+    if (product === null) {
+        return;
+    }
+
+    if (minimumPalletsDraft.value === '') {
+        router.patch(
+            updateMinimumPallets(product.id, { mergeQuery: {} }).url,
+            { minimum_pallets: null },
+            { preserveScroll: true, preserveState: true },
+        );
+        minimumPalletsDialogProduct.value = null;
+
+        return;
+    }
+
+    const minimumPallets = Number(minimumPalletsDraft.value);
+
+    if (!Number.isInteger(minimumPallets) || minimumPallets < 1) {
+        return;
+    }
+
+    router.patch(
+        updateMinimumPallets(product.id, { mergeQuery: {} }).url,
+        { minimum_pallets: minimumPallets },
+        { preserveScroll: true, preserveState: true },
+    );
+    minimumPalletsDialogProduct.value = null;
+}
+
+function isLowStock(product: ProductSummary): boolean {
+    return (
+        product.minimum_pallets !== null &&
+        product.pallets_count < product.minimum_pallets
+    );
+}
 </script>
 
 <template>
@@ -334,6 +339,18 @@ function submitBoxCount(): void {
                     v-model="quickSearchProduct"
                     :label="t('products.quickSearch.label')"
                     :placeholder="t('products.quickSearch.placeholder')"
+                />
+                <FilterCheckbox
+                    id="products-quick-inactive"
+                    v-model="filters.inactive"
+                    :label="t('products.filters.inactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
+                    id="products-quick-low-stock"
+                    v-model="filters.low_stock"
+                    :label="t('products.filters.lowStock')"
+                    @update:model-value="applyFilters"
                 />
                 <HelpLink :href="showHelp('products')" />
                 <button
@@ -355,21 +372,11 @@ function submitBoxCount(): void {
             :title="t('cellLog.filters.title')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
-                <div>
-                    <h3 :class="sectionHeadingClass">
-                        {{ t('cellLog.filters.sections.location') }}
-                    </h3>
-                    <LocationFilterFields
-                        id-prefix="filter"
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
-                        v-model:column-number="filters.column_number"
-                        :rows="filterOptions.rows"
-                        :max-column-number="filterOptions.maxColumnNumber"
-                    />
-                </div>
-
+            <form
+                id="products-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}
@@ -425,9 +432,15 @@ function submitBoxCount(): void {
                         />
                     </div>
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="products-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>
@@ -440,7 +453,7 @@ function submitBoxCount(): void {
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <FilterDialog
@@ -448,7 +461,11 @@ function submitBoxCount(): void {
             :title="t('products.columns.boxesPerPallet')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-4" @submit.prevent="submitBoxCount">
+            <form
+                id="products-box-count-form"
+                class="space-y-4"
+                @submit.prevent="submitBoxCount"
+            >
                 <FilterNumberField
                     id="products-box-count"
                     v-model="boxCountDraft"
@@ -463,11 +480,57 @@ function submitBoxCount(): void {
                         })
                     "
                 />
-                <button type="submit" :class="filterApplyButtonClass">
+            </form>
+
+            <template #footer>
+                <button
+                    type="submit"
+                    form="products-box-count-form"
+                    :class="filterApplyButtonClass"
+                >
                     <Check class="h-4 w-4 shrink-0" />
                     {{ t('expiringWindow.apply') }}
                 </button>
+            </template>
+        </FilterDialog>
+
+        <FilterDialog
+            v-model:open="minimumPalletsDialogOpen"
+            :title="t('products.columns.minimumPallets')"
+            :close-label="t('cellLog.filters.close')"
+        >
+            <form
+                id="products-minimum-pallets-form"
+                class="space-y-4"
+                @submit.prevent="submitMinimumPallets"
+            >
+                <FilterNumberField
+                    id="products-minimum-pallets"
+                    v-model="minimumPalletsDraft"
+                    :label="
+                        t('products.minimumPalletsLabel', {
+                            product: minimumPalletsDialogProduct
+                                ? productName(
+                                      minimumPalletsDialogProduct.name,
+                                      minimumPalletsDialogProduct.ar_name,
+                                  )
+                                : '',
+                        })
+                    "
+                    :placeholder="t('products.minimumPalletsPlaceholder')"
+                />
             </form>
+
+            <template #footer>
+                <button
+                    type="submit"
+                    form="products-minimum-pallets-form"
+                    :class="filterApplyButtonClass"
+                >
+                    <Check class="h-4 w-4 shrink-0" />
+                    {{ t('expiringWindow.apply') }}
+                </button>
+            </template>
         </FilterDialog>
 
         <DataTable
@@ -480,6 +543,9 @@ function submitBoxCount(): void {
                 },
                 {
                     label: t('products.columns.boxesPerPallet'),
+                },
+                {
+                    label: t('products.columns.minimumPallets'),
                 },
                 {
                     label: t('products.columns.full'),
@@ -508,19 +574,6 @@ function submitBoxCount(): void {
                     sortKey: 'expiring_soon_count',
                     filtered: occupancyColumnsFiltered,
                     filterKey: 'occupancy',
-                    filterIconAlwaysVisible: false,
-                },
-                {
-                    label: t('products.columns.activityToday'),
-                    sortKey: 'activity_today_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
-                },
-                {
-                    label: t('products.columns.activityWeek'),
-                    sortKey: 'activity_week_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
                     filterIconAlwaysVisible: false,
                 },
                 {
@@ -564,30 +617,6 @@ function submitBoxCount(): void {
                         :expiring-soon-days="expiringSoonDays"
                     />
                 </div>
-
-                <div v-else-if="key === 'activity'" class="space-y-3">
-                    <CellLogActivityFilterFields
-                        id-prefix="popover-filter"
-                        v-model:action="filters.action"
-                        v-model:user-id="filters.user_id"
-                        :actions="filterOptions.actions"
-                        :users="filterOptions.users"
-                    />
-
-                    <DateRangeFilterFields
-                        from-id="popover-filter-date-from"
-                        to-id="popover-filter-date-to"
-                        within-days-id="popover-filter-created-within-days"
-                        :from-label="t('cellLog.filters.from')"
-                        :to-label="t('cellLog.filters.to')"
-                        :within-days-label="t('cellLog.filters.withinDays')"
-                        v-model:from="filters.date_from"
-                        v-model:to="filters.date_to"
-                        v-model:within-days="filters.created_within_days"
-                        :range-disabled="dateRangeDisabled"
-                        :days-disabled="createdWithinDaysDisabled"
-                    />
-                </div>
             </template>
 
             <template #row="{ row: product }">
@@ -622,6 +651,28 @@ function submitBoxCount(): void {
                     </button>
                 </td>
                 <td class="px-4 py-2">
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.minimumPalletsLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :class="[
+                            filterTriggerButtonClass,
+                            isLowStock(product)
+                                ? 'text-red-600 dark:text-red-400'
+                                : '',
+                        ]"
+                        @click="openMinimumPalletsDialog(product)"
+                    >
+                        {{ product.minimum_pallets ?? '—' }}
+                    </button>
+                </td>
+                <td class="px-4 py-2">
                     <TableLink
                         :href="occupancyHref(product, { state: 'full' })"
                     >
@@ -651,16 +702,6 @@ function submitBoxCount(): void {
                         "
                     >
                         {{ product.expiring_soon_count }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, today, today)">
-                        {{ product.activity_today_count }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, weekStart, today)">
-                        {{ product.activity_week_count }}
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">

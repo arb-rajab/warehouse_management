@@ -2,6 +2,7 @@
 
 use App\Enums\CellLogAction;
 use App\Models\CellStatusLog;
+use App\Models\Pallet;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -34,13 +35,15 @@ test('the mobile dashboard shows expired and per-window expiring-soon pallet cou
     expect($response->json('stats.expiring.expired'))->toBe(1);
     expect($response->json('stats.expiring.windows'))->toHaveCount(4);
     expect($response->json('stats.expiring.windows.0'))->toEqual([
-        'days' => 7,
-        'until' => '2026-08-20',
+        'months' => 1,
+        'days' => 31,
+        'until' => '2026-09-13',
         'count' => 1,
     ]);
     expect($response->json('stats.expiring.windows.2'))->toEqual([
-        'days' => 30,
-        'until' => '2026-09-12',
+        'months' => 4,
+        'days' => 122,
+        'until' => '2026-12-13',
         'count' => 2,
     ]);
 
@@ -91,6 +94,63 @@ test('an invalid expiring_days is rejected on the mobile dashboard', function ()
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors(['expiring_days']);
+});
+
+test('a caller-chosen stale_days raises or lowers the pallet-age bar for the mobile dashboard stale count', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    $this->seedStaleWindowFixture();
+
+    $stricter = $this->getJson('/api/v1/dashboard?stale_days=45');
+    $stricter->assertOk();
+    expect($stricter->json('stats.stale'))->toEqual(['days' => 45, 'count' => 0]);
+
+    $looser = $this->getJson('/api/v1/dashboard?stale_days=20');
+    $looser->assertOk();
+    expect($looser->json('stats.stale'))->toEqual(['days' => 20, 'count' => 1]);
+
+    Carbon::setTestNow();
+});
+
+test('the mobile dashboard stale count defaults to 21 days', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    $this->seedStaleWindowFixture();
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.stale'))->toEqual(['days' => 21, 'count' => 1]);
+
+    Carbon::setTestNow();
+});
+
+test('an invalid stale_days is rejected on the mobile dashboard', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/dashboard?stale_days=0');
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['stale_days']);
+});
+
+test('the mobile dashboard counts products below their configured minimum pallets, excluding a fully-stocked product and one with no threshold', function () {
+    actingAsMobileUser();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at its minimum, so it must not count as low-stock.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.low_stock'))->toEqual(['count' => 1]);
 });
 
 test("the mobile dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {

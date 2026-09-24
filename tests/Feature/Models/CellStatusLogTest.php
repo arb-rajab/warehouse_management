@@ -244,12 +244,30 @@ test('the filtered scope can filter by row and column, excluding logs on another
     CellStatusLog::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]); // noise: same row, other column
     CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
 
-    $request = Request::create('/', 'GET', ['row_id' => $row->id, 'column_number' => 1]);
+    $request = Request::create('/', 'GET', ['row_id' => [$row->id], 'column_number' => 1]);
 
     $results = CellStatusLog::query()->filtered($request)->get();
 
     expect($results)->toHaveCount(1);
     expect($results->first()->id)->toBe($matching->id);
+});
+
+test('the filtered scope can filter by multiple rows at once, excluding logs on a remaining row', function () {
+    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $matchingA = CellStatusLog::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+    $matchingB = CellStatusLog::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: remaining row
+
+    $request = Request::create('/', 'GET', ['row_id' => [$rowA->id, $rowB->id]]);
+
+    $results = CellStatusLog::query()->filtered($request)->get();
+
+    expect($results->pluck('id')->sort()->values()->all())->toEqual(
+        collect([$matchingA->id, $matchingB->id])->sort()->values()->all()
+    );
 });
 
 test('the filtered scope can filter by multiple actions at once, excluding the remaining action', function () {

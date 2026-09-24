@@ -199,12 +199,30 @@ test('the filtered scope can filter by row and column, excluding reports on anot
     CellVerificationReport::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]); // noise: same row, other column
     CellVerificationReport::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
 
-    $request = Request::create('/', 'GET', ['row_id' => $row->id, 'column_number' => 1]);
+    $request = Request::create('/', 'GET', ['row_id' => [$row->id], 'column_number' => 1]);
 
     $results = CellVerificationReport::query()->filtered($request)->get();
 
     expect($results)->toHaveCount(1);
     expect($results->first()->id)->toBe($matching->id);
+});
+
+test('the filtered scope can filter by multiple rows, excluding reports on a remaining row', function () {
+    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $matchingA = CellVerificationReport::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+    $matchingB = CellVerificationReport::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+    CellVerificationReport::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
+
+    $request = Request::create('/', 'GET', ['row_id' => [$rowA->id, $rowB->id]]);
+
+    $results = CellVerificationReport::query()->filtered($request)->get();
+
+    expect($results->pluck('id')->sort()->values()->all())->toEqual(
+        collect([$matchingA->id, $matchingB->id])->sort()->values()->all()
+    );
 });
 
 test('the filtered scope combines multiple filters with AND, not OR', function () {
