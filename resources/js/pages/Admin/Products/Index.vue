@@ -285,7 +285,11 @@ function submitBoxCount(): void {
             :title="t('cellLog.filters.title')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="products-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}
@@ -341,9 +345,15 @@ function submitBoxCount(): void {
                         />
                     </div>
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="products-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>
@@ -356,7 +366,7 @@ function submitBoxCount(): void {
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <FilterDialog
@@ -364,7 +374,11 @@ function submitBoxCount(): void {
             :title="t('products.columns.boxesPerPallet')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-4" @submit.prevent="submitBoxCount">
+            <form
+                id="products-box-count-form"
+                class="space-y-4"
+                @submit.prevent="submitBoxCount"
+            >
                 <FilterNumberField
                     id="products-box-count"
                     v-model="boxCountDraft"
@@ -379,11 +393,18 @@ function submitBoxCount(): void {
                         })
                     "
                 />
-                <button type="submit" :class="filterApplyButtonClass">
+            </form>
+
+            <template #footer>
+                <button
+                    type="submit"
+                    form="products-box-count-form"
+                    :class="filterApplyButtonClass"
+                >
                     <Check class="h-4 w-4 shrink-0" />
                     {{ t('expiringWindow.apply') }}
                 </button>
-            </form>
+            </template>
         </FilterDialog>
 
         <DataTable

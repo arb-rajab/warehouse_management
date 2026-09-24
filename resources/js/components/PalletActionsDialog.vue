@@ -252,7 +252,11 @@ const submitLabel = computed(() => {
             </button>
         </div>
 
-        <form class="space-y-4" @submit.prevent="submit">
+        <form
+            id="pallet-action-form"
+            class="space-y-4"
+            @submit.prevent="submit"
+        >
             <template
                 v-if="selectedAction === 'store' || selectedAction === 'edit'"
             >
@@ -451,12 +455,15 @@ const submitLabel = computed(() => {
                     :class="plainFieldInputClass"
                 ></textarea>
             </div>
+        </form>
 
+        <template #footer>
             <SubmitButton
+                form="pallet-action-form"
                 :label="submitLabel"
                 :processing-label="t('cells.palletActions.submitting')"
                 :processing="processing"
             />
-        </form>
+        </template>
     </FilterDialog>
 </template>

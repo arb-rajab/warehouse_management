@@ -150,7 +150,11 @@ function onPerPageChange(perPage: number): void {
             :title="t('cellVerificationRound.filters.title')"
             :close-label="t('cellVerificationRound.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-verification-rounds-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellVerificationRound.filters.title') }}
@@ -215,9 +219,15 @@ function onPerPageChange(perPage: number): void {
                         :days-disabled="createdWithinDaysDisabled"
                     />
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="cell-verification-rounds-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellVerificationRound.filters.apply') }}
                     </button>
@@ -230,7 +240,7 @@ function onPerPageChange(perPage: number): void {
                         {{ t('cellVerificationRound.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <DataTable

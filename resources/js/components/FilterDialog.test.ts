@@ -209,4 +209,67 @@ describe('FilterDialog', () => {
 
         wrapper.unmount();
     });
+
+    it('renders the footer slot outside the scrollable content area', () => {
+        const wrapper = mount(FilterDialog, {
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: true,
+                'onUpdate:open': () => {},
+            },
+            slots: {
+                default: '<p>Filter fields</p>',
+                footer: '<button type="button">Apply</button>',
+            },
+        });
+
+        const content = wrapper
+            .get('p')
+            .element.closest('.overflow-y-auto') as HTMLElement;
+        const footerButton = wrapper
+            .findAll('button')
+            .find((button) => button.text() === 'Apply')?.element;
+
+        expect(content).not.toBeNull();
+        expect(footerButton).toBeDefined();
+        expect(content.contains(footerButton as HTMLElement)).toBe(false);
+    });
+
+    it('does not render a footer section when no footer slot is provided', () => {
+        const wrapper = mountDialog(true);
+
+        expect(wrapper.get('[role="dialog"]').element.children).toHaveLength(2);
+    });
+
+    it('includes the footer slot in the Tab focus trap', async () => {
+        const wrapper = mount(FilterDialog, {
+            attachTo: document.body,
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: true,
+                'onUpdate:open': () => {},
+            },
+            slots: {
+                default: '<input id="only-field" />',
+                footer: '<button id="footer-apply" type="button">Apply</button>',
+            },
+        });
+        await nextTick();
+
+        const footerButton = document.getElementById(
+            'footer-apply',
+        ) as HTMLElement;
+
+        footerButton.focus();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+
+        const closeButton = wrapper.get('[aria-label="Close"]')
+            .element as HTMLElement;
+
+        expect(document.activeElement).toBe(closeButton);
+
+        wrapper.unmount();
+    });
 });

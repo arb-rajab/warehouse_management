@@ -235,7 +235,11 @@ function onPerPageChange(perPage: number): void {
             :title="t('cellVerificationReport.filters.title')"
             :close-label="t('cellVerificationReport.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-verification-report-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{
@@ -325,9 +329,15 @@ function onPerPageChange(perPage: number): void {
                         />
                     </div>
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="cell-verification-report-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellVerificationReport.filters.apply') }}
                     </button>
@@ -340,7 +350,7 @@ function onPerPageChange(perPage: number): void {
                         {{ t('cellVerificationReport.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <DataTable

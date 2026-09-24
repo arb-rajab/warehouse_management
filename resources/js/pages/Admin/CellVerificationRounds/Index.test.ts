@@ -132,7 +132,6 @@ describe('CellVerificationRounds Index', () => {
         await openFilters(wrapper);
 
         const applyButton = wrapper
-            .get('form')
             .findAll('button')
             .find((button) =>
                 button
