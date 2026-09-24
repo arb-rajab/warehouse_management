@@ -155,7 +155,6 @@ describe('CellStatusLogs Index', () => {
         await openFilters(wrapper);
 
         const applyButton = wrapper
-            .get('form')
             .findAll('button')
             .find((button) =>
                 button.text().includes(t('cellLog.filters.apply')),

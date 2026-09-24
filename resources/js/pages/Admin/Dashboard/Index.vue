@@ -281,6 +281,7 @@ function onProductIdsChange(ids: string[]): void {
                             :close-label="t('cellLog.filters.close')"
                         >
                             <form
+                                id="dashboard-custom-expiring-days-form"
                                 class="space-y-4"
                                 @submit.prevent="submitCustomExpiringDays"
                             >
@@ -294,14 +295,18 @@ function onProductIdsChange(ids: string[]): void {
                                         t('expiringWindow.customPlaceholder')
                                     "
                                 />
+                            </form>
+
+                            <template #footer>
                                 <button
                                     type="submit"
+                                    form="dashboard-custom-expiring-days-form"
                                     :class="filterApplyButtonClass"
                                 >
                                     <Check class="h-4 w-4 shrink-0" />
                                     {{ t('expiringWindow.apply') }}
                                 </button>
-                            </form>
+                            </template>
                         </FilterDialog>
                     </template>
                 </DashboardStatTile>
@@ -344,6 +349,7 @@ function onProductIdsChange(ids: string[]): void {
                             :close-label="t('cellLog.filters.close')"
                         >
                             <form
+                                id="dashboard-custom-stale-days-form"
                                 class="space-y-4"
                                 @submit.prevent="submitCustomStaleDays"
                             >
@@ -355,14 +361,18 @@ function onProductIdsChange(ids: string[]): void {
                                         t('staleWindow.customPlaceholder')
                                     "
                                 />
+                            </form>
+
+                            <template #footer>
                                 <button
                                     type="submit"
+                                    form="dashboard-custom-stale-days-form"
                                     :class="filterApplyButtonClass"
                                 >
                                     <Check class="h-4 w-4 shrink-0" />
                                     {{ t('staleWindow.apply') }}
                                 </button>
-                            </form>
+                            </template>
                         </FilterDialog>
                     </template>
                 </DashboardStatTile>

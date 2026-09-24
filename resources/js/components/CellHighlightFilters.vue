@@ -116,16 +116,18 @@ function clear(): void {
                 />
             </div>
 
-            <div :class="['mt-6', filterFooterClass]">
-                <button
-                    type="button"
-                    :class="filterClearButtonClass"
-                    @click="clear"
-                >
-                    <X class="h-4 w-4 shrink-0" />
-                    {{ t('cellLog.filters.clear') }}
-                </button>
-            </div>
+            <template #footer>
+                <div :class="filterFooterClass">
+                    <button
+                        type="button"
+                        :class="filterClearButtonClass"
+                        @click="clear"
+                    >
+                        <X class="h-4 w-4 shrink-0" />
+                        {{ t('cellLog.filters.clear') }}
+                    </button>
+                </div>
+            </template>
         </FilterDialog>
     </div>
 </template>

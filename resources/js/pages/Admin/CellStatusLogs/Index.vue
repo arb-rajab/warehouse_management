@@ -211,7 +211,11 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             :title="t('cellLog.filters.title')"
             :close-label="t('cellLog.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-status-logs-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
@@ -300,9 +304,15 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         />
                     </div>
                 </div>
+            </form>
 
+            <template #footer>
                 <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
+                    <button
+                        type="submit"
+                        form="cell-status-logs-filter-form"
+                        :class="filterApplyButtonClass"
+                    >
                         <Check class="h-4 w-4 shrink-0" />
                         {{ t('cellLog.filters.apply') }}
                     </button>
@@ -315,7 +325,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         {{ t('cellLog.filters.clear') }}
                     </button>
                 </div>
-            </form>
+            </template>
         </FilterDialog>
 
         <div

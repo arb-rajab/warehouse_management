@@ -93,9 +93,9 @@ onBeforeUnmount(() => {
             role="dialog"
             aria-modal="true"
             :aria-label="title"
-            class="relative z-10 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-900"
+            class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl dark:bg-neutral-900"
         >
-            <div class="mb-4 flex items-center justify-between">
+            <div class="flex shrink-0 items-center justify-between p-6 pb-4">
                 <h2 class="text-lg font-semibold">{{ title }}</h2>
                 <button
                     ref="closeButtonRef"
@@ -107,8 +107,15 @@ onBeforeUnmount(() => {
                     <X class="h-5 w-5" />
                 </button>
             </div>
-            <div ref="contentRef">
+            <div
+                ref="contentRef"
+                class="min-h-0 flex-1 overflow-y-auto px-6"
+                :class="$slots.footer ? '' : 'pb-6'"
+            >
                 <slot />
+            </div>
+            <div v-if="$slots.footer" class="shrink-0 px-6 pb-6">
+                <slot name="footer" />
             </div>
         </div>
     </div>
