@@ -741,10 +741,6 @@ test('an authenticated user can export QR codes for every cell in a row', functi
 
     $response->assertOk();
     $response->assertHeader('content-type', 'application/pdf');
-    // A PDF with 4 real QR codes drawn is meaningfully larger than one with just
-    // labels (~1.1KB) — regression guard for the QR silently failing to render
-    // (dompdf doesn't support inline <svg>, only an <img> referencing an image source).
-    expect(strlen($response->getContent()))->toBeGreaterThan(2500);
 
     $pdf = (new PdfParser)->parseContent($response->getContent());
     // Each cell gets its own page (see resources/views/pdf/qr-labels.blade.php) —
@@ -756,6 +752,18 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     // covers that SVG's content directly against the single-cell export, which
     // the row-wide PDF sheet now embeds verbatim (see cellQrLabels()).
     expect($pdf->getPages())->toHaveCount(4);
+
+    // Regression guard for the QR silently missing from every page while the
+    // label text still drew: dompdf draws an SVG label straight into the page
+    // content stream as vector operators, and the QR is the only shape in it
+    // filled with the even-odd rule (its finder squares are rings) — PDF's
+    // `f*` operator. A QR referenced as a nested `<image>` instead of inlined
+    // (see BuildsQrLabels::qrSvgInnerMarkup()) left no `f*` on any page, just
+    // the plain `f` background fill and the text. PDF byte size can't tell
+    // the two apart: the broken 4-page PDF was already over 2.5KB.
+    foreach ($pdf->getPages() as $page) {
+        expect($page->get('Contents')->getContent())->toMatch('/^f\*$/m');
+    }
 });
 
 test('the row QR export still succeeds and produces one page per cell with a configured QR code size other than the default', function () {

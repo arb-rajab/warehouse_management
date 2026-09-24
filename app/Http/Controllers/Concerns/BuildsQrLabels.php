@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use Illuminate\Support\HtmlString;
+use LogicException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
@@ -13,9 +14,21 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 trait BuildsQrLabels
 {
     /**
-     * dompdf doesn't render inline `<svg>` markup (its SVG support only
-     * covers rasterizing an SVG *source* referenced by an `<img>` tag), so
-     * the QR is embedded as a base64 SVG data URI rather than inlined.
+     * The QR's own SVG markup, minus its outer `<svg>` wrapper, for splicing
+     * straight into qrLabelImage()'s label SVG. It can't be referenced from
+     * there as a nested `<image href="data:image/svg+xml...">` instead:
+     * browsers render that fine, but dompdf (the row-wide PDF sheet, see
+     * BuildsCellQrLabels::cellQrLabels()) draws an `<image>` found *inside*
+     * an SVG through php-svg-lib's SurfaceCpdf::image(), which only handles
+     * raster formats and silently draws nothing for an SVG source — the PDF
+     * got every label's text but no QR at all. Inlined, the QR is parsed as
+     * part of the same top-level SVG document, which both render.
+     *
+     * The wrapper is stripped rather than kept as a nested `<svg x y>`
+     * viewport because php-svg-lib treats a nested `<svg>` as a plain group,
+     * ignoring its x/y/viewBox — the caller positions this markup with a
+     * `<g transform>` instead. No scaling is needed on top of that: the QR
+     * is generated at exactly $size, so its own coordinates are already px.
      *
      * SVG (not PNG) is used deliberately: bacon-qr-code's PNG backend renders
      * through Imagick, drawing each QR module as a separate composite call —
@@ -27,7 +40,7 @@ trait BuildsQrLabels
      * $size is the admin-configured QR size (Setting::current(), see
      * qrLabelImage()) — never a hardcoded value.
      */
-    private function qrImageDataUri(string $data, int $size): string
+    private function qrSvgInnerMarkup(string $data, int $size): string
     {
         // simplesoftwareio/simple-qrcode's generate() docblock omits the leading
         // backslash on its Illuminate\Support\HtmlString return type, so Larastan
@@ -36,7 +49,11 @@ trait BuildsQrLabels
         /** @var HtmlString|string $svg */
         $svg = QrCode::format('svg')->size($size)->generate($data);
 
-        return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+        if (preg_match('/<svg\b[^>]*>(.*)<\/svg>/s', (string) $svg, $matches) !== 1) {
+            throw new LogicException('QR code generator returned no <svg> element.');
+        }
+
+        return $matches[1];
     }
 
     /**
@@ -238,7 +255,7 @@ trait BuildsQrLabels
             $qrX = (int) (($width - $qrSize) / 2);
         }
 
-        $qrDataUri = $this->qrImageDataUri($qrData, $qrSize);
+        $qrMarkup = $this->qrSvgInnerMarkup($qrData, $qrSize);
 
         $idMarkup = '';
         $idY = $qrBottom + 24;
@@ -300,7 +317,7 @@ trait BuildsQrLabels
         return <<<SVG
             <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
                 <rect width="100%" height="100%" fill="#ffffff"/>
-                <image href="{$qrDataUri}" x="{$qrX}" y="{$padding}" width="{$qrSize}" height="{$qrSize}"/>
+                <g transform="translate({$qrX},{$padding})">{$qrMarkup}</g>
                 {$idMarkup}
                 {$primaryMarkup}
                 {$secondaryMarkup}

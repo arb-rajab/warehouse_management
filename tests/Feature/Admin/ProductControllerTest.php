@@ -997,9 +997,13 @@ test('an authenticated admin can export a QR code image for a product, with both
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is embedded as a base64 SVG data URI — regression guard for the
-    // QR silently failing to render rather than just the surrounding text.
-    expect($svg)->toContain('data:image/svg+xml;base64,');
+    // A real QR is spliced in as inline SVG markup rather than a nested
+    // `<image>` reference, which dompdf silently skips (see
+    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
+    // failing to render rather than just the surrounding text.
+    expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
+        ->and($svg)->toContain('<path fill-rule="evenodd"')
+        ->and($svg)->not->toContain('<image');
     expect($svg)->toContain('Widgets');
     expect($svg)->toContain('ودجات');
     expect($svg)->toContain("ID: {$product->id}");
@@ -1023,7 +1027,7 @@ test('a product QR export uses the configured QR code size instead of the defaul
     // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
     // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('width="360" height="360"/>');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
 });
 
 test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
@@ -1097,7 +1101,7 @@ test('a product QR export label renders the product id as its own visible text l
     $response->assertOk();
     $svg = $response->getContent();
 
-    // Not just present somewhere inside the base64-encoded QR data URI —
+    // Not just encoded somewhere inside the QR's own markup —
     // asserted as its own readable <text> element a person could read off
     // the printed sticker.
     expect($svg)->toMatch('/<text[^>]*>ID: '.$product->id.'<\/text>/');

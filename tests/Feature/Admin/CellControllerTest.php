@@ -647,9 +647,13 @@ test('an authenticated user can export a QR code image for a single cell', funct
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is embedded as a base64 SVG data URI — regression guard for the
-    // QR silently failing to render rather than just the surrounding text.
-    expect($svg)->toContain('data:image/svg+xml;base64,');
+    // A real QR is spliced in as inline SVG markup rather than a nested
+    // `<image>` reference, which dompdf silently skips (see
+    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
+    // failing to render rather than just the surrounding text.
+    expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
+        ->and($svg)->toContain('<path fill-rule="evenodd"')
+        ->and($svg)->not->toContain('<image');
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
 
     // With no description line to share the label with, the slot label grows
@@ -678,7 +682,7 @@ test('a single-cell QR export uses the configured QR code size instead of the de
     // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
     // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('width="360" height="360"/>');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
 });
 
 test('a single-cell QR export keeps the full slot label visible for large cell/flat numbers', function () {
@@ -712,8 +716,12 @@ test('a single-cell QR export shrinks the QR slightly to keep the label visible 
     // clampLinesToHeight() dropped the label entirely (see BuildsQrLabels'
     // $minPrimaryZone guard). The QR now shrinks just enough to guarantee
     // the label always has room, rather than disappearing.
+    // 280 - 16 (bottom margin) - 46 ($minPrimaryZone) = 218 is the lowest the
+    // QR's bottom edge may sit; the unshrunk 240px QR ends at 20+240=260, so
+    // it shrinks by 42px to 198px and re-centers at x=(280-198)/2=41.
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number))
-        ->and($svg)->not->toContain('width="240" height="240"/>');
+        ->and($svg)->toContain('<g transform="translate(41,20)"><rect x="0" y="0" width="198" height="198"')
+        ->and($svg)->not->toContain('width="240" height="240"');
 });
 
 test('a mobile app user cannot export a single cells QR code', function () {
