@@ -205,12 +205,17 @@ describe('useDismissibleListbox', () => {
 
 describe('usePanelMaxWidth', () => {
     function elementWithRect(
-        rect: Pick<DOMRect, 'left' | 'right'>,
+        rect: Pick<DOMRect, 'left' | 'right'> &
+            Partial<Pick<DOMRect, 'bottom' | 'width'>>,
         direction: 'ltr' | 'rtl' = 'ltr',
     ): HTMLElement {
         const el = document.createElement('div');
         el.style.direction = direction;
-        vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect as DOMRect);
+        vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+            bottom: 0,
+            width: rect.right - rect.left,
+            ...rect,
+        } as DOMRect);
 
         return el;
     }
@@ -262,6 +267,50 @@ describe('usePanelMaxWidth', () => {
         recompute();
 
         expect(panelMaxWidthPx.value).toBe(320);
+    });
+
+    it('anchors the fixed-position panel below and at the start of the trigger under LTR', () => {
+        const containerRef = ref(
+            elementWithRect({ left: 100, right: 300, bottom: 250 }),
+        );
+        const { panelPosition, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelPosition.value).toEqual({
+            top: 254,
+            insetInlineStart: 100,
+            minWidth: 200,
+        });
+    });
+
+    it('anchors the fixed-position panel at the physical right edge of the trigger under RTL', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const containerRef = ref(
+            elementWithRect({ left: 700, right: 800, bottom: 120 }, 'rtl'),
+        );
+        const { panelPosition, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelPosition.value).toEqual({
+            top: 124,
+            insetInlineStart: 1024 - 800,
+            minWidth: 100,
+        });
+    });
+
+    it('leaves the panel position untouched when the container ref is not yet mounted', () => {
+        const containerRef = ref<HTMLElement | null>(null);
+        const { panelPosition, recompute } = usePanelMaxWidth(containerRef);
+
+        recompute();
+
+        expect(panelPosition.value).toEqual({
+            top: 0,
+            insetInlineStart: 0,
+            minWidth: 0,
+        });
     });
 });
 

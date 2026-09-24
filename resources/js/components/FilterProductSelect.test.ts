@@ -116,6 +116,8 @@ describe('FilterProductSelect', () => {
         vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
             left: 200,
             right: 208,
+            bottom: 40,
+            width: 8,
         } as DOMRect);
         container.style.direction = 'rtl';
 
@@ -124,6 +126,49 @@ describe('FilterProductSelect', () => {
         const panel = wrapper.get('[role="listbox"]').element
             .parentElement as HTMLElement;
         expect(panel.style.maxWidth).toBe('192px');
+    });
+
+    it('positions the panel as a fixed overlay anchored under the trigger, so it can escape a scrolling ancestor instead of being clipped by it', async () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            right: 300,
+            bottom: 250,
+            width: 200,
+        } as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.className).toContain('fixed');
+        expect(panel.style.top).toBe('254px');
+        expect(panel.style.insetInlineStart).toBe('100px');
+        expect(panel.style.minWidth).toBe('200px');
+    });
+
+    it('re-anchors the panel when its scrolling ancestor scrolls while open, and stops tracking once closed', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        const rect = { left: 100, right: 300, bottom: 250, width: 200 };
+        const getRectSpy = vi
+            .spyOn(container, 'getBoundingClientRect')
+            .mockReturnValue(rect as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+        const callsAfterOpen = getRectSpy.mock.calls.length;
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBeGreaterThan(callsAfterOpen);
+
+        const callsAfterResize = getRectSpy.mock.calls.length;
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBe(callsAfterResize);
     });
 
     it('renders the search input and fetches the first page when opened', async () => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -78,19 +78,72 @@ const { open, containerRef, setOptionRef, onOptionKeydown } =
     useDismissibleListbox(
         () => pinnedProducts.value.length + visibleResults.value.length,
     );
-const { panelMaxWidthPx, recompute: recomputePanelMaxWidth } =
-    usePanelMaxWidth(containerRef);
+const {
+    panelMaxWidthPx,
+    panelPosition,
+    recompute: recomputePanelGeometry,
+} = usePanelMaxWidth(containerRef);
 
 function toggleOpen(): void {
     open.value = !open.value;
 
     if (open.value) {
-        recomputePanelMaxWidth();
+        recomputePanelGeometry();
         fetchFirstPageIfEmpty();
 
         nextTick(() => searchInputRef.value?.focus());
     }
 }
+
+/**
+ * The panel is `position: fixed` (see the template) rather than the plain
+ * in-flow `absolute` FilterMultiSelect.vue uses, so it can escape
+ * FilterDialog's `overflow-y-auto` content area instead of being clipped by
+ * it — but `fixed` positioning is computed once from the trigger's
+ * on-screen rect and does not itself track that ancestor scrolling
+ * underneath it. Recompute on scroll of the nearest scrollable ancestor (or
+ * the window, if there isn't one) and on resize, for as long as the panel
+ * is open, so it stays visually anchored under the trigger.
+ */
+function closestScrollableAncestor(
+    el: HTMLElement,
+): HTMLElement | (Window & typeof globalThis) {
+    let node = el.parentElement;
+
+    while (node) {
+        if (['auto', 'scroll'].includes(getComputedStyle(node).overflowY)) {
+            return node;
+        }
+
+        node = node.parentElement;
+    }
+
+    return window;
+}
+
+let scrollAncestor: HTMLElement | (Window & typeof globalThis) | null = null;
+
+function stopTrackingViewport(): void {
+    scrollAncestor?.removeEventListener('scroll', recomputePanelGeometry);
+    window.removeEventListener('resize', recomputePanelGeometry);
+    scrollAncestor = null;
+}
+
+watch(open, (isOpen) => {
+    if (isOpen) {
+        scrollAncestor = containerRef.value
+            ? closestScrollableAncestor(containerRef.value)
+            : window;
+        scrollAncestor.addEventListener('scroll', recomputePanelGeometry, {
+            passive: true,
+        });
+        window.addEventListener('resize', recomputePanelGeometry);
+    } else {
+        stopTrackingViewport();
+    }
+});
+
+onBeforeUnmount(stopTrackingViewport);
 
 function buttonLabel(): string {
     if (model.value.length === 0) {
@@ -121,8 +174,13 @@ function buttonLabel(): string {
         </button>
         <div
             v-if="open"
-            class="absolute z-10 mt-1 w-max min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
-            :style="{ maxWidth: `${panelMaxWidthPx}px` }"
+            class="fixed z-[60] w-max rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            :style="{
+                top: `${panelPosition.top}px`,
+                insetInlineStart: `${panelPosition.insetInlineStart}px`,
+                minWidth: `${panelPosition.minWidth}px`,
+                maxWidth: `${panelMaxWidthPx}px`,
+            }"
         >
             <div class="relative mb-2">
                 <Search

@@ -17,7 +17,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Middleware/EnsureMinimumAppVersion.php,app/Console/Commands/SetMinimumAppVersionCommand.php,app/Models/MobileAppVersionRequirement.php | .ai/rules/commands-models.md |
 | resources/js/components/CellSlot.vue,resources/js/components/CellMap3D.vue,resources/js/lib/cellStateColor.ts | .ai/rules/components-js-components-js-lib.md |
 | resources/js/pages/Admin/Rows/Show.vue,resources/js/pages/Admin/Cells/Index.vue,resources/js/components/CellHighlightFilters.vue,resources/js/lib/cellHighlight.ts,resources/js/lib/cellStatus.ts | .ai/rules/components-js-lib.md |
-| resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts, resources/js/components/FilterMultiSelect.vue,resources/js/components/FilterMultiSelect.test.ts | .ai/rules/components.md |
+| resources/js/components/FilterDialog.vue,resources/js/components/FilterDialog.test.ts, resources/js/components/FilterMultiSelect.vue,resources/js/components/FilterMultiSelect.test.ts, resources/js/components/FilterProductSelect.vue,resources/js/components/FilterProductSelect.test.ts | .ai/rules/components.md |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php | .ai/rules/concerns-models.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php | .ai/rules/concerns.md |
 | config/telescope.php,database/migrations/*telescope*, config/pulse.php,database/migrations/*pulse* | .ai/rules/config-migrations.md |
