@@ -229,12 +229,13 @@ class PalletActionService
     }
 
     /**
-     * Open a Full pallet (Full→Opened), removing its initial boxes_count in the
-     * same transaction — see .ai/rules/v1.md for why this is a deliberate merge.
+     * Open a Full pallet (Full→Opened), optionally removing boxes in the same
+     * transaction. A null $boxesCount just transitions the cell to Opened and
+     * leaves remaining_boxes untouched — see .ai/rules/v1.md.
      *
      * @return array{pallet: ?Pallet, emptied: bool}
      */
-    public function open(Pallet $pallet, int $boxesCount, bool $confirmEmpty, int $userId, ?string $note): array
+    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note): array
     {
         $emptied = false;
 
@@ -246,7 +247,8 @@ class PalletActionService
                 throw new InvalidSlotStateException('pallet_not_full', __('messages.pallet_not_full'));
             }
 
-            if ($this->applyBoxesRemoval($cell, $lockedPallet, $userId, $boxesCount, $confirmEmpty, $note)) {
+            if ($boxesCount !== null
+                && $this->applyBoxesRemoval($cell, $lockedPallet, $userId, $boxesCount, $confirmEmpty, $note)) {
                 $emptied = true;
 
                 return;

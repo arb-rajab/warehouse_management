@@ -294,6 +294,29 @@ describe('PalletActionsDialog', () => {
         });
     });
 
+    it('does not require a boxes count to open a pallet, and posts null when left blank', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        expect(
+            wrapper.get('#pallet-action-boxes-count').attributes('required'),
+        ).toBeUndefined();
+
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledTimes(1);
+        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+            boxes_count: null,
+        });
+    });
+
+    it('requires a boxes count to remove boxes from an opened pallet', async () => {
+        const wrapper = await mountDialog(openedCell(6));
+
+        expect(
+            wrapper.get('#pallet-action-boxes-count').attributes('required'),
+        ).toBeDefined();
+    });
+
     it('switches tabs and resets the fields entered on the previously selected tab', async () => {
         const wrapper = await mountDialog(fullCell(6));
 

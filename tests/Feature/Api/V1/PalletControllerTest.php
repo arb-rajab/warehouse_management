@@ -468,15 +468,25 @@ test('opening a pallet without a note logs a null note', function () {
     expect(CellStatusLog::query()->where('cell_id', $pallet->cell_id)->sole()->note)->toBeNull();
 });
 
-test('opening a pallet without a boxes_count is rejected', function () {
-    actingAsMobileUser();
+test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
+    $user = actingAsMobileUser();
 
-    $pallet = Pallet::factory()->create();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open");
 
-    $response->assertStatus(422)->assertJsonValidationErrors('boxes_count');
-    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    $response->assertOk()->assertJsonPath('state', 'opened');
+    $response->assertJsonPath('remaining_boxes', 10);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'action' => CellLogAction::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 10,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('opening a pallet with more boxes than remain is rejected and nothing changes', function () {

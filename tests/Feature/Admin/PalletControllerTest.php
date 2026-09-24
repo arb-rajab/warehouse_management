@@ -203,6 +203,25 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
     ]);
 });
 
+test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
+    $admin = actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open");
+
+    $response->assertRedirect(route('admin.cells.index'));
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'action' => CellLogAction::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 10,
+        'user_id' => $admin->id,
+    ]);
+});
+
 test('opening a pallet with more boxes than remain, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(5)->create();
