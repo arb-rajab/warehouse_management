@@ -13,6 +13,7 @@ import {
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
+import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
@@ -264,6 +265,12 @@ function submitBoxCount(): void {
                     v-model="quickSearchProduct"
                     :label="t('products.quickSearch.label')"
                     :placeholder="t('products.quickSearch.placeholder')"
+                />
+                <FilterCheckbox
+                    id="products-quick-inactive"
+                    v-model="filters.inactive"
+                    :label="t('products.filters.inactive')"
+                    @update:model-value="applyFilters"
                 />
                 <HelpLink :href="showHelp('products')" />
                 <button
