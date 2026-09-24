@@ -156,6 +156,17 @@ class PalletActionService
     }
 
     /**
+     * A cell on the first level (`flat_number === 1`) is opened automatically as soon
+     * as a pallet lands in it — store() and transfer() both route their target state
+     * through here instead of assuming Full. `$default` is what the state would be
+     * without this rule (Full for store(), the carried-over source state for transfer()).
+     */
+    private function targetStateForCell(Cell $cell, CellState $default): CellState
+    {
+        return $cell->flat_number === 1 ? CellState::Opened : $default;
+    }
+
+    /**
      * Write a CellStatusLog row for a cell state transition.
      */
     private function logCellStatus(
@@ -185,7 +196,8 @@ class PalletActionService
     }
 
     /**
-     * Store a new pallet into an Empty cell, transitioning it to Full.
+     * Store a new pallet into an Empty cell, transitioning it to Full — or straight to
+     * Opened when the cell is on the first level (see targetStateForCell()).
      */
     public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
     {
@@ -210,13 +222,15 @@ class PalletActionService
                 'remaining_boxes' => $product->boxes_count,
             ]);
 
-            $cell->update(['state' => CellState::Full]);
+            $toState = $this->targetStateForCell($cell, CellState::Full);
+
+            $cell->update(['state' => $toState]);
 
             $this->logCellStatus(
                 $cell,
                 CellLogAction::Stored,
                 CellState::Empty,
-                CellState::Full,
+                $toState,
                 $pallet->product_id,
                 $pallet->id,
                 $userId,
@@ -326,7 +340,9 @@ class PalletActionService
 
     /**
      * Move a pallet to another Empty cell — the source cell frees to Empty, the
-     * destination inherits the source's prior state.
+     * destination inherits the source's prior state, unless the destination is on
+     * the first level, in which case it's opened automatically regardless of the
+     * source's state (see targetStateForCell()).
      */
     public function transfer(Pallet $pallet, int $destinationCellId, int $userId, ?string $note): Pallet
     {
@@ -338,16 +354,17 @@ class PalletActionService
                 throw new InvalidSlotStateException('destination_not_empty', __('messages.destination_not_empty'));
             }
 
-            $carryOverState = $sourceCell->state;
+            $sourceState = $sourceCell->state;
+            $destinationState = $this->targetStateForCell($destinationCell, $sourceState);
 
             $sourceCell->update(['state' => CellState::Empty]);
-            $destinationCell->update(['state' => $carryOverState]);
+            $destinationCell->update(['state' => $destinationState]);
             $pallet->update(['cell_id' => $destinationCell->id]);
 
             $this->logCellStatus(
                 $sourceCell,
                 CellLogAction::TransferredOut,
-                $carryOverState,
+                $sourceState,
                 CellState::Empty,
                 $pallet->product_id,
                 $pallet->id,
@@ -361,7 +378,7 @@ class PalletActionService
                 $destinationCell,
                 CellLogAction::TransferredIn,
                 CellState::Empty,
-                $carryOverState,
+                $destinationState,
                 $pallet->product_id,
                 $pallet->id,
                 $userId,
