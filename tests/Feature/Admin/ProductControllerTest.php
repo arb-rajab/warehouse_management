@@ -405,12 +405,15 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
 
 test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
     actingAsAdmin();
-    $product = Product::factory()->create();
+    // Fixed names pin the default name-ascending order, so products.data.0 is
+    // always $product — random factory names let $other sort first about
+    // half the time.
+    $product = Product::factory()->create(['name' => 'Alpha Widgets']);
     Pallet::factory()->create(['product_id' => $product->id]);
     Pallet::factory()->opened()->create(['product_id' => $product->id]);
 
     // Noise: another product's pallets must not be counted here.
-    $other = Product::factory()->create();
+    $other = Product::factory()->create(['name' => 'Zulu Widgets']);
     Pallet::factory()->create(['product_id' => $other->id]);
 
     $response = $this->get('/admin/products');
