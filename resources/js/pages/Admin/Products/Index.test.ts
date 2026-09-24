@@ -160,6 +160,54 @@ describe('Products Index', () => {
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
     });
 
+    it('renders the quick inactive checkbox in the toolbar, without opening the filter dialog', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.get('label[for="products-quick-inactive"]').text()).toBe(
+            t('products.filters.inactive'),
+        );
+        expect(
+            (
+                wrapper.get('#products-quick-inactive')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(false);
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('checks the quick inactive checkbox when the inactive filter is already applied', () => {
+        const wrapper = mountPage([], { inactive: true });
+
+        expect(
+            (
+                wrapper.get('#products-quick-inactive')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+    });
+
+    it('immediately requests inactive products when the toolbar checkbox is checked, without opening the filter dialog', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-inactive').setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin/products',
+            expect.objectContaining({ inactive: true }),
+            { preserveState: true, replace: true },
+        );
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('immediately omits inactive when the toolbar checkbox is unchecked again', async () => {
+        const wrapper = mountPage([], { inactive: true });
+
+        await wrapper.get('#products-quick-inactive').setValue(false);
+
+        const [, sentFilters] = routerGetMock.mock.calls[0];
+        expect(sentFilters).not.toHaveProperty('inactive');
+    });
+
     it('narrows the table to the picked product and requests it via product_id when a quick search result is selected', async () => {
         const wrapper = mountPage([]);
 
