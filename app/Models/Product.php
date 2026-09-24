@@ -259,6 +259,10 @@ class Product extends Model
      * product whose `ar_name` the store left empty. Matching both columns
      * costs nothing here: an empty `ar_name` cannot match a non-empty word.
      *
+     * A term that is entirely digits also matches the product's numeric
+     * `id` (see `applyNameSearch()`/`searchTermAsProductId()`) — additive to,
+     * never a replacement for, the name match.
+     *
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
@@ -286,6 +290,14 @@ class Product extends Model
             return;
         }
 
+        // A term that is nothing but digits is also treated as a product id:
+        // warehouse staff frequently know/copy the numeric id (e.g. off a
+        // printed label) rather than the name. This is additive — it never
+        // narrows the existing name match, only OR's an `id =` match onto it,
+        // so a term with no digit-only reading leaves the query exactly as it
+        // was before this existed.
+        $productId = self::searchTermAsProductId($term);
+
         // Query\Builder::getConnection() is declared as ConnectionInterface,
         // which has no getDriverName() — only the concrete Connection does. A
         // connection that is neither falls back to LIKE, which is the safe
@@ -298,9 +310,33 @@ class Product extends Model
             $connection instanceof Connection ? $connection->getDriverName() : '',
         );
 
+        if ($productId === null) {
+            self::applyNameMatch($query, $plan);
+
+            return;
+        }
+
+        $query->where(function (QueryBuilder $group) use ($plan, $productId): void {
+            self::applyNameMatch($group, $plan);
+            $group->orWhere('id', $productId);
+        });
+    }
+
+    /**
+     * Apply just the name-matching half of the search (FULLTEXT-or-LIKE, or
+     * plain LIKE where the driver/term rules FULLTEXT out) — the same
+     * condition `applyNameSearch()` always applied before it also learned to
+     * match by id. Split out so the id-less path keeps compiling to exactly
+     * the SQL it always did, with no extra wrapping group.
+     *
+     * @param  array{full_text_expression: string|null, like_words: list<string>}  $plan
+     */
+    private static function applyNameMatch(QueryBuilder $query, array $plan): void
+    {
         // No FULLTEXT expression at all — either this driver can't compile
         // MATCH, or the term has no indexable word — so the LIKE-AND-of-words
-        // group is the whole condition, exactly as it always was on sqlite.
+        // group is the whole name condition, exactly as it always was on
+        // sqlite.
         if ($plan['full_text_expression'] === null) {
             self::applyLikeWords($query, $plan['like_words']);
 
@@ -323,6 +359,22 @@ class Product extends Model
                 self::applyLikeWords($likeGroup, $plan['like_words']);
             });
         });
+    }
+
+    /**
+     * Parse a search term as a product id: the whole trimmed term must be
+     * nothing but digits, so "42" matches but "42 widgets", "-42" and "4.2"
+     * do not — those are names/decimals, not an id lookup.
+     */
+    private static function searchTermAsProductId(string $term): ?int
+    {
+        $trimmed = trim($term);
+
+        if ($trimmed === '' || ! ctype_digit($trimmed)) {
+            return null;
+        }
+
+        return (int) $trimmed;
     }
 
     /**
