@@ -64,7 +64,7 @@ test('the products index ships both raw name columns under the Arabic panel loca
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -86,6 +86,8 @@ test('the products index ships both raw name columns under the Arabic panel loca
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
