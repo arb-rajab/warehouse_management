@@ -1,0 +1,31 @@
+image: php:8.1
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Deploy to Hostinger
+          caches:
+            - composer
+          script:
+            # Install ssh and openssh-client tools in the pipeline container
+            - apt-get update && apt-get install -y openssh-client
+
+            # Set up SSH private key
+            - echo "$SSH_PRIVATE_KEY" > /tmp/id_rsa
+            - chmod 600 /tmp/id_rsa
+            - mkdir -p ~/.ssh
+
+            # Add the remote server to known_hosts (avoid prompt)
+            - ssh-keyscan -p 65002 147.93.48.198 >> ~/.ssh/known_hosts
+
+            # Perform git pull remotely on the Hostinger server
+            - ssh -p 65002 -i /tmp/id_rsa u730719392@147.93.48.198 "
+              cd domains/albarakabv.com/public_html/ &&
+              git pull &&
+              php artisan config:cache &&
+              php artisan view:cache
+              "
+
+            # Clean up private key after usage
+            - rm -f /tmp/id_rsa
