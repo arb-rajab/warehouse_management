@@ -206,8 +206,11 @@ test('searchByName also matches a product whose id equals the term, even though 
 });
 
 test('searchByName tolerates surrounding whitespace when the term is a product id', function () {
-    $matching = Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Gadgets']);
+    // ar_name is pinned on both rows (rather than left at the factory
+    // default, which embeds a random 1-999999 number) so the noise product
+    // can never accidentally LIKE-match the id being searched for.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
 
     $results = Product::query()->searchByName(' '.$matching->id.' ')->get();
 
@@ -215,8 +218,8 @@ test('searchByName tolerates surrounding whitespace when the term is a product i
 });
 
 test('searchByName returns nothing for a digits-only term matching neither an id nor a name', function () {
-    Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Gadgets']);
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
 
     $nonExistentId = Product::max('id') + 1000;
 
