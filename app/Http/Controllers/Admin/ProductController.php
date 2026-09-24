@@ -139,12 +139,28 @@ class ProductController extends Controller
      * be in the warehouse at minimum. WMS-owned data in
      * `wms_product_settings`, the same as `updateBoxCount()` above — see
      * .ai/rules/shared-database.md.
+     *
+     * `firstOrNew()` rather than `updateOrCreate([], [...])`: the latter
+     * would leave `boxes_count` off the insert for a product with no settings
+     * row yet, and `wms_product_settings.boxes_count` has its own DB-level
+     * default of 1 — divorced from `Product::DEFAULT_BOXES_COUNT` (50), which
+     * is what the product was actually showing (via `boxesCount()`'s
+     * fallback) before this row existed. Explicitly carrying that default
+     * into the new row keeps the displayed box count from silently dropping
+     * to 1 the moment a threshold is set on an otherwise-unconfigured
+     * product. Only stamped on a genuinely new row — an existing one keeps
+     * whatever box count it already has.
      */
     public function updateMinimumPallets(UpdateProductMinimumPalletsRequest $request, Product $product): RedirectResponse
     {
-        $product->setting()->updateOrCreate([], [
-            'minimum_pallets' => $request->input('minimum_pallets'),
-        ]);
+        $setting = $product->setting()->firstOrNew();
+
+        if (! $setting->exists) {
+            $setting->boxes_count = Product::DEFAULT_BOXES_COUNT;
+        }
+
+        $setting->minimum_pallets = $request->input('minimum_pallets');
+        $setting->save();
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
