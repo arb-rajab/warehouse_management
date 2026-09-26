@@ -205,6 +205,36 @@ test('searchByName also matches a product whose id equals the term, even though 
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
 
+test('searchByName also matches a product whose id merely contains the term, not just equals it', function () {
+    // `id` isn't in Product::$fillable (it's not meant for per-request
+    // create/update — see the class docblock), so these go through DB::table
+    // directly, the same way CreateProductsTableTest does, to pin exact,
+    // multi-digit ids for the substring assertion below.
+    DB::table('products')->insert([
+        'id' => 12345,
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+        'published' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    // Noise: an id that does not contain "234" anywhere, proving the match is
+    // a real substring check rather than, say, a LIKE-escaping bug that
+    // matches everything.
+    DB::table('products')->insert([
+        'id' => 6789,
+        'name' => 'Gadgets',
+        'ar_name' => 'أدوات',
+        'published' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $results = Product::query()->searchByName('234')->get();
+
+    expect($results->pluck('id')->all())->toBe([12345]);
+});
+
 test('searchByName tolerates surrounding whitespace when the term is a product id', function () {
     // ar_name is pinned on both rows (rather than left at the factory
     // default, which embeds a random 1-999999 number) so the noise product
@@ -376,23 +406,24 @@ test('searchByName adds no condition at all for a blank term on mysql', function
     expect(mysqlProductSearch('   ')->toSql())->toBe('select * from `products`');
 });
 
-test('searchByName ORs an id match onto the name condition on mysql when the term is digits-only', function () {
+test('searchByName ORs a partial id match onto the name condition on mysql when the term is digits-only', function () {
     // "123" is long enough to also be an indexable FULLTEXT word (unlike "42"
     // in the shorter-than-minimum-token test below), so this exercises the id
     // OR sitting alongside the full FULLTEXT-or-LIKE group, not just LIKE.
     $query = mysqlProductSearch('123');
 
     // The whole name-match condition (itself the FULLTEXT-or-LIKE group) sits
-    // in one nested group, OR'd against the bare `id = ?` — so an id match
-    // never has to satisfy any word condition, and vice versa.
+    // in one nested group, OR'd against `id LIKE '%123%'` — so an id match
+    // never has to satisfy any word condition, and vice versa, and a term
+    // that's only part of the real id still matches it.
     expect($query->toSql())->toBe(
         'select * from `products` where ((match (`name`, `ar_name`) against (? in boolean mode) or '
-        .'((`name` like ? escape ? or `ar_name` like ? escape ?))) or `id` = ?)'
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?))) or `id` like ?)'
     );
-    expect($query->getBindings())->toBe(['+123*', '%123%', '\\', '%123%', '\\', 123]);
+    expect($query->getBindings())->toBe(['+123*', '%123%', '\\', '%123%', '\\', '%123%']);
 });
 
-test('searchByName ORs an id match onto a LIKE-only name condition on mysql when the term is too short to be indexable', function () {
+test('searchByName ORs a partial id match onto a LIKE-only name condition on mysql when the term is too short to be indexable', function () {
     // "42" is shorter than FULL_TEXT_MIN_WORD_LENGTH, so it never enters the
     // FULLTEXT expression — `applyNameMatch()` takes the plain-LIKE branch,
     // with no extra wrapping group around it, and the id OR sits directly
@@ -400,9 +431,9 @@ test('searchByName ORs an id match onto a LIKE-only name condition on mysql when
     $query = mysqlProductSearch('42');
 
     expect($query->toSql())->toBe(
-        'select * from `products` where ((`name` like ? escape ? or `ar_name` like ? escape ?) or `id` = ?)'
+        'select * from `products` where ((`name` like ? escape ? or `ar_name` like ? escape ?) or `id` like ?)'
     );
-    expect($query->getBindings())->toBe(['%42%', '\\', '%42%', '\\', 42]);
+    expect($query->getBindings())->toBe(['%42%', '\\', '%42%', '\\', '%42%']);
 });
 
 test('searchByName stays on LIKE for a connection whose grammar has no fulltext support', function () {
