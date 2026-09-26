@@ -273,15 +273,43 @@ sources. A 403 from the proxy is an organization egress-policy denial: per
 the first failure, including backgrounded ones — take the denial at face value
 rather than reaching for another route around it.
 
-If a session's environment does *not* have that 403 block (composer can
-actually reach `codeload.github.com`), `composer install` still commonly
-times out or SSL-times-out partway through the `dist` downloads for a few
-`spatie/*` packages before falling back to a slow one-by-one `git clone`
-from source — this is normal proxy flakiness, not the policy block above,
-and one retry resolves it. To avoid burning a multi-minute install on
-`phpstan/phpstan` (a dev-only dependency not needed for Pest/vitest/Pint),
-run `composer install --no-dev` first; only add dev deps back if a task
-specifically needs them (e.g. PHPStan itself).
+**In a Claude Code web/remote session specifically** (`CLAUDE_CODE_REMOTE=true`
+— i.e. exactly the kind of session reading this file in that mode), don't even
+spend the first attempt: this container's own `SessionStart` hook
+(`.claude/hooks/session-start.sh`) already *measured* — on this exact image,
+not guessed — that every `require-dev` package 403s (Pint, Pest, PHPStan and
+Larastan all named explicitly in the session's own startup message: "don't
+push to find out"). That is a permanent fact of this container, not a
+session-to-session coin flip, so there is nothing to verify empirically. A
+bare `composer install`/`composer update` (no `--no-dev`) is denied outright
+by the guard hook before it can even run — go straight to `composer install
+--no-dev` for a bootable app, and to pushing + reading CI for anything
+Pint/PHPStan/Pest-shaped. This previously cost a real session several minutes
+and multiple tool calls (a full install that could only ever fail exactly as
+predicted) before this rule and the hook denial existed — don't re-litigate
+it by working around the denial or reaching for `--ignore-platform-reqs`,
+package-source rewrites, or similar.
+
+The one place a first *attempt* is still worth making is a session that is
+**not** a Claude Code web/remote session (no measured startup fact to rely
+on) — there, `composer install` still commonly times out or SSL-times-out
+partway through the `dist` downloads for a few `spatie/*` packages before
+falling back to a slow one-by-one `git clone` from source; this is normal
+proxy flakiness, not the policy block above, and one retry resolves it. To
+avoid burning a multi-minute install on `phpstan/phpstan` (a dev-only
+dependency not needed for Pest/vitest/Pint), run `composer install --no-dev`
+first there too; only add dev deps back if a task specifically needs them
+(e.g. PHPStan itself).
+
+**While a long-running command like `composer install --no-dev` (~4 minutes
+cold) is in flight in the background:** wait for exactly one completion
+notification — don't spawn a second or third background loop polling the
+same PID/condition, and don't fill the intervening turns with no-op
+`Bash`/`ReadNotifications` calls just to "do something while waiting". The
+harness delivers a notification when the backgrounded command finishes;
+ending the turn and letting that notification arrive costs nothing; a stack
+of redundant polling loops and filler turns costs real quota for zero
+additional information.
 
 `fake()` is undefined here for the same reason: `fakerphp/faker` is a dev
 dependency, so under `--no-dev` there is no faker at all. That puts every
