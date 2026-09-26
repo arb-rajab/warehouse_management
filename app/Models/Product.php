@@ -259,9 +259,10 @@ class Product extends Model
      * product whose `ar_name` the store left empty. Matching both columns
      * costs nothing here: an empty `ar_name` cannot match a non-empty word.
      *
-     * A term that is entirely digits also matches the product's numeric
-     * `id` (see `applyNameSearch()`/`searchTermAsProductId()`) — additive to,
-     * never a replacement for, the name match.
+     * A term that is entirely digits also matches products whose numeric
+     * `id` contains it as a substring (see
+     * `applyNameSearch()`/`searchTermAsProductId()`) — additive to, never a
+     * replacement for, the name match.
      *
      * @param  EloquentBuilder<Product>  $query
      */
@@ -290,13 +291,14 @@ class Product extends Model
             return;
         }
 
-        // A term that is nothing but digits is also treated as a product id:
-        // warehouse staff frequently know/copy the numeric id (e.g. off a
-        // printed label) rather than the name. This is additive — it never
-        // narrows the existing name match, only OR's an `id =` match onto it,
-        // so a term with no digit-only reading leaves the query exactly as it
-        // was before this existed.
-        $productId = self::searchTermAsProductId($term);
+        // A term that is nothing but digits is also treated as a (possibly
+        // partial) product id: warehouse staff frequently remember only part
+        // of the numeric id (e.g. off a printed label) rather than the whole
+        // thing or the name. This is additive — it never narrows the existing
+        // name match, only OR's an `id LIKE '%digits%'` match onto it, so a
+        // term with no digit-only reading leaves the query exactly as it was
+        // before this existed.
+        $productIdFragment = self::searchTermAsProductId($term);
 
         // Query\Builder::getConnection() is declared as ConnectionInterface,
         // which has no getDriverName() — only the concrete Connection does. A
@@ -310,15 +312,15 @@ class Product extends Model
             $connection instanceof Connection ? $connection->getDriverName() : '',
         );
 
-        if ($productId === null) {
+        if ($productIdFragment === null) {
             self::applyNameMatch($query, $plan);
 
             return;
         }
 
-        $query->where(function (QueryBuilder $group) use ($plan, $productId): void {
+        $query->where(function (QueryBuilder $group) use ($plan, $productIdFragment): void {
             self::applyNameMatch($group, $plan);
-            $group->orWhere('id', $productId);
+            $group->orWhere('id', 'like', "%{$productIdFragment}%");
         });
     }
 
@@ -362,11 +364,14 @@ class Product extends Model
     }
 
     /**
-     * Parse a search term as a product id: the whole trimmed term must be
-     * nothing but digits, so "42" matches but "42 widgets", "-42" and "4.2"
-     * do not — those are names/decimals, not an id lookup.
+     * Parse a search term as a product id fragment: the whole trimmed term
+     * must be nothing but digits, so "42" matches but "42 widgets", "-42" and
+     * "4.2" do not — those are names/decimals, not an id lookup. The digits
+     * are returned as-is (not cast to int) so a leading zero the admin typed
+     * (e.g. "007") stays part of the substring pattern rather than being
+     * silently dropped.
      */
-    private static function searchTermAsProductId(string $term): ?int
+    private static function searchTermAsProductId(string $term): ?string
     {
         $trimmed = trim($term);
 
@@ -374,7 +379,7 @@ class Product extends Model
             return null;
         }
 
-        return (int) $trimmed;
+        return $trimmed;
     }
 
     /**
