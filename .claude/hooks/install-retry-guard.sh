@@ -25,6 +25,17 @@ NETFAIL_RE='could not authenticate against github|curl error [0-9]+|proxy CONNEC
 
 REASON='A package install already failed in this session with a network/auth error, and it cannot succeed in this sandbox: phpstan/phpstan is dist-only and its download host is 403 through the egress proxy. Do not retry composer/npm/yarn/pnpm install, and do not route around the block by seeding caches or rewriting package sources - a 403 from the proxy is an egress-policy denial to report, not to work around. Write the tests, push, and read Pint/PHPStan/Pest results from CI instead, or ask the user how to proceed.'
 
+# In a Claude Code web/remote session, this container's own SessionStart hook
+# (.claude/hooks/session-start.sh) already measured — not guessed — that every
+# require-dev package 403s here, and says so up front in the session's own
+# context ("Pint, Pest, PHPStan and Larastan cannot be installed in this
+# sandbox ... don't push to find out"). That makes a first `composer
+# install`/`update` pulling in require-dev a predictable multi-minute failure,
+# not something worth confirming empirically once. Deny it outright — the
+# retry-after-failure logic below still exists for npm/yarn/pnpm and for local
+# (non-remote) sessions, where no such upfront measurement was made.
+PREDICTABLE_DEV_INSTALL_REASON='This container'"'"'s SessionStart hook already told this session that Pint/Pest/PHPStan/Larastan cannot be installed here (a measured, permanent fact of this sandbox, not a per-session flake) - see the "Sandbox" section of CLAUDE.md. Re-running composer install/update without --no-dev to check anyway just repeats a multi-minute failure the session was already told about. Use `composer install --no-dev` (app-only, works fine) if you need a bootable app, and push + read Pint/PHPStan/Pest results from CI for anything dev-tooling-related.'
+
 CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')"
 
 printf '%s' "$CMD" | grep -Eqi "$INSTALL_RE" || exit 0
@@ -39,6 +50,12 @@ deny() {
     exit 0
 }
 
+deny_predictable_dev_install() {
+    jq -n --arg reason "$PREDICTABLE_DEV_INSTALL_REASON" \
+        '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
+    exit 0
+}
+
 block() {
     mkdir -p "$STATE_DIR"
     printf '%s\n' "$CMD" > "$BLOCKED"
@@ -47,6 +64,12 @@ block() {
 case "$MODE" in
     check)
         [ -f "$BLOCKED" ] && deny
+
+        if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] \
+            && printf '%s' "$CMD" | grep -Eqi '^[[:space:]]*composer[[:space:]]+(install|update)\b' \
+            && ! printf '%s' "$CMD" | grep -Eq -- '--no-dev\b'; then
+            deny_predictable_dev_install
+        fi
 
         # An earlier attempt may have been backgrounded; its failure only shows
         # up in the task output file, which never reached `record`.
