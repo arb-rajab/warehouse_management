@@ -150,11 +150,15 @@ class Product extends Model
     }
 
     /**
+     * Ordered oldest-first (by id) so the admin products screen lists a
+     * product's barcodes in the order they were added, deterministically —
+     * see ProductController::index()'s column-scoped eager load.
+     *
      * @return HasMany<ProductBarcode, $this>
      */
     public function barcodes(): HasMany
     {
-        return $this->hasMany(ProductBarcode::class);
+        return $this->hasMany(ProductBarcode::class)->orderBy('id');
     }
 
     /**

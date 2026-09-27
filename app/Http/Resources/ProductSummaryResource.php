@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ProductBarcode;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int $opened_cells_count
  * @property-read int $expired_cells_count
  * @property-read int $expiring_soon_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, ProductBarcode> $barcodes
+ * @property-read Collection<int, ProductBarcode> $barcodes
  */
 class ProductSummaryResource extends JsonResource
 {

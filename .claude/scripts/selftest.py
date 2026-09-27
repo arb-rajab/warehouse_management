@@ -87,6 +87,16 @@ MISSING_TRAILING_COMMA_PHP = (
     "<?php\n\nreturn [\n    'active',\n    'published'\n];\n"
 )
 
+FULLY_QUALIFIED_REFERENCE_PHP = """<?php
+
+/**
+ * @property-read \\Illuminate\\Database\\Eloquent\\Collection<int, Product> $products
+ */
+class Example
+{
+}
+"""
+
 DUPLICATED_PHP = """<?php
 
 class Example
@@ -146,6 +156,7 @@ def main() -> int:
         (root / 'MissingComma.php').write_text(MISSING_TRAILING_COMMA_PHP)
         (root / 'NoTrailingNewline.php').write_text('<?php\n\n$value = 1;')
         (root / 'ClosingTag.php').write_text('<?php\n\n$value = 1;\n?>\n')
+        (root / 'FullyQualifiedReference.php').write_text(FULLY_QUALIFIED_REFERENCE_PHP)
 
         duplicated = root / 'duplicated'
         duplicated.mkdir()
@@ -193,6 +204,13 @@ def main() -> int:
 
         code, out = run('php_pint_style.py', str(root / 'ClosingTag.php'))
         check('stray ?> closing tag is reported', code == 1 and 'closing ?>' in out, out)
+
+        code, out = run('php_pint_style.py', str(root / 'FullyQualifiedReference.php'))
+        check(
+            'fully-qualified docblock reference is reported',
+            code == 1 and 'fully_qualified_strict_types' in out,
+            out,
+        )
 
         print('vue_unused_imports.py')
         code, out = run('vue_unused_imports.py', str(root / 'Apostrophe.vue'))

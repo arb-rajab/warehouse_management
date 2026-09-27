@@ -63,9 +63,7 @@ class ProductController extends Controller
         $products = Product::query()
             ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
-            ->with(['barcodes' => fn (Builder $query) => $query
-                ->select(['id', 'product_id', 'barcode'])
-                ->orderBy('id')])
+            ->with('barcodes:id,product_id,barcode')
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
             ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
