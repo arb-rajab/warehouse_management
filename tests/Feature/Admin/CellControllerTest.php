@@ -667,6 +667,61 @@ test('an authenticated user can export a QR code image for a single cell', funct
     expect($svg)->toContain('font-size="64"');
 });
 
+test('a single-cell QR export draws a downward-pointing triangle for the lowest level of a multi-level row', function () {
+    // The row has no Setting, so Setting::current() defaults to
+    // qr_code_width=850 (Setting::DEFAULT_QR_CODE_WIDTH) — the polygon's
+    // points are pinned to that width (see BuildsCellQrLabels::withLevelArrow()):
+    // size=16 (LABEL_PADDING-4), right=846, left=830, top=2, bottom=18.
+    // A downward-pointing triangle has its single tip point on the bottom.
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 1)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="830,2 846,2 838,18" fill="#111111"/>');
+});
+
+test('a single-cell QR export draws an upward-pointing triangle for the highest level of a multi-level row', function () {
+    // Same geometry as the down-triangle test above, mirrored: an
+    // upward-pointing triangle has its single tip point on top.
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 3)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="838,2 830,18 846,18" fill="#111111"/>');
+});
+
+test('a single-cell QR export draws no level triangle for a middle level', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->not->toContain('<polygon');
+});
+
+test('a single-cell QR export draws no level triangle when the row has only one level', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->not->toContain('<polygon');
+});
+
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);

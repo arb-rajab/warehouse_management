@@ -14,6 +14,15 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 trait BuildsQrLabels
 {
     /**
+     * The blank margin around the label's content on every side, and — more
+     * specifically for BuildsCellQrLabels::withLevelArrow() — the height of
+     * the always-blank strip above the QR that a level-arrow triangle is
+     * spliced into. Exposed as a constant (rather than a literal duplicated
+     * in that trait) so both stay in lockstep if this ever changes.
+     */
+    private const int LABEL_PADDING = 20;
+
+    /**
      * The QR's own SVG markup, minus its outer `<svg>` wrapper, for splicing
      * straight into qrLabelImage()'s label SVG. It can't be referenced from
      * there as a nested `<image href="data:image/svg+xml...">` instead:
@@ -223,7 +232,7 @@ trait BuildsQrLabels
      */
     private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false): string
     {
-        $padding = 20;
+        $padding = self::LABEL_PADDING;
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
         $qrX = $padding;

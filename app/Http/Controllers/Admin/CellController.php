@@ -96,10 +96,10 @@ class CellController extends Controller
 
     public function exportQr(Cell $cell): HttpResponse
     {
-        $cell->loadMissing('row:id,letter');
+        $cell->loadMissing('row:id,letter,flats_count');
         $setting = Setting::current();
 
-        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height))
+        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height, $cell->row->flats_count))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }
