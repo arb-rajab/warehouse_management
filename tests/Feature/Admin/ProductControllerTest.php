@@ -125,6 +125,7 @@ test('the products index ships both raw name columns under the Arabic panel loca
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
+                ->where('barcodes', [])
             )
     );
 
