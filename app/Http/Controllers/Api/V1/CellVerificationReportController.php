@@ -23,6 +23,7 @@ class CellVerificationReportController extends Controller
         'reportedProduct.thumbnailUpload:id,file_name,external_link',
         'reportedProduct.setting:product_id,boxes_count',
         'user:id,name',
+        'acceptedBy:id,name',
     ];
 
     public function __construct(private readonly CellVerificationService $cellVerifications) {}

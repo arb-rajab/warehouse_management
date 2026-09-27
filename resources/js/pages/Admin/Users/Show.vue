@@ -10,6 +10,7 @@ import {
     show as showUser,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -160,6 +161,11 @@ function onReportsPerPageChange(perPage: number): void {
                     <td class="px-4 py-2">
                         <CellVerificationCorrectnessBadge
                             :is-correct="report.is_correct"
+                        />
+                        <CellVerificationAcceptedNote
+                            v-if="report.accepted_at"
+                            :accepted-at="report.accepted_at"
+                            :accepted-by="report.accepted_by"
                         />
                     </td>
                     <td class="px-4 py-2">

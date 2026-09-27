@@ -22,6 +22,11 @@ return [
     'verification_round_completed' => 'تم إكمال جولة الجرد هذه بالفعل.',
     'rows_already_in_active_round' => 'هذه الممرات يجري جردها بالفعل في جولة أخرى: :rows',
     'cell_outside_round_rows' => 'هذا الموقع ليس ضمن الممرات التي تغطيها هذه الجولة.',
+    'verification_report_already_correct' => 'هذا التقرير مطابق للنظام، فلا يوجد ما يمكن اعتماده.',
+    'verification_report_already_accepted' => 'تم اعتماد هذا التقرير بالفعل.',
+    'verification_report_incomplete' => 'لم يعد هذا التقرير يحتوي على التفاصيل اللازمة لتحديث الموقع.',
+    'cell_changed_since_verification_report' => 'تغيّر هذا الموقع منذ جرده، لذا لم يعد بالإمكان تطبيق الحالة المُبلغ عنها.',
+    'verification_report_accepted_note' => 'تم الاعتماد من تقرير الجرد رقم :id',
     'qr_label_product_id' => 'المعرف: :id',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
 ];

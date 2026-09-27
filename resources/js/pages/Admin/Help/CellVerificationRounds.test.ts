@@ -2,8 +2,12 @@ import { Head } from '@inertiajs/vue3';
 import { Download } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
+import HelpUiPreview from '@/components/HelpUiPreview.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
+import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import CellVerificationRounds from './CellVerificationRounds.vue';
@@ -54,6 +58,7 @@ describe('Help CellVerificationRounds', () => {
         expect(headings).toEqual([
             t('help.cellVerificationRounds.what.heading'),
             t('help.cellVerificationRounds.reports.heading'),
+            t('help.cellVerificationRounds.accepting.heading'),
             t('help.cellVerificationRounds.exporting.heading'),
         ]);
     });
@@ -74,6 +79,30 @@ describe('Help CellVerificationRounds', () => {
         );
         expect(wrapper.text()).toContain(
             t('help.cellVerificationRounds.exporting.body'),
+        );
+    });
+
+    it('explains accepting a reported state and previews the real accept button and accepted note, non-interactively', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('help.cellVerificationRounds.accepting.body'),
+        );
+
+        const preview = wrapper
+            .findAllComponents(HelpUiPreview)
+            .find((p) =>
+                p.findComponent(CellVerificationAcceptButton).exists(),
+            );
+        expect(preview?.attributes('inert')).toBeDefined();
+        expect(preview?.text()).toContain(t('cellVerificationReport.accept'));
+
+        const note = preview!.getComponent(CellVerificationAcceptedNote);
+        expect(note.props('acceptedBy')).toEqual({ id: 1, name: 'Admin' });
+        expect(note.text()).toContain(
+            t('cellVerificationReport.acceptedOn', {
+                date: formatDateTime('2026-01-02T09:30:00Z'),
+            }),
         );
     });
 

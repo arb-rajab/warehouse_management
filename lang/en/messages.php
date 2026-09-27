@@ -22,6 +22,11 @@ return [
     'verification_round_completed' => 'This verification round has already been completed.',
     'rows_already_in_active_round' => 'These rows are already being verified in another round: :rows',
     'cell_outside_round_rows' => 'This slot is not in one of the rows this round covers.',
+    'verification_report_already_correct' => 'This report matched the system, so there is nothing to accept.',
+    'verification_report_already_accepted' => 'This report has already been accepted.',
+    'verification_report_incomplete' => 'This report no longer has the details needed to update the slot.',
+    'cell_changed_since_verification_report' => 'This slot has changed since it was verified, so the reported state can no longer be applied.',
+    'verification_report_accepted_note' => 'Accepted from verification report #:id',
     'qr_label_product_id' => 'ID: :id',
     'password_same_as_current' => 'The new password must be different from your current password.',
 ];

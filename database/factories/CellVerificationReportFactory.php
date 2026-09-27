@@ -36,6 +36,8 @@ class CellVerificationReportFactory extends Factory
             'reported_boxes_count' => null,
             'reported_expiration_date' => null,
             'note' => null,
+            'accepted_at' => null,
+            'accepted_by' => null,
         ];
     }
 
@@ -51,6 +53,14 @@ class CellVerificationReportFactory extends Factory
             'reported_product_id' => null,
             'reported_boxes_count' => null,
             'reported_expiration_date' => null,
+        ]);
+    }
+
+    public function accepted(): static
+    {
+        return $this->incorrect()->state(fn (array $attributes): array => [
+            'accepted_at' => now(),
+            'accepted_by' => User::factory(),
         ]);
     }
 }

@@ -14,3 +14,11 @@ export function confirmDelete(label: string): boolean {
 export function confirmLogout(): boolean {
     return confirm(t('nav.confirmLogout'));
 }
+
+/**
+ * Ask before accepting a verification report, which rewrites what the system
+ * holds for `slot` (e.g. `A3·2`) to match what the worker reported.
+ */
+export function confirmAcceptVerificationReport(slot: string): boolean {
+    return confirm(t('cellVerificationReport.acceptConfirm', { slot }));
+}

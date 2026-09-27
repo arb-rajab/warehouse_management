@@ -384,6 +384,9 @@ export interface CellVerificationReport {
     reported: CellVerificationSnapshot;
     note: string | null;
     user: UserSummary;
+    /** Set once an admin accepted the reported state; the discrepancy itself stays as reported. */
+    accepted_at: string | null;
+    accepted_by: UserSummary | null;
     created_at: string;
 }
 
