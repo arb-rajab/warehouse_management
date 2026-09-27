@@ -1050,6 +1050,16 @@ watch(
                     </button>
                 </div>
 
+                <!--
+                    mapContentEl uses w-max: as a block-level flex container its
+                    width would otherwise default to filling viewportEl (auto =
+                    fill available width, unlike height:auto which already
+                    shrink-wraps content), so its own getBoundingClientRect()/
+                    offsetWidth would report the container's width instead of
+                    the map's actual cell-grid width — breaking fitMapToView's
+                    zoom-to-fit and updateViewportBounds' pan clamp, both of
+                    which read this element's size.
+                -->
                 <div
                     v-if="viewMode === '2d'"
                     ref="viewportEl"
@@ -1065,7 +1075,7 @@ watch(
                 >
                     <div
                         ref="mapContentEl"
-                        class="flex gap-6 p-2 ease-out"
+                        class="flex w-max gap-6 p-2 ease-out"
                         :class="[
                             orientation.bandsAsColumns
                                 ? 'flex-row'

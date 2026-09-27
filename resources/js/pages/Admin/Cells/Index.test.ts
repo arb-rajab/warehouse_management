@@ -1392,6 +1392,21 @@ describe('Cells Index (warehouse map)', () => {
         expect(bandLabelAtEnd(wrapper)).toBe(true);
     });
 
+    it('keeps the map content shrink-wrapped to its own width instead of filling the viewport', () => {
+        // A block-level flex container defaults width:auto to filling its
+        // parent (viewportEl) rather than shrink-wrapping its cells, which
+        // would make getBoundingClientRect()/offsetWidth report the
+        // viewport's width instead of the map's real cell-grid width —
+        // silently breaking fitMapToView's zoom-to-fit (it would only ever
+        // fit the row/column count, never the cells within a row) and the
+        // pan-bounds clamp. w-max is what keeps that measurement accurate.
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        expect(
+            wrapper.get('[data-testid="map-viewport"] > div').classes(),
+        ).toContain('w-max');
+    });
+
     it('shrinks the map to fit entirely inside the viewport via the fit-to-view button', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
 
