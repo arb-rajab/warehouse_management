@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -8,6 +8,7 @@ import {
     CircleDashed,
     Clock,
     PackageOpen,
+    PackageX,
     SlidersHorizontal,
     TriangleAlert,
 } from '@lucide/vue';
@@ -57,6 +58,18 @@ interface LowStockStats {
     count: number;
 }
 
+interface InactiveInWarehouseProduct {
+    id: number;
+    name: string;
+    ar_name: string;
+    pallets_count: number;
+}
+
+interface InactiveInWarehouseStats {
+    count: number;
+    products: InactiveInWarehouseProduct[];
+}
+
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
@@ -67,6 +80,7 @@ const props = defineProps<{
         };
         stale: StaleDayWindow;
         low_stock: LowStockStats;
+        inactive_in_warehouse: InactiveInWarehouseStats;
         activity_today: {
             stored: number;
             opened: number;
@@ -399,6 +413,59 @@ function onProductIdsChange(ids: string[]): void {
                     tone="danger"
                     :icon="TriangleAlert"
                 />
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.inactiveInWarehouse.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.inactiveInWarehouse.count')"
+                    :value="props.stats.inactive_in_warehouse.count"
+                    :href="productsIndex().url"
+                    :query="{ inactive: true, ...productQuery }"
+                    tone="warning"
+                    :icon="PackageX"
+                >
+                    <template #footer>
+                        <ul
+                            v-if="
+                                props.stats.inactive_in_warehouse.products
+                                    .length > 0
+                            "
+                            class="mt-2 space-y-1 text-sm"
+                        >
+                            <li
+                                v-for="product in props.stats
+                                    .inactive_in_warehouse.products"
+                                :key="product.id"
+                            >
+                                <Link
+                                    :href="productsIndex().url"
+                                    :data="{ product_id: [product.id] }"
+                                    method="get"
+                                    class="flex items-center justify-between gap-2 text-gray-600 hover:underline dark:text-neutral-300"
+                                >
+                                    <span class="truncate">{{
+                                        product.name
+                                    }}</span>
+                                    <span
+                                        class="shrink-0 text-gray-400 dark:text-neutral-500"
+                                        >{{ product.pallets_count }}</span
+                                    >
+                                </Link>
+                            </li>
+                        </ul>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-gray-500 dark:text-neutral-400"
+                        >
+                            {{ t('dashboard.inactiveInWarehouse.empty') }}
+                        </p>
+                    </template>
+                </DashboardStatTile>
             </div>
         </section>
 
