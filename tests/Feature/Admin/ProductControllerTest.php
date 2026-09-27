@@ -399,19 +399,21 @@ test('the expired/expiring-soon pallet subqueries compare expiration_date direct
     Carbon::setTestNow();
 });
 
-test('the inactive filter narrows the products index to the store admin\'s deactivated products, regardless of cell occupancy', function () {
+test('the inactive filter narrows the products index to the store admin\'s deactivated products that still occupy the warehouse, excluding a deactivated product with no pallets', function () {
     actingAsAdmin();
 
-    // Deactivated but still occupying a cell — proves `inactive` reads
-    // `published`, not occupancy (see .ai/rules/shared-database.md).
-    $inactive = Product::factory()->inactive()->create();
-    Pallet::factory()->create(['product_id' => $inactive->id]);
+    // Deactivated and still occupying a cell — the only case the filter matches.
+    $inactiveInWarehouse = Product::factory()->inactive()->create();
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
 
-    // Active but with zero pallets — would look "inactive" under an
-    // occupancy-based definition, and must NOT be matched.
-    $activeNoPallets = Product::factory()->create();
+    // Noise: deactivated but never stocked — must NOT be matched, since it
+    // isn't actionable warehouse-side (nothing there to pull or reconcile).
+    Product::factory()->inactive()->create();
 
-    // Noise: another active product that also occupies a cell.
+    // Noise: active but with zero pallets.
+    Product::factory()->create();
+
+    // Noise: active product that occupies a cell.
     $activeWithPallet = Product::factory()->create();
     Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
 
@@ -419,7 +421,7 @@ test('the inactive filter narrows the products index to the store admin\'s deact
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 1)
-            ->where('products.data.0.id', $inactive->id)
+            ->where('products.data.0.id', $inactiveInWarehouse->id)
             ->where('products.data.0.active', false)
     );
 });

@@ -287,6 +287,26 @@ class Product extends Model
     }
 
     /**
+     * Scope a query to products that currently have at least one pallet
+     * somewhere in the warehouse. `pallets.cell_id` is non-nullable and
+     * unique (see Pallet's docblock), so every pallet row is inherently "in
+     * a cell" — this reduces to "has at least one pallet row", with no
+     * cell-state check needed.
+     *
+     * Shared by the admin products index's `inactive` filter
+     * (`Admin\ProductController::index()`) and the dashboard's
+     * inactive-in-warehouse count (`BuildsDashboardStats`), so the two
+     * "in the warehouse" definitions can never drift apart.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function inWarehouse(EloquentBuilder $query): void
+    {
+        $query->whereExists(Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id'));
+    }
+
+    /**
      * Apply the product name search to a *query* builder rather than an
      * Eloquent one.
      *

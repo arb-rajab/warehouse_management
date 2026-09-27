@@ -71,23 +71,7 @@ const stats = {
     },
     stale: { days: 30, count: 5 },
     low_stock: { count: 4 },
-    inactive_in_warehouse: {
-        count: 2,
-        products: [
-            {
-                id: 3,
-                name: 'Old Widgets',
-                ar_name: 'ودجات قديمة',
-                pallets_count: 2,
-            },
-            {
-                id: 4,
-                name: 'Discontinued Gadgets',
-                ar_name: 'أدوات متوقفة',
-                pallets_count: 1,
-            },
-        ],
-    },
+    inactive_in_warehouse: { count: 2 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
     activity_week: { stored: 20, opened: 8, emptied: 4, transferred: 9 },
 };
@@ -100,7 +84,6 @@ const products = [
 function mountPage(
     overrides: {
         filters?: { product_id: number[] | null };
-        stats?: typeof stats;
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -110,7 +93,7 @@ function mountPage(
 
     return mount(Index, {
         props: {
-            stats: overrides.stats ?? stats,
+            stats,
             today: '2026-08-13',
             weekStart: '2026-08-10',
             filters: overrides.filters ?? { product_id: null },
@@ -511,34 +494,6 @@ describe('Dashboard Index', () => {
             { inactive: true, product_id: [1, 2] },
         );
         expect(tile?.exists()).toBe(true);
-    });
-
-    it('lists each inactive-in-warehouse product with a link filtered to that product', () => {
-        const wrapper = mountPage();
-
-        const productLink = wrapper
-            .findAll('a')
-            .find(
-                (a) =>
-                    a.attributes('data-query') ===
-                    JSON.stringify({ product_id: [3] }),
-            );
-        expect(productLink?.text()).toContain('Old Widgets');
-        expect(productLink?.text()).toContain('2');
-        expect(productLink?.attributes('href')).toBe('/admin/products');
-    });
-
-    it('shows an empty state when no inactive products are in the warehouse', () => {
-        const wrapper = mountPage({
-            stats: {
-                ...stats,
-                inactive_in_warehouse: { count: 0, products: [] },
-            },
-        });
-
-        expect(wrapper.text()).toContain(
-            t('dashboard.inactiveInWarehouse.empty'),
-        );
     });
 
     it('renders the low-stock tile linking to the products page filtered to low_stock=true', () => {

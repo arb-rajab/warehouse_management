@@ -487,8 +487,7 @@
         },
         "inactiveInWarehouse": {
             "title": "Inactive products in warehouse",
-            "count": "Inactive products with stock",
-            "empty": "No inactive products currently in the warehouse"
+            "count": "Inactive products with stock"
         },
         "activityToday": {
             "title": "Today's activity"
