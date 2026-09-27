@@ -481,9 +481,12 @@ function incorrectReportOnFreshCell(array $reportAttributes): array
  */
 function palletInCell(Cell $cell, CellState $state, array $attributes): Pallet
 {
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id, ...$attributes]);
+
+    // After create(): PalletFactory's afterCreating hook resets the cell to Full.
     $cell->update(['state' => $state]);
 
-    return Pallet::factory()->create(['cell_id' => $cell->id, ...$attributes]);
+    return $pallet;
 }
 
 test('accepting a report of an empty cell empties the stored pallet and records the acceptance without touching the discrepancy', function () {
