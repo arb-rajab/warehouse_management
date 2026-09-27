@@ -439,7 +439,9 @@ describe('CellStatusLogs Index', () => {
 
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links).toHaveLength(1);
-        expect(links[0].attributes('href')).toBe('/admin/rows/A');
+        expect(links[0].attributes('href')).toBe(
+            '/admin/rows/A?cell_number=3&flat_number=2',
+        );
         expect(links[0].text()).toContain('A3·2');
     });
 
@@ -458,8 +460,8 @@ describe('CellStatusLogs Index', () => {
 
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links.map((a) => a.attributes('href'))).toEqual([
-            '/admin/rows/A',
-            '/admin/rows/B',
+            '/admin/rows/A?cell_number=3&flat_number=2',
+            '/admin/rows/B?cell_number=1&flat_number=1',
         ]);
         expect(links.map((a) => a.text())).toEqual(['A3·2', 'B1·1']);
     });
@@ -479,8 +481,8 @@ describe('CellStatusLogs Index', () => {
 
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links.map((a) => a.attributes('href'))).toEqual([
-            '/admin/rows/A',
-            '/admin/rows/B',
+            '/admin/rows/A?cell_number=3&flat_number=2',
+            '/admin/rows/B?cell_number=1&flat_number=1',
         ]);
         expect(links.map((a) => a.text())).toEqual(['A3·2', 'B1·1']);
     });

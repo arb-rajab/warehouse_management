@@ -390,7 +390,19 @@ const actionError = computed(
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink :href="showRow({ letter: row.cell.row_letter })">
+                    <TableLink
+                        :href="
+                            showRow(
+                                { letter: row.cell.row_letter },
+                                {
+                                    query: {
+                                        cell_number: row.cell.cell_number,
+                                        flat_number: row.cell.flat_number,
+                                    },
+                                },
+                            )
+                        "
+                    >
                         {{
                             formatSlot(
                                 row.cell.row_letter,

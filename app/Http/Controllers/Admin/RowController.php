@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ShowRowRequest;
 use App\Http\Requests\StoreRowRequest;
 use App\Http\Requests\UpdateRowRequest;
 use App\Http\Resources\CellResource;
@@ -52,8 +53,11 @@ class RowController extends Controller
         return redirect()->route('admin.rows.show', $row);
     }
 
-    public function show(Row $row): Response
+    public function show(ShowRowRequest $request, Row $row): Response
     {
+        $cellNumber = $request->integer('cell_number') ?: null;
+        $flatNumber = $request->integer('flat_number') ?: null;
+
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row->loadHasPallets()),
             'rows' => Row::mapOptions(),
@@ -68,6 +72,11 @@ class RowController extends Controller
             'filterOptions' => [
                 'products' => Product::selectedOptions(),
             ],
+            'linkedCell' => $cellNumber !== null && $flatNumber !== null ? [
+                'row_letter' => $row->letter,
+                'cell_number' => $cellNumber,
+                'flat_number' => $flatNumber,
+            ] : null,
         ]);
     }
 

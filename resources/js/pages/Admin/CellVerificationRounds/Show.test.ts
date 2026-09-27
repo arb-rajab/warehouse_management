@@ -388,7 +388,9 @@ describe('CellVerificationRounds Show', () => {
         ]);
 
         const link = rowCells(wrapper)[0].get('a');
-        expect(link.attributes('href')).toBe('/admin/rows/A');
+        expect(link.attributes('href')).toBe(
+            '/admin/rows/A?cell_number=3&flat_number=2',
+        );
         expect(link.text()).toContain(formatSlot('A', 3, 2));
     });
 
