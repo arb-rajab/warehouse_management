@@ -1423,6 +1423,67 @@ describe('Cells Index (warehouse map)', () => {
         getBoundingClientRectSpy.mockRestore();
     });
 
+    it('does not pan to center cell A1 when resetting or fitting the view, unlike rotation', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+        // centerLabelInViewport() looks up its target via `document.querySelector`,
+        // so the mounted tree needs to be attached to the document for that to
+        // find anything (vue-test-utils mounts detached by default).
+        document.body.appendChild(wrapper.element);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return {
+                        left: 0,
+                        top: 0,
+                        width: 700,
+                        height: 600,
+                    } as DOMRect;
+                }
+
+                if (
+                    this.getAttribute('data-slot-label') ===
+                    formatSlot('A', 1, 1)
+                ) {
+                    return {
+                        left: 500,
+                        top: 400,
+                        width: 100,
+                        height: 80,
+                    } as DOMRect;
+                }
+
+                return { left: 0, top: 0, width: 0, height: 0 } as DOMRect;
+            });
+
+        const transform = () =>
+            wrapper
+                .get('[data-testid="map-viewport"] > div')
+                .attributes('style');
+
+        await wrapper
+            .get(`[title="${t('cells.map.resetView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(0px, 0px)');
+
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(0px, 0px)');
+
+        // Rotation still recenters on A1, so it remains free to pan away from
+        // translate(0px, 0px) given the mismatched container/target rects above.
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+        await flushPromises();
+        expect(transform()).not.toContain('translate(0px, 0px)');
+
+        getBoundingClientRectSpy.mockRestore();
+        wrapper.element.remove();
+    });
+
     it('zooms via a wheel event on the map viewport', async () => {
         const wrapper = mountPage([row()], []);
 
