@@ -384,6 +384,8 @@ export interface CellVerificationReport {
     reported: CellVerificationSnapshot;
     note: string | null;
     user: UserSummary;
+    /** Whether the report's round is finished — absent where the round isn't loaded (the mobile report response). */
+    round_completed?: boolean;
     /** Set once an admin accepted the reported state; the discrepancy itself stays as reported. */
     accepted_at: string | null;
     accepted_by: UserSummary | null;

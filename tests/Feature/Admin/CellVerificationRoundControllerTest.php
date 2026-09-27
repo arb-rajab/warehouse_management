@@ -208,6 +208,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                     ->where('id', $reporter->id)
                     ->where('name', 'Ada Reporter')
                 )
+                ->where('round_completed', false)
                 ->where('accepted_at', null)
                 ->where('accepted_by', null)
                 ->where('created_at', $report->created_at->toIso8601String())
@@ -236,6 +237,7 @@ test('an accepted report on a round ships when and by whom it was accepted, alon
             ->where('reports.data.0.is_correct', false)
             ->where('reports.data.0.expected.cell_state', 'full')
             ->where('reports.data.0.reported.cell_state', 'empty')
+            ->where('reports.data.0.round_completed', true)
             ->where('reports.data.0.accepted_at', $report->fresh()->accepted_at->toIso8601String())
             ->where('reports.data.0.accepted_by', ['id' => $acceptedBy->id, 'name' => 'Zoe Admin'])
     );
@@ -614,6 +616,52 @@ test('accepting a report keeps the rounds filters and page on the redirect', fun
     $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept?is_correct=0&page=2");
 
     $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}?is_correct=0&page=2");
+});
+
+test('accepting a report from its reporters page redirects back there, keeping that pages query', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept?reports_page=2", ['return_to' => 'user']);
+
+    $response->assertRedirect("/admin/users/{$report->user_id}?reports_page=2");
+    $response->assertSessionHasNoErrors();
+    expect($report->fresh()->accepted_at)->not->toBeNull();
+});
+
+test('a refused accept from the reporters page shows its error back on that page', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'is_correct' => true,
+        'expected_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept", ['return_to' => 'user']);
+
+    $response->assertRedirect("/admin/users/{$report->user_id}");
+    $response->assertSessionHasErrors(['action' => __('messages.verification_report_already_correct')]);
+});
+
+test('accepting a report with an unknown return_to is rejected without changing anything', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept", ['return_to' => 'dashboard']);
+
+    $response->assertSessionHasErrors('return_to');
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+    expect($report->fresh()->accepted_at)->toBeNull();
 });
 
 test('a report cannot be accepted twice', function () {
