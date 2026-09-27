@@ -7,6 +7,7 @@ import {
     viewportTransform,
     zoomFromPinch,
     zoomFromWheelDelta,
+    zoomToFit,
     ZOOM_MAX,
     ZOOM_MIN,
 } from './mapViewport';
@@ -85,6 +86,53 @@ describe('zoomFromPinch', () => {
     });
 });
 
+describe('zoomToFit', () => {
+    it('shrinks to fit content that overflows the container on both axes', () => {
+        expect(
+            zoomToFit(
+                { width: 1000, height: 800 },
+                { width: 700, height: 600 },
+            ),
+        ).toBe(0.7);
+    });
+
+    it('shrinks by the more constraining axis when only one overflows', () => {
+        expect(
+            zoomToFit(
+                { width: 1000, height: 200 },
+                { width: 500, height: 500 },
+            ),
+        ).toBe(0.5);
+    });
+
+    it('never zooms in past 100% just because the content is smaller than the container', () => {
+        expect(
+            zoomToFit({ width: 100, height: 100 }, { width: 500, height: 500 }),
+        ).toBe(1);
+    });
+
+    it('fits exactly when content and container are the same size', () => {
+        expect(
+            zoomToFit({ width: 400, height: 300 }, { width: 400, height: 300 }),
+        ).toBe(1);
+    });
+
+    it('clamps the result to the minimum zoom', () => {
+        expect(
+            zoomToFit(
+                { width: 10000, height: 10000 },
+                { width: 100, height: 100 },
+            ),
+        ).toBe(ZOOM_MIN);
+    });
+
+    it('falls back to 100% zoom for a zero-sized content box', () => {
+        expect(
+            zoomToFit({ width: 0, height: 0 }, { width: 500, height: 500 }),
+        ).toBe(1);
+    });
+});
+
 describe('viewportTransform', () => {
     it('renders translate and scale in that order, ignoring rotation', () => {
         expect(
@@ -144,6 +192,16 @@ describe('useMapViewport', () => {
         expect(viewport.state.panY).toBe(0);
         expect(viewport.state.zoom).toBe(1);
         expect(viewport.state.rotation).toBe(90);
+    });
+
+    it('setZoom() sets an arbitrary zoom, clamped to the zoom bounds', () => {
+        const viewport = useMapViewport();
+
+        viewport.setZoom(0.3);
+        expect(viewport.state.zoom).toBe(ZOOM_MIN);
+
+        viewport.setZoom(1.75);
+        expect(viewport.state.zoom).toBe(1.75);
     });
 
     it('rotateLeft()/rotateRight() recenter pan but keep the current zoom', () => {

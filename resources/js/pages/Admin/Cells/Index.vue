@@ -13,6 +13,7 @@ import {
     Orbit,
     RotateCcw,
     RotateCw,
+    Scan,
     Search,
     ZoomIn,
     ZoomOut,
@@ -56,6 +57,7 @@ import {
     mapOrientation,
     useMapViewport,
     viewportTransform,
+    zoomToFit,
 } from '@/lib/mapViewport';
 import type {
     Cell,
@@ -502,6 +504,7 @@ const viewportZoomPercent = computed(() =>
     Math.round(viewport.state.zoom * 100),
 );
 const viewportEl = ref<HTMLElement | null>(null);
+const mapContentEl = ref<HTMLElement | null>(null);
 
 const viewMode = ref<'2d' | '3d'>('2d');
 const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
@@ -683,6 +686,35 @@ async function resetViewAndRecenter(): Promise<void> {
     }
 
     await recenterInstantly(() => viewport.reset());
+}
+
+/**
+ * Shrinks the map so the whole thing fits inside the viewport with no
+ * scrolling/panning needed, measuring the content's unscaled size (dividing
+ * its current, already-scaled bounding box by the current zoom) against the
+ * viewport container's size.
+ */
+async function fitMapToView(): Promise<void> {
+    const container = viewportEl.value;
+    const content = mapContentEl.value;
+
+    if (!container || !content) {
+        return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    const currentZoom = viewport.state.zoom;
+
+    const fittedZoom = zoomToFit(
+        {
+            width: contentRect.width / currentZoom,
+            height: contentRect.height / currentZoom,
+        },
+        { width: containerRect.width, height: containerRect.height },
+    );
+
+    await recenterInstantly(() => viewport.setZoom(fittedZoom));
 }
 
 watch(
@@ -929,6 +961,14 @@ watch(
                         >
                             <RotateCw class="h-4 w-4" />
                         </button>
+                        <button
+                            type="button"
+                            :title="t('cells.map.fitToView')"
+                            :class="mapToolbarButtonClass"
+                            @click="fitMapToView"
+                        >
+                            <Scan class="h-4 w-4" />
+                        </button>
                     </template>
                     <button
                         type="button"
@@ -967,6 +1007,7 @@ watch(
                     @pointerleave="viewport.onPointerUp"
                 >
                     <div
+                        ref="mapContentEl"
                         class="flex gap-6 p-2 ease-out"
                         :class="[
                             orientation.bandsAsColumns

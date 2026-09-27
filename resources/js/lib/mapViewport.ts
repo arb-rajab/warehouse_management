@@ -23,6 +23,31 @@ export function clampZoom(zoom: number): number {
     return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
 }
 
+export interface Size {
+    width: number;
+    height: number;
+}
+
+/**
+ * The zoom that fits `contentSize` entirely inside `containerSize` (shrinking
+ * only — never zooms past 100% just because the content is smaller than the
+ * container), clamped to the same [ZOOM_MIN, ZOOM_MAX] bounds as every other
+ * zoom change.
+ */
+export function zoomToFit(contentSize: Size, containerSize: Size): number {
+    if (contentSize.width <= 0 || contentSize.height <= 0) {
+        return clampZoom(1);
+    }
+
+    return clampZoom(
+        Math.min(
+            1,
+            containerSize.width / contentSize.width,
+            containerSize.height / contentSize.height,
+        ),
+    );
+}
+
 /**
  * Wraps a rotation into [0, 360) — e.g. -90 becomes 270, 450 becomes 90.
  */
@@ -111,6 +136,10 @@ export function useMapViewport() {
 
     function zoomOut(): void {
         state.zoom = clampZoom(state.zoom - ZOOM_STEP);
+    }
+
+    function setZoom(zoom: number): void {
+        state.zoom = clampZoom(zoom);
     }
 
     function rotateLeft(): void {
@@ -202,6 +231,7 @@ export function useMapViewport() {
         state: readonly(state),
         zoomIn,
         zoomOut,
+        setZoom,
         rotateLeft,
         rotateRight,
         reset,
