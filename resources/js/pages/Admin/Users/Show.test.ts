@@ -1,7 +1,9 @@
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
 import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -62,6 +64,7 @@ function mountPage(
 describe('Users Show', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        vi.unstubAllGlobals();
     });
 
     it('shows the users name in the title', () => {
@@ -388,8 +391,103 @@ describe('Users Show', () => {
         expect(
             unacceptedCell.findComponent(CellVerificationAcceptedNote).exists(),
         ).toBe(false);
-        // Accepting happens from the round's own page, not here.
-        expect(unacceptedCell.find('button').exists()).toBe(false);
+        // Accepted reports show the note instead of the button.
+        expect(
+            acceptedCell.findComponent(CellVerificationAcceptButton).exists(),
+        ).toBe(false);
+    });
+
+    it('offers to accept only an unaccepted incorrect report whose round is completed', () => {
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({ id: 1, is_correct: true }),
+            cellVerificationReport({ id: 2, is_correct: false }),
+            cellVerificationReport({
+                id: 3,
+                is_correct: false,
+                round_completed: false,
+            }),
+        ]);
+
+        const rows = wrapper.findAll('table')[1].findAll('tbody tr');
+        const hasAcceptButton = (index: number): boolean =>
+            rows[index]
+                .findAll('td')[2]
+                .findComponent(CellVerificationAcceptButton)
+                .exists();
+
+        expect(hasAcceptButton(0)).toBe(false);
+        expect(hasAcceptButton(1)).toBe(true);
+        expect(rows[1].findAll('td')[2].text()).toContain(
+            t('cellVerificationReport.accept'),
+        );
+        expect(hasAcceptButton(2)).toBe(false);
+    });
+
+    it('asks for confirmation naming the slot, then accepts the report and returns to this page', async () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({
+                id: 5,
+                is_correct: false,
+                cell: { row_letter: 'B', cell_number: 4, flat_number: 1 },
+            }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            t('cellVerificationReport.acceptConfirm', { slot: 'B4·1' }),
+        );
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-verification-reports/5/accept',
+            { return_to: 'user' },
+            { preserveScroll: true },
+        );
+    });
+
+    it('does not accept the report when the confirmation is cancelled', async () => {
+        vi.stubGlobal('confirm', () => false);
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({ is_correct: false }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(routerPostMock).not.toHaveBeenCalled();
+    });
+
+    it('shows why an accept was refused in the action error banner', () => {
+        usePageMock.mockReturnValue({
+            url: '/admin/users/7',
+            props: defaultAuthProps({
+                errors: {
+                    action: 'This slot has changed since it was verified.',
+                },
+            }),
+        });
+        const wrapper = mount(Show, {
+            props: {
+                user: user(),
+                logs: paginated([]),
+                reports: paginated([]),
+                filters: { per_page: 20, reports_per_page: 20 },
+            },
+        });
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'This slot has changed since it was verified.',
+        );
+    });
+
+    it('renders no action error banner when nothing was refused', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
     it('preselects the current per-page value in the reports page-size selector', () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
@@ -9,7 +9,9 @@ import {
     edit as editUser,
     show as showUser,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
 import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -19,7 +21,11 @@ import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { mergeTransferPairs } from '@/lib/cellStatusLogDisplay';
-import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
+import {
+    acceptReport,
+    canAcceptReport,
+    snapshotProductLabel,
+} from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -44,6 +50,12 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 const currentReportsPerPage = computed(
     () => props.filters.reports_per_page ?? 20,
+);
+
+const page = usePage();
+
+const actionError = computed(
+    () => (page.props.errors as Partial<Record<'action', string>>)?.action,
 );
 
 function viewPalletHistory(palletId: number): void {
@@ -80,6 +92,8 @@ function onReportsPerPageChange(perPage: number): void {
                 {{ t('users.show.editUser') }}
             </Link>
         </PageHeader>
+
+        <ActionErrorBanner :message="actionError" />
 
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">
@@ -166,6 +180,10 @@ function onReportsPerPageChange(perPage: number): void {
                             v-if="report.accepted_at"
                             :accepted-at="report.accepted_at"
                             :accepted-by="report.accepted_by"
+                        />
+                        <CellVerificationAcceptButton
+                            v-else-if="canAcceptReport(report)"
+                            @click="acceptReport(report, 'user')"
                         />
                     </td>
                     <td class="px-4 py-2">

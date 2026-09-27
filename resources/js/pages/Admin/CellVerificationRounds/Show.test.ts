@@ -441,10 +441,15 @@ describe('CellVerificationRounds Show', () => {
         ).toBe(false);
     });
 
-    it('does not offer to accept while the round is still in progress', () => {
+    it('does not offer to accept while the reports round is still in progress', () => {
         const wrapper = mountPage(
             cellVerificationRound({ completed_at: null }),
-            [cellVerificationReport({ is_correct: false })],
+            [
+                cellVerificationReport({
+                    is_correct: false,
+                    round_completed: false,
+                }),
+            ],
         );
 
         expect(
@@ -493,9 +498,10 @@ describe('CellVerificationRounds Show', () => {
                 slot: formatSlot('B', 4, 1),
             }),
         );
+        // No return_to: the backend's default redirect is back to this round.
         expect(routerPostMock).toHaveBeenCalledWith(
             '/admin/cell-verification-reports/5/accept',
-            {},
+            { return_to: null },
             { preserveScroll: true },
         );
     });

@@ -3,7 +3,6 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
-    acceptReport as acceptReportAction,
     exportReports,
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
@@ -26,8 +25,11 @@ import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
-import { confirmAcceptVerificationReport } from '@/lib/confirm';
+import {
+    acceptReport,
+    canAcceptReport,
+    snapshotProductLabel,
+} from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
@@ -152,39 +154,6 @@ const page = usePage();
 const actionError = computed(
     () => (page.props.errors as Partial<Record<'action', string>>)?.action,
 );
-
-/**
- * Only an unaccepted mismatch can be accepted, and only once the round is
- * finished — until then its rows are frozen against every pallet change.
- */
-function canAccept(report: CellVerificationReport): boolean {
-    return (
-        props.round.completed_at !== null &&
-        !report.is_correct &&
-        report.accepted_at === null
-    );
-}
-
-function acceptReport(report: CellVerificationReport): void {
-    const slot = formatSlot(
-        report.cell.row_letter,
-        report.cell.cell_number,
-        report.cell.flat_number,
-    );
-
-    if (!confirmAcceptVerificationReport(slot)) {
-        return;
-    }
-
-    router.post(
-        acceptReportAction(
-            { cellVerificationReport: report.id },
-            { mergeQuery: {} },
-        ).url,
-        {},
-        { preserveScroll: true },
-    );
-}
 </script>
 
 <template>
@@ -441,7 +410,7 @@ function acceptReport(report: CellVerificationReport): void {
                         :accepted-by="row.accepted_by"
                     />
                     <CellVerificationAcceptButton
-                        v-else-if="canAccept(row)"
+                        v-else-if="canAcceptReport(row)"
                         @click="acceptReport(row)"
                     />
                 </td>

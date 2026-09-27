@@ -680,7 +680,7 @@
             },
             "accepting": {
                 "heading": "Accepting what was reported",
-                "body": "When an incorrect report is right about what's really in the cell, use the accept button on that report to update the cell in the system to match it. The report stays marked incorrect, so the mismatch is never lost, and it shows when it was accepted and by whom. A report can only be accepted once, after its round is finished, and only while the cell still holds what the report expected — if the cell has changed since, update it from the warehouse map instead."
+                "body": "When an incorrect report is right about what's really in the cell, use the accept button on that report — on the round's page or on the worker's own page — to update the cell in the system to match it. The report stays marked incorrect, so the mismatch is never lost, and it shows when it was accepted and by whom. A report can only be accepted once, after its round is finished, and only while the cell still holds what the report expected — if the cell has changed since, update it from the warehouse map instead."
             },
             "exporting": {
                 "heading": "Exporting a round's reports",
