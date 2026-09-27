@@ -103,6 +103,7 @@ test('products.id and every product_id FK are declared as signed integers, not b
         ],
         '2026_09_08_000001_create_uploads_table.php' => ["\$table->integer('id')->autoIncrement();"],
         '2026_09_08_000002_create_wms_product_settings_table.php' => ["\$table->integer('product_id')->primary();"],
+        '2026_09_27_000000_create_wms_product_barcodes_table.php' => ["\$table->integer('product_id');"],
     ];
 
     foreach ($columns as $migration => $declarations) {

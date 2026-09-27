@@ -12,6 +12,13 @@ line-based checks, without needing Pint's actual tokenizer:
   - `trailing_comma_in_multiline` for array literals only — a multi-line
     `[...]` whose last element line has no trailing comma before the closing
     `]`
+  - `fully_qualified_strict_types` (partial): a leading-backslash,
+    multi-segment class reference (e.g. `\Illuminate\Database\Eloquent\Collection`)
+    outside a `use` import line — Pint wants this imported and referenced by
+    its short name, in PHPDoc annotations (`@property-read \Foo\Bar $x`) just
+    as much as in a real type-hint. This is exactly what slipped through and
+    failed CI once already (see the `ProductSummaryResource` incident): the
+    stand-in caught everything else in that diff, but not this.
 
 Usage:
     python3 .claude/scripts/php_pint_style.py app/Models/Product.php
@@ -36,12 +43,21 @@ crying wolf):
     last element does not cause a false positive.
   - A `]` closing a multi-line array whose last line is a comment, or that
     itself opens another bracket, is skipped rather than guessed at.
+  - The FQCN check only fires on a *multi-segment* reference (2+ backslashes,
+    e.g. `\App\Models\Product`) — a single-segment global reference like
+    `\Exception` or `\count(` is not flagged, so this under-reports that half
+    of the real fixer rather than risk flagging a global function/constant
+    escape. It also does not check whether a `use` import for that exact
+    class already exists elsewhere in the file (a real duplicate would be a
+    separate, unrelated problem) — it flags the fully-qualified reference
+    itself, which Pint rewrites unconditionally.
 """
 
 import re
 import sys
 
 ARRAY_SYNTAX = re.compile(r'(?<![\w$>:])array\s*\(')
+FQCN_REFERENCE = re.compile(r'(?<!\w)\\[A-Z][A-Za-z0-9_]*(?:\\[A-Za-z0-9_]+)+')
 
 
 def array_syntax_violations(lines: list[str]) -> list[int]:
@@ -105,6 +121,23 @@ def strip_trailing_line_comment(line: str) -> str:
     return line
 
 
+def fully_qualified_reference_violations(lines: list[str]) -> list[int]:
+    """Return line numbers with a leading-backslash, multi-segment class
+    reference (e.g. `\\Illuminate\\Database\\Eloquent\\Collection`) outside a
+    `use` import line — see the module docstring.
+    """
+    found = []
+
+    for n, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if stripped.startswith(('use ', 'namespace ')):
+            continue
+        if FQCN_REFERENCE.search(line):
+            found.append(n)
+
+    return found
+
+
 def array_trailing_comma_violations(lines: list[str]) -> list[int]:
     """Return line numbers of `]` closing a multi-line array with no trailing comma."""
     found = []
@@ -152,6 +185,9 @@ def main(paths: list[str]) -> int:
 
         for number in array_trailing_comma_violations(lines):
             problems.append(f'  {number}: multi-line array missing trailing comma')
+
+        for number in fully_qualified_reference_violations(lines):
+            problems.append(f'  {number}: fully-qualified class reference outside a use import (fully_qualified_strict_types)')
 
         if problems:
             bad_files += 1

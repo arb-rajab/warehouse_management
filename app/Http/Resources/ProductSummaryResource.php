@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ProductBarcode;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +20,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int $opened_cells_count
  * @property-read int $expired_cells_count
  * @property-read int $expiring_soon_count
+ * @property-read Collection<int, ProductBarcode> $barcodes
  */
 class ProductSummaryResource extends JsonResource
 {
@@ -41,6 +44,10 @@ class ProductSummaryResource extends JsonResource
             'opened_cells_count' => (int) $this->opened_cells_count,
             'expired_cells_count' => (int) $this->expired_cells_count,
             'expiring_soon_count' => (int) $this->expiring_soon_count,
+            'barcodes' => $this->barcodes->map(fn (ProductBarcode $barcode): array => [
+                'id' => $barcode->id,
+                'barcode' => $barcode->barcode,
+            ])->all(),
         ];
     }
 }

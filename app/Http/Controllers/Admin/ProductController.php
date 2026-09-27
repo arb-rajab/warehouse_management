@@ -9,6 +9,7 @@ use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
+use App\Http\Requests\Admin\StoreProductBarcodeRequest;
 use App\Http\Requests\Admin\UpdateProductBoxCountRequest;
 use App\Http\Requests\Admin\UpdateProductMinimumPalletsRequest;
 use App\Http\Resources\ProductOptionResource;
@@ -17,6 +18,7 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
@@ -61,6 +63,7 @@ class ProductController extends Controller
         $products = Product::query()
             ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
+            ->with('barcodes:id,product_id,barcode')
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
             ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
@@ -161,6 +164,39 @@ class ProductController extends Controller
 
         $setting->minimum_pallets = $request->input('minimum_pallets');
         $setting->save();
+
+        return $this->redirectPreservingQuery('admin.products.index', $request);
+    }
+
+    /**
+     * Attaches a new barcode to a product. WMS-owned data in
+     * `wms_product_barcodes`, the same as `updateBoxCount()`/
+     * `updateMinimumPallets()` above — see .ai/rules/shared-database.md.
+     *
+     * Redirects to `admin.products.index` rather than `back()` — see
+     * `updateBoxCount()`'s docblock.
+     */
+    public function addBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    {
+        $product->barcodes()->create([
+            'barcode' => $request->string('barcode')->trim()->value(),
+        ]);
+
+        return $this->redirectPreservingQuery('admin.products.index', $request);
+    }
+
+    /**
+     * Detaches a barcode from a product. `$barcode` is route-model-bound
+     * without scoping it to `$product` (Laravel has no built-in nested
+     * scoping for a manually declared route), so the ownership check is
+     * explicit here — without it, an admin could delete any product's
+     * barcode by guessing its id while looking at a different product's row.
+     */
+    public function removeBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
+    {
+        abort_if($barcode->product_id !== $product->id, 404);
+
+        $barcode->delete();
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }

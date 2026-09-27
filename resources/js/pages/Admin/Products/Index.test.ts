@@ -13,10 +13,18 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const { usePageMock, routerGetMock, routerPatchMock } = vi.hoisted(() => ({
+const {
+    usePageMock,
+    routerGetMock,
+    routerPatchMock,
+    routerPostMock,
+    routerDeleteMock,
+} = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
     routerPatchMock: vi.fn(),
+    routerPostMock: vi.fn(),
+    routerDeleteMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -26,7 +34,12 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { get: routerGetMock, patch: routerPatchMock },
+        router: {
+            get: routerGetMock,
+            patch: routerPatchMock,
+            post: routerPostMock,
+            delete: routerDeleteMock,
+        },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -50,6 +63,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         opened_cells_count: 1,
         expired_cells_count: 0,
         expiring_soon_count: 0,
+        barcodes: [],
         ...overrides,
     };
 }
@@ -104,7 +118,13 @@ async function openFilters(
 
 describe('Products Index', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock, routerPatchMock });
+        resetMocks({
+            usePageMock,
+            routerGetMock,
+            routerPatchMock,
+            routerPostMock,
+            routerDeleteMock,
+        });
     });
 
     afterEach(() => {
@@ -128,6 +148,7 @@ describe('Products Index', () => {
             t('products.columns.product'),
             t('products.columns.boxesPerPallet'),
             t('products.columns.minimumPallets'),
+            t('products.columns.barcodes'),
             t('products.columns.full'),
             t('products.columns.opened'),
             t('products.columns.expired'),
@@ -622,10 +643,143 @@ describe('Products Index', () => {
         expect(routerPatchMock).not.toHaveBeenCalled();
     });
 
+    it('renders the barcode count as a clickable trigger button', () => {
+        const wrapper = mountPage([
+            product({
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                barcodes: [{ id: 1, barcode: '1234567890123' }],
+            }),
+        ]);
+
+        const button = rowCells(wrapper)[3].get('button');
+        expect(button.text()).toBe('1');
+        expect(button.attributes('aria-label')).toBe(
+            t('products.barcodesLabel', { product: 'Widgets' }),
+        );
+    });
+
+    it('offers no column filter on the barcodes column either', () => {
+        const wrapper = mountPage([]);
+
+        const header = wrapper.findAll('thead th')[3];
+        expect(header.text()).toBe(t('products.columns.barcodes'));
+        expect(header.find('button[title]').exists()).toBe(false);
+    });
+
+    it('opens the barcodes dialog listing every barcode attached to the product', async () => {
+        const wrapper = mountPage([
+            product({
+                barcodes: [
+                    { id: 1, barcode: '1111111111111' },
+                    { id: 2, barcode: '2222222222222' },
+                ],
+            }),
+        ]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+
+        const items = wrapper.findAll('li');
+        expect(items).toHaveLength(2);
+        expect(items[0].text()).toContain('1111111111111');
+        expect(items[1].text()).toContain('2222222222222');
+    });
+
+    it('shows an empty-state message in the barcodes dialog when the product has none', async () => {
+        const wrapper = mountPage([product({ barcodes: [] })]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+
+        expect(wrapper.text()).toContain(t('products.noBarcodes'));
+    });
+
+    it('adds a new barcode, preserving the current page and filters', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/products?state=full&per_page=20',
+        );
+
+        const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+        await wrapper.get('#products-new-barcode').setValue('1234567890123');
+        await wrapper.get('#products-add-barcode-form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/products/42/barcodes?state=full&per_page=20',
+            { barcode: '1234567890123' },
+            expect.objectContaining({
+                preserveScroll: true,
+                preserveState: true,
+            }),
+        );
+
+        window.history.pushState({}, '', '/');
+    });
+
+    it('trims whitespace from a new barcode before submitting', async () => {
+        const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+        await wrapper
+            .get('#products-new-barcode')
+            .setValue('  1234567890123  ');
+        await wrapper.get('#products-add-barcode-form').trigger('submit');
+
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/products/42/barcodes',
+            { barcode: '1234567890123' },
+            expect.anything(),
+        );
+    });
+
+    it('rejects a blank barcode on dialog submit without a round trip', async () => {
+        const wrapper = mountPage([product({ barcodes: [] })]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+        await wrapper.get('#products-new-barcode').setValue('   ');
+        await wrapper.get('#products-add-barcode-form').trigger('submit');
+
+        expect(routerPostMock).not.toHaveBeenCalled();
+    });
+
+    it('removes a barcode, preserving the current page and filters', async () => {
+        window.history.pushState(
+            {},
+            '',
+            '/admin/products?state=full&per_page=20',
+        );
+
+        const wrapper = mountPage([
+            product({
+                id: 42,
+                barcodes: [{ id: 7, barcode: '1234567890123' }],
+            }),
+        ]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+        await wrapper
+            .get(
+                `[aria-label="${t('products.removeBarcode', { barcode: '1234567890123' })}"]`,
+            )
+            .trigger('click');
+
+        expect(routerDeleteMock).toHaveBeenCalledWith(
+            '/admin/products/42/barcodes/7?state=full&per_page=20',
+            expect.objectContaining({
+                preserveScroll: true,
+                preserveState: true,
+            }),
+        );
+
+        window.history.pushState({}, '', '/');
+    });
+
     it('renders the full count linking to the map filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
-        const cell = rowCells(wrapper)[3];
+        const cell = rowCells(wrapper)[4];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -636,7 +790,7 @@ describe('Products Index', () => {
     it('renders the opened count linking to the map filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
-        const cell = rowCells(wrapper)[4];
+        const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -648,7 +802,7 @@ describe('Products Index', () => {
             product({ id: 42, expired_cells_count: 1 }),
         ]);
 
-        const cell = rowCells(wrapper)[5];
+        const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -662,7 +816,7 @@ describe('Products Index', () => {
             { expiringSoonDays: 30 },
         );
 
-        const cell = rowCells(wrapper)[6];
+        const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
         expect(href).toContain('/admin/cells');
@@ -672,7 +826,7 @@ describe('Products Index', () => {
     it('renders a QR export link for the product', () => {
         const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
 
-        const cell = rowCells(wrapper)[7];
+        const cell = rowCells(wrapper)[8];
         const link = cell.get('a');
         expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
         expect(link.attributes('aria-label')).toBe(

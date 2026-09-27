@@ -509,11 +509,17 @@
             "expiringSoon": "Expiring ≤{days}d",
             "boxesPerPallet": "Boxes / pallet",
             "minimumPallets": "Min. pallets",
+            "barcodes": "Barcodes",
             "qr": "QR"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "minimumPalletsLabel": "Minimum pallets for {product}",
         "minimumPalletsPlaceholder": "e.g. 10",
+        "barcodesLabel": "Barcodes for {product}",
+        "addBarcode": "Add barcode",
+        "newBarcodePlaceholder": "Scan or type a barcode…",
+        "removeBarcode": "Remove barcode {barcode}",
+        "noBarcodes": "No barcodes added yet.",
         "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
     },
