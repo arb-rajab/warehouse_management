@@ -37,13 +37,13 @@ trait BuildsCellQrLabels
      * @param  Collection<int, Cell>  $cells
      * @return array<int, array{label: string, labelImage: string}>
      */
-    private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight): array
+    private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight, int $flatsCount): array
     {
         return $cells
             ->map(fn (Cell $cell) => [
                 'label' => Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
                 'labelImage' => 'data:image/svg+xml;base64,'.base64_encode(
-                    $this->cellQrLabelImage($rowLetter, $cell, $qrWidth, $qrHeight)
+                    $this->cellQrLabelImage($rowLetter, $cell, $qrWidth, $qrHeight, $flatsCount)
                 ),
             ])
             ->all();
@@ -54,10 +54,13 @@ trait BuildsCellQrLabels
      * expanded to fill the space a description line would otherwise leave
      * blank — for downloading/printing just this cell, and (base64-encoded,
      * see cellQrLabels()) for embedding as-is into the row-wide PDF sheet.
+     *
+     * $flatsCount (the row's total level count) drives the level-arrow
+     * triangle spliced into the label's corner — see withLevelArrow().
      */
-    private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight): string
+    private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight, int $flatsCount): string
     {
-        return $this->qrLabelImage(
+        $svg = $this->qrLabelImage(
             $this->cellDeepLink($rowLetter, $cell),
             Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
             null,
@@ -66,6 +69,61 @@ trait BuildsCellQrLabels
             $qrHeight,
             expandPrimaryText: true,
         );
+
+        return $this->withLevelArrow($svg, $qrWidth, $cell->flat_number, $flatsCount);
+    }
+
+    /**
+     * Splices a small filled triangle into the label's top-right corner to
+     * mark this cell's level: pointing up when it sits on its row's highest
+     * flat_number, down when it sits on the lowest, and nothing for every
+     * level in between. flat_number runs 1..$flatsCount (see
+     * RowObserver::updated()), so 1 is always the lowest level and
+     * $flatsCount the highest. A row with only one level ($flatsCount < 2)
+     * is simultaneously its own highest and lowest cell — there's no
+     * direction to indicate, so no triangle is drawn rather than picking one
+     * arbitrarily.
+     *
+     * Drawn as a plain SVG polygon rather than a text glyph (e.g. "↑"/"↓")
+     * because the row-wide PDF sheet's `font-family="sans-serif"` resolves,
+     * for dompdf's PDF output, to the core Helvetica font — Latin-1 only.
+     * The existing "·" slot-label separator is Latin-1 (U+00B7) and renders
+     * fine there, but arrow glyphs (U+2191/U+2193) are outside Latin-1 and
+     * would silently fail to render on the printed sheet. A polygon has no
+     * font/encoding to worry about — it renders identically to the QR
+     * itself, already a plain vector `<path>`.
+     *
+     * The triangle sits inside the label's top margin (y: 0..padding),
+     * which qrLabelImage() always leaves blank above the QR regardless of
+     * $width/$height or any QR-shrink adjustment (see qrLabelImage()'s
+     * $qrX/$qrBottom docblock) — so it never overlaps the QR or the text
+     * below it.
+     */
+    private function withLevelArrow(string $svg, int $width, int $flatNumber, int $flatsCount): string
+    {
+        $direction = match (true) {
+            $flatsCount < 2 => null,
+            $flatNumber === $flatsCount => 'up',
+            $flatNumber === 1 => 'down',
+            default => null,
+        };
+
+        if ($direction === null) {
+            return $svg;
+        }
+
+        $size = self::LABEL_PADDING - 4;
+        $right = $width - 4;
+        $left = $right - $size;
+        $top = 2;
+        $bottom = $top + $size;
+        $midX = (int) (($left + $right) / 2);
+
+        $points = $direction === 'up'
+            ? "{$midX},{$top} {$left},{$bottom} {$right},{$bottom}"
+            : "{$left},{$top} {$right},{$top} {$midX},{$bottom}";
+
+        return str_replace('</svg>', "<polygon points=\"{$points}\" fill=\"#111111\"/>\n</svg>", $svg);
     }
 
     /**

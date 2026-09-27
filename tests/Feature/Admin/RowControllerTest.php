@@ -766,6 +766,25 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     }
 });
 
+test('the row QR export still succeeds for a row spanning lowest/middle/highest levels', function () {
+    // Regression guard for BuildsCellQrLabels::cellQrLabels()'s $flatsCount
+    // argument (added alongside RowController::exportQrCodes()'s call site):
+    // a wrong type/value there would error before dompdf ever renders a page.
+    // The level triangle itself is drawn by the exact same
+    // cellQrLabelImage() the single-cell export uses (see CellControllerTest
+    // for its lowest/middle/highest/single-level coverage) — dompdf embeds
+    // the SVG as raw vector path/fill operators rather than a re-parseable
+    // image, so the triangle's own geometry isn't re-asserted here.
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $pdf = (new PdfParser)->parseContent($response->getContent());
+    expect($pdf->getPages())->toHaveCount(3);
+});
+
 test('the row QR export still succeeds and produces one page per cell with a configured QR code size other than the default', function () {
     // The PDF page size comes from an `@page { size: $qrWidth $qrHeight }` CSS
     // rule in resources/views/pdf/qr-labels.blade.php (dompdf converts the CSS
