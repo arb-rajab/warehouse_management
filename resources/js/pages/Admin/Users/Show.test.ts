@@ -353,7 +353,9 @@ describe('Users Show', () => {
         expect(roundLink.text()).toContain('#42');
 
         const cellLink = cells[1].get('a');
-        expect(cellLink.attributes('href')).toBe('/admin/rows/C');
+        expect(cellLink.attributes('href')).toBe(
+            '/admin/rows/C?cell_number=4&flat_number=1',
+        );
         expect(cellLink.text()).toContain('C4·1');
 
         expect(cells[2].text()).toContain(

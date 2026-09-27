@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
@@ -20,6 +20,7 @@ import { formatSlot } from '@/lib/location';
 import type {
     Cell,
     CellMapRow,
+    CellSlotLocation,
     ProductFilterOptions,
     Row,
 } from '@/types/admin';
@@ -30,6 +31,7 @@ const props = defineProps<{
     cells: Cell[];
     today: string;
     filterOptions: ProductFilterOptions;
+    linkedCell: CellSlotLocation | null;
 }>();
 
 const highlightFilters = reactive(emptyCellHighlightFilters());
@@ -98,18 +100,13 @@ const pulsingLabel = ref<string | null>(null);
 let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
 
 /**
- * Applying/changing a highlight filter jumps straight to its first match
- * instead of leaving the admin to scroll the grid manually — this page has
- * no camera/viewport to recenter (unlike the Cells map), so "jump" here
- * means scrolling the matching slot into view and briefly pulsing it.
+ * Scrolls the given slot into view and briefly pulses it — this page has no
+ * camera/viewport to recenter (unlike the Cells map), so "jump to a cell"
+ * here means this instead. Shared by the highlight-filter jump below and by
+ * the initial `linkedCell` deep-link (e.g. from a cell-status-log or
+ * verification-report row linking to the exact cell it refers to).
  */
-watch(highlightFilters, () => {
-    const label = firstHighlightMatchLabel();
-
-    if (!label) {
-        return;
-    }
-
+function pulseAndScrollTo(label: string): void {
     pulsingLabel.value = label;
     document.querySelector(`[data-slot-label="${label}"]`)?.scrollIntoView({
         behavior: 'smooth',
@@ -121,6 +118,40 @@ watch(highlightFilters, () => {
     pulseTimeout = setTimeout(() => {
         pulsingLabel.value = null;
     }, 1500);
+}
+
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * instead of leaving the admin to scroll the grid manually.
+ */
+watch(highlightFilters, () => {
+    const label = firstHighlightMatchLabel();
+
+    if (!label) {
+        return;
+    }
+
+    pulseAndScrollTo(label);
+});
+
+/**
+ * `linkedCell` only ever arrives once, on the initial full-page load (a
+ * cell-status-log/verification-report link deep-linking to a specific cell)
+ * — never as a reactive change afterwards — so this jumps to it once the
+ * grid has actually painted, rather than watching for prop changes that
+ * never come.
+ */
+onMounted(() => {
+    if (!props.linkedCell) {
+        return;
+    }
+
+    pulseAndScrollTo(
+        slotLabel(
+            props.linkedCell.cell_number - 1,
+            props.linkedCell.flat_number,
+        ),
+    );
 });
 
 function openToggleActiveDialog(cell: Cell | null, label: string): void {

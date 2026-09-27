@@ -161,7 +161,19 @@ function onReportsPerPageChange(perPage: number): void {
                     </td>
                     <td class="px-4 py-2">
                         <TableLink
-                            :href="showRow({ letter: report.cell.row_letter })"
+                            :href="
+                                showRow(
+                                    { letter: report.cell.row_letter },
+                                    {
+                                        query: {
+                                            cell_number:
+                                                report.cell.cell_number,
+                                            flat_number:
+                                                report.cell.flat_number,
+                                        },
+                                    },
+                                )
+                            "
                         >
                             {{
                                 formatSlot(
