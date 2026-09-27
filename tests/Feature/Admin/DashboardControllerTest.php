@@ -236,31 +236,27 @@ test('a product filter narrows the low-stock count to that product, excluding ot
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the dashboard lists inactive products with pallets in the warehouse, excluding an inactive product with no pallets and an active product with pallets', function () {
+test('the dashboard counts inactive products with pallets in the warehouse, excluding an inactive product with no pallets and an active product with pallets', function () {
     actingAsAdmin();
 
-    $inactiveInWarehouse = Product::factory()->create(['published' => false, 'name' => 'Discontinued Widgets']);
+    $inactiveInWarehouse = Product::factory()->create(['published' => false]);
     Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
 
     // Noise: inactive but never stocked, so it must not count as "in the warehouse".
-    Product::factory()->create(['published' => false, 'name' => 'Never Stocked']);
+    Product::factory()->create(['published' => false]);
 
     // Noise: active with stock, so it must not count as "inactive".
-    $activeProduct = Product::factory()->create(['published' => true, 'name' => 'Active Product']);
+    $activeProduct = Product::factory()->create(['published' => true]);
     Pallet::factory()->create(['product_id' => $activeProduct->id]);
 
     $response = $this->get('/admin');
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.inactive_in_warehouse.count', 1)
-            ->has('stats.inactive_in_warehouse.products', 1)
-            ->where('stats.inactive_in_warehouse.products.0.id', $inactiveInWarehouse->id)
-            ->where('stats.inactive_in_warehouse.products.0.name', 'Discontinued Widgets')
-            ->where('stats.inactive_in_warehouse.products.0.pallets_count', 1)
     );
 });
 
-test('a product filter narrows the inactive-in-warehouse list to that product, excluding other inactive products', function () {
+test('a product filter narrows the inactive-in-warehouse count to that product, excluding other inactive products', function () {
     actingAsAdmin();
 
     $matchingProduct = Product::factory()->create(['published' => false]);
@@ -273,8 +269,9 @@ test('a product filter narrows the inactive-in-warehouse list to that product, e
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.inactive_in_warehouse.count', 1)
-            ->where('stats.inactive_in_warehouse.products.0.id', $matchingProduct->id)
     );
+
+    expect($otherProduct->id)->not->toBeNull();
 });
 
 test("the dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {

@@ -80,7 +80,7 @@ class ProductController extends Controller
                 ->selectRaw('count(*)')
                 ->whereColumn('pallets.product_id', 'products.id')])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
-            ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false))
+            ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false)->inWarehouse())
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->when(
                 $this->occupancyFiltersActive($request),

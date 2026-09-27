@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Upload;
@@ -554,4 +555,23 @@ test('the inactive factory state sets published to false, with noise from a defa
     Product::factory()->create();
 
     expect($inactive->fresh()->published)->toBeFalse();
+});
+
+test('inWarehouse matches a product with at least one pallet, excluding a product with none', function () {
+    $inWarehouse = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $inWarehouse->id]);
+
+    // Noise: a product with zero pallets must not match.
+    Product::factory()->create();
+
+    $results = Product::query()->inWarehouse()->get();
+
+    expect($results->pluck('id')->all())->toBe([$inWarehouse->id]);
+});
+
+test('inWarehouse matches a product with more than one pallet', function () {
+    $product = Product::factory()->create();
+    Pallet::factory()->count(2)->create(['product_id' => $product->id]);
+
+    expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$product->id]);
 });
