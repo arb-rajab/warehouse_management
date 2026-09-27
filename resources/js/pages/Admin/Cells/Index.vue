@@ -33,6 +33,7 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
@@ -49,6 +50,7 @@ import {
     columnNumberOptions,
     countBadgeClass,
     mapToolbarButtonClass,
+    selectedCountLabel,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -924,6 +926,14 @@ watch(
                         >
                             {{ t('cells.search.notFound') }}
                         </span>
+                        <FilterProductSelect
+                            id="toolbar-product"
+                            v-model="highlightFilters.productIds"
+                            :label="t('cellLog.filters.product')"
+                            :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
+                            :selected="filterOptions.products"
+                        />
                     </div>
 
                     <div v-if="viewMode === '2d'" class="flex flex-wrap gap-2">
