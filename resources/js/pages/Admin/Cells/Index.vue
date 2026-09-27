@@ -636,8 +636,10 @@ function centerLabelInViewport(label: string): void {
 
 /**
  * Cell A1 (the first cell of the first row) is the map's fixed orientation anchor —
- * rotating or resetting the view always re-centers on it so it stays reachable no
- * matter how the letter/number axes have been swapped.
+ * rotating always re-centers on it so it stays reachable no matter how the
+ * letter/number axes have been swapped. Reset-view and fit-to-view deliberately don't
+ * call this: forcing A1 to the exact center of the viewport leaves unwanted empty space
+ * around the map, since A1 sits at a corner of the grid rather than its middle.
  */
 function centerFirstCellInViewport(): void {
     const firstRow = props.rows[0];
@@ -678,23 +680,24 @@ async function rotateRightAndRecenter(): Promise<void> {
     await recenterInstantly(() => viewport.rotateRight());
 }
 
-async function resetViewAndRecenter(): Promise<void> {
+function resetViewAndRecenter(): void {
     if (viewMode.value === '3d') {
         map3DRef.value?.resetView();
 
         return;
     }
 
-    await recenterInstantly(() => viewport.reset());
+    viewport.reset();
 }
 
 /**
  * Shrinks the map so the whole thing fits inside the viewport with no
  * scrolling/panning needed, measuring the content's unscaled size (dividing
  * its current, already-scaled bounding box by the current zoom) against the
- * viewport container's size.
+ * viewport container's size. Only the zoom changes — no panning is applied,
+ * so the map doesn't get shifted to center any particular cell.
  */
-async function fitMapToView(): Promise<void> {
+function fitMapToView(): void {
     const container = viewportEl.value;
     const content = mapContentEl.value;
 
@@ -714,7 +717,7 @@ async function fitMapToView(): Promise<void> {
         { width: containerRect.width, height: containerRect.height },
     );
 
-    await recenterInstantly(() => viewport.setZoom(fittedZoom));
+    viewport.setZoom(fittedZoom);
 }
 
 watch(
