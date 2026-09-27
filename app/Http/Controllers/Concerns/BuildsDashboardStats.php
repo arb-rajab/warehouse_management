@@ -268,7 +268,7 @@ trait BuildsDashboardStats
 
         $count = (clone $query)->count();
 
-        $products = (clone $query)
+        $products = array_values((clone $query)
             ->select(['id', 'name', 'ar_name'])
             ->addSelect(['pallets_count' => Pallet::query()
                 ->selectRaw('count(*)')
@@ -280,9 +280,12 @@ trait BuildsDashboardStats
                 'id' => $product->id,
                 'name' => $product->name,
                 'ar_name' => $product->ar_name,
-                'pallets_count' => (int) $product->pallets_count,
+                // pallets_count is an addSelect() alias, not a declared
+                // model property — getAttribute() sidesteps Larastan's
+                // undefined-property check on the magic __get() access.
+                'pallets_count' => (int) $product->getAttribute('pallets_count'),
             ])
-            ->all();
+            ->all());
 
         return ['count' => $count, 'products' => $products];
     }
