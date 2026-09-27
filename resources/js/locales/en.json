@@ -415,6 +415,7 @@
             "rotateLeft": "Rotate left",
             "rotateRight": "Rotate right",
             "resetView": "Reset view",
+            "fitToView": "Fit to view",
             "fullscreen": "Full screen",
             "exitFullscreen": "Exit full screen",
             "view2d": "2D view",

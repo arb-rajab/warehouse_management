@@ -1392,6 +1392,37 @@ describe('Cells Index (warehouse map)', () => {
         expect(bandLabelAtEnd(wrapper)).toBe(true);
     });
 
+    it('shrinks the map to fit entirely inside the viewport via the fit-to-view button', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return { width: 700, height: 600 } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
+                }
+
+                return { width: 0, height: 0 } as DOMRect;
+            });
+
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '70%',
+        );
+
+        getBoundingClientRectSpy.mockRestore();
+    });
+
     it('zooms via a wheel event on the map viewport', async () => {
         const wrapper = mountPage([row()], []);
 
