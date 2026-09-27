@@ -60,7 +60,7 @@ test("a user's admin page links their verification reports to the round and cell
     const cellLink = reportRow.locator('td').nth(1).getByRole('link').first();
     await expect(cellLink).toHaveAttribute(
         'href',
-        /^\/admin\/rows\/[A-Za-z0-9]+$/,
+        /^\/admin\/rows\/[A-Za-z0-9]+\?cell_number=\d+&flat_number=\d+$/,
     );
 
     await roundLink.click();
