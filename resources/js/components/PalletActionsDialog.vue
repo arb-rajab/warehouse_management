@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { CalendarPlus, CalendarX } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import {
     empty as emptyPallet,
@@ -12,12 +13,14 @@ import {
 import FilterDialog from '@/components/FilterDialog.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import { formatDate, formatDateTime } from '@/lib/date';
 import {
     fieldLabelClass,
     plainFieldInputClass,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { productName } from '@/lib/productName';
 import type { Cell, CellMapRow, ProductFilterOption } from '@/types/admin';
 
 const props = defineProps<{
@@ -230,6 +233,57 @@ const submitLabel = computed(() => {
         :title="t('cells.palletActions.title', { location: label })"
         :close-label="t('cellLog.filters.close')"
     >
+        <div
+            v-if="cell?.pallet"
+            data-testid="pallet-action-details"
+            class="mb-4 flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-neutral-800 dark:bg-neutral-950"
+        >
+            <img
+                v-if="cell.pallet.product_image_url"
+                :src="cell.pallet.product_image_url"
+                :alt="
+                    productName(
+                        cell.pallet.product_name,
+                        cell.pallet.product_ar_name,
+                    )
+                "
+                class="h-12 w-12 shrink-0 rounded object-cover"
+            />
+            <div class="min-w-0 space-y-0.5">
+                <p
+                    class="truncate font-medium text-gray-900 dark:text-neutral-100"
+                >
+                    {{
+                        productName(
+                            cell.pallet.product_name,
+                            cell.pallet.product_ar_name,
+                        )
+                    }}
+                </p>
+                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                    {{
+                        t('cells.palletActions.details.remainingBoxes', {
+                            count: cell.pallet.remaining_boxes,
+                        })
+                    }}
+                </p>
+                <div
+                    v-if="cell.pallet.expiration_date"
+                    class="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
+                >
+                    <CalendarX class="h-3 w-3 shrink-0" />
+                    {{ formatDate(cell.pallet.expiration_date) }}
+                </div>
+                <div
+                    v-if="cell.pallet.added_at"
+                    class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500"
+                >
+                    <CalendarPlus class="h-3 w-3 shrink-0" />
+                    {{ formatDateTime(cell.pallet.added_at) }}
+                </div>
+            </div>
+        </div>
+
         <div
             v-if="availableActions.length > 1"
             class="mb-4 flex flex-wrap gap-2"

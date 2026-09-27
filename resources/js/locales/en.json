@@ -356,6 +356,9 @@
         "palletActions": {
             "triggerLabel": "Manage pallet",
             "title": "Manage pallet — {location}",
+            "details": {
+                "remainingBoxes": "{count} boxes remaining"
+            },
             "tabs": {
                 "store": "Store",
                 "open": "Open",
