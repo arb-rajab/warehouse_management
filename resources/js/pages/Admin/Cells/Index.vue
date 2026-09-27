@@ -748,8 +748,15 @@ function resetViewAndRecenter(): void {
  * Shrinks the map so the whole thing fits inside the viewport with no
  * scrolling/panning needed, measuring the content's unscaled size (dividing
  * its current, already-scaled bounding box by the current zoom) against the
- * viewport container's size. Only the zoom changes — no panning is applied,
- * so the map doesn't get shifted to center any particular cell.
+ * viewport container's size, then re-centers the content's own middle in the
+ * viewport. Centering (not just zooming) is required: CSS `scale()` pivots
+ * around `transform-origin: center` — the content box's own center — so
+ * once the box is significantly bigger than the viewport, that pivot point
+ * sits far outside it, and shrinking around it without also repanning
+ * leaves the shrunk map off to one side instead of visible. This doesn't
+ * conflict with the rotate/reset flows deliberately not recentering on cell
+ * A1 (see js-lib.md) — this still centers on the content's own middle, not
+ * any particular cell.
  */
 function fitMapToView(): void {
     const container = viewportEl.value;
@@ -762,16 +769,19 @@ function fitMapToView(): void {
     const containerRect = container.getBoundingClientRect();
     const contentRect = content.getBoundingClientRect();
     const currentZoom = viewport.state.zoom;
+    const contentWidth = contentRect.width / currentZoom;
+    const contentHeight = contentRect.height / currentZoom;
 
     const fittedZoom = zoomToFit(
-        {
-            width: contentRect.width / currentZoom,
-            height: contentRect.height / currentZoom,
-        },
+        { width: contentWidth, height: contentHeight },
         { width: containerRect.width, height: containerRect.height },
     );
 
     viewport.setZoom(fittedZoom);
+    viewport.panBy(
+        containerRect.width / 2 - contentWidth / 2 - viewport.state.panX,
+        containerRect.height / 2 - contentHeight / 2 - viewport.state.panY,
+    );
 }
 
 watch(
@@ -1051,18 +1061,36 @@ watch(
                 </div>
 
                 <!--
-                    mapContentEl uses w-max: as a block-level flex container its
-                    width would otherwise default to filling viewportEl (auto =
-                    fill available width, unlike height:auto which already
-                    shrink-wraps content), so its own getBoundingClientRect()/
-                    offsetWidth would report the container's width instead of
-                    the map's actual cell-grid width — breaking fitMapToView's
-                    zoom-to-fit and updateViewportBounds' pan clamp, both of
-                    which read this element's size.
+                    Pinned dir="ltr" regardless of the direction of the page.
+                    Every cell physical position is already driven explicitly
+                    by JS (mapOrientation, via bandsAsColumns/reverseNumbers/
+                    bandLabelAtEnd, swapped by the rotate buttons instead of a
+                    CSS transform) — cell A1 belongs in the same physical spot
+                    no matter the UI language. Under dir="rtl" (Arabic) the
+                    browser was additionally auto-mirroring every flex-row/
+                    flex-col band and item list on top of that, fighting the
+                    JS-driven layout.
+
+                    That auto-mirroring is also why the `w-max` on mapContentEl
+                    (needed so its own getBoundingClientRect()/offsetWidth
+                    reports the real cell-grid width of the map instead of the
+                    width of viewportEl — a block container width:auto fills
+                    the parent, unlike height:auto — which is what the
+                    zoom-to-fit in fitMapToView and the pan clamp in
+                    updateViewportBounds both read) broke panning in RTL: that
+                    measurement math assumes the un-transformed box of
+                    mapContentEl starts flush with the *physical* top-left of
+                    viewportEl, which only held by coincidence while both were
+                    the same width — the un-transformed edge of a block box is
+                    really the *inline-start* edge of its containing block,
+                    physically the right edge under dir="rtl". Pinning
+                    dir="ltr" fixes both: it stops the mirroring, and keeps
+                    "inline-start" physically the left edge.
                 -->
                 <div
                     v-if="viewMode === '2d'"
                     ref="viewportEl"
+                    dir="ltr"
                     data-testid="map-viewport"
                     class="relative cursor-grab touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 select-none active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950"
                     :class="isMapFullscreen ? 'min-h-0 flex-1' : 'h-[32rem]'"
