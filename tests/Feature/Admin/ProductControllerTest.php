@@ -4,6 +4,7 @@ use App\Enums\CellLogAction;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\User;
@@ -27,6 +28,7 @@ test('an authenticated admin can view the products index with every property the
         'cell_id' => $cell->id,
         'expiration_date' => '2027-06-01',
     ]);
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
 
     $response = $this->get('/admin/products');
 
@@ -46,6 +48,7 @@ test('an authenticated admin can view the products index with every property the
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
+                ->where('barcodes', [['id' => $barcode->id, 'barcode' => '1234567890123']])
             )
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
@@ -53,6 +56,36 @@ test('an authenticated admin can view the products index with every property the
     );
 
     Carbon::setTestNow();
+});
+
+test('the products index ships an empty barcodes list for a product nobody has added one to', function () {
+    actingAsAdmin();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.barcodes', [])
+    );
+});
+
+test('the products index orders a product\'s barcodes by id, oldest first', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    // Inserted in this order so a plain alphabetical/numeric sort of the
+    // barcode text itself would produce the opposite order — proving the
+    // ordering is by id (insertion order), not by the barcode value.
+    $olderBarcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+    $newerBarcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.barcodes', [
+            ['id' => $olderBarcode->id, 'barcode' => '2222222222222'],
+            ['id' => $newerBarcode->id, 'barcode' => '1111111111111'],
+        ])
+    );
 });
 
 test('the products index ships both raw name columns under the Arabic panel locale too', function () {
@@ -998,6 +1031,174 @@ test('setting a box count for a non-existent product returns a 404', function ()
     actingAsAdmin();
 
     $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+
+    $response->assertNotFound();
+});
+
+test('an authenticated admin can add a barcode to a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseHas('wms_product_barcodes', [
+        'product_id' => $product->id,
+        'barcode' => '1234567890123',
+    ]);
+});
+
+test('adding a barcode trims surrounding whitespace', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123  ']);
+
+    $this->assertDatabaseHas('wms_product_barcodes', [
+        'product_id' => $product->id,
+        'barcode' => '1234567890123',
+    ]);
+});
+
+test('adding a barcode redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes?page=2&inactive=1", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('a product can have more than one barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '9876543210987']);
+
+    expect($product->fresh()->barcodes()->pluck('barcode')->sort()->values()->all())
+        ->toBe(['1234567890123', '9876543210987']);
+});
+
+test('a barcode is required and cannot be blank', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a barcode must be unique across every product, not just the one it is being added to', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '1234567890123']);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 1);
+});
+
+test('a mobile app user cannot add a barcode', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertForbidden();
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('an unauthenticated caller cannot add a barcode', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('adding a barcode to a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/products/999999/barcodes', ['barcode' => '1234567890123']);
+
+    $response->assertNotFound();
+});
+
+test('an authenticated admin can remove a barcode from a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('removing a barcode redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}?page=2&inactive=1");
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('removing a barcode that belongs to a different product returns a 404, leaving it intact', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $otherProduct->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertNotFound();
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id, 'product_id' => $otherProduct->id]);
+});
+
+test('a mobile app user cannot remove a barcode', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertForbidden();
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('an unauthenticated caller cannot remove a barcode', function () {
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('removing a non-existent barcode returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/999999");
 
     $response->assertNotFound();
 });

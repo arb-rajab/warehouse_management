@@ -304,6 +304,7 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`
+- `wms_product_barcodes.product_id`
 
 `uploads.id` is the same signed `int(11)`. sqlite reports both types as
 `integer`, so the test connection cannot catch a regression here —

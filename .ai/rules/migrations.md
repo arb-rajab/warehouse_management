@@ -32,3 +32,15 @@ and `uploads` are read-only and guarded with `Schema::hasTable()` on `up()` /
 `integer` rather than `foreignId()`. Read **.ai/rules/shared-database.md** before adding a migration —
 it carries the full table inventory, the guard conventions, and the products
 column mapping.
+
+## A new `product_id` FK also needs an entry in CreateProductsTableTest
+`tests/Feature/Database/CreateProductsTableTest.php`'s "products.id and every
+product_id FK are declared as signed integers, not bigints" test scans the
+raw migration source of every migration that declares a product FK, since
+sqlite reports both `integer` and `bigint unsigned` as `"integer"` and so
+cannot catch a `foreignId()` regression at the schema level. Adding a new
+`product_id`/`*_product_id` column means adding its migration filename and
+exact `$table->integer(...)` declaration string to that test's `$columns`
+array, and the same column to the enumerated list in the "products.id is a
+signed int(11)" section of .ai/rules/shared-database.md — both are missed
+easily since neither is discovered by grepping the new migration alone.

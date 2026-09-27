@@ -307,6 +307,11 @@ export interface CellStatusLogFilterOptions
     actions: CellLogAction[];
 }
 
+export interface ProductBarcode {
+    id: number;
+    barcode: string;
+}
+
 export interface ProductSummary {
     id: number;
     /** The store's raw base name — see `CellPallet.product_name`. */
@@ -333,6 +338,8 @@ export interface ProductSummary {
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
+    /** Barcodes attached to this product, oldest first. Stored in this app's own `wms_product_barcodes`. */
+    barcodes: ProductBarcode[];
 }
 
 export type ProductSortBy =

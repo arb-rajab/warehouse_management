@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -521,6 +522,25 @@ test('minimum_pallets stays null even for a product this app has never configure
     expect($product->fresh())
         ->setting->toBeNull()
         ->minimum_pallets->toBeNull();
+});
+
+test('barcodes returns every barcode attached to the product, excluding another product\'s', function () {
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+
+    // Noise: a barcode belonging to a different product.
+    $otherProduct = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '3333333333333']);
+
+    expect($product->barcodes->pluck('barcode')->sort()->values()->all())
+        ->toBe(['1111111111111', '2222222222222']);
+});
+
+test('barcodes is empty for a product nobody has added one to', function () {
+    $product = Product::factory()->create();
+
+    expect($product->barcodes)->toBeEmpty();
 });
 
 test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
