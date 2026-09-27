@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('cell-verification-rounds', [CellVerificationRoundController::class, 'index'])->name('cell-verification-rounds.index');
         Route::get('cell-verification-rounds/{cellVerificationRound}', [CellVerificationRoundController::class, 'show'])->name('cell-verification-rounds.show');
         Route::get('cell-verification-rounds/{cellVerificationRound}/export', [CellVerificationRoundController::class, 'exportReports'])->name('cell-verification-rounds.export');
+        Route::post('cell-verification-reports/{cellVerificationReport}/accept', [CellVerificationRoundController::class, 'acceptReport'])->name('cell-verification-reports.accept');
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');

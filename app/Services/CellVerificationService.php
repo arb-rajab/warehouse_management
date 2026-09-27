@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\CellState;
 use App\Exceptions\CellOutsideRoundRowsException;
+use App\Exceptions\CellVerificationReportNotAcceptableException;
+use App\Exceptions\InvalidSlotStateException;
 use App\Exceptions\OverlappingVerificationRoundException;
 use App\Exceptions\VerificationRoundCompletedException;
 use App\Models\Cell;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
+use App\Models\Pallet;
 use App\Models\Row;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +28,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CellVerificationService
 {
+    public function __construct(private readonly PalletActionService $palletActions) {}
+
     /**
      * Start a round over the given rows, claiming them exclusively until it is
      * completed, so two rounds may run at once as long as they share no row.
@@ -147,5 +153,105 @@ class CellVerificationService
                 'note' => $reported['note'] ?? null,
             ]);
         });
+    }
+
+    /**
+     * Accept an incorrect report: bring the cell's stored pallet in line with
+     * what the worker reported seeing, then stamp the report as accepted. The
+     * report's own snapshots and `is_correct` are left untouched, so the
+     * discrepancy stays on record alongside when (and by whom) it was resolved.
+     *
+     * The cell must still hold exactly what the report expected — anything
+     * else means it changed after the report, and applying the old reported
+     * state would overwrite that newer change. Every pallet change goes
+     * through PalletActionService, so its cell locking, active-round and
+     * inactive-cell guards, and CellStatusLog audit rows all still apply.
+     *
+     * @throws CellVerificationReportNotAcceptableException
+     * @throws InvalidSlotStateException
+     */
+    public function acceptReport(CellVerificationReport $report, int $userId): CellVerificationReport
+    {
+        return DB::transaction(function () use ($report, $userId) {
+            $lockedReport = CellVerificationReport::query()->lockForUpdate()->findOrFail($report->id);
+
+            if ($lockedReport->is_correct) {
+                throw new CellVerificationReportNotAcceptableException('verification_report_already_correct', __('messages.verification_report_already_correct'));
+            }
+
+            if ($lockedReport->accepted_at !== null) {
+                throw new CellVerificationReportNotAcceptableException('verification_report_already_accepted', __('messages.verification_report_already_accepted'));
+            }
+
+            $reportedState = $lockedReport->reported_cell_state;
+
+            // A deleted product nulls reported_product_id, leaving nothing to store.
+            if ($reportedState === null || ($reportedState !== CellState::Empty && $lockedReport->reported_product_id === null)) {
+                throw new CellVerificationReportNotAcceptableException('verification_report_incomplete', __('messages.verification_report_incomplete'));
+            }
+
+            $cell = $this->palletActions->lockCell($lockedReport->cell_id);
+            $pallet = Pallet::query()->where('cell_id', $cell->id)->first();
+
+            if (! $this->cellMatchesExpectedSnapshot($cell->state, $pallet, $lockedReport)) {
+                throw new CellVerificationReportNotAcceptableException('cell_changed_since_verification_report', __('messages.cell_changed_since_verification_report'));
+            }
+
+            $this->applyReportedState($cell->id, $cell->state, $pallet, $lockedReport, $reportedState, $userId);
+
+            $lockedReport->update([
+                'accepted_at' => now(),
+                'accepted_by' => $userId,
+            ]);
+
+            return $lockedReport;
+        });
+    }
+
+    private function cellMatchesExpectedSnapshot(CellState $cellState, ?Pallet $pallet, CellVerificationReport $report): bool
+    {
+        return $cellState === $report->expected_cell_state
+            && $pallet?->product_id === $report->expected_product_id
+            && $pallet?->remaining_boxes === $report->expected_boxes_count
+            && $pallet?->expiration_date?->toDateString() === $report->expected_expiration_date?->toDateString();
+    }
+
+    /**
+     * An opened pallet can't be closed again through PalletActionService, so a
+     * report of a full pallet where the system has an opened one replaces it:
+     * the old pallet is emptied and the reported one stored fresh.
+     */
+    private function applyReportedState(int $cellId, CellState $cellState, ?Pallet $pallet, CellVerificationReport $report, CellState $reportedState, int $userId): void
+    {
+        $note = __('messages.verification_report_accepted_note', ['id' => $report->id]);
+
+        if ($pallet !== null && ($reportedState === CellState::Empty || ($reportedState === CellState::Full && $cellState === CellState::Opened))) {
+            $this->palletActions->emptyPallet($pallet, $userId, $note);
+            $pallet = null;
+        }
+
+        if ($reportedState === CellState::Empty) {
+            return;
+        }
+
+        /** @var int $productId */
+        $productId = $report->reported_product_id;
+        $expirationDate = $report->reported_expiration_date?->toDateString();
+
+        $pallet ??= $this->palletActions->store($cellId, $productId, $expirationDate, $userId, $note);
+
+        if ($reportedState === CellState::Opened && $pallet->state === CellState::Full) {
+            $pallet = $this->palletActions->open($pallet, null, false, $userId, $note)['pallet'] ?? $pallet;
+        }
+
+        $this->palletActions->update(
+            $pallet,
+            $productId,
+            $expirationDate,
+            $report->reported_boxes_count ?? $pallet->remaining_boxes,
+            $userId,
+            false,
+            $note,
+        );
     }
 }

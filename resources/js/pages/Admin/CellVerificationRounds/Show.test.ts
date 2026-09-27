@@ -1,6 +1,9 @@
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDateTime } from '@/lib/date';
@@ -21,9 +24,10 @@ import type {
 } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerPostMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -33,7 +37,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { get: routerGetMock },
+        router: { get: routerGetMock, post: routerPostMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -56,10 +60,11 @@ function mountPage(
     round: CellVerificationRound,
     reports: CellVerificationReport[],
     filters: CellVerificationReportFilters = {},
+    pageProps: Record<string, unknown> = {},
 ) {
     usePageMock.mockReturnValue({
         url: `/admin/cell-verification-rounds/${round.id}`,
-        props: defaultAuthProps(),
+        props: defaultAuthProps(pageProps),
     });
 
     return mount(Show, {
@@ -80,7 +85,8 @@ async function openFilters(
 
 describe('CellVerificationRounds Show', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock });
+        resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        vi.unstubAllGlobals();
     });
 
     it('renders the round id in the page heading', () => {
@@ -395,9 +401,144 @@ describe('CellVerificationRounds Show', () => {
         expect(rowCells(wrapper, 0)[1].text()).toBe(
             t('cellVerificationReport.correct'),
         );
-        expect(rowCells(wrapper, 1)[1].text()).toBe(
+        expect(rowCells(wrapper, 1)[1].get('span').text()).toBe(
             t('cellVerificationReport.incorrect'),
         );
+    });
+
+    it('offers to accept only an unaccepted incorrect report once the round is completed', () => {
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: '2026-08-01T11:00:00Z' }),
+            [
+                cellVerificationReport({ id: 1, is_correct: true }),
+                cellVerificationReport({ id: 2, is_correct: false }),
+                cellVerificationReport({
+                    id: 3,
+                    is_correct: false,
+                    accepted_at: '2026-08-02T09:00:00Z',
+                    accepted_by: { id: 9, name: 'Zoe Admin' },
+                }),
+            ],
+        );
+
+        expect(
+            rowCells(wrapper, 0)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(false);
+        expect(
+            rowCells(wrapper, 1)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(true);
+        expect(rowCells(wrapper, 1)[1].text()).toContain(
+            t('cellVerificationReport.accept'),
+        );
+        expect(
+            rowCells(wrapper, 2)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('does not offer to accept while the round is still in progress', () => {
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: null }),
+            [cellVerificationReport({ is_correct: false })],
+        );
+
+        expect(
+            wrapper.findComponent(CellVerificationAcceptButton).exists(),
+        ).toBe(false);
+    });
+
+    it('keeps an accepted report marked incorrect and shows when and by whom it was accepted', () => {
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({
+                is_correct: false,
+                accepted_at: '2026-08-02T09:00:00Z',
+                accepted_by: { id: 9, name: 'Zoe Admin' },
+            }),
+        ]);
+
+        const cell = rowCells(wrapper)[1];
+        expect(cell.get('span').text()).toBe(
+            t('cellVerificationReport.incorrect'),
+        );
+        const note = cell.getComponent(CellVerificationAcceptedNote);
+        expect(note.props()).toEqual({
+            acceptedAt: '2026-08-02T09:00:00Z',
+            acceptedBy: { id: 9, name: 'Zoe Admin' },
+        });
+        expect(note.text()).toContain(formatDateTime('2026-08-02T09:00:00Z'));
+    });
+
+    it('asks for confirmation naming the slot, then posts the accept action for that report', async () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({
+                id: 5,
+                is_correct: false,
+                cell: { row_letter: 'B', cell_number: 4, flat_number: 1 },
+            }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            t('cellVerificationReport.acceptConfirm', {
+                slot: formatSlot('B', 4, 1),
+            }),
+        );
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-verification-reports/5/accept',
+            {},
+            { preserveScroll: true },
+        );
+    });
+
+    it('does not accept the report when the confirmation is cancelled', async () => {
+        vi.stubGlobal('confirm', () => false);
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({ is_correct: false }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(routerPostMock).not.toHaveBeenCalled();
+    });
+
+    it('shows why an accept was refused in the action error banner', () => {
+        const wrapper = mountPage(
+            cellVerificationRound(),
+            [],
+            {},
+            {
+                errors: {
+                    action: 'This slot has changed since it was verified.',
+                },
+            },
+        );
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'This slot has changed since it was verified.',
+        );
+    });
+
+    it('renders no action error banner when nothing was refused', () => {
+        const wrapper = mountPage(
+            cellVerificationRound(),
+            [],
+            {},
+            { errors: {} },
+        );
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
     it('renders the expected and reported cell state as a translated label', () => {

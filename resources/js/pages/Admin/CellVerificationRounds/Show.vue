@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
+    acceptReport as acceptReportAction,
     exportReports,
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -23,6 +27,7 @@ import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
+import { confirmAcceptVerificationReport } from '@/lib/confirm';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
@@ -141,6 +146,45 @@ function onPerPageChange(perPage: number): void {
     filters.per_page = perPage;
     applyFilters();
 }
+
+const page = usePage();
+
+const actionError = computed(
+    () => (page.props.errors as Partial<Record<'action', string>>)?.action,
+);
+
+/**
+ * Only an unaccepted mismatch can be accepted, and only once the round is
+ * finished — until then its rows are frozen against every pallet change.
+ */
+function canAccept(report: CellVerificationReport): boolean {
+    return (
+        props.round.completed_at !== null &&
+        !report.is_correct &&
+        report.accepted_at === null
+    );
+}
+
+function acceptReport(report: CellVerificationReport): void {
+    const slot = formatSlot(
+        report.cell.row_letter,
+        report.cell.cell_number,
+        report.cell.flat_number,
+    );
+
+    if (!confirmAcceptVerificationReport(slot)) {
+        return;
+    }
+
+    router.post(
+        acceptReportAction(
+            { cellVerificationReport: report.id },
+            { mergeQuery: {} },
+        ).url,
+        {},
+        { preserveScroll: true },
+    );
+}
 </script>
 
 <template>
@@ -229,6 +273,8 @@ function onPerPageChange(perPage: number): void {
                 </div>
             </div>
         </div>
+
+        <ActionErrorBanner :message="actionError" />
 
         <FilterDialog
             v-model:open="filtersOpen"
@@ -388,6 +434,15 @@ function onPerPageChange(perPage: number): void {
                 <td class="px-4 py-2">
                     <CellVerificationCorrectnessBadge
                         :is-correct="row.is_correct"
+                    />
+                    <CellVerificationAcceptedNote
+                        v-if="row.accepted_at"
+                        :accepted-at="row.accepted_at"
+                        :accepted-by="row.accepted_by"
+                    />
+                    <CellVerificationAcceptButton
+                        v-else-if="canAccept(row)"
+                        @click="acceptReport(row)"
                     />
                 </td>
                 <td class="px-4 py-2">

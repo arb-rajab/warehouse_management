@@ -308,7 +308,11 @@
         },
         "correct": "Correct",
         "incorrect": "Incorrect",
-        "empty": "No verification reports yet."
+        "empty": "No verification reports yet.",
+        "accept": "Accept reported state",
+        "acceptConfirm": "Update {slot} to match what was reported? The report stays marked incorrect, along with the date it was accepted.",
+        "acceptedOn": "Accepted {date}",
+        "acceptedBy": "by"
     },
     "cellHighlight": {
         "staleAfterDays": "Stale for at least (days)",
@@ -673,6 +677,10 @@
             "reports": {
                 "heading": "Correct and incorrect reports",
                 "body": "Open a round to see every report in it. Each one is marked correct when what the worker found matches the system, or incorrect when it doesn't — for example an empty cell that's actually holding a pallet, or the wrong product in a slot. Use this list to spot and fix real-world discrepancies."
+            },
+            "accepting": {
+                "heading": "Accepting what was reported",
+                "body": "When an incorrect report is right about what's really in the cell, use the accept button on that report to update the cell in the system to match it. The report stays marked incorrect, so the mismatch is never lost, and it shows when it was accepted and by whom. A report can only be accepted once, after its round is finished, and only while the cell still holds what the report expected — if the cell has changed since, update it from the warehouse map instead."
             },
             "exporting": {
                 "heading": "Exporting a round's reports",

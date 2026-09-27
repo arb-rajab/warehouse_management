@@ -104,6 +104,31 @@ test('the expected_expiration_date and reported_expiration_date attributes are c
     expect($fresh->reported_expiration_date)->toBeInstanceOf(CarbonImmutable::class);
 });
 
+test('a verification report belongs to the user who accepted it', function () {
+    $acceptedBy = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $report = CellVerificationReport::factory()->accepted()->create(['accepted_by' => $acceptedBy->id]);
+
+    expect($report->acceptedBy->id)->toBe($acceptedBy->id);
+    expect($report->acceptedBy->id)->not->toBe($otherUser->id);
+});
+
+test('a verification report has no accepting user or accepted_at until it is accepted', function () {
+    $report = CellVerificationReport::factory()->incorrect()->create();
+
+    expect($report->fresh()->acceptedBy)->toBeNull();
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('the accepted_at attribute is cast to a datetime', function () {
+    $report = CellVerificationReport::factory()->accepted()->create(['accepted_at' => '2026-09-01 10:30:00']);
+
+    $fresh = $report->fresh();
+
+    expect($fresh->accepted_at)->toBeInstanceOf(CarbonImmutable::class);
+    expect($fresh->accepted_at->toDateTimeString())->toBe('2026-09-01 10:30:00');
+});
+
 test('the filtered scope can filter by cell_id, excluding another cells report', function () {
     $cell = Cell::factory()->create();
     $matching = CellVerificationReport::factory()->create(['cell_id' => $cell->id]);

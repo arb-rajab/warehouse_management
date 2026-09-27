@@ -25,6 +25,8 @@ use Illuminate\Support\Carbon;
  * @property-read Carbon|null $reported_expiration_date
  * @property-read string|null $note
  * @property-read User $user
+ * @property-read Carbon|null $accepted_at
+ * @property-read User|null $acceptedBy
  * @property-read Carbon $created_at
  */
 class CellVerificationReportResource extends JsonResource
@@ -55,6 +57,8 @@ class CellVerificationReportResource extends JsonResource
             ],
             'note' => $this->note,
             'user' => $this->whenLoaded('user', fn () => new UserSummaryResource($this->user)),
+            'accepted_at' => $this->accepted_at?->toIso8601String(),
+            'accepted_by' => $this->whenLoaded('acceptedBy', fn () => $this->acceptedBy === null ? null : new UserSummaryResource($this->acceptedBy)),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

@@ -17,7 +17,10 @@ use Illuminate\Support\Carbon;
  * A single cell's verification outcome within a CellVerificationRound: the
  * pallet snapshot the system expected to find (captured server-side from the
  * cell's current pallet at submission time) versus what the mobile user
- * actually reported seeing. Append-only, like CellStatusLog — never edited.
+ * actually reported seeing. Append-only, like CellStatusLog — the snapshots
+ * and `is_correct` are never edited. The one later write is an admin accepting
+ * an incorrect report (see CellVerificationService::acceptReport()), which only
+ * fills `accepted_at`/`accepted_by` so the original discrepancy stays on record.
  *
  * @property int $id
  * @property int $cell_verification_round_id
@@ -33,6 +36,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $reported_boxes_count
  * @property Carbon|null $reported_expiration_date
  * @property string|null $note
+ * @property Carbon|null $accepted_at
+ * @property int|null $accepted_by
  * @property Carbon $created_at
  */
 #[Fillable([
@@ -49,6 +54,8 @@ use Illuminate\Support\Carbon;
     'reported_boxes_count',
     'reported_expiration_date',
     'note',
+    'accepted_at',
+    'accepted_by',
 ])]
 class CellVerificationReport extends Model
 {
@@ -71,6 +78,7 @@ class CellVerificationReport extends Model
         'reportedProduct:id,name,ar_name,thumbnail_img,published',
         'reportedProduct.thumbnailUpload:id,file_name,external_link',
         'reportedProduct.setting:product_id,boxes_count',
+        'acceptedBy:id,name',
     ];
 
     /**
@@ -82,7 +90,7 @@ class CellVerificationReport extends Model
         'id', 'cell_verification_round_id', 'cell_id', 'user_id', 'is_correct',
         'expected_cell_state', 'expected_product_id', 'expected_boxes_count', 'expected_expiration_date',
         'reported_cell_state', 'reported_product_id', 'reported_boxes_count', 'reported_expiration_date',
-        'note', 'created_at',
+        'note', 'accepted_at', 'accepted_by', 'created_at',
     ];
 
     /**
@@ -96,6 +104,7 @@ class CellVerificationReport extends Model
             'expected_expiration_date' => 'date',
             'reported_cell_state' => CellState::class,
             'reported_expiration_date' => 'date',
+            'accepted_at' => 'datetime',
         ];
     }
 
@@ -137,6 +146,14 @@ class CellVerificationReport extends Model
     public function reportedProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'reported_product_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function acceptedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'accepted_by');
     }
 
     /**

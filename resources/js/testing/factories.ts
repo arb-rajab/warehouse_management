@@ -103,6 +103,8 @@ export function cellVerificationReport(
         },
         note: null,
         user: { id: 7, name: 'Jane Doe' },
+        accepted_at: null,
+        accepted_by: null,
         created_at: '2026-08-01T10:00:00Z',
         ...overrides,
     };

@@ -2,6 +2,7 @@ import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -359,6 +360,36 @@ describe('Users Show', () => {
         expect(cells[6].text()).toContain(
             formatDateTime('2026-08-02T09:00:00Z'),
         );
+    });
+
+    it('shows when and by whom an accepted report was accepted, alongside its unchanged incorrect badge', () => {
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({
+                is_correct: false,
+                accepted_at: '2026-08-03T10:00:00Z',
+                accepted_by: { id: 9, name: 'Zoe Admin' },
+            }),
+            cellVerificationReport({ id: 2, is_correct: false }),
+        ]);
+
+        const rows = wrapper.findAll('table')[1].findAll('tbody tr');
+        const acceptedCell = rows[0].findAll('td')[2];
+        expect(acceptedCell.get('span').text()).toBe(
+            t('cellVerificationReport.incorrect'),
+        );
+        expect(
+            acceptedCell.getComponent(CellVerificationAcceptedNote).props(),
+        ).toEqual({
+            acceptedAt: '2026-08-03T10:00:00Z',
+            acceptedBy: { id: 9, name: 'Zoe Admin' },
+        });
+
+        const unacceptedCell = rows[1].findAll('td')[2];
+        expect(
+            unacceptedCell.findComponent(CellVerificationAcceptedNote).exists(),
+        ).toBe(false);
+        // Accepting happens from the round's own page, not here.
+        expect(unacceptedCell.find('button').exists()).toBe(false);
     });
 
     it('preselects the current per-page value in the reports page-size selector', () => {
