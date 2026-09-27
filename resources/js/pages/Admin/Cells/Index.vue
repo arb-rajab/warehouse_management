@@ -506,6 +506,60 @@ const viewportZoomPercent = computed(() =>
 const viewportEl = ref<HTMLElement | null>(null);
 const mapContentEl = ref<HTMLElement | null>(null);
 
+/**
+ * Keeps the viewport's pan bounds (see `useMapViewport`'s `setBounds()`) in
+ * sync with the container/content elements' real layout sizes, so panning
+ * stays clamped to the map's actual extent instead of allowing an infinite
+ * empty canvas. Re-observes whenever the elements themselves change (view
+ * mode toggling the 2D map's `v-if` off and back on) rather than assuming
+ * they're stable for the page's lifetime; `ResizeObserver` itself picks up
+ * later size changes (fullscreen toggle, window resize) without rewatching.
+ *
+ * `ResizeObserver` isn't defined in the Vitest/jsdom environment (see
+ * CellMap3D.test.ts, which stubs it explicitly) — guarded so Index.test.ts
+ * mounts without stubbing it too; pan simply stays unbounded there, same as
+ * before this feature, since `setBounds()` is never called.
+ */
+let viewportBoundsObserver: ResizeObserver | null = null;
+
+function updateViewportBounds(): void {
+    const container = viewportEl.value;
+    const content = mapContentEl.value;
+
+    if (!container || !content) {
+        return;
+    }
+
+    viewport.setBounds(
+        { width: container.clientWidth, height: container.clientHeight },
+        { width: content.offsetWidth, height: content.offsetHeight },
+    );
+}
+
+if (typeof ResizeObserver !== 'undefined') {
+    watch(
+        [viewportEl, mapContentEl],
+        ([container, content]) => {
+            viewportBoundsObserver?.disconnect();
+            viewportBoundsObserver = null;
+
+            if (!container || !content) {
+                return;
+            }
+
+            viewportBoundsObserver = new ResizeObserver(updateViewportBounds);
+            viewportBoundsObserver.observe(container);
+            viewportBoundsObserver.observe(content);
+            updateViewportBounds();
+        },
+        { immediate: true },
+    );
+}
+
+onBeforeUnmount(() => {
+    viewportBoundsObserver?.disconnect();
+});
+
 const viewMode = ref<'2d' | '3d'>('2d');
 const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
 

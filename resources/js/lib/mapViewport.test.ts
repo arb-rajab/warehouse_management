@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    clampPanAxis,
     clampZoom,
     mapOrientation,
     normalizeRotation,
@@ -316,5 +317,116 @@ describe('useMapViewport', () => {
         viewport.onPointerMove(pointerEvent(2, 300, 0));
 
         expect(viewport.state.zoom).toBe(zoomAfterLift);
+    });
+
+    describe('setBounds() — clamping pan to a finite range', () => {
+        it('leaves panBy() unbounded when setBounds() was never called', () => {
+            const viewport = useMapViewport();
+
+            viewport.panBy(100000, -100000);
+
+            expect(viewport.state.panX).toBe(100000);
+            expect(viewport.state.panY).toBe(-100000);
+        });
+
+        it('clamps an existing out-of-range pan as soon as bounds are set', () => {
+            const viewport = useMapViewport();
+
+            viewport.panBy(100000, 100000);
+            viewport.setBounds(
+                { width: 500, height: 500 },
+                { width: 1000, height: 1000 },
+            );
+
+            // content=1000, displayed=1000 (zoom 1), container=500 →
+            // pan clamps to at most 920 - 500 = 420 (see clampPanAxis).
+            expect(viewport.state.panX).toBe(420);
+            expect(viewport.state.panY).toBe(420);
+        });
+
+        it('stops panBy() at the bound instead of letting it run past', () => {
+            const viewport = useMapViewport();
+
+            viewport.setBounds(
+                { width: 500, height: 500 },
+                { width: 1000, height: 1000 },
+            );
+
+            viewport.panBy(-100000, -100000);
+            expect(viewport.state.panX).toBe(-920);
+            expect(viewport.state.panY).toBe(-920);
+
+            viewport.panBy(100000000, 100000000);
+            expect(viewport.state.panX).toBe(420);
+            expect(viewport.state.panY).toBe(420);
+        });
+
+        it('stops a pointer drag at the bound the same way panBy() does', () => {
+            const viewport = useMapViewport();
+
+            viewport.setBounds(
+                { width: 500, height: 500 },
+                { width: 1000, height: 1000 },
+            );
+
+            viewport.onPointerDown(pointerEvent(1, 0, 0));
+            viewport.onPointerMove(pointerEvent(1, 100000, 100000));
+
+            expect(viewport.state.panX).toBe(420);
+            expect(viewport.state.panY).toBe(420);
+        });
+
+        it('re-clamps when zooming out shrinks the displayed content', () => {
+            const viewport = useMapViewport();
+
+            viewport.setBounds(
+                { width: 500, height: 500 },
+                { width: 1000, height: 1000 },
+            );
+            viewport.panBy(420, 0);
+            expect(viewport.state.panX).toBe(420);
+
+            viewport.setZoom(0.5);
+
+            // content=1000, displayed=500, container=500 → max pan is now
+            // 670 - 500 = 170, tighter than the un-zoomed 420 it started at.
+            expect(viewport.state.panX).toBe(170);
+        });
+
+        it('does not clamp a pan that already sits inside the bounds', () => {
+            const viewport = useMapViewport();
+
+            viewport.setBounds(
+                { width: 500, height: 500 },
+                { width: 1000, height: 1000 },
+            );
+            viewport.panBy(50, -30);
+
+            expect(viewport.state.panX).toBe(50);
+            expect(viewport.state.panY).toBe(-30);
+        });
+    });
+});
+
+describe('clampPanAxis', () => {
+    it('leaves an in-range pan untouched', () => {
+        expect(clampPanAxis(50, 1000, 1000, 500)).toBe(50);
+    });
+
+    it('clamps a pan that would push the content past the max overlap', () => {
+        expect(clampPanAxis(100000, 1000, 1000, 500)).toBe(420);
+    });
+
+    it('clamps a pan that would push the content past the min overlap', () => {
+        expect(clampPanAxis(-100000, 1000, 1000, 500)).toBe(-920);
+    });
+
+    it('allows a wider range at a higher zoom (larger displayed size)', () => {
+        // Same content/container: at zoom 1 (displayed 1000) the max pan is
+        // 420 (see the earlier test); zoomed in to displayed 2000 the
+        // content overhangs more, so more pan is needed before it loses
+        // overlap — the max pan widens to 920.
+        expect(clampPanAxis(1000, 1000, 2000, 500)).toBe(920);
+        expect(clampPanAxis(2000, 1000, 2000, 500)).toBe(920);
     });
 });
