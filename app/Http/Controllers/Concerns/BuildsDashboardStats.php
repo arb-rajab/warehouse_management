@@ -42,12 +42,20 @@ trait BuildsDashboardStats
     public const int DEFAULT_CUSTOM_STALE_DAYS = StaleSoonDefaults::CUSTOM_WINDOW_DAYS;
 
     /**
+     * The most products the "inactive in warehouse" card lists by name —
+     * `count` always reflects the full total, so the card can say "N
+     * products" even once the list itself is capped.
+     */
+    private const int INACTIVE_IN_WAREHOUSE_LIMIT = 10;
+
+    /**
      * @param  list<int>|null  $productIds
      * @return array{
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
      *     low_stock: array{count: int},
+     *     inactive_in_warehouse: array{count: int, products: list<array{id: int, name: string, ar_name: string, pallets_count: int}>},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -57,6 +65,7 @@ trait BuildsDashboardStats
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
      *     low_stock: array{count: int},
+     *     inactive_in_warehouse: array{count: int, products: list<array{id: int, name: string, ar_name: string, pallets_count: int}>},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -73,6 +82,7 @@ trait BuildsDashboardStats
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
                     'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
                     'low_stock' => $this->lowStock($productIds, $productPublished),
+                    'inactive_in_warehouse' => $this->inactiveInWarehouse($productIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
                     'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
                 ];
@@ -228,6 +238,56 @@ trait BuildsDashboardStats
             ->count();
 
         return ['count' => $count];
+    }
+
+    /**
+     * Inactive products (`products.published = false`) that nonetheless have
+     * at least one pallet in the warehouse — the store has stopped selling
+     * them, but stock still physically occupies a cell. `pallets.cell_id` is
+     * non-nullable and unique (see Pallet's docblock), so every pallet row is
+     * inherently "in a cell" — "in the warehouse" reduces to "has at least
+     * one pallet row" with no cell-state check needed.
+     *
+     * Deliberately distinct from FilterProductsRequest's `inactive` filter,
+     * which is occupancy-agnostic by design (see .ai/rules/products.md) —
+     * this is the opposite subset: inactive AND occupying the warehouse.
+     *
+     * Filtered by `$productIds`/`$productPublished` directly (Product's own
+     * `id`/`published` columns), the same as {@see self::lowStock()}.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{count: int, products: list<array{id: int, name: string, ar_name: string, pallets_count: int}>}
+     */
+    private function inactiveInWarehouse(?array $productIds, ?bool $productPublished = null): array
+    {
+        $query = Product::query()
+            ->where('published', false)
+            ->whereExists(Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id'))
+            ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
+            ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished));
+
+        $count = (clone $query)->count();
+
+        $products = array_values((clone $query)
+            ->select(['id', 'name', 'ar_name'])
+            ->addSelect(['pallets_count' => Pallet::query()
+                ->selectRaw('count(*)')
+                ->whereColumn('pallets.product_id', 'products.id')])
+            ->orderBy('name')
+            ->limit(self::INACTIVE_IN_WAREHOUSE_LIMIT)
+            ->get()
+            ->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'ar_name' => $product->ar_name,
+                // pallets_count is an addSelect() alias, not a declared
+                // model property — getAttribute() sidesteps Larastan's
+                // undefined-property check on the magic __get() access.
+                'pallets_count' => (int) $product->getAttribute('pallets_count'),
+            ])
+            ->all());
+
+        return ['count' => $count, 'products' => $products];
     }
 
     /**

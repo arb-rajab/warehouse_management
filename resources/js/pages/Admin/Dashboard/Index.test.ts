@@ -71,6 +71,23 @@ const stats = {
     },
     stale: { days: 30, count: 5 },
     low_stock: { count: 4 },
+    inactive_in_warehouse: {
+        count: 2,
+        products: [
+            {
+                id: 3,
+                name: 'Old Widgets',
+                ar_name: 'ودجات قديمة',
+                pallets_count: 2,
+            },
+            {
+                id: 4,
+                name: 'Discontinued Gadgets',
+                ar_name: 'أدوات متوقفة',
+                pallets_count: 1,
+            },
+        ],
+    },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
     activity_week: { stored: 20, opened: 8, emptied: 4, transferred: 9 },
 };
@@ -83,6 +100,7 @@ const products = [
 function mountPage(
     overrides: {
         filters?: { product_id: number[] | null };
+        stats?: typeof stats;
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -92,7 +110,7 @@ function mountPage(
 
     return mount(Index, {
         props: {
-            stats,
+            stats: overrides.stats ?? stats,
             today: '2026-08-13',
             weekStart: '2026-08-10',
             filters: overrides.filters ?? { product_id: null },
@@ -451,10 +469,10 @@ describe('Dashboard Index', () => {
         expect(stale?.exists()).toBe(true);
     });
 
-    it('renders exactly six sections, including the stale and low-stock sections', () => {
+    it('renders exactly seven sections, including the stale, low-stock and inactive-in-warehouse sections', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findAll('section')).toHaveLength(6);
+        expect(wrapper.findAll('section')).toHaveLength(7);
     });
 
     it('renders every section heading', () => {
@@ -464,8 +482,63 @@ describe('Dashboard Index', () => {
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
         expect(wrapper.text()).toContain(t('dashboard.stale.title'));
         expect(wrapper.text()).toContain(t('dashboard.lowStock.title'));
+        expect(wrapper.text()).toContain(
+            t('dashboard.inactiveInWarehouse.title'),
+        );
         expect(wrapper.text()).toContain(t('dashboard.activityToday.title'));
         expect(wrapper.text()).toContain(t('dashboard.activityWeek.title'));
+    });
+
+    it('renders the inactive-in-warehouse tile linking to the products page filtered to inactive=true', () => {
+        const wrapper = mountPage();
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.inactiveInWarehouse.count'),
+            { inactive: true },
+        );
+        expect(tile?.props('value')).toBe(2);
+        expect(tile?.props('href')).toBe('/admin/products');
+        expect(tile?.props('tone')).toBe('warning');
+    });
+
+    it('includes the active product filter in the inactive-in-warehouse tile link', () => {
+        const wrapper = mountPage({ filters: { product_id: [1, 2] } });
+
+        const tile = tileByLabelAndQuery(
+            wrapper,
+            t('dashboard.inactiveInWarehouse.count'),
+            { inactive: true, product_id: [1, 2] },
+        );
+        expect(tile?.exists()).toBe(true);
+    });
+
+    it('lists each inactive-in-warehouse product with a link filtered to that product', () => {
+        const wrapper = mountPage();
+
+        const productLink = wrapper
+            .findAll('a')
+            .find(
+                (a) =>
+                    a.attributes('data-query') ===
+                    JSON.stringify({ product_id: [3] }),
+            );
+        expect(productLink?.text()).toContain('Old Widgets');
+        expect(productLink?.text()).toContain('2');
+        expect(productLink?.attributes('href')).toBe('/admin/products');
+    });
+
+    it('shows an empty state when no inactive products are in the warehouse', () => {
+        const wrapper = mountPage({
+            stats: {
+                ...stats,
+                inactive_in_warehouse: { count: 0, products: [] },
+            },
+        });
+
+        expect(wrapper.text()).toContain(
+            t('dashboard.inactiveInWarehouse.empty'),
+        );
     });
 
     it('renders the low-stock tile linking to the products page filtered to low_stock=true', () => {
