@@ -745,18 +745,25 @@ function resetViewAndRecenter(): void {
 }
 
 /**
- * Shrinks the map so the whole thing fits inside the viewport with no
- * scrolling/panning needed, measuring the content's unscaled size (dividing
- * its current, already-scaled bounding box by the current zoom) against the
- * viewport container's size, then re-centers the content's own middle in the
- * viewport. Centering (not just zooming) is required: CSS `scale()` pivots
- * around `transform-origin: center` — the content box's own center — so
- * once the box is significantly bigger than the viewport, that pivot point
- * sits far outside it, and shrinking around it without also repanning
- * leaves the shrunk map off to one side instead of visible. This doesn't
- * conflict with the rotate/reset flows deliberately not recentering on cell
- * A1 (see js-lib.md) — this still centers on the content's own middle, not
- * any particular cell.
+ * Shrinks the map so as much of it fits inside the viewport as possible with
+ * no scrolling/panning needed, measuring the content's unscaled size
+ * (dividing its current, already-scaled bounding box by the current zoom)
+ * against the viewport container's size, then re-pans so cell A1 (the
+ * content's own top-left corner) stays flush with the viewport's top-left —
+ * the same anchor reset-view and the unfitted 100% view already use — rather
+ * than drifting to whatever the scale pivot leaves it at. Repanning is
+ * required even though this keeps the same corner anchored: CSS `scale()`
+ * pivots around `transform-origin: center` — the content box's own center —
+ * so once the box is significantly bigger than the viewport, that pivot
+ * point sits far outside it, and shrinking around it without repanning slides
+ * the top-left corner away from (0,0) instead of leaving it in place. Any
+ * leftover slack (a non-constraining axis, or `ZOOM_MIN` preventing the map
+ * from shrinking enough to show every cell when it is very wide/tall) falls
+ * on the trailing edges only, never splits around the content, so cell A1
+ * always stays visible — anchoring flush like this is why this doesn't
+ * conflict with rotate/reset deliberately not force-centering on cell A1
+ * (see js-lib.md): that rule is about not pinning A1 to the viewport's exact
+ * middle, which this never does.
  */
 function fitMapToView(): void {
     const container = viewportEl.value;
@@ -779,8 +786,12 @@ function fitMapToView(): void {
 
     viewport.setZoom(fittedZoom);
     viewport.panBy(
-        containerRect.width / 2 - contentWidth / 2 - viewport.state.panX,
-        containerRect.height / 2 - contentHeight / 2 - viewport.state.panY,
+        (contentWidth * fittedZoom) / 2 -
+            contentWidth / 2 -
+            viewport.state.panX,
+        (contentHeight * fittedZoom) / 2 -
+            contentHeight / 2 -
+            viewport.state.panY,
     );
 }
 

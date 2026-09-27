@@ -1438,7 +1438,7 @@ describe('Cells Index (warehouse map)', () => {
         getBoundingClientRectSpy.mockRestore();
     });
 
-    it('resets pan to (0,0) without centering on cell A1, but fitting centers the content itself instead', async () => {
+    it('resets pan to (0,0) and fitting re-pans to keep cell A1 flush at the top-left, unlike rotation which centers A1', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
         // centerLabelInViewport() looks up its target via `document.querySelector`,
         // so the mounted tree needs to be attached to the document for that to
@@ -1491,15 +1491,18 @@ describe('Cells Index (warehouse map)', () => {
 
         // Content is 1000x800 against a 700x600 container: zoomToFit shrinks
         // to 70% (700/1000, the binding width ratio), and — since CSS scale()
-        // pivots around the content box's own center, not the viewport's —
-        // fitMapToView must also pan so that shrunk box's own middle lands on
-        // the viewport's middle: (350 - 500, 300 - 400) = (-150, -100). That's
-        // neither (0,0) nor a pan toward A1's mocked position, confirming this
-        // centers the content itself rather than any particular cell.
+        // pivots around the content box's own center, not its top-left corner
+        // — fitMapToView must also pan to counteract that drift so cell A1
+        // (the content's own top-left) stays flush at the viewport's
+        // top-left: (1000/2)*(0.7-1) = -150, (800/2)*(0.7-1) = -120. That's
+        // neither (0,0) (pan is still needed to counter the scale pivot) nor
+        // a pan toward A1's mocked slot-label position (confirming this
+        // isn't centerLabelInViewport's A1-centering, just the content's own
+        // corner staying put).
         await wrapper
             .get(`[title="${t('cells.map.fitToView')}"]`)
             .trigger('click');
-        expect(transform()).toContain('translate(-150px, -100px)');
+        expect(transform()).toContain('translate(-150px, -120px)');
         expect(transform()).toContain('scale(0.7)');
 
         // Rotation still recenters on A1, so it remains free to pan away from
