@@ -356,6 +356,9 @@
         "palletActions": {
             "triggerLabel": "إدارة المنصة النقالة",
             "title": "إدارة المنصة النقالة — {location}",
+            "details": {
+                "remainingBoxes": "{count} صندوق متبقٍ"
+            },
             "tabs": {
                 "store": "تخزين",
                 "open": "فتح",

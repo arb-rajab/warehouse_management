@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Ban, Box, LayoutGrid, PackageSearch, Search } from '@lucide/vue';
+import { Ban, Box, LayoutGrid, Search } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import CellSlot from '@/components/CellSlot.vue';
 import CellStateLegend from '@/components/CellStateLegend.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
@@ -15,7 +16,26 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
-import type { ProductFilterOption } from '@/types/admin';
+import type { Cell, ProductFilterOption } from '@/types/admin';
+
+const previewManageableCell: Cell = {
+    id: 0,
+    cell_number: 1,
+    flat_number: 1,
+    state: 'full',
+    is_active: true,
+    pallet: {
+        id: 0,
+        product_id: 0,
+        product_name: 'Example product',
+        product_ar_name: '',
+        product_image_url: null,
+        expiration_date: null,
+        added_at: null,
+        is_stale: null,
+        remaining_boxes: 5,
+    },
+};
 
 const palletActionTabKeys = [
     'store',
@@ -88,15 +108,13 @@ const previewProduct = ref<ProductFilterOption | null>(null);
             <p class="text-sm text-gray-700 dark:text-neutral-300">
                 {{ t('help.cells.managingPallets.body') }}
             </p>
-            <HelpUiPreview class="mt-2">
-                <span
-                    tabindex="-1"
-                    :title="t('cells.palletActions.triggerLabel')"
-                    class="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-neutral-400"
-                >
-                    <PackageSearch class="h-4 w-4" />
-                    {{ t('cells.palletActions.triggerLabel') }}
-                </span>
+            <HelpUiPreview inert class="mt-2 flex justify-center">
+                <CellSlot
+                    :cell="previewManageableCell"
+                    :label="formatSlot('A', 1, 1)"
+                    :highlighted="false"
+                    manageable
+                />
             </HelpUiPreview>
             <HelpUiPreview class="mt-2">
                 <span

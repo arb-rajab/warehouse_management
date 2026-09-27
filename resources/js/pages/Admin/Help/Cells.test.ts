@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/vue3';
-import { Ban, Box, LayoutGrid, PackageSearch, Search } from '@lucide/vue';
+import { Ban, Box, LayoutGrid, Search } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
@@ -78,14 +78,18 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(t('help.cells.deactivating.body'));
     });
 
-    it('renders a preview of the search, manage-pallet, and deactivate controls', () => {
+    it('renders a preview of the search, manageable cell, and deactivate controls', () => {
         const wrapper = mountPage();
 
         expect(wrapper.findComponent(Search).exists()).toBe(true);
-        expect(wrapper.findComponent(PackageSearch).exists()).toBe(true);
         expect(wrapper.findComponent(Ban).exists()).toBe(true);
         expect(wrapper.text()).toContain(t('cells.search.placeholder'));
-        expect(wrapper.text()).toContain(t('cells.palletActions.triggerLabel'));
+        expect(wrapper.text()).toContain('Example product');
+        expect(
+            wrapper
+                .find(`[title="${t('cells.palletActions.triggerLabel')}"]`)
+                .exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.deactivateLabel'),
         );
