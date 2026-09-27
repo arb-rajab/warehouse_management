@@ -8,6 +8,14 @@ const ZOOM_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.001;
 const ROTATION_STEP_DEGREES = 90;
 
+/**
+ * The minimum number of pixels of the map content that must stay overlapping
+ * the viewport container on each axis. Keeps panning finite — the map can be
+ * dragged/panned far enough to reach any edge or corner, but never so far
+ * that it's pushed entirely into blank space with nothing left to grab.
+ */
+const MIN_PAN_OVERLAP_PX = 80;
+
 interface MapViewportState {
     panX: number;
     panY: number;
@@ -45,6 +53,30 @@ export function zoomToFit(contentSize: Size, containerSize: Size): number {
             containerSize.width / contentSize.width,
             containerSize.height / contentSize.height,
         ),
+    );
+}
+
+/**
+ * Clamps a single pan axis so the (scaled) content box can't be pushed
+ * further than `MIN_PAN_OVERLAP_PX` clear of the container on that axis.
+ * `contentSize`/`displayedSize` are that axis's unscaled/scaled content
+ * length; the content box is assumed to start centered on the container's
+ * own top-left-flow position (transform-origin: center on an element that
+ * otherwise sits at the container's origin), matching how `viewportTransform`
+ * applies translate on top of a center-origin scale.
+ */
+export function clampPanAxis(
+    pan: number,
+    contentSize: number,
+    displayedSize: number,
+    containerSize: number,
+): number {
+    const centerScreen = contentSize / 2 + pan;
+    const minCenter = MIN_PAN_OVERLAP_PX - displayedSize / 2;
+    const maxCenter = containerSize - MIN_PAN_OVERLAP_PX + displayedSize / 2;
+
+    return (
+        Math.min(maxCenter, Math.max(minCenter, centerScreen)) - contentSize / 2
     );
 }
 
@@ -129,17 +161,61 @@ export function useMapViewport() {
     let panAnchor: Point | null = null;
     let pinchStartDistance: number | null = null;
     let zoomAtPinchStart = 1;
+    let bounds: { container: Size; content: Size } | null = null;
+
+    /**
+     * Re-clamps the current pan against the last-known container/content
+     * sizes. A no-op until `setBounds()` has been called at least once (e.g.
+     * in tests that exercise pan/zoom without ever measuring real DOM
+     * elements) — unbounded pan/zoom behavior is unchanged for callers that
+     * never opt in.
+     */
+    function clampPanToBounds(): void {
+        if (!bounds) {
+            return;
+        }
+
+        const displayedWidth = bounds.content.width * state.zoom;
+        const displayedHeight = bounds.content.height * state.zoom;
+
+        state.panX = clampPanAxis(
+            state.panX,
+            bounds.content.width,
+            displayedWidth,
+            bounds.container.width,
+        );
+        state.panY = clampPanAxis(
+            state.panY,
+            bounds.content.height,
+            displayedHeight,
+            bounds.container.height,
+        );
+    }
+
+    /**
+     * Records the container/content sizes pan is clamped against, and
+     * re-clamps immediately (e.g. after the container is resized). Sizes
+     * should be unscaled/layout sizes — a `ResizeObserver`'s content-box
+     * size, not a zoomed `getBoundingClientRect()`.
+     */
+    function setBounds(container: Size, content: Size): void {
+        bounds = { container, content };
+        clampPanToBounds();
+    }
 
     function zoomIn(): void {
         state.zoom = clampZoom(state.zoom + ZOOM_STEP);
+        clampPanToBounds();
     }
 
     function zoomOut(): void {
         state.zoom = clampZoom(state.zoom - ZOOM_STEP);
+        clampPanToBounds();
     }
 
     function setZoom(zoom: number): void {
         state.zoom = clampZoom(zoom);
+        clampPanToBounds();
     }
 
     function rotateLeft(): void {
@@ -172,10 +248,12 @@ export function useMapViewport() {
     function panBy(deltaX: number, deltaY: number): void {
         state.panX += deltaX;
         state.panY += deltaY;
+        clampPanToBounds();
     }
 
     function onWheel(event: WheelEvent): void {
         state.zoom = zoomFromWheelDelta(state.zoom, event.deltaY);
+        clampPanToBounds();
     }
 
     function onPointerDown(event: PointerEvent): void {
@@ -212,6 +290,7 @@ export function useMapViewport() {
                 pinchStartDistance,
                 distanceBetween(a, b),
             );
+            clampPanToBounds();
         }
     }
 
@@ -229,6 +308,7 @@ export function useMapViewport() {
 
     return {
         state: readonly(state),
+        setBounds,
         zoomIn,
         zoomOut,
         setZoom,
