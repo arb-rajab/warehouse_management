@@ -1438,7 +1438,7 @@ describe('Cells Index (warehouse map)', () => {
         getBoundingClientRectSpy.mockRestore();
     });
 
-    it('does not pan to center cell A1 when resetting or fitting the view, unlike rotation', async () => {
+    it('resets pan to (0,0) without centering on cell A1, but fitting centers the content itself instead', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
         // centerLabelInViewport() looks up its target via `document.querySelector`,
         // so the mounted tree needs to be attached to the document for that to
@@ -1455,6 +1455,13 @@ describe('Cells Index (warehouse map)', () => {
                         width: 700,
                         height: 600,
                     } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
                 }
 
                 if (
@@ -1482,10 +1489,18 @@ describe('Cells Index (warehouse map)', () => {
             .trigger('click');
         expect(transform()).toContain('translate(0px, 0px)');
 
+        // Content is 1000x800 against a 700x600 container: zoomToFit shrinks
+        // to 70% (700/1000, the binding width ratio), and — since CSS scale()
+        // pivots around the content box's own center, not the viewport's —
+        // fitMapToView must also pan so that shrunk box's own middle lands on
+        // the viewport's middle: (350 - 500, 300 - 400) = (-150, -100). That's
+        // neither (0,0) nor a pan toward A1's mocked position, confirming this
+        // centers the content itself rather than any particular cell.
         await wrapper
             .get(`[title="${t('cells.map.fitToView')}"]`)
             .trigger('click');
-        expect(transform()).toContain('translate(0px, 0px)');
+        expect(transform()).toContain('translate(-150px, -100px)');
+        expect(transform()).toContain('scale(0.7)');
 
         // Rotation still recenters on A1, so it remains free to pan away from
         // translate(0px, 0px) given the mismatched container/target rects above.
