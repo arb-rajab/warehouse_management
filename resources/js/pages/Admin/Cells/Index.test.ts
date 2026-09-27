@@ -1036,6 +1036,70 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
 
+    it('shows the product filter above the map without opening the highlight filter dialog', () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(wrapper.find('#toolbar-product').exists()).toBe(true);
+    });
+
+    it('highlights matching cells when a product is selected from the toolbar filter, without opening the highlight dialog', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({
+                        id: 2,
+                        product_id: 2,
+                        product_name: 'Gadgets',
+                        product_ar_name: 'أدوات',
+                    }),
+                }),
+            ],
+        );
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('keeps the toolbar product filter and the dialog product filter in sync', async () => {
+        const wrapper = mountPage([row()], []);
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+
+        expect(
+            (
+                wrapper.findAll('[role="listbox"] input[type="checkbox"]')[0]
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+    });
+
     it('highlights only cells matching the selected product', async () => {
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
