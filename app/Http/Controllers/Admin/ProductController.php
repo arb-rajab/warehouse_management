@@ -23,9 +23,11 @@ use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,6 +42,9 @@ class ProductController extends Controller
         'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
         'expiring_soon_count',
     ];
+
+    /** Longest side, in pixels, of an image served by {@see image()} — ample for a 3D map box face. */
+    private const int PRODUCT_IMAGE_MAX_SIZE = 256;
 
     public function index(FilterProductsRequest $request): Response
     {
@@ -227,6 +232,82 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
+    }
+
+    /**
+     * The product's store-hosted image, re-served from this app's own origin.
+     *
+     * The 3D map draws product images as WebGL textures, and WebGL rejects a
+     * cross-origin image unless its host sends CORS headers — which the
+     * store's image host doesn't, even though a plain `<img>` of the same URL
+     * displays fine. The upstream bytes are decoded and re-encoded as a
+     * downscaled PNG rather than passed through, so only a real raster image
+     * (never SVG/HTML) is ever served from this origin.
+     */
+    public function image(Product $product): HttpResponse
+    {
+        $product->loadMissing('thumbnailUpload:id,file_name,external_link');
+        $url = $product->image_url;
+
+        if ($url === null) {
+            abort(HttpResponse::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $upstream = Http::timeout(10)->get($url);
+        } catch (ConnectionException) {
+            abort(HttpResponse::HTTP_BAD_GATEWAY);
+        }
+
+        abort_unless($upstream->successful(), HttpResponse::HTTP_BAD_GATEWAY);
+
+        $png = $this->normalizedProductImage($upstream->body());
+
+        if ($png === null) {
+            abort(HttpResponse::HTTP_BAD_GATEWAY);
+        }
+
+        return response($png)
+            ->header('Content-Type', 'image/png')
+            ->header('Cache-Control', 'private, max-age=86400');
+    }
+
+    /**
+     * Decodes any raster format GD reads, downscales it to fit
+     * PRODUCT_IMAGE_MAX_SIZE (never upscaling) and re-encodes it as PNG,
+     * keeping transparency. Null when the bytes aren't a decodable image.
+     */
+    private function normalizedProductImage(string $bytes): ?string
+    {
+        // `@`: GD warns on undecodable input; a false return is handled below.
+        $source = @imagecreatefromstring($bytes);
+
+        if ($source === false) {
+            return null;
+        }
+
+        imagepalettetotruecolor($source);
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $scale = min(1, self::PRODUCT_IMAGE_MAX_SIZE / max($width, $height));
+        $target = imagescale(
+            $source,
+            max(1, (int) round($width * $scale)),
+            max(1, (int) round($height * $scale)),
+        );
+
+        if ($target === false) {
+            return null;
+        }
+
+        imagealphablending($target, false);
+        imagesavealpha($target, true);
+
+        ob_start();
+        imagepng($target);
+
+        return (string) ob_get_clean();
     }
 
     /**

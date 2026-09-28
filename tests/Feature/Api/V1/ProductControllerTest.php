@@ -281,7 +281,7 @@ test('an authenticated worker can list every current pallet of a product, ordere
     $otherProduct = Product::factory()->create();
 
     $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 1]);
 
     // Expires soonest, in row B — must sort first despite being in a "later" row.
     $soonest = Pallet::factory()->for($product)->create([
@@ -307,7 +307,9 @@ test('an authenticated worker can list every current pallet of a product, ordere
     $tiedLater->forceFill(['created_at' => $tiedEarlier->created_at->addMinute()])->save();
 
     // Noise: another product's pallet must never appear in this response.
-    Pallet::factory()->for($otherProduct)->create();
+    Pallet::factory()->for($otherProduct)->create([
+        'cell_id' => $rowB->cells()->where('cell_number', 2)->first()->id,
+    ]);
 
     $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
 

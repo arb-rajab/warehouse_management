@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import * as THREE from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { image as productImage } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -1594,15 +1595,19 @@ describe('CellMap3D', () => {
             return mesh;
         }
 
+        /** A pallet of product `productId`, whose image (if it has one) lives on the store's host — never loaded directly by the 3D map. */
         function palletWithImage(
-            productImageUrl: string | null,
+            productId: number,
+            hasImage = true,
         ): CellPalletSummary {
             return {
-                id: 9,
-                product_id: 3,
+                id: productId * 100,
+                product_id: productId,
                 product_name: 'Widgets',
                 product_ar_name: 'ودجات',
-                product_image_url: productImageUrl,
+                product_image_url: hasImage
+                    ? `https://store.example.com/uploads/${productId}.png`
+                    : null,
                 expiration_date: null,
                 added_at: null,
                 remaining_boxes: 5,
@@ -1628,8 +1633,9 @@ describe('CellMap3D', () => {
             };
         }
 
-        /** Resolves the pending load for `url` with a fake image of the given size. */
-        function loadTexture(url: string, width = 100, height = 100) {
+        /** Resolves the pending load of product `productId`'s image (via this app's `products.image` route) with a fake image of the given size. */
+        function loadTexture(productId: number, width = 100, height = 100) {
+            const url = productImage.url(productId);
             const load = registry().textureLoads.find(
                 (entry) => entry.url === url,
             );
@@ -1653,7 +1659,7 @@ describe('CellMap3D', () => {
                                 item({
                                     cellNumber: 1,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/a.png'),
+                                    pallet: palletWithImage(1),
                                 }),
                             ],
                         }),
@@ -1661,7 +1667,7 @@ describe('CellMap3D', () => {
                 },
             });
 
-            const mesh = meshShowing(loadTexture('/img/a.png'));
+            const mesh = meshShowing(loadTexture(1));
             const center = {
                 x: rowWorldX(0),
                 y: flatWorldY(1),
@@ -1704,7 +1710,7 @@ describe('CellMap3D', () => {
             });
         });
 
-        it('loads each distinct image once and groups its pallets into one mesh, skipping pallets without an image and empty cells', () => {
+        it("loads each product image once through this app's own image route and groups its pallets into one mesh, skipping pallets without an image and empty cells", () => {
             mount(CellMap3D, {
                 props: {
                     bands: [
@@ -1714,17 +1720,17 @@ describe('CellMap3D', () => {
                                 item({
                                     cellNumber: 1,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/a.png'),
+                                    pallet: palletWithImage(1),
                                 }),
                                 item({
                                     cellNumber: 2,
                                     state: 'opened',
-                                    pallet: palletWithImage('/img/a.png'),
+                                    pallet: palletWithImage(1),
                                 }),
                                 item({
                                     cellNumber: 3,
                                     state: 'full',
-                                    pallet: palletWithImage(null),
+                                    pallet: palletWithImage(3, false),
                                 }),
                                 item({ cellNumber: 4, state: 'empty' }),
                             ],
@@ -1735,7 +1741,7 @@ describe('CellMap3D', () => {
                                 item({
                                     cellNumber: 1,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/b.png'),
+                                    pallet: palletWithImage(2),
                                 }),
                             ],
                         }),
@@ -1743,14 +1749,15 @@ describe('CellMap3D', () => {
                 },
             });
 
+            // Same-origin route, not the store's (CORS-less) image host.
             expect(registry().textureLoads.map((load) => load.url)).toEqual([
-                '/img/a.png',
-                '/img/b.png',
+                '/admin/products/1/image',
+                '/admin/products/2/image',
             ]);
             expect(liveProductImageMeshes()).toHaveLength(2);
 
-            const aMesh = meshShowing(loadTexture('/img/a.png'));
-            const bMesh = meshShowing(loadTexture('/img/b.png'));
+            const aMesh = meshShowing(loadTexture(1));
+            const bMesh = meshShowing(loadTexture(2));
 
             expect(aMesh.count).toBe(10);
             expect(aMesh.matrices[0].z - cellWorldZ(1)).toBeGreaterThan(0);
@@ -1770,17 +1777,17 @@ describe('CellMap3D', () => {
                                 item({
                                     cellNumber: 1,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/wide.png'),
+                                    pallet: palletWithImage(4),
                                 }),
                                 item({
                                     cellNumber: 2,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/tall.png'),
+                                    pallet: palletWithImage(5),
                                 }),
                                 item({
                                     cellNumber: 3,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/blocked.png'),
+                                    pallet: palletWithImage(6),
                                 }),
                             ],
                         }),
@@ -1798,8 +1805,8 @@ describe('CellMap3D', () => {
                 expect(material.alphaTest).toBeGreaterThan(0);
             });
 
-            const wide = loadTexture('/img/wide.png', 200, 100);
-            const tall = loadTexture('/img/tall.png', 100, 200);
+            const wide = loadTexture(4, 200, 100);
+            const tall = loadTexture(5, 100, 200);
             const wideMaterial = meshShowing(wide).material;
 
             expect(wideMaterial.visible).toBe(true);
@@ -1825,13 +1832,13 @@ describe('CellMap3D', () => {
                         item({
                             cellNumber: 1,
                             state: 'full',
-                            pallet: palletWithImage('/img/a.png'),
+                            pallet: palletWithImage(1),
                         }),
                         item({
                             cellNumber: 2,
                             state: 'full',
                             dimmed: dimmedCellTwo,
-                            pallet: palletWithImage('/img/a.png'),
+                            pallet: palletWithImage(1),
                         }),
                     ],
                 }),
@@ -1839,7 +1846,7 @@ describe('CellMap3D', () => {
             const wrapper = mount(CellMap3D, {
                 props: { bands: bandsWithDimmed(false) },
             });
-            const texture = loadTexture('/img/a.png');
+            const texture = loadTexture(1);
             const meshBefore = meshShowing(texture);
             const cellBoxMeshCountBefore = cellBoxInstancedMeshes().length;
 
@@ -1870,31 +1877,31 @@ describe('CellMap3D', () => {
         });
 
         it("swaps a cell's image when its pallet's product changes in place", async () => {
-            const bandsWithImage = (url: string) => [
+            const bandsWithImage = (productId: number) => [
                 band({
                     items: [
                         item({
                             cellNumber: 1,
                             state: 'full',
-                            pallet: palletWithImage(url),
+                            pallet: palletWithImage(productId),
                         }),
                         item({ cellNumber: 2, state: 'empty' }),
                     ],
                 }),
             ];
             const wrapper = mount(CellMap3D, {
-                props: { bands: bandsWithImage('/img/a.png') },
+                props: { bands: bandsWithImage(1) },
             });
-            loadTexture('/img/a.png');
+            loadTexture(1);
 
-            await wrapper.setProps({ bands: bandsWithImage('/img/c.png') });
+            await wrapper.setProps({ bands: bandsWithImage(7) });
 
             expect(registry().textureLoads.map((load) => load.url)).toEqual([
-                '/img/a.png',
-                '/img/c.png',
+                productImage.url(1),
+                productImage.url(7),
             ]);
             expect(liveProductImageMeshes()).toHaveLength(1);
-            expect(meshShowing(loadTexture('/img/c.png')).count).toBe(5);
+            expect(meshShowing(loadTexture(7)).count).toBe(5);
         });
 
         it('disposes the image panels, their materials, loaded textures and the panel geometry on unmount', () => {
@@ -1906,14 +1913,14 @@ describe('CellMap3D', () => {
                                 item({
                                     cellNumber: 1,
                                     state: 'full',
-                                    pallet: palletWithImage('/img/a.png'),
+                                    pallet: palletWithImage(1),
                                 }),
                             ],
                         }),
                     ],
                 },
             });
-            const texture = loadTexture('/img/a.png');
+            const texture = loadTexture(1);
             const mesh = meshShowing(texture);
 
             wrapper.unmount();
