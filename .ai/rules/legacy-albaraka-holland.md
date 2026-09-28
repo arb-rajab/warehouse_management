@@ -23,17 +23,18 @@ paths:
 The goal is **one application**: one `composer.json`/`vendor`, one database,
 one `.env`. No second vendor directory, no second database, no gateway or proxy
 in front of two apps. This file is the audit that scopes that work. It was
-built from static reads of `github.com/arb-rajab/albaraka-holland` (commit
-`a120282`, its only commit) and this repo. Nothing was installed and no SQL was
-run. Package versions come from Packagist metadata (`repo.packagist.org/p2/*.json`)
-as of 2026-09-24.
+built from static reads of `github.com/arb-rajab/albaraka-holland` and this
+repo. The audit was first run on commit `a120282` and re-checked on `f31f264`
+("Second Commit(after changes)", 2026-09-27); section 0.6 lists what that commit
+changed. Nothing was installed and no SQL was run. Package versions come from
+Packagist metadata (`repo.packagist.org/p2/*.json`) as of 2026-09-24.
 
 Read the whole of section 0 before you start any phase. The other sections are
 reference material for the phase you are working on.
 
 ## 0. Blocking findings. Handle these first.
 
-### 0.1 The legacy repo contains a live webshell and an attacker file manager
+### 0.1 The legacy repo still contains a live webshell
 
 The legacy repo is a snapshot of a server document root. It contains files that
 an attacker dropped there:
@@ -42,7 +43,7 @@ an attacker dropped there:
 | --- | --- |
 | `public/logo.php` | Encrypted-eval webshell. It AES-decrypts a payload keyed on the session id, then `@eval()`s it. |
 | `public/demo.php` | Recon probe that deletes itself. It is `eval(base64_decode(...))` and prints the PHP version and file path before unlinking. |
-| `tn.php`, `public/tn.php` | Tiny File Manager 2.5.3, a full web file manager with one bcrypt admin user. **The plaintext password sits in a comment next to the hash.** |
+| ~~`tn.php`, `public/tn.php`~~ | **Removed in `f31f264`.** Tiny File Manager 2.5.3, a full web file manager with one bcrypt admin user, whose plaintext password sat in a comment next to the hash. Deleting it from the repo does not remove it from the server, and the password must be treated as leaked (it is still in git history). |
 | `public/addons/*.zip` (6 files) | The delivery mechanism. Each zip is a fake "addon" (`unique_identifier` `pm_…`, `sql/update.sql` = `SELECT 1;`) whose `config.json` copies `demo.php`/`logo.php` into `public/`. |
 
 This is how they got there: `AddonController::store` (`routes/admin.php:606`,
@@ -52,6 +53,10 @@ execution by design for anyone holding an admin session. `Storage::disk('local')
 has `root => public_path()`, which is why the uploaded zips ended up web-served
 under `public/addons/`.
 
+`f31f264` removed only the file manager. `public/logo.php`, `public/demo.php`
+and all six `public/addons/*.zip` files are **still in the repo**, and
+`AddonController` is unchanged, so the way they got in is still open.
+
 The following is outside this repo's scope. Tell the owner, because it cannot
 wait for the merge:
 - Treat the production store server as compromised.
@@ -59,8 +64,7 @@ wait for the merge:
   and `config('app.wms_token')`.
 - Audit the `addons` table and the admin users.
 
-For the merge, **never copy these into this repo**: `tn.php`, `public/tn.php`,
-`public/demo.php`, `public/logo.php`, `public/addons/`, `public/logs/`,
+For the merge, **never copy these into this repo**: `public/demo.php`, `public/logo.php`, `public/addons/`, `public/logs/`,
 `AddonController` and its views and routes, `routes/install.php`,
 `routes/update.php`, or the `update`/`installation` view directories.
 
@@ -123,6 +127,23 @@ is inferred from the `composer.json` ranges.
 - This app declares `php: ^8.3`, but its `composer.lock` actually needs
   **PHP ≥ 8.4.1**: symfony 8.1 components (`symfony/console` v8.1.4 and others)
   and `phpunit/phpunit` 13. Target PHP 8.4+ for the merged app.
+
+### 0.6 What `f31f264` changed
+
+The second legacy commit touches 9 files. None of it changes a package, a
+table, a class name, a config key or a route, so sections 1–7 still hold. What
+it does change:
+
+| File | Change | Effect on this audit |
+| --- | --- | --- |
+| `tn.php`, `public/tn.php` | Deleted | Updates 0.1. The webshell, the probe and the zips remain |
+| `SearchController` (2 queries), `BlogController` | `orderByRaw()` now binds the `LIKE` terms (`?` + bindings) instead of interpolating the search string into the SQL | Fixes SQL injection in the storefront search and blog search. A sweep of `app/` for other `*Raw()`/`DB::select`/`DB::statement` calls with an interpolated or concatenated variable finds none left |
+| `ProductController` (admin fetch) | The `cron_jobs` lookups wrap `status = pending OR running` in a closure and only count rows updated in the last 30 minutes | Fixes an operator-precedence bug where any `running` row of any command blocked the fetch, and a stuck job no longer blocks it forever. Keep this logic when the Otajer import commands move into `routes/console.php` (§6.5) |
+| `ProductController` (admin listing) | The default listing hides `deleted_from_api = 1` products | Store-admin UI only. It matches the idea behind WMS's `published` filter, but the two columns are different and must not be merged into one flag |
+| `NewFetchProductsCommand` | The `shipping` product and its `PerBox` stock row use `firstOrCreate` instead of `create` | Each import no longer adds another `shipping` row. Note for §3: this row is **not** in the Otajer feed, so whichever command ends up as the single `products` writer must keep creating it, and WMS product search will see it once the tables are shared |
+| `CategoryUtility::flat_children` | Guards against category parent cycles | Fixes unbounded recursion. No merge impact |
+| `backend/representatives/index.blade.php` | The delete link no longer points `href` at the route, it uses `data-href` with the confirm modal | Fixes deletion by a plain link click. No merge impact |
+| `public/download/product_bulk_demo.xlsx` | Added | A static asset to carry over with `public/` (§5) |
 
 ## 1. Package compatibility (legacy `composer.json`)
 
@@ -530,7 +551,7 @@ These silently alter legacy code:
   `ResourceCollection` classes serving the Flutter store app on `api/v2`.
   Unwrapping changes their JSON shape. Scope it, or add `$wrap` back on the
   legacy resources.
-- `Date::use(CarbonImmutable::class)`. There are 163 Carbon/`now()` uses in 62
+- `Date::use(CarbonImmutable::class)`. There are 165 Carbon/`now()` uses in 62
   legacy files. Code that mutates in place (`$d->addDays(3)` without
   reassigning) becomes a silent no-op, and `Carbon\Carbon` type-hints throw.
   Audit every site before enabling it for store code.
