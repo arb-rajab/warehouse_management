@@ -119,15 +119,26 @@ const NO_OCCUPIED_CELLS: CellOccupancyLookup = new Set<string>();
 /**
  * Advances a walking position by `deltaSeconds` given the currently held
  * movement directions, clamped to the warehouse's bounds. Forward/backward
- * moves along Z (down the current row's aisle); left/right strafes along X
- * (into the neighboring row's aisle); up/down flies along Y (between flats).
+ * moves along the camera's current horizontal look direction (`yawDegrees`,
+ * pitch ignored so pressing forward never flies you up/down); left/right
+ * strafes perpendicular to it; up/down still flies straight along world Y
+ * regardless of yaw. This is standard FPS-style relative movement — a
+ * previous revision of this function moved along the fixed world Z/X axes
+ * no matter which way the camera was turned (so "forward" always meant
+ * "deeper into the row"), but that was reported as a bug (arrow/WASD
+ * controls not adapting to where you'd rotated the camera to look) and was
+ * deliberately reversed in favor of this yaw-relative scheme.
  *
- * The camera always faces +Z with up = +Y, so its screen-right (local +X)
- * is world -X — a right-handed lookAt basis has `right = up × back`, and
- * `back` (eye-to-target reversed) is -Z here, giving `(0,1,0) × (0,0,-1) =
- * (-1,0,0)`. So pressing the "right" key must DECREASE world X to move
- * toward what actually appears on the right of the screen (and "left"
- * increases it) — get this backwards and left/right visually swap.
+ * The camera always faces +Z at yaw 0 with up = +Y, so its screen-right is
+ * world -X — a right-handed lookAt basis has `right = up × back`, and
+ * `back` (eye-to-target reversed) is -Z at yaw 0, giving `(0,1,0) ×
+ * (0,0,-1) = (-1,0,0)`. So pressing "right" at yaw 0 must move along
+ * (-1,0,0) to go toward what actually appears on the right of the screen
+ * (and "left" the opposite) — get this backwards and left/right visually
+ * swap. At a general yaw this generalizes to `right = (-cos(yaw), 0,
+ * -sin(yaw))`, the same forward vector `lookDirection` uses (`(-sin(yaw),
+ * *, cos(yaw))`) rotated -90° in the XZ plane — verify against
+ * `lookDirection`'s own derivation before changing either.
  *
  * `occupiedCellKeys` (optional — omitting it disables collision entirely,
  * e.g. for orbit mode or tests that don't care) blocks the camera from
@@ -151,24 +162,35 @@ export function stepPosition(
     bounds: WalkerBounds,
     speed: number = WALK_SPEED,
     occupiedCellKeys: CellOccupancyLookup = NO_OCCUPIED_CELLS,
+    yawDegrees: number = 0,
 ): WalkerPosition {
     let { x, y, z } = position;
     const distance = speed * deltaSeconds;
 
+    const yawRadians = (yawDegrees * Math.PI) / 180;
+    const forwardX = -Math.sin(yawRadians);
+    const forwardZ = Math.cos(yawRadians);
+    const rightX = -Math.cos(yawRadians);
+    const rightZ = -Math.sin(yawRadians);
+
     if (pressedDirections.has('forward')) {
-        z += distance;
+        x += forwardX * distance;
+        z += forwardZ * distance;
     }
 
     if (pressedDirections.has('backward')) {
-        z -= distance;
+        x -= forwardX * distance;
+        z -= forwardZ * distance;
     }
 
     if (pressedDirections.has('right')) {
-        x -= distance;
+        x += rightX * distance;
+        z += rightZ * distance;
     }
 
     if (pressedDirections.has('left')) {
-        x += distance;
+        x -= rightX * distance;
+        z -= rightZ * distance;
     }
 
     if (pressedDirections.has('up')) {
@@ -253,10 +275,10 @@ export const normalizeYaw = normalizeDegrees;
  * `stepPitch` already uses for the vertical axis. Unlike pitch, yaw is not
  * clamped — it wraps freely all the way around.
  *
- * Movement (`stepPosition`) is deliberately NOT relative to yaw — W/S/A/D
- * always walk/strafe along the fixed grid axes regardless of which way the
- * camera is currently turned, the same way a person can walk forward while
- * looking back over their shoulder.
+ * Movement (`stepPosition`) is relative to this yaw — W/S/A/D walk/strafe
+ * relative to whichever way the camera is currently turned (standard
+ * FPS-style controls), so rotating the view with a drag also rotates which
+ * way "forward" walks.
  */
 export function stepYaw(
     currentYawDegrees: number,

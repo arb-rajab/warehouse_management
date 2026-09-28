@@ -189,6 +189,115 @@ describe('stepPosition', () => {
         expect(next).toEqual({ x: 1, y: 2, z: 2 });
     });
 
+    describe('movement is relative to the camera yaw', () => {
+        // Wider than `bounds`, and centered away from the edges, so these
+        // yaw-rotated moves (which can go negative on either axis) aren't
+        // clipped by `stepPosition`'s own bounds-clamping — that's a
+        // different concern this block isn't testing.
+        const wideBounds = {
+            minX: -20,
+            maxX: 20,
+            minY: 0,
+            maxY: 10,
+            minZ: -20,
+            maxZ: 20,
+        };
+        const origin = { x: 0, y: 1, z: 0 };
+
+        it('walks forward along world Z at yaw 0 (facing +Z)', () => {
+            const next = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                0,
+            );
+
+            expect(next.x).toBeCloseTo(0);
+            expect(next.z).toBeCloseTo(4);
+        });
+
+        it('walks forward along world -X once turned 90 degrees to face that way', () => {
+            const next = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                90,
+            );
+
+            expect(next.x).toBeCloseTo(-4);
+            expect(next.z).toBeCloseTo(0);
+        });
+
+        it('strafes right perpendicular to an arbitrary yaw, matching the yaw-0 "screen-right is world -X" convention', () => {
+            const atYawZero = stepPosition(
+                origin,
+                new Set(['right']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                0,
+            );
+            expect(atYawZero.x).toBeCloseTo(-4);
+            expect(atYawZero.z).toBeCloseTo(0);
+
+            const atYaw90 = stepPosition(
+                origin,
+                new Set(['right']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                90,
+            );
+            expect(atYaw90.x).toBeCloseTo(0);
+            expect(atYaw90.z).toBeCloseTo(-4);
+        });
+
+        it('rotates forward/backward and left/right together at an arbitrary yaw (45 degrees)', () => {
+            const forward = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                45,
+            );
+            const backward = stepPosition(
+                origin,
+                new Set(['backward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                45,
+            );
+
+            expect(forward.x).toBeCloseTo(-backward.x);
+            expect(forward.z).toBeCloseTo(-backward.z);
+            expect(Math.hypot(forward.x, forward.z)).toBeCloseTo(4);
+        });
+
+        it('defaults to yaw 0 (fixed +Z forward) when yawDegrees is omitted, for backward compatibility', () => {
+            const next = stepPosition(
+                { x: 0, y: 1, z: 0 },
+                new Set(['forward', 'right']),
+                1,
+                bounds,
+                4,
+            );
+
+            expect(next).toEqual({ x: -4, y: 1, z: 4 });
+        });
+    });
+
     describe('with collision (occupiedCellKeys)', () => {
         // Row 0, cell 2, flat 1 is "occupied" throughout this block —
         // standing at cellWorldZ(1) facing forward (+Z), the box sits
