@@ -8,8 +8,10 @@ use App\Models\ProductBarcode;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
@@ -1362,4 +1364,143 @@ test('exporting a QR code for a non-existent product returns a 404', function ()
     $response = $this->get('/admin/products/999999/export-qr');
 
     $response->assertNotFound();
+});
+
+/**
+ * Encoded bytes of a solid-color JPEG, or a fully transparent PNG, of the given size.
+ */
+function productImageFixtureBytes(int $width, int $height, string $format): string
+{
+    $image = imagecreatetruecolor($width, $height);
+    ob_start();
+
+    if ($format === 'png') {
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        imagepng($image);
+    } else {
+        imagefill($image, 0, 0, imagecolorallocate($image, 200, 30, 30));
+        imagejpeg($image);
+    }
+
+    return (string) ob_get_clean();
+}
+
+test('the product image route re-serves the store image as a downscaled png from this apps origin', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'image/png');
+    expect($response->headers->get('Cache-Control'))
+        ->toContain('private')
+        ->toContain('max-age=86400');
+
+    $size = getimagesizefromstring((string) $response->getContent());
+
+    expect($size)->not->toBeFalse()
+        ->and([$size[0], $size[1], $size[2]])->toBe([256, 128, IMAGETYPE_PNG]);
+    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://cdn.example.com/widgets.jpg');
+});
+
+test('the product image route never upscales a small image and keeps its transparency', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(64, 32, 'png'), 200, ['Content-Type' => 'image/png']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertOk();
+    $image = imagecreatefromstring((string) $response->getContent());
+
+    expect($image)->not->toBeFalse()
+        ->and([imagesx($image), imagesy($image)])->toBe([64, 32])
+        ->and((imagecolorat($image, 10, 10) >> 24) & 0x7F)->toBe(127);
+});
+
+test('the product image route returns a 404 for a product with no image, without calling the store', function () {
+    actingAsAdmin();
+    Http::fake();
+    $product = Product::factory()->imageUrl(null)->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertNotFound();
+    Http::assertNothingSent();
+});
+
+test('the product image route reports a bad gateway when the store image host errors', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response('', 500)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertStatus(502);
+});
+
+test('the product image route reports a bad gateway when the store image host is unreachable', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::failedConnection()]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertStatus(502);
+});
+
+test('the product image route never re-serves a store response that is not a raster image', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(
+            '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            200,
+            ['Content-Type' => 'image/svg+xml'],
+        ),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.svg')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertStatus(502);
+    expect((string) $response->getContent())->not->toContain('<script>');
+});
+
+test('a mobile app user cannot fetch a products image', function () {
+    actingAsMobilePanelUser();
+    Http::fake();
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertForbidden();
+    Http::assertNothingSent();
+});
+
+test('an unauthenticated caller cannot fetch a products image', function () {
+    Http::fake();
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertRedirect(route('login'));
+    Http::assertNothingSent();
+});
+
+test('fetching the image of a non-existent product returns a 404', function () {
+    actingAsAdmin();
+    Http::fake();
+
+    $response = $this->get('/admin/products/999999/image');
+
+    $response->assertNotFound();
+    Http::assertNothingSent();
 });

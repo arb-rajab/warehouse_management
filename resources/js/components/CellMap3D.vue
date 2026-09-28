@@ -18,6 +18,7 @@ import {
     ref,
     watch,
 } from 'vue';
+import { image as productImage } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import CellSlot from '@/components/CellSlot.vue';
 import {
     CELL_STATES,
@@ -270,10 +271,8 @@ interface ProductImagePlacement {
  * One material per distinct product image URL, kept across rebuilds (and
  * disposed, with its texture, only on unmount) so each image is downloaded
  * once however many pallets carry that product and however often the cells
- * rebuild. A material stays invisible until its texture has loaded: a failed
- * load (e.g. the store's image host not sending CORS headers, which WebGL
- * needs even when an `<img>` would display the same URL) leaves that
- * product's boxes showing just their state color.
+ * rebuild. A material stays invisible until its texture has loaded, so a
+ * failed load leaves that product's boxes showing just their state color.
  */
 const productImageMaterialsByUrl = new Map<string, THREE.MeshBasicMaterial>();
 let productImageGeometry: THREE.PlaneGeometry | null = null;
@@ -685,18 +684,23 @@ function clearProductImages(): void {
     productImageMeshes = [];
 }
 
+/**
+ * Loads through this app's own `products.image` route rather than
+ * `product_image_url` itself: that URL is on the store's image host, which
+ * sends no CORS headers, and WebGL refuses a cross-origin texture without
+ * them (the 2D grid's plain `<img>` doesn't need them, so it keeps the
+ * direct URL).
+ */
 function productImagePlacementFor(
     item: CellMap3DItem,
     rowIndex: number,
 ): ProductImagePlacement | null {
-    const url = item.pallet?.product_image_url;
-
-    if (!url) {
+    if (!item.pallet?.product_image_url) {
         return null;
     }
 
     return {
-        url,
+        url: productImage.url(item.pallet.product_id),
         x: rowWorldX(rowIndex),
         y: flatWorldY(item.flatNumber),
         z: cellWorldZ(item.cellNumber),
