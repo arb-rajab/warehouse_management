@@ -53,9 +53,31 @@ execution by design for anyone holding an admin session. `Storage::disk('local')
 has `root => public_path()`, which is why the uploaded zips ended up web-served
 under `public/addons/`.
 
-`f31f264` removed only the file manager. `public/logo.php`, `public/demo.php`
-and all six `public/addons/*.zip` files are **still in the repo**, and
-`AddonController` is unchanged, so the way they got in is still open.
+`f31f264` removed only the file manager. The upgrade branch
+(`claude/albaraka-laravel-13-upgrade-7b5954`, commit `52e0de5`) removes
+`public/logo.php`, `public/demo.php`, the six `public/addons/*.zip` files,
+`public/logs/` and `AddonController`. `main` still has all of them until
+that branch merges.
+
+Phase 1 found two more entry points of the same kind. Both are deleted on
+that branch, and the production server still has them:
+
+- **`UpdateController` (`POST /update`).** The route was registered outside
+  the `auth`/`admin` group, so any visitor holding a CSRF token (every page
+  hands one out) could name any row of the `uploads` table. The controller
+  extracts that zip into the project root. `zip` is an allowed
+  `AizUploadController` type, and a customer account is enough to get an
+  upload row (anyone can register; a guest's upload fails before the row is
+  saved). That is remote code execution for any self-registered customer.
+- **`DemoController`.** Eight unauthenticated GET routes:
+  - `cron_1` drops every table and re-imports the demo SQL; `cron_2`
+    replaces the uploads. Both run only under `DEMO_MODE=On`.
+  - Six vendor data migrations run for anyone, each iterating every product
+    or order with a 2 GB memory limit: `convert_assets`, `convert_category`,
+    `convert_tax`, `insert_product_variant_forcefully`,
+    `update_seller_id_in_orders/{min}/{max}` and `migrate_attribute_values`.
+
+Check the production access logs for `POST /update` and those GET paths.
 
 The following is outside this repo's scope. Tell the owner, because it cannot
 wait for the merge:
@@ -65,8 +87,9 @@ wait for the merge:
 - Audit the `addons` table and the admin users.
 
 For the merge, **never copy these into this repo**: `public/demo.php`, `public/logo.php`, `public/addons/`, `public/logs/`,
-`AddonController` and its views and routes, `routes/install.php`,
-`routes/update.php`, or the `update`/`installation` view directories.
+`AddonController`, `UpdateController`, `InstallController` or `DemoController`
+and their views and routes, `routes/install.php`, `routes/update.php`, or the
+`update`/`installation` view directories.
 
 ### 0.2 The legacy document root is the project root
 
@@ -175,7 +198,13 @@ repo is on `laravel/framework ^13.17` and `php ^8.3`. It continues
 | `d4cdf20` | PHP 8.2–8.5 deprecations (§0.9) |
 | `0b13c5e` | L11, PHP 8.2, Sanctum 4, spatie v6, Carbon 3 fixes |
 | `c64715c` | L12, the duplicate-route-name fix (§6.4) |
-| `ba58d80` | L13, PHP 8.3, spatie v8, maatwebsite/excel 4 |
+| `ba58d80` | L13, PHP 8.3, spatie v8, maatwebsite/excel 4 (merged to `main` as PR #1) |
+| `52e0de5` | Phase 1: webshell, addon installer, updater and installer (§0.1) |
+| `3fb59dc` | Phase 1: the 12 addon route files and what only they reached |
+| `2a2aea1` | Phase 1: the ActiveITzone licence-check package |
+| `62ec165` | Phase 1: the dead Mix asset pipeline |
+| `1d01ab7` | Phase 1: checkout options and admin toggles of the removed gateways |
+| `5506c3b` | Phase 1: `DemoController` and the unreachable table-less models |
 
 Decisions taken on that branch:
 
@@ -224,14 +253,12 @@ These came out of the upgrade and need a business answer, not a code one:
   - Stripe (`stripe/stripe-php` 21.x), Razorpay 2.9, Authorize.Net 2.0.4 and
     Payku 1.0.5 still install. Stripe jumps from API-pinned 7.x, so its
     checkout calls would need re-testing.
-- **Checkout still offers the removed gateways when their toggle is on.**
-  `payment_select`, `wallet_modal`, `customer_packages_lists` and
-  `Api\V2\PaymentTypesController` still list them behind `business_settings`
-  toggles, and checkout's `payment_option` dispatch (`CheckoutController`,
-  `WalletController`, `CustomerPackageController`) now falls through to the
-  manual-payment branch for them. It already did that for any option without
-  a controller. Phase 1 strips those option blocks and the admin toggles; until
-  then, keep the toggles off.
+- **Checkout options for the removed gateways are gone** on the upgrade
+  branch (`1d01ab7`): the wallet and package modals,
+  `Api\V2\PaymentTypesController`, and the admin toggles and credential
+  forms. `main` still offers them whenever their toggle is on, and checkout's
+  `payment_option` dispatch then falls through to the manual-payment branch.
+  Keep those toggles off until the branch merges.
 - **`iyzico/iyzipay-php` stays** (`^2.0.61`, the current release) because
   `iyzico=1` in the dump. Drop it if 0b shows that was a demo default.
 
@@ -625,7 +652,32 @@ Decide these deliberately in phase 5 or 6:
 
 ### Legacy models whose tables exist nowhere
 
-These are uninstalled-addon dead code, so delete them with their controllers:
+These are uninstalled-addon dead code, so delete them with their controllers.
+
+**Status on the upgrade branch (`5506c3b`):**
+
+- **Deleted:** the models whose only users were dead code or uncalled
+  relations: `Banner`, `Slider`, `Policy`, `SubCategory`, `SubSubCategory`,
+  `AffiliateLog`, `AffiliateWithdrawRequest`, `AffiliateStats`,
+  `AffiliateEarningDetail`, `CartProduct`, `DeliveryBoyCollection`,
+  `DeliveryBoyPayment` and `OtpConfiguration`.
+- **Kept, because live code paths still reach them:**
+  - `ProductStock::wholesalePrices` from the cart
+  - `club_point` from checkout
+  - `OrderDetail::refund_request` from the `api/v2` purchase-history
+    resources
+  - `SellerPackage*` from `Helpers.php` and six payment controllers
+  - `SmsTemplate`, `ManualPaymentMethod`, `DeliveryBoy` and
+    `DeliveryHistory` from order and `api/v2` controllers
+  - `Customer` from `CustomerController` and `CustomersImport`
+  - `AffiliateUser`, `AffiliateOption`, `AffiliateConfig`,
+    `AffiliatePayment`, `AuctionProductBid`, `ClubPoint`, `ClubPointDetail`
+    and `RefundRequest`
+
+  Each site needs its guard checked, and the phase 0b schema dump must
+  confirm the table is really absent in production, before these go.
+
+Original list:
 
 - `Affiliate*` ×7
 - `AuctionProductBid`
@@ -808,7 +860,8 @@ routes. The WMS route table from `route:list` has 129.
   - `GET /admin`: WMS `admin.dashboard` vs the legacy admin dashboard.
   - `POST /logout`.
 - **Name collisions:** `login`, `logout`, `admin.dashboard`, `password.update`.
-- **Duplicate names inside the legacy routes.** 61 legacy names are
+- **Duplicate names inside the legacy routes.** 58 legacy names (61
+  before phase 1 deleted the addon route files) are
   registered twice:
   - mostly `Route::resource()` followed by an explicit override like
     `Route::get('/brands/destroy/{id}')->name('brands.destroy')`
@@ -907,7 +960,7 @@ changes:**
 | --- | --- | --- | --- |
 | 0a | Incident response (owner, outside the repo) | §0.1–0.3: rotate secrets, clean the server, disable the addon installer, lock down `api/v2/warehouse`, move the docroot to `public/` | ops, not code |
 | 0b | Capture production truth | `mysqldump --no-data` of prod, `business_settings` toggles, `addons` rows, `orders.payment_type` histogram, role and user_type lists, `FILESYSTEM_DRIVER`, and whether WMS product ids ⊆ store product ids | 1 short session |
-| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done so far:** the laracon21 helpers, and every SDK-backed gateway's controllers/routes/views (`62dc3f9`). **Left:** the checkout option blocks and admin toggles for those gateways (§0.8), and the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay) | ~150 files deleted, ~40 edited. Medium |
+| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done on the upgrade branch:** the laracon21 helpers; every SDK-backed gateway's controllers, routes, views, checkout options and admin toggles; the malicious files and the addon installer, updater and installer (§0.1); the 12 addon route files (1379 → 1130 routes); the licence-check package (its 52 calls were already commented out); the Mix pipeline; `DemoController`; and the unreachable table-less models (§3). **Left:** the table-less models still reached from live code (§3), the ~150 `addon_is_activated()` branches (inert while `addons` is empty), the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay, ToyyibPay) pending phase 0b, and 19 references to classes that were never in the repo (`OTPVerificationController`, `SellerPackageController`, `AffiliateController`, `ClubPointController`, `SmsUtility`, `PayfastUtility`, `Recaptcha` and others) | ~150 files deleted, ~40 edited. Medium |
 | 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `DB::raw` string casts (12). The `${var}` count was JS template literals, see §0.9. Needs PHP ≥ 8.4.1 to match WMS's lock. **Done:** the L8 → L13 version chain one major at a time, the spatie `Middleware` rename, PHP 8.2–8.5 deprecations, and Carbon 3 `diffIn*()` fixes (§0.7). **Left:** the skeleton shape (deferred to phase 6), intervention/image v3, laravel-pdf → dompdf, and `env()` outside config. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
 | 3 | Namespace and model remediation | Rename legacy `User` → `StoreUser` (151 files + the morph-type data plan). Merge `Product` and `Upload` into single models. Merge `Controller` and `AppServiceProvider`. Replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
 | 4 | Composer merge | Add the ~14 surviving packages to this repo. `composer.lock` regenerates in CI or a networked env (the sandbox can't install dev deps) | Small |
