@@ -498,11 +498,94 @@ Both apps map `App\` to `app/`. Only one class per FQCN can load.
 
 | FQCN | Resolution |
 | --- | --- |
-| `App\Models\User` | **Different tables** (`users` vs `wms_users`) and populations, so both must exist. Recommendation: the legacy class becomes `App\Models\StoreUser` (151 legacy files reference it, against 73 WMS files incl. tests, plus WMS's Wayfinder/Inertia types). The legacy rows move tables anyway (§3), so rewriting their morph type costs nothing extra. **Decision for the owner.** Morph columns storing `App\Models\User` for the store side, all of which need an `UPDATE`: `model_has_roles.model_type`, `personal_access_tokens.tokenable_type`, `notifications.notifiable_type`, `checkpoints.relationable_type` (`Checkpoint::relationable()`, `Trip.php:70` `whereHasMorph(... [User::class, Order::class])`) |
+| `App\Models\User` | **Done** (2026-09-28, legacy repo commit `a99b02c`, branch `claude/albaraka-holland-namespace-migration-u5nkzv`). **Different tables** (`users` vs `wms_users`) and populations, so both must exist. Renamed to `App\Models\StoreUser` in the legacy repo, 139 files (104 mechanical FQCN/`use` sites plus 35 files with bare same-namespace or post-`use` references a plain FQCN grep can't see — see §2.1). The legacy rows move tables anyway (§3), so rewriting their morph type costs nothing extra. Morph columns storing `App\Models\User` for the store side still need an `UPDATE` at the phase 5 DB merge, now confirmed as exactly these four (no `morphMap()` exists anywhere in the legacy app, so every one resolves the FQCN dynamically via `getMorphClass()`, not a static alias): `model_has_roles.model_type`, `personal_access_tokens.tokenable_type`, `notifications.notifiable_type`, `checkpoints.relationable_type` (`Checkpoint::isCustomer()`/`getCustomerForCheckpoint()`, `Trip.php:70` `whereHasMorph(... [StoreUser::class, Order::class])` — both already use the renamed class, so newly written rows store `App\Models\StoreUser`; only pre-existing rows need the `UPDATE`) |
 | `App\Models\Product` | **Same table** (`products`). Merge into one model: legacy is the full 72-column writer, WMS adds `searchByName`/`applyNameSearch`, `pallets`, `setting`, `WITH_DERIVED_ATTRIBUTES`, `boxes_count`/`image_url`, `optionLabels()`. See the conflicts in §6.8 |
 | `App\Models\Upload` | **Same table** (`uploads`). Merge: legacy is the writer (`AizUploadController`, import commands), WMS only has `url()`. Merging also answers shared-database.md's open question about how `uploads` stays current |
 | `App\Http\Controllers\Controller` | Keep WMS's abstract controller (`paginated`, `redirectPreservingQuery`, `resolvePerPage`). Legacy extends L8's base with `AuthorizesRequests`/`ValidatesRequests`. `$this->validate/authorize/dispatch` is used in 3 legacy controllers, so give those the traits directly |
 | `App\Providers\AppServiceProvider` | Merge the bodies. WMS's global settings break legacy code, see §6.1 |
+
+### 2.1 `User` → `StoreUser` rename: what was checked and fixed
+
+A 2026-09-28 session was asked to rename the legacy tree's entire `App\`
+root namespace (e.g. to `App\Shop\`). It stopped short of that: this
+section's own recommendation (below) and phase 7's phase-3 scope both
+already rejected a full-tree rename as unnecessary churn with no autoload
+benefit, so the session did only what phase 3 actually calls for — the one
+collision that's a same-repo mechanical rename. It is not a general
+precedent against renaming namespaces here; it's a record that the
+full-tree option was considered and declined for the reason already on
+record. `composer.json`'s `psr-4` mapping did not change: `App\` still maps
+to `app/`, only the `User` short name moved to `StoreUser`.
+
+**Scope of the mechanical work.** A plain `grep` for the `App\Models\User`
+FQCN found 104 files, but the true footprint was 139: 35 more files use the
+bare class name after a `use App\Models\User;` import (now
+`use App\Models\StoreUser;`) or, for 34 of those, from inside `app/Models/`
+itself, where same-namespace code never imports its sibling classes at all.
+A rename that stops at the FQCN grep leaves these bare references pointing
+at a class that no longer exists — this is the trap to check for in any
+later phase-3-style rename here. Every changed file was confirmed with
+`php -l` on PHP 8.4 (139/139 clean, matching this audit's own §0.9
+verification method) before pushing.
+
+**String-based references checked, per this file's own "easiest thing to
+miss" warning:**
+- `$this->app->bind()`/`singleton()` calls: none reference `User` by string
+  anywhere in `app/Providers/`.
+- `config/queue.php`'s `failed` block only names a table, not a class; no
+  job payload class names are hardcoded there.
+- Blade `@php use` statements: none exist importing `App\Models\User` (or
+  anything else) anywhere in `resources/views/`. Every Blade reference to
+  the model uses the fully-qualified `\App\Models\User` form directly, so
+  the FQCN sweep already covered all 420 views correctly — 10 of them
+  needed the leading-backslash form specifically (`\App\Models\User::…`),
+  which a naive "no leading backslash" regex would miss.
+- Route model binding type-hints: none bind `User` in `routes/`.
+- `Spatie\Permission` (`config/permission.php`) and Sanctum
+  (`config/sanctum.php`) config: neither hardcodes the user model by name
+  or string; both resolve it dynamically (`auth.providers.users.model`,
+  which does need — and got — the `App\Models\User::class` →
+  `App\Models\StoreUser::class` update in `config/auth.php`). Sanctum has
+  no model override to update at all.
+- `config/services.php`'s dead `stripe.model` key (the Stripe gateway
+  itself was removed in phase 1, §1) still referenced
+  `App\Models\User::class` and was updated too, since leaving a dangling
+  FQCN in a live config file — even an unused key — would break
+  `config:cache`.
+- `Illuminate\Foundation\Auth\User as Authenticatable` in the model file
+  itself is the **framework's** base class, imported under an alias; it is
+  correctly untouched, it is not the legacy `App\Models\User`.
+- **`morphMap()`: none exists anywhere in the legacy app.** Every
+  polymorphic relation resolves its stored type column dynamically via
+  `getMorphClass()` (`get_class($model)`), not a short static alias. That
+  is *worse* for a rename than a `morphMap()` would have been: a
+  `morphMap()` alias is one line to update and every stored row keeps
+  resolving correctly; without one, this rename immediately changed what
+  new rows write (`App\Models\StoreUser` from now on) while every
+  **existing** row across the four morph columns listed in the table above
+  still holds the literal string `App\Models\User`, and nothing in this
+  session's scope (a standalone code-only repo, no DB access) could touch
+  that production data. Whoever runs the phase 5 DB merge must run the
+  `UPDATE` against all four columns *before* any code that reads them
+  through `getMorphClass()`-based comparisons goes live on the merged
+  database, or `Checkpoint::isCustomer()`/`getCustomerForCheckpoint()` and
+  the `Trip::scopeSearch()` `whereHasMorph()` call will silently stop
+  matching every pre-rename row.
+- `routes/channels.php` has `Broadcast::channel('App.User.{id}', …)`. This
+  looked at first like a stale namespace-derived channel name, but nothing
+  in the app calls `new PrivateChannel('App.User.'.$id)` or broadcasts
+  through it — the only real `PrivateChannel` usage in the app is
+  `'trip.'.$id` (`SetTruckAvailability`). It is an arbitrary, seemingly
+  unused string identifier, not a derived class reference, so it was left
+  as-is rather than guessed at.
+
+**Deferred, not done here:** `Product`, `Upload`, `Controller` and
+`AppServiceProvider` are body *merges* with WMS's own versions of those
+classes (§2's table), not renames — writing the merged class correctly
+needs both codebases in the same tree to see both sides, which this
+still-standalone session didn't have. They stay under `App\` in the legacy
+repo until the phase 6 file move, at which point phase 3's plan already
+covers them.
 
 ### Legacy infrastructure classes with no L13 counterpart
 
@@ -962,7 +1045,7 @@ changes:**
 | 0b | Capture production truth | `mysqldump --no-data` of prod, `business_settings` toggles, `addons` rows, `orders.payment_type` histogram, role and user_type lists, `FILESYSTEM_DRIVER`, and whether WMS product ids ⊆ store product ids | 1 short session |
 | 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done on the upgrade branch:** the laracon21 helpers; every SDK-backed gateway's controllers, routes, views, checkout options and admin toggles; the malicious files and the addon installer, updater and installer (§0.1); the 12 addon route files (1379 → 1130 routes); the licence-check package (its 52 calls were already commented out); the Mix pipeline; `DemoController`; and the unreachable table-less models (§3). **Left:** the table-less models still reached from live code (§3), the ~150 `addon_is_activated()` branches (inert while `addons` is empty), the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay, ToyyibPay) pending phase 0b, and 19 references to classes that were never in the repo (`OTPVerificationController`, `SellerPackageController`, `AffiliateController`, `ClubPointController`, `SmsUtility`, `PayfastUtility`, `Recaptcha` and others) | ~150 files deleted, ~40 edited. Medium |
 | 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `DB::raw` string casts (12). The `${var}` count was JS template literals, see §0.9. Needs PHP ≥ 8.4.1 to match WMS's lock. **Done:** the L8 → L13 version chain one major at a time, the spatie `Middleware` rename, PHP 8.2–8.5 deprecations, and Carbon 3 `diffIn*()` fixes (§0.7). **Left:** the skeleton shape (deferred to phase 6), intervention/image v3, laravel-pdf → dompdf, and `env()` outside config. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
-| 3 | Namespace and model remediation | Rename legacy `User` → `StoreUser` (151 files + the morph-type data plan). Merge `Product` and `Upload` into single models. Merge `Controller` and `AppServiceProvider`. Replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
+| 3 | Namespace and model remediation | **`User` → `StoreUser` rename done** (§2.1: 139 files, not 151 — the estimate undercounted the bare-reference files a plain FQCN grep misses; the morph-type data plan is written but not run, no DB in scope). **Still open:** merge `Product` and `Upload` into single models, merge `Controller` and `AppServiceProvider`, replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
 | 4 | Composer merge | Add the ~14 surviving packages to this repo. `composer.lock` regenerates in CI or a networked env (the sandbox can't install dev deps) | Small |
 | 5 | DB merge | Target the **store's MySQL DB as the physical host**: it holds the live, larger data set. Import WMS's `wms_*` and domain tables into it. Add a guarded baseline migration for the store schema, following the `create_uploads_table` `hasTable()` pattern, generated from the 0b dump. It must also build on sqlite for CI. Move the legacy spatie and Sanctum rows into `wms_*` with id offsets and morph rewrites. Add `wms_permissions.section`. Pick the single products writer. Extend `SharedDatabaseTableNamesTest`'s inventory with every store table | Large and risky: needs a rehearsal on a prod copy |
 | 6 | Files, routes, config and assets | Move `app/` (non-colliding), `Helpers.php` (autoload `files`), views, `public/assets`, and the surviving commands. Add store routes under `Route::domain()` in `routes/store/*.php`. Port config per §4. Add the `uploads` disk. Scope CSP, `api`-group middleware, `withoutWrapping` and CarbonImmutable per §6.1 | Large (moves are mechanical, the scoping is not) |
