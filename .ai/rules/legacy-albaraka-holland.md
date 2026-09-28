@@ -145,6 +145,42 @@ it does change:
 | `backend/representatives/index.blade.php` | The delete link no longer points `href` at the route, it uses `data-href` with the confirm modal | Fixes deletion by a plain link click. No merge impact |
 | `public/download/product_bulk_demo.xlsx` | Added | A static asset to carry over with `public/` (§5) |
 
+### 0.7 Owner decisions and upgrade status (2026-09-28)
+
+Owner decisions. They override any recommendation in this file that conflicts:
+
+- **Never turn off Composer's platform check.** No `--ignore-platform-reqs`,
+  no `config.platform` override, no `platform-check: false`. The legacy
+  production `vendor/` could only have been installed that way: its code uses
+  PHP 8.1 enums while `laracon21/*` allowed only PHP 7. A package that doesn't
+  allow the running PHP gets upgraded or replaced with one that does.
+- **The legacy repo is temporary.** It will be deleted once its code is in
+  this app, so don't spend effort on its own configuration, deploy layout,
+  lock file or test harness. What matters is how the code lands here.
+- **The legacy framework is upgraded one major at a time** (8 → 9 → 10 so
+  far), not in one jump to the L13 skeleton. This replaces the "skip the
+  intermediate hops" advice in the phase 2 row of §7.
+
+Status: branch `claude/albaraka-laravel-upgrade-fxsyl1` of the legacy repo
+is on `laravel/framework ^10.0` and `php ^8.1`. It has one commit per hop.
+Its dependency set resolves with the platform check on for PHP 8.1, 8.2,
+8.3, 8.4.1 and 8.5. That was checked with `composer update --dry-run`
+against Packagist metadata only: nothing was installed or run. Compared with
+the tables in §1, that branch:
+
+- Removed `fideloper/proxy`, `symfony/mailer`, `spatie/db-dumper`,
+  `lcobucci/jwt` and the three `laracon21/*` packages. It inlined
+  `makeCombinations()` into `App\Utility\ProductUtility` and replaced
+  `timezones()` with `DateTimeZone::listIdentifiers()`.
+- Bumped `core-component-repository` 2.0 → 2.2. The code is identical and
+  only the php constraint changed; the package is still due for deletion.
+- Moved to Sanctum 3 (adds a `personal_access_tokens.expires_at` migration),
+  laravel/ui 4, flysystem-aws-s3-v3 3, spatie/laravel-ignition 2,
+  fakerphp/faker and PHPUnit 10.
+- Left every payment SDK in place. Of those, `unicodeveloper/laravel-paystack`
+  (max L11) and `kingflamez/laravelrave` (max L10) will block the next hops
+  unless the gateway pruning in phase 1 removes them first.
+
 ## 1. Package compatibility (legacy `composer.json`)
 
 Here is what the verdicts mean:
@@ -663,7 +699,7 @@ changes:**
 | 0a | Incident response (owner, outside the repo) | §0.1–0.3: rotate secrets, clean the server, disable the addon installer, lock down `api/v2/warehouse`, move the docroot to `public/` | ops, not code |
 | 0b | Capture production truth | `mysqldump --no-data` of prod, `business_settings` toggles, `addons` rows, `orders.payment_type` histogram, role and user_type lists, `FILESYSTEM_DRIVER`, and whether WMS product ids ⊆ store product ids | 1 short session |
 | 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers | ~150 files deleted, ~40 edited. Medium |
-| 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `${var}` interpolation (48 sites / 12 files), `DB::raw` string casts (12). Needs PHP ≥ 8.4.1 to match WMS's lock. Skip the 9/10/11/12 intermediate hops, which buy nothing when the destination is this repo's skeleton. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
+| 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `${var}` interpolation (48 sites / 12 files), `DB::raw` string casts (12). Needs PHP ≥ 8.4.1 to match WMS's lock. Upgrade one major at a time (§0.7): L10 is done, L11 → L13 remain. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
 | 3 | Namespace and model remediation | Rename legacy `User` → `StoreUser` (151 files + the morph-type data plan). Merge `Product` and `Upload` into single models. Merge `Controller` and `AppServiceProvider`. Replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
 | 4 | Composer merge | Add the ~14 surviving packages to this repo. `composer.lock` regenerates in CI or a networked env (the sandbox can't install dev deps) | Small |
 | 5 | DB merge | Target the **store's MySQL DB as the physical host**: it holds the live, larger data set. Import WMS's `wms_*` and domain tables into it. Add a guarded baseline migration for the store schema, following the `create_uploads_table` `hasTable()` pattern, generated from the 0b dump. It must also build on sqlite for CI. Move the legacy spatie and Sanctum rows into `wms_*` with id offsets and morph rewrites. Add `wms_permissions.section`. Pick the single products writer. Extend `SharedDatabaseTableNamesTest`'s inventory with every store table | Large and risky: needs a rehearsal on a prod copy |
