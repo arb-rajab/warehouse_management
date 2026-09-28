@@ -722,6 +722,110 @@ WMS-only tables, which the store has nothing like:
 cell_verification_rounds cell_verification_round_row cell_verification_reports
 mobile_app_version_requirements wms_product_settings wms_settings`
 
+### 3.1 Schema migrations for shop.sql's 83 tables (2026-09-28, schema only)
+
+A session was asked to turn every table `shop.sql` defines into a proper
+Laravel migration in this repo's `database/migrations/`, resolve every name
+collision, and reconcile spatie role names — schema only, no data import
+(that is explicitly a later session, per the task that produced this
+section). Scope is exactly `shop.sql`'s 83 tables, **not** the full 111-table
+union this file tracks elsewhere (the 19 extra `Schema::create` tables from
+legacy migrations and the 9 `sqlupdates`-only tables, e.g. `checkpoints`,
+`cron_jobs`, `dynamic_popups`, `offers`, `trips`, `trucks`, `carts_offered`,
+the `oauth_*` five, are **not** covered by this pass and remain future work).
+
+**Collision resolution, checked against every current bare and `wms_`-prefixed
+table name in this repo (not guessed from an older audit pass):**
+
+- **Direct name collisions found: exactly 2 — `products` and `uploads`.**
+  Both are the pre-existing "same concept" case this file's own §3 already
+  established (WMS's `products`/`uploads` migrations *are* the store's
+  tables, taken over when the shared database split, not a coincidental name
+  match) — so per this task's instructions ("flag rather than guess" when a
+  collision might be the same concept), **no new migration was written for
+  either.** The open data-modeling decision §3 already describes (reconciling
+  the store's 72-column `products` shape and picking the single writer) is
+  unchanged and still deferred to phase 5's DB merge — this session did not
+  touch it.
+- **No table needed a `shop_`-prefixed rename.** The task framing anticipated
+  renaming being the common case; it isn't, for this repo's actual current
+  state. Every other name in `shop.sql` was cross-checked against
+  `SharedDatabaseTableNamesTest`'s full inventory of live bare names
+  (`cell_status_log_flags`, `cell_status_logs`, `cell_verification_reports`,
+  `cell_verification_round_row`, `cell_verification_rounds`, `cells`,
+  `mobile_app_version_requirements`, `pallets`, `products`, `rows`,
+  `uploads`) plus every `wms_*` table — none collide. `users` in particular
+  does **not** collide: this app's own user table has been `wms_users` since
+  `rename_users_table_to_wms_users`, so the store's `users` table (72 legacy
+  columns, a completely different population — customers/sellers/staff, not
+  warehouse staff) was created bare, matching this file's own pre-existing
+  §3 decision ("`users` | `wms_users` | none, both stay"). A one-sentence
+  docblock to that effect lives in `2026_09_28_005008_create_users_table.php`
+  so nobody mistakes it for an unresolved collision later.
+- **The spatie tables (`roles`, `permissions`, `model_has_roles`,
+  `model_has_permissions`, `role_has_permissions`) and `personal_access_tokens`
+  got no new tables at all** — they already map onto the shared `wms_*`
+  tables per this file's pre-existing "one-config-wins" resolution (§3), and
+  the task's own instruction #2 requires them to stay one shared set. The one
+  gap that resolution left open — `permissions.section` (`varchar(50)`,
+  e.g. `product`, the legacy admin UI's permission grouping) has no column on
+  `wms_permissions` — is now closed by a new, additive migration,
+  `2026_09_28_006000_add_section_to_wms_permissions_table.php` (nullable, no
+  backfill; data import is a later session).
+- **`migrations` was not carried over at all.** It's Laravel's own migration
+  bookkeeping table, not a domain table — `wms_migrations` already serves
+  that role for this app (per §3), and creating a second one would be
+  nonsensical, not merely redundant.
+- **`password_resets` got its own new bare-named table**
+  (`2026_09_28_003007_create_password_resets_table.php`), deliberately kept
+  separate from this app's `wms_password_reset_tokens` — per §3's existing
+  recommendation, it resets the store's own `users` table through a different
+  guard/provider, and the two password-reset tables key off two disjoint user
+  tables that don't share an id space. This is a "different concept, same
+  general purpose" case, not a collision to merge away.
+- **The remaining 71 tables** (everything in `shop.sql` except the 2 flagged
+  collisions, the 6 spatie/Sanctum tables, and `migrations`) are legacy-only
+  domain tables with nothing resembling them in WMS. Every one got a
+  straightforward `create_<name>_table` migration under its exact bare
+  `shop.sql` name, column-for-column (types, nullability, defaults) — no
+  `wms_` prefix, no `Schema::hasTable()` guard (unlike `products`/`uploads`,
+  nothing here is shared with a still-external app). `shop.sql` declares only
+  one real foreign key anywhere in the whole 83-table dump —
+  `payku_payments.transaction_id → payku_transactions.id` — which is the only
+  one of these 74 new migrations that has a DB-level FK; every other
+  relationship (`user_id`, `product_id`, `order_id`, `category_id`, etc.
+  across every table) is enforced at the legacy application layer only, and
+  that is reproduced faithfully rather than "corrected" with FKs shop.sql
+  itself doesn't declare.
+
+**Role-name reconciliation (task instruction #2):** `shop.sql`'s `roles` table
+has exactly one row: `Super Admin` (id 1, guard `web`), matching what §3
+already recorded. `"Super Admin" ≠ "admin"` (WMS's own role, `Role::findOrCreate('admin', 'web')`
+in `app/Models/User.php`), and spatie's `(name, guard_name)` uniqueness means
+the two can never collide once both live in `wms_roles` — **no rename was
+needed.** A grep of the entire legacy `app/` tree for a hardcoded role name
+found none: `RoleController::store` (`app/Http/Controllers/RoleController.php:54`)
+creates every non-seeded role from free-text admin input
+(`Role::create(['name' => $request->name])`), so nothing in the codebase
+itself can ever check for a role literally named `admin`. The unresolved
+risk is one this file already flagged and this session cannot close without
+production access: staff roles created at runtime in the live store could,
+in principle, include one actually named `admin` (or anything else) that
+isn't in this 2023 dump. That is exactly the "query production for the real
+role list" gap phase 0b already calls for (§3) — carried forward unchanged,
+not newly discovered. If that check ever turns up a runtime role literally
+named `admin`, rename it (and update whatever legacy code string-matches it —
+none does today) **before** phase 5 moves spatie rows into `wms_roles`.
+
+**Every migration in this pass has a companion test in
+`tests/Feature/Database/`** per `.ai/rules/migrations.md`, using
+`DB::table(...)->insert()` / `Schema::hasTable()`/`hasColumns()` — none of
+these 74 tables have Eloquent models (out of scope here; a later session adds
+models alongside the real data import). `tests/Feature/SharedDatabaseTableNamesTest.php`'s
+pinned bare-name inventory was extended with all 74 new bare names (see that
+file directly for the current exact list — this section doesn't duplicate it
+to avoid the two drifting apart).
+
 ### Semantic overlaps, not name clashes
 
 Decide these deliberately in phase 5 or 6:
