@@ -138,7 +138,14 @@
     "extra": {
         "laravel": {
             "dont-discover": [
-                "genealabs/laravel-socialiter"
+                "genealabs/laravel-sign-in-with-apple",
+                "genealabs/laravel-socialiter",
+                "intervention/image",
+                "laracasts/flash",
+                "laravel/socialite",
+                "laravel/ui",
+                "maatwebsite/excel",
+                "niklasravnsborg/laravel-pdf"
             ]
         }
     },
