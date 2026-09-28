@@ -5,7 +5,7 @@ paths:
   - package.json
   - bootstrap/app.php
   - bootstrap/providers.php
-  - 'config/app.php,config/auth.php,config/services.php,config/filesystems.php,config/permission.php,config/session.php,config/store.php,config/secure-headers.php'
+  - 'config/app.php,config/auth.php,config/cache.php,config/services.php,config/filesystems.php,config/permission.php,config/session.php,config/store.php,config/secure-headers.php'
   - 'routes/web.php,routes/api.php,routes/console.php,routes/store/**'
   - 'app/Models/User.php,app/Models/Product.php,app/Models/Upload.php,app/Models/PersonalAccessToken.php'
   - 'app/Models/Store/**,app/Http/Controllers/Store/**'
@@ -107,6 +107,9 @@ prefix. That is the single point every storefront asset URL goes through.
 `vendor/` are also ignored, so **no version pins survive**. Every version below
 is inferred from the `composer.json` ranges.
 
+The upgrade branch (`804dca9`) un-ignores `app/Exceptions` and adds a
+`Handler`. `main` still can't boot.
+
 ### 0.5 Corrections to the facts this audit was seeded with
 
 - The legacy `app/` directory holds **527 files**, not about 1600. There are 526
@@ -157,29 +160,126 @@ Owner decisions. They override any recommendation in this file that conflicts:
 - **The legacy repo is temporary.** It will be deleted once its code is in
   this app, so don't spend effort on its own configuration, deploy layout,
   lock file or test harness. What matters is how the code lands here.
-- **The legacy framework is upgraded one major at a time** (8 → 9 → 10 so
-  far), not in one jump to the L13 skeleton. This replaces the "skip the
-  intermediate hops" advice in the phase 2 row of §7.
+- **The legacy framework is upgraded one major at a time** (8 → 9 → 10 →
+  11 → 12 → 13), not in one jump to the L13 skeleton. This replaces the
+  "skip the intermediate hops" advice in the phase 2 row of §7.
 
-Status: branch `claude/albaraka-laravel-upgrade-fxsyl1` of the legacy repo
-is on `laravel/framework ^10.0` and `php ^8.1`. It has one commit per hop.
-Its dependency set resolves with the platform check on for PHP 8.1, 8.2,
-8.3, 8.4.1 and 8.5. That was checked with `composer update --dry-run`
-against Packagist metadata only: nothing was installed or run. Compared with
-the tables in §1, that branch:
+Status: branch `claude/albaraka-laravel-13-upgrade-7b5954` of the legacy
+repo is on `laravel/framework ^13.17` and `php ^8.3`. It continues
+`claude/albaraka-laravel-upgrade-fxsyl1` (L8 → L10) with one commit per step:
 
-- Removed `fideloper/proxy`, `symfony/mailer`, `spatie/db-dumper`,
-  `lcobucci/jwt` and the three `laracon21/*` packages. It inlined
-  `makeCombinations()` into `App\Utility\ProductUtility` and replaced
-  `timezones()` with `DateTimeZone::listIdentifiers()`.
-- Bumped `core-component-repository` 2.0 → 2.2. The code is identical and
-  only the php constraint changed; the package is still due for deletion.
-- Moved to Sanctum 3 (adds a `personal_access_tokens.expires_at` migration),
-  laravel/ui 4, flysystem-aws-s3-v3 3, spatie/laravel-ignition 2,
-  fakerphp/faker and PHPUnit 10.
-- Left every payment SDK in place. Of those, `unicodeveloper/laravel-paystack`
-  (max L11) and `kingflamez/laravelrave` (max L10) will block the next hops
-  unless the gateway pruning in phase 1 removes them first.
+| Commit | What it did |
+| --- | --- |
+| `804dca9`, `6165c95` | L9 and L10 (earlier session). Removed `fideloper/proxy`, `symfony/mailer`, `spatie/db-dumper`, `lcobucci/jwt` and the three `laracon21/*` packages, inlined `makeCombinations()` into `App\Utility\ProductUtility`, replaced `timezones()` with `DateTimeZone::listIdentifiers()`, and added the `personal_access_tokens.expires_at` migration for Sanctum 3 |
+| `62dc3f9` | Removed the dead packages and the SDK-backed gateways (§1.1), with every controller, route, view, provider, alias and config file that imported them |
+| `d4cdf20` | PHP 8.2–8.5 deprecations (§0.9) |
+| `0b13c5e` | L11, PHP 8.2, Sanctum 4, spatie v6, Carbon 3 fixes |
+| `c64715c` | L12, the duplicate-route-name fix (§6.4) |
+| `ba58d80` | L13, PHP 8.3, spatie v8, maatwebsite/excel 4 |
+
+Decisions taken on that branch:
+
+- **The L11 slim skeleton is deferred to the file-merge phase (§7 phase
+  6).** The legacy app keeps `App\Http\Kernel`, `App\Console\Kernel`, the
+  five service providers and the `providers`/`aliases` arrays in
+  `config/app.php`. The L11 upgrade guide recommends against migrating an
+  upgraded app, L13 still supports that layout (`$routeMiddleware` is still
+  read), and all of it is folded into this app's `bootstrap/app.php` in
+  phase 6 anyway.
+- **`composer.json` is now merge-ready.** `php`, `laravel/framework`,
+  `laravel/sanctum`, `spatie/laravel-permission` and `laravel/tinker` carry
+  this app's exact constraints. The only overlapping `require` entry that
+  differs is `simplesoftwareio/simple-qrcode` (`^4.2` there, `*` here), and
+  both resolve to 4.2.0. Resolution was checked with `composer update
+  --dry-run` against Packagist metadata only, with the platform PHP set in a
+  scratch copy to 8.3.0, 8.4.1 and 8.5.0:
+  - the legacy set alone, with `roave/security-advisories` added;
+  - this app's `composer.json` plus every legacy `require`;
+  - `composer require --dry-run` of the legacy additions on top of this
+    app's `composer.lock`. That adds 39 packages and patch-bumps
+    `guzzlehttp/guzzle` 7.15.3 → 7.15.4. Nothing already locked is
+    downgraded or removed.
+
+### 0.8 Open decisions for the owner
+
+These came out of the upgrade and need a business answer, not a code one:
+
+- **The gateways removed in `62dc3f9` were removed on the 2023 dump's
+  toggles, before the phase 0b production check.** Stripe, PayPal, Razorpay,
+  Paystack, Instamojo, Payku, Authorize.Net and Mercado Pago lost their web
+  controllers. The Flutter app's `api/v2` Stripe, PayPal, Razorpay, Paystack,
+  Flutterwave and Paytm endpoints are gone too. If 0b shows any of them in
+  use, restoring one means a current SDK, not a revert:
+  - `unicodeveloper/laravel-paystack`: last release 1.2.0 (2024-04), max L11,
+    no maintained fork of it. `binkode/laravel-paystack` 1.6.0 installs on L13,
+    but it is a separate, lightly used package whose API was not compared.
+    Either drop Paystack or budget a rewrite of its two controllers.
+  - `paypal/paypal-checkout-sdk`: abandoned by PayPal in favour of
+    `paypal/paypal-server-sdk`, which has a different API. PayPal would be a
+    rewrite.
+  - `kingflamez/laravelrave` (Flutterwave): max L10, and none of the forks
+    checked on Packagist supports L13. Flutterwave would be a rewrite against
+    its HTTP API.
+  - `instamojo/instamojo-php`: last release 1.0 in 2020, unmaintained.
+  - Stripe (`stripe/stripe-php` 21.x), Razorpay 2.9, Authorize.Net 2.0.4 and
+    Payku 1.0.5 still install. Stripe jumps from API-pinned 7.x, so its
+    checkout calls would need re-testing.
+- **Checkout still offers the removed gateways when their toggle is on.**
+  `payment_select`, `wallet_modal`, `customer_packages_lists` and
+  `Api\V2\PaymentTypesController` still list them behind `business_settings`
+  toggles, and checkout's `payment_option` dispatch (`CheckoutController`,
+  `WalletController`, `CustomerPackageController`) now falls through to the
+  manual-payment branch for them. It already did that for any option without
+  a controller. Phase 1 strips those option blocks and the admin toggles; until
+  then, keep the toggles off.
+- **`iyzico/iyzipay-php` stays** (`^2.0.61`, the current release) because
+  `iyzico=1` in the dump. Drop it if 0b shows that was a demo default.
+
+### 0.9 What was verified, and what was not
+
+Checked statically, with nothing installed:
+
+- **Compile-time deprecations.** `php -l` on PHP 8.4 over the legacy `app/`,
+  `config/`, `routes/`, `database/` and `tests/`, and over all 409 Blade views
+  after compiling them with this app's L13 Blade compiler. No implicitly
+  nullable parameters. No `${var}` interpolation either: the 48 "`${var}`
+  sites" in §7 phase 2 are JavaScript template literals inside `<script>`
+  blocks, not PHP. The only failure is a pre-existing parse error in
+  `frontend/voguepay/customer_package_payment_vogue.blade.php` (an unmatched
+  `)` in the currency lookup). That view 500s whenever it renders; phase 1
+  deletes VoguePay or fixes it.
+- **Dynamic properties.** A nikic/php-parser scan of legacy `app/` for
+  `$this->x =` on undeclared properties (resolving parents through this app's
+  L13 vendor) and for `$request->x =`. The only hits were 7 order-status paths
+  stashing FCM fields on the `Request`; they now call
+  `NotificationUtility::sendOrderFirebaseNotification()`.
+- **Framework class references.** Every `Illuminate\…`, `Laravel\Sanctum\…`
+  and `Spatie\Permission\…` class the legacy code names exists in this app's
+  installed L13 / Sanctum 4.3 / spatie 8.3 source. The five `Auth\*`
+  controller traits come from laravel/ui, which therefore stays.
+- **maatwebsite/excel 4.** `CustomersImport`, `ProductsImport` and
+  `ProductsExport` load against the 4.0.3 concern interfaces. Before the
+  signature changes they fatal.
+- **Routes.** All 1379 legacy routes register on an L13 router. After
+  `keepLastRegisteredRouteNames()`, no name is shared and each duplicated
+  name resolves to its pre-L12 target.
+
+Not verified, because the legacy `vendor/` can't be installed here and CI
+doesn't exist for that repo:
+
+- The app has never booted on L11–L13, so there is no `artisan`, no
+  `route:list` and no request through the kernel. The legacy PHPUnit suite
+  (`ExampleTest` ×2, `UpdateProductFromApiTest`, and the new
+  `RouteNameResolutionTest`) has not run.
+- Runtime behaviour of the packages whose code changed underneath: Carbon 3
+  beyond the `diffIn*()` sites, PhpSpreadsheet 1.30 → 5 inside Excel imports
+  and exports, spatie v6's `RoleOrPermissionMiddleware` (it now checks
+  `canAny()`, so Gate abilities count too), Sanctum 4 and laravel/ui 4.6.
+- Runtime-only PHP deprecations that static reads can't see, such as `null`
+  passed to internal string functions.
+- Legacy migrations that `->change()` columns (13 sites) or pass
+  precision to `double()`. L11 changed both. They run only on a fresh
+  database, and phase 5 replaces them with a baseline schema.
 
 ## 1. Package compatibility (legacy `composer.json`)
 
@@ -210,7 +310,7 @@ SELECT payment_type, COUNT(*) FROM orders GROUP BY payment_type;
 
 | Package | Legacy | Refs | Verdict | Notes |
 | --- | --- | --- | --- | --- |
-| php | ^7.1.3 | – | → ^8.4 | see 0.5 |
+| php | ^7.1.3 | – | → ^8.3 (declared, = WMS) | the runtime needs ≥ 8.4.1, see 0.5 |
 | laravel/framework | 8.* | – | keep→^13.17 (in-WMS) | |
 | laravel/sanctum | ^2.12 | 11 | keep→^4.0 (in-WMS 4.3.3) | only one token model is possible, see §3 |
 | spatie/laravel-permission | ^5.5 | 6 (+388 `can()`/`permission:` sites) | keep→^8.3 (in-WMS) | `Spatie\Permission\Middlewares\*` becomes `Middleware\*`. Only one `table_names` is possible, see §3 |
@@ -219,7 +319,7 @@ SELECT payment_type, COUNT(*) FROM orders GROUP BY payment_type;
 | guzzlehttp/guzzle | ^7.3 | 15 | keep ^7.8 (in-WMS 7.15) | don't take 8.x, the framework pins 7 |
 | symfony/mailer | ^5.4 | 0 | remove | framework brings v8 |
 | spatie/db-dumper | 2.21.1 (exact pin) | 0 | remove | the pin conflicts with WMS's 4.1.1 (via laravel-backup) |
-| laravel/ui | ^3.0 | 11 (5 auth traits) | keep→^4.6 | or re-author the 5 `Auth\*Controller`s. `Auth::routes(['verify'=>true])` in `web.php:93` |
+| laravel/ui | ^3.0 | 11 (5 auth traits) | keep→^4.6.3 | not removable as-is: the 5 `Auth\*Controller`s use its `Illuminate\Foundation\Auth\*` traits and `web.php` calls its `Auth::routes(['verify'=>true])` macro. Re-authoring those controllers is the only way to drop it |
 | laravel/socialite | ^5.0 | 3 | keep→^5.31 | `google_login`/`facebook_login` = 0 in dump, verify |
 | genealabs/laravel-socialiter | * | 2 | keep→^13.0 | Apple sign-in in `Api\V2\AuthController:316` |
 | genealabs/laravel-sign-in-with-apple | * | 0 direct | keep→^13.0 | driver `sign-in-with-apple`. Remove both genealabs packages if Apple login is unused |
@@ -227,9 +327,9 @@ SELECT payment_type, COUNT(*) FROM orders GROUP BY payment_type;
 | giggsey/libphonenumber-for-php | * | 3 | keep→^9.0 | rep payments, customers |
 | google/apiclient | ^2.18 | 2 | keep ^2.20 | FCM HTTP v1 auth in `NotificationUtility`, `AdminNotificationController` |
 | intervention/image | ^2.5 | 6 | keep→^3.11 + intervention/image-laravel ^1.5 | v3 rewrites the API (`Image::make` becomes `ImageManager::read`). Uses: `TripService`, `AizUploadController` ×2, `SellerFileUploadController`. The `Image` alias goes away |
-| maatwebsite/excel | ^3.1 | 7 | keep→^3.1.70 | 3.1.70 allows `^13.0`, 4.x is optional |
+| maatwebsite/excel | ^3.1 | 7 | keep→^4.0 | 4.x is **required**, not optional: every 3.1.x needs phpspreadsheet 1.30, which caps PHP below 8.5 (this app's CI runs 8.5), and 3.1 < 3.1.70 has an advisory. v4 adds native return types to the concerns, see §0.9 |
 | laracasts/flash | ^3.0 | 100 | keep→^3.2.6 | 3.2.6 allows `^13.0` |
-| enshrined/svg-sanitize | ^0.15.4 | 1 | keep→^0.19 | `AizUploadController`. 1.0.0 exists, check its API before jumping |
+| enshrined/svg-sanitize | ^0.15.4 | 1 | keep→^0.22 | `AizUploadController`. Every release below 0.22 has an advisory (roave refuses it). `sanitize()` is unchanged in 0.22 and 1.0.0 |
 | setasign/fpdi | ^2.6 | 1 | keep ^2.6.8 | `TripService` (`TcpdfFpdi`) |
 | setasign/fpdf | ^1.8 | 0 direct | keep ^1.9 | the FPDI backend |
 | tecnickcom/tcpdf | ^6.8 | 1 (+`TcpdfFpdi`) | keep ^6.11 | needed by `TripService`, not just `config/excel.php` |
@@ -291,6 +391,78 @@ That list is before any gateway the production check keeps. Also: drop the
 `database/seeds` classmap, keep the `files: [app/Http/Helpers.php]` autoload,
 and drop `minimum-stability: dev` (it existed only for the PayPal `dev-master`).
 
+### 1.1 Final legacy package list (branch `claude/albaraka-laravel-13-upgrade-7b5954`)
+
+The tables above are the original audit. This is what the legacy
+`composer.json` requires now.
+
+`require`:
+
+| Package | Constraint | Note |
+| --- | --- | --- |
+| php | ^8.3 | = WMS |
+| laravel/framework | ^13.17 | = WMS |
+| laravel/sanctum | ^4.0 | = WMS |
+| spatie/laravel-permission | ^8.3 | = WMS |
+| laravel/tinker | ^3.0 | = WMS |
+| simplesoftwareio/simple-qrcode | ^4.2 | WMS has `*`; both lock 4.2.0 |
+| laravel/ui | ^4.6.3 | |
+| laravel/socialite | ^5.24.3 | |
+| genealabs/laravel-socialiter, genealabs/laravel-sign-in-with-apple | ^13.0 | drop both if Apple login is unused |
+| giggsey/libphonenumber-for-php | ^9.0 | |
+| google/apiclient | ^2.18 | |
+| guzzlehttp/guzzle | ^7.8 | |
+| intervention/image | ^2.5 | v2 is end-of-life; the v3 rewrite (5 call sites) is still open |
+| maatwebsite/excel | ^4.0 | |
+| laracasts/flash | ^3.2.5 | |
+| enshrined/svg-sanitize | ^0.22 | |
+| setasign/fpdf, setasign/fpdi, tecnickcom/tcpdf | ^1.8, ^2.6, ^6.8 | |
+| league/flysystem-aws-s3-v3 | ^3.0 | remove if production `FILESYSTEM_DRIVER` isn't `s3` |
+| niklasravnsborg/laravel-pdf | ^4.0 | abandoned; still to replace with dompdf |
+| mehedi-iitdu/core-component-repository | 2.2 | still to delete with its 47 calls |
+| iyzico/iyzipay-php | ^2.0.61 | the only payment SDK left, see §0.8 |
+
+`require-dev`: `fakerphp/faker ^1.24`, `mockery/mockery ^1.6` and
+`nunomaduro/collision ^8.9.3` (all = WMS), and `phpunit/phpunit ^12.0`,
+which the merge drops in favour of Pest.
+
+Removed from `require`:
+
+- `62dc3f9`:
+  - `anandsiddharth/laravel-paytm-wallet`
+  - `authorizenet/authorizenet`
+  - `barryvdh/laravel-ide-helper`
+  - `cinetpay/cinetpay-php`
+  - `instamojo/instamojo-php`
+  - `kingflamez/laravelrave`
+  - `mercadopago/dx-php`
+  - `milon/barcode`
+  - `myfatoorah/laravel-package`
+  - `osenco/mpesa`
+  - `paypal/paypal-checkout-sdk`
+  - `predis/predis`
+  - `razorpay/razorpay`
+  - `rmccue/requests`
+  - `sebacarrasco93/laravel-payku`
+  - `stripe/stripe-php`
+  - `twilio/sdk`
+  - `unicodeveloper/laravel-paystack`
+- The L9/L10 hops:
+  - `fideloper/proxy`
+  - `symfony/mailer`
+  - `spatie/db-dumper`
+  - `lcobucci/jwt`
+  - `laracon21/*` ×3
+
+Removed from `require-dev`:
+
+- `barryvdh/laravel-debugbar`, `beyondcode/laravel-dump-server`,
+  `filp/whoops`, `spatie/laravel-ignition`
+- `facade/ignition` and `fzaninotto/faker` (earlier hops)
+
+`config/database.php`'s redis client is now
+`env('REDIS_CLIENT', 'phpredis')`, since predis is gone.
+
 ## 2. Namespace collisions (`App\` in both)
 
 Both apps map `App\` to `app/`. Only one class per FQCN can load.
@@ -316,6 +488,8 @@ Fold these into `bootstrap/app.php`/`bootstrap/providers.php`, don't port them:
   `check:commands` and the `cron_jobs` table.
 - `RouteServiceProvider` (plus a stray `RouteServiceProvider.txt`),
   `EventServiceProvider`, `AuthServiceProvider`, `BroadcastServiceProvider`.
+  `RouteServiceProvider::keepLastRegisteredRouteNames()` must survive the
+  fold, see §6.4.
 - The missing `App\Exceptions\Handler`.
 - The framework-default middleware: `Authenticate`, `RedirectIfAuthenticated`,
   `EncryptCookies`, `TrimStrings`, `TrustProxies`, `VerifyCsrfToken`,
@@ -596,6 +770,22 @@ These silently alter legacy code:
 - `Password::defaults()` (min 12 in production) applies to legacy registration
   only where it calls `Password::defaults()`.
 
+WMS's `config/` also has two L13 hardening settings that break legacy code.
+The legacy config lacks both keys, so it runs on the L13 fallbacks today:
+
+- **`cache.serializable_classes`.** WMS allow-lists only `Collection`,
+  `stdClass` and `CarbonImmutable`. Legacy caches Eloquent models and
+  collections: 31 `Cache::remember`/`rememberForever` sites, e.g. the
+  `app.todays_deal`, `app.flash_deals` and `app.best_selling_products` API
+  caches. With that allow-list, those come back as `__PHP_Incomplete_Class`.
+  Either cache arrays (`->toArray()`, then rehydrate), or allow-list the
+  legacy model classes. The first is safer.
+- **`session.serialization` = `json`.** Legacy stores objects in the session,
+  e.g. `compare` and `cart` as Collections (`CompareController`,
+  `PayhereController`). Under `json` they come back as arrays, and code calling
+  collection methods on them breaks. Store arrays, or scope `php`
+  serialization to the store's session if the store gets its own.
+
 ### 6.2 `api` middleware group
 
 WMS appends `SetLocaleFromHeader` and `EnsureMinimumAppVersion` to the whole
@@ -618,6 +808,25 @@ routes. The WMS route table from `route:list` has 129.
   - `GET /admin`: WMS `admin.dashboard` vs the legacy admin dashboard.
   - `POST /logout`.
 - **Name collisions:** `login`, `logout`, `admin.dashboard`, `password.update`.
+- **Duplicate names inside the legacy routes.** 61 legacy names are
+  registered twice:
+  - mostly `Route::resource()` followed by an explicit override like
+    `Route::get('/brands/destroy/{id}')->name('brands.destroy')`
+  - plus `api/v2` resources that share a name with an admin page, e.g.
+    `brands.index`, `categories.index`, `customers.show`
+
+  Up to L11 the last registration won. From L12 the first one does, and
+  `route:cache` still refuses duplicates. The legacy
+  `RouteServiceProvider::keepLastRegisteredRouteNames()` strips each name
+  from all but its last route, and `RouteNameResolutionTest` pins the targets.
+  When the store routes move into `routes/store/*.php`, either:
+  - run the same step over the store route group, or
+  - rename the losing routes at the source, e.g.
+    `Route::resource(...)->except(['edit', 'destroy'])` and `api.`-prefixed
+    names for the `api/v2` resources.
+
+  Without one of those, admin links would point at the JSON API and every
+  GET delete link at a DELETE route.
 - **Catch-alls:** legacy `/{slug}` (web) and `api/{fallbackPlaceholder}`
   (`Route::fallback`) would shadow WMS routes registered after them.
 - **Dead routes:** 228 legacy routes point at **controllers that are not in the
@@ -698,8 +907,8 @@ changes:**
 | --- | --- | --- | --- |
 | 0a | Incident response (owner, outside the repo) | §0.1–0.3: rotate secrets, clean the server, disable the addon installer, lock down `api/v2/warehouse`, move the docroot to `public/` | ops, not code |
 | 0b | Capture production truth | `mysqldump --no-data` of prod, `business_settings` toggles, `addons` rows, `orders.payment_type` histogram, role and user_type lists, `FILESYSTEM_DRIVER`, and whether WMS product ids ⊆ store product ids | 1 short session |
-| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers | ~150 files deleted, ~40 edited. Medium |
-| 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `${var}` interpolation (48 sites / 12 files), `DB::raw` string casts (12). Needs PHP ≥ 8.4.1 to match WMS's lock. Upgrade one major at a time (§0.7): L10 is done, L11 → L13 remain. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
+| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done so far:** the laracon21 helpers, and every SDK-backed gateway's controllers/routes/views (`62dc3f9`). **Left:** the checkout option blocks and admin toggles for those gateways (§0.8), and the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay) | ~150 files deleted, ~40 edited. Medium |
+| 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `DB::raw` string casts (12). The `${var}` count was JS template literals, see §0.9. Needs PHP ≥ 8.4.1 to match WMS's lock. **Done:** the L8 → L13 version chain one major at a time, the spatie `Middleware` rename, PHP 8.2–8.5 deprecations, and Carbon 3 `diffIn*()` fixes (§0.7). **Left:** the skeleton shape (deferred to phase 6), intervention/image v3, laravel-pdf → dompdf, and `env()` outside config. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
 | 3 | Namespace and model remediation | Rename legacy `User` → `StoreUser` (151 files + the morph-type data plan). Merge `Product` and `Upload` into single models. Merge `Controller` and `AppServiceProvider`. Replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
 | 4 | Composer merge | Add the ~14 surviving packages to this repo. `composer.lock` regenerates in CI or a networked env (the sandbox can't install dev deps) | Small |
 | 5 | DB merge | Target the **store's MySQL DB as the physical host**: it holds the live, larger data set. Import WMS's `wms_*` and domain tables into it. Add a guarded baseline migration for the store schema, following the `create_uploads_table` `hasTable()` pattern, generated from the 0b dump. It must also build on sqlite for CI. Move the legacy spatie and Sanctum rows into `wms_*` with id offsets and morph rewrites. Add `wms_permissions.section`. Pick the single products writer. Extend `SharedDatabaseTableNamesTest`'s inventory with every store table | Large and risky: needs a rehearsal on a prod copy |
