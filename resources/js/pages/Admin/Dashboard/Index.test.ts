@@ -22,30 +22,11 @@ const { usePageMock, routerGetMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { defineComponent, h } = await import('vue');
-    const { headStub } = await import('@/testing/inertiaStubs');
-
-    const LinkStub = defineComponent({
-        props: ['href', 'data'],
-        setup(props, { slots }) {
-            return () =>
-                h(
-                    'a',
-                    {
-                        href:
-                            typeof props.href === 'string'
-                                ? props.href
-                                : props.href?.url,
-                        'data-query': JSON.stringify(props.data ?? {}),
-                    },
-                    slots.default?.(),
-                );
-        },
-    });
+    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
-        Link: LinkStub,
+        Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
@@ -159,7 +140,7 @@ describe('Dashboard Index', () => {
         expect(helpLink?.attributes('href')).toBe('/admin/help/dashboard');
     });
 
-    it('renders every occupancy tile with its count, linking to the cells map with a matching highlight filter', () => {
+    it('renders every occupancy tile with its count, linking to the matching-pallets list with a matching highlight filter', () => {
         const wrapper = mountPage();
 
         const tiles = wrapper.findAllComponents(DashboardStatTile);
@@ -167,7 +148,7 @@ describe('Dashboard Index', () => {
             (tile) => tile.props('label') === t('dashboard.occupancy.empty'),
         );
         expect(empty?.props('value')).toBe(3);
-        expect(empty?.props('href')).toBe('/admin/cells');
+        expect(empty?.props('href')).toBe('/admin/pallets');
         expect(empty?.props('query')).toEqual({ state: 'empty' });
 
         const full = tiles.find(
@@ -179,7 +160,7 @@ describe('Dashboard Index', () => {
         const opened = tiles.find(
             (tile) =>
                 tile.props('label') === t('dashboard.occupancy.opened') &&
-                tile.props('href') === '/admin/cells',
+                tile.props('href') === '/admin/pallets',
         );
         expect(opened?.props('value')).toBe(1);
         expect(opened?.props('query')).toEqual({ state: 'opened' });
@@ -204,7 +185,7 @@ describe('Dashboard Index', () => {
         });
     });
 
-    it('renders the expired tile linking to the cells map with an expires-within-days highlight', () => {
+    it('renders the expired tile linking to the matching-pallets list with an expires-within-days highlight', () => {
         const wrapper = mountPage();
 
         const expired = tileByLabelAndQuery(
@@ -213,7 +194,7 @@ describe('Dashboard Index', () => {
             { expired: true },
         );
         expect(expired?.props('value')).toBe(2);
-        expect(expired?.props('href')).toBe('/admin/cells');
+        expect(expired?.props('href')).toBe('/admin/pallets');
         expect(expired?.props('icon')).toBe(CalendarX);
     });
 
@@ -227,7 +208,7 @@ describe('Dashboard Index', () => {
                 { expires_within_days: window.days },
             );
             expect(tile?.props('value')).toBe(window.count);
-            expect(tile?.props('href')).toBe('/admin/cells');
+            expect(tile?.props('href')).toBe('/admin/pallets');
             expect(tile?.props('icon')).toBe(CalendarX);
         }
     });
@@ -251,7 +232,7 @@ describe('Dashboard Index', () => {
                     link.attributes('data-query') ===
                     JSON.stringify({ expires_within_days: 45 }),
             );
-        expect(customLink?.attributes('href')).toBe('/admin/cells');
+        expect(customLink?.attributes('href')).toBe('/admin/pallets');
         expect(customLink?.find('svg.lucide-calendar-x').exists()).toBe(true);
         expect(wrapper.text()).toContain('8');
         expect(wrapper.text()).toContain(
@@ -314,7 +295,7 @@ describe('Dashboard Index', () => {
                     link.attributes('data-query') ===
                     JSON.stringify({ stale_after_days: 30 }),
             );
-        expect(customLink?.attributes('href')).toBe('/admin/cells');
+        expect(customLink?.attributes('href')).toBe('/admin/pallets');
         expect(customLink?.find('svg.lucide-clock').exists()).toBe(true);
         expect(wrapper.text()).toContain('5');
         expect(wrapper.text()).toContain(

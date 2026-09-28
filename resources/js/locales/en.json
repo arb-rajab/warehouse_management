@@ -531,6 +531,20 @@
         "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
     },
+    "pallets": {
+        "title": "Matching pallets",
+        "viewOnMap": "View on map",
+        "filteredBy": "Filtered by:",
+        "columns": {
+            "product": "Product",
+            "state": "State",
+            "location": "Location",
+            "expiration": "Expires",
+            "added": "Added",
+            "remainingBoxes": "Boxes left"
+        },
+        "empty": "No pallets match this filter."
+    },
     "help": {
         "viewHelp": "Help",
         "backToHelp": "Back to help",

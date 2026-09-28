@@ -531,6 +531,20 @@
         "exportQrLabel": "تصدير رمز QR لـ {product}",
         "empty": "لا توجد منتجات بعد."
     },
+    "pallets": {
+        "title": "المنصات المطابقة",
+        "viewOnMap": "عرض على الخريطة",
+        "filteredBy": "مُصفّاة حسب:",
+        "columns": {
+            "product": "المنتج",
+            "state": "الحالة",
+            "location": "الموقع",
+            "expiration": "تنتهي في",
+            "added": "تاريخ الإضافة",
+            "remainingBoxes": "الصناديق المتبقية"
+        },
+        "empty": "لا توجد منصات مطابقة لهذا الفلتر."
+    },
     "help": {
         "viewHelp": "مساعدة",
         "backToHelp": "العودة إلى المساعدة",

@@ -6,6 +6,194 @@ use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('the matching pallets list orders by expiration date ascending, then add date ascending, with a null expiration sorting last', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 4]);
+
+    // Earliest expiration overall — must lead despite being created last.
+    $earliestExpiration = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-09-01',
+        'created_at' => '2026-08-05 00:00:00',
+    ]);
+    // Same expiration as the next pallet, but created earlier — must come first of the two.
+    $tieBrokenByAddDate = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-09-05',
+        'created_at' => '2026-08-01 00:00:00',
+    ]);
+    $sameExpirationCreatedLater = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 3)->first()->id,
+        'expiration_date' => '2026-09-05',
+        'created_at' => '2026-08-02 00:00:00',
+    ]);
+    // No expiration date at all — must sort last, not first.
+    $noExpiration = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 4)->first()->id,
+        'expiration_date' => null,
+        'created_at' => '2026-08-03 00:00:00',
+    ]);
+
+    $response = $this->get('/admin/pallets');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Pallets/Index')
+            ->where('pallets.data.0.id', $earliestExpiration->id)
+            ->where('pallets.data.1.id', $tieBrokenByAddDate->id)
+            ->where('pallets.data.2.id', $sameExpirationCreatedLater->id)
+            ->where('pallets.data.3.id', $noExpiration->id)
+    );
+});
+
+test('the matching pallets list filters by cell state, excluding a pallet in a different state', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    // Noise: this pallet's cell stays "full" (the factory default), which must not match "opened".
+    Pallet::factory()->create(['cell_id' => $row->cells()->where('flat_number', 1)->first()->id]);
+    $opened = Pallet::factory()->opened()->create(['cell_id' => $row->cells()->where('flat_number', 2)->first()->id]);
+
+    $response = $this->get('/admin/pallets?state=opened');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $opened->id)
+    );
+});
+
+test('the matching pallets list filters by is_active=false, excluding a pallet in an active cell', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    // Noise: this pallet's cell stays active, which must not match "inactive only".
+    Pallet::factory()->create(['cell_id' => $row->cells()->where('flat_number', 1)->first()->id]);
+    $inactive = Pallet::factory()->create(['cell_id' => $row->cells()->where('flat_number', 2)->first()->id]);
+    $inactive->cell->update(['is_active' => false]);
+
+    $response = $this->get('/admin/pallets?is_active=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $inactive->id)
+    );
+});
+
+test('the matching pallets list filters by expired, excluding a pallet that has not expired yet', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    // Noise: expires well in the future, which must not match "expired".
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-09-01',
+    ]);
+    $expired = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-01',
+    ]);
+
+    $response = $this->get('/admin/pallets?expired=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $expired->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the matching pallets list filters by expires_within_days, excluding a pallet expiring later', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    // Noise: expires well outside the 7-day window.
+    Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+        'expiration_date' => '2026-09-01',
+    ]);
+    $expiringSoon = Pallet::factory()->create([
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+        'expiration_date' => '2026-08-15',
+    ]);
+
+    $response = $this->get('/admin/pallets?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $expiringSoon->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the matching pallets list filters by stale_after_days, excluding a fresh pallet', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    // Noise: a freshly-stored pallet, nowhere near the staleness threshold.
+    Pallet::factory()->create(['cell_id' => $row->cells()->where('flat_number', 1)->first()->id]);
+    $stale = Pallet::factory()->stale()->create(['cell_id' => $row->cells()->where('flat_number', 2)->first()->id]);
+
+    $response = $this->get('/admin/pallets?stale_after_days=25');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $stale->id)
+    );
+});
+
+test('the matching pallets list filters by product_id, excluding a pallet of a different product', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $matching = Product::factory()->create();
+    $other = Product::factory()->create();
+    // Noise: a different product, which must not match the product filter.
+    Pallet::factory()->create([
+        'product_id' => $other->id,
+        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
+    ]);
+    $matchingPallet = Pallet::factory()->create([
+        'product_id' => $matching->id,
+        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
+    ]);
+
+    $response = $this->get("/admin/pallets?product_id[]={$matching->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)
+            ->where('pallets.data.0.id', $matchingPallet->id)
+            ->has('filterOptions.products', 1)
+            ->where('filterOptions.products.0.id', $matching->id)
+    );
+});
+
+test('the matching pallets list paginates instead of returning every matching pallet at once', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 5, 'flats_count' => 5]);
+
+    $row->cells()->get()->each(fn ($cell) => Pallet::factory()->create(['cell_id' => $cell->id]));
+
+    $response = $this->get('/admin/pallets');
+
+    assertInertiaPaginates($response, 'pallets', 20, 25, 'Admin/Pallets/Index');
+});
+
+test('an invalid state passed to the matching pallets list is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/pallets?state=bogus');
+
+    $response->assertInvalid(['state']);
+});
+
+test('a mobile app user cannot view the matching pallets list', function () {
+    actingAsMobilePanelUser();
+
+    $response = $this->get('/admin/pallets');
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller is redirected to login when viewing the matching pallets list', function () {
+    $response = $this->get('/admin/pallets');
+
+    $response->assertRedirect(route('login'));
+});
 
 test('an authenticated admin can store a pallet into an empty cell', function () {
     $admin = actingAsAdmin();
