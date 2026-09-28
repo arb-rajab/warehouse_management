@@ -49,7 +49,19 @@ const pair = computed(() => transferPair(props.log));
 <template>
     <td class="px-4 py-2">
         <div class="flex items-center gap-1">
-            <TableLink :href="showRow({ letter: pair.from.row_letter })">
+            <TableLink
+                :href="
+                    showRow(
+                        { letter: pair.from.row_letter },
+                        {
+                            query: {
+                                cell_number: pair.from.cell_number,
+                                flat_number: pair.from.flat_number,
+                            },
+                        },
+                    )
+                "
+            >
                 {{
                     formatSlot(
                         pair.from.row_letter,
@@ -62,7 +74,19 @@ const pair = computed(() => transferPair(props.log));
                 <ArrowRight
                     class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-neutral-500"
                 />
-                <TableLink :href="showRow({ letter: pair.to.row_letter })">
+                <TableLink
+                    :href="
+                        showRow(
+                            { letter: pair.to.row_letter },
+                            {
+                                query: {
+                                    cell_number: pair.to.cell_number,
+                                    flat_number: pair.to.flat_number,
+                                },
+                            },
+                        )
+                    "
+                >
                     {{
                         formatSlot(
                             pair.to.row_letter,

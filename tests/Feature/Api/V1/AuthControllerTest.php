@@ -21,10 +21,23 @@ test('a user can log in with correct credentials and receives a token plus every
         'id' => $user->id,
         'name' => 'Bob Mobile',
         'email' => 'bob@example.com',
+        'is_admin' => false,
     ]);
     expect(array_keys($response->json()))->toEqualCanonicalizing(['token', 'user']);
 
     $this->assertDatabaseCount('wms_personal_access_tokens', 1);
+});
+
+test('an admin logging in through the mobile api receives is_admin true', function () {
+    $user = User::factory()->create(['password' => 'correct-password']);
+
+    $response = $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'correct-password',
+    ]);
+
+    $response->assertOk();
+    expect($response->json('user.is_admin'))->toBeTrue();
 });
 
 test('logging in with the wrong password is rejected', function () {
@@ -128,6 +141,51 @@ test('an unauthenticated caller cannot log out and other users tokens are untouc
 
     $response->assertUnauthorized();
     $this->assertDatabaseCount('wms_personal_access_tokens', 1);
+});
+
+test('an authenticated worker can fetch their own user, matching the shape login returns', function () {
+    $user = User::factory()->mobileUser()->create([
+        'name' => 'Bob Mobile',
+        'email' => 'bob@example.com',
+    ]);
+    actingAsMobileUser($user);
+
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertOk();
+    expect($response->json())->toEqual([
+        'id' => $user->id,
+        'name' => 'Bob Mobile',
+        'email' => 'bob@example.com',
+        'is_admin' => false,
+    ]);
+});
+
+test('an admin fetching their own user gets is_admin true', function () {
+    $admin = User::factory()->create();
+    actingAsMobileUser($admin);
+
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertOk();
+    expect($response->json('is_admin'))->toBeTrue();
+});
+
+test('GET /user reflects a role change without requiring a fresh login', function () {
+    $user = User::factory()->mobileUser()->create();
+    actingAsMobileUser($user);
+
+    $this->getJson('/api/v1/user')->assertOk()->assertJson(['is_admin' => false]);
+
+    $user->syncRoles(['admin']);
+
+    $this->getJson('/api/v1/user')->assertOk()->assertJson(['is_admin' => true]);
+});
+
+test('an unauthenticated caller cannot fetch the signed-in user', function () {
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertUnauthorized();
 });
 
 test('the mobile api deliberately does not enforce must_change_password', function () {

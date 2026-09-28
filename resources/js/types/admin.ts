@@ -307,6 +307,11 @@ export interface CellStatusLogFilterOptions
     actions: CellLogAction[];
 }
 
+export interface ProductBarcode {
+    id: number;
+    barcode: string;
+}
+
 export interface ProductSummary {
     id: number;
     /** The store's raw base name — see `CellPallet.product_name`. */
@@ -333,6 +338,8 @@ export interface ProductSummary {
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
+    /** Barcodes attached to this product, oldest first. Stored in this app's own `wms_product_barcodes`. */
+    barcodes: ProductBarcode[];
 }
 
 export type ProductSortBy =
@@ -361,6 +368,38 @@ export interface ProductFilters {
 
 export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
 
+/**
+ * One row of the "matching pallets" admin list (Admin\PalletController::index) —
+ * the dashboard's map-linking stat tiles land here instead of jumping straight
+ * to the cell map. Carries the full `ProductDetails` (the list spans every
+ * product, unlike the cell map's per-flat `CellPallet`) plus `added_at`, the
+ * list's sort tiebreaker after `expiration_date`.
+ */
+export interface MatchingPallet {
+    id: number;
+    state: Cell['state'];
+    expiration_date: string | null;
+    added_at: string | null;
+    remaining_boxes: number;
+    product: ProductDetails;
+    location: CellSlotLocation;
+}
+
+/**
+ * The same highlight-filter query params `CellHighlightSeed` seeds the cell
+ * map from — this list accepts and means exactly the same shape so a
+ * dashboard tile's query works unchanged on either page.
+ */
+export interface MatchingPalletFilters {
+    state?: Cell['state'];
+    is_active?: boolean;
+    expired?: boolean;
+    expires_within_days?: number;
+    stale_after_days?: number;
+    product_id?: number[];
+    per_page?: number;
+}
+
 export interface CellVerificationSnapshot {
     cell_state: Cell['state'] | null;
     product: ProductDetails | null;
@@ -377,6 +416,11 @@ export interface CellVerificationReport {
     reported: CellVerificationSnapshot;
     note: string | null;
     user: UserSummary;
+    /** Whether the report's round is finished — absent where the round isn't loaded (the mobile report response). */
+    round_completed?: boolean;
+    /** Set once an admin accepted the reported state; the discrepancy itself stays as reported. */
+    accepted_at: string | null;
+    accepted_by: UserSummary | null;
     created_at: string;
 }
 

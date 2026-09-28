@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { confirmDelete, confirmLogout } from './confirm';
+import {
+    confirmAcceptVerificationReport,
+    confirmDelete,
+    confirmLogout,
+} from './confirm';
 
 afterEach(() => {
     vi.unstubAllGlobals();
@@ -42,5 +46,26 @@ describe('confirmLogout', () => {
 
         vi.stubGlobal('confirm', () => true);
         expect(confirmLogout()).toBe(true);
+    });
+});
+
+describe('confirmAcceptVerificationReport', () => {
+    it('asks with the shared accept wording, naming the slot', () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+
+        confirmAcceptVerificationReport('A3·2');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            'Update A3·2 to match what was reported? The report stays marked incorrect, along with the date it was accepted.',
+        );
+    });
+
+    it('passes the user’s answer straight back to the caller', () => {
+        vi.stubGlobal('confirm', () => false);
+        expect(confirmAcceptVerificationReport('A3·2')).toBe(false);
+
+        vi.stubGlobal('confirm', () => true);
+        expect(confirmAcceptVerificationReport('A3·2')).toBe(true);
     });
 });

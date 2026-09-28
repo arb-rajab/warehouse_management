@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, QrCode, SlidersHorizontal, X } from '@lucide/vue';
+import { Check, Plus, QrCode, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
+    addBarcode,
     exportQr,
     index as productsIndex,
+    removeBarcode,
     updateBoxCount,
     updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -30,6 +32,7 @@ import {
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
+    fieldLabelClass,
     filterApplyButtonClass,
     filterClearButtonClass,
     filterFooterClass,
@@ -44,6 +47,7 @@ import { t } from '@/lib/i18n';
 import { productName } from '@/lib/productName';
 import type {
     Paginated,
+    ProductBarcode,
     ProductFilterOption,
     ProductFilters,
     ProductIndexFilterOptions,
@@ -325,6 +329,78 @@ function isLowStock(product: ProductSummary): boolean {
         product.pallets_count < product.minimum_pallets
     );
 }
+
+const barcodesDialogProduct = ref<ProductSummary | null>(null);
+const newBarcodeDraft = ref('');
+
+/**
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
+ */
+const barcodesDialogOpen = computed({
+    get: () => barcodesDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            barcodesDialogProduct.value = null;
+        }
+    },
+});
+
+function openBarcodesDialog(product: ProductSummary): void {
+    newBarcodeDraft.value = '';
+    barcodesDialogProduct.value = product;
+}
+
+/**
+ * Unlike the single-value box-count/minimum-pallets dialogs (which close on
+ * submit), this dialog manages a list and stays open across additions/
+ * removals — so after each mutation it re-points itself at the freshest copy
+ * of the product from the now-updated `products` prop, rather than closing.
+ */
+function refreshBarcodesDialogProduct(productId: number): void {
+    barcodesDialogProduct.value =
+        props.products.data.find((product) => product.id === productId) ?? null;
+}
+
+function submitNewBarcode(): void {
+    const product = barcodesDialogProduct.value;
+    const barcode = newBarcodeDraft.value.trim();
+
+    if (product === null || barcode === '') {
+        return;
+    }
+
+    router.post(
+        addBarcode(product.id, { mergeQuery: {} }).url,
+        { barcode },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => refreshBarcodesDialogProduct(product.id),
+        },
+    );
+    newBarcodeDraft.value = '';
+}
+
+function removeProductBarcode(barcode: ProductBarcode): void {
+    const product = barcodesDialogProduct.value;
+
+    if (product === null) {
+        return;
+    }
+
+    router.delete(
+        removeBarcode.url(
+            { product: product.id, barcode: barcode.id },
+            { mergeQuery: {} },
+        ),
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => refreshBarcodesDialogProduct(product.id),
+        },
+    );
+}
 </script>
 
 <template>
@@ -533,6 +609,75 @@ function isLowStock(product: ProductSummary): boolean {
             </template>
         </FilterDialog>
 
+        <FilterDialog
+            v-model:open="barcodesDialogOpen"
+            :title="t('products.columns.barcodes')"
+            :close-label="t('cellLog.filters.close')"
+        >
+            <form
+                id="products-add-barcode-form"
+                class="flex items-end gap-2"
+                @submit.prevent="submitNewBarcode"
+            >
+                <div class="flex-1">
+                    <label for="products-new-barcode" :class="fieldLabelClass">
+                        {{
+                            t('products.barcodesLabel', {
+                                product: barcodesDialogProduct
+                                    ? productName(
+                                          barcodesDialogProduct.name,
+                                          barcodesDialogProduct.ar_name,
+                                      )
+                                    : '',
+                            })
+                        }}
+                    </label>
+                    <input
+                        id="products-new-barcode"
+                        v-model="newBarcodeDraft"
+                        type="text"
+                        :placeholder="t('products.newBarcodePlaceholder')"
+                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                    />
+                </div>
+                <button type="submit" :class="filterApplyButtonClass">
+                    <Plus class="h-4 w-4 shrink-0" />
+                    {{ t('products.addBarcode') }}
+                </button>
+            </form>
+
+            <p
+                v-if="(barcodesDialogProduct?.barcodes.length ?? 0) === 0"
+                class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
+            >
+                {{ t('products.noBarcodes') }}
+            </p>
+            <ul
+                v-else
+                class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
+            >
+                <li
+                    v-for="barcode in barcodesDialogProduct?.barcodes ?? []"
+                    :key="barcode.id"
+                    class="flex items-center justify-between gap-2 py-2 text-sm"
+                >
+                    {{ barcode.barcode }}
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.removeBarcode', {
+                                barcode: barcode.barcode,
+                            })
+                        "
+                        class="text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        @click="removeProductBarcode(barcode)"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </li>
+            </ul>
+        </FilterDialog>
+
         <DataTable
             v-model:open-filter-key="openFilterKey"
             :columns="[
@@ -546,6 +691,9 @@ function isLowStock(product: ProductSummary): boolean {
                 },
                 {
                     label: t('products.columns.minimumPallets'),
+                },
+                {
+                    label: t('products.columns.barcodes'),
                 },
                 {
                     label: t('products.columns.full'),
@@ -670,6 +818,23 @@ function isLowStock(product: ProductSummary): boolean {
                         @click="openMinimumPalletsDialog(product)"
                     >
                         {{ product.minimum_pallets ?? '—' }}
+                    </button>
+                </td>
+                <td class="px-4 py-2">
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.barcodesLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :class="filterTriggerButtonClass"
+                        @click="openBarcodesDialog(product)"
+                    >
+                        {{ product.barcodes.length }}
                     </button>
                 </td>
                 <td class="px-4 py-2">

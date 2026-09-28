@@ -3,6 +3,7 @@ import type {
     CellStatusLog,
     CellVerificationReport,
     CellVerificationRound,
+    MatchingPallet,
     Paginated,
     Row,
     Setting,
@@ -103,6 +104,9 @@ export function cellVerificationReport(
         },
         note: null,
         user: { id: 7, name: 'Jane Doe' },
+        round_completed: true,
+        accepted_at: null,
+        accepted_by: null,
         created_at: '2026-08-01T10:00:00Z',
         ...overrides,
     };
@@ -121,6 +125,27 @@ export function cellVerificationRound(
             { id: 2, letter: 'B' },
         ],
         user: { id: 7, name: 'Jane Doe' },
+        ...overrides,
+    };
+}
+
+export function matchingPallet(
+    overrides: Partial<MatchingPallet> = {},
+): MatchingPallet {
+    return {
+        id: 1,
+        state: 'full',
+        expiration_date: '2026-09-01',
+        added_at: '2026-08-01T10:00:00Z',
+        remaining_boxes: 10,
+        product: {
+            id: 10,
+            name: 'Widgets',
+            ar_name: 'ودجات',
+            image_url: null,
+            boxes_count: 10,
+        },
+        location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         ...overrides,
     };
 }

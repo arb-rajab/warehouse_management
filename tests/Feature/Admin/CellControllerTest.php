@@ -667,6 +667,70 @@ test('an authenticated user can export a QR code image for a single cell', funct
     expect($svg)->toContain('font-size="64"');
 });
 
+test('a single-cell QR export draws a same-height downward arrow beside the label for the lowest level of a multi-level row', function () {
+    // The row has no Setting, so Setting::current() defaults to
+    // qr_code_width=850 (Setting::DEFAULT_QR_CODE_WIDTH), and the label is
+    // short enough to stay on one line at the max 64px font — both pin the
+    // arrow's box to these exact points (see
+    // BuildsQrLabels::qrLabelImage()'s $primaryArrow reservation math).
+    // A downward arrow's shaft points away from its head, which sits at the
+    // bottom (708,906 is the tip; 587..830 the shaft/head span above it).
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 1)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="708,906 587,874 659,874 659,842 757,842 757,874 830,874" fill="#111111"/>');
+});
+
+test('a single-cell QR export draws a same-height upward arrow beside the label for the highest level of a multi-level row', function () {
+    // Same geometry as the downward-arrow test above, mirrored vertically —
+    // the tip (708,842) sits at the top instead of the bottom.
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 3)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="708,842 587,874 659,874 659,906 757,906 757,874 830,874" fill="#111111"/>');
+});
+
+test('a single-cell QR export draws a horizontal arrow beside the label for a middle level', function () {
+    // A horizontal (rightward) arrow's tip is on the right (830,874) with
+    // the shaft/head extending left to x=587 — see verticalArrowPoints()'s
+    // sibling horizontalArrowPoints().
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+});
+
+test('a single-cell QR export draws a horizontal arrow beside the label when the row has only one level', function () {
+    // A single-level row's one cell is simultaneously its own highest and
+    // lowest — there's no up/down direction to indicate, so it gets the same
+    // horizontal arrow a genuine mid-level cell does (see
+    // BuildsCellQrLabels::cellLevelArrowDirection()).
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+
+    $response->assertOk();
+    $svg = $response->getContent();
+    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+});
+
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);

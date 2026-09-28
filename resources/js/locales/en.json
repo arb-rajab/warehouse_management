@@ -308,7 +308,11 @@
         },
         "correct": "Correct",
         "incorrect": "Incorrect",
-        "empty": "No verification reports yet."
+        "empty": "No verification reports yet.",
+        "accept": "Accept reported state",
+        "acceptConfirm": "Update {slot} to match what was reported? The report stays marked incorrect, along with the date it was accepted.",
+        "acceptedOn": "Accepted {date}",
+        "acceptedBy": "by"
     },
     "cellHighlight": {
         "staleAfterDays": "Stale for at least (days)",
@@ -356,6 +360,9 @@
         "palletActions": {
             "triggerLabel": "Manage pallet",
             "title": "Manage pallet — {location}",
+            "details": {
+                "remainingBoxes": "{count} boxes remaining"
+            },
             "tabs": {
                 "store": "Store",
                 "open": "Open",
@@ -415,6 +422,7 @@
             "rotateLeft": "Rotate left",
             "rotateRight": "Rotate right",
             "resetView": "Reset view",
+            "fitToView": "Fit to view",
             "fullscreen": "Full screen",
             "exitFullscreen": "Exit full screen",
             "view2d": "2D view",
@@ -477,6 +485,10 @@
             "title": "Low stock",
             "count": "Below minimum pallets"
         },
+        "inactiveInWarehouse": {
+            "title": "Inactive products in warehouse",
+            "count": "Inactive products with stock"
+        },
         "activityToday": {
             "title": "Today's activity"
         },
@@ -505,13 +517,33 @@
             "expiringSoon": "Expiring ≤{days}d",
             "boxesPerPallet": "Boxes / pallet",
             "minimumPallets": "Min. pallets",
+            "barcodes": "Barcodes",
             "qr": "QR"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "minimumPalletsLabel": "Minimum pallets for {product}",
         "minimumPalletsPlaceholder": "e.g. 10",
+        "barcodesLabel": "Barcodes for {product}",
+        "addBarcode": "Add barcode",
+        "newBarcodePlaceholder": "Scan or type a barcode…",
+        "removeBarcode": "Remove barcode {barcode}",
+        "noBarcodes": "No barcodes added yet.",
         "exportQrLabel": "Export QR code for {product}",
         "empty": "No products yet."
+    },
+    "pallets": {
+        "title": "Matching pallets",
+        "viewOnMap": "View on map",
+        "filteredBy": "Filtered by:",
+        "columns": {
+            "product": "Product",
+            "state": "State",
+            "location": "Location",
+            "expiration": "Expires",
+            "added": "Added",
+            "remainingBoxes": "Boxes left"
+        },
+        "empty": "No pallets match this filter."
     },
     "help": {
         "viewHelp": "Help",
@@ -663,6 +695,10 @@
             "reports": {
                 "heading": "Correct and incorrect reports",
                 "body": "Open a round to see every report in it. Each one is marked correct when what the worker found matches the system, or incorrect when it doesn't — for example an empty cell that's actually holding a pallet, or the wrong product in a slot. Use this list to spot and fix real-world discrepancies."
+            },
+            "accepting": {
+                "heading": "Accepting what was reported",
+                "body": "When an incorrect report is right about what's really in the cell, use the accept button on that report — on the round's page or on the worker's own page — to update the cell in the system to match it. The report stays marked incorrect, so the mismatch is never lost, and it shows when it was accepted and by whom. A report can only be accepted once, after its round is finished, and only while the cell still holds what the report expected — if the cell has changed since, update it from the warehouse map instead."
             },
             "exporting": {
                 "heading": "Exporting a round's reports",

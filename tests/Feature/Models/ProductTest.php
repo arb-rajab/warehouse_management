@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -523,6 +525,25 @@ test('minimum_pallets stays null even for a product this app has never configure
         ->minimum_pallets->toBeNull();
 });
 
+test('barcodes returns every barcode attached to the product, excluding another product\'s', function () {
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+
+    // Noise: a barcode belonging to a different product.
+    $otherProduct = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '3333333333333']);
+
+    expect($product->barcodes->pluck('barcode')->sort()->values()->all())
+        ->toBe(['1111111111111', '2222222222222']);
+});
+
+test('barcodes is empty for a product nobody has added one to', function () {
+    $product = Product::factory()->create();
+
+    expect($product->barcodes)->toBeEmpty();
+});
+
 test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
     $product = Product::factory()->create();
 
@@ -534,4 +555,23 @@ test('the inactive factory state sets published to false, with noise from a defa
     Product::factory()->create();
 
     expect($inactive->fresh()->published)->toBeFalse();
+});
+
+test('inWarehouse matches a product with at least one pallet, excluding a product with none', function () {
+    $inWarehouse = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $inWarehouse->id]);
+
+    // Noise: a product with zero pallets must not match.
+    Product::factory()->create();
+
+    $results = Product::query()->inWarehouse()->get();
+
+    expect($results->pluck('id')->all())->toBe([$inWarehouse->id]);
+});
+
+test('inWarehouse matches a product with more than one pallet', function () {
+    $product = Product::factory()->create();
+    Pallet::factory()->count(2)->create(['product_id' => $product->id]);
+
+    expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$product->id]);
 });

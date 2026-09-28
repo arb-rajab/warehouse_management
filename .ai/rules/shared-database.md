@@ -304,6 +304,7 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`
+- `wms_product_barcodes.product_id`
 
 `uploads.id` is the same signed `int(11)`. sqlite reports both types as
 `integer`, so the test connection cannot catch a regression here —
@@ -315,18 +316,26 @@ table, but it is a schema change against every FK above plus a production data
 migration, and no test here can verify it (CI is sqlite, which ignores foreign
 key types entirely). Treat it as its own piece of work, not a drive-by.
 
-### `published`: the store admin's active/inactive toggle, not an occupancy signal
+### `published`: the store admin's active/inactive toggle, not an occupancy signal — but the admin `inactive` filter also requires occupancy
 
 `products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's
 active/inactive kill switch for a product, arriving here through `products:sync`
 and entirely independent of whether it currently occupies any cell in this
-warehouse. `Admin\ProductController::index()`'s
-`inactive` filter (`?inactive=true`) is `published = 0` — do not redefine
-"inactive" as "occupies zero cells" (e.g. `whereDoesntHave('pallets')`): a
-product can be `published = 0` while pallets of it still sit in cells (the
-store deactivated it after it was already stocked), and a freshly `published
-= 1` product legitimately has zero pallets before its first delivery. The two
-concepts don't imply each other in either direction.
+warehouse: a product can be `published = 0` while pallets of it still sit in
+cells (the store deactivated it after it was already stocked), and a freshly
+`published = 1` product legitimately has zero pallets before its first
+delivery. The two concepts don't imply each other in either direction at the
+column level.
+
+`Admin\ProductController::index()`'s `inactive` filter (`?inactive=true`),
+however, is deliberately narrower than bare `published = 0` — it also applies
+`Product::inWarehouse()` (see `.ai/rules/products.md`), so it only surfaces
+deactivated products that still have at least one pallet somewhere in the
+warehouse. This was an explicit, later product decision (the filter exists to
+find actionable deactivated stock, not every deactivated catalog row) and
+does not change what the raw `published` column itself means — see the
+paragraph above. The dashboard's `inactive_in_warehouse` count
+(`BuildsDashboardStats`) shares the same scope, so the two stay in agreement.
 
 ### `image_url` and `boxes_count` are not columns — both are derived
 

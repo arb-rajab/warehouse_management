@@ -1,11 +1,11 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { Cell, CellMapRow, Row } from '@/types/admin';
+import type { Cell, CellMapRow, CellSlotLocation, Row } from '@/types/admin';
 import Show from './Show.vue';
 
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
@@ -60,6 +60,8 @@ function mountPage(
         today?: string;
         rows?: CellMapRow[];
         errors?: Record<string, string>;
+        linkedCell?: CellSlotLocation | null;
+        attachTo?: Element;
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -70,6 +72,7 @@ function mountPage(
     const shownRow = row(rowOverrides);
 
     return mount(Show, {
+        attachTo: overrides.attachTo,
         props: {
             row: shownRow,
             rows: overrides.rows ?? [
@@ -83,6 +86,7 @@ function mountPage(
             cells,
             today: overrides.today ?? '2026-08-13',
             filterOptions: { products },
+            linkedCell: overrides.linkedCell ?? null,
         },
     });
 }
@@ -344,6 +348,51 @@ describe('Rows Show', () => {
         } finally {
             document.body.removeChild(wrapper.element);
         }
+    });
+
+    it('scrolls the linked cell into view and pulses it on load, without pulsing other cells', async () => {
+        const container = document.body.appendChild(
+            document.createElement('div'),
+        );
+
+        try {
+            const wrapper = mountPage(
+                { cells_count: 2, flats_count: 1 },
+                [
+                    cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+                    cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+                ],
+                {
+                    attachTo: container,
+                    linkedCell: {
+                        row_letter: 'A',
+                        cell_number: 2,
+                        flat_number: 1,
+                    },
+                },
+            );
+            await flushPromises();
+
+            expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+                'ring-emerald-500',
+            );
+            expect(
+                slot(wrapper, formatSlot('A', 1, 1))?.classes(),
+            ).not.toContain('ring-emerald-500');
+            expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+        } finally {
+            document.body.removeChild(container);
+        }
+    });
+
+    it('does not pulse any cell when no cell is linked', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+        ]);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'ring-emerald-500',
+        );
     });
 
     it('highlights only cells expiring within the given number of days', async () => {

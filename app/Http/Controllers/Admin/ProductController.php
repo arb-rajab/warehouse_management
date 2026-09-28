@@ -9,6 +9,7 @@ use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
+use App\Http\Requests\Admin\StoreProductBarcodeRequest;
 use App\Http\Requests\Admin\UpdateProductBoxCountRequest;
 use App\Http\Requests\Admin\UpdateProductMinimumPalletsRequest;
 use App\Http\Resources\ProductOptionResource;
@@ -17,13 +18,16 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,6 +42,9 @@ class ProductController extends Controller
         'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
         'expiring_soon_count',
     ];
+
+    /** Longest side, in pixels, of an image served by {@see image()} — ample for a 3D map box face. */
+    private const int PRODUCT_IMAGE_MAX_SIZE = 256;
 
     public function index(FilterProductsRequest $request): Response
     {
@@ -61,6 +68,7 @@ class ProductController extends Controller
         $products = Product::query()
             ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
+            ->with('barcodes:id,product_id,barcode')
             ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
             ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
             ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
@@ -77,7 +85,7 @@ class ProductController extends Controller
                 ->selectRaw('count(*)')
                 ->whereColumn('pallets.product_id', 'products.id')])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
-            ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false))
+            ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false)->inWarehouse())
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->when(
                 $this->occupancyFiltersActive($request),
@@ -166,6 +174,39 @@ class ProductController extends Controller
     }
 
     /**
+     * Attaches a new barcode to a product. WMS-owned data in
+     * `wms_product_barcodes`, the same as `updateBoxCount()`/
+     * `updateMinimumPallets()` above — see .ai/rules/shared-database.md.
+     *
+     * Redirects to `admin.products.index` rather than `back()` — see
+     * `updateBoxCount()`'s docblock.
+     */
+    public function addBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    {
+        $product->barcodes()->create([
+            'barcode' => $request->string('barcode')->trim()->value(),
+        ]);
+
+        return $this->redirectPreservingQuery('admin.products.index', $request);
+    }
+
+    /**
+     * Detaches a barcode from a product. `$barcode` is route-model-bound
+     * without scoping it to `$product` (Laravel has no built-in nested
+     * scoping for a manually declared route), so the ownership check is
+     * explicit here — without it, an admin could delete any product's
+     * barcode by guessing its id while looking at a different product's row.
+     */
+    public function removeBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
+    {
+        abort_if($barcode->product_id !== $product->id, 404);
+
+        $barcode->delete();
+
+        return $this->redirectPreservingQuery('admin.products.index', $request);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function search(SearchProductsRequest $request): array
@@ -191,6 +232,82 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
+    }
+
+    /**
+     * The product's store-hosted image, re-served from this app's own origin.
+     *
+     * The 3D map draws product images as WebGL textures, and WebGL rejects a
+     * cross-origin image unless its host sends CORS headers — which the
+     * store's image host doesn't, even though a plain `<img>` of the same URL
+     * displays fine. The upstream bytes are decoded and re-encoded as a
+     * downscaled PNG rather than passed through, so only a real raster image
+     * (never SVG/HTML) is ever served from this origin.
+     */
+    public function image(Product $product): HttpResponse
+    {
+        $product->loadMissing('thumbnailUpload:id,file_name,external_link');
+        $url = $product->image_url;
+
+        if ($url === null) {
+            abort(HttpResponse::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $upstream = Http::timeout(10)->get($url);
+        } catch (ConnectionException) {
+            abort(HttpResponse::HTTP_BAD_GATEWAY);
+        }
+
+        abort_unless($upstream->successful(), HttpResponse::HTTP_BAD_GATEWAY);
+
+        $png = $this->normalizedProductImage($upstream->body());
+
+        if ($png === null) {
+            abort(HttpResponse::HTTP_BAD_GATEWAY);
+        }
+
+        return response($png)
+            ->header('Content-Type', 'image/png')
+            ->header('Cache-Control', 'private, max-age=86400');
+    }
+
+    /**
+     * Decodes any raster format GD reads, downscales it to fit
+     * PRODUCT_IMAGE_MAX_SIZE (never upscaling) and re-encodes it as PNG,
+     * keeping transparency. Null when the bytes aren't a decodable image.
+     */
+    private function normalizedProductImage(string $bytes): ?string
+    {
+        // `@`: GD warns on undecodable input; a false return is handled below.
+        $source = @imagecreatefromstring($bytes);
+
+        if ($source === false) {
+            return null;
+        }
+
+        imagepalettetotruecolor($source);
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $scale = min(1, self::PRODUCT_IMAGE_MAX_SIZE / max($width, $height));
+        $target = imagescale(
+            $source,
+            max(1, (int) round($width * $scale)),
+            max(1, (int) round($height * $scale)),
+        );
+
+        if ($target === false) {
+            return null;
+        }
+
+        imagealphablending($target, false);
+        imagesavealpha($target, true);
+
+        ob_start();
+        imagepng($target);
+
+        return (string) ob_get_clean();
     }
 
     /**

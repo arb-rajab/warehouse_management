@@ -346,6 +346,61 @@ test('a rows cell grid has no pre-selected products for the highlight filter, si
     );
 });
 
+test('a rows cell grid links the requested cell as linkedCell when cell_number and flat_number are given', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=2&flat_number=1");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', [
+            'row_letter' => 'Z',
+            'cell_number' => 2,
+            'flat_number' => 1,
+        ])
+    );
+});
+
+test('a rows cell grid has no linkedCell absent cell_number/flat_number', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', null)
+    );
+});
+
+test('a rows cell grid has no linkedCell when only cell_number is given', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=1");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', null)
+    );
+});
+
+test('requesting a rows cell grid with an out-of-range cell_number is rejected', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=3&flat_number=1");
+
+    $response->assertSessionHasErrors('cell_number');
+});
+
+test('requesting a rows cell grid with an out-of-range flat_number is rejected', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=1&flat_number=3");
+
+    $response->assertSessionHasErrors('flat_number');
+});
+
 test('a mobile app user cannot view a rows cell grid', function () {
     actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z']);
@@ -764,6 +819,25 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     foreach ($pdf->getPages() as $page) {
         expect($page->get('Contents')->getContent())->toMatch('/^f\*$/m');
     }
+});
+
+test('the row QR export still succeeds for a row spanning lowest/middle/highest levels', function () {
+    // Regression guard for BuildsCellQrLabels::cellQrLabels()'s $flatsCount
+    // argument (added alongside RowController::exportQrCodes()'s call site):
+    // a wrong type/value there would error before dompdf ever renders a page.
+    // The level arrow itself is drawn by the exact same cellQrLabelImage()
+    // the single-cell export uses (see CellControllerTest for its
+    // lowest/middle/highest/single-level coverage) — dompdf embeds the SVG
+    // as raw vector path/fill operators rather than a re-parseable image, so
+    // the arrow's own geometry isn't re-asserted here.
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $pdf = (new PdfParser)->parseContent($response->getContent());
+    expect($pdf->getPages())->toHaveCount(3);
 });
 
 test('the row QR export still succeeds and produces one page per cell with a configured QR code size other than the default', function () {

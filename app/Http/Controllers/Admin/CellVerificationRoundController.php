@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\CellVerificationReportNotAcceptableException;
+use App\Exceptions\InvalidSlotStateException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AcceptCellVerificationReportRequest;
 use App\Http\Requests\Admin\FilterCellVerificationReportsRequest;
 use App\Http\Requests\Admin\FilterCellVerificationRoundsRequest;
 use App\Http\Resources\CellVerificationReportResource;
@@ -12,6 +15,8 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Services\CellVerificationService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -103,7 +108,7 @@ class CellVerificationRoundController extends Controller
                 'id', 'row', 'cell_number', 'flat_number',
                 'is_correct', 'expected_cell_state', 'expected_product', 'expected_boxes_count',
                 'expected_expiration_date', 'reported_cell_state', 'reported_product',
-                'reported_boxes_count', 'reported_expiration_date', 'note', 'reported_at',
+                'reported_boxes_count', 'reported_expiration_date', 'note', 'reported_at', 'accepted_at',
             ]);
 
             CellVerificationReport::query()
@@ -130,9 +135,51 @@ class CellVerificationRoundController extends Controller
                             $report->reported_expiration_date?->toDateString(),
                             $report->note,
                             $report->created_at->toIso8601String(),
+                            $report->accepted_at?->toIso8601String(),
                         ]);
                     }
                 });
         }, "cell-verification-round-{$cellVerificationRound->id}-reports.csv", ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Accept an incorrect report, updating its cell to match what was reported
+     * (see CellVerificationService::acceptReport()). A refusal — the cell
+     * changed since, its row is being verified again, the report was already
+     * accepted — is surfaced as a non-field `action` error for the page's
+     * ActionErrorBanner, since that state can change after the page rendered.
+     */
+    public function acceptReport(AcceptCellVerificationReportRequest $request, CellVerificationReport $cellVerificationReport, CellVerificationService $cellVerifications): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $redirect = $this->redirectAfterAccept($request, $cellVerificationReport);
+
+        try {
+            $cellVerifications->acceptReport($cellVerificationReport, $user->id);
+        } catch (CellVerificationReportNotAcceptableException|InvalidSlotStateException $e) {
+            return $redirect->withErrors(['action' => $e->getMessage()]);
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Triggered from both CellVerificationRounds/Show.vue (the default) and
+     * Users/Show.vue ('return_to' => 'user'), which the Referer header/session
+     * can't reliably tell apart — same as CellStatusLogController::
+     * redirectAfterAcknowledge(). Each target is the report's own round or
+     * reporter, never a request-supplied id.
+     */
+    private function redirectAfterAccept(AcceptCellVerificationReportRequest $request, CellVerificationReport $report): RedirectResponse
+    {
+        if ($request->input('return_to') === 'user') {
+            return $this->redirectPreservingQuery('admin.users.show', $request, ['user' => $report->user_id]);
+        }
+
+        return $this->redirectPreservingQuery('admin.cell-verification-rounds.show', $request, [
+            'cellVerificationRound' => $report->cell_verification_round_id,
+        ]);
     }
 }

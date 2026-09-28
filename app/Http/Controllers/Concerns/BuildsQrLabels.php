@@ -14,6 +14,11 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 trait BuildsQrLabels
 {
     /**
+     * The blank margin around the label's content on every side.
+     */
+    private const int LABEL_PADDING = 20;
+
+    /**
      * The QR's own SVG markup, minus its outer `<svg>` wrapper, for splicing
      * straight into qrLabelImage()'s label SVG. It can't be referenced from
      * there as a nested `<image href="data:image/svg+xml...">` instead:
@@ -181,6 +186,82 @@ trait BuildsQrLabels
     }
 
     /**
+     * A filled arrow-shaped polygon (shaft + triangular head) pointing 'up',
+     * 'down', or 'horizontal' (pointing right), sized to exactly fill the
+     * given box. Used to draw a same-height, easily-readable level indicator
+     * beside a label's primary text (see qrLabelImage()'s $primaryArrow) —
+     * a plain vector shape rather than a text glyph (e.g. "↑"/"↓") because
+     * the row-wide PDF sheet's `font-family="sans-serif"` resolves, for
+     * dompdf's PDF output, to the core Helvetica font — Latin-1 only. The
+     * existing "·" slot-label separator is Latin-1 (U+00B7) and renders fine
+     * there, but arrow glyphs are outside Latin-1 and would silently fail to
+     * render on the printed sheet. A polygon has no font/encoding to worry
+     * about — it renders identically to the QR itself, already a plain
+     * vector `<path>`.
+     */
+    private function arrowMarkup(string $direction, int $x0, int $y0, int $x1, int $y1): string
+    {
+        if ($x1 - $x0 < 4 || $y1 - $y0 < 4) {
+            return '';
+        }
+
+        $points = match ($direction) {
+            'up' => $this->verticalArrowPoints($x0, $y0, $x1, $y1, pointingUp: true),
+            'down' => $this->verticalArrowPoints($x0, $y0, $x1, $y1, pointingUp: false),
+            default => $this->horizontalArrowPoints($x0, $y0, $x1, $y1),
+        };
+
+        return '<polygon points="'.$points.'" fill="#111111"/>';
+    }
+
+    private function verticalArrowPoints(int $x0, int $y0, int $x1, int $y1, bool $pointingUp): string
+    {
+        $cx = intdiv($x0 + $x1, 2);
+        $headDepth = (int) round(($y1 - $y0) * 0.5);
+        $shaftHalfWidth = (int) round(($x1 - $x0) * 0.2);
+
+        [$tipY, $baseY, $farY] = $pointingUp
+            ? [$y0, $y0 + $headDepth, $y1]
+            : [$y1, $y1 - $headDepth, $y0];
+
+        return $this->polygonPoints([
+            [$cx, $tipY],
+            [$x0, $baseY],
+            [$cx - $shaftHalfWidth, $baseY],
+            [$cx - $shaftHalfWidth, $farY],
+            [$cx + $shaftHalfWidth, $farY],
+            [$cx + $shaftHalfWidth, $baseY],
+            [$x1, $baseY],
+        ]);
+    }
+
+    private function horizontalArrowPoints(int $x0, int $y0, int $x1, int $y1): string
+    {
+        $cy = intdiv($y0 + $y1, 2);
+        $headDepth = (int) round(($x1 - $x0) * 0.5);
+        $shaftHalfHeight = (int) round(($y1 - $y0) * 0.2);
+        $baseX = $x1 - $headDepth;
+
+        return $this->polygonPoints([
+            [$x1, $cy],
+            [$baseX, $y0],
+            [$baseX, $cy - $shaftHalfHeight],
+            [$x0, $cy - $shaftHalfHeight],
+            [$x0, $cy + $shaftHalfHeight],
+            [$baseX, $cy + $shaftHalfHeight],
+            [$baseX, $y1],
+        ]);
+    }
+
+    /**
+     * @param  list<array{0: int, 1: int}>  $points
+     */
+    private function polygonPoints(array $points): string
+    {
+        return implode(' ', array_map(fn (array $point) => "{$point[0]},{$point[1]}", $points));
+    }
+
+    /**
      * A single, self-contained SVG "image" label — one QR plus up to three
      * lines of plain legible text below it — for a single-item export
      * (one cell, one product) that a worker downloads and prints directly,
@@ -220,10 +301,21 @@ trait BuildsQrLabels
      * true, since a cell label carries no secondary/explanation line to
      * occupy that space) — see pickExpandedPrimaryFontSize() for how the size
      * is chosen.
+     *
+     * $primaryArrow ('up'/'down'/'horizontal', see arrowMarkup()) reserves a
+     * column to the right of the primary text — only BuildsCellQrLabels
+     * passes one, to mark a cell's level. The reservation comes out of the
+     * *same* $textMaxWidth the primary text itself wraps within (rather than
+     * measuring the rendered text and placing the arrow just past it — no
+     * such text-measurement API is available, see wrapLabelText()), so a
+     * long label auto-wraps onto more/narrower lines to make room instead of
+     * the arrow ever overlapping or overflowing it. The arrow's box then
+     * spans the full height of however many lines that produced, so it reads
+     * as large as the label itself rather than a small fixed-size icon.
      */
-    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false): string
+    private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false, ?string $primaryArrow = null): string
     {
-        $padding = 20;
+        $padding = self::LABEL_PADDING;
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
         $qrX = $padding;
@@ -257,6 +349,17 @@ trait BuildsQrLabels
 
         $qrMarkup = $this->qrSvgInnerMarkup($qrData, $qrSize);
 
+        // Reserving a fixed fraction of $textMaxWidth (rather than a size
+        // derived from the primary font, which isn't picked until after this
+        // point when $expandPrimaryText is true) keeps the arrow column's
+        // width independent of the font-size search below — the search just
+        // sees a narrower $primaryTextMaxWidth to wrap/fit within, the same
+        // way it already reacts to any other width.
+        $arrowGap = 12;
+        $arrowWidth = $primaryArrow !== null ? (int) round($textMaxWidth * 0.3) : 0;
+        $primaryTextMaxWidth = $primaryArrow !== null ? max(1, $textMaxWidth - $arrowWidth - $arrowGap) : $textMaxWidth;
+        $primaryCenterX = $primaryArrow !== null ? (int) ($padding + $primaryTextMaxWidth / 2) : $centerX;
+
         $idMarkup = '';
         $idY = $qrBottom + 24;
         $idRendered = false;
@@ -276,7 +379,7 @@ trait BuildsQrLabels
         if ($expandPrimaryText && ! $idRendered) {
             [$primaryFontSize, $primaryLineHeight, $primaryY] = $this->pickExpandedPrimaryFontSize(
                 $primaryText,
-                $textMaxWidth,
+                $primaryTextMaxWidth,
                 $qrBottom,
                 $maxTextY,
                 $primaryFontSize,
@@ -285,9 +388,19 @@ trait BuildsQrLabels
             );
         }
 
-        $primaryLines = $this->wrapLabelText($primaryText, $textMaxWidth, $primaryFontSize);
+        $primaryLines = $this->wrapLabelText($primaryText, $primaryTextMaxWidth, $primaryFontSize);
         $primaryLines = $this->clampLinesToHeight($primaryLines, $primaryY, $primaryLineHeight, $maxTextY);
-        $primaryMarkup = $this->textLinesMarkup($primaryLines, $centerX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
+        $primaryMarkup = $this->textLinesMarkup($primaryLines, $primaryCenterX, $primaryY, $primaryLineHeight, $primaryFontSize, '#111111', 'ltr', bold: true);
+
+        $arrowMarkup = '';
+
+        if ($primaryArrow !== null && $primaryLines !== []) {
+            $arrowTop = $primaryY - (int) round($primaryFontSize * 0.8);
+            $arrowBottom = $primaryY + (count($primaryLines) - 1) * $primaryLineHeight + (int) round($primaryFontSize * 0.2);
+            $arrowLeft = $padding + $primaryTextMaxWidth + $arrowGap;
+            $arrowRight = $width - $padding;
+            $arrowMarkup = $this->arrowMarkup($primaryArrow, $arrowLeft, $arrowTop, $arrowRight, $arrowBottom);
+        }
 
         // The Y just below whatever content actually got drawn — the last
         // visible primary line, or the id caption/QR bottom edge when no
@@ -320,6 +433,7 @@ trait BuildsQrLabels
                 <g transform="translate({$qrX},{$padding})">{$qrMarkup}</g>
                 {$idMarkup}
                 {$primaryMarkup}
+                {$arrowMarkup}
                 {$secondaryMarkup}
             </svg>
             SVG;

@@ -16,6 +16,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('user', [AuthController::class, 'show']);
 
         Route::get('dashboard', [DashboardController::class, 'index']);
 
@@ -28,6 +29,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('products', [ProductController::class, 'index']);
         Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product');
+        Route::get('products/{product}/pallets', [ProductController::class, 'pallets'])->whereNumber('product');
 
         Route::post('pallets', [PalletController::class, 'store']);
         Route::get('pallets/{pallet}', [PalletController::class, 'show']);

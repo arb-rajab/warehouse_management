@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
 
 test('an authenticated worker can list products with every property the app reads', function () {
     actingAsMobileUser();
@@ -268,6 +270,109 @@ test('an unauthenticated caller cannot fetch a single product', function () {
     $product = Product::factory()->create();
 
     $response = $this->getJson("/api/v1/products/{$product->id}");
+
+    $response->assertUnauthorized();
+});
+
+test('an authenticated worker can list every current pallet of a product, ordered by expiration then arrival then location', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->boxesCount(20)->create();
+    $otherProduct = Product::factory()->create();
+
+    $rowA = Row::factory()->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 1]);
+
+    // Expires soonest, in row B — must sort first despite being in a "later" row.
+    $soonest = Pallet::factory()->for($product)->create([
+        'cell_id' => $rowB->cells()->where('cell_number', 1)->first()->id,
+        'expiration_date' => now()->addDays(5)->toDateString(),
+    ]);
+
+    // No expiration date at all — must sort after every dated pallet.
+    $noExpiry = Pallet::factory()->for($product)->create([
+        'cell_id' => $rowA->cells()->where('cell_number', 3)->first()->id,
+        'expiration_date' => null,
+    ]);
+
+    // Same expiration date as $tiedLater but added earlier — must come first.
+    $tiedEarlier = Pallet::factory()->for($product)->create([
+        'cell_id' => $rowA->cells()->where('cell_number', 1)->first()->id,
+        'expiration_date' => now()->addDays(30)->toDateString(),
+    ]);
+    $tiedLater = Pallet::factory()->for($product)->create([
+        'cell_id' => $rowA->cells()->where('cell_number', 2)->first()->id,
+        'expiration_date' => now()->addDays(30)->toDateString(),
+    ]);
+    $tiedLater->forceFill(['created_at' => $tiedEarlier->created_at->addMinute()])->save();
+
+    // Noise: another product's pallet must never appear in this response.
+    Pallet::factory()->for($otherProduct)->create([
+        'cell_id' => $rowB->cells()->where('cell_number', 2)->first()->id,
+    ]);
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('id')->all())->toBe([
+        $soonest->id, $tiedEarlier->id, $tiedLater->id, $noExpiry->id,
+    ]);
+
+    expect(collect($response->json())->firstWhere('id', $soonest->id))->toEqual([
+        'id' => $soonest->id,
+        'state' => 'full',
+        'expiration_date' => $soonest->expiration_date->toDateString(),
+        'added_at' => $soonest->created_at->toIso8601String(),
+        'cell_entered_at' => null,
+        'remaining_boxes' => 20,
+        'product_boxes_count' => 20,
+        'location' => [
+            'row_letter' => 'B',
+            'cell_number' => 1,
+            'flat_number' => 1,
+        ],
+        'is_active' => true,
+    ]);
+});
+
+test('the pallet listing reflects an inactive cell', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $cell->update(['is_active' => false]);
+    $pallet = Pallet::factory()->for($product)->create(['cell_id' => $cell->id]);
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    expect(collect($response->json())->firstWhere('id', $pallet->id)['is_active'])->toBeFalse();
+});
+
+test('the pallet listing returns an empty array for a product with no current stock', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    expect($response->json())->toBe([]);
+});
+
+test('the pallet listing 404s for a nonexistent product id', function () {
+    actingAsMobileUser();
+
+    $response = $this->getJson('/api/v1/products/999999/pallets');
+
+    $response->assertNotFound();
+});
+
+test('an unauthenticated caller cannot list a product\'s pallets', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
 
     $response->assertUnauthorized();
 });

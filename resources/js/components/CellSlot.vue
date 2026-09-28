@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-    Ban,
-    CalendarPlus,
-    CalendarX,
-    PackageSearch,
-    QrCode,
-} from '@lucide/vue';
+import { Ban, CalendarPlus, CalendarX, QrCode } from '@lucide/vue';
 import { computed } from 'vue';
 import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -66,6 +60,14 @@ const toggleActiveLabel = computed(() =>
         : t('cells.toggleActive.reactivateLabel'),
 );
 
+const isManageable = computed(
+    () => props.manageable && Boolean(props.cell?.is_active),
+);
+
+const manageActionsLabel = computed(() =>
+    t('cells.palletActions.triggerLabel'),
+);
+
 function onToggleActive(): void {
     if (props.cell) {
         emit('toggle-active', props.cell);
@@ -73,7 +75,7 @@ function onToggleActive(): void {
 }
 
 function onManagePallet(): void {
-    if (props.cell) {
+    if (isManageable.value && props.cell) {
         emit('manage-pallet', props.cell);
     }
 }
@@ -94,7 +96,14 @@ function onManagePallet(): void {
             pulsing
                 ? 'animate-pulse ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-neutral-950'
                 : '',
+            isManageable ? 'cursor-pointer' : '',
         ]"
+        :role="isManageable ? 'button' : undefined"
+        :tabindex="isManageable ? 0 : undefined"
+        :title="isManageable ? manageActionsLabel : undefined"
+        :aria-label="isManageable ? manageActionsLabel : undefined"
+        @click="onManagePallet"
+        @keydown.enter.space.self.prevent="onManagePallet"
     >
         <span
             class="flex items-center gap-1 font-medium text-gray-500 dark:text-neutral-400"
@@ -122,7 +131,7 @@ function onManagePallet(): void {
             :title="toggleActiveLabel"
             :aria-label="toggleActiveLabel"
             class="absolute end-7 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
-            @click="onToggleActive"
+            @click.stop="onToggleActive"
         >
             <Ban class="h-5 w-5" stroke-width="2.5" />
         </button>
@@ -132,23 +141,13 @@ function onManagePallet(): void {
             :href="exportQr.url(cell.id)"
             :title="t('rows.show.reprintQr')"
             class="absolute end-1 top-1"
+            @click.stop
         >
             <QrCode
                 class="h-5 w-5 text-gray-400 dark:text-neutral-500"
                 stroke-width="2.5"
             />
         </a>
-
-        <button
-            v-if="cell && manageable && cell.is_active"
-            type="button"
-            :title="t('cells.palletActions.triggerLabel')"
-            :aria-label="t('cells.palletActions.triggerLabel')"
-            class="absolute end-1 bottom-1 cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
-            @click="onManagePallet"
-        >
-            <PackageSearch class="h-5 w-5" stroke-width="2.5" />
-        </button>
 
         <template v-if="cell?.pallet">
             <img

@@ -48,6 +48,7 @@ trait BuildsDashboardStats
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
      *     low_stock: array{count: int},
+     *     inactive_in_warehouse: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -57,6 +58,7 @@ trait BuildsDashboardStats
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
      *     low_stock: array{count: int},
+     *     inactive_in_warehouse: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
@@ -73,6 +75,7 @@ trait BuildsDashboardStats
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
                     'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
                     'low_stock' => $this->lowStock($productIds, $productPublished),
+                    'inactive_in_warehouse' => $this->inactiveInWarehouse($productIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
                     'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
                 ];
@@ -223,6 +226,32 @@ trait BuildsDashboardStats
                 (select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id)
                 > (select count(*) from pallets where pallets.product_id = products.id)
             ')
+            ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
+            ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
+            ->count();
+
+        return ['count' => $count];
+    }
+
+    /**
+     * Inactive products (`products.published = false`) that nonetheless have
+     * at least one pallet in the warehouse — the store has stopped selling
+     * them, but stock still physically occupies a cell. Uses the same
+     * {@see Product::inWarehouse()} scope as `Admin\ProductController::index()`'s
+     * `inactive` filter, so the dashboard count and the products-page filter
+     * it links to can never disagree on which products match.
+     *
+     * Filtered by `$productIds`/`$productPublished` directly (Product's own
+     * `id`/`published` columns), the same as {@see self::lowStock()}.
+     *
+     * @param  list<int>|null  $productIds
+     * @return array{count: int}
+     */
+    private function inactiveInWarehouse(?array $productIds, ?bool $productPublished = null): array
+    {
+        $count = Product::query()
+            ->where('published', false)
+            ->inWarehouse()
             ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
             ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
             ->count();

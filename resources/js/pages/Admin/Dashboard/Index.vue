@@ -8,15 +8,16 @@ import {
     CircleDashed,
     Clock,
     PackageOpen,
+    PackageX,
     SlidersHorizontal,
     TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
@@ -57,6 +58,10 @@ interface LowStockStats {
     count: number;
 }
 
+interface InactiveInWarehouseStats {
+    count: number;
+}
+
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
@@ -67,6 +72,7 @@ const props = defineProps<{
         };
         stale: StaleDayWindow;
         low_stock: LowStockStats;
+        inactive_in_warehouse: InactiveInWarehouseStats;
         activity_today: {
             stored: number;
             opened: number;
@@ -203,21 +209,21 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.empty')"
                     :value="props.stats.occupancy.empty"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{ state: 'empty', ...productQuery }"
                     :icon="CELL_STATE_COLOR.empty.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
                     :value="props.stats.occupancy.full"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{ state: 'full', ...productQuery }"
                     :icon="CELL_STATE_COLOR.full.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
                     :value="props.stats.occupancy.opened"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{ state: 'opened', ...productQuery }"
                     :icon="CELL_STATE_COLOR.opened.icon"
                 />
@@ -232,7 +238,7 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
                     :value="props.stats.expiring.expired"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{
                         expired: true,
                         ...productQuery,
@@ -249,7 +255,7 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="window.count"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{
                         expires_within_days: window.days,
                         ...productQuery,
@@ -264,7 +270,7 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="props.stats.expiring.custom.count"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{
                         expires_within_days: props.stats.expiring.custom.days,
                         ...productQuery,
@@ -332,7 +338,7 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="props.stats.stale.count"
-                    :href="cellsIndex().url"
+                    :href="palletsIndex().url"
                     :query="{
                         stale_after_days: props.stats.stale.days,
                         ...productQuery,
@@ -398,6 +404,22 @@ function onProductIdsChange(ids: string[]): void {
                     :query="{ low_stock: true, ...productQuery }"
                     tone="danger"
                     :icon="TriangleAlert"
+                />
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.inactiveInWarehouse.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.inactiveInWarehouse.count')"
+                    :value="props.stats.inactive_in_warehouse.count"
+                    :href="productsIndex().url"
+                    :query="{ inactive: true, ...productQuery }"
+                    tone="warning"
+                    :icon="PackageX"
                 />
             </div>
         </section>

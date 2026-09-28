@@ -1,7 +1,10 @@
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -61,6 +64,7 @@ function mountPage(
 describe('Users Show', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        vi.unstubAllGlobals();
     });
 
     it('shows the users name in the title', () => {
@@ -349,7 +353,9 @@ describe('Users Show', () => {
         expect(roundLink.text()).toContain('#42');
 
         const cellLink = cells[1].get('a');
-        expect(cellLink.attributes('href')).toBe('/admin/rows/C');
+        expect(cellLink.attributes('href')).toBe(
+            '/admin/rows/C?cell_number=4&flat_number=1',
+        );
         expect(cellLink.text()).toContain('C4·1');
 
         expect(cells[2].text()).toContain(
@@ -359,6 +365,131 @@ describe('Users Show', () => {
         expect(cells[6].text()).toContain(
             formatDateTime('2026-08-02T09:00:00Z'),
         );
+    });
+
+    it('shows when and by whom an accepted report was accepted, alongside its unchanged incorrect badge', () => {
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({
+                is_correct: false,
+                accepted_at: '2026-08-03T10:00:00Z',
+                accepted_by: { id: 9, name: 'Zoe Admin' },
+            }),
+            cellVerificationReport({ id: 2, is_correct: false }),
+        ]);
+
+        const rows = wrapper.findAll('table')[1].findAll('tbody tr');
+        const acceptedCell = rows[0].findAll('td')[2];
+        expect(acceptedCell.get('span').text()).toBe(
+            t('cellVerificationReport.incorrect'),
+        );
+        expect(
+            acceptedCell.getComponent(CellVerificationAcceptedNote).props(),
+        ).toEqual({
+            acceptedAt: '2026-08-03T10:00:00Z',
+            acceptedBy: { id: 9, name: 'Zoe Admin' },
+        });
+
+        const unacceptedCell = rows[1].findAll('td')[2];
+        expect(
+            unacceptedCell.findComponent(CellVerificationAcceptedNote).exists(),
+        ).toBe(false);
+        // Accepted reports show the note instead of the button.
+        expect(
+            acceptedCell.findComponent(CellVerificationAcceptButton).exists(),
+        ).toBe(false);
+    });
+
+    it('offers to accept only an unaccepted incorrect report whose round is completed', () => {
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({ id: 1, is_correct: true }),
+            cellVerificationReport({ id: 2, is_correct: false }),
+            cellVerificationReport({
+                id: 3,
+                is_correct: false,
+                round_completed: false,
+            }),
+        ]);
+
+        const rows = wrapper.findAll('table')[1].findAll('tbody tr');
+        const hasAcceptButton = (index: number): boolean =>
+            rows[index]
+                .findAll('td')[2]
+                .findComponent(CellVerificationAcceptButton)
+                .exists();
+
+        expect(hasAcceptButton(0)).toBe(false);
+        expect(hasAcceptButton(1)).toBe(true);
+        expect(rows[1].findAll('td')[2].text()).toContain(
+            t('cellVerificationReport.accept'),
+        );
+        expect(hasAcceptButton(2)).toBe(false);
+    });
+
+    it('asks for confirmation naming the slot, then accepts the report and returns to this page', async () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({
+                id: 5,
+                is_correct: false,
+                cell: { row_letter: 'B', cell_number: 4, flat_number: 1 },
+            }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            t('cellVerificationReport.acceptConfirm', { slot: 'B4·1' }),
+        );
+        expect(routerPostMock).toHaveBeenCalledWith(
+            '/admin/cell-verification-reports/5/accept',
+            { return_to: 'user' },
+            { preserveScroll: true },
+        );
+    });
+
+    it('does not accept the report when the confirmation is cancelled', async () => {
+        vi.stubGlobal('confirm', () => false);
+        const wrapper = mountPage([], {}, 20, [
+            cellVerificationReport({ is_correct: false }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(routerPostMock).not.toHaveBeenCalled();
+    });
+
+    it('shows why an accept was refused in the action error banner', () => {
+        usePageMock.mockReturnValue({
+            url: '/admin/users/7',
+            props: defaultAuthProps({
+                errors: {
+                    action: 'This slot has changed since it was verified.',
+                },
+            }),
+        });
+        const wrapper = mount(Show, {
+            props: {
+                user: user(),
+                logs: paginated([]),
+                reports: paginated([]),
+                filters: { per_page: 20, reports_per_page: 20 },
+            },
+        });
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'This slot has changed since it was verified.',
+        );
+    });
+
+    it('renders no action error banner when nothing was refused', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
     it('preselects the current per-page value in the reports page-size selector', () => {

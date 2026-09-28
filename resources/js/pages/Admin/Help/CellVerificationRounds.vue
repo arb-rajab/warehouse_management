@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Download } from '@lucide/vue';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
@@ -13,7 +15,7 @@ import {
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 
-const sections = ['what', 'reports', 'exporting'];
+const sections = ['what', 'reports', 'accepting', 'exporting'];
 
 /** Representative rows for the reports-table preview below — plain fixture data, never fetched. */
 const previewReports = [
@@ -92,6 +94,20 @@ const previewReports = [
                         <td class="px-4 py-2">{{ row.when }}</td>
                     </template>
                 </DataTable>
+            </HelpUiPreview>
+
+            <HelpUiPreview v-if="section === 'accepting'" inert class="mt-2">
+                <div>
+                    <CellVerificationCorrectnessBadge :is-correct="false" />
+                    <CellVerificationAcceptButton />
+                </div>
+                <div>
+                    <CellVerificationCorrectnessBadge :is-correct="false" />
+                    <CellVerificationAcceptedNote
+                        accepted-at="2026-01-02T09:30:00Z"
+                        :accepted-by="{ id: 1, name: 'Admin' }"
+                    />
+                </div>
             </HelpUiPreview>
 
             <HelpUiPreview v-if="section === 'exporting'" class="mt-2">

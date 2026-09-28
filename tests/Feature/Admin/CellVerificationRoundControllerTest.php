@@ -1,8 +1,12 @@
 <?php
 
+use App\Enums\CellLogAction;
 use App\Enums\CellState;
+use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
+use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
@@ -204,8 +208,38 @@ test('an authenticated admin can view a single round with its own reports and ev
                     ->where('id', $reporter->id)
                     ->where('name', 'Ada Reporter')
                 )
+                ->where('round_completed', false)
+                ->where('accepted_at', null)
+                ->where('accepted_by', null)
                 ->where('created_at', $report->created_at->toIso8601String())
             )
+    );
+});
+
+test('an accepted report on a round ships when and by whom it was accepted, alongside its unchanged discrepancy', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->completed()->covering($row)->create();
+    $acceptedBy = User::factory()->create(['name' => 'Zoe Admin']);
+    $report = CellVerificationReport::factory()->accepted()->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $row->cells()->first()->id,
+        'accepted_at' => '2026-09-20 09:15:00',
+        'accepted_by' => $acceptedBy->id,
+    ]);
+
+    $response = $this->get("/admin/cell-verification-rounds/{$round->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('reports.data', 1)
+            ->where('reports.data.0.id', $report->id)
+            ->where('reports.data.0.is_correct', false)
+            ->where('reports.data.0.expected.cell_state', 'full')
+            ->where('reports.data.0.reported.cell_state', 'empty')
+            ->where('reports.data.0.round_completed', true)
+            ->where('reports.data.0.accepted_at', $report->fresh()->accepted_at->toIso8601String())
+            ->where('reports.data.0.accepted_by', ['id' => $acceptedBy->id, 'name' => 'Zoe Admin'])
     );
 });
 
@@ -401,4 +435,382 @@ test('exporting a rounds reports csv eager loads report details instead of an N+
     // Without eager loading, 10 reports touching cell->row, expectedProduct and
     // reportedProduct each would push this well past 30 queries.
     expect($queryCount)->toBeLessThan(15);
+});
+
+test('exporting a rounds reports csv includes when each report was accepted', function () {
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->completed()->create();
+    $accepted = CellVerificationReport::factory()->accepted()->create([
+        'cell_verification_round_id' => $round->id,
+        'accepted_at' => '2026-09-20 09:15:00',
+    ]);
+    CellVerificationReport::factory()->incorrect()->create(['cell_verification_round_id' => $round->id]); // noise: not accepted
+
+    $csv = $this->get("/admin/cell-verification-rounds/{$round->id}/export")->streamedContent();
+
+    $lines = array_values(array_filter(explode("\n", $csv)));
+    expect(str_getcsv($lines[0]))->toContain('accepted_at');
+    expect($csv)->toContain($accepted->fresh()->accepted_at->toIso8601String());
+    expect(substr_count($csv, $accepted->fresh()->accepted_at->toIso8601String()))->toBe(1);
+});
+
+/**
+ * A completed round over a single-cell row (flat 2, so store() fills it Full
+ * rather than opening it) with one incorrect report against that cell.
+ *
+ * @param  array<string, mixed>  $reportAttributes
+ * @return array{cell: Cell, report: CellVerificationReport}
+ */
+function incorrectReportOnFreshCell(array $reportAttributes): array
+{
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->sole();
+    $round = CellVerificationRound::factory()->completed()->covering($row)->create();
+
+    $report = CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => false,
+        ...$reportAttributes,
+    ]);
+
+    return ['cell' => $cell, 'report' => $report];
+}
+
+/**
+ * @param  array<string, mixed>  $attributes
+ */
+function palletInCell(Cell $cell, CellState $state, array $attributes): Pallet
+{
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id, ...$attributes]);
+
+    // After create(): PalletFactory's afterCreating hook resets the cell to Full.
+    $cell->update(['state' => $state]);
+
+    return $pallet;
+}
+
+test('accepting a report of an empty cell empties the stored pallet and records the acceptance without touching the discrepancy', function () {
+    $admin = actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Full,
+        'expected_product_id' => $product->id,
+        'expected_boxes_count' => 10,
+        'expected_expiration_date' => '2026-12-01',
+        'reported_cell_state' => CellState::Empty,
+        'reported_product_id' => null,
+        'reported_boxes_count' => null,
+        'reported_expiration_date' => null,
+    ]);
+    $pallet = palletInCell($cell, CellState::Full, ['product_id' => $product->id, 'remaining_boxes' => 10, 'expiration_date' => '2026-12-01']);
+    $this->travelTo('2026-09-27 12:00:00');
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}");
+    $response->assertSessionHasNoErrors();
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::find($pallet->id))->toBeNull();
+
+    $log = CellStatusLog::query()->where('cell_id', $cell->id)->sole();
+    expect($log->action)->toBe(CellLogAction::Emptied);
+    expect($log->user_id)->toBe($admin->id);
+    expect($log->note)->toBe("Accepted from verification report #{$report->id}");
+
+    $fresh = $report->fresh();
+    expect($fresh->accepted_at->toDateTimeString())->toBe('2026-09-27 12:00:00');
+    expect($fresh->accepted_by)->toBe($admin->id);
+    expect($fresh->is_correct)->toBeFalse();
+    expect($fresh->expected_cell_state)->toBe(CellState::Full);
+    expect($fresh->expected_product_id)->toBe($product->id);
+    expect($fresh->reported_cell_state)->toBe(CellState::Empty);
+});
+
+test('accepting a report of an opened pallet in an empty cell stores and opens it with the reported contents', function () {
+    actingAsAdmin();
+    $product = Product::factory()->boxesCount(20)->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'expected_product_id' => null,
+        'expected_boxes_count' => null,
+        'expected_expiration_date' => null,
+        'reported_cell_state' => CellState::Opened,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 7,
+        'reported_expiration_date' => '2027-01-15',
+    ]);
+
+    $this->post("/admin/cell-verification-reports/{$report->id}/accept")->assertSessionHasNoErrors();
+
+    expect($cell->fresh()->state)->toBe(CellState::Opened);
+    $pallet = Pallet::query()->where('cell_id', $cell->id)->sole();
+    expect($pallet->product_id)->toBe($product->id);
+    expect($pallet->remaining_boxes)->toBe(7);
+    expect($pallet->expiration_date->toDateString())->toBe('2027-01-15');
+    expect(CellStatusLog::query()->where('cell_id', $cell->id)->orderBy('id')->pluck('action')->all())
+        ->toBe([CellLogAction::Stored, CellLogAction::Opened]);
+    expect($report->fresh()->accepted_at)->not->toBeNull();
+});
+
+test('accepting a report of a full pallet where the system has an opened one replaces it with the reported pallet', function () {
+    actingAsAdmin();
+    $storedProduct = Product::factory()->boxesCount(10)->create();
+    $reportedProduct = Product::factory()->boxesCount(20)->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Opened,
+        'expected_product_id' => $storedProduct->id,
+        'expected_boxes_count' => 4,
+        'expected_expiration_date' => null,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $reportedProduct->id,
+        'reported_boxes_count' => 20,
+        'reported_expiration_date' => '2027-02-01',
+    ]);
+    $oldPallet = palletInCell($cell, CellState::Opened, ['product_id' => $storedProduct->id, 'remaining_boxes' => 4, 'expiration_date' => null]);
+
+    $this->post("/admin/cell-verification-reports/{$report->id}/accept")->assertSessionHasNoErrors();
+
+    expect($cell->fresh()->state)->toBe(CellState::Full);
+    expect(Pallet::find($oldPallet->id))->toBeNull();
+    $pallet = Pallet::query()->where('cell_id', $cell->id)->sole();
+    expect($pallet->product_id)->toBe($reportedProduct->id);
+    expect($pallet->remaining_boxes)->toBe(20);
+    expect($pallet->expiration_date->toDateString())->toBe('2027-02-01');
+    expect(CellStatusLog::query()->where('cell_id', $cell->id)->orderBy('id')->pluck('action')->all())
+        ->toBe([CellLogAction::Emptied, CellLogAction::Stored]);
+});
+
+test('accepting a report that only differs in the pallets contents corrects them in place', function () {
+    actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Full,
+        'expected_product_id' => $product->id,
+        'expected_boxes_count' => 10,
+        'expected_expiration_date' => '2026-12-01',
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 6,
+        'reported_expiration_date' => '2026-11-01',
+    ]);
+    $pallet = palletInCell($cell, CellState::Full, ['product_id' => $product->id, 'remaining_boxes' => 10, 'expiration_date' => '2026-12-01']);
+
+    $this->post("/admin/cell-verification-reports/{$report->id}/accept")->assertSessionHasNoErrors();
+
+    $fresh = $pallet->fresh();
+    expect($fresh->remaining_boxes)->toBe(6);
+    expect($fresh->expiration_date->toDateString())->toBe('2026-11-01');
+    expect($cell->fresh()->state)->toBe(CellState::Full);
+    expect($report->fresh()->accepted_at)->not->toBeNull();
+});
+
+test('accepting a report keeps the rounds filters and page on the redirect', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept?is_correct=0&page=2");
+
+    $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}?is_correct=0&page=2");
+});
+
+test('accepting a report from its reporters page redirects back there, keeping that pages query', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept?reports_page=2", ['return_to' => 'user']);
+
+    $response->assertRedirect("/admin/users/{$report->user_id}?reports_page=2");
+    $response->assertSessionHasNoErrors();
+    expect($report->fresh()->accepted_at)->not->toBeNull();
+});
+
+test('a refused accept from the reporters page shows its error back on that page', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'is_correct' => true,
+        'expected_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept", ['return_to' => 'user']);
+
+    $response->assertRedirect("/admin/users/{$report->user_id}");
+    $response->assertSessionHasErrors(['action' => __('messages.verification_report_already_correct')]);
+});
+
+test('accepting a report with an unknown return_to is rejected without changing anything', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept", ['return_to' => 'dashboard']);
+
+    $response->assertSessionHasErrors('return_to');
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('a report cannot be accepted twice', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+    $firstAcceptor = User::factory()->create();
+    $report->update(['accepted_at' => '2026-09-20 09:15:00', 'accepted_by' => $firstAcceptor->id]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}");
+    $response->assertSessionHasErrors(['action' => __('messages.verification_report_already_accepted')]);
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+    expect($report->fresh()->accepted_by)->toBe($firstAcceptor->id);
+    expect($report->fresh()->accepted_at->toDateTimeString())->toBe('2026-09-20 09:15:00');
+});
+
+test('a correct report cannot be accepted', function () {
+    actingAsAdmin();
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'is_correct' => true,
+        'expected_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertSessionHasErrors(['action' => __('messages.verification_report_already_correct')]);
+    expect($report->fresh()->accepted_at)->toBeNull();
+    expect(CellStatusLog::query()->count())->toBe(0);
+});
+
+test('a report whose reported product has since been deleted cannot be accepted', function () {
+    actingAsAdmin();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => null,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertSessionHasErrors(['action' => __('messages.verification_report_incomplete')]);
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('a report cannot be accepted once its cell has changed since it was verified', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+    // Someone stored a different pallet in the cell after the report was made.
+    $newerPallet = palletInCell($cell, CellState::Full, ['product_id' => Product::factory(), 'remaining_boxes' => 3]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_changed_since_verification_report')]);
+    expect($newerPallet->fresh()->remaining_boxes)->toBe(3);
+    expect($newerPallet->fresh()->product_id)->not->toBe($product->id);
+    expect($report->fresh()->accepted_at)->toBeNull();
+    expect(CellStatusLog::query()->count())->toBe(0);
+});
+
+test('a report cannot be accepted while its cells row is being verified by an unfinished round', function () {
+    actingAsAdmin();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Full,
+        'expected_product_id' => null,
+        'expected_boxes_count' => null,
+        'reported_cell_state' => CellState::Empty,
+    ]);
+    $cell->update(['state' => CellState::Full]);
+    CellVerificationRound::factory()->covering($cell->row)->create(); // unfinished
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertSessionHasErrors(['action' => __('messages.cell_in_active_round')]);
+    expect($cell->fresh()->state)->toBe(CellState::Full);
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('a failure partway through accepting a report rolls back every pallet change', function () {
+    actingAsAdmin();
+    $product = Product::factory()->boxesCount(10)->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        // Stored fine, then rejected when the contents are set to zero boxes.
+        'reported_boxes_count' => 0,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+    expect(CellStatusLog::query()->count())->toBe(0);
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('an unauthenticated caller is redirected to login when accepting a report', function () {
+    ['report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Empty,
+    ]);
+
+    $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
+
+    $response->assertRedirect(route('login'));
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('a non-admin cannot accept a report', function () {
+    actingAsMobilePanelUser();
+    $product = Product::factory()->create();
+    ['cell' => $cell, 'report' => $report] = incorrectReportOnFreshCell([
+        'expected_cell_state' => CellState::Empty,
+        'reported_cell_state' => CellState::Full,
+        'reported_product_id' => $product->id,
+        'reported_boxes_count' => 5,
+        'reported_expiration_date' => '2027-01-01',
+    ]);
+
+    $this->post("/admin/cell-verification-reports/{$report->id}/accept")->assertForbidden();
+
+    expect($cell->fresh()->state)->toBe(CellState::Empty);
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('accepting a non-existent report returns a 404', function () {
+    actingAsAdmin();
+
+    $this->post('/admin/cell-verification-reports/999999/accept')->assertNotFound();
 });

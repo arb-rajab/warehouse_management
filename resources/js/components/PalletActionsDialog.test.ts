@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatDate, formatDateTime } from '@/lib/date';
 import type { CellMapRow, CellWithLocation } from '@/types/admin';
 import PalletActionsDialog from './PalletActionsDialog.vue';
 import SubmitButton from './SubmitButton.vue';
@@ -197,6 +198,24 @@ describe('PalletActionsDialog', () => {
         const wrapper = await mountDialog(emptyCell());
 
         expect(wrapper.get('h2').text()).toBe('Manage pallet — A2·1');
+    });
+
+    it('shows the pallet details when the cell holds one', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        const details = wrapper.get('[data-testid="pallet-action-details"]');
+        expect(details.text()).toContain('Widgets');
+        expect(details.text()).toContain('6 boxes remaining');
+        expect(details.text()).toContain(formatDate('2026-12-01'));
+        expect(details.text()).toContain(formatDateTime('2026-01-01'));
+    });
+
+    it('does not show pallet details for an empty cell', async () => {
+        const wrapper = await mountDialog(emptyCell());
+
+        expect(
+            wrapper.find('[data-testid="pallet-action-details"]').exists(),
+        ).toBe(false);
     });
 
     it('offers only the store tab for an empty cell, and posts the product/expiration/note fields on submit', async () => {

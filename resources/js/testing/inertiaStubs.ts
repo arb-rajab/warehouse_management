@@ -7,7 +7,7 @@ import { defineComponent, h } from 'vue';
  */
 export function createLinkStub() {
     return defineComponent({
-        props: ['href', 'as'],
+        props: ['href', 'as', 'data'],
         setup(props, { slots }) {
             return () =>
                 h(
@@ -17,6 +17,13 @@ export function createLinkStub() {
                             typeof props.href === 'string'
                                 ? props.href
                                 : props.href?.url,
+                        // Only rendered when a test passes `data` (a GET query
+                        // payload, e.g. DashboardStatTile/Pallets/Index's "view
+                        // on map" link) — omitted otherwise so a plain href-only
+                        // stub render stays free of a stray empty attribute.
+                        ...(props.data !== undefined
+                            ? { 'data-query': JSON.stringify(props.data) }
+                            : {}),
                     },
                     slots.default?.(),
                 );

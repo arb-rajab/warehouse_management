@@ -21,7 +21,7 @@ test('the cell log table links the cell and done-by cells to their own admin pag
     const cellLink = firstRow.locator('td').nth(0).getByRole('link').first();
     await expect(cellLink).toHaveAttribute(
         'href',
-        /^\/admin\/rows\/[A-Za-z0-9]+$/,
+        /^\/admin\/rows\/[A-Za-z0-9]+\?cell_number=\d+&flat_number=\d+$/,
     );
 
     const doneByLink = firstRow.getByRole('link', { name: 'Test User' });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
@@ -9,6 +9,9 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -22,7 +25,11 @@ import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
+import {
+    acceptReport,
+    canAcceptReport,
+    snapshotProductLabel,
+} from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
@@ -141,6 +148,12 @@ function onPerPageChange(perPage: number): void {
     filters.per_page = perPage;
     applyFilters();
 }
+
+const page = usePage();
+
+const actionError = computed(
+    () => (page.props.errors as Partial<Record<'action', string>>)?.action,
+);
 </script>
 
 <template>
@@ -229,6 +242,8 @@ function onPerPageChange(perPage: number): void {
                 </div>
             </div>
         </div>
+
+        <ActionErrorBanner :message="actionError" />
 
         <FilterDialog
             v-model:open="filtersOpen"
@@ -375,7 +390,19 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink :href="showRow({ letter: row.cell.row_letter })">
+                    <TableLink
+                        :href="
+                            showRow(
+                                { letter: row.cell.row_letter },
+                                {
+                                    query: {
+                                        cell_number: row.cell.cell_number,
+                                        flat_number: row.cell.flat_number,
+                                    },
+                                },
+                            )
+                        "
+                    >
                         {{
                             formatSlot(
                                 row.cell.row_letter,
@@ -388,6 +415,15 @@ function onPerPageChange(perPage: number): void {
                 <td class="px-4 py-2">
                     <CellVerificationCorrectnessBadge
                         :is-correct="row.is_correct"
+                    />
+                    <CellVerificationAcceptedNote
+                        v-if="row.accepted_at"
+                        :accepted-at="row.accepted_at"
+                        :accepted-by="row.accepted_by"
+                    />
+                    <CellVerificationAcceptButton
+                        v-else-if="canAcceptReport(row)"
+                        @click="acceptReport(row)"
                     />
                 </td>
                 <td class="px-4 py-2">

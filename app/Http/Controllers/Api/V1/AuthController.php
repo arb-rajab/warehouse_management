@@ -23,7 +23,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token->plainTextToken,
-            'user' => new UserResource($user),
+            'user' => new UserResource($user->loadMissing('roles:id,name')),
         ]);
     }
 
@@ -35,5 +35,18 @@ class AuthController extends Controller
         $user->currentAccessToken()->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * The signed-in user, in the same shape as /login's `user` — lets the app
+     * refresh `is_admin` on every launch instead of only at login, since a
+     * server-side role change otherwise doesn't reach a session already logged in.
+     */
+    public function show(Request $request): UserResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return new UserResource($user->loadMissing('roles:id,name'));
     }
 }

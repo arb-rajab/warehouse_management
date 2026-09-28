@@ -1036,6 +1036,70 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
     });
 
+    it('shows the product filter above the map without opening the highlight filter dialog', () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(wrapper.find('#toolbar-product').exists()).toBe(true);
+    });
+
+    it('highlights matching cells when a product is selected from the toolbar filter, without opening the highlight dialog', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({
+                        id: 2,
+                        product_id: 2,
+                        product_name: 'Gadgets',
+                        product_ar_name: 'أدوات',
+                    }),
+                }),
+            ],
+        );
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('keeps the toolbar product filter and the dialog product filter in sync', async () => {
+        const wrapper = mountPage([row()], []);
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+
+        expect(
+            (
+                wrapper.findAll('[role="listbox"] input[type="checkbox"]')[0]
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
+    });
+
     it('highlights only cells matching the selected product', async () => {
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 2 })],
@@ -1390,6 +1454,131 @@ describe('Cells Index (warehouse map)', () => {
         // band label at the end, not reset back to 0deg.
         expect(bandsAsColumns(wrapper)).toBe(true);
         expect(bandLabelAtEnd(wrapper)).toBe(true);
+    });
+
+    it('keeps the map content shrink-wrapped to its own width instead of filling the viewport', () => {
+        // A block-level flex container defaults width:auto to filling its
+        // parent (viewportEl) rather than shrink-wrapping its cells, which
+        // would make getBoundingClientRect()/offsetWidth report the
+        // viewport's width instead of the map's real cell-grid width —
+        // silently breaking fitMapToView's zoom-to-fit (it would only ever
+        // fit the row/column count, never the cells within a row) and the
+        // pan-bounds clamp. w-max is what keeps that measurement accurate.
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        expect(
+            wrapper.get('[data-testid="map-viewport"] > div').classes(),
+        ).toContain('w-max');
+    });
+
+    it('shrinks the map to fit entirely inside the viewport via the fit-to-view button', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return { width: 700, height: 600 } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
+                }
+
+                return { width: 0, height: 0 } as DOMRect;
+            });
+
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '70%',
+        );
+
+        getBoundingClientRectSpy.mockRestore();
+    });
+
+    it('resets pan to (0,0) and fitting re-pans to keep cell A1 flush at the top-left, unlike rotation which centers A1', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+        // centerLabelInViewport() looks up its target via `document.querySelector`,
+        // so the mounted tree needs to be attached to the document for that to
+        // find anything (vue-test-utils mounts detached by default).
+        document.body.appendChild(wrapper.element);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return {
+                        left: 0,
+                        top: 0,
+                        width: 700,
+                        height: 600,
+                    } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
+                }
+
+                if (
+                    this.getAttribute('data-slot-label') ===
+                    formatSlot('A', 1, 1)
+                ) {
+                    return {
+                        left: 500,
+                        top: 400,
+                        width: 100,
+                        height: 80,
+                    } as DOMRect;
+                }
+
+                return { left: 0, top: 0, width: 0, height: 0 } as DOMRect;
+            });
+
+        const transform = () =>
+            wrapper
+                .get('[data-testid="map-viewport"] > div')
+                .attributes('style');
+
+        await wrapper
+            .get(`[title="${t('cells.map.resetView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(0px, 0px)');
+
+        // Content is 1000x800 against a 700x600 container: zoomToFit shrinks
+        // to 70% (700/1000, the binding width ratio), and — since CSS scale()
+        // pivots around the content box's own center, not its top-left corner
+        // — fitMapToView must also pan to counteract that drift so cell A1
+        // (the content's own top-left) stays flush at the viewport's
+        // top-left: (1000/2)*(0.7-1) = -150, (800/2)*(0.7-1) = -120. That's
+        // neither (0,0) (pan is still needed to counter the scale pivot) nor
+        // a pan toward A1's mocked slot-label position (confirming this
+        // isn't centerLabelInViewport's A1-centering, just the content's own
+        // corner staying put).
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(-150px, -120px)');
+        expect(transform()).toContain('scale(0.7)');
+
+        // Rotation still recenters on A1, so it remains free to pan away from
+        // translate(0px, 0px) given the mismatched container/target rects above.
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+        await flushPromises();
+        expect(transform()).not.toContain('translate(0px, 0px)');
+
+        getBoundingClientRectSpy.mockRestore();
+        wrapper.element.remove();
     });
 
     it('zooms via a wheel event on the map viewport', async () => {
