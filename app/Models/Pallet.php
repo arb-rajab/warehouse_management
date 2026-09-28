@@ -9,12 +9,14 @@ use Carbon\CarbonImmutable;
 use Database\Factories\PalletFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
@@ -111,6 +113,71 @@ class Pallet extends Model
     public function isStaleAfter(int $days): bool
     {
         return $this->created_at->lte(now()->subDays($days));
+    }
+
+    /**
+     * Scope a query by the same highlight-filter query params the cell map's
+     * `CellController::firstHighlightMatch()` matches cells against — kept in
+     * lockstep with that method (and `matchesCellHighlight()`/`isCellExpired()`/
+     * `isCellExpiringWithin()`/`isCellStale()` on the frontend) so the "matching
+     * pallets" list and the map never disagree about which pallets match a
+     * given filter. `state`/`is_active` live on the pallet's `Cell`, not on the
+     * pallet itself, so those two go through `whereHas('cell', ...)`; the rest
+     * are plain columns on this table.
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function matchingHighlightFilters(Builder $query, Request $request): void
+    {
+        $today = today();
+
+        $query
+            ->when($request->filled('state'), fn (Builder $q) => $q->whereHas('cell', fn (Builder $c) => $c->where('state', $request->string('state')->value())))
+            ->when($request->filled('is_active') && ! $request->boolean('is_active'), fn (Builder $q) => $q->whereHas('cell', fn (Builder $c) => $c->where('is_active', false)))
+            ->when($request->boolean('expired'), fn (Builder $q) => $q->where('expiration_date', '<', $today))
+            ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereBetween('expiration_date', [$today, $today->copy()->addDays($request->integer('expires_within_days'))]))
+            ->when($request->filled('stale_after_days'), fn (Builder $q) => $q->where('created_at', '<=', $today->copy()->subDays($request->integer('stale_after_days'))))
+            ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))));
+    }
+
+    /**
+     * Order a query of pallets by `expiration_date` ascending (a null
+     * expiration sorts last, not first — the database default for ASC —
+     * since "no expiration date" isn't the most urgent case), then
+     * `created_at` ascending as the tiebreaker. Used by the "matching
+     * pallets" admin list; the `IS NULL` ordering expression works
+     * identically on both MySQL and SQLite.
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function orderedByExpirationThenAdded(Builder $query): void
+    {
+        $query->orderByRaw('expiration_date IS NULL')
+            ->orderBy('expiration_date')
+            ->orderBy('created_at');
+    }
+
+    /**
+     * The pallet fields shared by every listing that shows a pallet on its own
+     * row — not embedded in a cell's map summary (see `toMapSummaryArray()` for
+     * that shape). `ProductPalletResource` (a product's own pallet history) and
+     * `MatchingPalletResource` (the "matching pallets" list a dashboard tile
+     * links to) both build on this, so `state`/`expiration_date`/`added_at`
+     * can't be derived one way in one listing and another way in the other.
+     *
+     * @return array{id: int, state: string, expiration_date: string|null, added_at: string|null, remaining_boxes: int}
+     */
+    public function toListingSummaryArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'state' => $this->state->value,
+            'expiration_date' => $this->expiration_date?->toDateString(),
+            'added_at' => $this->created_at?->toIso8601String(),
+            'remaining_boxes' => $this->remaining_boxes,
+        ];
     }
 
     /**

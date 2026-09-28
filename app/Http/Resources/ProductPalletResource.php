@@ -29,12 +29,8 @@ class ProductPalletResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'state' => $this->state->value,
-            'expiration_date' => $this->expiration_date?->toDateString(),
-            'added_at' => $this->created_at?->toIso8601String(),
+            ...$this->resource->toListingSummaryArray(),
             'cell_entered_at' => $this->whenLoaded('cellEnteredLog', fn () => $this->cell_entered_at?->toIso8601String()),
-            'remaining_boxes' => $this->remaining_boxes,
             'product_boxes_count' => $this->product_boxes_count,
             'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
             'is_active' => $this->whenLoaded('cell', fn () => $this->cell->is_active),

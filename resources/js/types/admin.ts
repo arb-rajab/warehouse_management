@@ -368,6 +368,38 @@ export interface ProductFilters {
 
 export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
 
+/**
+ * One row of the "matching pallets" admin list (Admin\PalletController::index) —
+ * the dashboard's map-linking stat tiles land here instead of jumping straight
+ * to the cell map. Carries the full `ProductDetails` (the list spans every
+ * product, unlike the cell map's per-flat `CellPallet`) plus `added_at`, the
+ * list's sort tiebreaker after `expiration_date`.
+ */
+export interface MatchingPallet {
+    id: number;
+    state: Cell['state'];
+    expiration_date: string | null;
+    added_at: string | null;
+    remaining_boxes: number;
+    product: ProductDetails;
+    location: CellSlotLocation;
+}
+
+/**
+ * The same highlight-filter query params `CellHighlightSeed` seeds the cell
+ * map from — this list accepts and means exactly the same shape so a
+ * dashboard tile's query works unchanged on either page.
+ */
+export interface MatchingPalletFilters {
+    state?: Cell['state'];
+    is_active?: boolean;
+    expired?: boolean;
+    expires_within_days?: number;
+    stale_after_days?: number;
+    product_id?: number[];
+    per_page?: number;
+}
+
 export interface CellVerificationSnapshot {
     cell_state: Cell['state'] | null;
     product: ProductDetails | null;

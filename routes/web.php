@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::get('cells/{cell}/export-qr', [CellController::class, 'exportQr'])->name('cells.export-qr');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
 
+        Route::get('pallets', [PalletController::class, 'index'])->name('pallets.index');
         Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
         Route::put('pallets/{pallet}/update', [PalletController::class, 'update'])->name('pallets.update');
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('pallets.open');
