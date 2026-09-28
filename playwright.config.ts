@@ -34,7 +34,14 @@ export default defineConfig({
     reporter: 'list',
     use: {
         baseURL,
-        trace: 'on-first-retry',
+        // No `retries` is configured, so 'on-first-retry' never actually
+        // captured anything -- there's no first retry to trigger on.
+        // 'retain-on-failure' captures a trace/screenshot/video for any
+        // failed test on its only attempt, which is what CI needs to
+        // diagnose a failure without reproducing it locally.
+        trace: 'retain-on-failure',
+        screenshot: 'only-on-failure',
+        video: 'retain-on-failure',
     },
     projects: [
         {
