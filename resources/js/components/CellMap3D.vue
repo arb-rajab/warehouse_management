@@ -1751,6 +1751,7 @@ function animate(timeMs: number): void {
             bounds,
             speed,
             instanceSlotByKey,
+            yawDegrees,
         );
         position.x = next.x;
         position.y = next.y;
