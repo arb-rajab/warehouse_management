@@ -1471,7 +1471,8 @@ test('the product image route never re-serves a store response that is not a ras
     $response = $this->get("/admin/products/{$product->id}/image");
 
     $response->assertStatus(502);
-    expect((string) $response->getContent())->not->toContain('<script>');
+    expect($response->headers->get('Content-Type'))->not->toContain('svg')
+        ->and((string) $response->getContent())->not->toContain('alert(1)');
 });
 
 test('a mobile app user cannot fetch a products image', function () {
