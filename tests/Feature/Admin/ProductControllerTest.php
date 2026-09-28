@@ -1459,20 +1459,19 @@ test('the product image route reports a bad gateway when the store image host is
 
 test('the product image route never re-serves a store response that is not a raster image', function () {
     actingAsAdmin();
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
     Http::fake([
-        'cdn.example.com/*' => Http::response(
-            '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
-            200,
-            ['Content-Type' => 'image/svg+xml'],
-        ),
+        'cdn.example.com/*' => Http::response($svg, 200, ['Content-Type' => 'image/svg+xml']),
     ]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.svg')->create();
 
     $response = $this->get("/admin/products/{$product->id}/image");
 
+    // Not a substring check: in testing the 502 body is Laravel's debug page,
+    // whose stack-frame source excerpts include this very test file.
     $response->assertStatus(502);
     expect($response->headers->get('Content-Type'))->not->toContain('svg')
-        ->and((string) $response->getContent())->not->toContain('alert(1)');
+        ->and($response->getContent())->not->toBe($svg);
 });
 
 test('a mobile app user cannot fetch a products image', function () {
