@@ -5,6 +5,7 @@ import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
+    BOX_SIZE,
     boundsForWarehouse,
     cellWorldZ,
     EYE_HEIGHT,
@@ -15,7 +16,11 @@ import {
     WALK_SPEED,
     YAW_DRAG_SENSITIVITY,
 } from '@/lib/mapWalker';
-import type { CellMap3DBand, CellMap3DItem } from '@/types/admin';
+import type {
+    CellMap3DBand,
+    CellMap3DItem,
+    CellPalletSummary,
+} from '@/types/admin';
 import CellMap3D from './CellMap3D.vue';
 import CellSlot from './CellSlot.vue';
 
@@ -119,6 +124,7 @@ vi.mock('three', () => {
         x = 0;
         y = 0;
         z = 0;
+        rotation: { axis: 'x' | 'y'; angle: number } | null = null;
 
         makeTranslation(x: number, y: number, z: number) {
             this.x = x;
@@ -126,6 +132,22 @@ vi.mock('three', () => {
             this.z = z;
 
             return this;
+        }
+
+        makeRotationX(angle: number) {
+            this.rotation = { axis: 'x', angle };
+
+            return this;
+        }
+
+        makeRotationY(angle: number) {
+            this.rotation = { axis: 'y', angle };
+
+            return this;
+        }
+
+        setPosition(x: number, y: number, z: number) {
+            return this.makeTranslation(x, y, z);
         }
     }
 
@@ -160,6 +182,7 @@ vi.mock('three', () => {
         drawnInLastFrame = false;
         instanceColor: { needsUpdate: boolean } | null = null;
         colors: (Color | undefined)[] = [];
+        dispose = vi.fn();
 
         constructor(geometry: unknown, material: unknown, count: number) {
             super();
@@ -287,6 +310,26 @@ vi.mock('three', () => {
         }
     }
 
+    class MeshBasicMaterial {
+        alphaTest: unknown;
+        visible: unknown;
+        map: unknown = null;
+        needsUpdate = false;
+        dispose = vi.fn();
+
+        constructor(options?: { alphaTest?: unknown; visible?: unknown }) {
+            this.alphaTest = options?.alphaTest;
+            this.visible = options?.visible ?? true;
+        }
+    }
+
+    /** Records each load so a test decides whether (and with what image) it succeeds — a load no test resolves stands in for a failed/CORS-blocked one. */
+    class TextureLoader {
+        load = vi.fn((url: string, onLoad: (texture: unknown) => void) => {
+            registry.textureLoads.push({ url, onLoad });
+        });
+    }
+
     class PerspectiveCamera extends Object3D {
         fov: number;
         aspect: number;
@@ -353,6 +396,10 @@ vi.mock('three', () => {
         lineSegments: LineSegments[];
         instancedMeshes: InstancedMesh[];
         raycasters: Raycaster[];
+        textureLoads: Array<{
+            url: string;
+            onLoad: (texture: unknown) => void;
+        }>;
     } = {
         cameras: [],
         renderers: [],
@@ -360,6 +407,7 @@ vi.mock('three', () => {
         lineSegments: [],
         instancedMeshes: [],
         raycasters: [],
+        textureLoads: [],
     };
 
     return {
@@ -379,7 +427,10 @@ vi.mock('three', () => {
         PlaneGeometry,
         EdgesGeometry,
         MeshStandardMaterial,
+        MeshBasicMaterial,
         LineBasicMaterial,
+        TextureLoader,
+        SRGBColorSpace: 'srgb',
         Vector2,
         Raycaster,
     };
@@ -432,6 +483,10 @@ type Registry = {
     raycasters: Array<{
         setFromCamera: ReturnType<typeof vi.fn>;
         intersectObjects: ReturnType<typeof vi.fn>;
+    }>;
+    textureLoads: Array<{
+        url: string;
+        onLoad: (texture: unknown) => void;
     }>;
 };
 
@@ -651,6 +706,7 @@ beforeEach(() => {
     registry().lineSegments = [];
     registry().instancedMeshes = [];
     registry().raycasters = [];
+    registry().textureLoads = [];
 
     vi.stubGlobal('requestAnimationFrame', (cb: (time: number) => void) => {
         rafCallback = cb;
@@ -1490,6 +1546,383 @@ describe('CellMap3D', () => {
         wrapper.unmount();
 
         expect(renderer.dispose).toHaveBeenCalled();
+    });
+
+    describe('product images on pallets', () => {
+        type FakeTexture = ReturnType<typeof fakeTexture>;
+
+        type ProductImageMesh = {
+            count: number;
+            matrices: Array<{
+                x: number;
+                y: number;
+                z: number;
+                rotation: { axis: 'x' | 'y'; angle: number } | null;
+            }>;
+            colors: Array<{ value: unknown } | undefined>;
+            geometry: { dispose: ReturnType<typeof vi.fn> };
+            material: {
+                alphaTest: unknown;
+                visible: unknown;
+                map: unknown;
+                needsUpdate: boolean;
+                dispose: ReturnType<typeof vi.fn>;
+            };
+            dispose: ReturnType<typeof vi.fn>;
+        };
+
+        /** Image meshes still in the scene — replaced ones are disposed, but the mock's registry never forgets them. */
+        function liveProductImageMeshes(): ProductImageMesh[] {
+            return (
+                registry().instancedMeshes.filter(
+                    (mesh) => mesh.name === 'product-image',
+                ) as unknown as ProductImageMesh[]
+            ).filter((mesh) => mesh.dispose.mock.calls.length === 0);
+        }
+
+        function meshShowing(texture: FakeTexture): ProductImageMesh {
+            const mesh = liveProductImageMeshes().find(
+                (candidate) => candidate.material.map === texture,
+            );
+
+            if (!mesh) {
+                throw new Error(
+                    'No live product-image mesh shows that texture',
+                );
+            }
+
+            return mesh;
+        }
+
+        function palletWithImage(
+            productImageUrl: string | null,
+        ): CellPalletSummary {
+            return {
+                id: 9,
+                product_id: 3,
+                product_name: 'Widgets',
+                product_ar_name: 'ودجات',
+                product_image_url: productImageUrl,
+                expiration_date: null,
+                added_at: null,
+                remaining_boxes: 5,
+            };
+        }
+
+        function fakeTexture(width: number, height: number) {
+            const vector = () => ({
+                x: 1,
+                y: 1,
+                set(x: number, y: number) {
+                    this.x = x;
+                    this.y = y;
+                },
+            });
+
+            return {
+                image: { width, height },
+                colorSpace: '',
+                repeat: vector(),
+                offset: vector(),
+                dispose: vi.fn(),
+            };
+        }
+
+        /** Resolves the pending load for `url` with a fake image of the given size. */
+        function loadTexture(url: string, width = 100, height = 100) {
+            const load = registry().textureLoads.find(
+                (entry) => entry.url === url,
+            );
+
+            if (!load) {
+                throw new Error(`No texture load was started for ${url}`);
+            }
+
+            const texture = fakeTexture(width, height);
+            load.onLoad(texture);
+
+            return texture;
+        }
+
+        it("draws a pallet's product image on its box's four sides and top, just outside each face", () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/a.png'),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const mesh = meshShowing(loadTexture('/img/a.png'));
+            const center = {
+                x: rowWorldX(0),
+                y: flatWorldY(1),
+                z: cellWorldZ(1),
+            };
+            const expectedFaces = [
+                { axis: 'y', angle: 0, normal: [0, 0, 1] },
+                { axis: 'y', angle: Math.PI, normal: [0, 0, -1] },
+                { axis: 'y', angle: Math.PI / 2, normal: [1, 0, 0] },
+                { axis: 'y', angle: -Math.PI / 2, normal: [-1, 0, 0] },
+                { axis: 'x', angle: -Math.PI / 2, normal: [0, 1, 0] },
+            ];
+
+            expect(mesh.count).toBe(expectedFaces.length);
+
+            expectedFaces.forEach((face, index) => {
+                const matrix = mesh.matrices[index];
+                const offset = [
+                    matrix.x - center.x,
+                    matrix.y - center.y,
+                    matrix.z - center.z,
+                ];
+
+                expect(matrix.rotation).toEqual({
+                    axis: face.axis,
+                    angle: face.angle,
+                });
+
+                offset.forEach((component, axisIndex) => {
+                    const outward = component * face.normal[axisIndex];
+
+                    if (face.normal[axisIndex] === 0) {
+                        expect(component).toBeCloseTo(0);
+                    } else {
+                        // Outside the box face, inside the 1.05× outline.
+                        expect(outward).toBeGreaterThan(BOX_SIZE / 2);
+                        expect(outward).toBeLessThan((BOX_SIZE * 1.05) / 2);
+                    }
+                });
+            });
+        });
+
+        it('loads each distinct image once and groups its pallets into one mesh, skipping pallets without an image and empty cells', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/a.png'),
+                                }),
+                                item({
+                                    cellNumber: 2,
+                                    state: 'opened',
+                                    pallet: palletWithImage('/img/a.png'),
+                                }),
+                                item({
+                                    cellNumber: 3,
+                                    state: 'full',
+                                    pallet: palletWithImage(null),
+                                }),
+                                item({ cellNumber: 4, state: 'empty' }),
+                            ],
+                        }),
+                        band({
+                            letter: 'B',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/b.png'),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            expect(registry().textureLoads.map((load) => load.url)).toEqual([
+                '/img/a.png',
+                '/img/b.png',
+            ]);
+            expect(liveProductImageMeshes()).toHaveLength(2);
+
+            const aMesh = meshShowing(loadTexture('/img/a.png'));
+            const bMesh = meshShowing(loadTexture('/img/b.png'));
+
+            expect(aMesh.count).toBe(10);
+            expect(aMesh.matrices[0].z - cellWorldZ(1)).toBeGreaterThan(0);
+            expect(aMesh.matrices[0].z).toBeLessThan(cellWorldZ(2));
+            expect(aMesh.matrices[5].z).toBeGreaterThan(cellWorldZ(2));
+            expect(aMesh.matrices[5].z).toBeLessThan(cellWorldZ(3));
+            expect(bMesh.count).toBe(5);
+            expect(bMesh.matrices[0].x).toBe(rowWorldX(1));
+        });
+
+        it('keeps an image hidden until it loads, then shows it in sRGB cropped to a centred square — and a load that never succeeds stays hidden', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/wide.png'),
+                                }),
+                                item({
+                                    cellNumber: 2,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/tall.png'),
+                                }),
+                                item({
+                                    cellNumber: 3,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/blocked.png'),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const materials = liveProductImageMeshes().map(
+                (mesh) => mesh.material,
+            );
+            expect(materials).toHaveLength(3);
+            materials.forEach((material) => {
+                expect(material.visible).toBe(false);
+                expect(material.map).toBeNull();
+                expect(material.alphaTest).toBeGreaterThan(0);
+            });
+
+            const wide = loadTexture('/img/wide.png', 200, 100);
+            const tall = loadTexture('/img/tall.png', 100, 200);
+            const wideMaterial = meshShowing(wide).material;
+
+            expect(wideMaterial.visible).toBe(true);
+            expect(wideMaterial.needsUpdate).toBe(true);
+            expect(wide.colorSpace).toBe('srgb');
+            expect([wide.repeat.x, wide.repeat.y]).toEqual([0.5, 1]);
+            expect([wide.offset.x, wide.offset.y]).toEqual([0.25, 0]);
+            expect(meshShowing(tall).material.visible).toBe(true);
+            expect([tall.repeat.x, tall.repeat.y]).toEqual([1, 0.5]);
+            expect([tall.offset.x, tall.offset.y]).toEqual([0, 0.25]);
+
+            const blockedMaterials = liveProductImageMeshes()
+                .map((mesh) => mesh.material)
+                .filter((material) => material.map === null);
+            expect(blockedMaterials).toHaveLength(1);
+            expect(blockedMaterials[0].visible).toBe(false);
+        });
+
+        it("rebuilds the panels on an in-place update, matching each box's dimmed tint, without reloading or disposing the image", async () => {
+            const bandsWithDimmed = (dimmedCellTwo: boolean) => [
+                band({
+                    items: [
+                        item({
+                            cellNumber: 1,
+                            state: 'full',
+                            pallet: palletWithImage('/img/a.png'),
+                        }),
+                        item({
+                            cellNumber: 2,
+                            state: 'full',
+                            dimmed: dimmedCellTwo,
+                            pallet: palletWithImage('/img/a.png'),
+                        }),
+                    ],
+                }),
+            ];
+            const wrapper = mount(CellMap3D, {
+                props: { bands: bandsWithDimmed(false) },
+            });
+            const texture = loadTexture('/img/a.png');
+            const meshBefore = meshShowing(texture);
+            const cellBoxMeshCountBefore = cellBoxInstancedMeshes().length;
+
+            await wrapper.setProps({ bands: bandsWithDimmed(true) });
+
+            // Same set of cells → the in-place fast path, not a full rebuild.
+            expect(cellBoxInstancedMeshes()).toHaveLength(
+                cellBoxMeshCountBefore,
+            );
+            expect(meshBefore.dispose).toHaveBeenCalled();
+            expect(registry().textureLoads).toHaveLength(1);
+            expect(meshBefore.material.dispose).not.toHaveBeenCalled();
+
+            const meshAfter = meshShowing(texture);
+            const fullBoxes = cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+            );
+            const boxTint = (cellNumber: number) =>
+                fullBoxes?.colors[cellBoxMesh(cellNumber).instanceId]?.value;
+
+            expect(meshAfter).not.toBe(meshBefore);
+            expect(meshAfter.material.visible).toBe(true);
+            expect(boxTint(1)).not.toBe(boxTint(2));
+            [0, 1, 2, 3, 4].forEach((face) => {
+                expect(meshAfter.colors[face]?.value).toBe(boxTint(1));
+                expect(meshAfter.colors[5 + face]?.value).toBe(boxTint(2));
+            });
+        });
+
+        it("swaps a cell's image when its pallet's product changes in place", async () => {
+            const bandsWithImage = (url: string) => [
+                band({
+                    items: [
+                        item({
+                            cellNumber: 1,
+                            state: 'full',
+                            pallet: palletWithImage(url),
+                        }),
+                        item({ cellNumber: 2, state: 'empty' }),
+                    ],
+                }),
+            ];
+            const wrapper = mount(CellMap3D, {
+                props: { bands: bandsWithImage('/img/a.png') },
+            });
+            loadTexture('/img/a.png');
+
+            await wrapper.setProps({ bands: bandsWithImage('/img/c.png') });
+
+            expect(registry().textureLoads.map((load) => load.url)).toEqual([
+                '/img/a.png',
+                '/img/c.png',
+            ]);
+            expect(liveProductImageMeshes()).toHaveLength(1);
+            expect(meshShowing(loadTexture('/img/c.png')).count).toBe(5);
+        });
+
+        it('disposes the image panels, their materials, loaded textures and the panel geometry on unmount', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage('/img/a.png'),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            const texture = loadTexture('/img/a.png');
+            const mesh = meshShowing(texture);
+
+            wrapper.unmount();
+
+            expect(mesh.dispose).toHaveBeenCalled();
+            expect(mesh.material.dispose).toHaveBeenCalled();
+            expect(mesh.geometry.dispose).toHaveBeenCalled();
+            expect(texture.dispose).toHaveBeenCalled();
+        });
     });
 
     describe('location indicator', () => {
