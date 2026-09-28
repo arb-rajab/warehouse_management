@@ -150,6 +150,36 @@ const POST_SIZE = 0.15;
 /** How far a row's corner posts stand out from its boxes, in X (beside the aisle). */
 const POST_OFFSET = BOX_SIZE / 2 + SHELF_MARGIN;
 
+/** Share of each box face a product image covers — the border left around it keeps the box's state color readable. */
+const PRODUCT_IMAGE_FACE_FRACTION = 0.7;
+/** How far an image panel sits outside its box face, so the two don't z-fight. */
+const PRODUCT_IMAGE_FACE_OFFSET = 0.01;
+/**
+ * Transparent image pixels (e.g. a PNG's cut-out background) are discarded
+ * rather than blended — blending would need back-to-front sorting, which
+ * instanced panels don't get, so the box's own color shows through instead.
+ */
+const PRODUCT_IMAGE_ALPHA_TEST = 0.5;
+
+/**
+ * The box faces a pallet's product image is drawn on: the four sides (so it
+ * reads from the aisle and from a neighboring row, whichever way the walk
+ * camera is turned) and the top (seen from the orbit overview). Each rotates
+ * `THREE.PlaneGeometry` (which faces +Z) so its front side faces outward along
+ * `normal`, which keeps the image upright and un-mirrored from outside the box.
+ */
+const PRODUCT_IMAGE_FACES: ReadonlyArray<{
+    axis: 'x' | 'y';
+    angle: number;
+    normal: readonly [number, number, number];
+}> = [
+    { axis: 'y', angle: 0, normal: [0, 0, 1] },
+    { axis: 'y', angle: Math.PI, normal: [0, 0, -1] },
+    { axis: 'y', angle: Math.PI / 2, normal: [1, 0, 0] },
+    { axis: 'y', angle: -Math.PI / 2, normal: [-1, 0, 0] },
+    { axis: 'x', angle: -Math.PI / 2, normal: [0, 1, 0] },
+];
+
 /** Key-cap badge for the controls legend (e.g. the `Space`/`Shift` keys). */
 const kbdClass =
     'rounded border border-gray-400 bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-700 shadow-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200';
@@ -227,6 +257,33 @@ const boxMaterialsByState = new Map<
 let highlightOutlineMaterial: THREE.LineBasicMaterial | null = null;
 let pulseOutlineMaterial: THREE.LineBasicMaterial | null = null;
 let inactiveOutlineMaterial: THREE.LineBasicMaterial | null = null;
+
+interface ProductImagePlacement {
+    url: string;
+    x: number;
+    y: number;
+    z: number;
+    dimmed: boolean;
+}
+
+/**
+ * One material per distinct product image URL, kept across rebuilds (and
+ * disposed, with its texture, only on unmount) so each image is downloaded
+ * once however many pallets carry that product and however often the cells
+ * rebuild. A material stays invisible until its texture has loaded: a failed
+ * load (e.g. the store's image host not sending CORS headers, which WebGL
+ * needs even when an `<img>` would display the same URL) leaves that
+ * product's boxes showing just their state color.
+ */
+const productImageMaterialsByUrl = new Map<string, THREE.MeshBasicMaterial>();
+let productImageGeometry: THREE.PlaneGeometry | null = null;
+let productImageLoader: THREE.TextureLoader | null = null;
+/**
+ * One instanced mesh per distinct product image (its instances being every
+ * face panel of every pallet carrying it), rebuilt wholesale on every cell
+ * rebuild rather than patched in place — see `addProductImages`.
+ */
+let productImageMeshes: THREE.InstancedMesh[] = [];
 
 const pressedDirections = new Set<MoveDirection>();
 const position = { x: 0, y: EYE_HEIGHT, z: 0 };
@@ -500,7 +557,156 @@ function outlineKindFor(
     return null;
 }
 
+function getProductImageGeometry(): THREE.PlaneGeometry {
+    if (!productImageGeometry) {
+        productImageGeometry = new THREE.PlaneGeometry(
+            BOX_SIZE * PRODUCT_IMAGE_FACE_FRACTION,
+            BOX_SIZE * PRODUCT_IMAGE_FACE_FRACTION,
+        );
+        sceneDisposables.push(productImageGeometry);
+    }
+
+    return productImageGeometry;
+}
+
+/** Crops a non-square image to its centre square (like CSS `object-fit: cover`) instead of stretching it across the square panel. */
+function cropTextureToSquare(texture: THREE.Texture<HTMLImageElement>): void {
+    const aspect = texture.image.width / texture.image.height;
+
+    if (aspect > 1) {
+        texture.repeat.set(1 / aspect, 1);
+        texture.offset.set((1 - 1 / aspect) / 2, 0);
+    } else {
+        texture.repeat.set(1, aspect);
+        texture.offset.set(0, (1 - aspect) / 2);
+    }
+}
+
+function productImageMaterialFor(url: string): THREE.MeshBasicMaterial {
+    const existing = productImageMaterialsByUrl.get(url);
+
+    if (existing) {
+        return existing;
+    }
+
+    const material = new THREE.MeshBasicMaterial({
+        alphaTest: PRODUCT_IMAGE_ALPHA_TEST,
+        visible: false,
+    });
+    productImageMaterialsByUrl.set(url, material);
+    sceneDisposables.push(material);
+
+    productImageLoader ??= new THREE.TextureLoader();
+    productImageLoader.load(url, (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        cropTextureToSquare(texture);
+        sceneDisposables.push(texture);
+        material.map = texture;
+        material.visible = true;
+        material.needsUpdate = true;
+    });
+
+    return material;
+}
+
+function productImageFaceMatrix(
+    face: (typeof PRODUCT_IMAGE_FACES)[number],
+    placement: ProductImagePlacement,
+): THREE.Matrix4 {
+    const distance = BOX_SIZE / 2 + PRODUCT_IMAGE_FACE_OFFSET;
+    const matrix =
+        face.axis === 'x'
+            ? new THREE.Matrix4().makeRotationX(face.angle)
+            : new THREE.Matrix4().makeRotationY(face.angle);
+
+    return matrix.setPosition(
+        placement.x + face.normal[0] * distance,
+        placement.y + face.normal[1] * distance,
+        placement.z + face.normal[2] * distance,
+    );
+}
+
+/**
+ * Adds one `THREE.InstancedMesh` per distinct product image to `group`, with
+ * an instance for every face panel of every pallet carrying that image. Each
+ * mesh gets all its matrices before it is ever rendered or raycast, so its
+ * lazily computed bounding sphere is correct from the start — unlike the
+ * cell-box meshes (see `invalidateInstanceBounds`), these are never mutated
+ * afterwards, only replaced. Panels take the same dimmed tint as their box.
+ */
+function addProductImages(
+    group: THREE.Group,
+    placements: ProductImagePlacement[],
+): void {
+    const placementsByUrl = new Map<string, ProductImagePlacement[]>();
+
+    for (const placement of placements) {
+        const urlPlacements = placementsByUrl.get(placement.url) ?? [];
+        urlPlacements.push(placement);
+        placementsByUrl.set(placement.url, urlPlacements);
+    }
+
+    for (const [url, urlPlacements] of placementsByUrl) {
+        const mesh = new THREE.InstancedMesh(
+            getProductImageGeometry(),
+            productImageMaterialFor(url),
+            urlPlacements.length * PRODUCT_IMAGE_FACES.length,
+        );
+        mesh.name = 'product-image';
+
+        urlPlacements.forEach((placement, placementIndex) => {
+            PRODUCT_IMAGE_FACES.forEach((face, faceIndex) => {
+                const index =
+                    placementIndex * PRODUCT_IMAGE_FACES.length + faceIndex;
+                mesh.setMatrixAt(
+                    index,
+                    productImageFaceMatrix(face, placement),
+                );
+                mesh.setColorAt(
+                    index,
+                    new THREE.Color(
+                        placement.dimmed ? DIMMED_TINT : NORMAL_TINT,
+                    ),
+                );
+            });
+        });
+
+        group.add(mesh);
+        productImageMeshes.push(mesh);
+    }
+}
+
+function clearProductImages(): void {
+    for (const mesh of productImageMeshes) {
+        cellGroup?.remove(mesh);
+        mesh.dispose();
+    }
+
+    productImageMeshes = [];
+}
+
+function productImagePlacementFor(
+    item: CellMap3DItem,
+    rowIndex: number,
+): ProductImagePlacement | null {
+    const url = item.pallet?.product_image_url;
+
+    if (!url) {
+        return null;
+    }
+
+    return {
+        url,
+        x: rowWorldX(rowIndex),
+        y: flatWorldY(item.flatNumber),
+        z: cellWorldZ(item.cellNumber),
+        dimmed: item.dimmed,
+    };
+}
+
 function disposeCellGroup(): void {
+    clearProductImages();
+
     if (cellGroup && scene) {
         scene.remove(cellGroup);
     }
@@ -655,6 +861,7 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
     cellInstanceMeshes = [];
     instanceSlotByKey = new Map();
     cellOutlineLookup = new Map();
+    const imagePlacements: ProductImagePlacement[] = [];
 
     for (const state of CELL_STATES) {
         const mesh = new THREE.InstancedMesh(
@@ -677,6 +884,12 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
             const z = cellWorldZ(item.cellNumber);
             placeCellInstance(key, item.state, x, y, z, item.dimmed);
 
+            const imagePlacement = productImagePlacementFor(item, rowIndex);
+
+            if (imagePlacement) {
+                imagePlacements.push(imagePlacement);
+            }
+
             const outlineKind = outlineKindFor(item);
 
             if (outlineKind) {
@@ -691,6 +904,7 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
         }
     });
 
+    addProductImages(group, imagePlacements);
     addShelves(group, bands);
     addPosts(group, bands);
 
@@ -868,11 +1082,18 @@ function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
 
     const group = cellGroup;
     const newLookup = new Map<string, FacedItem>();
+    const imagePlacements: ProductImagePlacement[] = [];
 
     bands.forEach((band, rowIndex) => {
         for (const item of band.items) {
             const key = facedKey(rowIndex, item.cellNumber, item.flatNumber);
             newLookup.set(key, { rowLetter: band.letter, item });
+
+            const imagePlacement = productImagePlacementFor(item, rowIndex);
+
+            if (imagePlacement) {
+                imagePlacements.push(imagePlacement);
+            }
 
             const slot = instanceSlotByKey.get(key);
 
@@ -926,6 +1147,8 @@ function updateCellStatesAndLookup(bands: CellMap3DBand[]): void {
         }
     });
 
+    clearProductImages();
+    addProductImages(group, imagePlacements);
     cellLookup = newLookup;
 
     invalidateAfterCellDataChange();
