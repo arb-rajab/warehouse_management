@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\StoreUser;
+
 return [
 
     /*
@@ -51,7 +53,7 @@ return [
     ],
 
     'stripe' => [
-        'model' => App\Models\StoreUser::class,
+        'model' => StoreUser::class,
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
     ],
