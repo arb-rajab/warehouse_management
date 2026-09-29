@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 test('the shops table has the expected columns', function () {
@@ -14,4 +15,16 @@ test('the shops table has the expected columns', function () {
         'bank_name', 'bank_acc_name', 'bank_acc_no', 'bank_routing_no', 'bank_payment_status',
         'created_at', 'updated_at',
     ]))->toBeTrue();
+
+    DB::table('shops')->insert([
+        'user_id' => 1,
+        'name' => 'Demo Shop',
+    ]);
+
+    $this->assertDatabaseHas('shops', [
+        'user_id' => 1,
+        'name' => 'Demo Shop',
+        'rating' => 0.00,
+        'num_of_reviews' => 0,
+    ]);
 });
