@@ -1,5 +1,7 @@
 <?php
 
+use Database\Seeders\PageSeeder;
+
 /**
  * Regression coverage for the legacy storefront actually rendering under
  * /temp — see .ai/rules/legacy-albaraka-holland.md requirement 5. Mounting
@@ -24,3 +26,23 @@ test('the legacy registration page renders successfully', function () {
 
     $response->assertOk();
 });
+
+/**
+ * Each of the 5 policy pages reads its Page row's `keywords`/`meta_image`
+ * columns — see PageSeeder's own docblock for why this needed both seed
+ * data and an attribute-name fix (the views read `tags`/`meta_img`, columns
+ * that don't exist on this table) before any of them could render at all.
+ */
+test('each legacy policy page renders successfully once seeded', function (string $uri) {
+    $this->seed(PageSeeder::class);
+
+    $response = $this->get($uri);
+
+    $response->assertOk();
+})->with([
+    '/temp/terms',
+    '/temp/privacy-policy',
+    '/temp/return-policy',
+    '/temp/seller-policy',
+    '/temp/support-policy',
+]);
