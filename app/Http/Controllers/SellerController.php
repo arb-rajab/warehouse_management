@@ -13,20 +13,31 @@ use Cache;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class SellerController extends Controller
+class SellerController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_seller'])->only('index');
-        $this->middleware(['permission:view_seller_profile'])->only('profile_modal');
-        $this->middleware(['permission:login_as_seller'])->only('login');
-        $this->middleware(['permission:pay_to_seller'])->only('payment_modal');
-        $this->middleware(['permission:edit_seller'])->only('edit');
-        $this->middleware(['permission:delete_seller'])->only('destroy');
-        $this->middleware(['permission:ban_seller'])->only('ban');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_seller', only: ['index']),
+            new Middleware('permission:view_seller_profile', only: ['profile_modal']),
+            new Middleware('permission:login_as_seller', only: ['login']),
+            new Middleware('permission:pay_to_seller', only: ['payment_modal']),
+            new Middleware('permission:edit_seller', only: ['edit']),
+            new Middleware('permission:delete_seller', only: ['destroy']),
+            new Middleware('permission:ban_seller', only: ['ban']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

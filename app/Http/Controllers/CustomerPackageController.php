@@ -9,16 +9,27 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Session;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CustomerPackageController extends Controller
+class CustomerPackageController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_classified_packages'])->only('index');
-        $this->middleware(['permission:edit_classified_package'])->only('edit');
-        $this->middleware(['permission:delete_classified_package'])->only('destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_classified_packages', only: ['index']),
+            new Middleware('permission:edit_classified_package', only: ['edit']),
+            new Middleware('permission:delete_classified_package', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

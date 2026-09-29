@@ -10,15 +10,26 @@ use Auth;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ShopController extends Controller
+class ShopController extends Controller implements HasMiddleware
 {
 
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        $this->middleware('user', ['only' => ['index']]);
+        return [
+            new Middleware('user', only: ['index']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

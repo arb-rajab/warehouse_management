@@ -7,15 +7,26 @@ use App\Models\Review;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ReviewController extends Controller
+class ReviewController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_product_reviews'])->only('index');
-        $this->middleware(['permission:publish_product_review'])->only('updatePublished');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_product_reviews', only: ['index']),
+            new Middleware('permission:publish_product_review', only: ['updatePublished']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

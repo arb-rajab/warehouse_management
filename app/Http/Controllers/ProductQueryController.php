@@ -8,17 +8,27 @@ use App\Models\StoreUser;
 use Auth;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ProductQueryController extends Controller
+class ProductQueryController extends Controller implements HasMiddleware
 {
     use ValidatesRequests;
 
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_product_queries'])->only('admin_index');
+        return [
+            new Middleware('permission:view_all_product_queries', only: ['admin_index']),
+        ];
     }
-
     /**
      * Retrieve queries that belongs to current seller
      */

@@ -25,8 +25,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Str;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ProductController extends Controller
+class ProductController extends Controller implements HasMiddleware
 {
     protected $productService;
     protected $productTaxService;
@@ -43,17 +45,28 @@ class ProductController extends Controller
         $this->productTaxService = $productTaxService;
         $this->productFlashDealService = $productFlashDealService;
         $this->productStockService = $productStockService;
-
-        // Staff Permission Check
-        $this->middleware(['permission:add_new_product'])->only('create');
-        $this->middleware(['permission:show_all_products'])->only('all_products');
-        $this->middleware(['permission:show_in_house_products'])->only('admin_products');
-        $this->middleware(['permission:show_seller_products'])->only('seller_products');
-        $this->middleware(['permission:product_edit'])->only('admin_product_edit', 'seller_product_edit');
-        $this->middleware(['permission:product_duplicate'])->only('duplicate');
-        $this->middleware(['permission:product_delete'])->only('destroy');
     }
+
     /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:add_new_product', only: ['create']),
+            new Middleware('permission:show_all_products', only: ['all_products']),
+            new Middleware('permission:show_in_house_products', only: ['admin_products']),
+            new Middleware('permission:show_seller_products', only: ['seller_products']),
+            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit']),
+            new Middleware('permission:product_duplicate', only: ['duplicate']),
+            new Middleware('permission:product_delete', only: ['destroy']),
+        ];
+    }    /**
      * Display a listing of the resource.
      *
      * @return Response

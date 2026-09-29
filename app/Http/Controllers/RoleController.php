@@ -8,17 +8,28 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_staff_roles'])->only('index');
-        $this->middleware(['permission:add_staff_role'])->only('create');
-        $this->middleware(['permission:edit_staff_role'])->only('edit');
-        $this->middleware(['permission:delete_staff_role'])->only('destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_staff_roles', only: ['index']),
+            new Middleware('permission:add_staff_role', only: ['create']),
+            new Middleware('permission:edit_staff_role', only: ['edit']),
+            new Middleware('permission:delete_staff_role', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

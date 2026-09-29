@@ -11,16 +11,26 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mail;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ConversationController extends Controller
+class ConversationController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_product_conversations'])->only('admin_index');
-        $this->middleware(['permission:delete_product_conversations'])->only('destroy');
+        return [
+            new Middleware('permission:view_all_product_conversations', only: ['admin_index']),
+            new Middleware('permission:delete_product_conversations', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

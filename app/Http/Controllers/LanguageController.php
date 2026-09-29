@@ -10,14 +10,25 @@ use Cache;
 use Illuminate\Http\Request;
 use Session;
 use Storage;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class LanguageController extends Controller
+class LanguageController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:language_setup'])->only('index','create','edit','destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:language_setup', only: ['index', 'create', 'edit', 'destroy']),
+        ];
     }
-
     public function changeLanguage(Request $request)
     {
     	$request->session()->put('locale', $request->locale);

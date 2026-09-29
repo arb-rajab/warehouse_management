@@ -11,15 +11,26 @@ use Auth;
 use Excel;
 use Illuminate\Http\Request;
 use PDF;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ProductBulkUploadController extends Controller
+class ProductBulkUploadController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-
-        $this->middleware(['permission:product_bulk_import'])->only('index');
-        $this->middleware(['permission:product_bulk_export'])->only('export');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:product_bulk_import', only: ['index']),
+            new Middleware('permission:product_bulk_export', only: ['export']),
+        ];
     }
-
     public function index()
     {
         if (Auth::user()->user_type == 'seller') {

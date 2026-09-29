@@ -19,18 +19,28 @@ use Illuminate\Support\Facades\Validator;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
 use Spatie\Permission\Models\Role;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CustomerController extends Controller
+class CustomerController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_customers'])->only('index');
-        $this->middleware(['permission:login_as_customer'])->only('login');
-        $this->middleware(['permission:ban_customer'])->only('ban');
-        $this->middleware(['permission:delete_customer'])->only('destroy');
+        return [
+            new Middleware('permission:view_all_customers', only: ['index']),
+            new Middleware('permission:login_as_customer', only: ['login']),
+            new Middleware('permission:ban_customer', only: ['ban']),
+            new Middleware('permission:delete_customer', only: ['destroy']),
+        ];
     }
-
     protected $userService;
 
     protected function userService()

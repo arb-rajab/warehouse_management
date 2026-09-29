@@ -9,24 +9,33 @@ use App\Models\Color;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Str;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AttributeController extends Controller
+class AttributeController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_product_attributes'])->only('index');
-        $this->middleware(['permission:edit_product_attribute'])->only('edit');
-        $this->middleware(['permission:delete_product_attribute'])->only('destroy');
-
-        $this->middleware(['permission:view_product_attribute_values'])->only('show');
-        $this->middleware(['permission:edit_product_attribute_value'])->only('edit_attribute_value');
-        $this->middleware(['permission:delete_product_attribute_value'])->only('destroy_attribute_value');
-
-        $this->middleware(['permission:view_colors'])->only('colors');
-        $this->middleware(['permission:edit_color'])->only('edit_color');
-        $this->middleware(['permission:delete_color'])->only('destroy_color');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_product_attributes', only: ['index']),
+            new Middleware('permission:edit_product_attribute', only: ['edit']),
+            new Middleware('permission:delete_product_attribute', only: ['destroy']),
+            new Middleware('permission:view_product_attribute_values', only: ['show']),
+            new Middleware('permission:edit_product_attribute_value', only: ['edit_attribute_value']),
+            new Middleware('permission:delete_product_attribute_value', only: ['destroy_attribute_value']),
+            new Middleware('permission:view_colors', only: ['colors']),
+            new Middleware('permission:edit_color', only: ['edit_color']),
+            new Middleware('permission:delete_color', only: ['destroy_color']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

@@ -6,15 +6,26 @@ use App\Http\Requests\ZoneRequest;
 use App\Models\Country;
 use App\Models\Zone;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
 
-class ZoneController extends Controller
+class ZoneController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:manage_zones'])->only('index','create','edit','destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:manage_zones', only: ['index', 'create', 'edit', 'destroy']),
+        ];
     }
-
     public function index()
     {
         $zones = Zone::latest()->paginate(10);

@@ -29,20 +29,30 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Mail;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class OrderController extends Controller
+class OrderController extends Controller implements HasMiddleware
 {
     protected $offerService;
     protected $orderService;
 
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders'])->only('all_orders');
-        $this->middleware(['permission:view_order_details'])->only('show');
-        $this->middleware(['permission:delete_order'])->only('destroy', 'bulk_order_delete');
+        return [
+            new Middleware('permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders', only: ['all_orders']),
+            new Middleware('permission:view_order_details', only: ['show']),
+            new Middleware('permission:delete_order', only: ['destroy', 'bulk_order_delete']),
+        ];
     }
-
     protected function offerService()
     {
         return app(OfferService::class);

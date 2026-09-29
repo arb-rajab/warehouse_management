@@ -6,17 +6,28 @@ use App\Models\Page;
 use App\Models\PageTranslation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
 
-class PageController extends Controller
+class PageController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:add_website_page'])->only('create');
-        $this->middleware(['permission:edit_website_page'])->only('edit');
-        $this->middleware(['permission:delete_website_page'])->only('destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:add_website_page', only: ['create']),
+            new Middleware('permission:edit_website_page', only: ['edit']),
+            new Middleware('permission:delete_website_page', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

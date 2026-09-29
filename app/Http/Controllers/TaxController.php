@@ -5,14 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Tax;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class TaxController extends Controller
+class TaxController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:vat_&_tax_setup'])->only('index','create','edit','destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:vat_&_tax_setup', only: ['index', 'create', 'edit', 'destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

@@ -4,14 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Models\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CurrencyController extends Controller
+class CurrencyController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:currency_setup'])->only('currency','create','edit');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:currency_setup', only: ['currency', 'create', 'edit']),
+        ];
     }
-
     public function changeCurrency(Request $request)
     {
         $currency = Currency::where('code', $request->currency_code)->first();

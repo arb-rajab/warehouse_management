@@ -9,18 +9,29 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class FlashDealController extends Controller
+class FlashDealController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_flash_deals'])->only('index');
-        $this->middleware(['permission:add_flash_deal'])->only('create');
-        $this->middleware(['permission:edit_flash_deal'])->only('edit');
-        $this->middleware(['permission:delete_flash_deal'])->only('destroy');
-        $this->middleware(['permission:publish_flash_deal'])->only('update_featured');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_flash_deals', only: ['index']),
+            new Middleware('permission:add_flash_deal', only: ['create']),
+            new Middleware('permission:edit_flash_deal', only: ['edit']),
+            new Middleware('permission:delete_flash_deal', only: ['destroy']),
+            new Middleware('permission:publish_flash_deal', only: ['update_featured']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

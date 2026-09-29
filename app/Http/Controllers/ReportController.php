@@ -10,20 +10,31 @@ use App\Models\StoreUser;
 use App\Models\Wallet;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ReportController extends Controller
+class ReportController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:in_house_product_sale_report'])->only('in_house_sale_report');
-        $this->middleware(['permission:seller_products_sale_report'])->only('seller_sale_report');
-        $this->middleware(['permission:products_stock_report'])->only('stock_report');
-        $this->middleware(['permission:product_wishlist_report'])->only('wish_report');
-        $this->middleware(['permission:user_search_report'])->only('user_search_report');
-        $this->middleware(['permission:commission_history_report'])->only('commission_history');
-        $this->middleware(['permission:wallet_transaction_report'])->only('wallet_transaction_history');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:in_house_product_sale_report', only: ['in_house_sale_report']),
+            new Middleware('permission:seller_products_sale_report', only: ['seller_sale_report']),
+            new Middleware('permission:products_stock_report', only: ['stock_report']),
+            new Middleware('permission:product_wishlist_report', only: ['wish_report']),
+            new Middleware('permission:user_search_report', only: ['user_search_report']),
+            new Middleware('permission:commission_history_report', only: ['commission_history']),
+            new Middleware('permission:wallet_transaction_report', only: ['wallet_transaction_history']),
+        ];
     }
-
     public function stock_report(Request $request)
     {
         $sort_by =null;

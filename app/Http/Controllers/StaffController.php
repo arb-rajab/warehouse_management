@@ -8,17 +8,28 @@ use App\Models\StoreUser;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class StaffController extends Controller
+class StaffController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_staffs'])->only('index');
-        $this->middleware(['permission:add_staff'])->only('create');
-        $this->middleware(['permission:edit_staff'])->only('edit');
-        $this->middleware(['permission:delete_staff'])->only('destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_staffs', only: ['index']),
+            new Middleware('permission:add_staff', only: ['create']),
+            new Middleware('permission:edit_staff', only: ['edit']),
+            new Middleware('permission:delete_staff', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

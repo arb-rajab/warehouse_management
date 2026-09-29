@@ -6,14 +6,25 @@ use App\Models\Payment;
 use App\Models\StoreUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class PaymentController extends Controller
+class PaymentController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:seller_payment_history'])->only('payment_histories');
-    }
     /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:seller_payment_history', only: ['payment_histories']),
+        ];
+    }    /**
      * Display a listing of the resource.
      *
      * @return Response

@@ -7,29 +7,40 @@ use App\Models\Product;
 use Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BusinessSettingsController extends Controller
+class BusinessSettingsController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:seller_commission_configuration'])->only('vendor_commission');
-        $this->middleware(['permission:seller_verification_form_configuration'])->only('seller_verification_form');
-        $this->middleware(['permission:general_settings'])->only('general_setting');
-        $this->middleware(['permission:features_activation'])->only('activation');
-        $this->middleware(['permission:smtp_settings'])->only('smtp_settings');
-        $this->middleware(['permission:payment_methods_configurations'])->only('payment_method');
-        $this->middleware(['permission:order_configuration'])->only('order_configuration');
-        $this->middleware(['permission:file_system_&_cache_configuration'])->only('file_system');
-        $this->middleware(['permission:social_media_logins'])->only('social_login');
-        $this->middleware(['permission:facebook_chat'])->only('facebook_chat');
-        $this->middleware(['permission:facebook_comment'])->only('facebook_comment');
-        $this->middleware(['permission:analytics_tools_configuration'])->only('google_analytics');
-        $this->middleware(['permission:google_recaptcha_configuration'])->only('google_recaptcha');
-        $this->middleware(['permission:google_map_setting'])->only('google_map');
-        $this->middleware(['permission:google_firebase_setting'])->only('google_firebase');
-        $this->middleware(['permission:shipping_configuration'])->only('shipping_configuration');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:seller_commission_configuration', only: ['vendor_commission']),
+            new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form']),
+            new Middleware('permission:general_settings', only: ['general_setting']),
+            new Middleware('permission:features_activation', only: ['activation']),
+            new Middleware('permission:smtp_settings', only: ['smtp_settings']),
+            new Middleware('permission:payment_methods_configurations', only: ['payment_method']),
+            new Middleware('permission:order_configuration', only: ['order_configuration']),
+            new Middleware('permission:file_system_&_cache_configuration', only: ['file_system']),
+            new Middleware('permission:social_media_logins', only: ['social_login']),
+            new Middleware('permission:facebook_chat', only: ['facebook_chat']),
+            new Middleware('permission:facebook_comment', only: ['facebook_comment']),
+            new Middleware('permission:analytics_tools_configuration', only: ['google_analytics']),
+            new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha']),
+            new Middleware('permission:google_map_setting', only: ['google_map']),
+            new Middleware('permission:google_firebase_setting', only: ['google_firebase']),
+            new Middleware('permission:shipping_configuration', only: ['shipping_configuration']),
+        ];
     }
-
     public function general_setting(Request $request)
     {
     	return view('shop.backend.setup_configurations.general_settings');

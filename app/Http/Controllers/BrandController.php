@@ -8,17 +8,28 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BrandController extends Controller
+class BrandController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_brands'])->only('index');
-        $this->middleware(['permission:add_brand'])->only('create');
-        $this->middleware(['permission:edit_brand'])->only('edit');
-        $this->middleware(['permission:delete_brand'])->only('destroy');
-    }
     /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_brands', only: ['index']),
+            new Middleware('permission:add_brand', only: ['create']),
+            new Middleware('permission:edit_brand', only: ['edit']),
+            new Middleware('permission:delete_brand', only: ['destroy']),
+        ];
+    }    /**
      * Display a listing of the resource.
      *
      * @return Response

@@ -12,20 +12,29 @@ use App\Services\ProductTaxService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class DigitalProductController extends Controller
+class DigitalProductController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-
-        // Staff Permission Check
-        $this->middleware(['permission:show_digital_products'])->only('index');
-        $this->middleware(['permission:add_digital_product'])->only('create');
-        $this->middleware(['permission:edit_digital_product'])->only('edit');
-        $this->middleware(['permission:delete_digital_product'])->only('destroy');
-        $this->middleware(['permission:download_digital_product'])->only('download');
+        return [
+            new Middleware('permission:show_digital_products', only: ['index']),
+            new Middleware('permission:add_digital_product', only: ['create']),
+            new Middleware('permission:edit_digital_product', only: ['edit']),
+            new Middleware('permission:delete_digital_product', only: ['destroy']),
+            new Middleware('permission:download_digital_product', only: ['download']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

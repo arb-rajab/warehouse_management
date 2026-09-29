@@ -8,18 +8,29 @@ use App\Models\Offer;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class DynamicPopupController extends Controller
+class DynamicPopupController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_dynamic_popups'])->only('index');
-        $this->middleware(['permission:add_dynamic_popups'])->only('create');
-        $this->middleware(['permission:edit_dynamic_popups'])->only('edit');
-        $this->middleware(['permission:delete_dynamic_popups'])->only('destroy');
-        $this->middleware(['permission:publish_dynamic_popups'])->only('update_status');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_dynamic_popups', only: ['index']),
+            new Middleware('permission:add_dynamic_popups', only: ['create']),
+            new Middleware('permission:edit_dynamic_popups', only: ['edit']),
+            new Middleware('permission:delete_dynamic_popups', only: ['destroy']),
+            new Middleware('permission:publish_dynamic_popups', only: ['update_status']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

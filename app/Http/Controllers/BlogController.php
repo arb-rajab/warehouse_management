@@ -7,18 +7,29 @@ use App\Models\Blog;
 use App\Models\BlogCategory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BlogController extends Controller
+class BlogController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_blogs'])->only('index');
-        $this->middleware(['permission:add_blog'])->only('create');
-        $this->middleware(['permission:edit_blog'])->only('edit');
-        $this->middleware(['permission:delete_blog'])->only('destroy');
-        $this->middleware(['permission:publish_blog'])->only('change_status');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_blogs', only: ['index']),
+            new Middleware('permission:add_blog', only: ['create']),
+            new Middleware('permission:edit_blog', only: ['edit']),
+            new Middleware('permission:delete_blog', only: ['destroy']),
+            new Middleware('permission:publish_blog', only: ['change_status']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

@@ -5,15 +5,26 @@ namespace App\Http\Controllers;
 use App\Models\Subscriber;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class SubscriberController extends Controller
+class SubscriberController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_subscribers'])->only('index');
-        $this->middleware(['permission:delete_subscriber'])->only('destroy');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_subscribers', only: ['index']),
+            new Middleware('permission:delete_subscriber', only: ['destroy']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *

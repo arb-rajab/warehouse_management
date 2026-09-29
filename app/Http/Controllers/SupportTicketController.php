@@ -10,14 +10,25 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mail;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class SupportTicketController extends Controller
+class SupportTicketController extends Controller implements HasMiddleware
 {
-    public function __construct() {
-        // Staff Permission Check
-        $this->middleware(['permission:view_all_support_tickets'])->only('admin_index');
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_support_tickets', only: ['admin_index']),
+        ];
     }
-
     /**
      * Display a listing of the resource.
      *
