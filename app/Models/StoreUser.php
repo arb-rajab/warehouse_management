@@ -17,6 +17,19 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
 
+    /**
+     * The legacy User -> StoreUser rename (see
+     * .ai/rules/legacy-albaraka-holland.md section 2) only renamed the PHP
+     * class to dodge the App\Models\User collision; the actual table stayed
+     * `users` (the store's own, distinct from this app's wms_users). Without
+     * this, Eloquent's naming convention infers `store_users` from the class
+     * name — a table that has never existed — and every query against this
+     * model fails outright.
+     *
+     * @var string
+     */
+    protected $table = 'users';
+
     public function sendEmailVerificationNotification()
     {
         $this->notify(new EmailVerificationNotification());
