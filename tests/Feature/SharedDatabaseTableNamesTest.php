@@ -36,10 +36,11 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
     // specific enough to this domain that the store app had nothing like it,
     // one of the tables this app shares with the legacy store app
     // (`products`, which this app has taken ownership of; the `uploads` its
-    // thumbnails point at; and `product_barcodes`, which
-    // Product::storeBarcodes() reads — none of which this app has taken
-    // ownership of except `products` — see .ai/rules/shared-database.md),
-    // or one of the legacy store's own tables
+    // thumbnails point at; `product_barcodes`, which Product::storeBarcodes()
+    // reads; and `offers_catalogs`, which the legacy home page reads via
+    // OffersCatalog::first() — none of which this app has taken ownership of
+    // except `products` — see .ai/rules/shared-database.md), or one of the
+    // legacy store's own tables
     // carried over verbatim from `shop.sql` during the schema-only merge (see
     // .ai/rules/legacy-albaraka-holland.md §3.1) — none of which collide with
     // any WMS table, which is exactly why they kept their bare names instead
@@ -102,6 +103,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'messages',
         'mobile_app_version_requirements',
         'notifications',
+        'offers_catalogs',
         'order_details',
         'orders',
         'page_translations',

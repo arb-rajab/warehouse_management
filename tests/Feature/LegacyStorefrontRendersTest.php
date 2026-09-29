@@ -46,3 +46,30 @@ test('each legacy policy page renders successfully once seeded', function (strin
     '/temp/seller-policy',
     '/temp/support-policy',
 ]);
+
+/**
+ * The home page (HomeController::index()) caches featured_categories/
+ * todays_deal_products/newest_products as raw Eloquent collections, which
+ * hit the exact same config/cache.php serializable_classes allow-list
+ * problem get_setting()/addon_is_activated() did — except here every
+ * consumer downstream (this view and whatever it includes) expects real
+ * Category/Product model instances, not arrays, so the fix caches plain
+ * attribute arrays and rehydrates them with Model::hydrate() on every read
+ * instead. Requesting it twice is what actually exercises the bug: the
+ * first request computes and writes the cache, the second reads it back —
+ * only the second failed before the fix.
+ *
+ * Deliberately seeds no Product rows: several of the columns
+ * filter_products()/HomeController::index() filter by (todays_deal,
+ * isNewProduct, auction_product, approved, added_by) don't exist on this
+ * app's local products stand-in — a pre-existing gap this pass didn't
+ * touch, see products.category_id's own migration for the pattern were it
+ * ever tackled. Whether a query referencing one of them throws depends on
+ * sqlite's query planner and, empirically, on whether the table already
+ * has matching rows — not something to depend on. An empty table is the
+ * one state confirmed safe.
+ */
+test('the legacy home page renders successfully, both freshly cached and read back from cache', function () {
+    $this->get('/temp')->assertOk();
+    $this->get('/temp')->assertOk();
+});
