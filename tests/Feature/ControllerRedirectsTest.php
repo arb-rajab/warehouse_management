@@ -42,7 +42,28 @@ test('no controller redirects with back(), other than the intentional LocaleCont
         // LocaleController's back() is intentional: switching locale is fired
         // from every page in the app, not from one fixed index route, so
         // there's no explicit route to redirect to instead.
-        ->notName('LocaleController.php');
+        ->notName('LocaleController.php')
+        // The legacy store's root-namespace controllers (see
+        // .ai/rules/legacy-albaraka-holland.md) render plain Blade views,
+        // not Inertia pages, so this test's whole premise — Referer being
+        // stripped and Inertia treating every visit as XHR — doesn't apply
+        // to them. notPath() (not notName()) because several of these
+        // basenames collide with an unrelated, in-scope Inertia controller
+        // of the same name under Api/V2/ or Seller/ (e.g. CartController,
+        // CustomerController) — excluding by name alone would hide a real
+        // violation in the wrong one.
+        ->notPath([
+            '#^CartController\.php$#',
+            '#^CartOfferedController\.php$#',
+            '#^CustomerController\.php$#',
+            '#^PageController\.php$#',
+            '#^ProductQueryController\.php$#',
+            '#^RepresentativePackageController\.php$#',
+            '#^RepresentativePaymentController\.php$#',
+            '#^Trip/TripController\.php$#',
+            '#^Trip/TruckController\.php$#',
+            '#^VisitController\.php$#',
+        ]);
 
     $offenders = [];
 

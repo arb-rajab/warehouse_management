@@ -73,7 +73,7 @@ Auth::routes(['verify' => true]);
 
 // Login
 Route::controller(LoginController::class)->group(function () {
-    Route::get('/logout', 'logout');
+    // /logout is already registered by Auth::routes() above.
     Route::get('/social-login/redirect/{provider}', 'redirectToProvider')->name('social.login');
     Route::get('/social-login/{provider}/callback', 'handleProviderCallback')->name('social.callback');
     //Apple Callback
@@ -82,7 +82,7 @@ Route::controller(LoginController::class)->group(function () {
 });
 
 Route::controller(VerificationController::class)->group(function () {
-    Route::get('/email/resend', 'resend')->name('verification.resend');
+    // /email/resend is already registered by Auth::routes() above.
     Route::get('/verification-confirmation/{code}', 'verification_confirmation')->name('email.verification.confirmation');
 });
 
