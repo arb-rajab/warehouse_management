@@ -19,7 +19,7 @@ class ConversationController extends Controller
      */
     public function index()
     {
-        if (BusinessSetting::where('type', 'conversation_system')->first()->value == 1) {
+        if (BusinessSetting::where('type', 'conversation_system')->first()?->value == 1) {
             $conversations = Conversation::where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(5);
             return view('shop.seller.conversations.index', compact('conversations'));
         } else {

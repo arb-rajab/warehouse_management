@@ -87,7 +87,7 @@ class ShopController extends Controller
     {
         $data = [];
         $i = 0;
-        foreach (json_decode(BusinessSetting::where('type', 'verification_form')->first()->value) as $key => $element) {
+        foreach (json_decode(BusinessSetting::where('type', 'verification_form')->first()?->value) as $key => $element) {
             $item = [];
             if ($element->type == 'text') {
                 $item['type'] = 'text';

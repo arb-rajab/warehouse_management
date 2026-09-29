@@ -142,8 +142,7 @@
         "laravel": {
             "dont-discover": [
                 "genealabs/laravel-sign-in-with-apple",
-                "genealabs/laravel-socialiter",
-                "laravel/ui"
+                "genealabs/laravel-socialiter"
             ]
         }
     },

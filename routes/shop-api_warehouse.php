@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V2\Warehouse\CategoryController;
 use App\Http\Controllers\Api\V2\Warehouse\CustomerController;
 use App\Http\Controllers\Api\V2\Warehouse\OrderController;
 use App\Http\Controllers\Api\V2\Warehouse\ProductController;
-use App\Http\Controllers\Api\V2\Warehouse\CategoryController;
+use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/warehouse'], function () {
 

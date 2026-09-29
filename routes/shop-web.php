@@ -1,50 +1,48 @@
 <?php
 
-use App\Http\Controllers\BlogController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\PageController;
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AddressController;
-use App\Http\Controllers\CompareController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\CurrencyController;
-use App\Http\Controllers\LanguageController;
-use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\AizUploadController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\SubscriberController;
+use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CartOfferedController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CompareController;
 use App\Http\Controllers\ConversationController;
-use App\Http\Controllers\FollowSellerController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ProductQueryController;
-use App\Http\Controllers\Payment\BkashController;
-use App\Http\Controllers\Payment\NagadController;
-use App\Http\Controllers\OffersCatalogController;
-use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\DigitalProductController;
-use App\Http\Controllers\Payment\IyzicoController;
+use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
+use App\Http\Controllers\DigitalProductController;
+use App\Http\Controllers\DynamicPopupController;
+use App\Http\Controllers\FollowSellerController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OffersCatalogController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\Payment\AamarpayController;
+use App\Http\Controllers\Payment\BkashController;
+use App\Http\Controllers\Payment\IyzicoController;
+use App\Http\Controllers\Payment\NagadController;
 use App\Http\Controllers\Payment\NgeniusController;
 use App\Http\Controllers\Payment\PayhereController;
-use App\Http\Controllers\PurchaseHistoryController;
-use App\Http\Controllers\Payment\AamarpayController;
-use App\Http\Controllers\Payment\VoguepayController;
-use App\Http\Controllers\Auth\VerificationController;
-use App\Http\Controllers\CartOfferedController;
-use App\Http\Controllers\ConnectionController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\DynamicPopupController;
-use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\Payment\SslcommerzController;
+use App\Http\Controllers\Payment\VoguepayController;
+use App\Http\Controllers\ProductQueryController;
+use App\Http\Controllers\PurchaseHistoryController;
 use App\Http\Controllers\RepresentativePaymentController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SubscriberController;
+use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\VisitController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WishlistController;
 
 /*
   |--------------------------------------------------------------------------
@@ -431,26 +429,32 @@ Route::controller(PageController::class)->group(function () {
 
 
 
-Route::controller(PersonalInfoController::class)->group(function () {
-    Route::get('/personalInfo/create', 'create')->name('create.personalInfo')->middleware('auth');
-    Route::post('/personalInfo/store', 'store')->name('store.personalInfo')->middleware('auth');
-    Route::get('/personalInfo/show/{user_hash}', 'show')->name('show.personalInfo');
-    Route::get('/personalInfo/update', 'update')->name('update.personalInfo')->middleware('auth');
-    Route::get('/personalInfo/{filename}', 'downloadQrCode')->name('downloadQrCode.PersonalInfo')->middleware('auth');
-
-});
-
-Route::controller(ConnectionController::class)->group(function (){
-    Route::get('/connection/create/{user_hash}', 'create')->name('create.connection');
-    Route::post('/connection/store', 'store')->name('store.connection');
-    Route::get('/my_connections/show/{user_id}', 'my_connections')->name('show.connections')->middleware('auth');
-
-
-});
+// PersonalInfoController and ConnectionController were already missing from
+// the legacy repo before this merge (no trace in its git history either —
+// see .ai/rules/legacy-albaraka-holland.md's phase-6 notes). The
+// personal_info.create/show views and these route/name definitions
+// (create.personalInfo, store.personalInfo, show.personalInfo,
+// update.personalInfo, downloadQrCode.PersonalInfo, create.connection,
+// store.connection, show.connections) are the only trace of this feature;
+// authoring the controllers is out of scope for a file move, so these stay
+// commented out rather than crash route:list on a class that never existed.
+//
+// Route::controller(PersonalInfoController::class)->group(function () {
+//     Route::get('/personalInfo/create', 'create')->name('create.personalInfo')->middleware('auth');
+//     Route::post('/personalInfo/store', 'store')->name('store.personalInfo')->middleware('auth');
+//     Route::get('/personalInfo/show/{user_hash}', 'show')->name('show.personalInfo');
+//     Route::get('/personalInfo/update', 'update')->name('update.personalInfo')->middleware('auth');
+//     Route::get('/personalInfo/{filename}', 'downloadQrCode')->name('downloadQrCode.PersonalInfo')->middleware('auth');
+// });
+//
+// Route::controller(ConnectionController::class)->group(function () {
+//     Route::get('/connection/create/{user_hash}', 'create')->name('create.connection');
+//     Route::post('/connection/store', 'store')->name('store.connection');
+//     Route::get('/my_connections/show/{user_id}', 'my_connections')->name('show.connections')->middleware('auth');
+// });
 
 Route::controller(OffersCatalogController::class)->group(function () {
 
     Route::get('/offers/download', 'download')->name('offers.download');
 
 });
-

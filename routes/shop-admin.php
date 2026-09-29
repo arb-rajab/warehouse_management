@@ -12,7 +12,6 @@ use App\Http\Controllers\CarrierController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\ConnectionController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\CouponController;

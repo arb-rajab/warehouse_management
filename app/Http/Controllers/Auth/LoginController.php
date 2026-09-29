@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Session;
+use Socialite;
+use Storage;
 
 class LoginController extends Controller
 {
@@ -32,8 +34,6 @@ class LoginController extends Controller
     */
 
     use AuthenticatesUsers;
-use Socialite;
-use Storage;
 
     /**
      * Where to redirect users after login.

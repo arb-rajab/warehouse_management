@@ -8,6 +8,7 @@ use App\Models\StoreUser;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\VerifiesEmails;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class VerificationController extends Controller
 {
@@ -23,7 +24,6 @@ class VerificationController extends Controller
     */
 
     use VerifiesEmails;
-use Illuminate\Http\Response;
 
     /**
      * Where to redirect users after verification.

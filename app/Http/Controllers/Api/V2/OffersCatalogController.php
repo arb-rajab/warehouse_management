@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\api\v2;
+namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
 use App\Models\OffersCatalog;

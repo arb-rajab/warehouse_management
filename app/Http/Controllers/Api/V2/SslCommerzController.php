@@ -28,7 +28,7 @@ class SslCommerzController extends Controller
     public function __construct()
     {
         # IF SANDBOX TRUE, THEN IT WILL CONNECT WITH SSLCOMMERZ SANDBOX (TEST) SYSTEM
-        if (BusinessSetting::where('type', 'sslcommerz_sandbox')->first()->value == 1) {
+        if (BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1) {
             $this->setSSLCommerzMode(true);
         } else {
             $this->setSSLCommerzMode(false);

@@ -25,7 +25,7 @@ class ConversationController extends Controller
      */
     public function index()
     {
-        if (BusinessSetting::where('type', 'conversation_system')->first()->value == 1) {
+        if (BusinessSetting::where('type', 'conversation_system')->first()?->value == 1) {
 
             //SELECT sender_id, receiver_id, title, MAX(created_at) AS max_created_at FROM `conversations` WHERE receiver_id = 3 GROUP BY sender_id order by max_created_at desc;
             // $conversations = Conversation::select('sender_id', 'receiver_id', 'title', DB::raw("MAX(created_at) as max_created_at"))

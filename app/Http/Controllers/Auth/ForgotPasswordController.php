@@ -11,6 +11,8 @@ use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Mail;
 
 class ForgotPasswordController extends Controller
 {
@@ -26,8 +28,6 @@ class ForgotPasswordController extends Controller
     */
 
     use SendsPasswordResetEmails;
-use Illuminate\Support\Facades\Password;
-use Mail;
 
     /**
      * Create a new controller instance.
