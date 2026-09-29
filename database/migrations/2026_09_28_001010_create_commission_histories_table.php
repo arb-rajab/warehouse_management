@@ -16,8 +16,8 @@ return new class extends Migration
             $table->integer('order_id');
             $table->integer('order_detail_id');
             $table->integer('seller_id');
-            $table->double('admin_commission', 25, 2);
-            $table->double('seller_earning', 25, 2);
+            $table->decimal('admin_commission', 25, 2);
+            $table->decimal('seller_earning', 25, 2);
             $table->timestamps();
         });
     }

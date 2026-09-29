@@ -15,8 +15,8 @@ return new class extends Migration
             $table->integer('id')->autoIncrement();
             $table->integer('carrier_id');
             $table->string('billing_type', 20);
-            $table->double('delimiter1', 25, 2);
-            $table->double('delimiter2', 25, 2);
+            $table->decimal('delimiter1', 25, 2);
+            $table->decimal('delimiter2', 25, 2);
             $table->timestamps();
         });
     }

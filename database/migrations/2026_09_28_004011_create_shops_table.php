@@ -19,7 +19,7 @@ return new class extends Migration
             $table->longText('sliders')->nullable();
             $table->string('phone')->nullable();
             $table->string('address', 500)->nullable();
-            $table->double('rating', 3, 2)->default('0.00');
+            $table->decimal('rating', 3, 2)->default('0.00');
             $table->integer('num_of_reviews')->default('0');
             $table->integer('num_of_sale')->default('0');
             $table->integer('seller_package_id')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->integer('verification_status')->default('0');
             $table->longText('verification_info')->nullable();
             $table->integer('cash_on_delivery_status')->default('0');
-            $table->double('admin_to_pay', 20, 2)->default('0.00');
+            $table->decimal('admin_to_pay', 20, 2)->default('0.00');
             $table->string('facebook')->nullable();
             $table->string('instagram')->nullable();
             $table->string('google')->nullable();
@@ -38,9 +38,9 @@ return new class extends Migration
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->text('pick_up_point_id')->nullable();
-            $table->double('shipping_cost', 20, 2)->default('0.00');
-            $table->float('delivery_pickup_latitude', 17, 15)->nullable();
-            $table->float('delivery_pickup_longitude', 17, 15)->nullable();
+            $table->decimal('shipping_cost', 20, 2)->default('0.00');
+            $table->decimal('delivery_pickup_latitude', 17, 15)->nullable();
+            $table->decimal('delivery_pickup_longitude', 17, 15)->nullable();
             $table->string('bank_name')->nullable();
             $table->string('bank_acc_name', 200)->nullable();
             $table->string('bank_acc_no', 50)->nullable();

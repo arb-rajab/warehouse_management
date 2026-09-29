@@ -23,13 +23,13 @@ return new class extends Migration
             $table->integer('address_id')->default(0);
             $table->integer('product_id')->nullable();
             $table->text('variation')->nullable();
-            $table->double('price', 20, 2)->default(0.00);
-            $table->double('tax', 20, 2)->default(0.00);
-            $table->double('shipping_cost', 20, 2)->default(0.00);
+            $table->decimal('price', 20, 2)->default(0.00);
+            $table->decimal('tax', 20, 2)->default(0.00);
+            $table->decimal('shipping_cost', 20, 2)->default(0.00);
             $table->string('shipping_type', 30)->default('');
             $table->integer('pickup_point')->nullable();
             $table->integer('carrier_id')->nullable();
-            $table->double('discount', 10, 2)->default(0.00);
+            $table->decimal('discount', 10, 2)->default(0.00);
             $table->string('product_referral_code')->nullable();
             $table->string('coupon_code')->nullable();
             $table->tinyInteger('coupon_applied')->default(0);

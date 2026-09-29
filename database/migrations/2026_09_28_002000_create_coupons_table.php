@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('type');
             $table->string('code');
             $table->longText('details');
-            $table->double('discount', 20, 2);
+            $table->decimal('discount', 20, 2);
             $table->string('discount_type', 100);
             $table->integer('start_date');
             $table->integer('end_date');

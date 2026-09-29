@@ -29,8 +29,8 @@ return new class extends Migration
             $table->string('payment_type', 20)->nullable();
             $table->string('payment_status', 20)->nullable()->default('unpaid');
             $table->longText('payment_details')->nullable();
-            $table->double('grand_total', 20, 2)->nullable();
-            $table->double('coupon_discount', 20, 2)->default('0.00');
+            $table->decimal('grand_total', 20, 2)->nullable();
+            $table->decimal('coupon_discount', 20, 2)->default('0.00');
             $table->mediumText('code')->nullable();
             $table->string('tracking_code')->nullable();
             $table->integer('date');

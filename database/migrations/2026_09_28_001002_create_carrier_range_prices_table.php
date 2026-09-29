@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('carrier_id');
             $table->integer('carrier_range_id');
             $table->integer('zone_id');
-            $table->double('price', 8, 2);
+            $table->decimal('price', 8, 2);
             $table->timestamps();
         });
     }

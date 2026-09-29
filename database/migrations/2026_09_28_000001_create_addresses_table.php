@@ -15,8 +15,8 @@ return new class extends Migration
             $table->integer('country_id')->nullable();
             $table->integer('state_id');
             $table->integer('city_id')->nullable();
-            $table->float('longitude', 17, 15)->nullable();
-            $table->float('latitude', 17, 15)->nullable();
+            $table->decimal('longitude', 17, 15)->nullable();
+            $table->decimal('latitude', 17, 15)->nullable();
             $table->string('postal_code')->nullable();
             $table->string('phone')->nullable();
             $table->integer('set_default')->default(0);

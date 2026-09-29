@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('order_id')->nullable();
             $table->integer('package_id')->nullable();
             $table->integer('user_id');
-            $table->double('amount', 25, 2)->default('0.00');
+            $table->decimal('amount', 25, 2)->default('0.00');
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent();
         });

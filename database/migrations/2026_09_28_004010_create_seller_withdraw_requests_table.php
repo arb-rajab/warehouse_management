@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('seller_withdraw_requests', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->integer('user_id')->nullable();
-            $table->double('amount', 20, 2)->nullable();
+            $table->decimal('amount', 20, 2)->nullable();
             $table->longText('message')->nullable();
             $table->integer('status')->nullable();
             $table->integer('viewed')->nullable();

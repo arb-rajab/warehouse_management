@@ -15,7 +15,7 @@ return new class extends Migration
             $table->bigInteger('id')->autoIncrement();
             $table->string('name');
             $table->integer('state_id');
-            $table->double('cost', 20, 2)->default(0.00);
+            $table->decimal('cost', 20, 2)->default(0.00);
             $table->integer('status')->default(1);
             $table->timestamps();
             $table->timestamp('deleted_at')->nullable();

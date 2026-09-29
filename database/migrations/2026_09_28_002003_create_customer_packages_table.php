@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('customer_packages', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->string('name')->nullable();
-            $table->double('amount', 20, 2)->nullable();
+            $table->decimal('amount', 20, 2)->nullable();
             $table->integer('product_upload')->nullable();
             $table->string('logo', 150)->nullable();
             $table->timestamp('created_at')->nullable();

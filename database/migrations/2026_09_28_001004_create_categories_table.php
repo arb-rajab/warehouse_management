@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('level')->default(0);
             $table->string('name', 50);
             $table->integer('order_level')->default(0);
-            $table->double('commision_rate', 8, 2)->default(0.00);
+            $table->decimal('commision_rate', 8, 2)->default(0.00);
             $table->string('banner', 100)->nullable();
             $table->string('icon', 100)->nullable();
             $table->integer('featured')->default(0);

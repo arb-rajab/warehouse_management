@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('id')->autoIncrement();
             $table->string('name');
             $table->string('symbol');
-            $table->double('exchange_rate', 10, 5);
+            $table->decimal('exchange_rate', 10, 5);
             $table->integer('status')->default(0);
             $table->string('code', 20)->nullable();
             $table->timestamp('created_at')->useCurrent();

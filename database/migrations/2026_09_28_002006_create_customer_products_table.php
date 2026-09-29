@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('unit', 200)->nullable();
             $table->string('tags')->nullable();
             $table->mediumText('description')->nullable();
-            $table->double('unit_price', 20, 2)->nullable()->default(0.00);
+            $table->decimal('unit_price', 20, 2)->nullable()->default(0.00);
             $table->string('meta_title', 200)->nullable();
             $table->string('meta_description', 500)->nullable();
             $table->string('meta_img', 150)->nullable();

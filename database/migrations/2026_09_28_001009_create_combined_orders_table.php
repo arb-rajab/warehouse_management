@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('id')->autoIncrement();
             $table->integer('user_id');
             $table->text('shipping_address')->nullable();
-            $table->double('grand_total', 20, 2)->default(0.00);
+            $table->decimal('grand_total', 20, 2)->default(0.00);
             $table->timestamps();
         });
     }

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('product_id');
             $table->string('variant');
             $table->string('sku')->nullable();
-            $table->double('price', 20, 2)->default('0.00');
+            $table->decimal('price', 20, 2)->default('0.00');
             $table->integer('qty')->default('0');
             $table->integer('image')->nullable();
             $table->timestamp('created_at')->useCurrent();

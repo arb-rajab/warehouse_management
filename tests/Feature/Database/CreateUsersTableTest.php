@@ -20,6 +20,14 @@ test('down() falls back to the legacy names once a rename migration has un-prefi
     // `rename_users_table_to_wms_users`'s `down()` runs first and renames
     // these tables back to their legacy names before this migration's own
     // `down()` gets a turn.
+    //
+    // The legacy store's own `users` table (see
+    // .ai/rules/legacy-albaraka-holland.md §3.1) is a real, unrelated table
+    // that now exists permanently after every migrate, and it would collide
+    // with the bare rename below — drop it first, it plays no part in this
+    // WMS-only rename scenario.
+    Schema::dropIfExists('users');
+
     Schema::rename('wms_users', 'users');
     Schema::rename('wms_password_reset_tokens', 'password_reset_tokens');
     Schema::rename('wms_sessions', 'sessions');

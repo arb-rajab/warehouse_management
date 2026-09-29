@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('id')->autoIncrement();
             $table->integer('flash_deal_id');
             $table->integer('product_id');
-            $table->double('discount', 20, 2)->nullable()->default(0.00);
+            $table->decimal('discount', 20, 2)->nullable()->default(0.00);
             $table->string('discount_type', 20)->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent();
