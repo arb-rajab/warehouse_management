@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\StoreUser;
 use App\Models\User;
 
 return [
@@ -42,6 +43,17 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // The legacy store's own guard, merged from its config/auth.php (see
+        // .ai/rules/legacy-albaraka-holland.md sections 2 and 3): a distinct
+        // guard/provider pair, not a second 'web' entry, is what keeps
+        // hasRole() unambiguous between this app's User (guard web, wms_*
+        // permission tables) and the store's StoreUser (same permission
+        // tables, different rows) once their spatie roles share one guard.
+        'store' => [
+            'driver' => 'session',
+            'provider' => 'store_users',
+        ],
     ],
 
     /*
@@ -71,6 +83,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        'store_users' => [
+            'driver' => 'eloquent',
+            'model' => StoreUser::class,
+        ],
     ],
 
     /*
@@ -96,6 +113,16 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'wms_password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // The legacy store's own broker/table, kept separate per
+        // .ai/rules/legacy-albaraka-holland.md section 3's "one-config-wins
+        // collisions" table.
+        'store_users' => [
+            'provider' => 'store_users',
+            'table' => 'password_resets',
             'expire' => 60,
             'throttle' => 60,
         ],

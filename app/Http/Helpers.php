@@ -1011,7 +1011,11 @@ if (!function_exists('my_asset')) {
         if (env('FILESYSTEM_DRIVER') == 's3') {
             return Storage::disk('s3')->url($path);
         } else {
-            return app('url')->asset('public/' . $path, $secure);
+            // No 'public/' prefix: this app serves from public/ already (the
+            // document root), unlike the legacy layout this helper came from
+            // where the project root itself was served — see
+            // .ai/rules/legacy-albaraka-holland.md section 0.2.
+            return app('url')->asset($path, $secure);
         }
     }
 }
@@ -1026,7 +1030,7 @@ if (!function_exists('static_asset')) {
      */
     function static_asset($path, $secure = null)
     {
-        return app('url')->asset('public/' . $path, $secure);
+        return app('url')->asset($path, $secure);
     }
 }
 

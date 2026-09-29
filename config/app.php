@@ -41,6 +41,31 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    // Merged from the legacy store's config/app.php (see
+    // .ai/rules/legacy-albaraka-holland.md section 0.3): redacts these keys
+    // from a debug-mode error page's dumped superglobals.
+    'debug_blacklist' => [
+        '_ENV' => [
+            'APP_KEY',
+            'DB_PASSWORD',
+            'REDIS_PASSWORD',
+            'MAIL_PASSWORD',
+            'PUSHER_APP_KEY',
+            'PUSHER_APP_SECRET',
+        ],
+        '_SERVER' => [
+            'APP_KEY',
+            'DB_PASSWORD',
+            'REDIS_PASSWORD',
+            'MAIL_PASSWORD',
+            'PUSHER_APP_KEY',
+            'PUSHER_APP_SECRET',
+        ],
+        '_POST' => [
+            'password',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application URL
@@ -97,6 +122,22 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    /*
+    |--------------------------------------------------------------------------
+    | WMS Token
+    |--------------------------------------------------------------------------
+    |
+    | Merged from the legacy store's config/app.php. Guards routes/
+    | api_warehouse.php via WmsAuthMiddleware's `private-token` header check
+    | — see .ai/rules/legacy-albaraka-holland.md section 0.3, which flags
+    | this value as a secret that needs rotating outside this repo's scope.
+    | Kept as the same fallback default (unchanged behavior) but now
+    | overridable via env rather than hardcoded as the only value.
+    |
+    */
+
+    'wms_token' => env('WMS_TOKEN', 'wlak_leash_mch_labes_tagieh'),
+
     'key' => env('APP_KEY'),
 
     'previous_keys' => [
@@ -121,6 +162,61 @@ return [
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class Aliases (legacy store only)
+    |--------------------------------------------------------------------------
+    |
+    | This app's own code never relies on these — it always imports facades
+    | explicitly. The merged legacy store code does not: 120 of its files
+    | `use Auth;`, `use DB;`, etc. as bare global-namespace class references,
+    | which fatal at runtime ("Class not found") without an AliasLoader entry.
+    | See .ai/rules/legacy-albaraka-holland.md section 2.
+    |
+    */
+
+    'aliases' => [
+        'App' => Illuminate\Support\Facades\App::class,
+        'Artisan' => Illuminate\Support\Facades\Artisan::class,
+        'Auth' => Illuminate\Support\Facades\Auth::class,
+        'Blade' => Illuminate\Support\Facades\Blade::class,
+        'Broadcast' => Illuminate\Support\Facades\Broadcast::class,
+        'Bus' => Illuminate\Support\Facades\Bus::class,
+        'Cache' => Illuminate\Support\Facades\Cache::class,
+        'Config' => Illuminate\Support\Facades\Config::class,
+        'Cookie' => Illuminate\Support\Facades\Cookie::class,
+        'Crypt' => Illuminate\Support\Facades\Crypt::class,
+        'DB' => Illuminate\Support\Facades\DB::class,
+        'Eloquent' => Illuminate\Database\Eloquent\Model::class,
+        'Event' => Illuminate\Support\Facades\Event::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'File' => Illuminate\Support\Facades\File::class,
+        'Gate' => Illuminate\Support\Facades\Gate::class,
+        'Hash' => Illuminate\Support\Facades\Hash::class,
+        'Image' => Intervention\Image\Facades\Image::class,
+        'Lang' => Illuminate\Support\Facades\Lang::class,
+        'Log' => Illuminate\Support\Facades\Log::class,
+        'Mail' => Illuminate\Support\Facades\Mail::class,
+        'Notification' => Illuminate\Support\Facades\Notification::class,
+        'Password' => Illuminate\Support\Facades\Password::class,
+        'PDF' => niklasravnsborg\LaravelPdf\Facades\Pdf::class,
+        'QrCode' => SimpleSoftwareIO\QrCode\Facades\QrCode::class,
+        'Queue' => Illuminate\Support\Facades\Queue::class,
+        'Redirect' => Illuminate\Support\Facades\Redirect::class,
+        'Redis' => Illuminate\Support\Facades\Redis::class,
+        'Request' => Illuminate\Support\Facades\Request::class,
+        'Response' => Illuminate\Support\Facades\Response::class,
+        'Route' => Illuminate\Support\Facades\Route::class,
+        'Schema' => Illuminate\Support\Facades\Schema::class,
+        'Session' => Illuminate\Support\Facades\Session::class,
+        'Socialite' => Laravel\Socialite\Facades\Socialite::class,
+        'Storage' => Illuminate\Support\Facades\Storage::class,
+        'Str' => Illuminate\Support\Str::class,
+        'URL' => Illuminate\Support\Facades\URL::class,
+        'Validator' => Illuminate\Support\Facades\Validator::class,
+        'View' => Illuminate\Support\Facades\View::class,
     ],
 
 ];
