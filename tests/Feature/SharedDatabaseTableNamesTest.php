@@ -34,10 +34,12 @@ test('every spatie permission table name is wms-prefixed', function () {
 test('the only bare-named tables are this app\'s own domain tables plus the shared and legacy-store ones', function () {
     // Everything without a `wms_` prefix is either a table whose name was
     // specific enough to this domain that the store app had nothing like it,
-    // one of the two tables this app shares with the legacy store app
-    // (`products`, which this app has taken ownership of, and the `uploads`
-    // its thumbnails point at, which it has not — see
-    // .ai/rules/shared-database.md), or one of the legacy store's own tables
+    // one of the tables this app shares with the legacy store app
+    // (`products`, which this app has taken ownership of; the `uploads` its
+    // thumbnails point at; and `product_barcodes`, which
+    // Product::storeBarcodes() reads — none of which this app has taken
+    // ownership of except `products` — see .ai/rules/shared-database.md),
+    // or one of the legacy store's own tables
     // carried over verbatim from `shop.sql` during the schema-only merge (see
     // .ai/rules/legacy-albaraka-holland.md §3.1) — none of which collide with
     // any WMS table, which is exactly why they kept their bare names instead
@@ -111,6 +113,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'payments',
         'pickup_point_translations',
         'pickup_points',
+        'product_barcodes',
         'product_queries',
         'product_stocks',
         'product_taxes',
