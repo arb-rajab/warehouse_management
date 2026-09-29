@@ -13,6 +13,8 @@ use GuzzleHttp\Client;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +22,7 @@ use Session;
 use Socialite;
 use Storage;
 
-class LoginController extends Controller
+class LoginController extends Controller implements HasMiddleware
 {
     /*
     |--------------------------------------------------------------------------
@@ -372,8 +374,23 @@ class LoginController extends Controller
      *
      * @return void
      */
-    public function __construct()
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * Constructor-based `$this->middleware()` (the legacy laravel/ui
+     * scaffold's own pattern) was removed from the base Controller in
+     * Laravel 11 — every controller still using it throws "Call to
+     * undefined method ::middleware()" the moment it's instantiated, before
+     * any action method runs. This is the replacement `HasMiddleware`
+     * static method Laravel 11+ expects instead.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        $this->middleware('guest')->except(['logout', 'account_deletion']);
+        return [
+            new Middleware('guest', except: ['logout', 'account_deletion']),
+        ];
     }
 }

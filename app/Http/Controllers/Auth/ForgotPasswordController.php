@@ -11,10 +11,12 @@ use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Password;
 use Mail;
 
-class ForgotPasswordController extends Controller
+class ForgotPasswordController extends Controller implements HasMiddleware
 {
     /*
     |--------------------------------------------------------------------------
@@ -34,9 +36,20 @@ class ForgotPasswordController extends Controller
      *
      * @return void
      */
-    public function __construct()
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See LoginController::middleware()'s docblock for why this replaces
+     * the constructor-based `$this->middleware()` call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        $this->middleware('guest');
+        return [
+            new Middleware('guest'),
+        ];
     }
 
     /**

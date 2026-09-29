@@ -9,8 +9,10 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Auth\VerifiesEmails;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class VerificationController extends Controller
+class VerificationController extends Controller implements HasMiddleware
 {
     /*
     |--------------------------------------------------------------------------
@@ -37,11 +39,21 @@ class VerificationController extends Controller
      *
      * @return void
      */
-    public function __construct()
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See LoginController::middleware()'s docblock for why this replaces
+     * the constructor-based `$this->middleware()` call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        //$this->middleware('auth');
-        $this->middleware('signed')->only('verify');
-        $this->middleware('throttle:6,1')->only('verify', 'resend');
+        return [
+            new Middleware('signed', only: ['verify']),
+            new Middleware('throttle:6,1', only: ['verify', 'resend']),
+        ];
     }
 
     /**

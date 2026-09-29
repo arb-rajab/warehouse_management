@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\Middleware\HttpsProtocol;
 use App\Http\Middleware\Language;
+use App\Http\Middleware\UseStoreAuthGuard;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Route;
 
@@ -33,13 +34,16 @@ class RouteServiceProvider extends ServiceProvider
     public function map()
     {
         Route::prefix('temp')->group(function () {
-            Route::middleware(['web', Language::class, HttpsProtocol::class])
+            // UseStoreAuthGuard first, before Language/HttpsProtocol or any
+            // route-level auth/role middleware runs — see that class's own
+            // docblock for why every one of these three route files needs it.
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
                 ->group(base_path('routes/shop-web.php'));
 
-            Route::middleware(['web', Language::class, HttpsProtocol::class])
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
                 ->group(base_path('routes/shop-admin.php'));
 
-            Route::middleware(['web', Language::class, HttpsProtocol::class])
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
                 ->group(base_path('routes/shop-seller.php'));
 
             Route::prefix('api')->middleware('api')->group(base_path('routes/shop-api.php'));

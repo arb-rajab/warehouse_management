@@ -7,8 +7,11 @@ use Illuminate\Foundation\Auth\ResetsPasswords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Password;
 
-class ResetPasswordController extends Controller
+class ResetPasswordController extends Controller implements HasMiddleware
 {
     /*
     |--------------------------------------------------------------------------
@@ -35,9 +38,35 @@ class ResetPasswordController extends Controller
      *
      * @return void
      */
-    public function __construct()
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See LoginController::middleware()'s docblock for why this replaces
+     * the constructor-based `$this->middleware()` call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        $this->middleware('guest');
+        return [
+            new Middleware('guest'),
+        ];
+    }
+
+    /**
+     * Get the broker to be used during password reset.
+     *
+     * The stock default ('users') resets a password against
+     * config('auth.passwords.users'), whose provider is App\Models\User —
+     * this app's own admin model, not the legacy store's StoreUser. See
+     * config/auth.php's 'store_users' broker, added for exactly this.
+     *
+     * @return \Illuminate\Auth\Passwords\PasswordBroker
+     */
+    public function broker()
+    {
+        return Password::broker('store_users');
     }
 
     /**

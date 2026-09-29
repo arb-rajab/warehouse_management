@@ -18,6 +18,8 @@ use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -25,7 +27,7 @@ use Nexmo;
 use Session;
 
 
-class RegisterController extends Controller
+class RegisterController extends Controller implements HasMiddleware
 {
     /*
     |--------------------------------------------------------------------------
@@ -52,9 +54,20 @@ class RegisterController extends Controller
      *
      * @return void
      */
-    public function __construct()
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See LoginController::middleware()'s docblock for why this replaces
+     * the constructor-based `$this->middleware()` call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
     {
-        $this->middleware('guest');
+        return [
+            new Middleware('guest'),
+        ];
     }
 
     protected $userService;
