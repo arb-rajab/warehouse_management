@@ -1045,10 +1045,14 @@ if (!function_exists('static_asset')) {
 if (!function_exists('getBaseURL')) {
     function getBaseURL()
     {
-        $root = '//' . $_SERVER['HTTP_HOST'];
-        $root .= str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+        // request()->getHost() rather than $_SERVER['HTTP_HOST'] directly:
+        // the latter is never set outside a real HTTP-server-driven request
+        // (Pest's simulated requests included, since they build a Request
+        // object rather than populating superglobals), so every legacy page
+        // using this layout 500'd under test.
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 
-        return $root;
+        return '//'.request()->getHost().str_replace(basename($scriptName), '', $scriptName);
     }
 }
 
@@ -1088,8 +1092,21 @@ if (!function_exists('isUnique')) {
 if (!function_exists('get_setting')) {
     function get_setting($key, $default = null, $lang = false)
     {
+        // ->map(...)->toBase(): config/cache.php's serializable_classes
+        // allow-list (added for an unrelated Pulse-caching need, see that
+        // config's own docblock) only permits unserializing the base
+        // Illuminate\Support\Collection and stdClass/CarbonImmutable, not
+        // Eloquent's Collection subclass or any App\Models\* instance —
+        // caching BusinessSetting::all() directly 500'd every legacy page
+        // that calls get_setting() (which is most of them) the first time
+        // this cache entry was ever actually read back, since the merge
+        // newly made these routes reachable at all. Caching plain attribute
+        // arrays inside a base Collection keeps this call allow-list-safe
+        // without loosening it to admit real model classes, which the
+        // allow-list's own docblock treats as a deliberate security
+        // decision, not an oversight to route around.
         $settings = Cache::remember('business_settings', 0, function () {
-            return BusinessSetting::all();
+            return BusinessSetting::all()->map(fn (BusinessSetting $setting): array => $setting->getAttributes())->toBase();
         });
 
         if ($lang == false) {
@@ -1098,13 +1115,49 @@ if (!function_exists('get_setting')) {
             $setting = $settings->where('type', $key)->where('lang', $lang)->first();
             $setting = !$setting ? $settings->where('type', $key)->first() : $setting;
         }
-        return $setting == null ? $default : $setting->value;
+        return $setting == null ? $default : $setting['value'];
     }
 }
 
+/**
+ * Convert a hex color (`#rgb` or `#rrggbb`) to a `rgb(...)`/`rgba(...)` CSS
+ * value, used by the storefront layout to derive a translucent "soft"
+ * variant of the admin-configured brand color for its own inline styles.
+ *
+ * The legacy app called `Colorcodeconverter::convertHexToRgba()` here, a
+ * class that exists nowhere in either app nor in any installed package
+ * (confirmed identical, already-broken, in the source repo) — every
+ * storefront page using this layout 500'd on it before this fix, since the
+ * class-not-found error is fatal and unconditional, not something error
+ * reporting could have hidden.
+ */
 function hex2rgba($color, $opacity = false)
 {
-    return Colorcodeconverter::convertHexToRgba($color, $opacity);
+    $default = 'rgb(0, 0, 0)';
+
+    if (blank($color)) {
+        return $default;
+    }
+
+    $hex = ltrim($color, '#');
+
+    if (strlen($hex) === 3) {
+        $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+    }
+
+    if (strlen($hex) !== 6 || ! ctype_xdigit($hex)) {
+        return $default;
+    }
+
+    $rgb = array_map('hexdec', str_split($hex, 2));
+
+    if ($opacity === false) {
+        return 'rgb('.implode(', ', $rgb).')';
+    }
+
+    $opacity = abs((float) $opacity) > 1 ? 1.0 : (float) $opacity;
+
+    return 'rgba('.implode(', ', $rgb).', '.$opacity.')';
 }
 
 if (!function_exists('isAdmin')) {
@@ -1301,8 +1354,10 @@ if (!function_exists('calculateCommissionAffilationClubPoint')) {
 if (!function_exists('addon_is_activated')) {
     function addon_is_activated($identifier, $default = null)
     {
+        // Same allow-list-safe caching as get_setting() above — see that
+        // function's docblock.
         $addons = Cache::remember('addons', 86400, function () {
-            return Addon::all();
+            return Addon::all()->map(fn (Addon $addon): array => $addon->getAttributes())->toBase();
         });
 
         $activation = $addons->where('unique_identifier', $identifier)->where('activated', 1)->first();

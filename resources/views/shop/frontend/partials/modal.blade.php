@@ -40,7 +40,15 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form class="form-horizontal" action="{{ route('auction_product_bids.store') }}" method="POST" enctype="multipart/form-data">
+                {{-- auction_product_bids.store was never wired up as a named
+                     web route in either app (see app/Http/Controllers/Api/V2/
+                     AuctionProductBidController -- the only backing route is
+                     the JSON API's auction/place-bid, not this web form), so
+                     route() here always threw and 500'd this always-included
+                     modal on every single page. Route::has() keeps that same
+                     "the form has never actually worked" reality without
+                     taking down the whole page over it. --}}
+                <form class="form-horizontal" action="{{ Route::has('auction_product_bids.store') ? route('auction_product_bids.store') : '#' }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="product_id" id="bid_product_id" value="">
                     <div class="form-group">

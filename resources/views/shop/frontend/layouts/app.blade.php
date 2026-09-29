@@ -1,5 +1,9 @@
 <!DOCTYPE html>
- @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()->rtl == 1)
+{{-- ?->rtl: no Language row matching the active locale is a data gap (a
+     fresh/local install with no legacy language data seeded yet), not a
+     reason to 500 the entire storefront -- fall back to non-RTL exactly as
+     if rtl were 0. --}}
+ @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
 <html dir="rtl"
 lang="{{ str_replace('_', '-', app()->getLocale()) }}"
 >
@@ -56,7 +60,7 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
 
     <!-- CSS Files -->
     <link rel="stylesheet" href="{{ static_asset('assets/css/vendors.css') }}">
-    @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()->rtl == 1)
+    @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
     <link rel="stylesheet" href="{{ static_asset('assets/css/bootstrap-rtl.min.css') }}">
     @endif
     <link rel="stylesheet" href="{{ static_asset('assets/css/aiz-core.css') }}">

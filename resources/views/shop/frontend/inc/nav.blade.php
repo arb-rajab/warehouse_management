@@ -444,11 +444,11 @@
                 <div class="ml-xl-4 w-100 overflow-hidden">
                     <div class="d-flex align-items-center justify-content-center justify-content-xl-start h-100">
                         <ul class="list-inline mb-0 pl-0 hor-swipe c-scrollbar-light">
-                            @foreach (json_decode( get_setting('header_menu_labels'), true) as $key => $value)
+                            @foreach (json_decode( get_setting('header_menu_labels', '[]'), true) as $key => $value)
                             <li class="list-inline-item mr-0 animate-underline-white">
-                                <a href="{{ json_decode( get_setting('header_menu_links'), true)[$key] }}"
+                                <a href="{{ json_decode( get_setting('header_menu_links', '[]'), true)[$key] }}"
                                     class="fs-13 px-3 py-3 d-inline-block fw-700 text-white header_menu_links hov-bg-black-10
-                                    @if (url()->current() == json_decode( get_setting('header_menu_links'), true)[$key]) active @endif">
+                                    @if (url()->current() == json_decode( get_setting('header_menu_links', '[]'), true)[$key]) active @endif">
                                     {{ translate($value) }}
                                 </a>
                             </li>
@@ -516,11 +516,11 @@
         @endauth
         <hr>
         <ul class="mb-0 pl-3 pb-3 h-100">
-            @foreach (json_decode( get_setting('header_menu_labels'), true) as $key => $value)
+            @foreach (json_decode( get_setting('header_menu_labels', '[]'), true) as $key => $value)
             <li class="mr-0">
-                <a href="{{ json_decode( get_setting('header_menu_links'), true)[$key] }}"
+                <a href="{{ json_decode( get_setting('header_menu_links', '[]'), true)[$key] }}"
                     class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links
-                    @if (url()->current() == json_decode( get_setting('header_menu_links'), true)[$key]) active @endif">
+                    @if (url()->current() == json_decode( get_setting('header_menu_links', '[]'), true)[$key]) active @endif">
                     {{ translate($value) }}
                 </a>
             </li>
