@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Requests\ProductRequest;
-use Illuminate\Http\Request;
 use App\Models\AttributeValue;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductTax;
 use App\Models\ProductTranslation;
-use Carbon\Carbon;
+use App\Services\ProductFlashDealService;
+use App\Services\ProductService;
+use App\Services\ProductStockService;
+use App\Services\ProductTaxService;
 use App\Utility\ProductUtility;
 use Artisan;
-use Auth;
-use Str;
 
-use App\Services\ProductService;
-use App\Services\ProductTaxService;
-use App\Services\ProductFlashDealService;
-use App\Services\ProductStockService;
+use Auth;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Str;
 
 class ProductController extends Controller
 {
@@ -178,7 +178,7 @@ class ProductController extends Controller
 
     public function sku_combination(Request $request)
     {
-        $options = array();
+        $options = [];
         if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
             $colors_active = 1;
             array_push($options, $request->colors);
@@ -192,7 +192,7 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($request->choice_no as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $data = array();
+                $data = [];
                 foreach ($request[$name] as $key => $item) {
                     array_push($data, $item);
                 }
@@ -208,7 +208,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($request->id);
 
-        $options = array();
+        $options = [];
         if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
             $colors_active = 1;
             array_push($options, $request->colors);
@@ -222,7 +222,7 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($request->choice_no as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $data = array();
+                $data = [];
                 foreach ($request[$name] as $key => $item) {
                     array_push($data, $item);
                 }

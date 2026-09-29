@@ -11,9 +11,9 @@ class PolicyCollection extends ResourceCollection
         return [
             'data' => $this->collection->map(function($data) {
                 return [
-                    'content' => $data->content
+                    'content' => $data->content,
                 ];
-            })
+            }),
         ];
     }
 
@@ -21,7 +21,7 @@ class PolicyCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

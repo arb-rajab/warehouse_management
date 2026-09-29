@@ -3,11 +3,11 @@ namespace App\Console\Commands;
 
 use App\Models\CombinedOrder;
 use App\Models\Customer;
-use Illuminate\Console\Command;
-use App\Models\StoreUser;
 use App\Models\Order;
+use App\Models\StoreUser;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 
 class UnverifyUsers extends Command
 {

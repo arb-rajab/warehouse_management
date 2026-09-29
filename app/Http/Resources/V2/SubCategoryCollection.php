@@ -14,10 +14,10 @@ class SubCategoryCollection extends ResourceCollection
                     'name' => $data->name,
                     'subSubCategories' => new SubSubCategoryCollection($data->subSubCategories),
                     'links' => [
-                        'products' => route('products.subCategory', $data->id)
-                    ]
+                        'products' => route('products.subCategory', $data->id),
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class SubCategoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CouponRequest;
-use Illuminate\Http\Request;
 use App\Models\Coupon;
+use App\Models\Product;
 use App\Models\StoreUser;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CouponController extends Controller
 {
@@ -20,7 +22,7 @@ class CouponController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -31,7 +33,7 @@ class CouponController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -41,11 +43,11 @@ class CouponController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(CouponRequest $request)
-    {   
+    {
         $user_id = StoreUser::where('user_type', 'admin')->first()->id;
         Coupon::create($request->validated() + [
             'user_id' => $user_id,
@@ -58,7 +60,7 @@ class CouponController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -69,7 +71,7 @@ class CouponController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -80,9 +82,9 @@ class CouponController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(CouponRequest $request, Coupon $coupon)
     {
@@ -95,7 +97,7 @@ class CouponController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -107,8 +109,8 @@ class CouponController extends Controller
     public function get_coupon_form(Request $request)
     {
         if($request->coupon_type == "product_base") {
-            $admin_id = \App\Models\StoreUser::where('user_type', 'admin')->first()->id;
-            $products = filter_products(\App\Models\Product::where('user_id', $admin_id))->get();
+            $admin_id = StoreUser::where('user_type', 'admin')->first()->id;
+            $products = filter_products(Product::where('user_id', $admin_id))->get();
             return view('partials.coupons.product_base_coupon', compact('products'));
         }
         elseif($request->coupon_type == "cart_base"){
@@ -120,8 +122,8 @@ class CouponController extends Controller
     {
         if($request->coupon_type == "product_base") {
             $coupon = Coupon::findOrFail($request->id);
-            $admin_id = \App\Models\StoreUser::where('user_type', 'admin')->first()->id;
-            $products = filter_products(\App\Models\Product::where('user_id', $admin_id))->get();
+            $admin_id = StoreUser::where('user_type', 'admin')->first()->id;
+            $products = filter_products(Product::where('user_id', $admin_id))->get();
             return view('partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
         }
         elseif($request->coupon_type == "cart_base"){

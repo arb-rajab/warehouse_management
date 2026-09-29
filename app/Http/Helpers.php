@@ -1,37 +1,37 @@
 <?php
 
-use Carbon\Carbon;
-use App\Models\Cart;
-use App\Models\City;
-use App\Models\Shop;
-use App\Models\StoreUser;
-use App\Models\Addon;
-use App\Models\Coupon;
-use App\Models\Seller;
-use App\Models\Upload;
-use App\Models\Wallet;
-use App\Models\Address;
-use App\Models\Carrier;
-use App\Models\Country;
-use App\Models\Product;
-use App\Models\Currency;
-use App\Models\CouponUsage;
-use App\Models\Translation;
-use App\Models\ProductStock;
-use App\Models\CombinedOrder;
-use App\Models\SellerPackage;
-use App\Models\BusinessSetting;
-use App\Models\CustomerPackage;
-use App\Utility\CategoryUtility;
-use App\Models\SellerPackagePayment;
-use App\Utility\NotificationUtility;
-use App\Http\Resources\V2\CarrierCollection;
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\ClubPointController;
 use App\Http\Controllers\CommissionController;
+use App\Http\Resources\V2\CarrierCollection;
+use App\Models\Addon;
+use App\Models\Address;
+use App\Models\BusinessSetting;
+use App\Models\Carrier;
+use App\Models\Cart;
 use App\Models\Category;
+use App\Models\City;
+use App\Models\CombinedOrder;
+use App\Models\Country;
+use App\Models\Coupon;
+use App\Models\CouponUsage;
+use App\Models\Currency;
+use App\Models\CustomerPackage;
+use App\Models\Product;
+use App\Models\ProductStock;
+use App\Models\Seller;
+use App\Models\SellerPackage;
+use App\Models\SellerPackagePayment;
+use App\Models\Shop;
+use App\Models\StoreUser;
+use App\Models\Translation;
+use App\Models\Upload;
 use App\Models\UserPageView;
+use App\Models\Wallet;
 use App\Models\Wishlist;
+use App\Utility\CategoryUtility;
+use App\Utility\NotificationUtility;
+use Carbon\Carbon;
 use Laravel\Sanctum\PersonalAccessToken;
 
 //highlights the selected navigation on admin panel
@@ -106,7 +106,7 @@ if (!function_exists('filter_products')) {
 if (!function_exists('get_cached_products')) {
     function get_cached_products($category_id = null)
     {
-        $products = \App\Models\Product::where('published', 1)->where('approved', '1')->where('auction_product', 0);
+        $products = Product::where('published', 1)->where('approved', '1')->where('auction_product', 0);
         $verified_sellers = verified_sellers_id();
         if (get_setting('vendor_system_activation') == 1) {
             $products = $products->where(function ($p) use ($verified_sellers) {
@@ -385,7 +385,7 @@ if (!function_exists('carts_product_discount')) {
         $discount = 0;
         foreach ($cart_products as $key => $cart_product) {
             $str = '';
-            $product = \App\Models\Product::find($cart_product['product_id']);
+            $product = Product::find($cart_product['product_id']);
             if ($cart_product['variation'] != null) {
                 $str = $cart_product['variation'];
             }
@@ -787,7 +787,7 @@ function translate($key, $lang = null, $addslashes = false)
         $translation_def = new Translation;
         $translation_def->lang = 'en';
         $translation_def->lang_key = $lang_key;
-        $translation_def->lang_value = str_replace(array("\r", "\n", "\r\n"), "", $key);
+        $translation_def->lang_value = str_replace(["\r", "\n", "\r\n"], "", $key);
         $translation_def->save();
         Cache::forget('translations-en');
     }
@@ -817,19 +817,19 @@ function translate($key, $lang = null, $addslashes = false)
 
 function remove_invalid_charcaters($str)
 {
-    $str = str_ireplace(array("\\"), '', $str);
-    return str_ireplace(array('"'), '\"', $str);
+    $str = str_ireplace(["\\"], '', $str);
+    return str_ireplace(['"'], '\"', $str);
 }
 
 function getShippingCost($carts, $index, $carrier = '')
 {
     $shipping_type = get_setting('shipping_type');
-    $admin_products = array();
-    $seller_products = array();
+    $admin_products = [];
+    $seller_products = [];
     $admin_product_total_weight = 0;
     $admin_product_total_price = 0;
-    $seller_product_total_weight = array();
-    $seller_product_total_price = array();
+    $seller_product_total_weight = [];
+    $seller_product_total_price = [];
 
     $cartItem = $carts[$index];
     $product = Product::find($cartItem['product_id']);
@@ -849,7 +849,7 @@ function getShippingCost($carts, $index, $carrier = '')
                 $admin_product_total_price += (cart_product_price($cart_item, $item_product, false, false) * $cart_item['quantity']);
             }
         } else {
-            $product_ids = array();
+            $product_ids = [];
             $weight = 0;
             $price = 0;
             if (isset($seller_products[$item_product->user_id])) {
@@ -945,7 +945,7 @@ if (!function_exists('carrier_base_price')) {
 if (!function_exists('seller_base_carrier_list')) {
     function seller_base_carrier_list($owner_id)
     {
-        $carrier_list = array();
+        $carrier_list = [];
         $carts = Cart::where('user_id', auth()->user()->id)->get();
         if (count($carts) > 0) {
             $zone = $carts[0]['address'] ? Country::where('id', $carts[0]['address']['country_id'])->first()->zone_id : null;
@@ -991,7 +991,7 @@ if (!function_exists('app_timezone')) {
 if (!function_exists('uploaded_asset')) {
     function uploaded_asset($id)
     {
-        if (($asset = \App\Models\Upload::find($id)) != null) {
+        if (($asset = Upload::find($id)) != null) {
             return $asset->external_link == null ? my_asset($asset->file_name) : ($asset->file_name == null ? $asset->external_link : $asset->file_name);
         }
         return static_asset('assets/img/placeholder.jpg');
@@ -1071,7 +1071,7 @@ if (!function_exists('isUnique')) {
      */
     function isUnique($email)
     {
-        $user = \App\Models\StoreUser::where('email', $email)->first();
+        $user = StoreUser::where('email', $email)->first();
 
         if ($user == null) {
             return '1'; // $user = null means we did not get any match with the email provided by the user inside the database
@@ -1136,7 +1136,7 @@ if (!function_exists('isCustomer')) {
 if (!function_exists('formatBytes')) {
     function formatBytes($bytes, $precision = 2)
     {
-        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
 
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
@@ -1195,7 +1195,7 @@ if (!function_exists('checkout_done')) {
 if (!function_exists('wallet_payment_done')) {
     function wallet_payment_done($user_id, $amount, $payment_method, $payment_details)
     {
-        $user = \App\Models\StoreUser::find($user_id);
+        $user = StoreUser::find($user_id);
         $user->balance = $user->balance + $amount;
         $user->save();
 
@@ -1310,7 +1310,7 @@ if (!function_exists('addon_is_activated')) {
 if (!function_exists('seller_package_validity_check')) {
     function seller_package_validity_check($user_id = null)
     {
-        $user = $user_id == null ? \App\Models\StoreUser::find(Auth::user()->id) : \App\Models\StoreUser::find($user_id);
+        $user = $user_id == null ? StoreUser::find(Auth::user()->id) : StoreUser::find($user_id);
         $shop = $user->shop;
         $package_validation = false;
         if (

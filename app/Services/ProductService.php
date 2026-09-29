@@ -23,7 +23,7 @@ class ProductService
         } else {
             $user_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->first()->id;
         }
-        $tags = array();
+        $tags = [];
         if ($collection['tags'][0] != null) {
             foreach (json_decode($collection['tags'][0]) as $key => $tag) {
                 array_push($tags, $tag->value);
@@ -66,7 +66,7 @@ class ProductService
         $slug_suffix = $same_slug_count ? '-' . $same_slug_count + 1 : '';
         $slug .= $slug_suffix;
 
-        $colors = json_encode(array());
+        $colors = json_encode([]);
         if (
             isset($collection['colors_active']) &&
             $collection['colors_active'] &&
@@ -92,14 +92,14 @@ class ProductService
 
         unset($collection['colors_active']);
 
-        $choice_options = array();
+        $choice_options = [];
         if (isset($collection['choice_no']) && $collection['choice_no']) {
             $str = '';
-            $item = array();
+            $item = [];
             foreach ($collection['choice_no'] as $key => $no) {
                 $str = 'choice_options_' . $no;
                 $item['attribute_id'] = $no;
-                $attribute_data = array();
+                $attribute_data = [];
                 // foreach (json_decode($request[$str][0]) as $key => $eachValue) {
                 foreach ($collection[$str] as $key => $eachValue) {
                     // array_push($data, $eachValue->value);
@@ -118,7 +118,7 @@ class ProductService
             $attributes = json_encode($collection['choice_no']);
             unset($collection['choice_no']);
         } else {
-            $attributes = json_encode(array());
+            $attributes = json_encode([]);
         }
 
         $published = 1;
@@ -172,7 +172,7 @@ class ProductService
         }
 
 
-        $tags = array();
+        $tags = [];
         if ($collection['tags'][0] != null) {
             foreach (json_decode($collection['tags'][0]) as $key => $tag) {
                 array_push($tags, $tag->value);
@@ -217,7 +217,7 @@ class ProductService
         }
         unset($collection['flat_shipping_cost']);
 
-        $colors = json_encode(array());
+        $colors = json_encode([]);
         if (
             isset($collection['colors_active']) &&
             $collection['colors_active'] &&
@@ -243,14 +243,14 @@ class ProductService
 
         unset($collection['colors_active']);
 
-        $choice_options = array();
+        $choice_options = [];
         if (isset($collection['choice_no']) && $collection['choice_no']) {
             $str = '';
-            $item = array();
+            $item = [];
             foreach ($collection['choice_no'] as $key => $no) {
                 $str = 'choice_options_' . $no;
                 $item['attribute_id'] = $no;
-                $attribute_data = array();
+                $attribute_data = [];
                 // foreach (json_decode($request[$str][0]) as $key => $eachValue) {
                 foreach ($collection[$str] as $key => $eachValue) {
                     // array_push($data, $eachValue->value);
@@ -269,7 +269,7 @@ class ProductService
             $attributes = json_encode($collection['choice_no']);
             unset($collection['choice_no']);
         } else {
-            $attributes = json_encode(array());
+            $attributes = json_encode([]);
         }
 
         unset($collection['button']);

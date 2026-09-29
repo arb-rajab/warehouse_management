@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\ReviewCollection;
-use App\Models\Review;
 use App\Models\Product;
-use Illuminate\Http\Request;
+use App\Models\Review;
 use App\Models\StoreUser;
+use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
@@ -22,7 +22,7 @@ class ReviewController extends Controller
 
         /*
          @foreach ($detailedProduct->orderDetails as $key => $orderDetail)
-                                            @if($orderDetail->order != null && $orderDetail->order->user_id == Auth::user()->id && $orderDetail->delivery_status == 'delivered' && \App\Models\Review::where('user_id', Auth::user()->id)->where('product_id', $detailedProduct->id)->first() == null)
+                                            @if($orderDetail->order != null && $orderDetail->order->user_id == Auth::user()->id && $orderDetail->delivery_status == 'delivered' && Review::where('user_id', Auth::user()->id)->where('product_id', $detailedProduct->id)->first() == null)
                                                 @php
                                                     $commentable = true;
                                                 @endphp
@@ -33,7 +33,7 @@ class ReviewController extends Controller
         $reviewable = false;
 
         foreach ($product->orderDetails as $key => $orderDetail) {
-            if($orderDetail->order != null && $orderDetail->order->user_id == auth()->user()->id && $orderDetail->delivery_status == 'delivered' && \App\Models\Review::where('user_id', auth()->user()->id)->where('product_id', $product->id)->first() == null){
+            if($orderDetail->order != null && $orderDetail->order->user_id == auth()->user()->id && $orderDetail->delivery_status == 'delivered' && Review::where('user_id', auth()->user()->id)->where('product_id', $product->id)->first() == null){
                 $reviewable = true;
             }
         }
@@ -45,7 +45,7 @@ class ReviewController extends Controller
             ]);
         }
 
-        $review = new \App\Models\Review;
+        $review = new Review;
         $review->product_id = $request->product_id;
         $review->user_id = auth()->user()->id;
         $review->rating = $request->rating;

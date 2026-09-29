@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\RepresentativePayment;
+use Illuminate\Http\Request;
 use PDF;
 use QrCode;
 

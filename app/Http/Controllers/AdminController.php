@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Category;
 use App\Models\Product;
+use App\Utility\CategoryUtility;
 use Artisan;
 use Cache;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class AdminController extends Controller
 {
     /**
      * Show the admin dashboard.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function admin_dashboard(Request $request)
     {
@@ -26,7 +28,7 @@ class AdminController extends Controller
             $num_of_visits_data = null;
 
             foreach ($root_categories as $key => $category){
-                $category_ids = \App\Utility\CategoryUtility::children_ids($category->id);
+                $category_ids = CategoryUtility::children_ids($category->id);
                 $category_ids[] = $category->id;
 
                 $products = Product::with('stocks')->whereIn('category_id', $category_ids)->get();

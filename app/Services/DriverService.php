@@ -4,8 +4,8 @@ namespace App\Services;
 use App\Models\StoreUser;
 use App\Notifications\NewDriverTripNotification;
 use App\Utility\NotificationUtility;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class DriverService{
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ConversationCollection extends ResourceCollection
@@ -9,8 +11,8 @@ class ConversationCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -37,7 +39,7 @@ class ConversationCollection extends ResourceCollection
                     'title' => $data->title,
                     'is_seen' => $seen_status,
                 ];
-            })
+            }),
         ];
     }
 }

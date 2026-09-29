@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ZoneRequest;
 use App\Models\Country;
 use App\Models\Zone;
+use Illuminate\Http\Response;
 
 
 class ZoneController extends Controller
@@ -69,7 +70,7 @@ class ZoneController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {

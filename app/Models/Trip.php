@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 
 class Trip extends Model
 {
@@ -23,7 +23,7 @@ class Trip extends Model
         'code',
         'notes',
         'distance',
-        'duration'
+        'duration',
     ];
 
     protected $casts = [

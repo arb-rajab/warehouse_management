@@ -9,9 +9,9 @@ class GoogleRevoke implements ProviderRevoke
     {
         $token = auth()->user()->access_token;
         $ch = curl_init("https://oauth2.googleapis.com/revoke?token={$token}");
-        $header = array(
-            'Content-Type:application/x-www-form-urlencoded'
-        );
+        $header = [
+            'Content-Type:application/x-www-form-urlencoded',
+        ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         $resultdata = curl_exec($ch);

@@ -2,14 +2,14 @@
 
 namespace App\Notifications;
 
+use App\Mail\EmailManager;
+use App\Models\StoreUser;
+use Auth;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
-use App\Mail\EmailManager;
-use Auth;
-use App\Models\StoreUser;
 
 class AppEmailVerificationNotification extends Notification
 {

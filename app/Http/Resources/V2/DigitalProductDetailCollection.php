@@ -22,7 +22,7 @@ class DigitalProductDetailCollection extends ResourceCollection
                 if (!empty($photo_paths)) {
                     for ($i = 0; $i < count($photo_paths); $i++) {
                         if ($photo_paths[$i] != "" ) {
-                            $item = array();
+                            $item = [];
                             $item['variant'] = "";
                             $item['path'] = $photo_paths[$i];
                             $photos[]= $item;
@@ -34,7 +34,7 @@ class DigitalProductDetailCollection extends ResourceCollection
 
                 foreach ($data->stocks as $stockItem){
                     if($stockItem->image != null && $stockItem->image != ""){
-                        $item = array();
+                        $item = [];
                         $item['variant'] = $stockItem->variant;
                         $item['path'] = uploaded_asset($stockItem->image) ;
                         $photos[]= $item;
@@ -64,9 +64,9 @@ class DigitalProductDetailCollection extends ResourceCollection
                     'earn_point' => (float)$data->earn_point,
                     'description' => $data->getTranslation('description'),
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
-                    'link' => route('product', $data->slug)
+                    'link' => route('product', $data->slug),
                 ];
-            })
+            }),
         ];
     }
 
@@ -74,7 +74,7 @@ class DigitalProductDetailCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

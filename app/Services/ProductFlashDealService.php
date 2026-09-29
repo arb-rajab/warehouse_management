@@ -14,7 +14,7 @@ class ProductFlashDealService
 
         if ($collection['flash_deal_id']) {
             $flash_deal_product = FlashDealProduct::firstOrNew([
-                'flash_deal_id' => $collection['flash_deal_id'], 
+                'flash_deal_id' => $collection['flash_deal_id'],
                 'product_id' => $product->id]
                 );
             $flash_deal_product->flash_deal_id = $collection['flash_deal_id'];

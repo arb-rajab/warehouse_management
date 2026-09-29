@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Models\ClubPoint;
 use App\Http\Resources\V2\ClubpointCollection;
+use App\Models\ClubPoint;
 use App\Models\StoreUser;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class ClubpointController extends Controller
                     $club_point_detail->converted_amount = floatval($club_point_detail->point / get_setting('club_point_convert_rate'));
                     $club_point_detail->save();
                     $amount += $club_point_detail->converted_amount;
-                } 
+                }
             }
 
 

@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\AuthenticatesUsers;
-use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
-use Socialite;
-use App\Models\StoreUser;
-use App\Models\Customer;
 use App\Models\Cart;
+use App\Models\Customer;
+use App\Models\StoreUser;
 use App\Services\SocialRevoke;
-use Session;
+use Auth;
+use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
+use GuzzleHttp\Client;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use GuzzleHttp\Client;
-use Auth;
-use Storage;
+use Illuminate\Validation\ValidationException;
+use Session;
 
 class LoginController extends Controller
 {
@@ -32,6 +32,8 @@ class LoginController extends Controller
     */
 
     use AuthenticatesUsers;
+use Socialite;
+use Storage;
 
     /**
      * Where to redirect users after login.
@@ -44,7 +46,7 @@ class LoginController extends Controller
     /**
      * Redirect the user to the Google authentication page.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function redirectToProvider($provider)
     {
@@ -123,7 +125,7 @@ class LoginController extends Controller
     /**
      * Obtain the user information from Google.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function handleProviderCallback(Request $request, $provider)
     {
@@ -215,10 +217,10 @@ class LoginController extends Controller
     /**
      * Validate the user login request.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return void
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     protected function validateLogin(Request $request)
     {
@@ -232,7 +234,7 @@ class LoginController extends Controller
     /**
      * Get the needed authorization credentials from the request.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return array
      */
     protected function credentials(Request $request)
@@ -255,7 +257,7 @@ class LoginController extends Controller
                 ->update(
                     [
                         'user_id' => auth()->user()->id,
-                        'temp_user_id' => null
+                        'temp_user_id' => null,
                     ]
                 );
 
@@ -279,10 +281,10 @@ class LoginController extends Controller
     /**
      * Get the failed login response instance.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return \Symfony\Component\HttpFoundation\Response
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     protected function sendFailedLoginResponse(Request $request)
     {
@@ -293,8 +295,8 @@ class LoginController extends Controller
     /**
      * Log the user out of the application.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function logout(Request $request)
     {

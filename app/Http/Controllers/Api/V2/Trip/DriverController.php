@@ -12,6 +12,8 @@ use App\Http\Requests\Trips\UpdateCheckpointRequest;
 use App\Http\Requests\Trips\UpdateTripRequest;
 use App\Http\Resources\V2\Trip\TripResource;
 use App\Models\Checkpoint;
+use App\Models\Order;
+use App\Models\StoreUser;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\TripService;
@@ -226,7 +228,7 @@ class DriverController extends Controller
         $excluded_trip_id = $request->input('excluded_trip_id') ?? 0;
 
         // Fetch drivers that do not have any active trips on the selected date
-        $drivers = \App\Models\StoreUser::drivers()
+        $drivers = StoreUser::drivers()
             ->whereDoesntHave('trips', function ($query) use ($date, $excluded_trip_id) {
                 $query->whereDate('due_date', $date)
                         ->where('id', '<>', $excluded_trip_id);
@@ -234,7 +236,7 @@ class DriverController extends Controller
             ->get();
 
         // Fetch trucks that do not have any active trips on the selected date
-        $trucks = \App\Models\Truck::whereDoesntHave('trips', function ($query) use ($date, $excluded_trip_id) {
+        $trucks = Truck::whereDoesntHave('trips', function ($query) use ($date, $excluded_trip_id) {
             $query->whereDate('due_date', $date)
                 ->where('id', '<>', $excluded_trip_id); // Exclude other trips on the same date
                 })
@@ -254,10 +256,10 @@ class DriverController extends Controller
     public function getLongLatitude($id, Request $request)
     {
         if($request->type == 'order'){
-            $order = \App\Models\Order::find($id);
+            $order = Order::find($id);
             $user = $order->customer;
         }else{
-            $user = \App\Models\StoreUser::find($id);
+            $user = StoreUser::find($id);
         }
 
         if($user){

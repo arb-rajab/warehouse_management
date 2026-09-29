@@ -17,9 +17,9 @@ class UploadedFileCollection extends ResourceCollection
                     'url' => uploaded_asset($data->id),
                     'file_size' => $data->file_size,
                     'extension' => $data->extension,
-                    'type' => $data->type
+                    'type' => $data->type,
                 ];
-            })
+            }),
         ];
     }
 
@@ -27,7 +27,7 @@ class UploadedFileCollection extends ResourceCollection
     {
         return [
             'result' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

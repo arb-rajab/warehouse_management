@@ -3,8 +3,8 @@
 namespace App\Http\Resources\V2;
 
 use App\Models\Cart;
-use App\Models\StoreUser;
 use App\Models\ProductVariation;
+use App\Models\StoreUser;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Facades\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -60,7 +60,7 @@ class ProductMiniCollection extends ResourceCollection
                 if (!empty($photo_paths)) {
                     for ($i = 0; $i < count($photo_paths); $i++) {
                         if ($photo_paths[$i] != "") {
-                            $item = array();
+                            $item = [];
                             $item['variant'] = "";
                             $item['path'] = $photo_paths[$i];
                             $photos[] = $item;
@@ -70,7 +70,7 @@ class ProductMiniCollection extends ResourceCollection
 
                 foreach ($data->stocks as $stockItem) {
                     if ($stockItem->image != null && $stockItem->image != "") {
-                        $item = array();
+                        $item = [];
                         $item['variant'] = $stockItem->variant;
                         $item['path'] = uploaded_asset($stockItem->image);
                         $photos[] = $item;
@@ -146,9 +146,9 @@ class ProductMiniCollection extends ResourceCollection
                     'stars' => $data->collection?->amount ?? 0,
                     'links' => [
                         'details' => route('products.show', $data->id),
-                    ]
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -156,7 +156,7 @@ class ProductMiniCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

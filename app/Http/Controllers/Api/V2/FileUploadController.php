@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Upload;
 use App\Models\StoreUser;
+use App\Models\Upload;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Storage;
 
@@ -24,14 +24,14 @@ class FileUploadController extends Controller
             ]);
         }
 
-        $type = array(
+        $type = [
             "jpg" => "image",
             "jpeg" => "image",
             "png" => "image",
             "svg" => "image",
             "webp" => "image",
             "gif" => "image",
-        );
+        ];
 
         try {
             $image = $request->image;

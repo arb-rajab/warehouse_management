@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Seller;
 
-use Illuminate\Http\Request;
-use App\Models\Category;
 use App\Models\Brand;
-use Auth;
+use App\Models\Category;
 use App\Models\ProductsImport;
-use PDF;
+use Auth;
 use Excel;
+use Illuminate\Http\Request;
+use PDF;
 
 class ProductBulkUploadController extends Controller
 {
@@ -47,7 +47,7 @@ class ProductBulkUploadController extends Controller
             $import = new ProductsImport;
             Excel::import($import, request()->file('bulk_file'));
         }
-        
+
         return back();
     }
 

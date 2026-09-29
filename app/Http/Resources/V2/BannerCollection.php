@@ -13,9 +13,9 @@ class BannerCollection extends ResourceCollection
                 return [
                     'photo' => uploaded_asset($data),
                     'url' => route('home'),
-                    'position' => 1
+                    'position' => 1,
                 ];
-            })
+            }),
         ];
     }
 
@@ -23,7 +23,7 @@ class BannerCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

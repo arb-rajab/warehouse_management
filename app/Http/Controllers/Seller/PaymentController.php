@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Seller;
 
 use App\Models\Payment;
 use Auth;
+use Illuminate\Http\Response;
 
 class PaymentController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {

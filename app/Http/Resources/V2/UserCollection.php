@@ -21,9 +21,9 @@ class UserCollection extends ResourceCollection
                     'city' => $data->city,
                     'country' => $data->country,
                     'postal_code' => $data->postal_code,
-                    'phone' => $data->phone
+                    'phone' => $data->phone,
                 ];
-            })
+            }),
         ];
     }
 
@@ -31,7 +31,7 @@ class UserCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

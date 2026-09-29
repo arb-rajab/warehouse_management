@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CouponRequest extends FormRequest
@@ -92,7 +92,7 @@ class CouponRequest extends FormRequest
         }
         $coupon_details = null;
         if ($this->type == "product_base") {
-            $coupon_details = array();
+            $coupon_details = [];
             if($this->product_ids) {
                 foreach ($this->product_ids as $product_id) {
                     $data['product_id'] = $product_id;
@@ -101,7 +101,7 @@ class CouponRequest extends FormRequest
             }
             $coupon_details = json_encode($coupon_details);
         } elseif ($this->type == "cart_base") {
-            $data                     = array();
+            $data                     = [];
             $data['min_buy']          = $this->min_buy;
             $data['max_discount']     = $this->max_discount;
             $coupon_details           = json_encode($data);

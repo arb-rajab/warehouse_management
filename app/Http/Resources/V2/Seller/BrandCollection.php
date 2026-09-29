@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class BrandCollection extends JsonResource
@@ -9,15 +11,15 @@ class BrandCollection extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
         return [
             'id'                =>(int) $this->id,
             'name'              =>$this->name,
-            'icon'              => uploaded_asset($this->logo)
+            'icon'              => uploaded_asset($this->logo),
         ];
     }
 }

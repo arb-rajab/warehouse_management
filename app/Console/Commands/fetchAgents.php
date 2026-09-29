@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\StoreUser;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 class fetchAgents extends Command

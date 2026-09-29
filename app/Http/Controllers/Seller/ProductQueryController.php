@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\ProductQuery;
 use Auth;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 
 class ProductQueryController extends Controller
 {
+    use ValidatesRequests;
+
     /**
      * Retrieve queries that belongs to current seller
      */

@@ -17,7 +17,7 @@ class CountriesCollection extends ResourceCollection
                     'priority' => (int) $data->priority,
                     'status' => (int) $data->status,
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class CountriesCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

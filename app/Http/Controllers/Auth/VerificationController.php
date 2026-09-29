@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\VerifiesEmails;
+use App\Http\Controllers\OTPVerificationController;
 use App\Models\StoreUser;
 use Carbon\Carbon;
+use Illuminate\Foundation\Auth\VerifiesEmails;
 use Illuminate\Http\Request;
-use App\Http\Controllers\OTPVerificationController;
 
 class VerificationController extends Controller
 {
@@ -23,6 +23,7 @@ class VerificationController extends Controller
     */
 
     use VerifiesEmails;
+use Illuminate\Http\Response;
 
     /**
      * Where to redirect users after verification.
@@ -46,8 +47,8 @@ class VerificationController extends Controller
     /**
      * Show the email verification notice.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function show(Request $request)
     {
@@ -67,8 +68,8 @@ class VerificationController extends Controller
     /**
      * Resend the email verification notification.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function resend(Request $request)
     {

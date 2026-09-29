@@ -22,7 +22,7 @@ class MessageCollection extends ResourceCollection
                     'date' => Carbon::createFromFormat('Y-m-d H:i:s',$data->created_at)->format('F d, Y'),
                     'time' => Carbon::createFromFormat('Y-m-d H:i:s',$data->created_at)->format('h:i a'),
                 ];
-            })
+            }),
         ];
     }
 
@@ -30,7 +30,7 @@ class MessageCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

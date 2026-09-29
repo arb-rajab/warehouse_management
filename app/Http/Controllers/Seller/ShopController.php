@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Models\BusinessSetting;
-use Illuminate\Http\Request;
 use App\Models\Shop;
 use Auth;
+use Illuminate\Http\Request;
 
 class ShopController extends Controller
 {
@@ -51,9 +51,9 @@ class ShopController extends Controller
             $shop->youtube = $request->youtube;
         } elseif (
             $request->has('top_banner') ||
-            $request->has('sliders') || 
-            $request->has('banner_full_width_1') || 
-            $request->has('banners_half_width') || 
+            $request->has('sliders') ||
+            $request->has('banner_full_width_1') ||
+            $request->has('banners_half_width') ||
             $request->has('banner_full_width_2')
         ) {
             $shop->top_banner = $request->top_banner;
@@ -85,10 +85,10 @@ class ShopController extends Controller
 
     public function verify_form_store(Request $request)
     {
-        $data = array();
+        $data = [];
         $i = 0;
         foreach (json_decode(BusinessSetting::where('type', 'verification_form')->first()->value) as $key => $element) {
-            $item = array();
+            $item = [];
             if ($element->type == 'text') {
                 $item['type'] = 'text';
                 $item['label'] = $element->label;

@@ -2,10 +2,12 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use libphonenumber\PhoneNumberUtil;
-use libphonenumber\PhoneNumberFormat;
 use App\Models\RepresentativePayment;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
 
 class RepresentativePaymentCollection extends ResourceCollection
 {
@@ -50,8 +52,8 @@ class RepresentativePaymentCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -74,7 +76,7 @@ class RepresentativePaymentCollection extends ResourceCollection
                     'status' => $data->status,
                     'date' => $data->date,
                 ];
-            })
+            }),
         ];
     }
 
@@ -82,7 +84,7 @@ class RepresentativePaymentCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

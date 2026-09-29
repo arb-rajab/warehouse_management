@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Models\Cart;
-use App\Models\Carrier;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V2\CarrierCollection;
+use App\Models\Carrier;
+use App\Models\Cart;
 use App\Models\Country;
+use Illuminate\Http\Request;
 
 class CarrierController extends Controller
 {
     public function index()
     {
-        $seller_wise_carrier_list = array();
+        $seller_wise_carrier_list = [];
         $carts = Cart::where('user_id', auth()->user()->id)->get();
         if (count($carts) > 0) {
             $zone = $carts[0]['address'] ? Country::where('id',$carts[0]['address']['country_id'])->first()->zone_id : null;

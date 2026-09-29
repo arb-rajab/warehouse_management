@@ -246,10 +246,10 @@ class FeatureOrderTripController extends Controller
 
    public function newUpdate(Request $request, $id)
     {
-        $order = Order::findOrFail($id); 
+        $order = Order::findOrFail($id);
 
         $customer = StoreUser::findOrFail($request->customer_id);
-        
+
         $order->update([
             $order->user_id       = $customer->id,
             $order->delivery_date = $request->delivery_date,
@@ -270,11 +270,11 @@ class FeatureOrderTripController extends Controller
 
         $this->calculateOrderProfits($order);
 
-        $trip = $order->trip; 
+        $trip = $order->trip;
 
         if ($trip && $trip->driver && $trip->driver->device_token) {
             $driver = $trip->driver;
-        
+
        NotificationUtility::sendPushNotificationToUser(
             $driver,
             'تم تعديل الطلبية',

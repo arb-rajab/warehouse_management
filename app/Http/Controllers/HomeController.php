@@ -2,36 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Auth;
-use Hash;
-use Mail;
-use Cache;
-use Cookie;
-use App\Models\Page;
-use App\Models\Shop;
-use App\Models\StoreUser;
+use App\Mail\SecondEmailVerifyMailManager;
+use App\Models\AffiliateConfig;
 use App\Models\Brand;
-use App\Models\Order;
+use App\Models\Category;
 use App\Models\Country;
 use App\Models\Coupon;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\FlashDeal;
-use App\Models\OrderDetail;
-use App\Models\PickupPoint;
-use Illuminate\Support\Str;
-use App\Models\ProductQuery;
-use Illuminate\Http\Request;
-use App\Models\AffiliateConfig;
 use App\Models\CustomerPackage;
-use App\Utility\CategoryUtility;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Response;
-use Illuminate\Auth\Events\PasswordReset;
-use App\Mail\SecondEmailVerifyMailManager;
+use App\Models\FlashDeal;
 use App\Models\OffersCatalog;
+use App\Models\Order;
+use App\Models\OrderDetail;
+use App\Models\Page;
+use App\Models\PickupPoint;
+use App\Models\Product;
+use App\Models\ProductQuery;
 use App\Models\ProductVariation;
+use App\Models\Shop;
+use App\Models\StoreUser;
+use App\Utility\CategoryUtility;
+use Auth;
+use Cache;
+use Cookie;
+use Hash;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Mail;
 
 class HomeController extends Controller
 {
@@ -262,10 +262,10 @@ class HomeController extends Controller
             // Pagination using Ajax
             if (request()->ajax()) {
                 if ($request->type == 'query') {
-                    return Response::json(View::make('frontend.partials.product_query_pagination', array('product_queries' => $product_queries))->render());
+                    return Response::json(View::make('frontend.partials.product_query_pagination', ['product_queries' => $product_queries])->render());
                 }
                 if ($request->type == 'review') {
-                    return Response::json(View::make('frontend.product_details.reviews', array('reviews' => $reviews))->render());
+                    return Response::json(View::make('frontend.product_details.reviews', ['reviews' => $reviews])->render());
                 }
             }
 
@@ -318,7 +318,7 @@ class HomeController extends Controller
                 $sort_by = $request->sort_by;
                 $min_price = $request->min_price;
                 $max_price = $request->max_price;
-                $selected_categories = array();
+                $selected_categories = [];
                 $brand_id = null;
                 $rating = null;
 
@@ -504,14 +504,14 @@ class HomeController extends Controller
 
         $price += $tax;
 
-        return array(
+        return [
             'price' => single_price($price * $request->quantity),
             'quantity' => $quantity,
             'digital' => $product->digital,
             'variation' => $str,
             'max_limit' => $max_limit,
-            'in_stock' => $in_stock
-        );
+            'in_stock' => $in_stock,
+        ];
     }
 
     public function sellerpolicy()

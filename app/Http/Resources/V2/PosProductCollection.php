@@ -15,9 +15,9 @@ class PosProductCollection extends ResourceCollection
                     'name' => $data->name,
                     'variant_product' => $data->variant_product,
                     'thumbnail_image' => uploaded_asset($data->thumbnail_img),
-                    'price' => single_price($data->unit_price)
+                    'price' => single_price($data->unit_price),
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class PosProductCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

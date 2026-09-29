@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\PurchasedResource;
-use App\Http\Resources\V2\PurchaseHistoryMiniCollection;
 use App\Http\Resources\V2\PurchaseHistoryCollection;
 use App\Http\Resources\V2\PurchaseHistoryItemsCollection;
+use App\Http\Resources\V2\PurchaseHistoryMiniCollection;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
-use Illuminate\Http\Request;
 use App\Models\StoreUser;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseHistoryController extends Controller

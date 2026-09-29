@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\WalletController;
-use GuzzleHttp\Client;
 use App\Models\BusinessSetting;
+use GuzzleHttp\Client;
 use Session;
 
 class VoguepayController extends Controller

@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api\V2\Seller;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\V2\Seller\AttributeCollection;
 use App\Http\Resources\V2\Seller\BrandCollection;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-
 use App\Http\Resources\V2\Seller\CategoriesCollection;
 use App\Http\Resources\V2\Seller\ColorCollection;
+
 use App\Http\Resources\V2\Seller\ProductCollection;
 use App\Http\Resources\V2\Seller\ProductDetailsCollection;
 use App\Http\Resources\V2\Seller\ProductReviewCollection;
@@ -24,12 +22,14 @@ use App\Models\ProductTax;
 use App\Models\ProductTranslation;
 use App\Models\Review;
 use App\Models\Tax;
-use Artisan;
-
 use App\Services\ProductFlashDealService;
 use App\Services\ProductService;
 use App\Services\ProductStockService;
+
 use App\Services\ProductTaxService;
+use Artisan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -81,7 +81,7 @@ class ProductController extends Controller
 
         return AttributeCollection::collection($attributes);
 
-    }    
+    }
     public function getColors(){
         $colors =Color::orderBy('name', 'asc')->get();
 
@@ -107,7 +107,7 @@ class ProductController extends Controller
             '_token', 'sku', 'choice', 'tax_id', 'tax', 'tax_type', 'flash_deal_id', 'flash_discount', 'flash_discount_type'
         ]));
         $request->merge(['product_id' => $product->id]);
-        
+
         //VAT & Tax
         if($request->tax_id) {
             $this->productTaxService->store($request->only([
@@ -131,7 +131,7 @@ class ProductController extends Controller
 
     public function edit(Request $request, $id)
     {
-        
+
         if(auth()->user()->user_type != 'seller'){
             return $this->failed(translate('Unauthenticated User.'));
         }
@@ -228,7 +228,7 @@ class ProductController extends Controller
     public function duplicate($id)
     {
         $product = Product::findOrFail($id);
-        
+
         if (auth()->user()->id != $product->user_id) {
             return $this->failed(translate('This product is not yours'));
         }
@@ -284,12 +284,12 @@ class ProductController extends Controller
             ->select('reviews.id','reviews.rating','reviews.comment','reviews.status','reviews.updated_at','products.name as product_name','users.id as user_id','users.name','users.avatar')
             ->distinct()
             ->paginate(1);
-        
+
        return new ProductReviewCollection($reviews);
     }
 
     public function remainingUploads(){
-        
+
         $remaining_uploads=(max(0, auth()->user()->shop->product_upload_limit - auth()->user()->products()->count()) );
         return response()->json([
             'ramaining_product'=> $remaining_uploads,

@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Warehouse;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class CustomerCollection extends ResourceCollection
@@ -9,8 +11,8 @@ class CustomerCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -32,9 +34,9 @@ class CustomerCollection extends ResourceCollection
                     'company_shipping_address'  =>  $data->shipping_address,
                     'is_rep'                    => $data->is_rep,
                     'rep_serial'                => $data->rep_serial,
-                    'registered_at'             =>  $data->created_at->format('Y-m-d')
+                    'registered_at'             =>  $data->created_at->format('Y-m-d'),
                 ];
-            })
+            }),
         ];
     }
 
@@ -43,7 +45,7 @@ class CustomerCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

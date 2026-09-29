@@ -2,24 +2,24 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Models\City;
-use App\Models\Country;
 use App\Http\Resources\V2\AddressCollection;
-use App\Models\Address;
 use App\Http\Resources\V2\CitiesCollection;
 use App\Http\Resources\V2\CountriesCollection;
-use App\Models\Order;
-use App\Models\Upload;
-use App\Models\StoreUser;
-use App\Models\Wishlist;
-use Illuminate\Http\Request;
+use App\Models\Address;
 use App\Models\Cart;
+use App\Models\City;
+use App\Models\Country;
+use App\Models\Order;
+use App\Models\StoreUser;
+use App\Models\Upload;
+use App\Models\Wishlist;
+use App\Notifications\AppEmailVerificationNotification;
 use Hash;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\AppEmailVerificationNotification;
+use Storage;
 
 class ProfileController extends Controller
 {
@@ -160,7 +160,7 @@ class ProfileController extends Controller
                 'trade_license' => $user->trade_license,
                 'bank_account_number' => $user->bank_account_number,
                 'email_verified' => $user->email_verified_at != null,
-                'admin_verified' => $user->admin_verified ? 1 : 0
+                'admin_verified' => $user->admin_verified ? 1 : 0,
             ]
         ]);
     }
@@ -197,14 +197,14 @@ class ProfileController extends Controller
             ]);
         }
 
-        $type = array(
+        $type = [
             "jpg" => "image",
             "jpeg" => "image",
             "png" => "image",
             "svg" => "image",
             "webp" => "image",
             "gif" => "image",
-        );
+        ];
 
         try {
             $image = $request->image;
@@ -312,14 +312,14 @@ class ProfileController extends Controller
             ]);
         }
 
-        $type = array(
+        $type = [
             "jpg" => "image",
             "jpeg" => "image",
             "png" => "image",
             "svg" => "image",
             "webp" => "image",
             "gif" => "image",
-        );
+        ];
 
         try {
             $image = $request->image;

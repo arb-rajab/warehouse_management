@@ -19,7 +19,7 @@ class CustomerProductController extends Controller
         return new ClassifiedProductMiniCollection($products);
     }
 
-    
+
     public function ownProducts()
     {
         $products = CustomerProduct::where('user_id', auth()->user()->id)->paginate(20);

@@ -2,16 +2,16 @@
 
 namespace App\Utility;
 
-use App\Mail\InvoiceEmailManager;
-use App\Models\Order;
-use App\Models\StoreUser;
-use App\Models\SmsTemplate;
 use App\Http\Controllers\OTPVerificationController;
-use Mail;
-use Illuminate\Support\Facades\Notification;
-use App\Notifications\OrderNotification;
+use App\Mail\InvoiceEmailManager;
 use App\Models\FirebaseNotification;
+use App\Models\Order;
+use App\Models\SmsTemplate;
+use App\Models\StoreUser;
+use App\Notifications\OrderNotification;
 use Google\Client as GoogleClient;
+use Illuminate\Support\Facades\Notification;
+use Mail;
 
 class NotificationUtility
 {
@@ -53,7 +53,7 @@ class NotificationUtility
             $users = StoreUser::findMany([$order->user->id, $order->seller_id, StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->first()->id]);
         }
 
-        $order_notification = array();
+        $order_notification = [];
         $order_notification['order_id'] = $order->id;
         $order_notification['order_code'] = $order->code;
         $order_notification['user_id'] = $order->user_id;
@@ -67,8 +67,8 @@ class NotificationUtility
     {
         $url = 'https://fcm.googleapis.com/fcm/send';
 
-        $fields = array
-        (
+        $fields =
+        [
             'to' => $req->device_token,
             'notification' => [
                 'body' => $req->text,
@@ -78,15 +78,15 @@ class NotificationUtility
             'data' => [
                 'item_type' => $req->type,
                 'item_type_id' => $req->id,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK'
-            ]
-        );
+                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+            ],
+        ];
 
         //$fields = json_encode($arrayToSend);
-        $headers = array(
+        $headers = [
             'Authorization: key=' . env('FCM_SERVER_KEY'),
-            'Content-Type: application/json'
-        );
+            'Content-Type: application/json',
+        ];
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -152,7 +152,7 @@ class NotificationUtility
                     'title' => $title,
                     'body' => $body,
                 ],
-            ]
+            ],
         ];
 
         $payload = json_encode($payload);

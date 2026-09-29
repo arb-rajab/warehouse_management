@@ -3,6 +3,8 @@
 namespace App\Http\Resources\V2;
 
 use App\Models\Review;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class AuctionProductDetailCollection extends ResourceCollection
@@ -10,8 +12,8 @@ class AuctionProductDetailCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -24,7 +26,7 @@ class AuctionProductDetailCollection extends ResourceCollection
                 if (!empty($photo_paths)) {
                     for ($i = 0; $i < count($photo_paths); $i++) {
                         if ($photo_paths[$i] != "") {
-                            $item = array();
+                            $item = [];
                             $item['variant'] = "";
                             $item['path'] = $photo_paths[$i];
                             $photos[] = $item;
@@ -91,7 +93,7 @@ class AuctionProductDetailCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Models\Conversation;
 use App\Http\Resources\V2\ConversationCollection;
 use App\Http\Resources\V2\MessageCollection;
 use App\Mail\ConversationMailManager;
+use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
 use App\Models\StoreUser;

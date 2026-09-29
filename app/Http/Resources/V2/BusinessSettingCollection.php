@@ -12,9 +12,9 @@ class BusinessSettingCollection extends ResourceCollection
             'data' => $this->collection->map(function($data) {
                 return [
                     'type' => $data->type,
-                    'value' => $data->type == 'verification_form' ? json_decode($data->value) : $data->value
+                    'value' => $data->type == 'verification_form' ? json_decode($data->value) : $data->value,
                 ];
-            })
+            }),
         ];
     }
 
@@ -22,7 +22,7 @@ class BusinessSettingCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -4,13 +4,25 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Models\BusinessSetting;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\WalletController;
+use App\Models\BusinessSetting;
 use App\Models\CombinedOrder;
 use App\Models\StoreUser;
 use Illuminate\Http\Request;
+use Iyzipay\Model\Address;
+use Iyzipay\Model\BasketItem;
+use Iyzipay\Model\BasketItemType;
+use Iyzipay\Model\Buyer;
+use Iyzipay\Model\Currency;
+use Iyzipay\Model\Locale;
+use Iyzipay\Model\PaymentGroup;
+use Iyzipay\Model\PayWithIyzico;
+use Iyzipay\Model\PayWithIyzicoInitialize;
+use Iyzipay\Options;
+use Iyzipay\Request\CreatePayWithIyzicoInitializeRequest;
+use Iyzipay\Request\RetrievePayWithIyzicoRequest;
 use Redirect;
 
 class IyzicoController extends Controller
@@ -23,7 +35,7 @@ class IyzicoController extends Controller
         $amount = $request->amount;
         $user_id = $request->user_id;
 
-        $options = new \Iyzipay\Options();
+        $options = new Options();
         $options->setApiKey(env('IYZICO_API_KEY'));
         $options->setSecretKey(env('IYZICO_SECRET_KEY'));
 
@@ -33,11 +45,11 @@ class IyzicoController extends Controller
             $options->setBaseUrl("https://api.iyzipay.com");
         }
 
-        $iyzicoRequest = new \Iyzipay\Request\CreatePayWithIyzicoInitializeRequest();
-        $iyzicoRequest->setLocale(\Iyzipay\Model\Locale::TR);
+        $iyzicoRequest = new CreatePayWithIyzicoInitializeRequest();
+        $iyzicoRequest->setLocale(Locale::TR);
         $iyzicoRequest->setConversationId('123456789');
 
-        $buyer = new \Iyzipay\Model\Buyer();
+        $buyer = new Buyer();
         $buyer->setId("BY789");
         $buyer->setName("John");
         $buyer->setSurname("Doe");
@@ -47,14 +59,14 @@ class IyzicoController extends Controller
         $buyer->setCity("Istanbul");
         $buyer->setCountry("Turkey");
         $iyzicoRequest->setBuyer($buyer);
-        $shippingAddress = new \Iyzipay\Model\Address();
+        $shippingAddress = new Address();
         $shippingAddress->setContactName("Jane Doe");
         $shippingAddress->setCity("Istanbul");
         $shippingAddress->setCountry("Turkey");
         $shippingAddress->setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
         $iyzicoRequest->setShippingAddress($shippingAddress);
-        
-        $billingAddress = new \Iyzipay\Model\Address();
+
+        $billingAddress = new Address();
         $billingAddress->setContactName("Jane Doe");
         $billingAddress->setCity("Istanbul");
         $billingAddress->setCountry("Turkey");
@@ -66,17 +78,17 @@ class IyzicoController extends Controller
             $combined_order = CombinedOrder::find($combined_order_id);
             $iyzicoRequest->setPrice(round($combined_order->grand_total));
             $iyzicoRequest->setPaidPrice(round($combined_order->grand_total));
-            $iyzicoRequest->setCurrency(\Iyzipay\Model\Currency::TL);
+            $iyzicoRequest->setCurrency(Currency::TL);
             $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(\Iyzipay\Model\PaymentGroup::SUBSCRIPTION);
+            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
             $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
 
-            $basketItems = array();
-            $firstBasketItem = new \Iyzipay\Model\BasketItem();
+            $basketItems = [];
+            $firstBasketItem = new BasketItem();
             $firstBasketItem->setId(rand(1000, 9999));
             $firstBasketItem->setName("Cart Payment");
             $firstBasketItem->setCategory1("Accessories");
-            $firstBasketItem->setItemType(\Iyzipay\Model\BasketItemType::VIRTUAL);
+            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
             $firstBasketItem->setPrice(round($combined_order->grand_total));
             $basketItems[0] = $firstBasketItem;
 
@@ -84,17 +96,17 @@ class IyzicoController extends Controller
         } elseif ($payment_type == 'wallet_payment') {
             $iyzicoRequest->setPrice(round($amount));
             $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(\Iyzipay\Model\Currency::TL);
+            $iyzicoRequest->setCurrency(Currency::TL);
             $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(\Iyzipay\Model\PaymentGroup::SUBSCRIPTION);
+            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
             $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
 
-            $basketItems = array();
-            $firstBasketItem = new \Iyzipay\Model\BasketItem();
+            $basketItems = [];
+            $firstBasketItem = new BasketItem();
             $firstBasketItem->setId(rand(1000, 9999));
             $firstBasketItem->setName("Wallet Payment");
             $firstBasketItem->setCategory1("Wallet");
-            $firstBasketItem->setItemType(\Iyzipay\Model\BasketItemType::VIRTUAL);
+            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
             $firstBasketItem->setPrice(round($amount));
             $basketItems[0] = $firstBasketItem;
 
@@ -102,17 +114,17 @@ class IyzicoController extends Controller
         } elseif ($payment_type == 'seller_package_payment') {
             $iyzicoRequest->setPrice(round($amount));
             $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(\Iyzipay\Model\Currency::TL);
+            $iyzicoRequest->setCurrency(Currency::TL);
             $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(\Iyzipay\Model\PaymentGroup::SUBSCRIPTION);
+            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
             $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
 
-            $basketItems = array();
-            $firstBasketItem = new \Iyzipay\Model\BasketItem();
+            $basketItems = [];
+            $firstBasketItem = new BasketItem();
             $firstBasketItem->setId(rand(1000, 9999));
             $firstBasketItem->setName("Seller Package Payment");
             $firstBasketItem->setCategory1("SellerPackage");
-            $firstBasketItem->setItemType(\Iyzipay\Model\BasketItemType::VIRTUAL);
+            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
             $firstBasketItem->setPrice(round($amount));
             $basketItems[0] = $firstBasketItem;
 
@@ -120,24 +132,24 @@ class IyzicoController extends Controller
         } elseif ($payment_type == 'customer_package_payment') {
             $iyzicoRequest->setPrice(round($amount));
             $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(\Iyzipay\Model\Currency::TL);
+            $iyzicoRequest->setCurrency(Currency::TL);
             $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(\Iyzipay\Model\PaymentGroup::SUBSCRIPTION);
+            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
             $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
 
-            $basketItems = array();
-            $firstBasketItem = new \Iyzipay\Model\BasketItem();
+            $basketItems = [];
+            $firstBasketItem = new BasketItem();
             $firstBasketItem->setId(rand(1000, 9999));
             $firstBasketItem->setName("Customer Package Payment");
             $firstBasketItem->setCategory1("CustomerPackage");
-            $firstBasketItem->setItemType(\Iyzipay\Model\BasketItemType::VIRTUAL);
+            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
             $firstBasketItem->setPrice(round($amount));
             $basketItems[0] = $firstBasketItem;
 
             $iyzicoRequest->setBasketItems($basketItems);
         }
 
-        $payWithIyzicoInitialize = \Iyzipay\Model\PayWithIyzicoInitialize::create($iyzicoRequest, $options);
+        $payWithIyzicoInitialize = PayWithIyzicoInitialize::create($iyzicoRequest, $options);
 
         # print result
         return Redirect::to($payWithIyzicoInitialize->getPayWithIyzicoPageUrl());
@@ -145,7 +157,7 @@ class IyzicoController extends Controller
 
     public function callback(Request $request)
     {
-        $options = new \Iyzipay\Options();
+        $options = new Options();
         $options->setApiKey(env('IYZICO_API_KEY'));
         $options->setSecretKey(env('IYZICO_SECRET_KEY'));
 
@@ -155,12 +167,12 @@ class IyzicoController extends Controller
             $options->setBaseUrl("https://api.iyzipay.com");
         }
 
-        $iyzicoRequest = new \Iyzipay\Request\RetrievePayWithIyzicoRequest();
-        $iyzicoRequest->setLocale(\Iyzipay\Model\Locale::TR);
+        $iyzicoRequest = new RetrievePayWithIyzicoRequest();
+        $iyzicoRequest->setLocale(Locale::TR);
         $iyzicoRequest->setConversationId('123456789');
         $iyzicoRequest->setToken($request->token);
         # make request
-        $payWithIyzico = \Iyzipay\Model\PayWithIyzico::retrieve($iyzicoRequest, $options);
+        $payWithIyzico = PayWithIyzico::retrieve($iyzicoRequest, $options);
 
         $payment = $payWithIyzico->getRawResult();
 

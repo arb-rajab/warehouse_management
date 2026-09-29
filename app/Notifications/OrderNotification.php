@@ -2,16 +2,16 @@
 
 namespace App\Notifications;
 
+use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use App\Models\Order;
 
 class OrderNotification extends Notification
 {
     use Queueable;
-    
+
     protected $order_notification;
 
     /**
@@ -40,7 +40,7 @@ class OrderNotification extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
@@ -63,7 +63,7 @@ class OrderNotification extends Notification
             'order_code'    => $this->order_notification['order_code'],
             'user_id'       => $this->order_notification['user_id'],
             'seller_id'     => $this->order_notification['seller_id'],
-            'status'        => $this->order_notification['status']
+            'status'        => $this->order_notification['status'],
         ];
     }
 }

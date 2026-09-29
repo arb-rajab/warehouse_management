@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers\Trip;
 
+use App\Enums\CheckpointStatus;
 use App\Enums\TripStatus;
 use App\Events\SetTruckAvailability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Trips\TripRequest;
 use App\Models\Checkpoint;
 use App\Models\Order;
-use Illuminate\Http\Request;
+use App\Models\StoreUser;
 use App\Models\Trip;
 use App\Models\Truck;
-use App\Models\StoreUser;
 use App\Services\DriverService;
 use App\Services\UserService;
+use GuzzleHttp\Client;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class TripController extends Controller
 {
@@ -61,7 +64,7 @@ class TripController extends Controller
         $available_trucks = Truck::available(true)->get();
         $unavailable_trucks = Truck::available(false)->get();
         $trip = null; // to fix frontend issue
-        
+
         $orders = Order::where('delivery_status', 'on_delivery')->orderBy('created_at', 'desc')->get();
         $long_lat_array = $this->getOrdersCoordinates($orders);
 
@@ -291,12 +294,12 @@ class TripController extends Controller
 
         $truck = Truck::find($trip->truck_id);
         switch ($request->status) {
-            case \App\Enums\TripStatus::Started->value:
+            case TripStatus::Started->value:
                 $trip->started_at = now();
                 event(new SetTruckAvailability($trip, $truck, false));
                 break;
 
-            case \App\Enums\TripStatus::Closed->value:
+            case TripStatus::Closed->value:
                 $trip->closed_at = now();
                 $trip->active = false;
                 foreach($trip->checkpoints as $checkpoint){
@@ -346,7 +349,7 @@ class TripController extends Controller
         $checkpoint->status = $request->status;
 
         // Update corresponding date based on status
-        if(\App\Enums\CheckpointStatus::Delivered->value){
+        if(CheckpointStatus::Delivered->value){
             $checkpoint->arrived_at = now();
         }
 
@@ -443,7 +446,7 @@ class TripController extends Controller
                 "id" => "0",
                 "checkpoint_type" => "delivery",
                 "checkpoint_related_id" => $marker['order_id'],
-                "checkpoint_notes" => null
+                "checkpoint_notes" => null,
             ];
 
             $checkpoints_array[] = $this->formatCheckpointsArray($checkpoint, $address, $key + 1, Order::class, $long_lat_array);
@@ -489,7 +492,7 @@ class TripController extends Controller
                 return [
                     'longitude' => $checkpoint->longitudes ?? null,
                     'latitude' => $checkpoint->latitudes ?? null,
-                    'label' => $checkpoint->sort_order_in_trip . ' | ' . $checkpoint->getCustomerForCheckpoint()?->name ?? '-'
+                    'label' => $checkpoint->sort_order_in_trip . ' | ' . $checkpoint->getCustomerForCheckpoint()?->name ?? '-',
                 ];
             })
 
@@ -507,13 +510,13 @@ class TripController extends Controller
                 return "{$point['longitude']},{$point['latitude']}";
             }, $long_lat_array));
 
-            $client = new \GuzzleHttp\Client();
+            $client = new Client();
             $url = "http://router.project-osrm.org/route/v1/driving/{$coordinateString}";
 
             $response = $client->get($url, [
                 'query' => [
                     'overview' => 'full', // or 'simplified' for less detailed routes
-                    'geometries' => 'geojson'
+                    'geometries' => 'geojson',
                 ]
             ]);
 
@@ -544,7 +547,7 @@ class TripController extends Controller
                 return [
                     'longitude' => $checkpoint->longitudes ?? null,
                     'latitude' => $checkpoint->latitudes ?? null,
-                    'label' => $checkpoint->sort_order_in_trip . ' | ' . $checkpoint->getCustomerForCheckpoint()?->name ?? '-'
+                    'label' => $checkpoint->sort_order_in_trip . ' | ' . $checkpoint->getCustomerForCheckpoint()?->name ?? '-',
                 ];
             })
             // Filter out invalid points (missing longitude or latitude)
@@ -562,13 +565,13 @@ class TripController extends Controller
             }, $long_lat_array));
 
             // Step 2: Send request to OSRM `/trip` endpoint
-            $client = new \GuzzleHttp\Client();
+            $client = new Client();
             $url = "http://router.project-osrm.org/trip/v1/driving/{$coordinateString}";
 
             $response = $client->get($url, [
                 'query' => [
                     'overview' => 'full', // or 'simplified' for less detailed routes
-                    'geometries' => 'geojson'
+                    'geometries' => 'geojson',
                 ]
             ]);
 
@@ -631,7 +634,7 @@ class TripController extends Controller
      * Apply status filters to the query based on the request.
      *
      * @param Request $request
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param Builder $query
      */
     protected function applyStatusFilters(Request $request, $query)
     {
@@ -661,7 +664,7 @@ class TripController extends Controller
             "id" => "0",
             "checkpoint_type" => "other",
             "checkpoint_related_id" => 9,
-            "checkpoint_notes" => __('Default starting checkpoint')
+            "checkpoint_notes" => __('Default starting checkpoint'),
         ];
 
         $default_starting_checkpoint_user = StoreUser::find(9);

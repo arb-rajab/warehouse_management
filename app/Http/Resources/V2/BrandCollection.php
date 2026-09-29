@@ -15,10 +15,10 @@ class BrandCollection extends ResourceCollection
                     'name' => $data->getTranslation('name'),
                     'logo' => uploaded_asset($data->logo),
                     'links' => [
-                        'products' => route('api.products.brand', $data->id)
-                    ]
+                        'products' => route('api.products.brand', $data->id),
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -26,7 +26,7 @@ class BrandCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

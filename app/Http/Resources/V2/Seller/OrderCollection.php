@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class OrderCollection extends ResourceCollection
@@ -9,8 +11,8 @@ class OrderCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -22,9 +24,9 @@ class OrderCollection extends ResourceCollection
                     'total'             => format_price($data->grand_total),
                     'order_date'        => date('d-m-Y', strtotime($data->created_at)),
                     'payment_status'    => $data->payment_status,
-                    'delivery_status'   => $data->delivery_status
+                    'delivery_status'   => $data->delivery_status,
                 ];
-            })
+            }),
         ];
     }
 }

@@ -5,15 +5,15 @@ namespace App\Models;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StoreUser;
+use Auth;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\ToCollection;
-use Illuminate\Support\Str;
-use Auth;
-use Carbon\Carbon;
 use Storage;
 
 //class ProductsImport implements ToModel, WithHeadingRow, WithValidation
@@ -57,9 +57,9 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
                     'unit' => $row['unit'],
                     'meta_title' => $row['meta_title'],
                     'meta_description' => $row['meta_description'],
-                    'colors' => json_encode(array()),
-                    'choice_options' => json_encode(array()),
-                    'variations' => json_encode(array()),
+                    'colors' => json_encode([]),
+                    'choice_options' => json_encode([]),
+                    'variations' => json_encode([]),
                     'slug' => preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', strtolower($row['slug']))) . '-' . Str::random(5),
                     'thumbnail_img' => $this->downloadThumbnail($row['thumbnail_img']),
                     'photos' => $this->downloadGalleryImages($row['photos']),
@@ -97,7 +97,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
                 if (!is_numeric($value)) {
                     $onFailure('Unit price is not numeric');
                 }
-            }
+            },
         ];
     }
 
@@ -117,7 +117,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
 
     public function downloadGalleryImages($urls)
     {
-        $data = array();
+        $data = [];
         foreach (explode(',', str_replace(' ', '', $urls)) as $url) {
             $data[] = $this->downloadThumbnail($url);
         }

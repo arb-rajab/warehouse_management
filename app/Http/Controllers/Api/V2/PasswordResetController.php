@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Notifications\AppEmailVerificationNotification;
-use Illuminate\Http\Request;
-use App\Models\StoreUser;
-use App\Models\PasswordReset;
-use App\Notifications\PasswordResetRequest;
-use Illuminate\Support\Str;
 use App\Http\Controllers\OTPVerificationController;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
-
+use App\Models\PasswordReset;
+use App\Models\StoreUser;
+use App\Notifications\AppEmailVerificationNotification;
+use App\Notifications\PasswordResetRequest;
 use Hash;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+
+use Illuminate\Validation\ValidationException;
 
 class PasswordResetController extends Controller
 {

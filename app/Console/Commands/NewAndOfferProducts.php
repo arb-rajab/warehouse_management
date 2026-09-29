@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Product;
-
 use Carbon\Carbon;
+
 use Exception;
+use Illuminate\Console\Command;
 
 class NewAndOfferProducts extends Command
 {

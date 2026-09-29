@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ConversationMessageCollection extends ResourceCollection
@@ -9,14 +11,14 @@ class ConversationMessageCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
         $image = null;
         $is_seller_message = false;
-        
+
         if($this->user != null){
             $image = uploaded_asset($this->user->avatar_original);
         }

@@ -10,9 +10,10 @@ use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Services\CartService;
 use App\Services\OfferService;
+use App\Utility\NagadUtility;
+use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Auth;
 use Illuminate\Support\Facades\Validator;
 class CartController extends Controller
 {
@@ -109,9 +110,9 @@ class CartController extends Controller
         $shops = [];
         if (!empty($owner_ids)) {
             foreach ($owner_ids as $owner_id) {
-                $shop = array();
+                $shop = [];
                 $shop_items_raw_data = Cart::where('user_id', $request->user()->id)->where('owner_id', $owner_id)->get()->toArray();
-                $shop_items_data = array();
+                $shop_items_data = [];
                 if (!empty($shop_items_raw_data)) {
                     foreach ($shop_items_raw_data as $shop_items_raw_data_item) {
                         $decodedData = json_decode($shop_items_raw_data_item["variation_qty"], true);
@@ -423,7 +424,7 @@ class CartController extends Controller
             $this->cartService()->setVisitCustomerToCart();
         }
 
-        if (\App\Utility\NagadUtility::create_balance_reference($request->cost_matrix) == false) {
+        if (NagadUtility::create_balance_reference($request->cost_matrix) == false) {
             return response()->json(['result' => false, 'message' => 'Cost matrix error']);
         }
 

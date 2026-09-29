@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProductReviewCollection extends ResourceCollection
@@ -9,8 +11,8 @@ class ProductReviewCollection extends ResourceCollection
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -26,12 +28,12 @@ class ProductReviewCollection extends ResourceCollection
                     "product_name"=> $data->product_name,
                     "user_id"=>(int)  $data->user_id,
                     "name"=> $data->name,
-                    "avatar"=> $data->avatar
+                    "avatar"=> $data->avatar,
                 ];
 
             }),
 
         ];
-        
+
     }
 }

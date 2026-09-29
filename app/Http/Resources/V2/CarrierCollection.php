@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Support\Facades\Auth;
 
 class CarrierCollection extends ResourceCollection
 {
@@ -13,7 +13,7 @@ class CarrierCollection extends ResourceCollection
         $this->ownerId = $owner_id;
         return $this;
     }
-    
+
     public function toArray($request)
     {
         return [
@@ -26,7 +26,7 @@ class CarrierCollection extends ResourceCollection
                     'free_shipping' => $data->free_shipping == 1 ? true : false,
                     'transit_price' => single_price(carrier_base_price(auth()->user()->carts, $data->id, $this->ownerId)),
                 ];
-            })
+            }),
         ];
     }
 
@@ -34,7 +34,7 @@ class CarrierCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status'  => 200
+            'status'  => 200,
         ];
     }
 }

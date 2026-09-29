@@ -2,11 +2,12 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\CountWebRouteVisits;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -99,7 +100,7 @@ class RouteServiceProvider extends ServiceProvider
    */
   protected function mapWebRoutes()
   {
-    Route::middleware(['web', \App\Http\Middleware\CountWebRouteVisits::class])
+    Route::middleware(['web', CountWebRouteVisits::class])
        ->namespace($this->namespace)
        ->group(base_path('routes/web.php'));
   }

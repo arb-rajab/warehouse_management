@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Trip;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Trips\DriverRequest;
-use Illuminate\Http\Request;
+use App\Models\Country;
 use App\Models\StoreUser;
 use Hash;
+use Illuminate\Http\Request;
 
 class DriverController extends Controller
 {
@@ -31,7 +32,7 @@ class DriverController extends Controller
 
     public function create()
     {
-        $countries = \App\Models\Country::where('status', 1)->orderBy('priority')->get();
+        $countries = Country::where('status', 1)->orderBy('priority')->get();
 
         return view('backend.trips.drivers.create', compact('countries'));
     }
@@ -64,7 +65,7 @@ class DriverController extends Controller
     {
         $driver = StoreUser::find($id);
 
-        $countries = \App\Models\Country::where('status', 1)->orderBy('priority')->get();
+        $countries = Country::where('status', 1)->orderBy('priority')->get();
 
         return view('backend.trips.drivers.edit', compact('driver', 'countries'));
     }

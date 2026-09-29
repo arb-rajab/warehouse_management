@@ -86,9 +86,9 @@ class ShippingController extends Controller
         $subtotal = 0;
         if (!empty($owner_ids)) {
             foreach ($owner_ids as $owner_id) {
-                $shop = array();
+                $shop = [];
                 $shop_items_raw_data = Cart::where('user_id', auth()->user()->id)->where('owner_id', $owner_id)->get()->toArray();
-                $shop_items_data = array();
+                $shop_items_data = [];
                 if (!empty($shop_items_raw_data)) {
                     foreach ($shop_items_raw_data as $shop_items_raw_data_item) {
                         $product = Product::where('id', $shop_items_raw_data_item["product_id"])->first();
@@ -148,7 +148,7 @@ class ShippingController extends Controller
                     $shop['pickup_points']  = PickupPointResource::collection($pickup_point_list);
                 }
                 if(get_setting('minimum_order_amount_check') == 1){
-                    $default_delivery_fees = \App\Models\Product::where('mat_id', get_setting('default_specific_product'))->first();
+                    $default_delivery_fees = Product::where('mat_id', get_setting('default_specific_product'))->first();
                     if(isset($default_delivery_fees)){ // in case the `transport` product got deleted.
                         $default_delivery_fees =  $default_delivery_fees->unit_price;
                     }

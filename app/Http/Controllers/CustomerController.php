@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Customer;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Models\Address;
 use App\Models\Country;
-use App\Models\StoreUser;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use App\Notifications\AppEmailVerificationNotification;
-use App\Http\Controllers\Auth\RegisterController;
+use App\Models\Customer;
 use App\Models\RepresentativePackage;
+use App\Models\StoreUser;
+use App\Notifications\AppEmailVerificationNotification;
 use App\Services\UserService;
+use Carbon\Carbon;
 use Exception;
-use Spatie\Permission\Models\Role;
-use libphonenumber\PhoneNumberUtil;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
+use Spatie\Permission\Models\Role;
 
 class CustomerController extends Controller
 {
@@ -153,7 +154,7 @@ class CustomerController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -165,8 +166,8 @@ class CustomerController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -209,7 +210,7 @@ class CustomerController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -220,7 +221,7 @@ class CustomerController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Request $request, $id)
     {
@@ -233,9 +234,9 @@ class CustomerController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -304,7 +305,7 @@ class CustomerController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -485,7 +486,7 @@ class CustomerController extends Controller
             return back();
         }
 
-        $countries = \App\Models\Country::where('status', 1)->orderBy('priority')->get();
+        $countries = Country::where('status', 1)->orderBy('priority')->get();
 
         return view('frontend.user.create_user', compact('countries'));
     }

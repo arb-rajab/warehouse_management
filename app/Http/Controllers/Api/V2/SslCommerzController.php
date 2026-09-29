@@ -4,8 +4,8 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Models\BusinessSetting;
 use App\Http\Controllers\SSLCommerz;
+use App\Models\BusinessSetting;
 use App\Models\CombinedOrder;
 use App\Models\StoreUser;
 use App\Models\Wallet;
@@ -49,7 +49,7 @@ class SslCommerzController extends Controller
         $amount = $request->amount;
         $user_id = $request->user_id;
 
-        $post_data = array();
+        $post_data = [];
         $post_data['total_amount'] = $request->amount; # You cant not pay less than 10
         $post_data['currency'] = "BDT";
 
@@ -385,7 +385,7 @@ class SslCommerzController extends Controller
             # NEW ARRAY DECLARED TO TAKE VALUE OF ALL POST
             $pre_define_key = explode(',', $post_data['verify_key']);
 
-            $new_data = array();
+            $new_data = [];
             if (!empty($pre_define_key)) {
                 foreach ($pre_define_key as $value) {
                     if (isset($post_data[$value])) {
@@ -419,7 +419,7 @@ class SslCommerzController extends Controller
     }
 
     # FUNCTION TO GET IMAGES FROM WEB
-    public function _get_image($gw = "", $source = array())
+    public function _get_image($gw = "", $source = [])
     {
         $logo = "";
         if (!empty($source) && isset($source['desc'])) {

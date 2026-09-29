@@ -2,15 +2,16 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use App;
+use Closure;
+use Illuminate\Http\Request;
 
 class AppLanguage
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  \Closure  $next
      * @return mixed
      */
@@ -26,7 +27,7 @@ class AppLanguage
         else{
             $locale = 'en';
         }
-    
+
 
         // set laravel localization
         App::setLocale($locale);

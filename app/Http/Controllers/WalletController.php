@@ -1,9 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Wallet;
 use Auth;
+use Illuminate\Http\Request;
 use Session;
 
 class WalletController extends Controller

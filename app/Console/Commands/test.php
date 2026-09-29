@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\StoreUser;
+use Illuminate\Console\Command;
 
 
 class test extends Command
@@ -55,7 +55,7 @@ class test extends Command
 
         //
         foreach($products as $product){
-            $data = array();
+            $data = [];
 
             $data['owner_id'] = $product->user_id;
             $data['user_id'] = $user->id;

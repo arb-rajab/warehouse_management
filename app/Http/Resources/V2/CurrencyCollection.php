@@ -15,9 +15,9 @@ class CurrencyCollection extends ResourceCollection
                     'name' => $data->name,
                     'code' => $data->code,
                     'symbol' => $data->symbol,
-                    'exchange_rate' => (float) $data->exchange_rate
+                    'exchange_rate' => (float) $data->exchange_rate,
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class CurrencyCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

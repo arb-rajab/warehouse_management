@@ -8,6 +8,7 @@ use App\Models\CarrierRange;
 use App\Models\CarrierRangePrice;
 use App\Models\Zone;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CarrierController extends Controller
 {
@@ -19,7 +20,7 @@ class CarrierController extends Controller
      /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -30,7 +31,7 @@ class CarrierController extends Controller
      /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -41,8 +42,8 @@ class CarrierController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(CarrierRequest $request)
     {
@@ -85,7 +86,7 @@ class CarrierController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -97,9 +98,9 @@ class CarrierController extends Controller
      /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(CarrierRequest $request, $id)
     {
@@ -145,15 +146,15 @@ class CarrierController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
         $carrier = Carrier::findOrFail($id);
-        
+
         $carrier->carrier_ranges()->delete();
         $carrier->carrier_range_prices()->delete();
-        
+
         Carrier::destroy($id);
 
         flash(translate('Carrier has been deleted successfully'))->success();

@@ -15,16 +15,16 @@ class CartCollection extends ResourceCollection
                     'seller_id' => $data->seller_id,
                     'product' => [
                         'name' => $data->product->name,
-                        'image' => uploaded_asset($data->product->thumbnail_img)
+                        'image' => uploaded_asset($data->product->thumbnail_img),
                     ],
                     'variation' => $data->variation,
                     'price' => (float) cart_product_price($data, $data->product, false, false),
                     'tax' => (float)cart_product_tax($data,  $data->product ,false),
                     'shipping_cost' => (float) $data->shipping_cost,
                     'quantity' => (int) $data->quantity,
-                    'date' => $data->created_at->diffForHumans()
+                    'date' => $data->created_at->diffForHumans(),
                 ];
-            })
+            }),
         ];
     }
 
@@ -32,7 +32,7 @@ class CartCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

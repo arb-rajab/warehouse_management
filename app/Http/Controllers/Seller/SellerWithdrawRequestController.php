@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Seller;
 
-use Illuminate\Http\Request;
 use App\Models\SellerWithdrawRequest;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class SellerWithdrawRequestController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -23,8 +24,8 @@ class SellerWithdrawRequestController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {

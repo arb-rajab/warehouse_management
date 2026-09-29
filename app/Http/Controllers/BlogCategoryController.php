@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlogCategory; ;
 use Illuminate\Http\Request;
-use App\Models\BlogCategory; 
+use Illuminate\Http\Response;
 
 class BlogCategoryController extends Controller
 {
@@ -19,7 +20,7 @@ class BlogCategoryController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -30,7 +31,7 @@ class BlogCategoryController extends Controller
             $sort_search = $request->search;
             $categories = $categories->where('category_name', 'like', '%'.$sort_search.'%');
         }
-        
+
         $categories = $categories->paginate(15);
         return view('backend.blog_system.category.index', compact('categories', 'sort_search'));
     }
@@ -38,7 +39,7 @@ class BlogCategoryController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -49,24 +50,24 @@ class BlogCategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
-        
+
         $request->validate([
             'category_name' => 'required|max:255',
         ]);
-        
+
         $category = new BlogCategory;
-        
+
         $category->category_name = $request->category_name;
         $category->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->category_name));
-        
+
         $category->save();
-        
-        
+
+
         flash(translate('Blog category has been created successfully'))->success();
         return redirect()->route('blog-category.index');
     }
@@ -75,7 +76,7 @@ class BlogCategoryController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -86,22 +87,22 @@ class BlogCategoryController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
         $cateogry = BlogCategory::find($id);
         $all_categories = BlogCategory::all();
-        
+
         return view('backend.blog_system.category.edit',  compact('cateogry','all_categories'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -113,10 +114,10 @@ class BlogCategoryController extends Controller
 
         $category->category_name = $request->category_name;
         $category->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->category_name));
-        
+
         $category->save();
-        
-        
+
+
         flash(translate('Blog category has been updated successfully'))->success();
         return redirect()->route('blog-category.index');
     }
@@ -125,12 +126,12 @@ class BlogCategoryController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
         BlogCategory::find($id)->delete();
-        
+
         return redirect('admin/blog-category');
     }
 }

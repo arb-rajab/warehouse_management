@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App;
 use App\Http\Resources\V2\ClassifiedProductDetailCollection;
 use App\Http\Resources\V2\ClassifiedProductMiniCollection;
-use Cache;
-use App\Models\Shop;
-use App\Models\Color;
-use App\Models\Product;
-use App\Models\FlashDeal;
-use Illuminate\Http\Request;
-use App\Utility\SearchUtility;
-use App\Utility\CategoryUtility;
-use App\Http\Resources\V2\ProductCollection;
-use App\Http\Resources\V2\FlashDealCollection;
-use App\Http\Resources\V2\ProductMiniCollection;
-use App\Http\Resources\V2\ProductDetailCollection;
 use App\Http\Resources\V2\DigitalProductDetailCollection;
+use App\Http\Resources\V2\FlashDealCollection;
+use App\Http\Resources\V2\ProductCollection;
+use App\Http\Resources\V2\ProductDetailCollection;
+use App\Http\Resources\V2\ProductMiniCollection;
+use App\Models\Color;
 use App\Models\CustomerProduct;
-use App\Models\StoreProductBarcode;
-use App;
+use App\Models\FlashDeal;
+use App\Models\Product;
 use App\Models\ProductCollection as ModelsProductCollection;
+use App\Models\Shop;
+use App\Models\StoreProductBarcode;
+use App\Utility\CategoryUtility;
+use App\Utility\SearchUtility;
+use Cache;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -107,7 +107,7 @@ class ProductController extends Controller
                         'variation' => $str,
                         'max_limit' => 0,
                         'in_stock' => 0,
-                        'image' => ""
+                        'image' => "",
                     ]
 
                 ]
@@ -187,7 +187,7 @@ class ProductController extends Controller
                     'variation' => $str,
                     'max_limit' => $max_limit,
                     'in_stock' => $in_stock,
-                    'image' => $product_stock->image == null ? "" : uploaded_asset($product_stock->image)
+                    'image' => $product_stock->image == null ? "" : uploaded_asset($product_stock->image),
                 ]
 
             ]
@@ -544,7 +544,7 @@ class ProductController extends Controller
         return response()->json(
             [
                 'result' => true,
-                'data' => $product->stocks
+                'data' => $product->stocks,
             ]
         );
     }

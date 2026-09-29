@@ -4,9 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\Brand;
 use App\Models\BrandTranslation;
-use Illuminate\Console\Command;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 class ImportBrands extends Command

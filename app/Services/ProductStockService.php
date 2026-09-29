@@ -12,10 +12,10 @@ class ProductStockService
         $collection = collect($data);
 
         $options = ProductUtility::get_attribute_options($collection);
-        
+
         //Generates the combinations of customer choice options
         $combinations = ProductUtility::makeCombinations($options);
-        
+
         $variant = '';
         if (count($combinations[0]) > 0) {
             $product->variant_product = 1;
@@ -38,7 +38,7 @@ class ProductStockService
             unset($collection['current_stock']);
 
             $data = $collection->merge(compact('variant', 'qty', 'price'))->toArray();
-            
+
             ProductStock::create($data);
         }
     }

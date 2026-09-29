@@ -4,18 +4,18 @@
 namespace App\Http\Controllers\Api\V2;
 
 
+use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
-use Illuminate\Http\Request;
-use App\Models\Cart;
 use App\Models\Product;
+use Illuminate\Http\Request;
 
 class CheckoutController
 {
     public function apply_coupon_code(Request $request)
     {
-        
-        $coupon = Coupon::where('code', $request->coupon_code)->first(); 
+
+        $coupon = Coupon::where('code', $request->coupon_code)->first();
         $cart_items = Cart::where('user_id', auth()->user()->id)->where('owner_id', $coupon->user_id)->get();
         $coupon_discount = 0;
         if ($cart_items->isEmpty()) {
@@ -52,13 +52,13 @@ class CheckoutController
 
 
         $coupon_details = json_decode($coupon->details);
-        
+
 
         if ($coupon->type == 'cart_base') {
             $subtotal = 0;
             $tax = 0;
             $shipping = 0;
-            foreach ($cart_items as $key => $cartItem) { 
+            foreach ($cart_items as $key => $cartItem) {
                 $product = Product::find($cartItem['product_id']);
                 $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 $tax += cart_product_tax($cartItem, $product,false) * $cartItem['quantity'];
@@ -77,8 +77,8 @@ class CheckoutController
                 }
             }
         } elseif ($coupon->type == 'product_base') {
-            
-            foreach ($cart_items as $key => $cartItem) { 
+
+            foreach ($cart_items as $key => $cartItem) {
                 $product = Product::find($cartItem['product_id']);
                 foreach ($coupon_details as $key => $coupon_detail) {
                     if ($coupon_detail->product_id == $cartItem['product_id']) {
@@ -90,8 +90,8 @@ class CheckoutController
                     }
                 }
             }
-            
-        } 
+
+        }
 
         if($coupon_discount>0){
             Cart::where('user_id', auth()->user()->id)->update([

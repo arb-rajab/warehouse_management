@@ -2,31 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use App\Http\Controllers\AffiliateController;
-use Illuminate\Http\Request;
-use App\Models\Order;
-use App\Models\Cart;
+use App\Mail\InvoiceEmailManager;
 use App\Models\Address;
+use App\Models\Cart;
+use App\Models\CombinedOrder;
+use App\Models\Coupon;
+use App\Models\CouponUsage;
+use App\Models\DeliveryHistory;
+use App\Models\Order;
+use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\ProductStock;
-use App\Models\OrderDetail;
-use App\Models\CouponUsage;
-use App\Models\Coupon;
-use App\Models\StoreUser;
-use App\Models\CombinedOrder;
-use App\Models\SmsTemplate;
 use App\Models\ProductVariation;
-use Auth;
-use Mail;
-use App\Mail\InvoiceEmailManager;
+use App\Models\SmsTemplate;
+use App\Models\StoreUser;
 use App\Services\OfferService;
 use App\Services\OrderService;
 use App\Utility\NotificationUtility;
 use App\Utility\SmsUtility;
+use Auth;
+use Carbon\Carbon;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Mail;
 
 class OrderController extends Controller
 {
@@ -169,7 +171,7 @@ class OrderController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -179,8 +181,8 @@ class OrderController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -215,12 +217,12 @@ class OrderController extends Controller
         $combined_order->shipping_address = json_encode($shippingAddress);
         $combined_order->save();
 
-        $seller_products = array();
+        $seller_products = [];
         if ($carts[0]->by_rep) {
             $for_customer_id = $carts[0]->for_customer;
         }
         foreach ($carts as $cartItem) {
-            $product_ids = array();
+            $product_ids = [];
             $product = Product::find($cartItem['product_id']);
             if (isset($seller_products[$product->user_id])) {
                 $product_ids = $seller_products[$product->user_id];
@@ -450,7 +452,7 @@ class OrderController extends Controller
      * Display the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
 
 
@@ -458,7 +460,7 @@ class OrderController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -468,9 +470,9 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -481,7 +483,7 @@ class OrderController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -700,12 +702,12 @@ class OrderController extends Controller
             $order->delivery_history_date = date("Y-m-d H:i:s");
             $order->save();
 
-            $delivery_history = \App\Models\DeliveryHistory::where('order_id', $order->id)
+            $delivery_history = DeliveryHistory::where('order_id', $order->id)
                 ->where('delivery_status', $order->delivery_status)
                 ->first();
 
             if (empty($delivery_history)) {
-                $delivery_history = new \App\Models\DeliveryHistory;
+                $delivery_history = new DeliveryHistory;
 
                 $delivery_history->order_id = $order->id;
                 $delivery_history->delivery_status = $order->delivery_status;

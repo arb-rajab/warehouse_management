@@ -10,7 +10,7 @@ class ClassifiedProductMiniCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection->map(function($data) {
-                    
+
 
                 return [
                     'id' => $data->id,
@@ -22,7 +22,7 @@ class ClassifiedProductMiniCollection extends ResourceCollection
                     'published' => $data->published==1?true:false,
                     'status' => $data->status==1?true:false,
                 ];
-            })
+            }),
         ];
     }
 
@@ -30,7 +30,7 @@ class ClassifiedProductMiniCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Trip;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Truck;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class TruckController extends Controller

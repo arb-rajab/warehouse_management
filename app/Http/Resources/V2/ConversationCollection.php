@@ -22,7 +22,7 @@ class ConversationCollection extends ResourceCollection
                     'receiver_viewed'=> intval($data->receiver_viewed),
                     'date'=> $data->updated_at,
                 ];
-            })
+            }),
         ];
     }
 
@@ -30,7 +30,7 @@ class ConversationCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Payment;
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
-use App\Models\CombinedOrder;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\WalletController;
-use App\Http\Controllers\CheckoutController;
-use Session;
+use App\Models\CombinedOrder;
+use App\Models\CustomerPackage;
+use App\Models\SellerPackage;
 use Auth;
+use Illuminate\Http\Request;
+use Session;
 
 class AamarpayController extends Controller
 {
@@ -21,7 +21,7 @@ class AamarpayController extends Controller
             flash(translate('Please add phone number to your profile'))->warning();
             return redirect()->route('profile');
         }
-        
+
         if (Auth::user()->email == null) {
             $email = 'customer@exmaple.com';
         }
@@ -55,7 +55,7 @@ class AamarpayController extends Controller
             }
         }
 
-        $fields = array(
+        $fields = [
             'store_id' => env('AAMARPAY_STORE_ID'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
             'amount' => $amount, //transaction amount
             'payment_type' => 'VISA', //no need to change
@@ -86,8 +86,8 @@ class AamarpayController extends Controller
             'opt_b' => Session::get('combined_order_id'),
             'opt_c' => json_encode(Session::get('payment_data')),
             'opt_d' => '',
-            'signature_key' => env('AAMARPAY_SIGNATURE_KEY') //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature key
-        );
+            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature key
+        ];
 
         $fields_string = http_build_query($fields);
 

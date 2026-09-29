@@ -21,9 +21,9 @@ class GeneralSettingCollection extends ResourceCollection
                     'twitter' => $data->twitter,
                     'instagram' => $data->instagram,
                     'youtube' => $data->youtube,
-                    'google_plus' => $data->google_plus
+                    'google_plus' => $data->google_plus,
                 ];
-            })
+            }),
         ];
     }
 
@@ -31,7 +31,7 @@ class GeneralSettingCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

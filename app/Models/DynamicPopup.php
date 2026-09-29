@@ -23,7 +23,7 @@ class DynamicPopup extends Model
         'btn_background_color',
         'delay_seconds',
         'offer_id',
-        'show_page'
+        'show_page',
     ];
 
     public function offer()

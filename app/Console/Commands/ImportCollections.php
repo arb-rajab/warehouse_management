@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\ProductCollection;
-use Illuminate\Console\Command;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 
 class ImportCollections extends Command
 {
@@ -85,7 +85,7 @@ class ImportCollections extends Command
                 [
                     'name' => 'default collection',
                     'serial' => 0,
-                    'amount' => 0
+                    'amount' => 0,
                 ],
             );
 

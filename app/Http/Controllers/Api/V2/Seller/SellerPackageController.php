@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api\V2\Seller;
 
 use App\Http\Resources\V2\Seller\SellerPackageResource;
-use Illuminate\Http\Request;
+use App\Models\Order;
+use App\Models\Seller;
 use App\Models\SellerPackage;
 use App\Models\SellerPackagePayment;
-use App\Models\Seller;
-use App\Models\Order;
 use App\Utility\PayfastUtility;
 use Auth;
-use Session;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Session;
 
 class SellerPackageController extends Controller
 {

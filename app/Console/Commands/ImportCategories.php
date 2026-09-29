@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Carbon\Carbon;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
 use App\Models\Upload;
+use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 class ImportCategories extends Command

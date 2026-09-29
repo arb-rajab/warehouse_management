@@ -2,25 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Utility\PayfastUtility;
-use Illuminate\Http\Request;
-use App\Models\Category;
+use App\Models\Address;
+use App\Models\Carrier;
 use App\Models\Cart;
-use App\Models\Order;
+use App\Models\CartOffered;
+use App\Models\Category;
+use App\Models\CombinedOrder;
+use App\Models\Country;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
-use App\Models\Address;
-use App\Models\StoreUser;
-use App\Models\Carrier;
-use App\Models\CartOffered;
-use App\Models\CombinedOrder;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreUser;
 use App\Models\Visit;
-use App\Utility\PayhereUtility;
 use App\Utility\NotificationUtility;
-use Session;
+use App\Utility\PayfastUtility;
+use App\Utility\PayhereUtility;
 use Auth;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Session;
 
 class CheckoutController extends Controller
 {
@@ -77,12 +78,12 @@ class CheckoutController extends Controller
                     return (new $decorator)->pay($request);
                 } else {
                     $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
-                    $manual_payment_data = array(
+                    $manual_payment_data = [
                         'name'   => $request->payment_option,
                         'amount' => $combined_order->grand_total,
                         'trx_id' => $request->trx_id,
-                        'photo'  => $request->photo
-                    );
+                        'photo'  => $request->photo,
+                    ];
                     foreach ($combined_order->orders as $order) {
                         $order->manual_payment = 1;
                         $order->manual_payment_data = json_encode($manual_payment_data);
@@ -164,9 +165,9 @@ class CheckoutController extends Controller
             $cartItem->save();
         }
 
-        $carrier_list = array();
+        $carrier_list = [];
         // if(get_setting('shipping_type') == 'carrier_wise_shipping'){
-        //     $zone = \App\Models\Country::where('id',$carts[0]['address']['country_id'])->first()->zone_id;
+        //     $zone = Country::where('id',$carts[0]['address']['country_id'])->first()->zone_id;
 
         //     $carrier_query = Carrier::query();
         //     $carrier_query->whereIn('id',function ($query) use ($zone) {
@@ -213,7 +214,7 @@ class CheckoutController extends Controller
     public function apply_coupon_code(Request $request)
     {
         $coupon = Coupon::where('code', $request->code)->first();
-        $response_message = array();
+        $response_message = [];
 
         if ($coupon != null) {
             if (strtotime(date('d-m-Y')) >= $coupon->start_date && strtotime(date('d-m-Y')) <= $coupon->end_date) {
@@ -269,7 +270,7 @@ class CheckoutController extends Controller
                                 [
                                     'discount' => $coupon_discount / count($carts),
                                     'coupon_code' => $request->code,
-                                    'coupon_applied' => 1
+                                    'coupon_applied' => 1,
                                 ]
                             );
                         $response_message['response'] = 'success';
@@ -296,7 +297,7 @@ class CheckoutController extends Controller
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
 
         $returnHTML = view('frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'))->render();
-        return response()->json(array('response_message' => $response_message, 'html' => $returnHTML));
+        return response()->json(['response_message' => $response_message, 'html' => $returnHTML]);
     }
 
     public function remove_coupon_code(Request $request)
@@ -306,7 +307,7 @@ class CheckoutController extends Controller
                 [
                     'discount' => 0.00,
                     'coupon_code' => '',
-                    'coupon_applied' => 0
+                    'coupon_applied' => 0,
                 ]
             );
 

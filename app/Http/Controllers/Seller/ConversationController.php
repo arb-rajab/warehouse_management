@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\Seller;
 
-use Illuminate\Http\Request;
-use App\Models\Conversation;
 use App\Models\BusinessSetting;
+use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\ProductQuery;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ConversationController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -31,7 +32,7 @@ class ConversationController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -49,7 +50,7 @@ class ConversationController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function refresh(Request $request)
     {
@@ -67,8 +68,8 @@ class ConversationController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function message_store(Request $request)
     {
@@ -87,5 +88,5 @@ class ConversationController extends Controller
 
         return back();
     }
-    
+
 }

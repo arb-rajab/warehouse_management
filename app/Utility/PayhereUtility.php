@@ -50,7 +50,7 @@ class PayhereUtility
                 $order_id.
                 number_format($payhere_amount, 2, '.', '').
                 env('PAYHERE_CURRENCY').
-                strtoupper(md5(env('PAYHERE_SECRET'))) 
+                strtoupper(md5(env('PAYHERE_SECRET')))
             )
         );
         return $hash;

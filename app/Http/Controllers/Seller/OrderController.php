@@ -8,16 +8,17 @@ use App\Models\SmsTemplate;
 use App\Models\StoreUser;
 use App\Utility\NotificationUtility;
 use App\Utility\SmsUtility;
-use Illuminate\Http\Request;
 use Auth;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class OrderController extends Controller
 {
     /**
      * Display a listing of the resource to seller.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -81,7 +82,7 @@ class OrderController extends Controller
             $user->save();
         }
 
-        
+
         foreach ($order->orderDetails->where('seller_id', Auth::user()->id) as $key => $orderDetail) {
             $orderDetail->delivery_status = $request->status;
             $orderDetail->save();
@@ -140,7 +141,7 @@ class OrderController extends Controller
             $orderDetail->payment_status = $request->status;
             $orderDetail->save();
         }
-        
+
         $status = 'paid';
         foreach ($order->orderDetails as $key => $orderDetail) {
             if ($orderDetail->payment_status != 'paid') {

@@ -32,7 +32,7 @@ class RefundRequestCollection extends ResourceCollection
                     'reason' => $data->reason,
                     'date' => date('d-m-Y', strtotime($data->created_at)),
                 ];
-            })
+            }),
         ];
     }
 
@@ -40,7 +40,7 @@ class RefundRequestCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

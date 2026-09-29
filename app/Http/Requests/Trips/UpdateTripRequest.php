@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Trips;
 
+use App\Enums\TripStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\TripStatus;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateTripRequest extends FormRequest

@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\StoreUser;
-use Illuminate\Console\Command;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 class fetchMemebers extends Command

@@ -16,7 +16,7 @@ class CitiesCollection extends ResourceCollection
                     'name' => $data->name,
                     'cost' => $data->cost,
                 ];
-            })
+            }),
         ];
     }
 
@@ -24,7 +24,7 @@ class CitiesCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

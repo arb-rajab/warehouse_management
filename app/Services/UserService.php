@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class UserService
 {

@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\OTPVerificationController;
 use App\Http\Resources\V2\CustomerCollection;
 use App\Http\Resources\V2\Warehouse\CustomerDetailsResource;
+use App\Models\Address;
+use App\Models\BusinessSetting;
+use App\Models\Cart;
+use App\Models\CartOffered;
+use App\Models\Country;
+use App\Models\StoreUser;
+use App\Models\Visit;
+use App\Notifications\AppEmailVerificationNotification;
+use App\Services\UserService;
+use Auth;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Models\Cart;
-use App\Models\StoreUser;
-use App\Models\Country;
-use App\Models\Address;
-use Auth;
-use App\Notifications\AppEmailVerificationNotification;
-use App\Http\Controllers\OTPVerificationController;
-use App\Models\BusinessSetting;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Services\UserService;
-use App\Models\CartOffered;
-use App\Models\Visit;
-use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
@@ -63,7 +63,7 @@ class CustomerController extends Controller
         }
 
         $data = [
-            'data' => $users->select('id', 'name', 'AccSysID as otajerID', 'company_name')->get()
+            'data' => $users->select('id', 'name', 'AccSysID as otajerID', 'company_name')->get(),
         ];
 
         return $data;
@@ -199,7 +199,7 @@ class CustomerController extends Controller
 
     public function create_customer(Request $request)
     {
-        $messages = array(
+        $messages = [
             'name.required' => translate('Name is required'),
             'email_or_phone.required' => $request->register_by == 'email' ? translate('Email is required') : translate('Phone is required'),
             'email_or_phone.email' => translate('Email must be a valid email address'),
@@ -207,8 +207,8 @@ class CustomerController extends Controller
             'email_or_phone.unique' => $request->register_by == 'email' ? translate('The email has already been taken') : translate('The phone has already been taken'),
             'password.required' => translate('Password is required'),
             'password.confirmed' => translate('Password confirmation does not match'),
-            'password.min' => translate('Minimum 6 digits required for password')
-        );
+            'password.min' => translate('Minimum 6 digits required for password'),
+        ];
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'company_name' => 'required|string|max:255',
@@ -295,7 +295,7 @@ class CustomerController extends Controller
                 'trade_license' => $user->trade_license,
                 'bank_account_number' => $user->bank_account_number,
                 'email_verified' => $user->email_verified_at != null,
-                'admin_verified' => $user->admin_verified ? 1 : 0
+                'admin_verified' => $user->admin_verified ? 1 : 0,
             ]
         ]);
     }

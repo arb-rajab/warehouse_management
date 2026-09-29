@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Models\Search;
-use App\Models\Product;
 use App\Models\Brand;
+use App\Models\Product;
+use App\Models\Search;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 

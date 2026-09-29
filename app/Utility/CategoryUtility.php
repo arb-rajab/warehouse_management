@@ -20,7 +20,7 @@ class CategoryUtility
 
         $children = CategoryUtility::get_immediate_children($id, $with_trashed, true);
 
-        return !empty($children) ? array_column($children, 'id') : array();
+        return !empty($children) ? array_column($children, 'id') : [];
     }
 
     public static function get_immediate_children_count($id, $with_trashed = false)
@@ -29,7 +29,7 @@ class CategoryUtility
     }
 
     /*when with trashed is true id will get even the deleted items*/
-    public static function flat_children($id, $with_trashed = false, $container = array(), $visited = array())
+    public static function flat_children($id, $with_trashed = false, $container = [], $visited = [])
     {
         // Cycle guard: a category whose parent_id points back into its own
         // ancestry (e.g. parent_id == id) used to recurse until PHP ran out of
@@ -57,7 +57,7 @@ class CategoryUtility
     {
         $children = CategoryUtility::flat_children($id, $with_trashed = false);
 
-        return !empty($children) ? array_column($children, 'id') : array();
+        return !empty($children) ? array_column($children, 'id') : [];
     }
 
     public static function move_children_to_parent($id)

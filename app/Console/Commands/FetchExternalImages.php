@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManagerStatic as Image;
 
 class FetchExternalImages extends Command

@@ -2,14 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Hash;
-use App\Models\StoreUser;
 use App\Models\Address;
 use App\Models\Country;
+use App\Models\StoreUser;
 use App\Services\UserService;
-use Illuminate\Support\Facades\DB;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 
 class ImportCustomersFromArray extends Command

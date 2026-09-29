@@ -1,19 +1,19 @@
 <?php
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\CombinedOrder;
 use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\WalletController;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\SSLCommerz;
+use App\Http\Controllers\WalletController;
+use App\Models\CombinedOrder;
+use App\Models\CustomerPackage;
+use App\Models\SellerPackage;
 use App\Models\StoreUser;
-use Session;
 use Auth;
+use Illuminate\Http\Request;
+use Session;
 
 session_start();
 
@@ -27,7 +27,7 @@ class SslcommerzController extends Controller
         if(Session::has('payment_type')){
             if(Session::get('payment_type') == 'cart_payment'){
                 $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
-                $post_data = array();
+                $post_data = [];
                 $post_data['total_amount'] = $combined_order->grand_total; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = substr(md5($request->session()->get('combined_order_id')), 0, 10); // tran_id must be unique
@@ -50,10 +50,10 @@ class SslcommerzController extends Controller
                 // $post_data['cus_country'] = $request->session()->get('shipping_info')['country'];
                 // $post_data['cus_phone'] = $request->session()->get('shipping_info')['phone'];
                 // $post_data['cus_email'] = $request->session()->get('shipping_info')['email'];
-                
+
             }
             elseif (Session::get('payment_type') == 'wallet_payment') {
-                $post_data = array();
+                $post_data = [];
                 $post_data['total_amount'] = $request->session()->get('payment_data')['amount']; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
@@ -68,11 +68,11 @@ class SslcommerzController extends Controller
                 // $_SESSION['payment_values']['payment_data']=$request->session()->get('payment_data');
                 // $_SESSION['payment_values']['payment_type']=$request->session()->get('payment_type');
                 #End to save these value  in session to pick in success page.
-                
+
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {
                 $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-                $post_data = array();
+                $post_data = [];
                 $post_data['total_amount'] = $customer_package->amount; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
@@ -90,7 +90,7 @@ class SslcommerzController extends Controller
             }
             elseif (Session::get('payment_type') == 'seller_package_payment') {
                 $seller_package = SellerPackage::findOrFail(Session::get('payment_data')['seller_package_id']);
-                $post_data = array();
+                $post_data = [];
                 $post_data['total_amount'] = $seller_package->amount; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
@@ -107,7 +107,7 @@ class SslcommerzController extends Controller
                 #End to save these value  in session to pick in success page.
 
             }
-            
+
             # CUSTOMER INFORMATION
             $user = Auth::user();
             $post_data['cus_name'] = $user->name;
@@ -140,12 +140,12 @@ class SslcommerzController extends Controller
         // $post_data['value_d'] = "ref004";
 
         $sslc = new SSLCommerz();
-        
+
         # initiate(Transaction Data , false: Redirect to SSLCOMMERZ gateway/ true: Show all the Payement gateway here )
         $payment_options = $sslc->initiate($post_data, false);
         if (!is_array($payment_options)) {
             print_r($payment_options);
-            $payment_options = array();
+            $payment_options = [];
         }
 
     }

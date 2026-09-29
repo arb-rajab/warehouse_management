@@ -3,8 +3,8 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use Illuminate\Http\Request;
 use App\Models\ManualPaymentMethod;
+use Illuminate\Http\Request;
 
 class PaymentTypesController
 {
@@ -22,11 +22,11 @@ class PaymentTypesController
             $list = $request->list; // ?list=offline
         }
 
-        $payment_types = array();
+        $payment_types = [];
 
         if ($list == "online" || $list == "both") {
             if (get_setting('iyzico') == 1) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'iyzico';
                 $payment_type['payment_type_key'] = 'iyzico';
                 $payment_type['image'] = static_asset('assets/img/cards/iyzico.png');
@@ -42,7 +42,7 @@ class PaymentTypesController
             }
 
             if (get_setting('bkash') == 1) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'bkash';
                 $payment_type['payment_type_key'] = 'bkash';
                 $payment_type['image'] = static_asset('assets/img/cards/bkash.png');
@@ -58,7 +58,7 @@ class PaymentTypesController
             }
 
             if (get_setting('nagad') == 1) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'nagad';
                 $payment_type['payment_type_key'] = 'nagad';
                 $payment_type['image'] = static_asset('assets/img/cards/nagad.png');
@@ -74,7 +74,7 @@ class PaymentTypesController
             }
 
             if (get_setting('sslcommerz_payment') == 1) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'sslcommerz_payment';
                 $payment_type['payment_type_key'] = 'sslcommerz';
                 $payment_type['image'] = static_asset('assets/img/cards/sslcommerz.png');
@@ -95,7 +95,7 @@ class PaymentTypesController
         // you cannot recharge wallet by wallet or cash payment
         if ($mode != 'wallet' && $mode != 'seller_package' && $list != "offline") {
             if (get_setting('wallet_system') == 1) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'wallet_system';
                 $payment_type['payment_type_key'] = 'wallet';
                 $payment_type['image'] = static_asset('assets/img/cards/wallet.png');
@@ -119,12 +119,12 @@ class PaymentTypesController
                     if ($haveDigitalProduct || $cash_on_delivery) {
                         break;
                     }
-                    
+
                 }
-            } 
+            }
 
             if (get_setting('cash_payment') == 1  && !$haveDigitalProduct && !$cash_on_delivery) {
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'cash_payment';
                 $payment_type['payment_type_key'] = 'cash_on_delivery';
                 $payment_type['image'] = static_asset('assets/img/cards/cod.png');
@@ -151,7 +151,7 @@ class PaymentTypesController
                 }
 
 
-                $payment_type = array();
+                $payment_type = [];
                 $payment_type['payment_type'] = 'manual_payment';
                 $payment_type['payment_type_key'] = 'manual_payment_' . $method->id;
                 $payment_type['image'] = uploaded_asset($method->photo);

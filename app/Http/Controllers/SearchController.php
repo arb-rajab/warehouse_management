@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Search;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Brand;
-use App\Models\StoreUser;
-use App\Models\Color;
-use App\Models\Shop;
 use App\Models\Attribute;
 use App\Models\AttributeCategory;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Color;
+use App\Models\Product;
+use App\Models\Search;
+use App\Models\Shop;
+use App\Models\StoreUser;
 use App\Utility\CategoryUtility;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class SearchController extends Controller
 {
@@ -25,7 +26,7 @@ class SearchController extends Controller
         $max_price = $request->max_price;
         $seller_id = $request->seller_id;
         $attributes = Attribute::all();
-        $selected_attribute_values = array();
+        $selected_attribute_values = [];
         $colors = Color::all();
         $selected_color = null;
 
@@ -166,7 +167,7 @@ class SearchController extends Controller
     //Suggest Search
     public function ajax_search(Request $request)
     {
-        $keywords = array();
+        $keywords = [];
         $query = $request->search;
         $products = Product::where('tags', 'like', '%' . $query . '%')->get();
         foreach ($products as $key => $product) {
@@ -222,8 +223,8 @@ class SearchController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {

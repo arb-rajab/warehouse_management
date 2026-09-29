@@ -72,7 +72,7 @@ class OfferController extends Controller
         if($request->has('brand_offer')){
             $result = $this->update_brand_offer($request, $id);
             if($result){
-            
+
                 flash(translate('Offer Deal has been updated successfully'))->success();
                 return redirect()->route('offer_deals.index');
             }

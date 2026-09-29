@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\StoreUser;
 use App\Models\Visit;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class VisitController extends Controller
 {

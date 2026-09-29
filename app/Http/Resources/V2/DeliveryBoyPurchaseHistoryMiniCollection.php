@@ -24,7 +24,7 @@ class DeliveryBoyPurchaseHistoryMiniCollection extends ResourceCollection
                         $delivery_pickup_latitude = floatval(get_setting('delivery_pickup_latitude'));
                         $delivery_pickup_longitude = floatval(get_setting('delivery_pickup_longitude'));
                     }
-                    
+
                 }
                 $shipping_address = json_decode($data->shipping_address,true);
                 $location_available = false;
@@ -57,10 +57,10 @@ class DeliveryBoyPurchaseHistoryMiniCollection extends ResourceCollection
                     'delivery_pickup_latitude' => $delivery_pickup_latitude,
                     'delivery_pickup_longitude' => $delivery_pickup_longitude,
                     'links' => [
-                        'details' => ""
-                    ]
+                        'details' => "",
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -68,7 +68,7 @@ class DeliveryBoyPurchaseHistoryMiniCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

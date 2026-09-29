@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V2\Seller;
 
 use App\Http\Resources\V2\RefundRequestCollection;
-use Illuminate\Http\Request;
-
 use App\Models\RefundRequest;
+
+use Illuminate\Http\Request;
 
 
 class RefundController extends Controller
@@ -18,8 +18,8 @@ class RefundController extends Controller
         $refunds = RefundRequest::where('seller_id',$sellerId)->latest()->paginate(10);
         return new RefundRequestCollection($refunds);
     }
-    
-    
+
+
         public function request_approval_vendor(Request $request)
     {
         $refund = RefundRequest::findOrFail($request->refund_id);
@@ -32,7 +32,7 @@ class RefundController extends Controller
             $refund->seller_approval = 1;
         }
 
-        if ($refund->save()) 
+        if ($refund->save())
         {
            return $this->success(translate('Refund Status has been change successfully'))  ;
         }
@@ -51,8 +51,8 @@ class RefundController extends Controller
       elseif (auth()->user()->user_type == 'seller' && $refund->seller_id==auth()->user()->id){
           $refund->seller_approval = 2;
       }
-      
-      if ($refund->save()) 
+
+      if ($refund->save())
         {
            return $this->success(translate('Refund Status has been change successfully'))  ;
         }

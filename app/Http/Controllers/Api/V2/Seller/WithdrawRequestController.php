@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V2\Seller;
 
 use App\Http\Resources\V2\Seller\SellerWithdrawResource;
-use Illuminate\Http\Request;
 use App\Models\SellerWithdrawRequest;
 use Auth;
+use Illuminate\Http\Request;
 use Response;
 
 class WithdrawRequestController extends Controller
@@ -25,7 +25,7 @@ class WithdrawRequestController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)

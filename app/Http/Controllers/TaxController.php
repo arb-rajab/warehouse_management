@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Tax;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class TaxController extends Controller
 {
@@ -15,7 +16,7 @@ class TaxController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -26,7 +27,7 @@ class TaxController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -36,15 +37,15 @@ class TaxController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
         $tax = new Tax;
         $tax->name = $request->name;
 //        $pickup_point->address = $request->address;
-        
+
         if ($tax->save()) {
 
             flash(translate('Tax has been inserted successfully'))->success();
@@ -61,7 +62,7 @@ class TaxController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -72,7 +73,7 @@ class TaxController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -83,9 +84,9 @@ class TaxController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -101,7 +102,7 @@ class TaxController extends Controller
             return back();
         }
     }
-    
+
     public function change_tax_status(Request $request) {
         $tax = Tax::findOrFail($request->id);
         if($tax->tax_status == 1) {
@@ -109,10 +110,10 @@ class TaxController extends Controller
         } else {
             $tax->tax_status = 1;
         }
-        
+
         if($tax->save()) {
             return 1;
-        } 
+        }
         return 0;
     }
 
@@ -120,10 +121,10 @@ class TaxController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
-    {   
+    {
         if(Tax::destroy($id)){
             flash(translate('Tax has been deleted successfully'))->success();
             return redirect()->route('tax.index');

@@ -20,10 +20,10 @@ class SearchProductCollection extends ResourceCollection
                         'details' => route('products.show', $data->id),
                         'reviews' => route('api.reviews.index', $data->id),
                         'related' => route('products.related', $data->id),
-                        'top_from_seller' => route('products.topFromSeller', $data->id)
-                    ]
+                        'top_from_seller' => route('products.topFromSeller', $data->id),
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -31,7 +31,7 @@ class SearchProductCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

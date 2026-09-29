@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\V2\Seller;
 
+use App\Http\Resources\V2\Seller\CommissionHistoryResource;
 use App\Http\Resources\V2\Seller\ProductCollection;
 use App\Http\Resources\V2\Seller\ProductMiniCollection;
-use App\Http\Resources\V2\Seller\CommissionHistoryResource;
 use App\Http\Resources\V2\Seller\SellerPackageResource;
 use App\Http\Resources\V2\Seller\SellerPaymentResource;
 use App\Http\Resources\V2\ShopCollection;
@@ -16,11 +16,11 @@ use App\Models\OrderDetail;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Shop;
-use Illuminate\Http\Request;
 use App\Utility\SearchUtility;
 use Cache;
 use Carbon\Carbon;
 use DB;
+use Illuminate\Http\Request;
 use Response;
 
 class ShopController extends Controller
@@ -45,7 +45,7 @@ class ShopController extends Controller
     public function update(Request $request)
     {
 
-        
+
         $shop = Shop::where('user_id',auth()->user()->id)->first();
         $successMessage='Shop info updated successfully';
         $failedMessage='Shop info updated failed';
@@ -79,7 +79,7 @@ class ShopController extends Controller
             $shop->google = $request->google;
             $shop->twitter = $request->twitter;
             $shop->youtube = $request->youtube;
-        }elseif(           
+        }elseif(
         $request->has('cash_on_delivery_status') ||
         $request->has('bank_payment_status') ||
         $request->has('bank_name') ||
@@ -87,7 +87,7 @@ class ShopController extends Controller
         $request->has('bank_acc_no') ||
         $request->has('bank_routing_no')
         ){
-            
+
                 $shop->cash_on_delivery_status = $request->cash_on_delivery_status;
                 $shop->bank_payment_status = $request->bank_payment_status;
                 $shop->bank_name = $request->bank_name;
@@ -96,8 +96,8 @@ class ShopController extends Controller
                 $shop->bank_routing_no = $request->bank_routing_no;
 
                 $successMessage='Payment info updated successfully';
-        
-    
+
+
         }else {
             $shop->sliders = $request->sliders;
         }
@@ -107,7 +107,7 @@ class ShopController extends Controller
         }
 
         return $this->failed(translate($failedMessage));
-        
+
     }
 
 
@@ -120,16 +120,16 @@ class ShopController extends Controller
             ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d')"))
             ->get()->toArray();
        //dd($data->toArray());
-      
+
         //$array_date = [];
         $sales_array = [];
 		for ($i=0; $i<7; $i++) {
             $new_date = date("M-d", strtotime(($i+1)." days ago"));
     		//$array_date[] = date("M-d", strtotime($i." days ago"));
-            
+
             $sales_array[$i]['date'] = $new_date;
             $sales_array[$i]['total'] = 0;
-          
+
         	if(!empty($data)) {
                 $key = array_search($new_date, array_column($data, 'date'));
               	if(is_numeric($key)) {
@@ -137,7 +137,7 @@ class ShopController extends Controller
               	}
         	}
 		}
-        
+
         return Response()->json($sales_array);
     }
 
@@ -164,7 +164,7 @@ class ShopController extends Controller
             ->orderBy('num_of_sale', 'desc'))
             ->limit(12)
             ->get();
-            
+
         return new ProductCollection($products);
     }
 
@@ -183,7 +183,7 @@ class ShopController extends Controller
             'id' => $shop->id,
             'package_name' => $shop->seller_package->name,
             'package_img' => uploaded_asset($shop->seller_package->logo)
-            
+
         ]);
     }
 
@@ -201,7 +201,7 @@ class ShopController extends Controller
             'avatar' => $user->avatar,
             'avatar_original' => uploaded_asset($user->avatar_original),
             'phone' => $user->phone
-            
+
         ]);
     }
 

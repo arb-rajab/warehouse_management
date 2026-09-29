@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\V2\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V2\Warehouse\CustomerCollection;
-use App\Http\Resources\V2\Warehouse\RepCollection;
 use App\Http\Resources\V2\Warehouse\CustomerDetailsResource;
+use App\Http\Resources\V2\Warehouse\RepCollection;
 use App\Models\Customer;
-use Illuminate\Http\Request;
 use App\Models\StoreUser;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller

@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
-use App\Notifications\TermsAgreementNotification;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Laravel\Sanctum\HasApiTokens;
 use App\Models\Cart;
 use App\Notifications\EmailVerificationNotification;
-use Spatie\Permission\Traits\HasRoles;
+use App\Notifications\TermsAgreementNotification;
+use Carbon\Carbon;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class StoreUser extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
+use Spatie\Permission\Traits\HasRoles;
 
     public function sendEmailVerificationNotification()
     {
@@ -62,7 +63,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         'admin_verified',
         'admin_notes',
         'activity_status',
-        'device_key'
+        'device_key',
     ];
 
     /**
@@ -259,8 +260,8 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     public function rep_last_visit_of_the_day()
     {
         // Get start and end of the day
-        $startOfDay = \Carbon\Carbon::now()->startOfDay();
-        $endOfDay = \Carbon\Carbon::now()->endOfDay();
+        $startOfDay = Carbon::now()->startOfDay();
+        $endOfDay = Carbon::now()->endOfDay();
 
         return $this->rep_visits
             ->where('visit_date', '>=', $startOfDay)

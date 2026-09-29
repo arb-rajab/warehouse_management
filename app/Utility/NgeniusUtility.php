@@ -4,6 +4,7 @@ namespace App\Utility;
 
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerPackageController;
+use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\WalletController;
 use App\Models\StoreUser;
 use Session;
@@ -37,8 +38,8 @@ class NgeniusUtility
         $apikey = env("NGENIUS_API_KEY"); // set your service account API key (example only)
         $idServiceURL = self::getUrl('identity');                   // set the identity service URL (example only)
 
-        $tokenHeaders = array("Authorization: Basic $apikey", "Content-Type: application/x-www-form-urlencoded");
-        $tokenResponse = self::invokeCurlRequest("POST", $idServiceURL, $tokenHeaders, http_build_query(array('grant_type' => 'client_credentials')));
+        $tokenHeaders = ["Authorization: Basic $apikey", "Content-Type: application/x-www-form-urlencoded"];
+        $tokenResponse = self::invokeCurlRequest("POST", $idServiceURL, $tokenHeaders, http_build_query(['grant_type' => 'client_credentials']));
 
 //        $tokenHeaders = array("Authorization: Basic $apikey", "Content-Type: application/vnd.ni-payment.v2+json", "Accept: application/vnd.ni-payment.v2+json");
 //        $tokenResponse = self::invokeCurlRequest("POST", $idServiceURL, $tokenHeaders, null);
@@ -76,7 +77,7 @@ class NgeniusUtility
         $txnServiceURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders";             // set the transaction service URL (example only)
         $access_token = self::getAccessToken();
 
-        $orderCreateHeaders = array("Authorization: Bearer " . $access_token, "Content-Type: application/vnd.ni-payment.v2+json", "Accept: application/vnd.ni-payment.v2+json");
+        $orderCreateHeaders = ["Authorization: Bearer " . $access_token, "Content-Type: application/vnd.ni-payment.v2+json", "Accept: application/vnd.ni-payment.v2+json"];
         $orderCreateResponse = self::invokeCurlRequest("POST", $txnServiceURL, $orderCreateHeaders, $order);
 
         $orderCreateResponse = json_decode($orderCreateResponse);
@@ -108,7 +109,7 @@ class NgeniusUtility
         $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/$orderRef";             // set the transaction service URL (example only)
         $access_token = self::getAccessToken();
 
-        $headers = array("Authorization: Bearer " . $access_token);
+        $headers = ["Authorization: Bearer " . $access_token];
         $orderStatusResponse = self::invokeCurlRequest("GET", $orderCheckURL, $headers, null);
 
         $orderStatusResponse = json_decode($orderStatusResponse);
@@ -142,7 +143,7 @@ class NgeniusUtility
             }
 
             if ($payment_type == 'seller_package_payment') {
-                $seller_package_controller = new \App\Http\Controllers\SellerPackageController;
+                $seller_package_controller = new SellerPackageController;
                 return $seller_package_controller->purchase_payment_done(session()->get('payment_data'), $payment);
             }
 

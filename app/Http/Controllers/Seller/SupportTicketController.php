@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Mail\SupportMailManager;
-use Illuminate\Http\Request;
+use App\Models\StoreUser;
 use App\Models\Ticket;
 use App\Models\TicketReply;
-use App\Models\StoreUser;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Mail;
 
 class SupportTicketController extends Controller
@@ -15,7 +16,7 @@ class SupportTicketController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -26,8 +27,8 @@ class SupportTicketController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -68,7 +69,7 @@ class SupportTicketController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {

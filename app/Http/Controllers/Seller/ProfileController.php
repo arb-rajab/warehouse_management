@@ -6,27 +6,29 @@ use App\Http\Requests\SellerProfileRequest;
 use App\Models\StoreUser;
 use Auth;
 use Hash;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ProfileController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
         $user = Auth::user();
-        $addresses = $user->addresses; 
+        $addresses = $user->addresses;
         return view('seller.profile.index', compact('user','addresses'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(SellerProfileRequest $request , $id)
     {
@@ -42,7 +44,7 @@ class ProfileController extends Controller
         if($request->new_password != null && ($request->new_password == $request->confirm_password)){
             $user->password = Hash::make($request->new_password);
         }
-        
+
         $user->avatar_original = $request->photo;
 
         $shop = $user->shop;

@@ -17,7 +17,7 @@ class WalletCollection extends ResourceCollection
                     'approval_string' => $data->offline_payment ? ($data->approval == 1 ? "Approved" : "Decliend") : "N/A",
                     'date' => Carbon::createFromTimestamp(strtotime($data->created_at))->format('d-m-Y'),
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class WalletCollection extends ResourceCollection
     {
         return [
             'result' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Product;
 use App\Models\CommissionHistory;
-use App\Models\Wallet;
-use App\Models\StoreUser;
+use App\Models\Product;
 use App\Models\Search;
 use App\Models\Shop;
+use App\Models\StoreUser;
+use App\Models\Wallet;
 use Auth;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
@@ -77,19 +77,19 @@ class ReportController extends Controller
         $searches = Search::orderBy('count', 'desc')->paginate(10);
         return view('backend.reports.user_search_report', compact('searches'));
     }
-    
+
     public function commission_history(Request $request) {
         $seller_id = null;
         $date_range = null;
-        
+
         if(Auth::user()->user_type == 'seller') {
             $seller_id = Auth::user()->id;
         } if($request->seller_id) {
             $seller_id = $request->seller_id;
         }
-        
+
         $commission_history = CommissionHistory::orderBy('created_at', 'desc');
-        
+
         if ($request->date_range) {
             $date_range = $request->date_range;
             $date_range1 = explode(" / ", $request->date_range);
@@ -97,31 +97,31 @@ class ReportController extends Controller
             $commission_history = $commission_history->where('created_at', '<=', $date_range1[1]);
         }
         if ($seller_id){
-            
+
             $commission_history = $commission_history->where('seller_id', '=', $seller_id);
         }
-        
+
         $commission_history = $commission_history->paginate(10);
         if(Auth::user()->user_type == 'seller') {
             return view('seller.reports.commission_history_report', compact('commission_history', 'seller_id', 'date_range'));
         }
         return view('backend.reports.commission_history_report', compact('commission_history', 'seller_id', 'date_range'));
     }
-    
+
     public function wallet_transaction_history(Request $request) {
         $user_id = null;
         $date_range = null;
-        
+
         if($request->user_id) {
             $user_id = $request->user_id;
         }
-        
+
         $users_with_wallet = StoreUser::whereIn('id', function($query) {
             $query->select('user_id')->from(with(new Wallet)->getTable());
         })->get();
 
         $wallet_history = Wallet::orderBy('created_at', 'desc');
-        
+
         if ($request->date_range) {
             $date_range = $request->date_range;
             $date_range1 = explode(" / ", $request->date_range);
@@ -131,7 +131,7 @@ class ReportController extends Controller
         if ($user_id){
             $wallet_history = $wallet_history->where('user_id', '=', $user_id);
         }
-        
+
         $wallets = $wallet_history->paginate(10);
 
         return view('backend.reports.wallet_history_report', compact('wallets', 'users_with_wallet', 'user_id', 'date_range'));

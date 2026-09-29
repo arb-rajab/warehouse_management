@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Trips;
 
+use App\Enums\CheckpointStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\CheckpointStatus;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateCheckpointRequest extends FormRequest
@@ -34,7 +34,7 @@ class UpdateCheckpointRequest extends FormRequest
             'status' => ['required', Rule::in(array_column(CheckpointStatus::cases(), 'value'))],
             'notes' => 'nullable|string|max:65535', // text col
             'longitudes' => 'nullable|numeric|between:-180,180',
-            'latitudes' => 'nullable|numeric|between:-90,90'
+            'latitudes' => 'nullable|numeric|between:-90,90',
         ];
     }
 
@@ -61,7 +61,7 @@ class UpdateCheckpointRequest extends FormRequest
             'longitudes.numeric' => 'The longitudes must be a valid number.',
             'longitudes.between' => 'The longitudes must be between -180 and 180 degrees.',
             'latitudes.numeric' => 'The latitudes must be a valid number.',
-            'latitudes.between' => 'The latitudes must be between -90 and 90 degrees.'
+            'latitudes.between' => 'The latitudes must be between -90 and 90 degrees.',
         ];
     }
 }

@@ -22,7 +22,7 @@ class DeliveryHistoryCollection extends ResourceCollection
                     'payment_type' => $data->payment_type,
                     'date' => Carbon::createFromTimestamp($data->created_at)->format('d-m-Y'),
                 ];
-            })
+            }),
         ];
     }
 
@@ -30,7 +30,7 @@ class DeliveryHistoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

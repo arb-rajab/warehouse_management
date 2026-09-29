@@ -2,13 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Cart;
 use App\Models\StoreUser;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Notification;
 use App\Notifications\UnorderedCartNotification;
+use Carbon\Carbon;
 use Exception;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Notification;
 
 class CheckUnorderedCarts extends Command
 {

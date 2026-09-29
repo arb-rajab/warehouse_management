@@ -3,26 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProductRequest;
-use Illuminate\Http\Request;
-use App\Models\Product;
-use App\Models\ProductTranslation;
-use App\Models\Category;
-use App\Models\ProductTax;
 use App\Models\AttributeValue;
 use App\Models\Cart;
-use App\Models\StoreProductBarcode;
+use App\Models\Category;
+use App\Models\CronJobs;
+use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\ProductTax;
+use App\Models\ProductTranslation;
 use App\Models\ProductVariation;
-use Carbon\Carbon;
+use App\Models\StoreProductBarcode;
+use App\Services\ProductFlashDealService;
+use App\Services\ProductService;
+use App\Services\ProductStockService;
+use App\Services\ProductTaxService;
 use App\Utility\ProductUtility;
 use Artisan;
 use Cache;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Str;
-use App\Services\ProductService;
-use App\Services\ProductTaxService;
-use App\Services\ProductFlashDealService;
-use App\Services\ProductStockService;
-use App\Models\CronJobs;
 
 class ProductController extends Controller
 {
@@ -54,7 +56,7 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function admin_products(Request $request)
     {
@@ -107,7 +109,7 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function seller_products(Request $request)
     {
@@ -242,7 +244,7 @@ class ProductController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -271,8 +273,8 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(ProductRequest $request)
     {
@@ -363,7 +365,7 @@ class ProductController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -374,7 +376,7 @@ class ProductController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function admin_product_edit(Request $request, $id)
     {
@@ -410,7 +412,7 @@ class ProductController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function seller_product_edit(Request $request, $id)
     {
@@ -433,9 +435,9 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(ProductRequest $request, Product $product)
     {
@@ -548,7 +550,7 @@ class ProductController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -558,7 +560,7 @@ class ProductController extends Controller
         $product->stocks()->delete();
         $product->taxes()->delete();
         $product->variations()->delete();
-        $product->barcodes()->delete();
+        $product->storeBarcodes()->delete();
 
 
         if (Product::destroy($id)) {
@@ -591,7 +593,7 @@ class ProductController extends Controller
      * Duplicates the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function duplicate(Request $request, $id)
     {
@@ -706,7 +708,7 @@ class ProductController extends Controller
 
     public function sku_combination(Request $request)
     {
-        $options = array();
+        $options = [];
         if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
             $colors_active = 1;
             array_push($options, $request->colors);
@@ -720,7 +722,7 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($request->choice_no as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $data = array();
+                $data = [];
                 // foreach (json_decode($request[$name][0]) as $key => $item) {
                 foreach ($request[$name] as $key => $item) {
                     // array_push($data, $item->value);
@@ -738,7 +740,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($request->id);
 
-        $options = array();
+        $options = [];
         if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
             $colors_active = 1;
             array_push($options, $request->colors);
@@ -752,7 +754,7 @@ class ProductController extends Controller
         if ($request->has('choice_no')) {
             foreach ($request->choice_no as $key => $no) {
                 $name = 'choice_options_' . $no;
-                $data = array();
+                $data = [];
                 // foreach (json_decode($request[$name][0]) as $key => $item) {
                 foreach ($request[$name] as $key => $item) {
                     // array_push($data, $item->value);
@@ -769,49 +771,49 @@ class ProductController extends Controller
 
     public function fetch()
     {
-        \Illuminate\Support\Facades\Log::info('Fetch function started at ' . now()->toDateTimeString());
-    
+        Log::info('Fetch function started at ' . now()->toDateTimeString());
+
         $hostingerCronJob = CronJobs::where('command', 'fetching-products-by-hostinger')->where(function ($q) { $q->where('status', 'pending')->orWhere('status', 'running'); })->where('updated_at', '>', now()->subMinutes(30))->first();
-        
-        \Illuminate\Support\Facades\Log::info('Checked for hostinger cron job: ' . ($hostingerCronJob ? 'found (ID: ' . $hostingerCronJob->id . ', Status: ' . $hostingerCronJob->status . ')' : 'not found'));
-    
+
+        Log::info('Checked for hostinger cron job: ' . ($hostingerCronJob ? 'found (ID: ' . $hostingerCronJob->id . ', Status: ' . $hostingerCronJob->status . ')' : 'not found'));
+
         if ($hostingerCronJob) {
-            \Illuminate\Support\Facades\Log::info('Returning failure (500) because hostinger cron job is pending or running', [
+            Log::info('Returning failure (500) because hostinger cron job is pending or running', [
                 'id' => $hostingerCronJob->id,
                 'status' => $hostingerCronJob->status,
                 'created_at' => $hostingerCronJob->created_at,
                 'updated_at' => $hostingerCronJob->updated_at,
                 'command' => $hostingerCronJob->command,
             ]);
-        
+
             return response()->json([
                 'success' => false,
                 'cron_job' => $hostingerCronJob
             ], 500);
         }
-    
+
         $cronjob = CronJobs::where('command', 'fetching-products-by-admin')->where(function ($q) { $q->where('status', 'pending')->orWhere('status', 'running'); })->where('updated_at', '>', now()->subMinutes(30))->first();
-        
-        \Illuminate\Support\Facades\Log::info('Checked for admin cron job: ' . ($cronjob ? 'found (ID: ' . $cronjob->id . ', Status: ' . $cronjob->status . ')' : 'not found'));
-    
+
+        Log::info('Checked for admin cron job: ' . ($cronjob ? 'found (ID: ' . $cronjob->id . ', Status: ' . $cronjob->status . ')' : 'not found'));
+
         if (! $cronjob) {
-            \Illuminate\Support\Facades\Log::info('Creating new admin cron job');
-            
+            Log::info('Creating new admin cron job');
+
             try {
                 CronJobs::create([
                     'command' => 'fetching-products-by-admin',
                     'status' => 'pending',
                 ]);
-                \Illuminate\Support\Facades\Log::info('New admin cron job created successfully');
+                Log::info('New admin cron job created successfully');
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error creating admin cron job: ' . $e->getMessage());
+                Log::error('Error creating admin cron job: ' . $e->getMessage());
                 return response()->json(['success' => false], 500);
             }
-    
-            \Illuminate\Support\Facades\Log::info('Returning success');
+
+            Log::info('Returning success');
             return response()->json(['success' => true]);
         } else {
-            \Illuminate\Support\Facades\Log::info('Returning failure (500) because admin cron job is pending or running');
+            Log::info('Returning failure (500) because admin cron job is pending or running');
             return response()->json(['success' => false], 500);
         }
     }

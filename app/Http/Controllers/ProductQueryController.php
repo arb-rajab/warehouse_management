@@ -6,10 +6,13 @@ use App\Models\Product;
 use App\Models\ProductQuery;
 use App\Models\StoreUser;
 use Auth;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 
 class ProductQueryController extends Controller
 {
+    use ValidatesRequests;
+
     public function __construct()
     {
         // Staff Permission Check

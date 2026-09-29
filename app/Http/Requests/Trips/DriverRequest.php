@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Trips;
 
+use App\Enums\CheckpointType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\CheckpointType;
 
 class DriverRequest extends FormRequest
 {

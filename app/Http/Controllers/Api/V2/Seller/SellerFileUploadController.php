@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\V2\Seller;
 
 use App\Http\Resources\V2\UploadedFileCollection;
-use Illuminate\Http\Request;
 use App\Models\Upload;
-use Response;
 use Auth;
-use Storage;
+use Illuminate\Http\Request;
 use Image;
+use Response;
+use Storage;
 
 class SellerFileUploadController extends Controller
 {
@@ -56,7 +56,7 @@ class SellerFileUploadController extends Controller
 
     public function upload(Request $request)
     {
-        $type = array(
+        $type = [
             "jpg" => "image",
             "jpeg" => "image",
             "png" => "image",
@@ -90,8 +90,8 @@ class SellerFileUploadController extends Controller
             "ods" => "document",
             "xlr" => "document",
             "xls" => "document",
-            "xlsx" => "document"
-        );
+            "xlsx" => "document",
+        ];
         if (auth()->user()->user_type == 'seller') {
             if ($request->hasFile('aiz_file')) {
                 $upload = new Upload;
@@ -153,7 +153,7 @@ class SellerFileUploadController extends Controller
                             file_get_contents(base_path('public/') . $path),
                             [
                                 'visibility' => 'public',
-                                'ContentType' =>  $extension == 'svg' ? 'image/svg+xml' : $file_mime
+                                'ContentType' =>  $extension == 'svg' ? 'image/svg+xml' : $file_mime,
                             ]
                         );
                         if ($arr[0] != 'updates') {

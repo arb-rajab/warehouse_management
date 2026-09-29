@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Http\Resources\V2\AddressCollection;
+use App\Http\Resources\V2\CitiesCollection;
+use App\Http\Resources\V2\CountriesCollection;
+use App\Http\Resources\V2\StatesCollection;
+use App\Models\Address;
+use App\Models\Cart;
 use App\Models\City;
 use App\Models\Country;
-use App\Http\Resources\V2\AddressCollection;
-use App\Models\Address;
-use App\Http\Resources\V2\CitiesCollection;
-use App\Http\Resources\V2\StatesCollection;
-use App\Http\Resources\V2\CountriesCollection;
-use Illuminate\Http\Request;
-use App\Models\Cart;
 use App\Models\State;
+use Illuminate\Http\Request;
 
 class AddressController extends Controller
 {

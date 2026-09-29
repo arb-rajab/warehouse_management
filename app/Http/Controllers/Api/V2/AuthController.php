@@ -5,25 +5,26 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\OTPVerificationController;
+use App\Models\Address;
 use App\Models\BusinessSetting;
+use App\Models\Cart;
+use App\Models\Country;
 use App\Models\Customer;
-use Illuminate\Http\Request;
-use Carbon\Carbon;
 use App\Models\StoreUser;
 use App\Notifications\AppEmailVerificationNotification;
-use Hash;
-use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
-use Socialite;
-use App\Models\Cart;
 use App\Rules\Recaptcha;
-use App\Models\Address;
 use App\Services\SocialRevoke;
-use App\Models\Country;
+use App\Services\UserService;
+use App\Utility\PayhereUtility;
+use Carbon\Carbon;
+use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
+use GuzzleHttp\Client as GuzzleClient;
+use Hash;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
-use GuzzleHttp\Client as GuzzleClient;
-use App\Services\UserService;
+use Socialite;
 
 class AuthController extends Controller
 {
@@ -36,7 +37,7 @@ class AuthController extends Controller
 
     public function signup(Request $request)
     {
-        $messages = array(
+        $messages = [
             'name.required' => translate('Name is required'),
             'email_or_phone.required' => $request->register_by == 'email' ? translate('Email is required') : translate('Phone is required'),
             'email_or_phone.email' => translate('Email must be a valid email address'),
@@ -44,8 +45,8 @@ class AuthController extends Controller
             'email_or_phone.unique' => $request->register_by == 'email' ? translate('The email has already been taken') : translate('The phone has already been taken'),
             'password.required' => translate('Password is required'),
             'password.confirmed' => translate('Password confirmation does not match'),
-            'password.min' => translate('Minimum 6 digits required for password')
-        );
+            'password.min' => translate('Minimum 6 digits required for password'),
+        ];
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'company_name' => 'required|string|max:255',
@@ -180,12 +181,12 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $messages = array(
+        $messages = [
             'email.required' => $request->login_by == 'email' ? translate('Email is required') : translate('Phone is required'),
             'email.email' => translate('Email must be a valid email address'),
             'email.numeric' => translate('Phone must be a number.'),
             'password.required' => translate('Password is required'),
-        );
+        ];
         $validator = Validator::make($request->all(), [
             'password' => 'required',
             'login_by' => 'required',
@@ -239,7 +240,7 @@ class AuthController extends Controller
         }
         // if (!$delivery_boy_condition) {
         if (!$delivery_boy_condition && !$seller_condition) {
-            if (\App\Utility\PayhereUtility::create_wallet_reference($request->identity_matrix) == false) {
+            if (PayhereUtility::create_wallet_reference($request->identity_matrix) == false) {
                 return response()->json(['result' => false, 'message' => 'Identity matrix error', 'user' => null], 401);
             }
         }
@@ -406,7 +407,7 @@ class AuthController extends Controller
                 'trade_license' => $user->trade_license,
                 'bank_account_number' => $user->bank_account_number,
                 'email_verified' => $user->email_verified_at != null,
-                'admin_verified' => $user->admin_verified ? 1 : 0
+                'admin_verified' => $user->admin_verified ? 1 : 0,
             ]
         ]);
     }
@@ -428,7 +429,7 @@ class AuthController extends Controller
                 'email' => '',
                 'avatar' => '',
                 'avatar_original' => '',
-                'phone' => ''
+                'phone' => '',
             ]
         ]);
     }

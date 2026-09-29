@@ -2,6 +2,8 @@
 
 namespace App\Events;
 
+use App\Models\Trip;
+use App\Models\Truck;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -9,8 +11,6 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Trip;
-use App\Models\Truck;
 
 class SetTruckAvailability
 {
@@ -35,7 +35,7 @@ class SetTruckAvailability
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return \Illuminate\Broadcasting\Channel|array
+     * @return Channel|array
      */
     public function broadcastOn()
     {

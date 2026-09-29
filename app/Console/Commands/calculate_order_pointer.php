@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Order;
+use Illuminate\Console\Command;
 
 class calculate_order_pointer extends Command
 {

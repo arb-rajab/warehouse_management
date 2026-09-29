@@ -12,9 +12,9 @@ class ColorCollection extends ResourceCollection
             'data' => $this->collection->map(function($data) {
                 return [
                     'name' => $data->name,
-                    'code' => $data->code
+                    'code' => $data->code,
                 ];
-            })
+            }),
         ];
     }
 
@@ -22,7 +22,7 @@ class ColorCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

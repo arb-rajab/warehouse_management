@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\Seller;
 
-use Illuminate\Http\Request;
 use App\Models\Address;
 use App\Models\City;
 use App\Models\State;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class AddressController extends Controller
 {
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -38,29 +39,29 @@ class AddressController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
         $data['address_data'] = Address::findOrFail($id);
         $data['states'] = State::where('status', 1)->where('country_id', $data['address_data']->country_id)->get();
         $data['cities'] = City::where('status', 1)->where('state_id', $data['address_data']->state_id)->get();
-        
+
         $returnHTML = view('seller.profile.address_edit_modal', $data)->render();
-        return response()->json(array('data' => $data, 'html'=>$returnHTML));
+        return response()->json(['data' => $data, 'html'=>$returnHTML]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
         $address = Address::findOrFail($id);
-        
+
         $address->address       = $request->address;
         $address->country_id    = $request->country_id;
         $address->state_id      = $request->state_id;
@@ -80,7 +81,7 @@ class AddressController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -96,22 +97,22 @@ class AddressController extends Controller
     public function getStates(Request $request) {
         $states = State::where('status', 1)->where('country_id', $request->country_id)->get();
         $html = '<option value="">'.translate("Select State").'</option>';
-        
+
         foreach ($states as $state) {
             $html .= '<option value="' . $state->id . '">' . $state->name . '</option>';
         }
-        
+
         echo json_encode($html);
     }
-    
+
     public function getCities(Request $request) {
         $cities = City::where('status', 1)->where('state_id', $request->state_id)->get();
         $html = '<option value="">'.translate("Select City").'</option>';
-        
+
         foreach ($cities as $row) {
             $html .= '<option value="' . $row->id . '">' . $row->getTranslation('name') . '</option>';
         }
-        
+
         echo json_encode($html);
     }
 

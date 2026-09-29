@@ -8,9 +8,9 @@ use App\Http\Resources\V2\ShopCollection;
 use App\Http\Resources\V2\ShopDetailsCollection;
 use App\Models\Product;
 use App\Models\Shop;
-use Illuminate\Http\Request;
 use App\Utility\SearchUtility;
 use Cache;
+use Illuminate\Http\Request;
 
 class ShopController extends Controller
 {
@@ -48,7 +48,7 @@ class ShopController extends Controller
     public function topSellingProducts($id)
     {
         $shop = Shop::findOrFail($id);
-        
+
         return Cache::remember("app.top_selling_products-$id", 86400, function () use ($shop){
             return new ProductMiniCollection(Product::where('user_id', $shop->user_id)->where('published',1)->orderBy('num_of_sale', 'desc')->limit(10)->get());
         });

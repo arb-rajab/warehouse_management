@@ -15,7 +15,7 @@ class StatesCollection extends ResourceCollection
                     'country_id' => (int) $data->country_id,
                     'name' => $data->name,
                 ];
-            })
+            }),
         ];
     }
 
@@ -23,7 +23,7 @@ class StatesCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

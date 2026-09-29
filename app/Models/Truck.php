@@ -18,7 +18,7 @@ class Truck extends Model
         'description',
         'license_plate',
         'photos',
-        'is_available'
+        'is_available',
     ];
 
     protected $casts = [

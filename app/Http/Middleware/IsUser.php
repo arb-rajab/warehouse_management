@@ -2,25 +2,26 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Auth;
+use Closure;
+use Illuminate\Http\Request;
 
 class IsUser
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  \Closure  $next
      * @return mixed
      */
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && 
-                (Auth::user()->user_type == 'customer' || 
-                Auth::user()->user_type == 'seller' || 
+        if (Auth::check() &&
+                (Auth::user()->user_type == 'customer' ||
+                Auth::user()->user_type == 'seller' ||
                 Auth::user()->user_type == 'delivery_boy') ) {
-            
+
             return $next($request);
         }
         else{

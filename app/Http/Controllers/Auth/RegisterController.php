@@ -2,27 +2,27 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Models\StoreUser;
-use App\Models\Customer;
-use App\Models\Cart;
-use App\Models\BusinessSetting;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\OTPVerificationController;
+use App\Models\Address;
+use App\Models\BusinessSetting;
+use App\Models\Cart;
+use App\Models\Country;
+use App\Models\Customer;
+use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
+use App\Services\UserService;
+use Carbon\Carbon;
+use Cookie;
+use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Foundation\Auth\RegistersUsers;
-use App\Models\Address;
-use App\Models\Country;
-use App\Services\UserService;
-use Cookie;
-use Session;
-use Nexmo;
-use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
+use Nexmo;
+use Session;
 
 
 class RegisterController extends Controller
@@ -86,7 +86,7 @@ class RegisterController extends Controller
      * Create a new user instance after a valid registration.
      *
      * @param  array  $data
-     * @return \App\Models\StoreUser
+     * @return StoreUser
      */
     protected function create(array $data)
     {

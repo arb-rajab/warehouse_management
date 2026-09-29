@@ -39,7 +39,7 @@ class UserController extends Controller
             'avatar_original' => "",
             'phone' => "",
             'admin_verified' => 0,
-            'is_rep' => 0
+            'is_rep' => 0,
         ];
 
 

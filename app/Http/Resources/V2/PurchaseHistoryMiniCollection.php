@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Models\StoreUser;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\ResourceCollection;
-use App\Models\StoreUser;
 
 class PurchaseHistoryMiniCollection extends ResourceCollection
 {
@@ -41,10 +41,10 @@ class PurchaseHistoryMiniCollection extends ResourceCollection
                     'grand_total' => format_price($data->grand_total) ,
                     'date' => Carbon::createFromTimestamp($data->date)->format('d-m-Y'),
                     'links' => [
-                        'details' => ''
-                    ]
+                        'details' => '',
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -52,7 +52,7 @@ class PurchaseHistoryMiniCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

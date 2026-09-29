@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
 use App\Utility\CategoryUtility;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class CategoryCollection extends ResourceCollection
 {
@@ -19,10 +19,10 @@ class CategoryCollection extends ResourceCollection
                     'number_of_children' => CategoryUtility::get_immediate_children_count($data->id),
                     'links' => [
                         'products' => route('api.products.category', $data->id),
-                        'sub_categories' => route('subCategories.index', $data->id)
-                    ]
+                        'sub_categories' => route('subCategories.index', $data->id),
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -30,7 +30,7 @@ class CategoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use Illuminate\Http\Request;
 use App\Models\Upload;
-use Response;
 use Auth;
-use Storage;
+use Illuminate\Http\Request;
 use Image;
+use Response;
+use Storage;
 
 class AizUploadController extends Controller
 {
@@ -52,7 +52,7 @@ class AizUploadController extends Controller
 
     public function upload(Request $request)
     {
-        $type = array(
+        $type = [
             "jpg" => "image",
             "jpeg" => "image",
             "png" => "image",
@@ -86,8 +86,8 @@ class AizUploadController extends Controller
             "ods" => "document",
             "xlr" => "document",
             "xls" => "document",
-            "xlsx" => "document"
-        );
+            "xlsx" => "document",
+        ];
         if ($request->hasFile('aiz_file')) {
             $upload = new Upload;
             $extension = strtolower($request->file('aiz_file')->getClientOriginalExtension());
@@ -148,7 +148,7 @@ class AizUploadController extends Controller
                         file_get_contents(base_path('public/') . $path),
                         [
                             'visibility' => 'public',
-                            'ContentType' =>  $extension == 'svg' ? 'image/svg+xml' : $file_mime
+                            'ContentType' =>  $extension == 'svg' ? 'image/svg+xml' : $file_mime,
                         ]
                     );
                     if ($arr[0] != 'updates') {

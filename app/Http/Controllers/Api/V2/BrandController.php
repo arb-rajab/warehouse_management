@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\BrandCollection;
 use App\Models\Brand;
-use Illuminate\Http\Request;
 use App\Utility\SearchUtility;
 use Cache;
+use Illuminate\Http\Request;
 
 class BrandController extends Controller
 {

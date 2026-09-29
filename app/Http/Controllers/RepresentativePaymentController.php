@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\RepresentativePayment;
+use App\Models\StoreStoreUser;
 use App\Models\StoreUser;
 use Auth;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use PDF;
-use libphonenumber\PhoneNumberUtil;
 use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
+use PDF;
 use QrCode;
 
 class RepresentativePaymentController extends Controller
@@ -24,7 +26,7 @@ class RepresentativePaymentController extends Controller
 
     public function create()
     {
-        $customers = \App\Models\StoreStoreUser::where('user_type', 'customer')->where('is_rep', false)->get();
+        $customers = StoreStoreUser::where('user_type', 'customer')->where('is_rep', false)->get();
         return view('frontend.user.rep-payments-create', compact('customers'));
     }
     public function show($id)
@@ -59,7 +61,7 @@ class RepresentativePaymentController extends Controller
 
         $customer = $request->customer_id ? StoreUser::find($request->customer_id) : StoreUser::where('AccSysId', $request->customer_otajer_id)->first();
 
-        $formattedDate = \Carbon\Carbon::now()->format('Ymd');
+        $formattedDate = Carbon::now()->format('Ymd');
         $receiptCode = $formattedDate . '-' . $customer->AccSysID . '-' . $request->amount;
 
         $payment = RepresentativePayment::create([

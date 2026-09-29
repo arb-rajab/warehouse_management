@@ -11,10 +11,13 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 
 /**
  * A row in this app's `products` table.
@@ -542,5 +545,176 @@ class Product extends Model
         return preg_match('/^[\p{L}\p{N}]+$/u', $word) === 1
             && mb_strlen($word) >= self::FULL_TEXT_MIN_WORD_LENGTH
             && ! in_array(mb_strtolower($word), self::FULL_TEXT_STOPWORDS, true);
+    }
+
+    // --- Merged from the legacy store's App\Models\Product (see
+    // .ai/rules/legacy-albaraka-holland.md section 2). The store's own writers
+    // (NewFetchProductsCommand, the legacy ProductController, the Excel
+    // imports) mass-assign far more columns than #[Fillable] above allows;
+    // reconciling that — "pick one writer" — is deferred to the DB-merge
+    // phase the audit already tracks, not decided here.
+
+    public function getTranslation(string $field = '', string|false $lang = false): mixed
+    {
+        $lang = $lang === false ? App::getLocale() : $lang;
+        $translation = $this->product_translations->where('lang', $lang)->first();
+
+        return $translation !== null ? $translation->$field : $this->$field;
+    }
+
+    /**
+     * @return HasMany<ProductTranslation, $this>
+     */
+    public function product_translations(): HasMany
+    {
+        return $this->hasMany(ProductTranslation::class);
+    }
+
+    /**
+     * @return BelongsTo<Category, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * @return BelongsTo<Brand, $this>
+     */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    /**
+     * @return BelongsTo<ProductCollection, $this>
+     */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(ProductCollection::class);
+    }
+
+    /**
+     * @return BelongsTo<StoreUser, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
+    }
+
+    /**
+     * @return HasMany<OrderDetail, $this>
+     */
+    public function orderDetails(): HasMany
+    {
+        return $this->hasMany(OrderDetail::class);
+    }
+
+    /**
+     * @return HasMany<Review, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->where('status', 1);
+    }
+
+    /**
+     * @return HasMany<Wishlist, $this>
+     */
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * @return HasMany<ProductStock, $this>
+     */
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
+    /**
+     * @return HasMany<ProductTax, $this>
+     */
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(ProductTax::class);
+    }
+
+    /**
+     * @return HasOne<FlashDealProduct, $this>
+     */
+    public function flash_deal_product(): HasOne
+    {
+        return $this->hasOne(FlashDealProduct::class);
+    }
+
+    /**
+     * @return BelongsToMany<Offer, $this>
+     */
+    public function offers(): BelongsToMany
+    {
+        return $this->belongsToMany(Offer::class, 'offer_products', 'product_id', 'offer_id')
+            ->wherePivot('is_base_product', 1);
+    }
+
+    /**
+     * @return HasMany<AuctionProductBid, $this>
+     */
+    public function bids(): HasMany
+    {
+        return $this->hasMany(AuctionProductBid::class);
+    }
+
+    /**
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function physical(EloquentBuilder $query): void
+    {
+        $query->where('digital', 0);
+    }
+
+    /**
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function digital(EloquentBuilder $query): void
+    {
+        $query->where('digital', 1);
+    }
+
+    /**
+     * @return HasMany<ProductVariation, $this>
+     */
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class);
+    }
+
+    /**
+     * The store's own barcodes (table `product_barcodes`), distinct from this
+     * app's {@see self::barcodes()} (table `wms_product_barcodes`) — same
+     * name would otherwise collide, see StoreProductBarcode's docblock.
+     *
+     * @return HasMany<StoreProductBarcode, $this>
+     */
+    public function storeBarcodes(): HasMany
+    {
+        return $this->hasMany(StoreProductBarcode::class);
+    }
+
+    public function profit(): float
+    {
+        return (float) ($this->unit_price * $this->collection?->amount ?? 0) / 100;
+    }
+
+    /**
+     * @return MorphMany<UserPageView, $this>
+     */
+    public function views(): MorphMany
+    {
+        return $this->morphMany(UserPageView::class, 'viewable');
     }
 }

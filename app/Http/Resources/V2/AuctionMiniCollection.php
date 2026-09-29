@@ -24,9 +24,9 @@ class AuctionMiniCollection extends ResourceCollection
                     'sales' => (int) $data->num_of_sale,
                     'links' => [
                         'details' => route('products.show', $data->id),
-                    ]
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -34,7 +34,7 @@ class AuctionMiniCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

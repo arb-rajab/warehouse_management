@@ -25,7 +25,7 @@ class Checkpoint extends Model
         'eta',
         'notes',
         'cmr_file',
-        'photos'
+        'photos',
     ];
 
     protected $casts = [

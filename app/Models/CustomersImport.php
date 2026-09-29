@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Models\Customer;
+use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Illuminate\Support\Facades\Hash;
 
 class CustomersImport implements ToModel, WithHeadingRow
 {

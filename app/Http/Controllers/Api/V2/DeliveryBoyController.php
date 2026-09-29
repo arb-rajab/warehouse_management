@@ -3,21 +3,22 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\OTPVerificationController;
-use App\Http\Resources\V2\PurchaseHistoryMiniCollection;
-use App\Http\Resources\V2\DeliveryBoyPurchaseHistoryMiniCollection;
-use Illuminate\Http\Request;
 use App\Http\Resources\V2\DeliveryBoyCollection;
+use App\Http\Resources\V2\DeliveryBoyPurchaseHistoryMiniCollection;
 use App\Http\Resources\V2\DeliveryHistoryCollection;
 use App\Http\Resources\V2\PurchaseHistoryCollection;
 use App\Http\Resources\V2\PurchaseHistoryItemsCollection;
-use Auth;
+use App\Http\Resources\V2\PurchaseHistoryMiniCollection;
 use App\Models\DeliveryBoy;
 use App\Models\DeliveryHistory;
 use App\Models\Order;
 use App\Models\OrderDetail;
-use App\Models\StoreUser;
 use App\Models\SmsTemplate;
+use App\Models\StoreUser;
 use App\Utility\SmsUtility;
+use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 
 class DeliveryBoyController extends Controller
@@ -27,7 +28,7 @@ class DeliveryBoyController extends Controller
      * Show the list of assigned delivery by the admin.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
 
     public function dashboard_summary($id)
@@ -89,7 +90,7 @@ class DeliveryBoyController extends Controller
      * Show the list of pickup delivery by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function picked_up_delivery($id)
     {
@@ -104,7 +105,7 @@ class DeliveryBoyController extends Controller
      * Show the list of pickup delivery by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function on_the_way_delivery($id)
     {
@@ -119,7 +120,7 @@ class DeliveryBoyController extends Controller
      * Show the list of completed delivery by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function completed_delivery($id)
     {
@@ -161,7 +162,7 @@ class DeliveryBoyController extends Controller
      * Show the list of pending delivery by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function pending_delivery($id)
     {
@@ -177,7 +178,7 @@ class DeliveryBoyController extends Controller
      * Show the list of cancelled delivery by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function cancelled_delivery($id)
     {
@@ -217,7 +218,7 @@ class DeliveryBoyController extends Controller
      * Show the list of today's collection by the delivery boy.
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function collection($id)
     {
@@ -309,7 +310,7 @@ class DeliveryBoyController extends Controller
      * Call from order controller
      *
      * @param int $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function change_delivery_status(Request $request) {
         $order = Order::find($request->order_id);
@@ -402,7 +403,7 @@ class DeliveryBoyController extends Controller
     {
         $order_detail = Order::where('id', $id)->where('assign_delivery_boy', auth()->user()->id)->get();
         // $order_query = auth()->user()->orders->where('id', $id);
-        
+
         // return new PurchaseHistoryCollection($order_query->get());
         return new PurchaseHistoryCollection($order_detail);
     }

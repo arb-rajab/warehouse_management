@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Warehouse;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class OrderDetailResource extends JsonResource
@@ -9,8 +11,8 @@ class OrderDetailResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -37,7 +39,7 @@ class OrderDetailResource extends JsonResource
             'for_customer'              =>  $this->for_customer,
             'discount_percent'          =>  $this->discount_percent,
             'indicator'                 =>  $this->indicator,
-            'created_at'                =>  $this->created_at
+            'created_at'                =>  $this->created_at,
         ];
     }
 
@@ -46,7 +48,7 @@ class OrderDetailResource extends JsonResource
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

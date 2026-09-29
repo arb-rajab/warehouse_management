@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2\Seller;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CategoriesCollection extends JsonResource
@@ -9,8 +11,8 @@ class CategoriesCollection extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -24,7 +26,7 @@ class CategoriesCollection extends JsonResource
             'featured'          =>$this->featured==0?false:true,
             'digital'           =>$this->digital==0?false:true,
             'slug'              =>$this->slug,
-            'meta_title'        =>$this->meta_title
+            'meta_title'        =>$this->meta_title,
         ];
     }
 }

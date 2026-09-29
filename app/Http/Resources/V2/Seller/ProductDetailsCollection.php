@@ -4,6 +4,8 @@ namespace App\Http\Resources\V2\Seller;
 
 use App\Http\Resources\V2\UploadedFileCollection;
 use App\Models\Upload;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductDetailsCollection extends JsonResource
@@ -11,8 +13,8 @@ class ProductDetailsCollection extends JsonResource
     /**
      * Transform the resource collection into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @param  Request  $request
+     * @return array|Arrayable|\JsonSerializable
      */
     public function toArray($request)
     {
@@ -61,7 +63,7 @@ class ProductDetailsCollection extends JsonResource
             "num_of_sale" => $this->num_of_sale,
             "meta_title" => $this->meta_title,
             "meta_description" => $this->meta_description,
-            "meta_img" =>new UploadedFileCollection(Upload::where("id",$this->meta_img)->get()), 
+            "meta_img" =>new UploadedFileCollection(Upload::where("id",$this->meta_img)->get()),
             "pdf" =>new UploadedFileCollection(Upload::whereIn("id",explode(",",$this->pdf))->get()),
             "slug" => $this->slug,
             "rating" => $this->rating,
@@ -83,7 +85,7 @@ class ProductDetailsCollection extends JsonResource
     {
         return [
             'result' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

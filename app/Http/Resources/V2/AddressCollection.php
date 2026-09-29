@@ -38,7 +38,7 @@ class AddressCollection extends ResourceCollection
                     'lat' => $lat,
                     'lang' => $lang,
                 ];
-            })
+            }),
         ];
     }
 
@@ -46,7 +46,7 @@ class AddressCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

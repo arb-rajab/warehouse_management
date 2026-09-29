@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Request;
-use setasign\Fpdi\Fpdi;
 use App\Models\Checkpoint;
 use App\Models\Upload;
 use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Image;
-use setasign\Fpdi\TcpdfFpdi;  // Make sure you use the correct FPDI class
+use setasign\Fpdi\Fpdi;
+use setasign\Fpdi\TcpdfFpdi;  // Make sure you use the correct FPDI class;
 
 class  TripService
 {
@@ -118,7 +119,7 @@ class  TripService
             $pdf->Output($outputPath, 'F');
 
             // Convert the saved file into a Symfony UploadedFile instance
-            $file = new \Illuminate\Http\UploadedFile(
+            $file = new UploadedFile(
                 $outputPath,
                 basename($outputPath),
                 'application/pdf',

@@ -32,7 +32,7 @@ class DynamicPopupCollection extends ResourceCollection
                     'btn_text' => $data->btn_text,
                     'show_page' => $data->show_page,
                 ];
-            })
+            }),
         ];
     }
 
@@ -40,7 +40,7 @@ class DynamicPopupCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

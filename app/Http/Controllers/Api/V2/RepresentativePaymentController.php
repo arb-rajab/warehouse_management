@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Http\Resources\V2\RepresentativePaymentCollection;
+use App\Models\RepresentativePayment;
+use App\Models\StoreUser;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Models\StoreUser;
-use App\Models\RepresentativePayment;
-use App\Http\Resources\V2\RepresentativePaymentCollection;
 
 class RepresentativePaymentController extends Controller
 {
@@ -82,7 +83,7 @@ class RepresentativePaymentController extends Controller
             ], 404);
         }
 
-        $formattedDate = \Carbon\Carbon::now()->format('Ymd');
+        $formattedDate = Carbon::now()->format('Ymd');
         $receiptCode = $formattedDate . '-' . $customer->AccSysID . '-' . $request->amount;
 
         $representativePayment = RepresentativePayment::create([

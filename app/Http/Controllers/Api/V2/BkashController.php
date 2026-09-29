@@ -70,22 +70,22 @@ class BkashController extends Controller
         $auth = $token;
 
         $callbackURL = route('home');
-        $requestbody = array(
+        $requestbody = [
             'mode' => '0011',
             'payerReference' => ' ',
             'callbackURL' => route('api.bkash.callback'),
             'amount' => $amount,
             'currency' => 'BDT',
             'intent' => 'sale',
-            'merchantInvoiceNumber' => "Inv" . Date('YmdH') . rand(1000, 10000)
-        );
+            'merchantInvoiceNumber' => "Inv" . Date('YmdH') . rand(1000, 10000),
+        ];
         $requestbodyJson = json_encode($requestbody);
 
-        $header = array(
+        $header = [
             'Content-Type:application/json',
             'Authorization:' . $auth,
-            'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY')
-        );
+            'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY'),
+        ];
 
         $url = curl_init($this->base_url . 'checkout/create');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
@@ -142,14 +142,14 @@ class BkashController extends Controller
 
     public function getToken()
     {
-        $request_data = array('app_key' => env('BKASH_CHECKOUT_APP_KEY'), 'app_secret' => env('BKASH_CHECKOUT_APP_SECRET'));
+        $request_data = ['app_key' => env('BKASH_CHECKOUT_APP_KEY'), 'app_secret' => env('BKASH_CHECKOUT_APP_SECRET')];
         $request_data_json = json_encode($request_data);
 
-        $header = array(
+        $header = [
             'Content-Type:application/json',
             'username:' . env('BKASH_CHECKOUT_USER_NAME'),
-            'password:' . env('BKASH_CHECKOUT_PASSWORD')
-        );
+            'password:' . env('BKASH_CHECKOUT_PASSWORD'),
+        ];
 
         $url = curl_init($this->base_url . 'checkout/token/grant');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
@@ -170,16 +170,16 @@ class BkashController extends Controller
 
         $auth = $token;
 
-        $requestbody = array(
-            'paymentID' => $paymentID
-        );
+        $requestbody = [
+            'paymentID' => $paymentID,
+        ];
         $requestbodyJson = json_encode($requestbody);
 
-        $header = array(
+        $header = [
             'Content-Type:application/json',
             'Authorization:' . $auth,
-            'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY')
-        );
+            'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY'),
+        ];
 
         $url = curl_init($this->base_url . 'checkout/execute');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
@@ -194,19 +194,19 @@ class BkashController extends Controller
     }
 
     public function query($token, $paymentID){
-    
+
         $auth = $token;
-        
-         $requestbody = array(
-            'paymentID' => $paymentID
-        );
+
+         $requestbody = [
+            'paymentID' => $paymentID,
+        ];
         $requestbodyJson = json_encode($requestbody);
 
-        $header = array(
+        $header = [
             'Content-Type:application/json',
             'Authorization:' . $auth,
-            'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY')
-        );
+            'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY'),
+        ];
 
         $url = curl_init($this->base_url.'checkout/payment/status');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
@@ -216,7 +216,7 @@ class BkashController extends Controller
         curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         $resultdata = curl_exec($url);
-        
+
         return $resultdata;
     }
 

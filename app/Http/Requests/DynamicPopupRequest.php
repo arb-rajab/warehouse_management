@@ -30,7 +30,7 @@ class DynamicPopupRequest extends FormRequest
             'delay_seconds'        => 'required|integer|max:100',
             'btn_text'             => 'required|string|max:191',
             'offer_id'             => 'required|integer',
-            'show_page'            => 'required|integer'
+            'show_page'            => 'required|integer',
         ];
     }
 
@@ -50,7 +50,7 @@ class DynamicPopupRequest extends FormRequest
             'delay_seconds.required'        => translate('Delay time is required'),
             'delay_seconds.integer'         => translate('Delay time must be a number represents the seconds'),
             'offer_id.required'             => translate('You need to choose an offer'),
-            'show_page.required'            => translate('You need to choose an show page')
+            'show_page.required'            => translate('You need to choose an show page'),
         ];
     }
 }

@@ -16,7 +16,7 @@ class ShopCollection extends ResourceCollection
                     'logo' => uploaded_asset($data->logo),
                     'rating' => $data->rating,
                 ];
-            })
+            }),
         ];
     }
 
@@ -24,12 +24,12 @@ class ShopCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 
     protected function convertPhotos($data){
-        $result = array();
+        $result = [];
         foreach ($data as $key => $item) {
             array_push($result, uploaded_asset($item));
         }

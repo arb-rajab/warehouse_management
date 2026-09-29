@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\StoreUser;
 use App\Models\Address;
+use App\Models\StoreUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 

@@ -30,12 +30,12 @@ class WalletController extends Controller
         $user = StoreUser::find($request->user_id);
 
         if ($user->balance >= $request->amount) {
-            
-            $response =  $order->store($request, true);            
+
+            $response =  $order->store($request, true);
             $decoded_response = $response->original;
             if ($decoded_response['result'] == true) { // only decrease user balance with a success
                 $user->balance -= $request->amount;
-                $user->save();            
+                $user->save();
             }
 
             return $response;

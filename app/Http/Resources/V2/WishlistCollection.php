@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
 use App\Models\ProductVariation;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class WishlistCollection extends ResourceCollection
 {
@@ -25,9 +25,9 @@ class WishlistCollection extends ResourceCollection
                         'thumbnail_image' => uploaded_asset($data->product->thumbnail_img),
                         'base_price' => format_price(home_base_price($data->product, false)) ,
                         'rating' => (float) $data->product->rating,
-                    ]
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -35,7 +35,7 @@ class WishlistCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
-use Illuminate\Http\Request;
 use App\Models\StoreUser;
 use Google\Client as GoogleClient;
+use Illuminate\Http\Request;
 
 class AdminNotificationController extends Controller
 {
@@ -66,7 +66,7 @@ class AdminNotificationController extends Controller
 
         $headers = [
             "Authorization: Bearer $access_token",
-            'Content-Type: application/json'
+            'Content-Type: application/json',
         ];
 
         $data = [
@@ -76,7 +76,7 @@ class AdminNotificationController extends Controller
                     "title" => $title,
                     "body" => $description,
                 ],
-            ]
+            ],
         ];
         $payload = json_encode($data);
 

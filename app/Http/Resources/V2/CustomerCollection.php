@@ -31,7 +31,7 @@ class CustomerCollection extends ResourceCollection
                     'package_name' => $data->customer_package->name??"",
                     'is_important' => $data->is_important,
                 ];
-            })
+            }),
         ];
     }
 
@@ -39,7 +39,7 @@ class CustomerCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

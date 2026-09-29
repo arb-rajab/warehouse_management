@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\PasswordReset;
-use App\Models\StoreUser;
 use App\Mail\SecondEmailVerifyMailManager;
+use App\Models\StoreUser;
 use App\Utility\SmsUtility;
-use Mail;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ForgotPasswordController extends Controller
 {
@@ -26,6 +26,8 @@ class ForgotPasswordController extends Controller
     */
 
     use SendsPasswordResetEmails;
+use Illuminate\Support\Facades\Password;
+use Mail;
 
     /**
      * Create a new controller instance.
@@ -40,8 +42,8 @@ class ForgotPasswordController extends Controller
     /**
      * Send a reset link to the given user.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @param  Request  $request
+     * @return RedirectResponse|JsonResponse
      */
     public function sendResetLinkEmail(Request $request)
     {

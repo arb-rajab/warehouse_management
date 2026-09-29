@@ -16,10 +16,10 @@ class HomeCategoryCollection extends ResourceCollection
                     'icon' => uploaded_asset($data->category->icon),
                     'links' => [
                         'products' => route('api.products.category', $data->category->id),
-                        'sub_categories' => route('subCategories.index', $data->category->id)
-                    ]
+                        'sub_categories' => route('subCategories.index', $data->category->id),
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -27,7 +27,7 @@ class HomeCategoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

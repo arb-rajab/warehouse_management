@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Mail\EmailManager;
 use App\Models\StoreUser;
 use App\Models\Subscriber;
+use Illuminate\Http\Request;
 use Mail;
-use App\Mail\EmailManager;
 
 class NewsletterController extends Controller
 {

@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\BlogCategory;
 use App\Models\Blog;
+use App\Models\BlogCategory;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class BlogController extends Controller
 {
@@ -17,17 +18,17 @@ class BlogController extends Controller
         $this->middleware(['permission:delete_blog'])->only('destroy');
         $this->middleware(['permission:publish_blog'])->only('change_status');
     }
-    
+
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $sort_search = null;
         $blogs = Blog::orderBy('created_at', 'desc');
-        
+
         if ($request->search != null){
             $blogs = $blogs->where('title', 'like', '%'.$request->search.'%');
             $sort_search = $request->search;
@@ -41,7 +42,7 @@ class BlogController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -52,31 +53,31 @@ class BlogController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
-        
+
         $request->validate([
             'category_id' => 'required',
             'title' => 'required|max:255',
         ]);
 
         $blog = new Blog;
-        
+
         $blog->category_id = $request->category_id;
         $blog->title = $request->title;
         $blog->banner = $request->banner;
         $blog->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->slug));
         $blog->short_description = $request->short_description;
         $blog->description = $request->description;
-        
+
         $blog->meta_title = $request->meta_title;
         $blog->meta_img = $request->meta_img;
         $blog->meta_description = $request->meta_description;
         $blog->meta_keywords = $request->meta_keywords;
-        
+
         $blog->save();
 
         flash(translate('Blog post has been created successfully'))->success();
@@ -87,36 +88,36 @@ class BlogController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
-        
+
     }
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
         $blog = Blog::find($id);
         $blog_categories = BlogCategory::all();
-        
+
         return view('backend.blog_system.blog.edit', compact('blog','blog_categories'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
-    {        
+    {
         $request->validate([
             'category_id' => 'required',
             'title' => 'required|max:255',
@@ -130,22 +131,22 @@ class BlogController extends Controller
         $blog->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->slug));
         $blog->short_description = $request->short_description;
         $blog->description = $request->description;
-        
+
         $blog->meta_title = $request->meta_title;
         $blog->meta_img = $request->meta_img;
         $blog->meta_description = $request->meta_description;
         $blog->meta_keywords = $request->meta_keywords;
-        
+
         $blog->save();
 
         flash(translate('Blog post has been updated successfully'))->success();
         return redirect()->route('blog.index');
     }
-    
+
     public function change_status(Request $request) {
         $blog = Blog::find($request->id);
         $blog->status = $request->status;
-        
+
         $blog->save();
         return 1;
     }
@@ -154,18 +155,18 @@ class BlogController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
         Blog::find($id)->delete();
-        
+
         return redirect('admin/blogs');
     }
 
 
     public function all_blog(Request $request) {
-        $selected_categories = array();
+        $selected_categories = [];
         $search = null;
         $blogs = Blog::query();
 
@@ -181,27 +182,27 @@ class BlogController extends Controller
             $case1 = $search . '%';
             $case2 = '%' . $search . '%';
 
-            $blogs->orderByRaw("CASE 
-                WHEN title LIKE ? THEN 1 
-                WHEN title LIKE ? THEN 2 
-                ELSE 3 
+            $blogs->orderByRaw("CASE
+                WHEN title LIKE ? THEN 1
+                WHEN title LIKE ? THEN 2
+                ELSE 3
                 END", [$case1, $case2]);
         }
-        
+
         if ($request->has('selected_categories')) {
             $selected_categories = $request->selected_categories;
             $blog_categories = BlogCategory::whereIn('slug', $selected_categories)->pluck('id')->toArray();
 
             $blogs->whereIn('category_id', $blog_categories);
         }
-        
+
         $blogs = $blogs->where('status', 1)->orderBy('created_at', 'desc')->paginate(12);
 
         $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
 
         return view("frontend.blog.listing", compact('blogs', 'selected_categories', 'search', 'recent_blogs'));
     }
-    
+
     public function blog_details($slug) {
         $blog = Blog::where('slug', $slug)->first();
         $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();

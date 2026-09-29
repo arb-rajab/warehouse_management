@@ -1,15 +1,15 @@
 <?php
 namespace App\Http\Controllers\Payment;
 
-use Illuminate\Http\Request;
-use App\Utility\NagadUtility;
-use App\Models\CombinedOrder;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\WalletController;
-use App\Http\Controllers\CheckoutController;
+use App\Models\CombinedOrder;
+use App\Models\CustomerPackage;
+use App\Models\SellerPackage;
+use App\Utility\NagadUtility;
+use Illuminate\Http\Request;
 use Session;
 
 class NagadController{
@@ -80,15 +80,15 @@ class NagadController{
             'merchantId' => $MerchantID,
             'datetime' => $DateTime,
             'orderId' => $invoice_no,
-            'challenge' => NagadUtility::generateRandomString()
+            'challenge' => NagadUtility::generateRandomString(),
         ];
 
-        $PostData = array(
+        $PostData = [
             'accountNumber' => config('nagad.merchant_number'), //optional
             'dateTime' => $DateTime,
             'sensitiveData' => NagadUtility::EncryptDataWithPublicKey(json_encode($SensitiveData)),
-            'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveData))
-        );
+            'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveData)),
+        ];
 
         $ur = $this->nagadHost."api/dfs/check-out/initialize/" . $MerchantID . "/" . $invoice_no;
         $Result_Data = NagadUtility::HttpPostMethod($ur,$PostData);
@@ -103,13 +103,13 @@ class NagadController{
                     $paymentReferenceId = $PlainResponse['paymentReferenceId'];
                     $randomserver = $PlainResponse['challenge'];
 
-                    $SensitiveDataOrder = array(
+                    $SensitiveDataOrder = [
                         'merchantId' => $MerchantID,
                         'orderId' => $invoice_no,
                         'currencyCode' => '050',
                         'amount' => $this->amount,
-                        'challenge' => $randomserver
-                    );
+                        'challenge' => $randomserver,
+                    ];
 
 
                     // $merchantAdditionalInfo = '{"no_of_seat": "1", "Service_Charge":"20"}';
@@ -119,12 +119,12 @@ class NagadController{
                     // echo $merchantAdditionalInfo;
                     // exit();
 
-                    $PostDataOrder = array(
+                    $PostDataOrder = [
                         'sensitiveData' => NagadUtility::EncryptDataWithPublicKey(json_encode($SensitiveDataOrder)),
                         'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveDataOrder)),
                         'merchantCallbackURL' => $merchantCallbackURL,
-                        'additionalMerchantInfo' => (object)$this->merchantAdditionalInfo
-                    );
+                        'additionalMerchantInfo' => (object)$this->merchantAdditionalInfo,
+                    ];
 
                     // echo json_encode($PostDataOrder);
                     // exit();

@@ -21,7 +21,7 @@ class PosProductCollection extends ResourceCollection
                     'variant' => $data->variant,
                     'digital' => $data->digital,
                 ];
-            })
+            }),
         ];
     }
 
@@ -29,7 +29,7 @@ class PosProductCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

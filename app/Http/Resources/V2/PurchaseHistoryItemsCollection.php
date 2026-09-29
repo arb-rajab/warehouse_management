@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V2;
 
+use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class PurchaseHistoryItemsCollection extends ResourceCollection
@@ -19,7 +20,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     $refund_section = true;
                     $no_of_max_day = get_setting('refund_request_time');
                     $last_refund_date = $data->created_at->addDays($no_of_max_day);
-                    $today_date = \Carbon\Carbon::now();
+                    $today_date = Carbon::now();
                     if ($data->product != null &&
                         $data->product->refundable != 0 &&
                         $data->refund_request == null &&
@@ -75,7 +76,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     'refund_label' => $refund_label,
                     'refund_request_status' => $refund_request_status,
                 ];
-            })
+            }),
         ];
     }
 
@@ -83,7 +84,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

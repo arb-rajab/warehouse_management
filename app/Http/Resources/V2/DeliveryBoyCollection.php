@@ -17,7 +17,7 @@ class DeliveryBoyCollection extends ResourceCollection
                     'total_collection' => $data->total_collection,
                     'total_earning' => $data->total_earning,
                 ];
-            })
+            }),
         ];
     }
 
@@ -25,7 +25,7 @@ class DeliveryBoyCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

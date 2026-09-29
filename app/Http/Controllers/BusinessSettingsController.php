@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\BusinessSetting;
+use App\Models\Product;
 use Artisan;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class BusinessSettingsController extends Controller
 {
@@ -88,8 +90,8 @@ class BusinessSettingsController extends Controller
 
     /**
      * Update the API key's for payment methods.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function payment_method_update(Request $request)
     {
@@ -117,8 +119,8 @@ class BusinessSettingsController extends Controller
 
     /**
      * Update the API key's for GOOGLE analytics.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function google_analytics_update(Request $request)
     {
@@ -215,8 +217,8 @@ class BusinessSettingsController extends Controller
 
     /**
      * Update the API key's for GOOGLE analytics.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function facebook_chat_update(Request $request)
     {
@@ -291,8 +293,8 @@ class BusinessSettingsController extends Controller
 
     /**
      * Update the API key's for other methods.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function env_key_update(Request $request)
     {
@@ -308,7 +310,7 @@ class BusinessSettingsController extends Controller
      * overWrite the Env File values.
      * @param  String type
      * @param  String value
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function overWriteEnvFile($type, $val)
     {
@@ -335,12 +337,12 @@ class BusinessSettingsController extends Controller
 
     /**
      * Update sell verification form.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function seller_verification_form_update(Request $request)
     {
-        $form = array();
+        $form = [];
         $select_types = ['select', 'multi_select', 'radio'];
         $j = 0;
         for ($i=0; $i < count($request->type); $i++) {
@@ -522,7 +524,7 @@ class BusinessSettingsController extends Controller
     {
         $query = $request->input('query');
 
-        $results = \App\Models\Product::where('mat_id', 'like', '%' . $query . '%')
+        $results = Product::where('mat_id', 'like', '%' . $query . '%')
             ->select('id', 'name', 'mat_id')
             ->get();
 

@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppTranslation;
-use Illuminate\Http\Request;
 use App\Models\Language;
-use App\Models\Translation;
 use App\Models\StoreUser;
+use App\Models\Translation;
 use Cache;
-use Storage;
+use Illuminate\Http\Request;
 use Session;
+use Storage;
 
 class LanguageController extends Controller
 {
@@ -47,7 +47,7 @@ class LanguageController extends Controller
         $language->name = $request->name;
         $language->code = $request->code;
         $language->app_lang_code = $request->app_lang_code;
-        $language->save();   
+        $language->save();
 
         Cache::forget('app.languages');
 
@@ -60,13 +60,13 @@ class LanguageController extends Controller
         $sort_search = null;
         $language = Language::findOrFail($id);
         $lang_keys = Translation::where('lang', 'en');
-        
+
         if ($request->has('search')){
             $sort_search = $request->search;
             $lang_keys = $lang_keys->where('lang_key', 'like', '%'.preg_replace('/[^A-Za-z0-9\_]/', '', str_replace(' ', '_', strtolower($sort_search))).'%');
         }
         $lang_keys = $lang_keys->paginate(50);
-        
+
         return view('backend.setup_configurations.languages.language_view', compact('language','lang_keys','sort_search'));
     }
 
@@ -90,12 +90,12 @@ class LanguageController extends Controller
             flash(translate('English language code can not be edited'))->error();
             return back();
         }
-        
+
         $language->name = $request->name;
         $language->code = $request->code;
-        $language->app_lang_code = $request->app_lang_code; 
+        $language->app_lang_code = $request->app_lang_code;
         $language->save();
-        
+
         Cache::forget('app.languages');
 
         flash(translate('Language has been updated successfully'))->success();
@@ -174,7 +174,7 @@ class LanguageController extends Controller
         $path = Storage::disk('local')->put('app-translations', $request->lang_file);
 
         $contents = file_get_contents(public_path($path));
-        
+
         try {
             foreach(json_decode($contents) as $key => $value){
                 AppTranslation::updateOrCreate(
@@ -221,7 +221,7 @@ class LanguageController extends Controller
             // Write into the json file
             $filename = "app_{$language->app_lang_code}.arb";
             $contents = AppTranslation::where('lang', $language->app_lang_code)->pluck('lang_value', 'lang_key')->toJson();
-            
+
             return response()->streamDownload(function () use ($contents) {
                 echo $contents;
             }, $filename);

@@ -61,7 +61,7 @@ class SSLCommerz
                             return $this->error;
                         }
                     } else {
-                        $options = array();
+                        $options = [];
                         # VISA GATEWAY
                         if (isset($this->sslc_data['gw']['visa']) && $this->sslc_data['gw']['visa'] != "") {
                             $sslcz_visa = explode(",", $this->sslc_data['gw']['visa']);
@@ -417,7 +417,7 @@ class SSLCommerz
             # NEW ARRAY DECLARED TO TAKE VALUE OF ALL POST
             $pre_define_key = explode(',', $post_data['verify_key']);
 
-            $new_data = array();
+            $new_data = [];
             if (!empty($pre_define_key)) {
                 foreach ($pre_define_key as $value) {
                     if (isset($post_data[$value])) {
@@ -452,7 +452,7 @@ class SSLCommerz
     }
 
     # FUNCTION TO GET IMAGES FROM WEB
-    protected function _get_image($gw = "", $source = array())
+    protected function _get_image($gw = "", $source = [])
     {
         $logo = "";
         if (!empty($source) && isset($source['desc'])) {

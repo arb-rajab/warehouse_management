@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\CustomerProduct;
 use App\Models\CustomerProductTranslation;
-use App\Models\Category;
-use App\Models\Brand;
-use Auth;
-use Illuminate\Support\Str;
 use App\Utility\CategoryUtility;
+use Auth;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 
 class CustomerProductController extends Controller
 {
@@ -23,7 +24,7 @@ class CustomerProductController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -43,7 +44,7 @@ class CustomerProductController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -67,8 +68,8 @@ class CustomerProductController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -84,7 +85,7 @@ class CustomerProductController extends Controller
         $customer_product->thumbnail_img        = $request->thumbnail_img;
         $customer_product->unit                 = $request->unit;
 
-        $tags = array();
+        $tags = [];
         if($request->tags[0] != null){
             foreach (json_decode($request->tags[0]) as $key => $tag) {
                 array_push($tags, $tag->value);
@@ -125,7 +126,7 @@ class CustomerProductController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -136,7 +137,7 @@ class CustomerProductController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Request $request, $id)
     {
@@ -152,9 +153,9 @@ class CustomerProductController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -173,7 +174,7 @@ class CustomerProductController extends Controller
         $customer_product->photos               = $request->photos;
         $customer_product->thumbnail_img        = $request->thumbnail_img;
 
-        $tags = array();
+        $tags = [];
         if($request->tags[0] != null){
             foreach (json_decode($request->tags[0]) as $key => $tag) {
                 array_push($tags, $tag->value);
@@ -210,7 +211,7 @@ class CustomerProductController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {

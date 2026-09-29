@@ -5,22 +5,23 @@ namespace App\Http\Controllers\Api\V2\Seller;
 use App\Http\Resources\V2\MessageCollection;
 use App\Http\Resources\V2\Seller\ConversationCollection;
 use App\Http\Resources\V2\Seller\ConversationResource;
-use Illuminate\Http\Request;
-use App\Models\Conversation;
-use App\Models\BusinessSetting;
-use App\Models\Message;
-use Auth;
-use App\Models\Product;
-use Mail;
 use App\Mail\ConversationMailManager;
+use App\Models\BusinessSetting;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\Product;
+use Auth;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Mail;
 
 class ConversationController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -63,7 +64,7 @@ class ConversationController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -90,7 +91,7 @@ class ConversationController extends Controller
             return $this->failed(translate('You can not see this message.'));
 
         }
-        
+
     }
 
 
@@ -98,7 +99,7 @@ class ConversationController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {

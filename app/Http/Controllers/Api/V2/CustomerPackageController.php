@@ -18,7 +18,7 @@ class CustomerPackageController extends Controller
 public function purchase_package_free(Request $request)
     {
         $data['customer_package_id'] = $request->package_id;
-        
+
 
         $customer_package = CustomerPackage::findOrFail($data['customer_package_id']);
 
@@ -33,7 +33,7 @@ public function purchase_package_free(Request $request)
                 return $this->success(translate('Package purchasing successful'));
             } else {
                return $this->failed(translate('You can not purchase this package anymore.'));
-                
+
             }
         }
         return $this->failed(translate('Invalid input'));
@@ -55,7 +55,7 @@ public function purchase_package_free(Request $request)
         $customer_package->offline_payment = 1;
         $customer_package->reciept = ($request->photo == null) ? '' : $request->photo;
         $customer_package->save();
-        
+
         return $this->success(translate("Submitted Successfully"));
     }
 }

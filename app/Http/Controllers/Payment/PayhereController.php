@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Controller;
+use App\Models\CombinedOrder;
+use App\Models\CustomerPackage;
 use App\Models\StoreUser;
 use App\Models\Wallet;
-use App\Models\CombinedOrder;
 use App\Utility\PayhereUtility;
-use App\Models\CustomerPackage;
-use Session;
 use Auth;
 use Illuminate\Http\Request;
+use Session;
 
 class PayhereController extends Controller
 {
@@ -47,7 +47,7 @@ class PayhereController extends Controller
                 $email = Auth::user()->email;
                 $address = 'dummy address';
                 $city = 'Colombo';
-        
+
                 return PayhereUtility::create_wallet_form($user_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city);
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {
@@ -62,7 +62,7 @@ class PayhereController extends Controller
                 $email = Auth::user()->email;
                 $address = 'dummy address';
                 $city = 'Colombo';
-    
+
                 return PayhereUtility::create_customer_package_form($user_id, $package_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city);
             }
         }

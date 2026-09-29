@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommissionHistory;
-use Illuminate\Http\Request;
-use App\Models\SellerWithdrawRequest;
 use App\Models\Payment;
+use App\Models\SellerWithdrawRequest;
 use App\Models\Shop;
+use Illuminate\Http\Request;
 use Session;
 
 class CommissionController extends Controller
@@ -97,7 +97,7 @@ class CommissionController extends Controller
                 $orderDetail->payment_status = 'paid';
                 $orderDetail->save();
                 $commission_percentage = 0;
-                
+
                 if(get_setting('vendor_commission_activation')){
                     if (get_setting('category_wise_commission')) {
                         $commission_percentage = $orderDetail->product->category->commision_rate;

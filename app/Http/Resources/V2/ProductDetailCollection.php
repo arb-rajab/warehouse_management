@@ -2,14 +2,14 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use App\Models\Review;
 use App\Models\Attribute;
+use App\Models\Cart;
 use App\Models\ProductVariation;
+use App\Models\Review;
+use App\Models\StoreUser;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Facades\Request;
 use Laravel\Sanctum\PersonalAccessToken;
-use App\Models\Cart;
-use App\Models\StoreUser;
 
 class ProductDetailCollection extends ResourceCollection
 {
@@ -33,7 +33,7 @@ class ProductDetailCollection extends ResourceCollection
                 if (!empty($photo_paths)) {
                     for ($i = 0; $i < count($photo_paths); $i++) {
                         if ($photo_paths[$i] != "") {
-                            $item = array();
+                            $item = [];
                             $item['variant'] = "";
                             $item['path'] = $photo_paths[$i];
                             $photos[] = $item;
@@ -43,7 +43,7 @@ class ProductDetailCollection extends ResourceCollection
 
                 foreach ($data->stocks as $stockItem) {
                     if ($stockItem->image != null && $stockItem->image != "") {
-                        $item = array();
+                        $item = [];
                         $item['variant'] = $stockItem->variant;
                         $item['path'] = uploaded_asset($stockItem->image);
                         $photos[] = $item;
@@ -160,9 +160,9 @@ class ProductDetailCollection extends ResourceCollection
                     'stars' => $data->collection?->amount ?? 0,
                     'offers' => $offer_array ?? null,
                     'for_sale'  => (int) $data->for_sale,
-                    'published' => (int) $data->published
+                    'published' => (int) $data->published,
                 ];
-            })
+            }),
         ];
     }
 
@@ -170,13 +170,13 @@ class ProductDetailCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 
     protected function convertToChoiceOptions($data)
     {
-        $result = array();
+        $result = [];
         if ($data) {
             foreach ($data as $key => $choice) {
                 $item['name'] = $choice->attribute_id;
@@ -190,7 +190,7 @@ class ProductDetailCollection extends ResourceCollection
 
     protected function convertPhotos($data)
     {
-        $result = array();
+        $result = [];
         foreach ($data as $key => $item) {
             array_push($result, uploaded_asset($item));
         }

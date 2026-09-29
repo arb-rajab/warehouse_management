@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Seller;
 
-use Illuminate\Http\Request;
+use App\Models\Review;
 use Auth;
 use DB;
+use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
@@ -19,7 +20,7 @@ class ReviewController extends Controller
                     ->paginate(9);
 
         foreach ($reviews as $key => $value) {
-            $review = \App\Models\Review::find($value->id);
+            $review = Review::find($value->id);
             $review->viewed = 1;
             $review->save();
         }

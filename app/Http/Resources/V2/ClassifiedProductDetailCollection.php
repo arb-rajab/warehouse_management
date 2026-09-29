@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use App\Models\Review;
 use App\Models\Attribute;
+use App\Models\Review;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 
 class ClassifiedProductDetailCollection extends ResourceCollection
@@ -13,7 +13,7 @@ class ClassifiedProductDetailCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection->map(function ($data) {
-                
+
                 $photo_paths = get_images_path($data->photos);
 
                 $photos = [];
@@ -22,7 +22,7 @@ class ClassifiedProductDetailCollection extends ResourceCollection
                 if (!empty($photo_paths)) {
                     for ($i = 0; $i < count($photo_paths); $i++) {
                         if ($photo_paths[$i] != "" ) {
-                            $item = array();
+                            $item = [];
                             $item['variant'] = "";
                             $item['path'] = $photo_paths[$i];
                             $photos[]= $item;
@@ -63,9 +63,9 @@ class ClassifiedProductDetailCollection extends ResourceCollection
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
                     'brand' => $brand,
                     'category' => $data->category->name,
-                    'link' => route('product', $data->slug)
+                    'link' => route('product', $data->slug),
                 ];
-            })
+            }),
         ];
     }
 
@@ -73,13 +73,13 @@ class ClassifiedProductDetailCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 
     protected function convertToChoiceOptions($data)
     {
-        $result = array();
+        $result = [];
        if($data) {
         foreach ($data as $key => $choice) {
             $item['name'] = $choice->attribute_id;
@@ -93,7 +93,7 @@ class ClassifiedProductDetailCollection extends ResourceCollection
 
     protected function convertPhotos($data)
     {
-        $result = array();
+        $result = [];
         foreach ($data as $key => $item) {
             array_push($result, uploaded_asset($item));
         }

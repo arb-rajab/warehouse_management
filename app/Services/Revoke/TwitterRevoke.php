@@ -10,7 +10,7 @@ class TwitterRevoke implements ProviderRevoke
         $token = auth()->user()->access_token;
         $client_id = env('TWITTER_CLIENT_ID');
 
-        $request_data = array('client_id' => $client_id, 'token' => $token);
+        $request_data = ['client_id' => $client_id, 'token' => $token];
         $request_data_json = json_encode($request_data);
 
         $ch = curl_init();
@@ -20,9 +20,9 @@ class TwitterRevoke implements ProviderRevoke
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $request_data_json);
 
-        $header = array(
-            'Content-Type:application/x-www-form-urlencoded'
-        );
+        $header = [
+            'Content-Type:application/x-www-form-urlencoded',
+        ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
 
         curl_exec($ch);

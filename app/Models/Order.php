@@ -26,7 +26,7 @@ class Order extends Model
         'delivery_date',
         'member_serial',
         'combined_order_id',
-        'payment_type'
+        'payment_type',
     ];
 
     public function orderDetails()

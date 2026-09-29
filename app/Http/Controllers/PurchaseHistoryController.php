@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use DB;
-use Auth;
 use App\Models\Order;
-use App\Models\Upload;
 use App\Models\Product;
+use App\Models\Upload;
+use Auth;
+use DB;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class PurchaseHistoryController extends Controller
 {
@@ -15,7 +16,7 @@ class PurchaseHistoryController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -79,7 +80,7 @@ class PurchaseHistoryController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function order_cancel($id)
     {

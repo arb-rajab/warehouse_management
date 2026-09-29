@@ -2,14 +2,14 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\JsonResource;
 use \App\Models\Product;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class ShopDetailsCollection extends JsonResource
 {
     public function toArray($request)
     {
-        return 
+        return
         [
             'id' => $this->id,
             'user_id' => intval($this->user_id) ,
@@ -57,12 +57,12 @@ class ShopDetailsCollection extends JsonResource
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 
     protected function convertPhotos($data){
-        $result = array();
+        $result = [];
         foreach ($data as $key => $item) {
             array_push($result, uploaded_asset($item));
         }

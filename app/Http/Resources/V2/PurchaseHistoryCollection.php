@@ -41,10 +41,10 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'cancel_request' => $data->cancel_request == 1,
                     'manually_payable' => $data->manual_payment && $data->manual_payment_data == null,
                     'links' => [
-                        'details' => ''
-                    ]
+                        'details' => '',
+                    ],
                 ];
-            })
+            }),
         ];
     }
 
@@ -52,7 +52,7 @@ class PurchaseHistoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 }

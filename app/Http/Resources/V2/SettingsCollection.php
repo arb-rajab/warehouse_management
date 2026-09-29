@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources\V2;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
 use App\Models\BusinessSetting;
 use App\Models\Currency;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class SettingsCollection extends ResourceCollection
 {
@@ -24,11 +24,11 @@ class SettingsCollection extends ResourceCollection
                         'name' => Currency::findOrFail(BusinessSetting::where('type', 'system_default_currency')->first()->value)->name,
                         'symbol' => Currency::findOrFail(BusinessSetting::where('type', 'system_default_currency')->first()->value)->symbol,
                         'exchange_rate' => (float) $this->exchangeRate(Currency::findOrFail(BusinessSetting::where('type', 'system_default_currency')->first()->value)),
-                        'code' => Currency::findOrFail(BusinessSetting::where('type', 'system_default_currency')->first()->value)->code
+                        'code' => Currency::findOrFail(BusinessSetting::where('type', 'system_default_currency')->first()->value)->code,
                     ],
-                    'currency_format' => $data->currency_format
+                    'currency_format' => $data->currency_format,
                 ];
-            })
+            }),
         ];
     }
 
@@ -36,7 +36,7 @@ class SettingsCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'status' => 200
+            'status' => 200,
         ];
     }
 

@@ -80,12 +80,12 @@ class NagadUtility {
     {
         $url = curl_init($PostURL);
         $posttoken = json_encode($PostData);
-        $header = array(
+        $header = [
             'Content-Type:application/json',
             'X-KM-Api-Version:v-0.2.0',
             'X-KM-IP-V4:' . self::get_client_ip(),
-            'X-KM-Client-Type:PC_WEB'
-        );
+            'X-KM-Client-Type:PC_WEB',
+        ];
 
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
         curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");

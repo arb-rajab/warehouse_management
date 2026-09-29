@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\StoreUser;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Console\Command;
 
 class SyncOldMembers extends Command
 {
@@ -74,7 +74,7 @@ class SyncOldMembers extends Command
                     "CompanyName"  =>    $user->company_name,
                     "Email"        =>    $user->email,
                     "Mobile"       =>    $user->phone,
-                    "AccSystemID"  =>    161900001 + $user->id
+                    "AccSystemID"  =>    161900001 + $user->id,
                 ];
                 $client = new GuzzleClient();
 

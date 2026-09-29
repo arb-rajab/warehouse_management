@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\RepresentativePackage;
 use App\Models\StoreUser;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class RepresentativePackageController extends Controller

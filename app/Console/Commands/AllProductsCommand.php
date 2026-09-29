@@ -2,20 +2,20 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Product;
-use App\Models\ProductStock;
-use Carbon\Carbon;
-use Exception;
-use App\Models\ProductTax;
-use App\Models\Tax;
-use App\Models\ProductTranslation;
-use Illuminate\Support\Str;
-use App\Models\Upload;
-use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductStock;
+use App\Models\ProductTax;
+use App\Models\ProductTranslation;
 use App\Models\StoreUser;
+use App\Models\Tax;
+use App\Models\Upload;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 class AllProductsCommand extends Command
 {
@@ -153,7 +153,7 @@ class AllProductsCommand extends Command
                     // Define the static part of the attribute information for "Per Box" and "Per Piece.", right now all products can sold per box or per piece
                     $choice_options[] = [
                         "attribute_id" => "$types_of_sale->id",
-                        "values" => ["Per Box", "Per Piece"]
+                        "values" => ["Per Box", "Per Piece"],
                     ];
                     // Initialize an array to hold the "VName" values
                     $attributeValues = [];
@@ -173,7 +173,7 @@ class AllProductsCommand extends Command
             else{ // if there are no variations
                 $choice_options[] = [
                     "attribute_id" => "$types_of_sale->id",
-                    "values" => ["Per Box", "Per Piece"]
+                    "values" => ["Per Box", "Per Piece"],
                 ];
 
                 $choice_options = json_encode($choice_options);
@@ -301,7 +301,7 @@ class AllProductsCommand extends Command
                      // Define the static part of the attribute information for "Per Box" and "Per Piece.", right now all products can sold per box or per piece
                      $choice_options[] = [
                          "attribute_id" => "$types_of_sale->id",
-                         "values" => ["Per Box", "Per Piece"]
+                         "values" => ["Per Box", "Per Piece"],
                      ];
 
                      // Initialize an array to hold the "VName" values

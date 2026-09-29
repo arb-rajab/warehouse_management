@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\BusinessSetting;
 use App\Models\Shop;
 use App\Models\StoreUser;
-use App\Models\BusinessSetting;
+use App\Notifications\EmailVerificationNotification;
 use Auth;
 use Hash;
-use App\Notifications\EmailVerificationNotification;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ShopController extends Controller
 {
@@ -21,7 +22,7 @@ class ShopController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -32,7 +33,7 @@ class ShopController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -44,7 +45,7 @@ class ShopController extends Controller
 				flash(translate('This user already a seller'))->error();
 				return back();
 			}
-            
+
         } else {
             return view('frontend.seller_form');
         }
@@ -53,8 +54,8 @@ class ShopController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -124,7 +125,7 @@ class ShopController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -135,7 +136,7 @@ class ShopController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {

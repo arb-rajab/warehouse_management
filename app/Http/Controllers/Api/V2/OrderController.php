@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use \App\Utility\NotificationUtility;
+use App\Http\Controllers\AffiliateController;
 use App\Models\Address;
-use Illuminate\Http\Request;
-use App\Models\Order;
+use App\Models\BusinessSetting;
 use App\Models\Cart;
-use App\Models\Product;
-use App\Models\ProductStock;
-use App\Models\OrderDetail;
+use App\Models\CombinedOrder;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
-use App\Models\BusinessSetting;
+use App\Models\Order;
+use App\Models\OrderDetail;
+use App\Models\Product;
+use App\Models\ProductStock;
 use App\Models\StoreUser;
-use DB;
-use \App\Utility\NotificationUtility;
-use App\Models\CombinedOrder;
-use App\Http\Controllers\AffiliateController;
-use App\Services\OrderService;
 use App\Services\OfferService;
+use App\Services\OrderService;
 use Auth;
 use Carbon\Carbon;
+use DB;
+use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
@@ -139,9 +139,9 @@ class OrderController extends Controller
         $combined_order->shipping_address = json_encode($shippingAddress);
         $combined_order->save();
 
-        $seller_products = array();
+        $seller_products = [];
         foreach ($cartItems as $cartItem) {
-            $product_ids = array();
+            $product_ids = [];
             $product = Product::find($cartItem['product_id']);
             if (isset($seller_products[$product->user_id])) {
                 $product_ids = $seller_products[$product->user_id];
