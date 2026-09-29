@@ -26,12 +26,12 @@ class AppEmailVerificationNotification extends Notification
 
     public function toMail($notifiable)
     {
-        $array['view'] = 'emails.app_verification';
+        $array['view'] = 'shop.emails.app_verification';
         $array['subject'] = translate('Email Verification');
         $array['content'] = translate('Please enter the code:'.$notifiable->verification_code);
 
         return (new MailMessage)
-            ->view('emails.app_verification', ['array' => $array])
+            ->view('shop.emails.app_verification', ['array' => $array])
             ->subject(translate('Email Verification - ').env('APP_NAME'));
     }
 

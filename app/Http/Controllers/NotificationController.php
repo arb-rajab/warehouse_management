@@ -13,15 +13,15 @@ class NotificationController extends Controller
         auth()->user()->unreadNotifications->markAsRead();
 
         if(Auth::user()->user_type == 'admin') {
-            return view('backend.notification.index', compact('notifications'));
+            return view('shop.backend.notification.index', compact('notifications'));
         }
 
         if(Auth::user()->user_type == 'seller') {
-            return view('seller.notification.index', compact('notifications'));
+            return view('shop.seller.notification.index', compact('notifications'));
         }
 
         if(Auth::user()->user_type == 'customer') {
-            return view('frontend.user.customer.notification.index', compact('notifications'));
+            return view('shop.frontend.user.customer.notification.index', compact('notifications'));
         }
 
     }

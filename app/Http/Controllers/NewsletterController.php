@@ -19,7 +19,7 @@ class NewsletterController extends Controller
     {
         $users = StoreUser::all();
         $subscribers = Subscriber::all();
-        return view('backend.marketing.newsletters.index', compact('users', 'subscribers'));
+        return view('shop.backend.marketing.newsletters.index', compact('users', 'subscribers'));
     }
 
     public function send(Request $request)
@@ -28,7 +28,7 @@ class NewsletterController extends Controller
             //sends newsletter to selected users
         	if ($request->has('user_emails')) {
                 foreach ($request->user_emails as $key => $email) {
-                    $array['view'] = 'emails.newsletter';
+                    $array['view'] = 'shop.emails.newsletter';
                     $array['subject'] = $request->subject;
                     $array['from'] = env('MAIL_FROM_ADDRESS');
                     $array['content'] = $request->content;
@@ -44,7 +44,7 @@ class NewsletterController extends Controller
             //sends newsletter to subscribers
             if ($request->has('subscriber_emails')) {
                 foreach ($request->subscriber_emails as $key => $email) {
-                    $array['view'] = 'emails.newsletter';
+                    $array['view'] = 'shop.emails.newsletter';
                     $array['subject'] = $request->subject;
                     $array['from'] = env('MAIL_FROM_ADDRESS');
                     $array['content'] = $request->content;
@@ -67,7 +67,7 @@ class NewsletterController extends Controller
     }
 
     public function testEmail(Request $request){
-        $array['view'] = 'emails.newsletter';
+        $array['view'] = 'shop.emails.newsletter';
         $array['subject'] = "SMTP Test";
         $array['from'] = env('MAIL_FROM_ADDRESS');
         $array['content'] = "This is a test email.";

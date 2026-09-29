@@ -22,6 +22,6 @@ class CommissionHistoryController extends Controller
         }
 
         $commission_history = $commission_history->paginate(10);
-        return view('seller.commission_history.index', compact('commission_history', 'seller_id', 'date_range'));
+        return view('shop.seller.commission_history.index', compact('commission_history', 'seller_id', 'date_range'));
     }
 }

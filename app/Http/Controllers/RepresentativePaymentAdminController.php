@@ -65,7 +65,7 @@ class RepresentativePaymentAdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('backend.representatives.payments.index', compact('payments'));
+        return view('shop.backend.representatives.payments.index', compact('payments'));
 
     }
 
@@ -108,7 +108,7 @@ class RepresentativePaymentAdminController extends Controller
         $payment = RepresentativePayment::findOrFail($id);
         $qrCode = $this->generate_qr_to_show_payment(new Request(['id' => $id]));
 
-        return PDF::loadView('frontend.user.export-rep-payments', [
+        return PDF::loadView('shop.frontend.user.export-rep-payments', [
             'payment' => $payment,
             'qr' => $qrCode,
         ])->download('payment-' . $payment->id . '.pdf');

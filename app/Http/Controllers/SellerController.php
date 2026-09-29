@@ -55,7 +55,7 @@ class SellerController extends Controller
             $shops = $shops->where('verification_status', $approved);
         }
         $shops = $shops->paginate(15);
-        return view('backend.sellers.index', compact('shops', 'sort_search', 'approved'));
+        return view('shop.backend.sellers.index', compact('shops', 'sort_search', 'approved'));
     }
 
     /**
@@ -65,7 +65,7 @@ class SellerController extends Controller
      */
     public function create()
     {
-        return view('backend.sellers.create');
+        return view('shop.backend.sellers.create');
     }
 
     /**
@@ -131,7 +131,7 @@ class SellerController extends Controller
     public function edit($id)
     {
         $shop = Shop::findOrFail(decrypt($id));
-        return view('backend.sellers.edit', compact('shop'));
+        return view('shop.backend.sellers.edit', compact('shop'));
     }
 
     /**
@@ -203,7 +203,7 @@ class SellerController extends Controller
     public function show_verification_request($id)
     {
         $shop = Shop::findOrFail($id);
-        return view('backend.sellers.verification', compact('shop'));
+        return view('shop.backend.sellers.verification', compact('shop'));
     }
 
     public function approve_seller($id)
@@ -237,13 +237,13 @@ class SellerController extends Controller
     public function payment_modal(Request $request)
     {
         $shop = shop::findOrFail($request->id);
-        return view('backend.sellers.payment_modal', compact('shop'));
+        return view('shop.backend.sellers.payment_modal', compact('shop'));
     }
 
     public function profile_modal(Request $request)
     {
         $shop = Shop::findOrFail($request->id);
-        return view('backend.sellers.profile_modal', compact('shop'));
+        return view('shop.backend.sellers.profile_modal', compact('shop'));
     }
 
     public function updateApproved(Request $request)

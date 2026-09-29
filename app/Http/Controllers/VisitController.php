@@ -35,7 +35,7 @@ class VisitController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('backend.representatives.visits.index', compact('visits', 'date'));
+        return view('shop.backend.representatives.visits.index', compact('visits', 'date'));
 
     }
 
@@ -52,7 +52,7 @@ class VisitController extends Controller
     public function show($id)
     {
         $visit = Visit::findOrFail($id);
-        return view('backend.representatives.visits.show', compact('visit'));
+        return view('shop.backend.representatives.visits.show', compact('visit'));
     }
 
     public function show_all_visits_in_a_day(Request $request, $rep_id)
@@ -75,7 +75,7 @@ class VisitController extends Controller
                     ->orderByDesc('rank')
                     ->get();
 
-        return view('backend.representatives.visits.rep-show', compact('visits', 'date', 'rep'));
+        return view('shop.backend.representatives.visits.rep-show', compact('visits', 'date', 'rep'));
     }
 
     public function destroy($id)

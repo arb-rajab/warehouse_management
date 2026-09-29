@@ -33,7 +33,7 @@ class ReportController extends Controller
             $products = $products->where('category_id', $sort_by);
         }
         $products = $products->paginate(15);
-        return view('backend.reports.stock_report', compact('products','sort_by'));
+        return view('shop.backend.reports.stock_report', compact('products','sort_by'));
     }
 
     public function in_house_sale_report(Request $request)
@@ -45,7 +45,7 @@ class ReportController extends Controller
             $products = $products->where('category_id', $sort_by);
         }
         $products = $products->paginate(15);
-        return view('backend.reports.in_house_sale_report', compact('products','sort_by'));
+        return view('shop.backend.reports.in_house_sale_report', compact('products','sort_by'));
     }
 
     public function seller_sale_report(Request $request)
@@ -58,7 +58,7 @@ class ReportController extends Controller
             $sellers = $sellers->where('verification_status', $sort_by);
         }
         $sellers = $sellers->paginate(10);
-        return view('backend.reports.seller_sale_report', compact('sellers','sort_by'));
+        return view('shop.backend.reports.seller_sale_report', compact('sellers','sort_by'));
     }
 
     public function wish_report(Request $request)
@@ -70,12 +70,12 @@ class ReportController extends Controller
             $products = $products->where('category_id', $sort_by);
         }
         $products = $products->paginate(10);
-        return view('backend.reports.wish_report', compact('products','sort_by'));
+        return view('shop.backend.reports.wish_report', compact('products','sort_by'));
     }
 
     public function user_search_report(Request $request){
         $searches = Search::orderBy('count', 'desc')->paginate(10);
-        return view('backend.reports.user_search_report', compact('searches'));
+        return view('shop.backend.reports.user_search_report', compact('searches'));
     }
 
     public function commission_history(Request $request) {
@@ -105,7 +105,7 @@ class ReportController extends Controller
         if(Auth::user()->user_type == 'seller') {
             return view('seller.reports.commission_history_report', compact('commission_history', 'seller_id', 'date_range'));
         }
-        return view('backend.reports.commission_history_report', compact('commission_history', 'seller_id', 'date_range'));
+        return view('shop.backend.reports.commission_history_report', compact('commission_history', 'seller_id', 'date_range'));
     }
 
     public function wallet_transaction_history(Request $request) {
@@ -134,6 +134,6 @@ class ReportController extends Controller
 
         $wallets = $wallet_history->paginate(10);
 
-        return view('backend.reports.wallet_history_report', compact('wallets', 'users_with_wallet', 'user_id', 'date_range'));
+        return view('shop.backend.reports.wallet_history_report', compact('wallets', 'users_with_wallet', 'user_id', 'date_range'));
     }
 }

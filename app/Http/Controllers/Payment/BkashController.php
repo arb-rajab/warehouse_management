@@ -111,12 +111,12 @@ class BkashController extends Controller
     {
         $allRequest = $request->all();
         if(isset($allRequest['status']) && $allRequest['status'] == 'failure'){
-            return view('frontend.bkash.fail')->with([
+            return view('shop.frontend.bkash.fail')->with([
                 'errorMessage' => 'Payment Failure'
             ]);
 
         }else if(isset($allRequest['status']) && $allRequest['status'] == 'cancel'){
-            return view('frontend.bkash.fail')->with([
+            return view('shop.frontend.bkash.fail')->with([
                 'errorMessage' => 'Payment Cancelled'
             ]);
 
@@ -128,7 +128,7 @@ class BkashController extends Controller
 
             $result_data_array = json_decode($resultdata,true);
             if(array_key_exists("statusCode",$result_data_array) && $result_data_array['statusCode'] != '0000'){
-                return view('frontend.bkash.fail')->with([
+                return view('shop.frontend.bkash.fail')->with([
                     'errorMessage' => $result_data_array['statusMessage'],
                 ]);
             }else if(array_key_exists("statusMessage",$result_data_array)){

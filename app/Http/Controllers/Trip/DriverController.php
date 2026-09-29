@@ -27,14 +27,14 @@ class DriverController extends Controller
         }
 
         $drivers = $drivers->paginate(15);
-        return view('backend.trips.drivers.index', compact('drivers', 'sort_search'));
+        return view('shop.backend.trips.drivers.index', compact('drivers', 'sort_search'));
     }
 
     public function create()
     {
         $countries = Country::where('status', 1)->orderBy('priority')->get();
 
-        return view('backend.trips.drivers.create', compact('countries'));
+        return view('shop.backend.trips.drivers.create', compact('countries'));
     }
 
     public function store(DriverRequest $request)
@@ -67,7 +67,7 @@ class DriverController extends Controller
 
         $countries = Country::where('status', 1)->orderBy('priority')->get();
 
-        return view('backend.trips.drivers.edit', compact('driver', 'countries'));
+        return view('shop.backend.trips.drivers.edit', compact('driver', 'countries'));
     }
 
     public function update(Request $request)

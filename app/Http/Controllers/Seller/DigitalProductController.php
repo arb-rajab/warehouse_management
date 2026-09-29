@@ -23,7 +23,7 @@ class DigitalProductController  extends Controller
     public function index(Request $request)
     {
         $products = Product::where('user_id', Auth::user()->id)->where('digital', 1)->orderBy('created_at', 'desc')->paginate(10);
-        return view('seller.product.digitalproducts.index', compact('products'));
+        return view('shop.seller.product.digitalproducts.index', compact('products'));
     }
 
     /**
@@ -36,7 +36,7 @@ class DigitalProductController  extends Controller
         if(addon_is_activated('seller_subscription')){
             if(seller_package_validity_check()){
                 $categories = Category::where('digital', 1)->get();
-                return view('seller.product.digitalproducts.create', compact('categories'));
+                return view('shop.seller.product.digitalproducts.create', compact('categories'));
             }
             else {
                 flash(translate('Please upgrade your package.'))->warning();
@@ -44,7 +44,7 @@ class DigitalProductController  extends Controller
             }
         }
         $categories = Category::where('digital', 1)->get();
-        return view('seller.product.digitalproducts.create', compact('categories'));
+        return view('shop.seller.product.digitalproducts.create', compact('categories'));
     }
 
     /**
@@ -136,7 +136,7 @@ class DigitalProductController  extends Controller
         $categories = Category::where('digital', 1)->get();
         $lang = $request->lang;
         $product = Product::find($id);
-        return view('seller.product.digitalproducts.edit', compact('categories', 'product', 'lang'));
+        return view('shop.seller.product.digitalproducts.edit', compact('categories', 'product', 'lang'));
     }
 
     /**

@@ -21,7 +21,7 @@ class SupportTicketController extends Controller
     public function index()
     {
         $tickets = Ticket::where('user_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(9);
-        return view('seller.support_ticket.index', compact('tickets'));
+        return view('shop.seller.support_ticket.index', compact('tickets'));
     }
 
     /**
@@ -50,7 +50,7 @@ class SupportTicketController extends Controller
     }
 
     public function send_support_mail_to_admin($ticket){
-        $array['view'] = 'emails.support';
+        $array['view'] = 'shop.emails.support';
         $array['subject'] = translate('Support ticket Code is').':- '.$ticket->code;
         $array['from'] = env('MAIL_FROM_ADDRESS');
         $array['content'] = translate('Hi. A ticket has been created. Please check the ticket.');
@@ -77,7 +77,7 @@ class SupportTicketController extends Controller
         $ticket->client_viewed = 1;
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;
-        return view('seller.support_ticket.show', compact('ticket','ticket_replies'));
+        return view('shop.seller.support_ticket.show', compact('ticket','ticket_replies'));
     }
 
     public function ticket_reply_store(Request $request)

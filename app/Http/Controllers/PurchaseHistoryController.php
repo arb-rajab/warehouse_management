@@ -24,7 +24,7 @@ class PurchaseHistoryController extends Controller
 
         $orders = Order::with('orderDetails')->where('user_id', $user_id)->orWhere('for_customer',  $user_id )->orderBy('code', 'desc')->paginate(10);
 
-        return view('frontend.user.purchase_history', compact('orders'));
+        return view('shop.frontend.user.purchase_history', compact('orders'));
     }
 
     public function digital_index()
@@ -38,7 +38,7 @@ class PurchaseHistoryController extends Controller
                         ->where('order_details.payment_status', 'paid')
                         ->select('order_details.id')
                         ->paginate(15);
-        return view('frontend.user.digital_purchase_history', compact('orders'));
+        return view('shop.frontend.user.digital_purchase_history', compact('orders'));
     }
 
     public function purchase_history_details($id)
@@ -47,7 +47,7 @@ class PurchaseHistoryController extends Controller
         $order->delivery_viewed = 1;
         $order->payment_status_viewed = 1;
         $order->save();
-        return view('frontend.user.order_details_customer', compact('order'));
+        return view('shop.frontend.user.order_details_customer', compact('order'));
     }
 
     public function download(Request $request)

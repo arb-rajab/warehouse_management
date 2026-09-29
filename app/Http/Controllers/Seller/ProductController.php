@@ -49,7 +49,7 @@ class ProductController extends Controller
             $products = $products->where('name', 'like', '%' . $search . '%');
         }
         $products = $products->paginate(10);
-        return view('seller.product.products.index', compact('products', 'search'));
+        return view('shop.seller.product.products.index', compact('products', 'search'));
     }
 
     public function create(Request $request)
@@ -61,7 +61,7 @@ class ProductController extends Controller
                     ->where('digital', 0)
                     ->with('childrenCategories')
                     ->get();
-                return view('seller.product.products.create', compact('categories'));
+                return view('shop.seller.product.products.create', compact('categories'));
             } else {
                 flash(translate('Please upgrade your package.'))->warning();
                 return back();
@@ -71,7 +71,7 @@ class ProductController extends Controller
             ->where('digital', 0)
             ->with('childrenCategories')
             ->get();
-        return view('seller.product.products.create', compact('categories'));
+        return view('shop.seller.product.products.create', compact('categories'));
     }
 
     public function store(ProductRequest $request)
@@ -129,7 +129,7 @@ class ProductController extends Controller
             ->where('digital', 0)
             ->with('childrenCategories')
             ->get();
-        return view('seller.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
+        return view('shop.seller.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
     }
 
     public function update(ProductRequest $request, Product $product)
@@ -201,7 +201,7 @@ class ProductController extends Controller
         }
 
         $combinations = ProductUtility::makeCombinations($options);
-        return view('backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
+        return view('shop.backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
     }
 
     public function sku_combination_edit(Request $request)
@@ -231,7 +231,7 @@ class ProductController extends Controller
         }
 
         $combinations = ProductUtility::makeCombinations($options);
-        return view('backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
+        return view('shop.backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
     }
 
     public function add_more_choice_option(Request $request)

@@ -31,7 +31,7 @@ class ConversationMailManager extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.conversation')
+        return $this->view('shop.emails.conversation')
                     ->from($this->array['from'], env('MAIL_FROM_NAME'))
                     ->subject($this->array['subject'])
                     ->with([

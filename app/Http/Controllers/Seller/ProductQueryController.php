@@ -18,7 +18,7 @@ class ProductQueryController extends Controller
     public function index()
     {
         $queries = ProductQuery::where('seller_id', Auth::id())->latest()->paginate(20);
-        return view('seller.product_query.index', compact('queries'));
+        return view('shop.seller.product_query.index', compact('queries'));
     }
     /**
      * Retrieve specific query using query id.
@@ -26,7 +26,7 @@ class ProductQueryController extends Controller
     public function show($id)
     {
         $query = ProductQuery::find(decrypt($id));
-        return view('seller.product_query.show', compact('query'));
+        return view('shop.seller.product_query.show', compact('query'));
     }
     /**
      * Store reply against the question from seller panel

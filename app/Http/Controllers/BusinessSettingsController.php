@@ -32,60 +32,60 @@ class BusinessSettingsController extends Controller
 
     public function general_setting(Request $request)
     {
-    	return view('backend.setup_configurations.general_settings');
+    	return view('shop.backend.setup_configurations.general_settings');
     }
 
     public function activation(Request $request)
     {
-    	return view('backend.setup_configurations.activation');
+    	return view('shop.backend.setup_configurations.activation');
     }
 
     public function social_login(Request $request)
     {
-        return view('backend.setup_configurations.social_login');
+        return view('shop.backend.setup_configurations.social_login');
     }
 
     public function smtp_settings(Request $request)
     {
-        return view('backend.setup_configurations.smtp_settings');
+        return view('shop.backend.setup_configurations.smtp_settings');
     }
 
     public function google_analytics(Request $request)
     {
-        return view('backend.setup_configurations.google_configuration.google_analytics');
+        return view('shop.backend.setup_configurations.google_configuration.google_analytics');
     }
 
     public function google_recaptcha(Request $request)
     {
-        return view('backend.setup_configurations.google_configuration.google_recaptcha');
+        return view('shop.backend.setup_configurations.google_configuration.google_recaptcha');
     }
 
     public function google_map(Request $request) {
-        return view('backend.setup_configurations.google_configuration.google_map');
+        return view('shop.backend.setup_configurations.google_configuration.google_map');
     }
 
     public function google_firebase(Request $request) {
-        return view('backend.setup_configurations.google_configuration.google_firebase');
+        return view('shop.backend.setup_configurations.google_configuration.google_firebase');
     }
 
     public function facebook_chat(Request $request)
     {
-        return view('backend.setup_configurations.facebook_chat');
+        return view('shop.backend.setup_configurations.facebook_chat');
     }
 
     public function facebook_comment(Request $request)
     {
-        return view('backend.setup_configurations.facebook_configuration.facebook_comment');
+        return view('shop.backend.setup_configurations.facebook_configuration.facebook_comment');
     }
 
     public function payment_method(Request $request)
     {
-        return view('backend.setup_configurations.payment_method');
+        return view('shop.backend.setup_configurations.payment_method');
     }
 
     public function file_system(Request $request)
     {
-        return view('backend.setup_configurations.file_system');
+        return view('shop.backend.setup_configurations.file_system');
     }
 
     /**
@@ -332,7 +332,7 @@ class BusinessSettingsController extends Controller
 
     public function seller_verification_form(Request $request)
     {
-    	return view('backend.sellers.seller_verification_form.index');
+    	return view('shop.backend.sellers.seller_verification_form.index');
     }
 
     /**
@@ -478,7 +478,7 @@ class BusinessSettingsController extends Controller
 
     public function vendor_commission(Request $request)
     {
-        return view('backend.sellers.seller_commission.index');
+        return view('shop.backend.sellers.seller_commission.index');
     }
 
     public function vendor_commission_update(Request $request){
@@ -503,7 +503,7 @@ class BusinessSettingsController extends Controller
     }
 
     public function shipping_configuration(Request $request){
-        return view('backend.setup_configurations.shipping_configuration.index');
+        return view('shop.backend.setup_configurations.shipping_configuration.index');
     }
 
     public function shipping_configuration_update(Request $request){
@@ -517,7 +517,7 @@ class BusinessSettingsController extends Controller
     }
 
     public function order_configuration(){
-        return view('backend.setup_configurations.order_configuration.index');
+        return view('shop.backend.setup_configurations.order_configuration.index');
     }
 
     public function search(Request $request)

@@ -20,7 +20,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
         $addresses = $user->addresses;
-        return view('seller.profile.index', compact('user','addresses'));
+        return view('shop.seller.profile.index', compact('user','addresses'));
     }
 
     /**

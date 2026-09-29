@@ -32,13 +32,13 @@ class CustomerProductController extends Controller
             return redirect()->route('dashboard');
         }
         $products = CustomerProduct::where('user_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(10);
-        return view('frontend.user.customer.products', compact('products'));
+        return view('shop.frontend.user.customer.products', compact('products'));
     }
 
     public function customer_product_index()
     {
         $products = CustomerProduct::orderBy('created_at', 'desc')->paginate(10);
-        return view('backend.customer.classified_products.index', compact('products'));
+        return view('shop.backend.customer.classified_products.index', compact('products'));
     }
 
     /**
@@ -54,10 +54,10 @@ class CustomerProductController extends Controller
             ->get();
 
         if(Auth::user()->user_type == "customer" && Auth::user()->remaining_uploads > 0){
-            return view('frontend.user.customer.product_upload', compact('categories'));
+            return view('shop.frontend.user.customer.product_upload', compact('categories'));
         }
         elseif (Auth::user()->user_type == "seller" && Auth::user()->remaining_uploads > 0) {
-            return view('frontend.user.customer.product_upload', compact('categories'));
+            return view('shop.frontend.user.customer.product_upload', compact('categories'));
         }
         else{
             flash(translate('Your classified product upload limit has been reached. Please buy a package.'))->error();
@@ -147,7 +147,7 @@ class CustomerProductController extends Controller
             ->get();
         $product    = CustomerProduct::find($id);
         $lang       = $request->lang;
-        return view('frontend.user.customer.product_edit', compact('categories', 'product','lang'));
+        return view('shop.frontend.user.customer.product_edit', compact('categories', 'product','lang'));
     }
 
     /**
@@ -266,7 +266,7 @@ class CustomerProductController extends Controller
         }
         $customer_product  = CustomerProduct::where('slug', $slug)->first();
         if($customer_product!=null){
-            return view('frontend.customer_product_details', compact('customer_product'));
+            return view('shop.frontend.customer_product_details', compact('customer_product'));
         }
         abort(404);
     }
@@ -329,6 +329,6 @@ class CustomerProductController extends Controller
 
         $customer_products = $customer_products->paginate(12)->appends(request()->query());
 
-        return view('frontend.customer_product_listing', compact('customer_products', 'category_id', 'brand_id', 'sort_by', 'condition'));
+        return view('shop.frontend.customer_product_listing', compact('customer_products', 'category_id', 'brand_id', 'sort_by', 'condition'));
     }
 }

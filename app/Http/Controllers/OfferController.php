@@ -18,12 +18,12 @@ class OfferController extends Controller
             $offer = $offer->where('title', 'like', '%'.$sort_search.'%');
         }
         $offer = $offer->paginate(15);
-        return view('backend.marketing.offer_deals.index', compact('offer', 'sort_search'));
+        return view('shop.backend.marketing.offer_deals.index', compact('offer', 'sort_search'));
     }
 
     public function create()
     {
-        return view('backend.marketing.offer_deals.create');
+        return view('shop.backend.marketing.offer_deals.create');
     }
 
     public function show($id)
@@ -35,9 +35,9 @@ class OfferController extends Controller
     {
         $offer = Offer::findOrFail($id);
         if($offer->offer_type == 'brand_offer'){
-            return view('backend.marketing.offer_deals.brands.edit', compact('offer'));
+            return view('shop.backend.marketing.offer_deals.brands.edit', compact('offer'));
         }else{
-            return view('backend.marketing.offer_deals.edit', compact('offer'));
+            return view('shop.backend.marketing.offer_deals.edit', compact('offer'));
         }
     }
 
@@ -140,35 +140,35 @@ class OfferController extends Controller
 
     public function product_discount(Request $request){
         $product_ids = $request->product_ids;
-        return view('backend.marketing.offer_deals.offer_deal_discount', compact('product_ids'));
+        return view('shop.backend.marketing.offer_deals.offer_deal_discount', compact('product_ids'));
     }
     public function base_product_discount(Request $request){
         $product_id = $request->product_id;
-        return view('backend.marketing.offer_deals.base_offer_deal_discount', compact('product_id'));
+        return view('shop.backend.marketing.offer_deals.base_offer_deal_discount', compact('product_id'));
     }
 
     public function product_discount_edit(Request $request){
         $product_ids = $request->product_ids;
         $base_product_id = $request->base_product_id;
         $offer_deal_id = $request->offer_id;
-        return view('backend.marketing.offer_deals.offer_deal_discount_edit', compact('product_ids', 'base_product_id', 'offer_deal_id'));
+        return view('shop.backend.marketing.offer_deals.offer_deal_discount_edit', compact('product_ids', 'base_product_id', 'offer_deal_id'));
     }
 
     public function base_brand_discount(Request $request){
         $brand_id = $request->brand_id;
-        return view('backend.marketing.offer_deals.brands.base_offer_deal_discount', compact('brand_id'));
+        return view('shop.backend.marketing.offer_deals.brands.base_offer_deal_discount', compact('brand_id'));
     }
 
     public function brand_discount_edit(Request $request){
         $product_ids = $request->product_ids;
         $brand = $request->brand;
         $offer_deal_id = $request->offer_id;
-        return view('backend.marketing.offer_deals.brands.offer_deal_discount_edit', compact('product_ids', 'brand', 'offer_deal_id'));
+        return view('shop.backend.marketing.offer_deals.brands.offer_deal_discount_edit', compact('product_ids', 'brand', 'offer_deal_id'));
     }
 
     public function brandCreate()
     {
-        return view('backend.marketing.offer_deals.brands.create');
+        return view('shop.backend.marketing.offer_deals.brands.create');
     }
 
     protected function store_brand_offer($request)

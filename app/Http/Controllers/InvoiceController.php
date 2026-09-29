@@ -75,7 +75,7 @@ class InvoiceController extends Controller
             }
         }
 
-        return PDF::loadView('backend.invoices.invoice', [
+        return PDF::loadView('shop.backend.invoices.invoice', [
             'order' => $order,
             'font_family' => $font_family,
             'direction' => $direction,

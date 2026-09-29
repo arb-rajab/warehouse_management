@@ -55,7 +55,7 @@ use Illuminate\Http\Response;
         if ($request->user()->email != null) {
             return $request->user()->hasVerifiedEmail()
                             ? redirect($this->redirectPath())
-                            : view('auth.verify');
+                            : view('shop.auth.verify');
         }
         else {
             $otpController = new OTPVerificationController;

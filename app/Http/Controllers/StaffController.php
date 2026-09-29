@@ -27,7 +27,7 @@ class StaffController extends Controller
     public function index()
     {
         $staffs = Staff::paginate(10);
-        return view('backend.staff.staffs.index', compact('staffs'));
+        return view('shop.backend.staff.staffs.index', compact('staffs'));
     }
 
     /**
@@ -38,7 +38,7 @@ class StaffController extends Controller
     public function create()
     {
         $roles = Role::where('id','!=',1)->orderBy('id', 'desc')->get();
-        return view('backend.staff.staffs.create', compact('roles'));
+        return view('shop.backend.staff.staffs.create', compact('roles'));
     }
 
     /**
@@ -93,7 +93,7 @@ class StaffController extends Controller
     {
         $staff = Staff::findOrFail(decrypt($id));
         $roles = $roles = Role::where('id','!=',1)->orderBy('id', 'desc')->get();
-        return view('backend.staff.staffs.edit', compact('staff', 'roles'));
+        return view('shop.backend.staff.staffs.edit', compact('staff', 'roles'));
     }
 
     /**

@@ -28,7 +28,7 @@ class PickupPointController extends Controller
             $pickup_points = $pickup_points->where('name', 'like', '%'.$sort_search.'%');
         }
         $pickup_points = $pickup_points->paginate(10);
-        return view('backend.setup_configurations.pickup_point.index', compact('pickup_points','sort_search'));
+        return view('shop.backend.setup_configurations.pickup_point.index', compact('pickup_points','sort_search'));
     }
 
     /**
@@ -38,7 +38,7 @@ class PickupPointController extends Controller
      */
     public function create()
     {
-        return view('backend.setup_configurations.pickup_point.create');
+        return view('shop.backend.setup_configurations.pickup_point.create');
     }
 
     /**
@@ -93,7 +93,7 @@ class PickupPointController extends Controller
     {
         $lang           = $request->lang;
         $pickup_point   = PickupPoint::findOrFail($id);
-        return view('backend.setup_configurations.pickup_point.edit', compact('pickup_point','lang'));
+        return view('shop.backend.setup_configurations.pickup_point.edit', compact('pickup_point','lang'));
     }
 
     /**

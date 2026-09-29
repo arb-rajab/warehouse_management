@@ -54,14 +54,14 @@ use Mail;
                 $user->verification_code = rand(100000,999999);
                 $user->save();
 
-                $array['view'] = 'emails.verification';
+                $array['view'] = 'shop.emails.verification';
                 $array['from'] = env('MAIL_FROM_ADDRESS');
                 $array['subject'] = translate('Password Reset');
                 $array['content'] = translate('Verification Code is').': '. $user->verification_code;
 
                 Mail::to($user->email)->queue(new SecondEmailVerifyMailManager($array));
 
-                return view('auth.passwords.reset');
+                return view('shop.auth.passwords.reset');
             }
             else {
                 flash(translate('No account exists with this email'))->error();

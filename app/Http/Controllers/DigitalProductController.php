@@ -40,7 +40,7 @@ class DigitalProductController extends Controller
             $products       = $products->where('name', 'like', '%' . $sort_search . '%');
         }
         $products = $products->where('digital', 1)->paginate(10);
-        return view('backend.product.digital_products.index', compact('products', 'sort_search'));
+        return view('shop.backend.product.digital_products.index', compact('products', 'sort_search'));
     }
 
     /**
@@ -54,7 +54,7 @@ class DigitalProductController extends Controller
             ->where('digital', 1)
             ->with('childrenCategories')
             ->get();
-        return view('backend.product.digital_products.create', compact('categories'));
+        return view('shop.backend.product.digital_products.create', compact('categories'));
     }
 
     /**
@@ -152,7 +152,7 @@ class DigitalProductController extends Controller
             ->where('digital', 1)
             ->with('childrenCategories')
             ->get();
-        return view('backend.product.digital_products.edit', compact('product', 'lang', 'categories'));
+        return view('shop.backend.product.digital_products.edit', compact('product', 'lang', 'categories'));
     }
 
     /**

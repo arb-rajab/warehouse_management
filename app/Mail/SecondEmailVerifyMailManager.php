@@ -31,7 +31,7 @@ class SecondEmailVerifyMailManager extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.verification')
+        return $this->view('shop.emails.verification')
                     ->from($this->array['from'], env('MAIL_FROM_NAME'))
                     ->subject($this->array['subject']);
     }

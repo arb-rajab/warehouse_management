@@ -20,6 +20,6 @@ class DashboardController extends Controller
                                 ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d')"))
                                 ->get()->pluck('total', 'date');
 
-        return view('seller.dashboard', $data);
+        return view('shop.seller.dashboard', $data);
     }
 }

@@ -52,7 +52,7 @@ class OrderController extends Controller
             $order->save();
         }
 
-        return view('seller.orders.index', compact('orders', 'payment_status', 'delivery_status', 'sort_search'));
+        return view('shop.seller.orders.index', compact('orders', 'payment_status', 'delivery_status', 'sort_search'));
     }
 
     public function show($id)
@@ -65,7 +65,7 @@ class OrderController extends Controller
 
         $order->viewed = 1;
         $order->save();
-        return view('seller.orders.show', compact('order', 'delivery_boys'));
+        return view('shop.seller.orders.show', compact('order', 'delivery_boys'));
     }
 
     // Update Delivery Status

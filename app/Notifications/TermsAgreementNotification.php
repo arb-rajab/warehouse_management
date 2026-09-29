@@ -43,13 +43,13 @@ class TermsAgreementNotification extends Notification
         $notifiable->verification_code = encrypt($notifiable->id);
         $notifiable->save();
 
-        $array['view'] = 'emails.verification';
+        $array['view'] = 'shop.emails.verification';
         $array['subject'] = translate('Terms Agreement');
         $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
         $array['link'] = route('terms.activation', $notifiable->verification_code);
 
         return (new MailMessage)
-            ->view('emails.terms', ['array' => $array])
+            ->view('shop.emails.terms', ['array' => $array])
             ->subject(translate('Terms Agreements - ').env('APP_NAME'));
     }
 

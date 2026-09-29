@@ -18,14 +18,14 @@ class ZoneController extends Controller
     public function index()
     {
         $zones = Zone::latest()->paginate(10);
-        return view('backend.setup_configurations.zones.index', compact('zones'));
+        return view('shop.backend.setup_configurations.zones.index', compact('zones'));
     }
 
 
     public function create()
     {
         $countries = Country::where('status', 1)->where('zone_id',0)->get();
-        return view('backend.setup_configurations.zones.create', compact('countries'));
+        return view('shop.backend.setup_configurations.zones.create', compact('countries'));
     }
 
 
@@ -49,7 +49,7 @@ class ZoneController extends Controller
                                     ->orWhere('zone_id', $zone->id);
                             })
                             ->get();
-        return view('backend.setup_configurations.zones.edit', compact('countries', 'zone'));
+        return view('shop.backend.setup_configurations.zones.edit', compact('countries', 'zone'));
     }
 
 

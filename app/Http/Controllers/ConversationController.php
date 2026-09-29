@@ -30,7 +30,7 @@ class ConversationController extends Controller
     {
         if (BusinessSetting::where('type', 'conversation_system')->first()->value == 1) {
             $conversations = Conversation::where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(8);
-            return view('frontend.user.conversations.index', compact('conversations'));
+            return view('shop.frontend.user.conversations.index', compact('conversations'));
         } else {
             flash(translate('Conversation is disabled at this moment'))->warning();
             return back();
@@ -46,7 +46,7 @@ class ConversationController extends Controller
     {
         if (BusinessSetting::where('type', 'conversation_system')->first()->value == 1) {
             $conversations = Conversation::orderBy('created_at', 'desc')->get();
-            return view('backend.support.conversations.index', compact('conversations'));
+            return view('shop.backend.support.conversations.index', compact('conversations'));
         } else {
             flash(translate('Conversation is disabled at this moment'))->warning();
             return back();
@@ -95,7 +95,7 @@ class ConversationController extends Controller
 
     public function send_message_to_seller($conversation, $message, $user_type)
     {
-        $array['view'] = 'emails.conversation';
+        $array['view'] = 'shop.emails.conversation';
         $array['subject'] = translate('Sender').':- '. Auth::user()->name;
         $array['from'] = env('MAIL_FROM_ADDRESS');
         $array['content'] = translate('Hi! You recieved a message from ') . Auth::user()->name . '.';
@@ -131,7 +131,7 @@ class ConversationController extends Controller
             $conversation->receiver_viewed = 1;
         }
         $conversation->save();
-        return view('frontend.user.conversations.show', compact('conversation'));
+        return view('shop.frontend.user.conversations.show', compact('conversation'));
     }
 
 
@@ -151,7 +151,7 @@ class ConversationController extends Controller
             $conversation->receiver_viewed = 1;
             $conversation->save();
         }
-        return view('frontend.partials.messages', compact('conversation'));
+        return view('shop.frontend.partials.messages', compact('conversation'));
     }
 
     /**
@@ -169,7 +169,7 @@ class ConversationController extends Controller
             $conversation->receiver_viewed = 1;
         }
         $conversation->save();
-        return view('backend.support.conversations.show', compact('conversation'));
+        return view('shop.backend.support.conversations.show', compact('conversation'));
     }
 
     /**

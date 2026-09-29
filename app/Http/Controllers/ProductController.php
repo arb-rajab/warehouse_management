@@ -103,7 +103,7 @@ class ProductController extends Controller
 
         $products = $products->where('digital', 0)->orderBy('created_at', 'desc')->paginate(15);
 
-        return view('backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'sort_search'));
+        return view('shop.backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'sort_search'));
     }
 
     /**
@@ -145,7 +145,7 @@ class ProductController extends Controller
         $products = $products->where('digital', 0)->paginate(15);
         $type = 'Seller';
 
-        return view('backend.product.products.index', compact('products', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
+        return view('shop.backend.product.products.index', compact('products', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
     }
 
     public function all_products(Request $request)
@@ -237,7 +237,7 @@ class ProductController extends Controller
         $products = $products->paginate(15);
         $type = 'All';
 
-        return view('backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
+        return view('shop.backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
     }
 
 
@@ -254,7 +254,7 @@ class ProductController extends Controller
             ->with('childrenCategories')
             ->get();
 
-        return view('backend.product.products.create', compact('categories'));
+        return view('shop.backend.product.products.create', compact('categories'));
     }
 
     public function add_more_choice_option(Request $request)
@@ -405,7 +405,7 @@ class ProductController extends Controller
             ->where('digital', 0)
             ->with('childrenCategories')
             ->get();
-        return view('backend.product.products.edit', compact('product', 'categories', 'tags', 'lang', 'variations', 'barcodes'));
+        return view('shop.backend.product.products.edit', compact('product', 'categories', 'tags', 'lang', 'variations', 'barcodes'));
     }
 
     /**
@@ -429,7 +429,7 @@ class ProductController extends Controller
             ->with('childrenCategories')
             ->get();
 
-        return view('backend.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
+        return view('shop.backend.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
     }
 
     /**
@@ -733,7 +733,7 @@ class ProductController extends Controller
         }
 
         $combinations = ProductUtility::makeCombinations($options);
-        return view('backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
+        return view('shop.backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
     }
 
     public function sku_combination_edit(Request $request)
@@ -765,7 +765,7 @@ class ProductController extends Controller
         }
 
         $combinations = ProductUtility::makeCombinations($options);
-        return view('backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
+        return view('shop.backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
     }
 
 

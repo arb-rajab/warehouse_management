@@ -274,7 +274,7 @@ class SellerFileUploadController extends Controller
         $file = Upload::findOrFail($request['id']);
 
         return (auth()->user()->user_type == 'seller')
-            ? view('seller.uploads.info', compact('file'))
-            : view('backend.uploaded_files.info', compact('file'));
+            ? view('shop.seller.uploads.info', compact('file'))
+            : view('shop.backend.uploaded_files.info', compact('file'));
     }
 }

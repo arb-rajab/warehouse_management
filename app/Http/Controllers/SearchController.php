@@ -137,7 +137,7 @@ class SearchController extends Controller
 
         $products = filter_products($products)->with('taxes')->paginate(120)->appends(request()->query());
 
-        return view('frontend.product_listing', compact('products', 'query', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
+        return view('shop.frontend.product_listing', compact('products', 'query', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
     }
 
     public function listing(Request $request)
@@ -215,7 +215,7 @@ class SearchController extends Controller
      //   $shops = Shop::whereIn('user_id', verified_sellers_id())->where('name', 'like', '%' . $query . '%')->get()->take(3);
 
         if (sizeof($keywords) > 0 ||sizeof($products) > 0 ) {
-            return view('frontend.partials.search_content', compact('products', 'keywords'));
+            return view('shop.frontend.partials.search_content', compact('products', 'keywords'));
         }
         return '0';
     }

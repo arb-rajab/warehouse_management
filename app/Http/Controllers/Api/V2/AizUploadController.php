@@ -46,8 +46,8 @@ class AizUploadController extends Controller
 
 
         return (auth()->user()->user_type == 'seller')
-            ? view('seller.uploads.index', compact('all_uploads', 'search', 'sort_by'))
-            : view('backend.uploaded_files.index', compact('all_uploads', 'search', 'sort_by'));
+            ? view('shop.seller.uploads.index', compact('all_uploads', 'search', 'sort_by'))
+            : view('shop.backend.uploaded_files.index', compact('all_uploads', 'search', 'sort_by'));
     }
 
     public function upload(Request $request)
@@ -294,7 +294,7 @@ class AizUploadController extends Controller
         $file = Upload::findOrFail($request['id']);
 
         return (auth()->user()->user_type == 'seller')
-            ? view('seller.uploads.info', compact('file'))
-            : view('backend.uploaded_files.info', compact('file'));
+            ? view('shop.seller.uploads.info', compact('file'))
+            : view('shop.backend.uploaded_files.info', compact('file'));
     }
 }

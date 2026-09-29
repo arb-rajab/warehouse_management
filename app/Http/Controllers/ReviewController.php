@@ -28,7 +28,7 @@ class ReviewController extends Controller
             $reviews->orderBy('rating', explode(",",$request->rating)[1]);
         }
         $reviews = $reviews->orderBy('created_at', 'desc')->paginate(15);
-        return view('backend.product.reviews.index', compact('reviews'));
+        return view('shop.backend.product.reviews.index', compact('reviews'));
     }
 
     /**
@@ -157,6 +157,6 @@ class ReviewController extends Controller
     public function product_review_modal(Request $request){
         $product = Product::where('id',$request->product_id)->first();
         $review = Review::where('user_id',Auth::user()->id)->where('product_id',$product->id)->first();
-        return view('frontend.user.product_review_modal', compact('product','review'));
+        return view('shop.frontend.user.product_review_modal', compact('product','review'));
     }
 }

@@ -14,7 +14,7 @@ class FeatureOrderController extends Controller
 {
     public function create()
     {
-        return view('backend.sales.new-new-order');
+        return view('shop.backend.sales.new-new-order');
     }
 
 
@@ -24,7 +24,7 @@ class FeatureOrderController extends Controller
         $product_ids = $request->product_ids;
         $rep_id = $request->rep_id;
 
-        return view('backend.sales.user-data-table', compact('user_id', 'rep_id', 'product_ids'));
+        return view('shop.backend.sales.user-data-table', compact('user_id', 'rep_id', 'product_ids'));
     }
 
     public function store(Request $request)

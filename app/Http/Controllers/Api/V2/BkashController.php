@@ -62,7 +62,7 @@ class BkashController extends Controller
 
     public function webpage($token, $amount)
     {
-        return view('frontend.payment.bkash_app', compact('token', 'amount'));
+        return view('shop.frontend.payment.bkash_app', compact('token', 'amount'));
     }
 
     public function checkout($token, $amount)

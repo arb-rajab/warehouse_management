@@ -92,7 +92,7 @@ class CustomerController extends Controller
         $users = $users->paginate(15);
 
         // dd($users->toSql()); // Add this line
-        return view('backend.customer.customers.index', compact('users', 'sort_search'));
+        return view('shop.backend.customer.customers.index', compact('users', 'sort_search'));
     }
 
     public function archive(Request $request)
@@ -148,7 +148,7 @@ class CustomerController extends Controller
         $users = $users->paginate(15);
 
         // dd($users->toSql()); // Add this line
-        return view('backend.customer.customers.archive', compact('users', 'sort_search'));
+        return view('shop.backend.customer.customers.archive', compact('users', 'sort_search'));
     }
 
     /**
@@ -160,7 +160,7 @@ class CustomerController extends Controller
     {
         $countries = Country::where('status', 1)->get();
 
-        return view('backend.customer.customers.create', compact('countries'));
+        return view('shop.backend.customer.customers.create', compact('countries'));
     }
 
     /**
@@ -228,7 +228,7 @@ class CustomerController extends Controller
         $customer = StoreUser::find($id);
         $countries = Country::where('status', 1)->get();
 
-        return view('backend.customer.customers.edit', compact('customer', 'countries'));
+        return view('shop.backend.customer.customers.edit', compact('customer', 'countries'));
     }
 
     /**
@@ -436,12 +436,12 @@ class CustomerController extends Controller
             ->orderByRaw('CAST(rep_id AS SIGNED) asc')
             ->paginate(15);
 
-        return view('backend.representatives.index', compact('representatives', 'sort_search'));
+        return view('shop.backend.representatives.index', compact('representatives', 'sort_search'));
     }
 
     public function repCreate()
     {
-        return view('backend.representatives.create');
+        return view('shop.backend.representatives.create');
     }
     public function repStore(Request $request)
     {
@@ -488,7 +488,7 @@ class CustomerController extends Controller
 
         $countries = Country::where('status', 1)->orderBy('priority')->get();
 
-        return view('frontend.user.create_user', compact('countries'));
+        return view('shop.frontend.user.create_user', compact('countries'));
     }
 
     public function store_customer(Request $request)
@@ -607,7 +607,7 @@ class CustomerController extends Controller
         $customer = StoreUser::find($id);
 
         if ($customer) {
-            return view('backend.customer.customers.edit_password', compact('customer'));
+            return view('shop.backend.customer.customers.edit_password', compact('customer'));
         } else {
             return back();
         }
@@ -750,6 +750,6 @@ class CustomerController extends Controller
 
         $userViews = $query->paginate(15);
 
-        return view('backend.customer.customers.views', compact('userViews'));
+        return view('shop.backend.customer.customers.views', compact('userViews'));
     }
 }

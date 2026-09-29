@@ -11,7 +11,7 @@ class CompareController extends Controller
     {
         //dd($request->session()->get('compare'));
         $categories = Category::all();
-        return view('frontend.view_compare', compact('categories'));
+        return view('shop.frontend.view_compare', compact('categories'));
     }
 
     //clears the session data for compare
@@ -41,6 +41,6 @@ class CompareController extends Controller
             $request->session()->put('compare', $compare);
         }
 
-        return view('frontend.partials.compare');
+        return view('shop.frontend.partials.compare');
     }
 }

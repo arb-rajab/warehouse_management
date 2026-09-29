@@ -141,7 +141,7 @@ class CheckoutController extends Controller
         //        if (Session::has('cart') && count(Session::get('cart')) > 0) {
         if ($carts && count($carts) > 0) {
             $categories = Category::all();
-            return view('frontend.shipping_info', compact('categories', 'carts', 'customer_addresses'));
+            return view('shop.frontend.shipping_info', compact('categories', 'carts', 'customer_addresses'));
         }
         flash(translate('Your cart is empty'))->success();
         return back();
@@ -177,7 +177,7 @@ class CheckoutController extends Controller
         //     $carrier_list = $carrier_query->get();
         // }
 
-        return view('frontend.delivery_info', compact('carts', 'carrier_list'));
+        return view('shop.frontend.delivery_info', compact('carts', 'carrier_list'));
     }
 
     public function store_delivery_info(Request $request)
@@ -208,7 +208,7 @@ class CheckoutController extends Controller
 
         $total = $subtotal;
 
-        return view('frontend.payment_select', compact('carts', 'shipping_info', 'total'));
+        return view('shop.frontend.payment_select', compact('carts', 'shipping_info', 'total'));
     }
 
     public function apply_coupon_code(Request $request)
@@ -296,7 +296,7 @@ class CheckoutController extends Controller
             ->get();
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
 
-        $returnHTML = view('frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'))->render();
+        $returnHTML = view('shop.frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'))->render();
         return response()->json(['response_message' => $response_message, 'html' => $returnHTML]);
     }
 
@@ -317,7 +317,7 @@ class CheckoutController extends Controller
 
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
 
-        return view('frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'));
+        return view('shop.frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'));
     }
 
     public function apply_club_point(Request $request)
@@ -356,7 +356,7 @@ class CheckoutController extends Controller
         //     NotificationUtility::sendOrderPlacedNotification($order);
         // }
 
-        return view('frontend.order_confirmed', compact('combined_order'));
+        return view('shop.frontend.order_confirmed', compact('combined_order'));
     }
 
     public function get_customers_to_choose()
@@ -365,7 +365,7 @@ class CheckoutController extends Controller
         $carts = Cart::where('user_id', Auth::user()->id)->get();
 
         if (Auth::user()->is_rep) {
-            return view('frontend.view_customer', compact('users', 'carts'));
+            return view('shop.frontend.view_customer', compact('users', 'carts'));
         }
     }
 

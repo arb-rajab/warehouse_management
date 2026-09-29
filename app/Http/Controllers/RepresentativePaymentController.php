@@ -21,19 +21,19 @@ class RepresentativePaymentController extends Controller
         $payments = RepresentativePayment::where('rep_id', auth()->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(10);
-        return view('frontend.user.rep-payments', compact('payments'));
+        return view('shop.frontend.user.rep-payments', compact('payments'));
     }
 
     public function create()
     {
         $customers = StoreStoreUser::where('user_type', 'customer')->where('is_rep', false)->get();
-        return view('frontend.user.rep-payments-create', compact('customers'));
+        return view('shop.frontend.user.rep-payments-create', compact('customers'));
     }
     public function show($id)
     {
         $payment = RepresentativePayment::findOrFail($id);
 
-        return view('frontend.user.rep-payments-show', compact('payment'));
+        return view('shop.frontend.user.rep-payments-show', compact('payment'));
     }
 
     public function store(Request $request)
@@ -99,7 +99,7 @@ class RepresentativePaymentController extends Controller
         $payment = RepresentativePayment::findOrFail($id);
         $qrCode = $this->generate_qr_to_show_payment(new Request(['id' => $id]));
 
-        $pdf = PDF::loadView('frontend.user.export-rep-payments', [
+        $pdf = PDF::loadView('shop.frontend.user.export-rep-payments', [
             'payment' => $payment,
             'qr' => $qrCode,
         ]);

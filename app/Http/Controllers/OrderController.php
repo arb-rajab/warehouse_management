@@ -137,7 +137,7 @@ class OrderController extends Controller
                 ->where('created_at', '<=', date('Y-m-d', strtotime(explode(" to ", $date)[1])) . '  23:59:59');
         }
         $orders = $orders->paginate(15);
-        return view('backend.sales.index', compact('orders', 'sort_search', 'payment_status', 'delivery_status', 'date'));
+        return view('shop.backend.sales.index', compact('orders', 'sort_search', 'payment_status', 'delivery_status', 'date'));
     }
 
     public function show($id)
@@ -165,7 +165,7 @@ class OrderController extends Controller
             }
         }
         // return $cartResults;
-        return view('backend.sales.show', compact('order', 'delivery_boys', 'cartResults'));
+        return view('shop.backend.sales.show', compact('order', 'delivery_boys', 'cartResults'));
     }
 
     /**
@@ -718,7 +718,7 @@ class OrderController extends Controller
             $delivery_history->save();
 
             if (env('MAIL_USERNAME') != null && get_setting('delivery_boy_mail_notification') == '1') {
-                $array['view'] = 'emails.invoice';
+                $array['view'] = 'shop.emails.invoice';
                 $array['subject'] = translate('You are assigned to delivery an order. Order code') . ' - ' . $order->code;
                 $array['from'] = env('MAIL_FROM_ADDRESS');
                 $array['order'] = $order;

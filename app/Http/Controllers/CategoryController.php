@@ -35,7 +35,7 @@ class CategoryController extends Controller
             $categories = $categories->where('name', 'like', '%'.$sort_search.'%');
         }
         $categories = $categories->paginate(15);
-        return view('backend.product.categories.index', compact('categories', 'sort_search'));
+        return view('shop.backend.product.categories.index', compact('categories', 'sort_search'));
     }
 
     /**
@@ -49,7 +49,7 @@ class CategoryController extends Controller
             ->with('childrenCategories')
             ->get();
 
-        return view('backend.product.categories.create', compact('categories'));
+        return view('shop.backend.product.categories.create', compact('categories'));
     }
 
     /**
@@ -129,7 +129,7 @@ class CategoryController extends Controller
             ->orderBy('name','asc')
             ->get();
 
-        return view('backend.product.categories.edit', compact('category', 'categories', 'lang'));
+        return view('shop.backend.product.categories.edit', compact('category', 'categories', 'lang'));
     }
 
     /**

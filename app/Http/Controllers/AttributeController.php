@@ -35,7 +35,7 @@ class AttributeController extends Controller
     public function index()
     {
          $attributes = Attribute::orderBy('created_at', 'desc')->get();
-         return view('backend.product.attribute.index', compact('attributes'));
+         return view('shop.backend.product.attribute.index', compact('attributes'));
     //    $attribute =  Attribute::first()->id;
     //     return $this->show($attribute);
     }
@@ -81,7 +81,7 @@ class AttributeController extends Controller
 
         // echo '<pre>';print_r($data['all_attribute_values']);die;
 
-        return view("backend.product.attribute.attribute_value.index", $data);
+        return view("shop.backend.product.attribute.attribute_value.index", $data);
     }
 
     /**
@@ -94,7 +94,7 @@ class AttributeController extends Controller
     {
         $lang      = $request->lang;
         $attribute = Attribute::findOrFail($id);
-        return view('backend.product.attribute.edit', compact('attribute','lang'));
+        return view('shop.backend.product.attribute.edit', compact('attribute','lang'));
     }
 
     /**
@@ -154,7 +154,7 @@ class AttributeController extends Controller
     public function edit_attribute_value(Request $request, $id)
     {
         $attribute_value = AttributeValue::findOrFail($id);
-        return view("backend.product.attribute.attribute_value.edit", compact('attribute_value'));
+        return view("shop.backend.product.attribute.attribute_value.edit", compact('attribute_value'));
     }
 
     public function update_attribute_value(Request $request, $id)
@@ -190,7 +190,7 @@ class AttributeController extends Controller
         }
         $colors = $colors->paginate(10);
 
-        return view('backend.product.color.index', compact('colors', 'sort_search'));
+        return view('shop.backend.product.color.index', compact('colors', 'sort_search'));
     }
 
     public function store_color(Request $request) {
@@ -211,7 +211,7 @@ class AttributeController extends Controller
     public function edit_color(Request $request, $id)
     {
         $color = Color::findOrFail($id);
-        return view('backend.product.color.edit', compact('color'));
+        return view('shop.backend.product.color.edit', compact('color'));
     }
 
     /**

@@ -34,7 +34,7 @@ class DynamicPopupController extends Controller
             $dynamic_popups = $dynamic_popups->where('title', 'like', '%'.$sort_search.'%');
         }
         $dynamic_popups = $dynamic_popups->paginate(15);
-        return view('backend.marketing.dynamic_popup.index', compact('dynamic_popups', 'sort_search'));
+        return view('shop.backend.marketing.dynamic_popup.index', compact('dynamic_popups', 'sort_search'));
     }
 
     /**
@@ -44,7 +44,7 @@ class DynamicPopupController extends Controller
      */
     public function create()
     {
-        return view('backend.marketing.dynamic_popup.create');
+        return view('shop.backend.marketing.dynamic_popup.create');
     }
 
     /**
@@ -84,7 +84,7 @@ class DynamicPopupController extends Controller
      */
     public function edit(DynamicPopup $dynamic_popup)
     {
-        return view('backend.marketing.dynamic_popup.edit', compact('dynamic_popup'));
+        return view('shop.backend.marketing.dynamic_popup.edit', compact('dynamic_popup'));
     }
 
     /**

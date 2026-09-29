@@ -25,7 +25,7 @@ class CarrierController extends Controller
     public function index()
     {
         $carriers = Carrier::paginate(15);
-        return view('backend.setup_configurations.carriers.index', compact('carriers'));
+        return view('shop.backend.setup_configurations.carriers.index', compact('carriers'));
     }
 
      /**
@@ -36,7 +36,7 @@ class CarrierController extends Controller
     public function create()
     {
         $zones = Zone::get();
-        return view('backend.setup_configurations.carriers.create',compact('zones'));
+        return view('shop.backend.setup_configurations.carriers.create',compact('zones'));
     }
 
     /**
@@ -92,7 +92,7 @@ class CarrierController extends Controller
     {
         $carrier = Carrier::findOrFail($id);
         $zones = Zone::get();
-        return view('backend.setup_configurations.carriers.edit',compact('zones','carrier'));
+        return view('shop.backend.setup_configurations.carriers.edit',compact('zones','carrier'));
     }
 
      /**

@@ -33,7 +33,7 @@ class CityController extends Controller
         $cities = $cities_queries->orderBy('status', 'desc')->paginate(15);
         $states = State::where('status', 1)->get();
 
-        return view('backend.setup_configurations.cities.index', compact('cities', 'states', 'sort_city', 'sort_state'));
+        return view('shop.backend.setup_configurations.cities.index', compact('cities', 'states', 'sort_city', 'sort_state'));
     }
 
     /**
@@ -77,7 +77,7 @@ class CityController extends Controller
          $lang  = $request->lang;
          $city  = City::findOrFail($id);
          $states = State::where('status', 1)->get();
-         return view('backend.setup_configurations.cities.edit', compact('city', 'lang', 'states'));
+         return view('shop.backend.setup_configurations.cities.edit', compact('city', 'lang', 'states'));
      }
 
 

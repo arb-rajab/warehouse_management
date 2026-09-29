@@ -32,7 +32,7 @@ class ProductBulkUploadController extends Controller
             }
         }
         elseif (Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff') {
-            return view('backend.product.bulk_upload.index');
+            return view('shop.backend.product.bulk_upload.index');
         }
     }
 
@@ -44,7 +44,7 @@ class ProductBulkUploadController extends Controller
     {
         $categories = Category::all();
 
-        return PDF::loadView('backend.downloads.category',[
+        return PDF::loadView('shop.backend.downloads.category',[
             'categories' => $categories,
         ], [], [])->download('category.pdf');
     }
@@ -53,7 +53,7 @@ class ProductBulkUploadController extends Controller
     {
         $brands = Brand::all();
 
-        return PDF::loadView('backend.downloads.brand',[
+        return PDF::loadView('shop.backend.downloads.brand',[
             'brands' => $brands,
         ], [], [])->download('brands.pdf');
     }
@@ -62,7 +62,7 @@ class ProductBulkUploadController extends Controller
     {
         $users = StoreUser::where('user_type','seller')->get();
 
-        return PDF::loadView('backend.downloads.user',[
+        return PDF::loadView('shop.backend.downloads.user',[
             'users' => $users,
         ], [], [])->download('user.pdf');
 

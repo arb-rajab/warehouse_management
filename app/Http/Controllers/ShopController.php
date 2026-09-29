@@ -27,7 +27,7 @@ class ShopController extends Controller
     public function index()
     {
         $shop = Auth::user()->shop;
-        return view('seller.shop', compact('shop'));
+        return view('shop.seller.shop', compact('shop'));
     }
 
     /**
@@ -47,7 +47,7 @@ class ShopController extends Controller
 			}
 
         } else {
-            return view('frontend.seller_form');
+            return view('shop.frontend.seller_form');
         }
     }
 

@@ -27,7 +27,7 @@ class CustomerPackageController extends Controller
     public function index()
     {
         $customer_packages = CustomerPackage::all();
-        return view('backend.customer.customer_packages.index', compact('customer_packages'));
+        return view('shop.backend.customer.customer_packages.index', compact('customer_packages'));
     }
 
     /**
@@ -37,7 +37,7 @@ class CustomerPackageController extends Controller
      */
     public function create()
     {
-        return view('backend.customer.customer_packages.create');
+        return view('shop.backend.customer.customer_packages.create');
     }
 
     /**
@@ -86,7 +86,7 @@ class CustomerPackageController extends Controller
     {
         $lang = $request->lang;
         $customer_package = CustomerPackage::findOrFail($id);
-        return view('backend.customer.customer_packages.edit', compact('customer_package', 'lang'));
+        return view('shop.backend.customer.customer_packages.edit', compact('customer_package', 'lang'));
     }
 
     /**

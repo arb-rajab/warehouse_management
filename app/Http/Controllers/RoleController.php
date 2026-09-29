@@ -27,10 +27,10 @@ class RoleController extends Controller
     public function index()
     {
         $roles = Role::where('id','!=',1)->paginate(10);
-        return view('backend.staff.staff_roles.index', compact('roles'));
+        return view('shop.backend.staff.staff_roles.index', compact('roles'));
 
         // $roles = Role::paginate(10);
-        // return view('backend.staff.staff_roles.index', compact('roles'));
+        // return view('shop.backend.staff.staff_roles.index', compact('roles'));
     }
 
     /**
@@ -40,7 +40,7 @@ class RoleController extends Controller
      */
     public function create()
     {
-        return view('backend.staff.staff_roles.create');
+        return view('shop.backend.staff.staff_roles.create');
     }
 
     /**
@@ -84,7 +84,7 @@ class RoleController extends Controller
     {
         $lang = $request->lang;
         $role = Role::findOrFail($id);
-        return view('backend.staff.staff_roles.edit', compact('role','lang'));
+        return view('shop.backend.staff.staff_roles.edit', compact('role','lang'));
     }
 
     /**

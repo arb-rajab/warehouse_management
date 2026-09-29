@@ -61,7 +61,7 @@ class CartController extends Controller
             }
         }
         // return $cartResults;
-        return view('frontend.view_cart', compact('carts', 'cartResults'));
+        return view('shop.frontend.view_cart', compact('carts', 'cartResults'));
     }
 
     public function showCartModal(Request $request)
@@ -69,7 +69,7 @@ class CartController extends Controller
         $product = Product::find($request->id);
         $variations = ProductVariation::where('product_id', $product->id)->get();
 
-        return view('frontend.partials.addToCart', compact('product', 'variations'));
+        return view('shop.frontend.partials.addToCart', compact('product', 'variations'));
     }
 
     public function addToCart(Request $request)
@@ -79,8 +79,8 @@ class CartController extends Controller
             if($result['status'] != 'success'){
                 return [
                     'status' => 0,
-                    'modal_view' => view('frontend.partials.noVisit', compact('result'))->render(),
-                    'nav_cart_view' => view('frontend.partials.cart')->render(),
+                    'modal_view' => view('shop.frontend.partials.noVisit', compact('result'))->render(),
+                    'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                 ];
             }
         }
@@ -121,8 +121,8 @@ class CartController extends Controller
                 return [
                     'status' => 0,
                     'cart_count' => count($carts),
-                    'modal_view' => view('frontend.partials.minQtyNotSatisfied', ['min_qty' => $product->min_qty])->render(),
-                    'nav_cart_view' => view('frontend.partials.cart')->render(),
+                    'modal_view' => view('shop.frontend.partials.minQtyNotSatisfied', ['min_qty' => $product->min_qty])->render(),
+                    'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                 ];
             }
 
@@ -181,8 +181,8 @@ class CartController extends Controller
                 return [
                     'status' => 0,
                     'cart_count' => count($carts),
-                    'modal_view' => view('frontend.partials.outOfStockCart')->render(),
-                    'nav_cart_view' => view('frontend.partials.cart')->render(),
+                    'modal_view' => view('shop.frontend.partials.outOfStockCart')->render(),
+                    'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                 ];
             }
 
@@ -249,8 +249,8 @@ class CartController extends Controller
                         return [
                             'status' => 0,
                             'cart_count' => count($carts),
-                            'modal_view' => view('frontend.partials.auctionProductAlredayAddedCart')->render(),
-                            'nav_cart_view' => view('frontend.partials.cart')->render(),
+                            'modal_view' => view('shop.frontend.partials.auctionProductAlredayAddedCart')->render(),
+                            'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                         ];
                     }
 
@@ -261,8 +261,8 @@ class CartController extends Controller
                             return [
                                 'status' => 0,
                                 'cart_count' => count($carts),
-                                'modal_view' => view('frontend.partials.outOfStockCart')->render(),
-                                'nav_cart_view' => view('frontend.partials.cart')->render(),
+                                'modal_view' => view('shop.frontend.partials.outOfStockCart')->render(),
+                                'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                             ];
                         }
                         if (($str != null && $cartItem['variation'] == $str) || $str == null) {
@@ -327,8 +327,8 @@ class CartController extends Controller
             return [
                 'status' => 1,
                 'cart_count' => count($carts),
-                'modal_view' => view('frontend.partials.addedToCart', compact('product', 'data', 'offer_message'))->render(),
-                'nav_cart_view' => view('frontend.partials.cart')->render(),
+                'modal_view' => view('shop.frontend.partials.addedToCart', compact('product', 'data', 'offer_message'))->render(),
+                'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
                 'variation' => json_encode($request->variation)
 
             ];
@@ -364,8 +364,8 @@ class CartController extends Controller
             return [
                 'status' => 1,
                 'cart_count' => count($carts),
-                'modal_view' => view('frontend.partials.addedToCart', compact('product', 'data'))->render(),
-                'nav_cart_view' => view('frontend.partials.cart')->render(),
+                'modal_view' => view('shop.frontend.partials.addedToCart', compact('product', 'data'))->render(),
+                'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
             ];
         }
     }
@@ -386,8 +386,8 @@ class CartController extends Controller
 
         return redirect()->back()->with([
             'cart_count' => count($carts),
-            'cart_view' => view('frontend.partials.cart_details', compact('carts'))->render(),
-            'nav_cart_view' => view('frontend.partials.cart')->render(),
+            'cart_view' => view('shop.frontend.partials.cart_details', compact('carts'))->render(),
+            'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
             'notification' => [
                 'type' => 'success',
                 'message' => 'Item has been removed from the cart.',
@@ -454,8 +454,8 @@ class CartController extends Controller
 
         return [
             'cart_count' => count($carts),
-            'cart_view' => view('frontend.partials.cart_details', compact('carts'))->render(),
-            'nav_cart_view' => view('frontend.partials.cart')->render(),
+            'cart_view' => view('shop.frontend.partials.cart_details', compact('carts'))->render(),
+            'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
         ];
     }
 

@@ -27,7 +27,7 @@ class CountryController extends Controller
         }
         $countries = $country_queries->orderBy('status', 'desc')->paginate(15);
 
-        return view('backend.setup_configurations.countries.index', compact('countries', 'sort_country'));
+        return view('shop.backend.setup_configurations.countries.index', compact('countries', 'sort_country'));
     }
 
     /**

@@ -32,7 +32,7 @@ class BrandController extends Controller
             $brands = $brands->where('name', 'like', '%'.$sort_search.'%');
         }
         $brands = $brands->paginate(15);
-        return view('backend.product.brands.index', compact('brands', 'sort_search'));
+        return view('shop.backend.product.brands.index', compact('brands', 'sort_search'));
     }
 
     /**
@@ -97,7 +97,7 @@ class BrandController extends Controller
     {
         $lang   = $request->lang;
         $brand  = Brand::findOrFail($id);
-        return view('backend.product.brands.edit', compact('brand','lang'));
+        return view('shop.backend.product.brands.edit', compact('brand','lang'));
     }
 
     /**
@@ -161,6 +161,6 @@ class BrandController extends Controller
             $brands = $brands->where('name', 'like', '%'.$sort_search.'%');
         }
         $brands = $brands->paginate(15);
-        return view('backend.product.brand_wise_discount.set_discount', compact('brands', 'sort_search'));
+        return view('shop.backend.product.brand_wise_discount.set_discount', compact('brands', 'sort_search'));
     }
 }

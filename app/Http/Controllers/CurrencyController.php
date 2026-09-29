@@ -32,7 +32,7 @@ class CurrencyController extends Controller
         $currencies = $currencies->paginate(10);
 
         $active_currencies = Currency::where('status', 1)->get();
-        return view('backend.setup_configurations.currencies.index', compact('currencies', 'active_currencies','sort_search'));
+        return view('shop.backend.setup_configurations.currencies.index', compact('currencies', 'active_currencies','sort_search'));
     }
 
     public function updateYourCurrency(Request $request)
@@ -55,13 +55,13 @@ class CurrencyController extends Controller
 
     public function create()
     {
-        return view('backend.setup_configurations.currencies.create');
+        return view('shop.backend.setup_configurations.currencies.create');
     }
 
     public function edit(Request $request)
     {
         $currency = Currency::findOrFail($request->id);
-        return view('backend.setup_configurations.currencies.edit', compact('currency'));
+        return view('shop.backend.setup_configurations.currencies.edit', compact('currency'));
     }
 
     public function store(Request $request)

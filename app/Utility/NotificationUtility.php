@@ -18,7 +18,7 @@ class NotificationUtility
     public static function sendOrderPlacedNotification($order, $request = null)
     {
         //sends email to customer with the invoice pdf attached
-        $array['view'] = 'emails.invoice';
+        $array['view'] = 'shop.emails.invoice';
         $array['subject'] = translate('A new order has been placed') . ' - ' . $order->code;
         $array['from'] = env('MAIL_FROM_ADDRESS');
         $array['order'] = $order;

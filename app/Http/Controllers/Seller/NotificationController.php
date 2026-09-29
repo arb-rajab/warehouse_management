@@ -10,6 +10,6 @@ class NotificationController extends Controller
         $notifications = auth()->user()->notifications()->paginate(15);
         auth()->user()->unreadNotifications->markAsRead();
 
-        return view('seller.notification.index', compact('notifications'));
+        return view('shop.seller.notification.index', compact('notifications'));
     }
 }

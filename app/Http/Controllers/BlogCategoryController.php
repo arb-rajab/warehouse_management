@@ -33,7 +33,7 @@ class BlogCategoryController extends Controller
         }
 
         $categories = $categories->paginate(15);
-        return view('backend.blog_system.category.index', compact('categories', 'sort_search'));
+        return view('shop.backend.blog_system.category.index', compact('categories', 'sort_search'));
     }
 
     /**
@@ -44,7 +44,7 @@ class BlogCategoryController extends Controller
     public function create()
     {
         $all_categories = BlogCategory::all();
-        return view('backend.blog_system.category.create', compact('all_categories'));
+        return view('shop.backend.blog_system.category.create', compact('all_categories'));
     }
 
     /**
@@ -94,7 +94,7 @@ class BlogCategoryController extends Controller
         $cateogry = BlogCategory::find($id);
         $all_categories = BlogCategory::all();
 
-        return view('backend.blog_system.category.edit',  compact('cateogry','all_categories'));
+        return view('shop.backend.blog_system.category.edit',  compact('cateogry','all_categories'));
     }
 
     /**

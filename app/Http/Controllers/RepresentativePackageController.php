@@ -12,13 +12,13 @@ class RepresentativePackageController extends Controller
     public function index(){
 
         $packages = RepresentativePackage::all();
-        return view('backend.representatives.packages.index', compact('packages'));
+        return view('shop.backend.representatives.packages.index', compact('packages'));
 
     }
 
     public function create(){
 
-        return view('backend.representatives.packages.create');
+        return view('shop.backend.representatives.packages.create');
     }
 
     public function store(Request $request){
@@ -44,7 +44,7 @@ class RepresentativePackageController extends Controller
     public function edit($id){
         $package = RepresentativePackage::find($id);
 
-        return view('backend.representatives.packages.edit', compact('package'));
+        return view('shop.backend.representatives.packages.edit', compact('package'));
 
 
     }
@@ -107,7 +107,7 @@ class RepresentativePackageController extends Controller
         $user = StoreUser::findOrFail($request->id);
         $packages = RepresentativePackage::all();
 
-        return view('backend.representatives.packages.modal', compact('user', 'packages'));
+        return view('shop.backend.representatives.packages.modal', compact('user', 'packages'));
 
     }
 

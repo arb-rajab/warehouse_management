@@ -13,7 +13,7 @@ class AdminNotificationController extends Controller
     {
         $notifications = Notification::with('user')->paginate('10');
 
-        return view('backend.customer.notifications.index', compact('notifications'));
+        return view('shop.backend.customer.notifications.index', compact('notifications'));
     }
 
     public function deleteNotification($id)
@@ -31,7 +31,7 @@ class AdminNotificationController extends Controller
     public function createNotification()
     {
         $customers = StoreUser::where('user_type', 'customer')->orderBy('name', 'desc')->get();
-        return view('backend.customer.notifications.create', compact('customers'));
+        return view('shop.backend.customer.notifications.create', compact('customers'));
     }
 
     public function sendFcmNotification(Request $request)

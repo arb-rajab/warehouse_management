@@ -17,7 +17,7 @@ class SellerWithdrawRequestController extends Controller
     public function index()
     {
         $seller_withdraw_requests = SellerWithdrawRequest::where('user_id', Auth::user()->id)->latest()->paginate(9);
-        return view('seller.money_withdraw_requests.index', compact('seller_withdraw_requests'));
+        return view('shop.seller.money_withdraw_requests.index', compact('seller_withdraw_requests'));
     }
 
 

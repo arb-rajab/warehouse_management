@@ -15,7 +15,7 @@ class ProductBulkUploadController extends Controller
     public function index()
     {
         if(Auth::user()->shop->verification_status){
-            return view('seller.product.product_bulk_upload.index');
+            return view('shop.seller.product.product_bulk_upload.index');
         }
         else{
             flash(translate('Your shop is not verified yet!'))->warning();
@@ -27,7 +27,7 @@ class ProductBulkUploadController extends Controller
     {
         $categories = Category::all();
 
-        return PDF::loadView('backend.downloads.category',[
+        return PDF::loadView('shop.backend.downloads.category',[
             'categories' => $categories,
         ], [], [])->download('category.pdf');
     }
@@ -36,7 +36,7 @@ class ProductBulkUploadController extends Controller
     {
         $brands = Brand::all();
 
-        return PDF::loadView('backend.downloads.brand',[
+        return PDF::loadView('shop.backend.downloads.brand',[
             'brands' => $brands,
         ], [], [])->download('brands.pdf');
     }

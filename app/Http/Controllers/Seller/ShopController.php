@@ -12,7 +12,7 @@ class ShopController extends Controller
     public function index()
     {
         $shop = Auth::user()->shop;
-        return view('seller.shop', compact('shop'));
+        return view('shop.seller.shop', compact('shop'));
     }
 
     public function update(Request $request)
@@ -76,7 +76,7 @@ class ShopController extends Controller
     {
         if (Auth::user()->shop->verification_info == null) {
             $shop = Auth::user()->shop;
-            return view('seller.verify_form', compact('shop'));
+            return view('shop.seller.verify_form', compact('shop'));
         } else {
             flash(translate('Sorry! You have sent verification request already.'))->error();
             return back();

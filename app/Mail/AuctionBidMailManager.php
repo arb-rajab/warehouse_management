@@ -31,7 +31,7 @@ class AuctionBidMailManager extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.auction_bid')
+        return $this->view('shop.emails.auction_bid')
                     ->from($this->array['from'], env('MAIL_FROM_NAME'))
                     ->subject($this->array['subject'])
                     ->with([

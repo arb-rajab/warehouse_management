@@ -20,7 +20,7 @@ class CouponController extends Controller
     public function index()
     {
         $coupons = Coupon::where('user_id', Auth::user()->id)->orderBy('id','desc')->get();
-        return view('seller.coupons.index', compact('coupons'));
+        return view('shop.seller.coupons.index', compact('coupons'));
     }
 
     /**
@@ -30,7 +30,7 @@ class CouponController extends Controller
      */
     public function create()
     {
-        return view('seller.coupons.create');
+        return view('shop.seller.coupons.create');
     }
 
 
@@ -71,7 +71,7 @@ class CouponController extends Controller
     public function edit($id)
     {
         $coupon = Coupon::findOrFail(decrypt($id));
-        return view('seller.coupons.edit', compact('coupon'));
+        return view('shop.seller.coupons.edit', compact('coupon'));
     }
 
     /**
@@ -106,10 +106,10 @@ class CouponController extends Controller
     {
         if($request->coupon_type == "product_base") {
             $products = filter_products(Product::where('user_id', Auth::user()->id))->get();
-            return view('partials.coupons.product_base_coupon', compact('products'));
+            return view('shop.partials.coupons.product_base_coupon', compact('products'));
         }
         elseif($request->coupon_type == "cart_base"){
-            return view('partials.coupons.cart_base_coupon');
+            return view('shop.partials.coupons.cart_base_coupon');
         }
     }
 
@@ -118,11 +118,11 @@ class CouponController extends Controller
         if($request->coupon_type == "product_base") {
             $coupon = Coupon::findOrFail($request->id);
             $products = filter_products(Product::where('user_id', Auth::user()->id))->get();
-            return view('partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
+            return view('shop.partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
         }
         elseif($request->coupon_type == "cart_base"){
             $coupon = Coupon::findOrFail($request->id);
-            return view('partials.coupons.cart_base_coupon_edit',compact('coupon'));
+            return view('shop.partials.coupons.cart_base_coupon_edit',compact('coupon'));
         }
     }
 }

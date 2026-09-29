@@ -16,7 +16,7 @@ class FeatureOrderTripController extends Controller
 {
     public function create()
     {
-        return view('backend.sales.new-order');
+        return view('shop.backend.sales.new-order');
     }
 
 
@@ -26,7 +26,7 @@ class FeatureOrderTripController extends Controller
         $product_ids = $request->product_ids;
         // $rep_id = $request->rep_id;
 
-        return view('backend.sales.user-data-table', compact('user_id', 'product_ids'));
+        return view('shop.backend.sales.user-data-table', compact('user_id', 'product_ids'));
     }
 
     public function store(Request $request)
@@ -211,7 +211,7 @@ class FeatureOrderTripController extends Controller
 
     public function newCreate()
     {
-        return view('backend.sales.new-shipping-order');
+        return view('shop.backend.sales.new-shipping-order');
     }
 
     public function newEdit($id)
@@ -220,7 +220,7 @@ class FeatureOrderTripController extends Controller
     $customers = StoreUser::where('user_type', 'customer')->orderBy('name', 'desc')->get();
     $products = Product::where('published', 1)->where('approved', 1)->orderBy('created_at', 'desc')->get();
 
-    return view('backend.sales.edit-shipping-order', compact('order', 'customers', 'products'));
+    return view('shop.backend.sales.edit-shipping-order', compact('order', 'customers', 'products'));
     }
 
     public function newStore(Request $request)
@@ -293,7 +293,7 @@ class FeatureOrderTripController extends Controller
         $product_ids = $request->product_ids;
         // $rep_id = $request->rep_id;
 
-        return view('backend.sales.user-data-table', compact('user_id', 'product_ids'));
+        return view('shop.backend.sales.user-data-table', compact('user_id', 'product_ids'));
     }
     private function newProcessOrderProducts(Request $request, Order $order, CombinedOrder $combinedOrder)
     {

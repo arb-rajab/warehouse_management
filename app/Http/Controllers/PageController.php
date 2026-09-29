@@ -34,7 +34,7 @@ class PageController extends Controller
      */
     public function create()
     {
-        return view('backend.website_settings.pages.create');
+        return view('shop.backend.website_settings.pages.create');
     }
 
     /**
@@ -94,10 +94,10 @@ class PageController extends Controller
         $page = Page::where('slug', $id)->first();
         if($page != null){
           if ($page_name == 'home') {
-            return view('backend.website_settings.pages.home_page_edit', compact('page','lang'));
+            return view('shop.backend.website_settings.pages.home_page_edit', compact('page','lang'));
           }
           else{
-            return view('backend.website_settings.pages.edit', compact('page','lang'));
+            return view('shop.backend.website_settings.pages.edit', compact('page','lang'));
           }
         }
         abort(404);
@@ -162,14 +162,14 @@ class PageController extends Controller
     public function show_custom_page($slug){
         $page = Page::where('slug', $slug)->first();
         if($page != null){
-            return view('frontend.custom_page', compact('page'));
+            return view('shop.frontend.custom_page', compact('page'));
         }
         abort(404);
     }
     public function mobile_custom_page($slug){
         $page = Page::where('slug', $slug)->first();
         if($page != null){
-            return view('frontend.m_custom_page', compact('page'));
+            return view('shop.frontend.m_custom_page', compact('page'));
         }
         abort(404);
     }

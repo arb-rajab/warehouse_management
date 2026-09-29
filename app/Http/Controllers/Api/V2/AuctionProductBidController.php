@@ -26,7 +26,7 @@ class AuctionProductBidController extends Controller
             if ($secound_max_bid != null) {
                 if ($secound_max_bid->user->email != null) {
                     $product = Product::where('id', $request->product_id)->first();
-                    $array['view'] = 'emails.auction_bid';
+                    $array['view'] = 'shop.emails.auction_bid';
                     $array['subject'] = translate('Auction Bid');
                     $array['from'] = env('MAIL_FROM_ADDRESS');
                     $array['content'] = 'Hi! A new user bidded more then you for the product, ' . $product->name . '. ' . 'Highest bid amount: ' . $bid->amount;

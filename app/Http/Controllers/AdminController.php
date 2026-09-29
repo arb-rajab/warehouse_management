@@ -55,7 +55,7 @@ class AdminController extends Controller
             return $item;
         });
 
-        return view('backend.dashboard', compact('root_categories', 'cached_graph_data', 'total_visits'));
+        return view('shop.backend.dashboard', compact('root_categories', 'cached_graph_data', 'total_visits'));
     }
 
     function clearCache(Request $request)

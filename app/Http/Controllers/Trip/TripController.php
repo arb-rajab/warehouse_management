@@ -49,14 +49,14 @@ class TripController extends Controller
         $coordinates = $map_array['coordinates'];
         $long_lat_array = $map_array['long_lat_array'];
 
-        return view('backend.trips.checkpoints.index', compact('checkpoints', 'coordinates', 'long_lat_array'));
+        return view('shop.backend.trips.checkpoints.index', compact('checkpoints', 'coordinates', 'long_lat_array'));
 
     }
 
     public function create()
     {
         $trip = null; // to fix frontend issue
-        return view('backend.trips.create', compact('trip'));
+        return view('shop.backend.trips.create', compact('trip'));
     }
 
     public function create_from_map()
@@ -68,7 +68,7 @@ class TripController extends Controller
         $orders = Order::where('delivery_status', 'on_delivery')->orderBy('created_at', 'desc')->get();
         $long_lat_array = $this->getOrdersCoordinates($orders);
 
-        return view('backend.trips.create-from-map', compact('trip', 'available_trucks', 'unavailable_trucks', 'long_lat_array'));
+        return view('shop.backend.trips.create-from-map', compact('trip', 'available_trucks', 'unavailable_trucks', 'long_lat_array'));
     }
 
     public function store_from_map(Request $request)
@@ -158,7 +158,7 @@ class TripController extends Controller
     {
         $trip = Trip::find($id);
 
-        return view('backend.trips.edit', compact('trip'));
+        return view('shop.backend.trips.edit', compact('trip'));
     }
 
     public function update(TripRequest $request)
@@ -393,7 +393,7 @@ class TripController extends Controller
 
         $page_title = $type === 'today' ? translate('Today Trips') : translate('All Trips');
 
-        return view('backend.trips.index', compact('trips', 'sort_search', 'page_title'));
+        return view('shop.backend.trips.index', compact('trips', 'sort_search', 'page_title'));
     }
 
     protected function getOrdersCoordinates($orders)
@@ -718,7 +718,7 @@ class TripController extends Controller
         }
 
         $orders = $orders->paginate(15);
-        return view('backend.trips.orders', compact('orders', 'sort_search', 'payment_status', 'delivery_status', 'date'));
+        return view('shop.backend.trips.orders', compact('orders', 'sort_search', 'payment_status', 'delivery_status', 'date'));
     }
 
     public function bulk_change_delivery_status(Request $request)

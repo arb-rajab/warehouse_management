@@ -21,7 +21,7 @@ class TaxController extends Controller
     public function index()
     {
         $all_taxes = Tax::orderBy('created_at', 'desc')->get();
-        return view('backend.setup_configurations.tax.index', compact('all_taxes'));
+        return view('shop.backend.setup_configurations.tax.index', compact('all_taxes'));
     }
 
     /**
@@ -78,7 +78,7 @@ class TaxController extends Controller
     public function edit($id)
     {
         $tax = Tax::findOrFail($id);
-        return view('backend.setup_configurations.tax.edit', compact('tax'));
+        return view('shop.backend.setup_configurations.tax.edit', compact('tax'));
     }
 
     /**

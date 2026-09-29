@@ -15,13 +15,13 @@ class VoguepayController extends Controller
     public function pay()
     {
         if (Session::get('payment_type') == 'cart_payment') {
-            return view('frontend.voguepay.cart_payment_vogue');
+            return view('shop.frontend.voguepay.cart_payment_vogue');
         }
         elseif (Session::get('payment_type') == 'wallet_payment') {
-            return view('frontend.voguepay.wallet_payment_vogue');
+            return view('shop.frontend.voguepay.wallet_payment_vogue');
         }
         elseif (Session::get('payment_type') == 'customer_package_payment') {
-            return view('frontend.voguepay.customer_package_payment_vogue');
+            return view('shop.frontend.voguepay.customer_package_payment_vogue');
         }
     }
 

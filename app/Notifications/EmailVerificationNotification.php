@@ -29,13 +29,13 @@ class EmailVerificationNotification extends Notification
         $notifiable->verification_code = encrypt($notifiable->id);
         $notifiable->save();
 
-        $array['view'] = 'emails.verification';
+        $array['view'] = 'shop.emails.verification';
         $array['subject'] = translate('Account Verification & Terms Agreement');
         $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
         $array['link'] = route('email.verification.confirmation', $notifiable->verification_code);
 
         return (new MailMessage)
-            ->view('emails.verification', ['array' => $array])
+            ->view('shop.emails.verification', ['array' => $array])
             ->subject(translate('Email Verification - ').env('APP_NAME'));
     }
 

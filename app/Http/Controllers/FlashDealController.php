@@ -35,7 +35,7 @@ class FlashDealController extends Controller
             $flash_deals = $flash_deals->where('title', 'like', '%'.$sort_search.'%');
         }
         $flash_deals = $flash_deals->paginate(15);
-        return view('backend.marketing.flash_deals.index', compact('flash_deals', 'sort_search'));
+        return view('shop.backend.marketing.flash_deals.index', compact('flash_deals', 'sort_search'));
     }
 
     /**
@@ -45,7 +45,7 @@ class FlashDealController extends Controller
      */
     public function create()
     {
-        return view('backend.marketing.flash_deals.create');
+        return view('shop.backend.marketing.flash_deals.create');
     }
 
     /**
@@ -116,7 +116,7 @@ class FlashDealController extends Controller
     {
         $lang           = $request->lang;
         $flash_deal = FlashDeal::findOrFail($id);
-        return view('backend.marketing.flash_deals.edit', compact('flash_deal','lang'));
+        return view('shop.backend.marketing.flash_deals.edit', compact('flash_deal','lang'));
     }
 
     /**
@@ -222,12 +222,12 @@ class FlashDealController extends Controller
 
     public function product_discount(Request $request){
         $product_ids = $request->product_ids;
-        return view('backend.marketing.flash_deals.flash_deal_discount', compact('product_ids'));
+        return view('shop.backend.marketing.flash_deals.flash_deal_discount', compact('product_ids'));
     }
 
     public function product_discount_edit(Request $request){
         $product_ids = $request->product_ids;
         $flash_deal_id = $request->flash_deal_id;
-        return view('backend.marketing.flash_deals.flash_deal_discount_edit', compact('product_ids', 'flash_deal_id'));
+        return view('shop.backend.marketing.flash_deals.flash_deal_discount_edit', compact('product_ids', 'flash_deal_id'));
     }
 }

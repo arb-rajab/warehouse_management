@@ -16,19 +16,19 @@ class WebsiteController extends Controller
 
 	public function header(Request $request)
 	{
-		return view('backend.website_settings.header');
+		return view('shop.backend.website_settings.header');
 	}
 	public function footer(Request $request)
 	{
 		$lang = $request->lang;
-		return view('backend.website_settings.footer', compact('lang'));
+		return view('shop.backend.website_settings.footer', compact('lang'));
 	}
 	public function pages(Request $request)
 	{
-		return view('backend.website_settings.pages.index');
+		return view('shop.backend.website_settings.pages.index');
 	}
 	public function appearance(Request $request)
 	{
-		return view('backend.website_settings.appearance');
+		return view('shop.backend.website_settings.appearance');
 	}
 }

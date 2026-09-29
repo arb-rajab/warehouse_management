@@ -25,12 +25,12 @@ class TruckController extends Controller
         }
 
         $trucks = $trucks->paginate(15);
-        return view('backend.trips.trucks.index', compact('trucks', 'sort_search'));
+        return view('shop.backend.trips.trucks.index', compact('trucks', 'sort_search'));
     }
 
     public function create()
     {
-        return view('backend.trips.trucks.create');
+        return view('shop.backend.trips.trucks.create');
     }
 
     public function store(Request $request)
@@ -64,7 +64,7 @@ class TruckController extends Controller
     {
         $truck = Truck::find($id);
 
-        return view('backend.trips.trucks.edit', compact('truck'));
+        return view('shop.backend.trips.trucks.edit', compact('truck'));
     }
 
     public function update(Request $request)

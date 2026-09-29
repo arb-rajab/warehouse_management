@@ -17,7 +17,7 @@ class OffersCatalogController extends Controller
     {
         $offers = OffersCatalog::all();
 
-        return view('backend.offers_catalog.index', compact('offers'));
+        return view('shop.backend.offers_catalog.index', compact('offers'));
     }
 
     /**

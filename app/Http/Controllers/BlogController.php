@@ -36,7 +36,7 @@ class BlogController extends Controller
 
         $blogs = $blogs->paginate(15);
 
-        return view('backend.blog_system.blog.index', compact('blogs','sort_search'));
+        return view('shop.backend.blog_system.blog.index', compact('blogs','sort_search'));
     }
 
     /**
@@ -47,7 +47,7 @@ class BlogController extends Controller
     public function create()
     {
         $blog_categories = BlogCategory::all();
-        return view('backend.blog_system.blog.create', compact('blog_categories'));
+        return view('shop.backend.blog_system.blog.create', compact('blog_categories'));
     }
 
     /**
@@ -106,7 +106,7 @@ class BlogController extends Controller
         $blog = Blog::find($id);
         $blog_categories = BlogCategory::all();
 
-        return view('backend.blog_system.blog.edit', compact('blog','blog_categories'));
+        return view('shop.backend.blog_system.blog.edit', compact('blog','blog_categories'));
     }
 
     /**
@@ -200,12 +200,12 @@ class BlogController extends Controller
 
         $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
 
-        return view("frontend.blog.listing", compact('blogs', 'selected_categories', 'search', 'recent_blogs'));
+        return view("shop.frontend.blog.listing", compact('blogs', 'selected_categories', 'search', 'recent_blogs'));
     }
 
     public function blog_details($slug) {
         $blog = Blog::where('slug', $slug)->first();
         $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
-        return view("frontend.blog.details", compact('blog', 'recent_blogs'));
+        return view("shop.frontend.blog.details", compact('blog', 'recent_blogs'));
     }
 }

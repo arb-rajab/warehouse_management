@@ -33,7 +33,7 @@ class StateController extends Controller
         }
 
         $states = $state_queries->orderBy('status', 'desc')->paginate(15);
-        return view('backend.setup_configurations.states.index', compact('states', 'sort_country', 'sort_state'));
+        return view('shop.backend.setup_configurations.states.index', compact('states', 'sort_country', 'sort_state'));
     }
 
     /**
@@ -87,7 +87,7 @@ class StateController extends Controller
         $state  = State::findOrFail($id);
         $countries = Country::where('status', 1)->get();
 
-        return view('backend.setup_configurations.states.edit', compact('countries', 'state'));
+        return view('shop.backend.setup_configurations.states.edit', compact('countries', 'state'));
     }
 
     /**
