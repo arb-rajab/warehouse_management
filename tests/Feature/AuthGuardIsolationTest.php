@@ -56,10 +56,13 @@ test('an admin panel session does not sign anyone into the store, even for a mat
     $admin = User::factory()->create(['id' => $storeAdmin->id]);
     $this->actingAs($admin);
 
-    $this->get('/temp/admin/roles/create')->assertRedirect(route('shop.login'));
+    // /admin first: a store request leaves Auth::shouldUse('store') on the one
+    // app instance a test serves every request from, where production builds a
+    // fresh container per request, so /admin would then run on the store guard.
     $this->followingRedirects()->get('/admin')->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/Dashboard/Index')
     );
+    $this->get('/temp/admin/roles/create')->assertRedirect(route('shop.login'));
 });
 
 /**
