@@ -41,10 +41,15 @@ class EnsurePasswordHasBeenChanged
      */
     public function handle(Request $request, Closure $next): Response
     {
-        /** @var User|null $user */
         $user = $request->user();
 
-        if ($user === null || ! $user->must_change_password) {
+        // must_change_password is a WMS-specific column on App\Models\User.
+        // Under /temp, Auth::shouldUse('store') (see
+        // App\Http\Middleware\UseStoreAuthGuard) makes this resolve to a
+        // StoreUser instead — a model with no such attribute at all, so
+        // accessing it under this app's strict-attributes mode throws
+        // rather than returning null.
+        if (! $user instanceof User || ! $user->must_change_password) {
             return $next($request);
         }
 

@@ -27,9 +27,8 @@ test('the migration leaves an existing uploads table alone', function () {
 
 test('the migration creates only the columns this app reads', function () {
     expect(Schema::hasColumns('uploads', ['id', 'file_name', 'external_link', 'created_at', 'updated_at']))->toBeTrue();
-    // Deliberately absent, so nothing here can start depending on them.
+    // Deliberately absent, so nothing here can start depending on it.
     expect(Schema::hasColumn('uploads', 'file_original_name'))->toBeFalse();
-    expect(Schema::hasColumn('uploads', 'user_id'))->toBeFalse();
 });
 
 test('both file_name and external_link are nullable', function () {

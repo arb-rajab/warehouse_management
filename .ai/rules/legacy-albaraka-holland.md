@@ -952,6 +952,16 @@ The legacy `webpack.mix.js`/`package.json` (Mix 2, Vue 2, Bootstrap 4) are
 
 Drop them outright. There is nothing to port to Vite.
 
+Done: `vite.config.ts` and the Inertia bundle are untouched and there is no
+second Vite entry. `public/assets/**` and `public/download/` are copied in
+verbatim, and `static_asset()`/`my_asset()` no longer prefix `public/`.
+`/temp` routes return plain Blade (the views never call `@vite` or extend
+`app.blade.php`), so jQuery/Bootstrap never share a page with the Vue 3 app;
+`HandleInertiaRequests` is in the `web` group but only acts on Inertia
+responses. `LegacyAssetHelpersTest` fails if a view names a bundle missing
+from `public/`. `fonts/Roboto-Regular.ttf` (invoice view) was never in the
+legacy repo either.
+
 The storefront, admin and seller UIs are 420 server-rendered Blade views
 (frontend 132, backend 214, seller 35, auth 5, emails 8). They load prebuilt
 ActiveITzone theme bundles through `static_asset()`:
@@ -999,7 +1009,10 @@ These silently alter legacy code:
 - `JsonResource::withoutWrapping()`. Legacy has 25 `JsonResource` and 62
   `ResourceCollection` classes serving the Flutter store app on `api/v2`.
   Unwrapping changes their JSON shape. Scope it, or add `$wrap` back on the
-  legacy resources.
+  legacy resources. **Scoped** (2026-09-30): the four store API route files
+  under `/temp/api` run `WrapStoreApiResources`, which puts the `data` wrapper
+  back for the request and restores the previous one afterwards. Without it
+  every collection came out as `{"data":{"data":[...]}}`.
 - `Date::use(CarbonImmutable::class)`. There are 165 Carbon/`now()` uses in 62
   legacy files. Code that mutates in place (`$d->addDays(3)` without
   reassigning) becomes a silent no-op, and `Carbon\Carbon` type-hints throw.

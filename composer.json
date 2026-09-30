@@ -65,7 +65,10 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/Http/Helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -139,13 +142,7 @@
         "laravel": {
             "dont-discover": [
                 "genealabs/laravel-sign-in-with-apple",
-                "genealabs/laravel-socialiter",
-                "intervention/image",
-                "laracasts/flash",
-                "laravel/socialite",
-                "laravel/ui",
-                "maatwebsite/excel",
-                "niklasravnsborg/laravel-pdf"
+                "genealabs/laravel-socialiter"
             ]
         }
     },

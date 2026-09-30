@@ -4,13 +4,22 @@ use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Order;
+use App\Models\OrderDetail;
 use App\Models\Pallet;
+use App\Models\Product;
+use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /*
@@ -91,6 +100,177 @@ function actingAsMobilePanelUser(): User
     test()->actingAs($mobileUser);
 
     return $mobileUser;
+}
+
+/**
+ * Create a legacy store user (App\Models\StoreUser, the store's own `users`
+ * table) with a verified email and a known password, for tests of the store
+ * mounted under /temp. There is no factory for this model: the store's rows
+ * are never generated anywhere else.
+ *
+ * Returns the row re-read from the database, every column loaded, as a real
+ * request's authenticated user is: the store's views read columns this never
+ * sets, which strict mode refuses to read off a model that doesn't have them.
+ */
+function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password'): StoreUser
+{
+    $user = StoreUser::create([
+        'name' => ucfirst($userType).' Tester',
+        'email' => $email ?? $userType.'-'.Str::random(8).'@example.com',
+        'user_type' => $userType,
+        'phone' => (string) random_int(1000000000, 9999999999),
+    ]);
+    $user->password = Hash::make($password);
+    $user->email_verified_at = now();
+    $user->save();
+
+    return $user->fresh();
+}
+
+/**
+ * Authenticate a legacy store user on the store's own `store` guard.
+ *
+ * actingAs() also makes its guard the default for the rest of the test, which
+ * a real request only reaches partway through its middleware, from
+ * UseStoreAuthGuard. Switching the default back makes each request start on
+ * this app's own guard as a real one does, so a middleware that runs before
+ * UseStoreAuthGuard fails here the way it fails for real users.
+ */
+function actingAsStoreUser(StoreUser $user): StoreUser
+{
+    $defaultGuard = Auth::getDefaultDriver();
+
+    test()->actingAs($user, 'store');
+
+    Auth::shouldUse($defaultGuard);
+
+    return $user;
+}
+
+/**
+ * Give the legacy store the default currency every storefront price is
+ * formatted through (get_system_default_currency()), which production has and
+ * a fresh database doesn't.
+ */
+function seedStoreCurrency(): void
+{
+    $currencyId = DB::table('currencies')->insertGetId([
+        'name' => 'Euro', 'symbol' => '€', 'exchange_rate' => 1, 'status' => 1, 'code' => 'EUR',
+    ]);
+
+    DB::table('business_settings')->insert(['type' => 'system_default_currency', 'value' => $currencyId]);
+}
+
+/**
+ * A product the legacy store can show and sell: published, priced, and with
+ * the stock row the cart takes its price and quantity from.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createStoreProduct(array $attributes = []): Product
+{
+    $product = Product::factory()->create([
+        'slug' => 'product-'.Str::lower(Str::random(8)),
+        'unit_price' => 2.5,
+        'current_stock' => 50,
+        'choice_options' => '[]',
+        ...$attributes,
+    ]);
+
+    DB::table('product_stocks')->insert([
+        'product_id' => $product->id,
+        'variant' => '',
+        'sku' => 'SKU-'.$product->id,
+        'price' => $product->unit_price,
+        'qty' => $product->current_stock,
+    ]);
+
+    return $product;
+}
+
+/**
+ * A default delivery address in the Netherlands for store user `$userId`.
+ */
+function addStoreAddress(int $userId): int
+{
+    $countryId = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
+
+    return DB::table('addresses')->insertGetId([
+        'user_id' => $userId, 'address' => 'Damrak 1', 'country_id' => $countryId, 'phone' => '612345678', 'set_default' => 1,
+    ]);
+}
+
+/**
+ * A token for the store's mobile-app API, as its login hands out.
+ */
+function storeApiToken(StoreUser $user): string
+{
+    return $user->createToken('API Token')->plainTextToken;
+}
+
+/**
+ * A store admin with the store's `Super Admin` role, which
+ * AuthServiceProvider's Gate::before() grants every ability.
+ */
+function createStoreAdmin(bool $raizerAdmin = false): StoreUser
+{
+    Role::findOrCreate('Super Admin', 'store');
+
+    $admin = createStoreUser('admin');
+    $admin->forceFill(['raizer_admin' => $raizerAdmin ?: null])->save();
+    $admin->assignRole('Super Admin');
+
+    return $admin;
+}
+
+/**
+ * A cash-on-delivery order `$customer` placed, carrying the shipping address
+ * the checkout stores on it.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createStoreOrder(StoreUser $customer, array $attributes = []): Order
+{
+    $order = new Order;
+    $order->forceFill([
+        'user_id' => $customer->id,
+        'shipping_type' => 'home_delivery',
+        'shipping_address' => json_encode(['name' => $customer->name, 'email' => $customer->email, 'phone' => $customer->phone]),
+        'payment_type' => 'cash_on_delivery',
+        'grand_total' => 5,
+        'code' => now()->format('Ymd-His').random_int(10, 99),
+        'date' => now()->timestamp,
+        ...$attributes,
+    ])->save();
+
+    return $order->fresh();
+}
+
+/**
+ * An order `$customer` placed for `$product`, its order line in
+ * `$paymentStatus` (the column the digital-download checks read).
+ */
+function orderStoreProduct(StoreUser $customer, Product $product, string $paymentStatus = 'paid'): OrderDetail
+{
+    $order = createStoreOrder($customer, ['payment_status' => $paymentStatus]);
+
+    return OrderDetail::forceCreate([
+        'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
+        'price' => 5, 'tax' => 0, 'quantity' => 1, 'payment_status' => $paymentStatus,
+    ]);
+}
+
+/**
+ * Make the test cache serialize, through the same serializable_classes
+ * allow-list (config/cache.php) production's database store applies. The
+ * array store tests use otherwise keeps values as they are, so a cached
+ * model comes back intact here and as __PHP_Incomplete_Class in production.
+ */
+function useSerializingCache(): void
+{
+    config(['cache.stores.array.serialize' => true]);
+
+    app('cache')->forgetDriver('array');
 }
 
 /**

@@ -38,3 +38,20 @@ runs:
       run: |
         [ -f .env ] || cp .env.example .env
         php artisan key:generate --ansi
+
+    # Merging in the legacy store's routes/controllers (see
+    # .ai/rules/legacy-albaraka-holland.md) means any command that resolves
+    # every controller to boot the app -- route:list, and Wayfinder's
+    # generator, which the Vite plugin also shells out to on every `npm run
+    # build` -- now reaches a legacy controller constructor querying
+    # BusinessSetting via get_setting(). Every job using this action needs a
+    # real (if empty) database for that to succeed, not just the jobs that
+    # already provisioned one for their own tests.
+    - name: Ensure a database is available
+      shell: bash
+      run: |
+        php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+        php -r "file_exists('database/telescope.sqlite') || touch('database/telescope.sqlite');"
+        php -r "file_exists('database/pulse.sqlite') || touch('database/pulse.sqlite');"
+        php -r "file_exists('database/health.sqlite') || touch('database/health.sqlite');"
+        php artisan migrate --force

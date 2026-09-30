@@ -28,7 +28,10 @@ test('deleting a product cascades to its barcodes and leaves other products\' ba
     expect(ProductBarcode::query()->whereKey($survivorBarcode->id)->exists())->toBeTrue();
 });
 
-test('the table is wms-owned rather than a column on the shared products table', function () {
-    expect(Schema::hasTable('wms_product_barcodes'))->toBeTrue();
-    expect(Schema::hasColumn('products', 'barcode'))->toBeFalse();
+test('barcodes are wms-owned rows rather than the shared products table\'s own barcode column', function () {
+    // `products.barcode` is the store's single barcode per product, which its
+    // seller pages still read and write; this app's barcodes never touch it.
+    expect(Schema::hasTable('wms_product_barcodes'))->toBeTrue()
+        ->and((new Product)->barcodes()->getRelated()->getTable())->toBe('wms_product_barcodes')
+        ->and((new Product)->getFillable())->not->toContain('barcode');
 });

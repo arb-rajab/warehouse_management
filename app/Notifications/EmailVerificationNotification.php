@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Mail\EmailManager;
+use App\Models\StoreUser;
+use Auth;
+use Carbon\Carbon;
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\URL;
+
+class EmailVerificationNotification extends Notification
+{
+    use Queueable;
+
+    public function __construct()
+    {
+    }
+
+    public function via($notifiable)
+    {
+        return ['mail'];
+    }
+
+    public function toMail($notifiable)
+    {
+        $notifiable->verification_code = encrypt($notifiable->id);
+        $notifiable->save();
+
+        $array['view'] = 'shop.emails.verification';
+        $array['subject'] = translate('Account Verification & Terms Agreement');
+        $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
+        $array['link'] = route('email.verification.confirmation', $notifiable->verification_code);
+
+        return (new MailMessage)
+            ->view('shop.emails.verification', ['array' => $array])
+            ->subject(translate('Email Verification - ').env('APP_NAME'));
+    }
+
+    public function toArray($notifiable)
+    {
+        return [
+            //
+        ];
+    }
+}
