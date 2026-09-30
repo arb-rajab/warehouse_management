@@ -38,6 +38,7 @@ setup() {
     (
         cd "$WORK/origin"
         mkdir -p database public storage/framework bootstrap/cache
+        echo '{"json":1}' > composer.json
         echo '{"lock":1}' > composer.lock
         echo '{"lock":1}' > package-lock.json
         echo '<?php' > public/index.php
@@ -87,7 +88,13 @@ STUB
 exit 0
 STUB
 
-    printf '#!/bin/sh\nexit 0\n' > "$WORK/bin/composer"
+    # Leaves one file per release, so a test can tell an install (a new file)
+    # from a reused vendor/ (only the files carried over).
+    cat > "$WORK/bin/composer" <<'STUB'
+#!/bin/sh
+mkdir -p vendor && touch "vendor/installed-by-$(basename "$PWD")"
+exit 0
+STUB
     chmod +x "$WORK/bin"/*
 
     (
@@ -160,6 +167,34 @@ for _ in 1 2 3; do deploy "$(commit_new_revision)" || fail "deploy failed unexpe
 check "old releases are pruned" "$(ls -1 "$WORK/host/releases" | wc -l | tr -d ' ')" "2"
 check "old backups are pruned" "$(ls -1 "$WORK/host/shared/backups" | wc -l | tr -d ' ')" "2"
 check "current still resolves" "$([ -d "$WORK/host/current" ] && echo yes || echo no)" "yes"
+
+# The release whose composer stub run produced the live vendor/: its own id after
+# an install, an earlier release's after a reuse.
+vendor_installed_by() { ls -1 "$WORK/host/current/vendor" | sed 's/^installed-by-//'; }
+
+echo "vendor/ is reused only while composer.json and both lockfiles are unchanged"
+setup
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
+first_release="$(published)"
+check "the first deploy installs" "$(vendor_installed_by)" "$first_release"
+deploy "$(commit_new_revision)" >/dev/null
+check "an unrelated change reuses the previous vendor/" "$(vendor_installed_by)" "$first_release"
+(
+    cd "$WORK/origin"
+    echo '{"json":2}' > composer.json
+    git add -A
+    git -c user.email=t@t -c user.name=t commit -qm "composer.json only"
+)
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
+check "a composer.json change alone reinstalls" "$(vendor_installed_by)" "$(published)"
+(
+    cd "$WORK/origin"
+    echo '{"lock":2}' > composer.lock
+    git add -A
+    git -c user.email=t@t -c user.name=t commit -qm "lock"
+)
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
+check "a lockfile change reinstalls" "$(vendor_installed_by)" "$(published)"
 
 echo "shared public entries are relinked into every release"
 setup

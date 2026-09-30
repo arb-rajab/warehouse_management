@@ -236,8 +236,15 @@ fi
 # nothing when neither lockfile moved, so carry the previous release's trees
 # over instead. Hardlinks make that near-free on disk; both tools replace files
 # rather than editing in place, so the copies never diverge.
+#
+# composer.json is compared too, not only the lock: its `autoload` (a `files`
+# entry, a psr-4 root) and `extra.laravel.dont-discover` are baked into
+# vendor/composer at install time and can change while the lock does not. A
+# reused vendor/ then boots without the new autoload file, and every artisan
+# command dies on its first call to a function it defines.
 reuse_dependencies=0
 if [ -n "$previous_release" ] \
+    && cmp -s "$RELEASE_DIR/composer.json" "$previous_release/composer.json" \
     && cmp -s "$RELEASE_DIR/composer.lock" "$previous_release/composer.lock" \
     && cmp -s "$RELEASE_DIR/package-lock.json" "$previous_release/package-lock.json"; then
     reuse_dependencies=1
