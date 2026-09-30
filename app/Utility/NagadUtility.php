@@ -92,8 +92,8 @@ class NagadUtility {
         curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($url, CURLOPT_POSTFIELDS, $posttoken);
         curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($url, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($url, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($url, CURLOPT_SSL_VERIFYPEER, true);
 
         $resultdata = curl_exec($url);
 
@@ -112,7 +112,7 @@ class NagadUtility {
         curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/0 (Windows; U; Windows NT 0; zh-CN; rv:3)");
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         $file_contents = curl_exec($ch);
         echo curl_error($ch);
         return $file_contents;

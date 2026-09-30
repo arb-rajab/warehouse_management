@@ -231,8 +231,8 @@ class SslCommerzController extends Controller
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
 
         if (SSLCZ_IS_LOCAL_HOST) {
-            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
         } else {
             curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2); // Its default value is now 2
             curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
@@ -289,8 +289,8 @@ class SslCommerzController extends Controller
                 curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
 
                 if (SSLCZ_IS_LOCAL_HOST) {
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);
+                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
                 } else {
                     curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2); // Its default value is now 2
                     curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
