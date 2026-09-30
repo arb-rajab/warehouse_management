@@ -35,6 +35,14 @@ class User extends Authenticatable
     protected $table = 'wms_users';
 
     /**
+     * The spatie guard this model's roles and permissions live under, pinned
+     * so it isn't derived from config/auth.php's guard list (`web` and
+     * `sanctum` both name this model's provider). StoreUser's is `store`;
+     * see .ai/rules/legacy-albaraka-holland.md, "Auth guards".
+     */
+    protected string $guard_name = 'web';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

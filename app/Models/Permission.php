@@ -2,16 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Spatie\Permission\Models\Permission as SpatiePermission;
 
-class Permission extends Model
+/**
+ * The legacy store's permissions: spatie's permission model, held to the
+ * `store` guard, for the same reason as Role. They live in spatie's
+ * configured `wms_permissions` table, next to WMS's own `web` ones.
+ */
+class Permission extends SpatiePermission
 {
-    /**
-     * See Role::getTable(): the legacy store's permissions live in spatie's
-     * configured `wms_permissions` table here.
-     */
-    public function getTable(): string
+    protected string $guard_name = 'store';
+
+    protected static function booted(): void
     {
-        return config('permission.table_names.permissions');
+        static::addGlobalScope('store_guard', function (Builder $query): void {
+            $query->where($query->qualifyColumn('guard_name'), 'store');
+        });
     }
 }

@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\RoleTranslation;
-// use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -37,7 +36,7 @@ class RoleController extends Controller implements HasMiddleware
      */
     public function index()
     {
-        $roles = Role::where('id','!=',1)->paginate(10);
+        $roles = Role::excludingSuperAdmin()->paginate(10);
         return view('shop.backend.staff.staff_roles.index', compact('roles'));
 
         // $roles = Role::paginate(10);
@@ -132,8 +131,9 @@ class RoleController extends Controller implements HasMiddleware
      */
     public function destroy($id)
     {
-        RoleTranslation::where('role_id',$id)->delete();
-        Role::destroy($id);
+        $role = Role::findOrFail($id);
+        RoleTranslation::where('role_id', $role->id)->delete();
+        $role->delete();
         flash(translate('Role has been deleted successfully'))->success();
         return redirect()->route('roles.index');
     }
