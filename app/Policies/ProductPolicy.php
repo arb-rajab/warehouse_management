@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\StoreUser;
@@ -35,7 +36,7 @@ class ProductPolicy
             || $product->user_id === $user->id
             || OrderDetail::where('product_id', $product->id)
                 ->where('payment_status', 'paid')
-                ->whereHas('order', fn ($order) => $order->where('user_id', $user->id))
+                ->whereIn('order_id', Order::select('id')->where('user_id', $user->id))
                 ->exists();
     }
 }
