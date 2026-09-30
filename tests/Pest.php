@@ -4,17 +4,21 @@ use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Order;
 use App\Models\Pallet;
+use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /*
@@ -140,6 +144,98 @@ function actingAsStoreUser(StoreUser $user): StoreUser
     Auth::shouldUse($defaultGuard);
 
     return $user;
+}
+
+/**
+ * Give the legacy store the default currency every storefront price is
+ * formatted through (get_system_default_currency()), which production has and
+ * a fresh database doesn't.
+ */
+function seedStoreCurrency(): void
+{
+    $currencyId = DB::table('currencies')->insertGetId([
+        'name' => 'Euro', 'symbol' => '€', 'exchange_rate' => 1, 'status' => 1, 'code' => 'EUR',
+    ]);
+
+    DB::table('business_settings')->insert(['type' => 'system_default_currency', 'value' => $currencyId]);
+}
+
+/**
+ * A product the legacy store can show and sell: published, priced, and with
+ * the stock row the cart takes its price and quantity from.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createStoreProduct(array $attributes = []): Product
+{
+    $product = Product::factory()->create([
+        'slug' => 'product-'.Str::lower(Str::random(8)),
+        'unit_price' => 2.5,
+        'current_stock' => 50,
+        'choice_options' => '[]',
+        ...$attributes,
+    ]);
+
+    DB::table('product_stocks')->insert([
+        'product_id' => $product->id,
+        'variant' => '',
+        'sku' => 'SKU-'.$product->id,
+        'price' => $product->unit_price,
+        'qty' => $product->current_stock,
+    ]);
+
+    return $product;
+}
+
+/**
+ * A store admin with the store's `Super Admin` role, which
+ * AuthServiceProvider's Gate::before() grants every ability.
+ */
+function createStoreAdmin(bool $raizerAdmin = false): StoreUser
+{
+    Role::findOrCreate('Super Admin', 'store');
+
+    $admin = createStoreUser('admin');
+    $admin->forceFill(['raizer_admin' => $raizerAdmin ?: null])->save();
+    $admin->assignRole('Super Admin');
+
+    return $admin;
+}
+
+/**
+ * A cash-on-delivery order `$customer` placed, carrying the shipping address
+ * the checkout stores on it.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createStoreOrder(StoreUser $customer, array $attributes = []): Order
+{
+    $order = new Order;
+    $order->forceFill([
+        'user_id' => $customer->id,
+        'shipping_type' => 'home_delivery',
+        'shipping_address' => json_encode(['name' => $customer->name, 'email' => $customer->email, 'phone' => $customer->phone]),
+        'payment_type' => 'cash_on_delivery',
+        'grand_total' => 5,
+        'code' => now()->format('Ymd-His').random_int(10, 99),
+        'date' => now()->timestamp,
+        ...$attributes,
+    ])->save();
+
+    return $order->fresh();
+}
+
+/**
+ * Make the test cache serialize, through the same serializable_classes
+ * allow-list (config/cache.php) production's database store applies. The
+ * array store tests use otherwise keeps values as they are, so a cached
+ * model comes back intact here and as __PHP_Incomplete_Class in production.
+ */
+function useSerializingCache(): void
+{
+    config(['cache.stores.array.serialize' => true]);
+
+    app('cache')->forgetDriver('array');
 }
 
 /**

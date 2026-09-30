@@ -225,8 +225,6 @@ class CartController extends Controller
             //$data['shipping'] = 0;
             $data['shipping_cost'] = 0;
             $data['product_referral_code'] = null;
-            $data['cash_on_delivery'] = $product->cash_on_delivery;
-            $data['digital'] = $product->digital;
             $data['for_customer'] = isset($for_customer) ? $for_customer : null;
             if (Auth::check()) {
                 $data['by_rep'] = Auth::user()->is_rep ? true : false;
@@ -348,8 +346,6 @@ class CartController extends Controller
             $data['tax'] = $tax;
             $data['shipping_cost'] = 0;
             $data['product_referral_code'] = null;
-            $data['cash_on_delivery'] = $product->cash_on_delivery;
-            $data['digital'] = $product->digital;
 
             if (count($carts) == 0) {
                 Cart::create($data);

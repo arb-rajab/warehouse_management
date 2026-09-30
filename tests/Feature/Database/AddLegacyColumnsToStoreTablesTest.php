@@ -18,7 +18,9 @@ test('every column the legacy store added after shop.sql exists', function () {
         'rep_package_id', 'rep_discount_percentage', 'admin_notes', 'activity_status', 'profits', 'device_key',
         'raizer_admin',
     ]))->toBeTrue()
-        ->and(Schema::hasColumn('categories', 'serial'))->toBeTrue()
+        ->and(Schema::hasColumns('categories', ['serial', 'cover_image']))->toBeTrue()
+        ->and(Schema::hasColumn('reviews', 'photos'))->toBeTrue()
+        ->and(Schema::hasColumns('shops', ['top_banner', 'banner_full_width_1', 'banners_half_width', 'banner_full_width_2']))->toBeTrue()
         ->and(Schema::hasColumn('countries', 'priority'))->toBeTrue()
         ->and(Schema::hasColumn('brands', 'serial'))->toBeTrue()
         ->and(Schema::hasColumns('carts', [
@@ -29,6 +31,18 @@ test('every column the legacy store added after shop.sql exists', function () {
             'company_address', 'company_shipping_address', 'company_tax_number', 'order_from', 'by_rep',
             'for_customer', 'manager_notes', 'member_serial', 'delivery_date', 'wms_status', 'otajerOrderID',
             'profits', 'discount_percent', 'indicator', 'invoice_number',
+        ]))->toBeTrue()
+        ->and(Schema::hasColumns('products', [
+            'added_by', 'user_id', 'brand_id', 'photos', 'old_photo', 'video_provider', 'video_link', 'tags',
+            'description', 'unit_price', 'purchase_price', 'variant_product', 'attributes', 'choice_options', 'colors',
+            'variations', 'todays_deal', 'approved', 'stock_visibility_state', 'cash_on_delivery', 'featured',
+            'seller_featured', 'current_stock', 'unit', 'weight', 'min_qty', 'max_qty', 'low_stock_quantity',
+            'discount', 'discount_type', 'discount_start_date', 'discount_end_date', 'tax', 'tax_type',
+            'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'num_of_sale',
+            'meta_title', 'meta_description', 'meta_img', 'pdf', 'slug', 'rating', 'barcode', 'digital',
+            'auction_product', 'file_name', 'file_path', 'external_link', 'external_link_btn', 'wholesale_product',
+            'serial', 'from_api', 'mat_id', 'unit_equal', 'isNewProduct', 'isOfferProduct', 'for_sale', 'api_unitId',
+            'deleted_from_api', 'api_unit_name', 'collection_id',
         ]))->toBeTrue()
         ->and(Schema::hasColumns('order_details', [
             'product_serial', 'variation_qty', 'item_notes', 'product_matId', 'product_name', 'original_price',
@@ -83,6 +97,36 @@ test('deleting a cart soft-deletes it and leaves the other carts alone', functio
 
     expect(Cart::pluck('user_id')->all())->toBe([2])
         ->and(DB::table('carts')->where('user_id', 1)->value('deleted_at'))->not->toBeNull();
+});
+
+/**
+ * The only writer of `products` is `products:sync`, which sends `name`,
+ * `ar_name` and `published`: every store column has to default from that.
+ */
+test('a product written the way products:sync writes one gets the store defaults', function () {
+    DB::table('products')->insert(['id' => 100027, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'published' => 1]);
+
+    expect((array) DB::table('products')->where('id', 100027)->first([
+        'added_by', 'user_id', 'unit_price', 'todays_deal', 'approved', 'auction_product', 'isNewProduct', 'min_qty',
+        'max_qty', 'current_stock', 'shipping_type', 'attributes', 'slug', 'digital', 'for_sale', 'deleted_from_api',
+    ]))->toEqual([
+        'added_by' => 'admin',
+        'user_id' => null,
+        'unit_price' => 0,
+        'todays_deal' => 0,
+        'approved' => 1,
+        'auction_product' => 0,
+        'isNewProduct' => null,
+        'min_qty' => 1,
+        'max_qty' => 1000,
+        'current_stock' => 0,
+        'shipping_type' => 'flat_rate',
+        'attributes' => '[]',
+        'slug' => null,
+        'digital' => 0,
+        'for_sale' => 1,
+        'deleted_from_api' => 0,
+    ]);
 });
 
 test('an order detail row gets the legacy defaults', function () {

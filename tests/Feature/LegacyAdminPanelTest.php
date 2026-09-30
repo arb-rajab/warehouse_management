@@ -5,7 +5,6 @@ use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 /**
  * Regression coverage for the legacy store's admin panel under /temp/admin,
@@ -23,17 +22,6 @@ use Spatie\Permission\Models\Role;
  *   lacked, and `Language::first()->rtl` with no language row;
  * - the dashboard iterated a `total_visits` setting nothing here creates.
  */
-function createStoreAdmin(bool $raizerAdmin = false): StoreUser
-{
-    Role::findOrCreate('Super Admin', 'store');
-
-    $admin = createStoreUser('admin');
-    $admin->forceFill(['raizer_admin' => $raizerAdmin ?: null])->save();
-    $admin->assignRole('Super Admin');
-
-    return $admin;
-}
-
 test('a store admin logging in is sent to the store admin dashboard', function () {
     $admin = createStoreAdmin();
 

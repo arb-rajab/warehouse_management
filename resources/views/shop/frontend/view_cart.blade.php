@@ -48,7 +48,8 @@
 
     @php
         $user = \Auth::user();
-        $offered_cart = \App\Models\CartOffered::where('user_id', $user->id)->get();
+        // A guest's cart has no offers: it is keyed on temp_user_id, not a user.
+        $offered_cart = $user ? \App\Models\CartOffered::where('user_id', $user->id)->get() : collect();
     @endphp
     <!-- Cart Details -->
     <section class="mb-4" id="cart-summary">

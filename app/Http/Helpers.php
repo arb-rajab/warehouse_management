@@ -102,6 +102,28 @@ if (!function_exists('filter_products')) {
     }
 }
 
+if (!function_exists('remember_models')) {
+    /**
+     * Cache a query's models, and return them as real models on every read.
+     *
+     * config/cache.php's serializable_classes allow-list lets this app's cache
+     * unserialize only a base Collection, stdClass and CarbonImmutable, so a
+     * cached model or Eloquent collection comes back as __PHP_Incomplete_Class
+     * from any store that serializes (production's database store does; the
+     * array store tests use doesn't). The models' attribute arrays are cached
+     * instead and hydrated back on every read, cache hit or miss alike.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
+     * @param  \DateTimeInterface|\DateInterval|int|null  $ttl  null caches forever
+     * @param  \Closure(): \Illuminate\Support\Collection  $query
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    function remember_models(string $model, string $key, $ttl, Closure $query)
+    {
+        return $model::hydrate(Cache::remember($key, $ttl, fn () => $query()->map->getAttributes()->all()));
+    }
+}
+
 //cache products based on category
 if (!function_exists('get_cached_products')) {
     function get_cached_products($category_id = null)
@@ -119,13 +141,13 @@ if (!function_exists('get_cached_products')) {
         }
 
         if ($category_id != null) {
-            return Cache::remember('products-category-' . $category_id, 1, function () use ($category_id, $products) {
+            return remember_models(Product::class, 'products-category-' . $category_id, 1, function () use ($category_id, $products) {
                 $category_ids = CategoryUtility::children_ids($category_id);
                 $category_ids[] = $category_id;
                 return $products->whereIn('category_id', $category_ids)->orderBy('featured', 'desc')->take(12)->get();
             });
         } else {
-            return Cache::remember('products', 86400, function () use ($products) {
+            return remember_models(Product::class, 'products', 86400, function () use ($products) {
                 return $products->latest()->take(12)->get();
             });
         }
@@ -144,9 +166,12 @@ if (!function_exists('verified_sellers_id')) {
 if (!function_exists('get_system_default_currency')) {
     function get_system_default_currency()
     {
-        return Cache::remember('system_default_currency', 86400, function () {
-            return Currency::findOrFail(get_setting('system_default_currency'));
-        });
+        // The attributes, not the model: see remember_models() for why
+        // models don't survive this app's cache. Every price on the
+        // storefront is formatted through here.
+        return (new Currency)->newFromBuilder(Cache::remember('system_default_currency', 86400, function () {
+            return Currency::findOrFail(get_setting('system_default_currency'))->getAttributes();
+        }));
     }
 }
 

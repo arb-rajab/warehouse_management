@@ -8,7 +8,10 @@ return
         'keywords'              => '',
         'creator'               => 'Laravel Pdf',
         'display_mode'          => 'fullpage',
-        'tempDir'               => base_path('temp/'),
+        // mPDF keeps its font cache and temporary files in <tempDir>/mpdf.
+        // The legacy store put them in a project-root temp/ it gitignored;
+        // storage/ is this app's writable, already ignored place for them.
+        'tempDir'               => storage_path('framework/cache'),
         'font_path' => base_path('public/assets/fonts/'),
         'font_data' => [
             'roboto' => [

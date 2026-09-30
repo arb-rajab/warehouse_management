@@ -42,8 +42,9 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
     // except `products` — see .ai/rules/shared-database.md), or one of the
     // legacy store's own tables
     // carried over verbatim from `shop.sql` during the schema-only merge (see
-    // .ai/rules/legacy-albaraka-holland.md §3.1) — none of which collide with
-    // any WMS table, which is exactly why they kept their bare names instead
+    // .ai/rules/legacy-albaraka-holland.md §3.1) or from the store's own
+    // later migrations and v7.0.0 `sqlupdates` script — none of which collide
+    // with any WMS table, which is exactly why they kept their bare names instead
     // of getting a `wms_`/`shop_` prefix. A new bare name appearing here is a
     // table that needs one of those justifications before it ships.
     $bareNamed = array_values(array_filter(
@@ -71,6 +72,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'carrier_ranges',
         'carriers',
         'carts',
+        'carts_offered',
         'categories',
         'category_translations',
         'cell_status_log_flags',
@@ -79,6 +81,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'cell_verification_round_row',
         'cell_verification_rounds',
         'cells',
+        'checkpoints',
         'cities',
         'city_translations',
         'colors',
@@ -88,21 +91,29 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'countries',
         'coupon_usages',
         'coupons',
+        'cron_jobs',
         'currencies',
         'customer_package_payments',
         'customer_package_translations',
         'customer_packages',
         'customer_product_translations',
         'customer_products',
+        'customers_notifications',
+        'dynamic_popup_user',
+        'dynamic_popups',
         'firebase_notifications',
         'flash_deal_products',
         'flash_deal_translations',
         'flash_deals',
+        'follow_sellers',
         'home_categories',
         'languages',
         'messages',
         'mobile_app_version_requirements',
         'notifications',
+        'offer_products',
+        'offer_user',
+        'offers',
         'offers_catalogs',
         'order_details',
         'orders',
@@ -116,12 +127,16 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'pickup_point_translations',
         'pickup_points',
         'product_barcodes',
+        'product_collections',
         'product_queries',
         'product_stocks',
         'product_taxes',
         'product_translations',
+        'product_variations',
         'products',
         'proxypay_payments',
+        'representative_packages',
+        'representative_payments',
         'reviews',
         'role_translations',
         'rows',
@@ -137,8 +152,12 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'tickets',
         'transactions',
         'translations',
+        'trips',
+        'trucks',
         'uploads',
+        'user_page_views',
         'users',
+        'visits',
         'wallets',
         'wishlists',
         'zones',

@@ -10,7 +10,19 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $guarded;
+    /**
+     * No guarded attributes.
+     *
+     * The legacy model declared `protected $guarded;` with no value, which
+     * redeclares the parent's `['*']` as null. Eloquent reads a null list as
+     * empty, so the model was already fully mass assignable; spelling it `[]`
+     * keeps that and removes the one trap the null set, mergeGuarded()'s
+     * array_merge() on it throwing a TypeError.
+     *
+     * @var array<string>
+     */
+    protected $guarded = [];
+
     protected $with = ['category_translations'];
 
     public function getTranslation($field = '', $lang = false)

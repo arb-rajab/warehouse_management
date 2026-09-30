@@ -306,6 +306,9 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `wms_product_settings.product_id`
 - `wms_product_barcodes.product_id`
 - `product_barcodes.product_id`
+- `product_variations.product_id`
+- `carts_offered.product_id` (no constraint, as in the store's schema)
+- `offer_products.product_id` (no constraint, as in the store's schema)
 
 `uploads.id` is the same signed `int(11)`. sqlite reports both types as
 `integer`, so the test connection cannot catch a regression here —

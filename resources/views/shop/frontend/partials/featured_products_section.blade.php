@@ -1,5 +1,5 @@
 @php
-    $featured_products = Cache::remember('featured_products', 3600, function () {
+    $featured_products = remember_models(\App\Models\Product::class, 'featured_products', 3600, function () {
         return filter_products(\App\Models\Product::where('published', 1)->where('featured', '1'))->latest()->limit(12)->get();
     });
 @endphp

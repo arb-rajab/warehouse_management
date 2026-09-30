@@ -22,7 +22,6 @@ use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Utility\CategoryUtility;
 use Auth;
-use Cache;
 use Cookie;
 use Hash;
 use Illuminate\Auth\Events\PasswordReset;
@@ -42,27 +41,18 @@ class HomeController extends Controller
      */
     public function index()
     {
-        // Cache plain attribute arrays, not the Eloquent collections
-        // themselves, then Model::hydrate() them back on every read (cache
-        // hit or miss alike) — see get_setting()'s docblock in
-        // app/Http/Helpers.php for why: config/cache.php's
-        // serializable_classes allow-list only permits unserializing plain
-        // arrays/scalars and a short list of safe value objects, not
-        // Eloquent's Collection subclass or any App\Models\* instance.
-        // hydrate() keeps every consumer below (this view and whatever it
-        // includes) working with real Category/Product models exactly as
-        // before, so nothing downstream needs to change.
-        $featured_categories = Category::hydrate(Cache::rememberForever('featured_categories', function () {
-            return Category::where('featured', 1)->get()->map->getAttributes()->all();
-        }));
+        // Every cached query here goes through remember_models(): see its
+        // docblock in app/Http/Helpers.php for why models can't be cached as
+        // they are.
+        $featured_categories = remember_models(Category::class, 'featured_categories', null, function () {
+            return Category::where('featured', 1)->get();
+        });
 
-        $todays_deal_products = Product::hydrate(Cache::rememberForever('todays_deal_products', function () {
-            return filter_products(Product::where('published', 1)->where('todays_deal', '1'))->orderBy('name')->get()->map->getAttributes()->all();
-        }));
+        $todays_deal_products = $this->todaysDealProducts();
 
-        $newest_products = Product::hydrate(Cache::remember('newest_products', 20, function () {
-            return filter_products(Product::where('isNewProduct', true)->where('published', 1))->orderBy('name')->get()->map->getAttributes()->all();
-        }));
+        $newest_products = remember_models(Product::class, 'newest_products', 20, function () {
+            return filter_products(Product::where('isNewProduct', true)->where('published', 1))->orderBy('name')->get();
+        });
 
         $offers_catalog = OffersCatalog::first();
 
@@ -711,11 +701,26 @@ class HomeController extends Controller
 
     public function todays_deal()
     {
-        $todays_deal_products = Cache::rememberForever('todays_deal_products', function () {
-            return filter_products(Product::where('published', 1)->where('todays_deal', '1'))->get();
-        });
+        $todays_deal_products = $this->todaysDealProducts();
 
         return view("shop.frontend.todays_deal", compact('todays_deal_products'));
+    }
+
+    /**
+     * Today's deal products, which the home page and this page share one
+     * cache key for.
+     *
+     * todays_deal() used to cache the models themselves under the same key
+     * index() cached attribute arrays under, so whichever of the two pages
+     * ran second read the other's shape back and failed.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Product>
+     */
+    private function todaysDealProducts()
+    {
+        return remember_models(Product::class, 'todays_deal_products', null, function () {
+            return filter_products(Product::where('published', 1)->where('todays_deal', '1'))->orderBy('name')->get();
+        });
     }
 
     public function all_seller(Request $request)

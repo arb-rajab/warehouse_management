@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Order;
 use App\Models\ProductVariation;
 use Config;
+use Illuminate\Support\Facades\Gate;
 use PDF;
 use Session;
 
@@ -15,6 +16,9 @@ class InvoiceController extends Controller
     //download invoice
     public function invoice_download($id)
     {
+        $order = Order::findOrFail($id);
+        Gate::authorize('downloadInvoice', $order);
+
         if (Session::has('currency_code')) {
             $currency_code = Session::get('currency_code');
         } else {
@@ -61,8 +65,6 @@ class InvoiceController extends Controller
         // mpdf config will be used in 4th params of loadview
 
         $config = [];
-
-        $order = Order::findOrFail($id);
 
         $cartResults = [];
 

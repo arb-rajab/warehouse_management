@@ -6,6 +6,7 @@ use App\Models\Currency;
 use App\Models\Language;
 use App\Models\Order;
 use Config;
+use Illuminate\Support\Facades\Gate;
 use PDF;
 use Session;
 
@@ -14,6 +15,9 @@ class InvoiceController extends Controller
     //download invoice
     public function invoice_download($id)
     {
+        $order = Order::findOrFail($id);
+        Gate::authorize('downloadInvoice', $order);
+
         if(Session::has('currency_code')){
             $currency_code = Session::get('currency_code');
         }
@@ -62,7 +66,6 @@ class InvoiceController extends Controller
 
         $config = [];
 
-        $order = Order::findOrFail($id);
         return PDF::loadView('shop.backend.invoices.invoice',[
             'order' => $order,
             'font_family' => $font_family,

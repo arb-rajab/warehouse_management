@@ -265,7 +265,11 @@ class OrderController extends Controller implements HasMiddleware
 
             $order->additional_info = $request->additional_info;
 
-            // $order->shipping_type = $carts[0]['shipping_type'];
+            // orders.shipping_type is NOT NULL with no default. The legacy
+            // app ran MySQL non-strict, which quietly stored '' when this
+            // line was commented out; this app's connection is strict, and
+            // rejects the order instead. Every web cart ships home_delivery.
+            $order->shipping_type = $carts[0]['shipping_type'];
             // if ($carts[0]['shipping_type'] == 'pickup_point') {
             //     $order->pickup_point_id = $cartItem['pickup_point'];
             // }
@@ -351,7 +355,10 @@ class OrderController extends Controller implements HasMiddleware
                 $order_detail->product_referral_code = $cartItem['product_referral_code'];
                 $order_detail->shipping_cost = $cartItem['shipping_cost'];
                 $order_detail->product_serial = $product->serial;
-                $order_detail->tax = $product->tax;
+                // order_details.tax is NOT NULL and products.tax nullable: the
+                // legacy app's non-strict MySQL stored 0 for a product with no
+                // tax, which this app's strict connection refuses to do for it.
+                $order_detail->tax = $product->tax ?? 0;
                 $order_detail->item_notes = $cartItem['item_notes'];
                 $order_detail->profits = (float)($order_detail->price * $product->collection?->amount ?? 0) / 100;
 

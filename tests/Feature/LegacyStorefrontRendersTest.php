@@ -49,30 +49,66 @@ test('each legacy policy page renders successfully once seeded', function (strin
 ]);
 
 /**
- * The home page (HomeController::index()) caches featured_categories/
- * todays_deal_products/newest_products as raw Eloquent collections, which
- * hit the exact same config/cache.php serializable_classes allow-list
- * problem get_setting()/addon_is_activated() did — except here every
- * consumer downstream (this view and whatever it includes) expects real
- * Category/Product model instances, not arrays, so the fix caches plain
- * attribute arrays and rehydrates them with Model::hydrate() on every read
- * instead. Requesting it twice is what actually exercises the bug: the
- * first request computes and writes the cache, the second reads it back —
- * only the second failed before the fix.
- *
- * Deliberately seeds no Product rows: several of the columns
- * filter_products()/HomeController::index() filter by (todays_deal,
- * isNewProduct, auction_product, approved, added_by) don't exist on this
- * app's local products stand-in — a pre-existing gap this pass didn't
- * touch, see products.category_id's own migration for the pattern were it
- * ever tackled. Whether a query referencing one of them throws depends on
- * sqlite's query planner and, empirically, on whether the table already
- * has matching rows — not something to depend on. An empty table is the
- * one state confirmed safe.
+ * The home page reads today's deal and the newest products through
+ * filter_products(), which filters on columns (todays_deal, isNewProduct,
+ * auction_product, approved, added_by, user_id) the `products` table here
+ * lacked until the store's own columns were carried over: with no product
+ * rows, sqlite read the unqualified ones as string literals rather than
+ * failing, which is why a page with products had never been rendered.
+ * Requesting it twice reads the cached lists back.
  */
-test('the legacy home page renders successfully, both freshly cached and read back from cache', function () {
+test("the legacy home page shows today's deal and the newest products, freshly cached and from cache", function () {
+    seedStoreCurrency();
+    $deal = createStoreProduct(['todays_deal' => 1]);
+    $newest = createStoreProduct(['isNewProduct' => true]);
+    $unpublished = createStoreProduct(['todays_deal' => 1, 'isNewProduct' => true, 'published' => false]);
+
+    foreach ([1, 2] as $request) {
+        $this->get('/temp')
+            ->assertOk()
+            ->assertSee($deal->name)
+            ->assertSee($newest->name)
+            ->assertDontSee($unpublished->name);
+    }
+});
+
+/**
+ * todays_deal() cached the models themselves under the key the home page
+ * caches attribute arrays under, so whichever page ran second read the
+ * other's shape back.
+ */
+test("the today's deal page and the home page share their cached list", function () {
+    seedStoreCurrency();
+    $deal = createStoreProduct(['todays_deal' => 1]);
+
     $this->get('/temp')->assertOk();
-    $this->get('/temp')->assertOk();
+    $this->get('/temp/todays-deal')->assertOk()->assertSee($deal->name);
+    $this->get('/temp')->assertOk()->assertSee($deal->name);
+});
+
+/**
+ * Production's cache serializes through config/cache.php's
+ * serializable_classes allow-list, which a cached model does not survive:
+ * the default currency every price goes through, and the product lists the
+ * home page sections cache, came back as __PHP_Incomplete_Class on the second
+ * request that read them.
+ */
+test('the storefront keeps working once its cached models are read back from a serializing cache', function () {
+    useSerializingCache();
+    seedStoreCurrency();
+    $category = DB::table('categories')->insertGetId(['name' => 'Snacks', 'slug' => 'snacks', 'level' => 0]);
+    DB::table('business_settings')->insert(['type' => 'home_categories', 'value' => json_encode([(string) $category])]);
+    $product = createStoreProduct(['todays_deal' => 1, 'featured' => 1, 'category_id' => $category]);
+
+    foreach ([1, 2] as $request) {
+        $this->get('/temp')->assertOk()->assertSee($product->name);
+        $this->get('/temp/todays-deal')->assertOk()->assertSee($product->name);
+        $this->get('/temp/product/'.$product->slug)->assertOk()->assertSee($product->name);
+        $this->post('/temp/home/section/featured')->assertOk()->assertSee($product->name);
+        $this->post('/temp/home/section/home_categories')->assertOk()->assertSee($product->name);
+        $this->post('/temp/home/section/best_selling')->assertOk();
+        $this->post('/temp/home/section/best_sellers')->assertOk();
+    }
 });
 
 /**
