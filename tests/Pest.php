@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Order;
+use App\Models\OrderDetail;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\StoreUser;
@@ -243,6 +244,20 @@ function createStoreOrder(StoreUser $customer, array $attributes = []): Order
     ])->save();
 
     return $order->fresh();
+}
+
+/**
+ * An order `$customer` placed for `$product`, its order line in
+ * `$paymentStatus` (the column the digital-download checks read).
+ */
+function orderStoreProduct(StoreUser $customer, Product $product, string $paymentStatus = 'paid'): OrderDetail
+{
+    $order = createStoreOrder($customer, ['payment_status' => $paymentStatus]);
+
+    return OrderDetail::forceCreate([
+        'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
+        'price' => 5, 'tax' => 0, 'quantity' => 1, 'payment_status' => $paymentStatus,
+    ]);
 }
 
 /**

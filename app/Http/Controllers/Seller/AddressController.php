@@ -8,6 +8,7 @@ use App\Models\State;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class AddressController extends Controller
 {
@@ -44,6 +45,7 @@ class AddressController extends Controller
     public function edit($id)
     {
         $data['address_data'] = Address::findOrFail($id);
+        Gate::authorize('manage', $data['address_data']);
         $data['states'] = State::where('status', 1)->where('country_id', $data['address_data']->country_id)->get();
         $data['cities'] = City::where('status', 1)->where('state_id', $data['address_data']->state_id)->get();
 
@@ -61,6 +63,7 @@ class AddressController extends Controller
     public function update(Request $request, $id)
     {
         $address = Address::findOrFail($id);
+        Gate::authorize('manage', $address);
 
         $address->address       = $request->address;
         $address->country_id    = $request->country_id;
@@ -86,6 +89,7 @@ class AddressController extends Controller
     public function destroy($id)
     {
         $address = Address::findOrFail($id);
+        Gate::authorize('manage', $address);
         if(!$address->set_default){
             $address->delete();
             return back();
@@ -117,6 +121,8 @@ class AddressController extends Controller
     }
 
     public function set_default($id){
+        Gate::authorize('manage', Address::findOrFail($id));
+
         foreach (Auth::user()->addresses as $key => $address) {
             $address->set_default = 0;
             $address->save();

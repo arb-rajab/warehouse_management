@@ -123,3 +123,40 @@ test("a seller can update their own coupon through the app API and not another s
         'details' => '{"min_buy":20,"max_discount":10}',
     ]);
 });
+
+test("a seller cannot open, update or delete another seller's digital product in the seller area", function () {
+    $product = createStoreProduct(['user_id' => createStoreUser('seller')->id, 'added_by' => 'seller', 'digital' => 1, 'thumbnail_img' => null]);
+    actingAsStoreUser(createStoreUser('seller'));
+
+    $this->get("/temp/seller/digitalproducts/{$product->id}/edit")
+        ->assertRedirect()
+        ->assertSessionHas('flash_notification');
+    $this->post("/temp/seller/digitalproducts/update/{$product->id}", sellerProductForm(['unit_price' => 0.5]))->assertRedirect();
+    $this->get("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect();
+
+    expect($product->fresh())->not->toBeNull()
+        ->and($product->fresh()->only(['name', 'slug', 'unit_price']))->toEqual([
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'unit_price' => 2.5,
+        ]);
+});
+
+test('a seller can open and delete their own digital product in the seller area', function () {
+    $seller = actingAsStoreUser(createStoreUser('seller'));
+    $product = createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller', 'digital' => 1, 'thumbnail_img' => null]);
+
+    $this->get("/temp/seller/digitalproducts/{$product->id}/edit")
+        ->assertOk()
+        ->assertSee($product->name);
+    $this->get("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect('/temp/seller/digitalproducts');
+
+    expect(Product::find($product->id))->toBeNull();
+});
+
+test("a seller cannot download another seller's digital product file", function () {
+    $product = createStoreProduct(['user_id' => createStoreUser('seller')->id, 'digital' => 1]);
+    actingAsStoreUser(createStoreUser('seller'));
+
+    $this->get('/temp/seller/digitalproducts/download/'.encrypt($product->id))->assertNotFound();
+});

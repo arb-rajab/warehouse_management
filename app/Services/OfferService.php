@@ -154,6 +154,11 @@ class OfferService
 
     public function removeProductOfferFromCart($cart_id)
     {
+        // A guest's cart never gets an offer (see processOffer()).
+        if (! Auth::check()) {
+            return;
+        }
+
         $user = Auth::user();
         $cart_to_delete = Cart::find($cart_id);
         $carts = Cart::where('user_id', $user->id)->get()->load('product', 'product.offers');

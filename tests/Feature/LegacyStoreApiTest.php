@@ -5,9 +5,14 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\Product;
 use App\Models\Wishlist;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * The store's mobile-app API under /temp/api/v2 (routes/shop-api.php),
@@ -234,4 +239,68 @@ test("a customer can read and write their own conversation and not someone else'
         ->assertOk();
 
     expect(Message::where('message', 'And in blue?')->exists())->toBeTrue();
+});
+
+/**
+ * A paid digital product whose file sits at public/`$fileName`. The
+ * `uploads` stand-in leaves out the store's filename columns on purpose (see
+ * CreateUploadsTableTest), and the download names its file from them, so they
+ * are added here as the store's own table has them.
+ */
+function digitalProductWithFile(string $fileName): Product
+{
+    Schema::table('uploads', function (Blueprint $table) {
+        $table->string('file_original_name')->nullable();
+        $table->string('extension')->nullable();
+    });
+
+    File::ensureDirectoryExists(dirname(public_path($fileName)));
+    File::put(public_path($fileName), 'the digital product');
+    $uploadId = DB::table('uploads')->insertGetId(['file_name' => $fileName, 'file_original_name' => 'guide', 'extension' => 'txt']);
+
+    return createStoreProduct(['user_id' => createStoreUser('seller')->id, 'digital' => 1, 'file_name' => $uploadId]);
+}
+
+test("no one downloads a digital product's file through the app API without a paid order for it", function () {
+    $fileName = 'uploads/tests/'.Str::random(8).'.txt';
+    $product = digitalProductWithFile($fileName);
+    $unpaidBuyer = createStoreUser('customer');
+    orderStoreProduct($unpaidBuyer, $product, 'unpaid');
+    // A paid order for this product that is someone else's.
+    orderStoreProduct(createStoreUser('customer'), $product);
+
+    try {
+        foreach ([createStoreUser('customer'), $unpaidBuyer, createStoreUser('seller')] as $caller) {
+            app('auth')->forgetGuards();
+            $this->withToken(storeApiToken($caller))
+                ->getJson("/temp/api/v2/purchased-products/download/{$product->id}")
+                ->assertForbidden();
+        }
+    } finally {
+        File::delete(public_path($fileName));
+    }
+});
+
+test("a customer with a paid order downloads the digital product's file through the app API", function () {
+    $fileName = 'uploads/tests/'.Str::random(8).'.txt';
+    $product = digitalProductWithFile($fileName);
+    $buyer = createStoreUser('customer');
+    orderStoreProduct($buyer, $product);
+
+    try {
+        $response = $this->withToken(storeApiToken($buyer))
+            ->get("/temp/api/v2/purchased-products/download/{$product->id}")
+            ->assertOk()
+            ->assertDownload('guide.txt');
+
+        expect($response->baseResponse->getFile()->getContent())->toBe('the digital product');
+    } finally {
+        File::delete(public_path($fileName));
+    }
+
+    // The file gone from disk is a 404, where it used to be an empty 200.
+    app('auth')->forgetGuards();
+    $this->withToken(storeApiToken($buyer))
+        ->getJson("/temp/api/v2/purchased-products/download/{$product->id}")
+        ->assertNotFound();
 });

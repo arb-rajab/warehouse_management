@@ -37,7 +37,10 @@ class ProfileController extends Controller
             return back();
         }
 
+        // The seller's own account only: this took any account by id,
+        // its password included.
         $user = StoreUser::findOrFail($id);
+        abort_unless($user->is(Auth::user()), 403);
         $user->name = $request->name;
         $user->phone = $request->phone;
 

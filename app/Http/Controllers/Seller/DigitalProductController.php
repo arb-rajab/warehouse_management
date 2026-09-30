@@ -12,6 +12,7 @@ use App\Services\ProductTaxService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class DigitalProductController  extends Controller
 {
@@ -135,7 +136,12 @@ class DigitalProductController  extends Controller
     {
         $categories = Category::where('digital', 1)->get();
         $lang = $request->lang;
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
+        if (Gate::denies('updateAsSeller', $product)) {
+            flash(translate('This product is not yours.'))->warning();
+            return back();
+        }
+
         return view('shop.seller.product.digitalproducts.edit', compact('categories', 'product', 'lang'));
     }
 
@@ -149,6 +155,11 @@ class DigitalProductController  extends Controller
     public function update(Request $request, $id)
     {
         $product                    = Product::findOrFail($id);
+        if (Gate::denies('updateAsSeller', $product)) {
+            flash(translate('This product is not yours.'))->warning();
+            return back();
+        }
+
         if($request->lang == env("DEFAULT_LANGUAGE")){
             $product->name          = $request->name;
             $product->description   = $request->description;
@@ -235,6 +246,10 @@ class DigitalProductController  extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+        if (Gate::denies('updateAsSeller', $product)) {
+            flash(translate('This product is not yours.'))->warning();
+            return back();
+        }
 
         $product->product_translations()->delete();
         $product->stocks()->delete();

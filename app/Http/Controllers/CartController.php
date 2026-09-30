@@ -369,9 +369,11 @@ class CartController extends Controller
     //removes from Cart
     public function removeFromCart(Request $request)
     {
-        $this->offerService()->removeProductOfferFromCart($request->id);
+        $cart = $this->findOwnCartItem($request) ?? abort(404);
 
-        Cart::destroy($request->id);
+        $this->offerService()->removeProductOfferFromCart($cart->id);
+
+        $cart->delete();
         if (auth()->user() != null) {
             $user_id = Auth::user()->id;
             $carts = Cart::where('user_id', $user_id)->get();
@@ -394,7 +396,7 @@ class CartController extends Controller
     //updated the quantity for a cart item
     public function updateQuantity(Request $request)
     {
-        $cartItem = Cart::findOrFail($request->id);
+        $cartItem = $this->findOwnCartItem($request) ?? abort(404);
 
         if ($cartItem['id'] == $request->id) {
             $product = Product::find($cartItem['product_id']);
@@ -457,7 +459,7 @@ class CartController extends Controller
 
     public function update_item_notes(Request $request)
     {
-        $cart = Cart::find($request->id);
+        $cart = $this->findOwnCartItem($request);
         if(!$cart){
             return 0;
         }
@@ -469,7 +471,7 @@ class CartController extends Controller
         return 0;
     }
     public function update_item_price(Request $request){
-        $cart = Cart::find($request->id);
+        $cart = $this->findOwnCartItem($request);
         if(!$cart){
             return 0;
         }
@@ -489,4 +491,22 @@ class CartController extends Controller
         return 0;
     }
 
+    /**
+     * The cart item $request->id from the caller's own cart: the signed-in
+     * account's, or a guest's kept under their session's temp_user_id. The
+     * cart actions took any cart row by id.
+     */
+    private function findOwnCartItem(Request $request): ?Cart
+    {
+        [$ownerColumn, $ownerId] = Auth::check()
+            ? ['user_id', Auth::user()->id]
+            : ['temp_user_id', $request->session()->get('temp_user_id')];
+
+        // where($column, null) would match every row without an owner of that kind.
+        if ($ownerId === null) {
+            return null;
+        }
+
+        return Cart::whereKey($request->id)->where($ownerColumn, $ownerId)->first();
+    }
 }

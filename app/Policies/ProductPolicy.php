@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\StoreUser;
 
@@ -19,5 +20,22 @@ class ProductPolicy
     public function updateAsSeller(StoreUser $user, Product $product): bool
     {
         return $product->user_id === $user->id;
+    }
+
+    /**
+     * Who may download a digital product's file through the app API: a store
+     * admin, the seller who uploaded it, and a customer with a paid order for
+     * it. The endpoint's purchase check tested a query's Collection for
+     * truthiness, which an empty one also passes, so any signed-in account
+     * could download any paid digital product.
+     */
+    public function download(StoreUser $user, Product $product): bool
+    {
+        return $user->user_type === 'admin'
+            || $product->user_id === $user->id
+            || OrderDetail::where('product_id', $product->id)
+                ->where('payment_status', 'paid')
+                ->whereHas('order', fn ($order) => $order->where('user_id', $user->id))
+                ->exists();
     }
 }
