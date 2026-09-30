@@ -10,6 +10,7 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Exceptions\GuardDoesNotMatch;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -56,7 +57,9 @@ test('an admin panel session does not sign anyone into the store, even for a mat
     $this->actingAs($admin);
 
     $this->get('/temp/admin/roles/create')->assertRedirect(route('shop.login'));
-    $this->get('/admin')->assertOk();
+    $this->followingRedirects()->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Dashboard/Index')
+    );
 });
 
 /**
