@@ -48,11 +48,6 @@ return new class extends Migration
      * single barcode, which its seller pages and seller API read and write;
      * this app's barcodes stay in `wms_product_barcodes`.
      *
-     * `uploads` is still the store's table, which `create_uploads_table`
-     * reproduces only as far as this app reads it; the store's file manager,
-     * uploader and seller API read the four `shop.sql` columns added here.
-     * Its `deleted_at` stays out: the merged Upload model dropped SoftDeletes.
-     *
      * Each added column is guarded on its own, since the store's production
      * database already has every one of them. The three column changes at
      * the end are the legacy migrations' own `->change()` calls, and leave
@@ -165,12 +160,6 @@ return new class extends Migration
             ],
             'countries' => [
                 'priority' => fn (Blueprint $table) => $table->boolean('priority')->default(0),
-            ],
-            'uploads' => [
-                'file_original_name' => fn (Blueprint $table) => $table->string('file_original_name')->nullable()->after('id'),
-                'file_size' => fn (Blueprint $table) => $table->integer('file_size')->nullable()->after('user_id'),
-                'extension' => fn (Blueprint $table) => $table->string('extension', 10)->nullable()->after('file_size'),
-                'type' => fn (Blueprint $table) => $table->string('type', 15)->nullable()->after('extension'),
             ],
             'brands' => [
                 'serial' => fn (Blueprint $table) => $table->integer('serial')->nullable(),

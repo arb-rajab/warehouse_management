@@ -27,9 +27,14 @@ function sellerProductForm(array $overrides = []): array
     ];
 }
 
+/**
+ * A seller's product, with no image: the seller API's product page lists a
+ * product's uploads by columns the `uploads` stand-in deliberately leaves
+ * out (see CreateUploadsTableTest).
+ */
 function sellerProduct(StoreUser $seller): Product
 {
-    return createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller', 'seller_featured' => 1]);
+    return createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller', 'seller_featured' => 1, 'thumbnail_img' => null]);
 }
 
 function sellerCoupon(StoreUser $seller): Coupon

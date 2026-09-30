@@ -22,7 +22,6 @@ test('every column the legacy store added after shop.sql exists', function () {
         ->and(Schema::hasColumn('reviews', 'photos'))->toBeTrue()
         ->and(Schema::hasColumns('shops', ['top_banner', 'banner_full_width_1', 'banners_half_width', 'banner_full_width_2']))->toBeTrue()
         ->and(Schema::hasColumn('countries', 'priority'))->toBeTrue()
-        ->and(Schema::hasColumns('uploads', ['file_original_name', 'file_size', 'extension', 'type']))->toBeTrue()
         ->and(Schema::hasColumn('brands', 'serial'))->toBeTrue()
         ->and(Schema::hasColumns('carts', [
             'deleted_at', 'variation_qty', 'by_rep', 'for_customer', 'item_notes', 'product_serial', 'rep_price',
@@ -174,7 +173,6 @@ test("rolling the migration back in production leaves the store's columns and th
     app()->instance('env', 'testing');
 
     expect(Schema::hasColumns('users', ['company_name', 'raizer_admin']))->toBeTrue()
-        ->and(Schema::hasColumn('uploads', 'file_original_name'))->toBeTrue()
         ->and(DB::table('users')->where('name', 'Jane Doe')->value('company_name'))->toBe('Acme');
 });
 
@@ -185,7 +183,6 @@ test('rolling the migration back removes the added columns and restores the chan
 
     expect(Schema::hasColumn('users', 'raizer_admin'))->toBeFalse()
         ->and(Schema::hasColumn('carts', 'deleted_at'))->toBeFalse()
-        ->and(Schema::hasColumn('uploads', 'file_original_name'))->toBeFalse()
         ->and(Schema::hasColumn('order_details', 'profits'))->toBeFalse()
         ->and(fn () => DB::table('addresses')->insert(['user_id' => 1, 'address' => 'Street 1', 'state_id' => null]))
         ->toThrow(QueryException::class);
