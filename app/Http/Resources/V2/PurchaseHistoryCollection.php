@@ -38,8 +38,10 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'tax' => format_price($data->orderDetails->sum('tax')),
                     'customer_notes' => $data->additional_info,
                     'date' => Carbon::createFromTimestamp($data->date)->format('d-m-Y'),
-                    'cancel_request' => $data->cancel_request == 1,
-                    'manually_payable' => $data->manual_payment && $data->manual_payment_data == null,
+                    // Columns only the delivery boy and offline payment addons
+                    // add to orders, neither of which this store has installed.
+                    'cancel_request' => ($data->cancel_request ?? 0) == 1,
+                    'manually_payable' => ($data->manual_payment ?? false) && ($data->manual_payment_data ?? null) == null,
                     'links' => [
                         'details' => '',
                     ],

@@ -235,7 +235,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         Route::get('products/todays-deal', 'App\Http\Controllers\Api\V2\ProductController@todaysDeal');
         Route::get('products/featured', 'App\Http\Controllers\Api\V2\ProductController@featured');
         Route::get('products/best-seller', 'App\Http\Controllers\Api\V2\ProductController@bestSeller');
-        Route::get('products/top-from-seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@topFromSeller');
+        Route::get('products/top-from-seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@topFromSeller')->name('products.topFromSeller');
         Route::get('products/related/{id}', 'App\Http\Controllers\Api\V2\ProductController@related')->name('products.related');
 
         Route::get('products/featured-from-seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@newFromSeller')->name('products.featuredromSeller');

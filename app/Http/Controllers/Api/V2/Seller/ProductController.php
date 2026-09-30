@@ -29,6 +29,7 @@ use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use Artisan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -138,7 +139,7 @@ class ProductController extends Controller
 
         $product = Product::where('id',$id)->with('stocks')->first();
 
-        if (auth()->user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             return $this->failed(translate('This product is not yours.'));
         }
         $product->lang =  $request->lang==null?env("DEFAULT_LANGUAGE"):$request->lang;
@@ -156,6 +157,10 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product)
     {
+        if (Gate::denies('updateAsSeller', $product)) {
+            return $this->failed(translate('This product is not yours'));
+        }
+
         //Product
         $product = $this->productService->update($request->except([
             '_token', 'sku', 'choice', 'tax_id', 'tax', 'tax_type', 'flash_deal_id', 'flash_discount', 'flash_discount_type'
@@ -229,7 +234,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        if (auth()->user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             return $this->failed(translate('This product is not yours'));
         }
         if (addon_is_activated('seller_subscription')) {
@@ -257,7 +262,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        if (auth()->user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             return $this->failed(translate('This product is not yours'));
         }
 

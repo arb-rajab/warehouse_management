@@ -6,7 +6,7 @@ use App\Http\Resources\V2\UserCollection;
 use App\Models\StoreUser;
 use Illuminate\Http\Request;
 
-use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\PersonalAccessToken;
 
 
 class UserController extends Controller

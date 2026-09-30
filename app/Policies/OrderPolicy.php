@@ -6,11 +6,10 @@ use App\Models\Order;
 use App\Models\StoreUser;
 
 /**
- * Who may see a store order's invoice: the customer who placed it, the seller
- * it was placed with, and back-office staff allowed to see orders. Both
- * invoice routes (the storefront's, which the back office links too, and the
- * seller area's) used to find the order by its id alone, so any signed-in
- * store account could download anyone's invoice by counting through ids.
+ * Who may see a store order. The invoice routes (the storefront's, which the
+ * back office links too, and the seller area's) and the app API's purchase
+ * history used to find the order by its id alone, so any signed-in store
+ * account could read anyone's by counting through ids.
  */
 class OrderPolicy
 {
@@ -28,9 +27,19 @@ class OrderPolicy
         'view_order_details',
     ];
 
-    public function downloadInvoice(StoreUser $user, Order $order): bool
+    /**
+     * The account that placed the order, and the customer a representative
+     * placed it for: both find it in their purchase history.
+     */
+    public function view(StoreUser $user, Order $order): bool
     {
         return $order->user_id === $user->id
+            || $order->for_customer === $user->id;
+    }
+
+    public function downloadInvoice(StoreUser $user, Order $order): bool
+    {
+        return $this->view($user, $order)
             || $order->seller_id === $user->id
             || $user->canAny(self::ORDER_VIEWING_PERMISSIONS);
     }

@@ -500,9 +500,16 @@ class CartController extends Controller
 
     public function destroy($id)
     {
-        $this->offerService()->removeProductOfferFromCart($id);
+        // The customer's own cart item only: this deleted any cart row by id.
+        $cart = Cart::where('id', $id)->where('user_id', auth()->user()->id)->first();
 
-        Cart::destroy($id);
+        if (! $cart) {
+            return response()->json(['result' => false, 'message' => translate('Cart item not found')], 404);
+        }
+
+        $this->offerService()->removeProductOfferFromCart($cart->id);
+
+        $cart->delete();
 
         return response()->json(['result' => true, 'message' => translate('Product is successfully removed from your cart')], 200);
     }

@@ -143,7 +143,9 @@ class ProductDetailCollection extends ResourceCollection
                     'tax_type' => $data->tax_type,
                     'rating' => (float)$data->rating,
                     'rating_count' => (int)Review::where(['product_id' => $data->id])->count(),
-                    'earn_point' => (float)$data->earn_point,
+                    // Only the club point addon adds products.earn_point, and this
+                    // store has never installed it.
+                    'earn_point' => (float) ($data->earn_point ?? 0),
                     'description' => $data->getTranslation('description'),
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
                     'brand' => $brand,

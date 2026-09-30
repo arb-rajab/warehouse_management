@@ -19,7 +19,6 @@ use App\Models\Shop;
 use App\Models\StoreProductBarcode;
 use App\Utility\CategoryUtility;
 use App\Utility\SearchUtility;
-use Cache;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -249,18 +248,17 @@ class ProductController extends Controller
 
     public function todaysDeal()
     {
-        return Cache::remember('app.todays_deal', 86400, function () {
+        return new ProductMiniCollection(remember_models(Product::class, 'app.todays_deal', 86400, function () {
             $products = Product::where('todays_deal', 1)->physical();
-            return new ProductMiniCollection(filter_products($products)->limit(20)->latest()->get());
-        });
+            return filter_products($products)->limit(20)->latest()->get();
+        }));
     }
 
     public function flashDeal()
     {
-        return Cache::remember('app.flash_deals', 86400, function () {
-            $flash_deals = FlashDeal::where('status', 1)->where('featured', 1)->where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->get();
-            return new FlashDealCollection($flash_deals);
-        });
+        return new FlashDealCollection(remember_models(FlashDeal::class, 'app.flash_deals', 86400, function () {
+            return FlashDeal::where('status', 1)->where('featured', 1)->where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->get();
+        }));
     }
 
     public function featured()
@@ -279,29 +277,29 @@ class ProductController extends Controller
 
     public function bestSeller()
     {
-        return Cache::remember('app.best_selling_products', 86400, function () {
+        return new ProductMiniCollection(remember_models(Product::class, 'app.best_selling_products', 86400, function () {
             $products = Product::orderBy('num_of_sale', 'desc')->physical();
-            return new ProductMiniCollection(filter_products($products)->limit(20)->get());
-        });
+            return filter_products($products)->limit(20)->get();
+        }));
     }
 
     public function related($id)
     {
-        return Cache::remember("app.related_products-$id", 86400, function () use ($id) {
+        return new ProductMiniCollection(remember_models(Product::class, "app.related_products-$id", 86400, function () use ($id) {
             $product = Product::find($id);
             $products = Product::where('category_id', $product->category_id)->where('id', '!=', $id)->physical();
-            return new ProductMiniCollection(filter_products($products)->limit(10)->get());
-        });
+            return filter_products($products)->limit(10)->get();
+        }));
     }
 
     public function topFromSeller($id)
     {
-        return Cache::remember("app.top_from_this_seller_products-$id", 86400, function () use ($id) {
+        return new ProductMiniCollection(remember_models(Product::class, "app.top_from_this_seller_products-$id", 86400, function () use ($id) {
             $product = Product::find($id);
             $products = Product::where('user_id', $product->user_id)->orderBy('num_of_sale', 'desc')->physical();
 
-            return new ProductMiniCollection(filter_products($products)->limit(10)->get());
-        });
+            return filter_products($products)->limit(10)->get();
+        }));
     }
 
     public function barcode_search(Request $request)

@@ -44,9 +44,14 @@ return new class extends Migration
      * and `published`, can satisfy: `unit_price` takes 0 here, and `slug`,
      * `serial` and `mat_id` are nullable (MySQL gives a text column no
      * default). `user_id` and `collection_id` match the ids they point at,
-     * `users.id` and `product_collections.id`. `barcode` is left out: no
-     * store code reads it, and this app keeps barcodes in
-     * `wms_product_barcodes`, which CreateWmsProductBarcodesTableTest pins.
+     * `users.id` and `product_collections.id`. `barcode` is the store's own
+     * single barcode, which its seller pages and seller API read and write;
+     * this app's barcodes stay in `wms_product_barcodes`.
+     *
+     * `uploads` is still the store's table, which `create_uploads_table`
+     * reproduces only as far as this app reads it; the store's file manager,
+     * uploader and seller API read the four `shop.sql` columns added here.
+     * Its `deleted_at` stays out: the merged Upload model dropped SoftDeletes.
      *
      * Each added column is guarded on its own, since the store's production
      * database already has every one of them. The three column changes at
@@ -78,9 +83,17 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Guarded on the environment, like the store tables' own migrations: in
+     * production every one of these columns is the store's, with its data,
+     * and none of them is this migration's to drop or change back.
      */
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::table('addresses', function (Blueprint $table) {
             $table->integer('state_id')->change();
         });
@@ -152,6 +165,12 @@ return new class extends Migration
             ],
             'countries' => [
                 'priority' => fn (Blueprint $table) => $table->boolean('priority')->default(0),
+            ],
+            'uploads' => [
+                'file_original_name' => fn (Blueprint $table) => $table->string('file_original_name')->nullable()->after('id'),
+                'file_size' => fn (Blueprint $table) => $table->integer('file_size')->nullable()->after('user_id'),
+                'extension' => fn (Blueprint $table) => $table->string('extension', 10)->nullable()->after('file_size'),
+                'type' => fn (Blueprint $table) => $table->string('type', 15)->nullable()->after('extension'),
             ],
             'brands' => [
                 'serial' => fn (Blueprint $table) => $table->integer('serial')->nullable(),
@@ -230,6 +249,7 @@ return new class extends Migration
                 'pdf' => fn (Blueprint $table) => $table->string('pdf')->nullable(),
                 'slug' => fn (Blueprint $table) => $table->mediumText('slug')->nullable(),
                 'rating' => fn (Blueprint $table) => $table->decimal('rating', 8, 2)->default(0),
+                'barcode' => fn (Blueprint $table) => $table->string('barcode')->nullable(),
                 'digital' => fn (Blueprint $table) => $table->integer('digital')->default(0),
                 'auction_product' => fn (Blueprint $table) => $table->integer('auction_product')->default(0),
                 'file_name' => fn (Blueprint $table) => $table->string('file_name')->nullable(),

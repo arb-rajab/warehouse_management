@@ -65,7 +65,9 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     'tax' => format_price($data->tax),
                     'item_notes' => $data->item_notes,
                     'shipping_cost' => format_price($data->shipping_cost),
-                    'coupon_discount' => format_price($data->coupon_discount),
+                    // order_details has no coupon_discount column: a coupon's
+                    // discount is recorded on the order.
+                    'coupon_discount' => format_price($data->coupon_discount ?? 0),
                     'quantity' => (int)$data->quantity,
                     'payment_status' => $data->payment_status,
                     'payment_status_string' => ucwords(str_replace('_', ' ', $data->payment_status)),

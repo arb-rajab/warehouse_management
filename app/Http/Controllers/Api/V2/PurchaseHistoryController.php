@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\StoreUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class PurchaseHistoryController extends Controller
 {
@@ -37,17 +38,18 @@ class PurchaseHistoryController extends Controller
 
     public function details($id)
     {
-        $order_detail = Order::where('id', $id)->get();
-        // $order_query = auth()->user()->orders->where('id', $id);
+        $order = Order::findOrFail($id);
+        Gate::authorize('view', $order);
 
-        // return new PurchaseHistoryCollection($order_query->get());
-        return new PurchaseHistoryCollection($order_detail);
+        return new PurchaseHistoryCollection($order->newCollection([$order]));
     }
 
     public function items($id)
     {
-        $order_id = Order::select('id')->where('id', $id)->first();
-        $order_query = OrderDetail::where('order_id', $order_id->id);
+        $order = Order::findOrFail($id);
+        Gate::authorize('view', $order);
+
+        $order_query = OrderDetail::where('order_id', $order->id);
         return new PurchaseHistoryItemsCollection($order_query->get());
     }
 

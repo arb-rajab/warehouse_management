@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\Middleware\HttpsProtocol;
 use App\Http\Middleware\Language;
 use App\Http\Middleware\UseStoreAuthGuard;
+use App\Http\Middleware\WrapStoreApiResources;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Route;
 
@@ -48,8 +49,10 @@ class RouteServiceProvider extends ServiceProvider
     public function map()
     {
         Route::prefix('temp')->group(function () {
-            Route::prefix('api')->middleware('api')->group(base_path('routes/shop-api.php'));
-            Route::prefix('api')->middleware('api')->group(base_path('routes/shop-api_seller.php'));
+            // WrapStoreApiResources on all four store API files: see its
+            // docblock for the JSON shape they would lose without it.
+            Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api.php'));
+            Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api_seller.php'));
 
             // UseStoreAuthGuard first, before Language/HttpsProtocol or any
             // route-level auth/role middleware runs — see that class's own
@@ -60,12 +63,13 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
                 ->group(base_path('routes/shop-seller.php'));
 
-            // No outer middleware group, matching the legacy app's own
+            // No outer `api` group, matching the legacy app's own
             // mapApiWareHouseRoutes()/mapApiTripRoutes(): each route in these
             // two files carries its own inline middleware (wms.auth,
-            // auth:sanctum, driver).
-            Route::prefix('api')->group(base_path('routes/shop-api_warehouse.php'));
-            Route::prefix('api')->group(base_path('routes/shop-api_trip.php'));
+            // auth:sanctum, driver). WrapStoreApiResources is this app's own
+            // addition, as above.
+            Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_warehouse.php'));
+            Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_trip.php'));
 
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
                 ->group(base_path('routes/shop-web.php'));

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V2;
 use App\Http\Resources\V2\BrandCollection;
 use App\Models\Brand;
 use App\Utility\SearchUtility;
-use Cache;
 use Illuminate\Http\Request;
 
 class BrandController extends Controller
@@ -22,8 +21,8 @@ class BrandController extends Controller
 
     public function top()
     {
-        return Cache::remember('app.top_brands', 86400, function(){
-            return new BrandCollection(Brand::where('top', 1)->get());
-        });
+        return new BrandCollection(remember_models(Brand::class, 'app.top_brands', 86400, function () {
+            return Brand::where('top', 1)->get();
+        }));
     }
 }

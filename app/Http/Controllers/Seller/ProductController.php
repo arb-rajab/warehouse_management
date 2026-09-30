@@ -19,6 +19,7 @@ use Artisan;
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Str;
 
 class ProductController extends Controller
@@ -118,7 +119,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        if (Auth::user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }
@@ -134,6 +135,11 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product)
     {
+        if (Gate::denies('updateAsSeller', $product)) {
+            flash(translate('This product is not yours.'))->warning();
+            return back();
+        }
+
         //Product
         $product = $this->productService->update($request->except([
             '_token', 'sku', 'choice', 'tax_id', 'tax', 'tax_type', 'flash_deal_id', 'flash_discount', 'flash_discount_type'
@@ -250,6 +256,9 @@ class ProductController extends Controller
     public function updatePublished(Request $request)
     {
         $product = Product::findOrFail($request->id);
+        if (Gate::denies('updateAsSeller', $product)) {
+            return 0;
+        }
         $product->published = $request->status;
         if (addon_is_activated('seller_subscription') && $request->status == 1) {
             $shop = $product->user->shop;
@@ -268,6 +277,9 @@ class ProductController extends Controller
     public function updateFeatured(Request $request)
     {
         $product = Product::findOrFail($request->id);
+        if (Gate::denies('updateAsSeller', $product)) {
+            return 0;
+        }
         $product->seller_featured = $request->status;
         if ($product->save()) {
             Artisan::call('view:clear');
@@ -280,7 +292,7 @@ class ProductController extends Controller
     public function duplicate($id)
     {
         $product = Product::find($id);
-        if (Auth::user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }
@@ -314,7 +326,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        if (Auth::user()->id != $product->user_id) {
+        if (Gate::denies('updateAsSeller', $product)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }

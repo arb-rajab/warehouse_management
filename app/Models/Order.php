@@ -4,6 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * `for_customer` is declared here because the migration that adds it
+ * (add_legacy_columns_to_store_tables) builds its columns from a map, which
+ * Larastan's migration reader can't follow.
+ *
+ * @property int|null $for_customer the customer a representative placed the order for
+ */
 class Order extends Model
 {
     protected $fillable = [

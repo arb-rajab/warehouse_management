@@ -13,12 +13,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * The store's own upload flow (AizUploadController, the import commands) is
  * the writer — see .ai/rules/legacy-albaraka-holland.md section 2 — with
- * $fillable merged in from the legacy model for that, though none of those
- * extra columns exist in this app's local `uploads` stand-in migration yet
- * (it deliberately carries only the 3 columns this app itself reads). The
- * legacy model's SoftDeletes trait is dropped for the same reason: it adds a
- * global `deleted_at` scope to every query, and that column doesn't exist
- * here either — resolving both is DB-merge-phase work, not this move.
+ * $fillable merged in from the legacy model for that. `create_uploads_table`
+ * carries only the 3 columns this app itself reads; the store's other
+ * columns are added by add_legacy_columns_to_store_tables (and `user_id` by
+ * add_user_id_to_uploads). The legacy model's SoftDeletes trait is dropped:
+ * it adds a global `deleted_at` scope to every query, and that column isn't
+ * reproduced here — resolving it is DB-merge-phase work, not this move.
  *
  * @property int $id
  * @property string|null $file_name

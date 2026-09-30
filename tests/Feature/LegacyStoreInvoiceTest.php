@@ -45,6 +45,17 @@ test('a customer can download the invoice of their own order', function () {
         ->and(storage_path('framework/cache/mpdf'))->toBeDirectory();
 });
 
+test('a customer can download the invoice of an order a representative placed for them', function () {
+    $representative = createStoreUser('customer');
+    $customer = actingAsStoreUser(createStoreUser('customer'));
+    $order = createStoreOrder($representative, ['by_rep' => 1, 'for_customer' => $customer->id]);
+
+    [$response, $pdf] = downloadInvoice(route('invoice.download', $order->id));
+
+    $response->assertOk();
+    expect($pdf)->toStartWith('%PDF-');
+});
+
 test("a customer cannot download another customer's invoice", function () {
     $order = createStoreOrder(createStoreUser('customer'));
     actingAsStoreUser(createStoreUser('customer'));

@@ -29,7 +29,9 @@ use Illuminate\Support\Facades\App;
  * .ai/rules/shared-database.md. That command is the single writer, so there is
  * no per-request create/update/delete of a `Product` anywhere in this codebase
  * and there should not be. The remaining columns are inherited from the store's
- * original schema and are never read here.
+ * original schema and are never read here, except by the legacy store under
+ * /temp: ProductPolicy reads `user_id`, the seller who owns the product, which
+ * add_legacy_columns_to_store_tables adds in a form Larastan can't read.
  *
  * `image_url` and `boxes_count` are not columns on it: the first resolves
  * through the store-owned `uploads` table, the second through this app's own
@@ -41,6 +43,7 @@ use Illuminate\Support\Facades\App;
  * @property string $ar_name
  * @property int|null $thumbnail_img
  * @property bool $published
+ * @property int|null $user_id
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read int|null $minimum_pallets
@@ -554,9 +557,14 @@ class Product extends Model
     // reconciling that — "pick one writer" — is deferred to the DB-merge
     // phase the audit already tracks, not decided here.
 
-    public function getTranslation(string $field = '', string|false $lang = false): mixed
+    /**
+     * The legacy callers pass `$request->lang` straight through, which is
+     * null when the request has none: like the legacy model's loose
+     * `$lang == false`, any empty language means the app's locale.
+     */
+    public function getTranslation(string $field = '', string|false|null $lang = false): mixed
     {
-        $lang = $lang === false ? App::getLocale() : $lang;
+        $lang = $lang ?: App::getLocale();
         $translation = $this->product_translations->where('lang', $lang)->first();
 
         return $translation !== null ? $translation->$field : $this->$field;

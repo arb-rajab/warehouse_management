@@ -188,6 +188,26 @@ function createStoreProduct(array $attributes = []): Product
 }
 
 /**
+ * A default delivery address in the Netherlands for store user `$userId`.
+ */
+function addStoreAddress(int $userId): int
+{
+    $countryId = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
+
+    return DB::table('addresses')->insertGetId([
+        'user_id' => $userId, 'address' => 'Damrak 1', 'country_id' => $countryId, 'phone' => '612345678', 'set_default' => 1,
+    ]);
+}
+
+/**
+ * A token for the store's mobile-app API, as its login hands out.
+ */
+function storeApiToken(StoreUser $user): string
+{
+    return $user->createToken('API Token')->plainTextToken;
+}
+
+/**
  * A store admin with the store's `Super Admin` role, which
  * AuthServiceProvider's Gate::before() grants every ability.
  */

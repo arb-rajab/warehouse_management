@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Product;
 use App\Models\StoreUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Mail;
 
 class ChatController extends Controller
@@ -23,12 +24,16 @@ class ChatController extends Controller
 
     public function messages($id)
     {
+        Gate::authorize('participate', Conversation::findOrFail($id));
+
         $messages = Message::where('conversation_id', $id)->latest('id')->paginate(10);
         return new MessageCollection($messages);
     }
 
     public function insert_message(Request $request)
     {
+        Gate::authorize('participate', Conversation::findOrFail($request->conversation_id));
+
         $message = new Message;
         $message->conversation_id = $request->conversation_id;
         $message->user_id = auth()->user()->id;
@@ -47,6 +52,8 @@ class ChatController extends Controller
 
     public function get_new_messages($conversation_id, $last_message_id)
     {
+        Gate::authorize('participate', Conversation::findOrFail($conversation_id));
+
         $messages = Message::where('conversation_id', $conversation_id)->where('id', '>', $last_message_id)->latest('id')->paginate(10);
         return new MessageCollection($messages);
     }

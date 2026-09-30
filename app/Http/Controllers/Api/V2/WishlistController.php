@@ -32,7 +32,11 @@ class WishlistController extends Controller
     public function destroy($id)
     {
         try {
-            Wishlist::destroy($id);
+            // The customer's own wishlist item only: this deleted any by id.
+            if (! Wishlist::where('id', $id)->where('user_id', auth()->user()->id)->delete()) {
+                return response()->json(['result' => false, 'message' => translate('Wishlist item not found')], 404);
+            }
+
             return response()->json(['result' => true, 'message' => translate('Product is successfully removed from your wishlist')], 200);
         } catch (\Exception $e) {
             return response()->json(['result' => false, 'message' => $e->getMessage()], 200);

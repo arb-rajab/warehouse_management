@@ -32,7 +32,7 @@ use App\Models\Wishlist;
 use App\Utility\CategoryUtility;
 use App\Utility\NotificationUtility;
 use Carbon\Carbon;
-use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\PersonalAccessToken;
 
 //highlights the selected navigation on admin panel
 if (!function_exists('areActiveRoutes')) {

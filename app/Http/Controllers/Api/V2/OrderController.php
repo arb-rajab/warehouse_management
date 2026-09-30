@@ -180,6 +180,11 @@ class OrderController extends Controller
             $order->member_serial = $user_serial;
 
             $order->payment_type = $request->payment_type;
+            // orders.shipping_type is NOT NULL with no default, and the order
+            // is saved here before the item loop below sets it. The legacy
+            // app's non-strict MySQL stored '' meanwhile; this app's strict
+            // connection rejects the order instead.
+            $order->shipping_type = $seller_product[0]['shipping_type'];
             $order->delivery_viewed = '0';
             $order->payment_status_viewed = '0';
             $order->code = date('Ymd-His') . rand(10, 99);
@@ -261,7 +266,9 @@ class OrderController extends Controller
                 $order_detail->shipping_cost = $cartItem['shipping_cost'];
                 $order_detail->product_serial = $product->serial;
                 $order_detail->item_notes = $cartItem['item_notes'];
-                $order_detail->tax = $product->tax;
+                // order_details.tax is NOT NULL and products.tax nullable: see
+                // the web OrderController::store().
+                $order_detail->tax = $product->tax ?? 0;
                 $order_detail->profits = (float)($order_detail->price * ($product->collection?->amount ?? 1)) / 100;
 
                 $shipping += $order_detail->shipping_cost;

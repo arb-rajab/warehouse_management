@@ -23,7 +23,7 @@ use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\PersonalAccessToken;
 use Socialite;
 
 class AuthController extends Controller

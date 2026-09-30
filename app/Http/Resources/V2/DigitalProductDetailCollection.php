@@ -61,7 +61,9 @@ class DigitalProductDetailCollection extends ResourceCollection
                     'currency_symbol' => currency_symbol(),
                     'rating' => (float)$data->rating,
                     'rating_count' => (int)Review::where(['product_id' => $data->id])->count(),
-                    'earn_point' => (float)$data->earn_point,
+                    // Only the club point addon adds products.earn_point, and this
+                    // store has never installed it.
+                    'earn_point' => (float) ($data->earn_point ?? 0),
                     'description' => $data->getTranslation('description'),
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
                     'link' => route('product', $data->slug),

@@ -22,15 +22,6 @@ use Illuminate\Support\Facades\DB;
  *   a null `tax`, both NOT NULL, which the legacy app's non-strict MySQL
  *   quietly turned into '' and 0 and this app's strict connection refuses.
  */
-function addStoreAddress(int $userId): int
-{
-    $countryId = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
-
-    return DB::table('addresses')->insertGetId([
-        'user_id' => $userId, 'address' => 'Damrak 1', 'country_id' => $countryId, 'phone' => '612345678', 'set_default' => 1,
-    ]);
-}
-
 test('a guest can add a product to their cart and open it', function () {
     seedStoreCurrency();
     $product = createStoreProduct(['unit_price' => 2.5]);

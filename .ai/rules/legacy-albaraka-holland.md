@@ -999,7 +999,10 @@ These silently alter legacy code:
 - `JsonResource::withoutWrapping()`. Legacy has 25 `JsonResource` and 62
   `ResourceCollection` classes serving the Flutter store app on `api/v2`.
   Unwrapping changes their JSON shape. Scope it, or add `$wrap` back on the
-  legacy resources.
+  legacy resources. **Scoped** (2026-09-30): the four store API route files
+  under `/temp/api` run `WrapStoreApiResources`, which puts the `data` wrapper
+  back for the request and restores the previous one afterwards. Without it
+  every collection came out as `{"data":{"data":[...]}}`.
 - `Date::use(CarbonImmutable::class)`. There are 165 Carbon/`now()` uses in 62
   legacy files. Code that mutates in place (`$d->addDays(3)` without
   reassigning) becomes a silent no-op, and `Carbon\Carbon` type-hints throw.

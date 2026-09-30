@@ -124,7 +124,9 @@ class ProductMiniCollection extends ResourceCollection
                     'colors' => json_decode($data->colors) ?? [],
                     'current_stock' => (int)$data->stocks->first()?->qty,
                     'rating' => (float) $data->rating,
-                    'earn_point' => (float)$data->earn_point,
+                    // Only the club point addon adds products.earn_point, and this
+                    // store has never installed it.
+                    'earn_point' => (float) ($data->earn_point ?? 0),
                     'description' => $data->getTranslation('description'),
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
                     'sales' => (int) $data->num_of_sale,

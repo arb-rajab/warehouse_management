@@ -10,6 +10,7 @@ use App\Models\Product;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class CouponController extends Controller
 {
@@ -63,7 +64,14 @@ class CouponController extends Controller
      */
     public function update(CouponRequest $request, Coupon $coupon)
     {
-        $coupon->update($request->validated());
+        if (Gate::denies('update', $coupon)) {
+            return $this->failed(translate('This coupon is not yours'));
+        }
+
+        // The coupon's own columns only: date_range, min_buy, max_discount and
+        // product_ids are inputs CouponRequest folds into start_date,
+        // end_date and details, and aren't columns to write.
+        $coupon->update($request->safe()->only($coupon->getFillable()));
 
         return $this->success(translate('Coupon has been updated successfully'));
     }

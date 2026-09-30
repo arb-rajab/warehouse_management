@@ -3,6 +3,32 @@
 use App\Policies\OrderPolicy;
 use Spatie\Permission\Models\Permission;
 
+test('an order is visible to the account that placed it and nobody else', function () {
+    $customer = createStoreUser('customer');
+    $otherCustomer = createStoreUser('customer');
+    $order = createStoreOrder($customer);
+
+    $policy = new OrderPolicy;
+
+    expect($policy->view($customer, $order))->toBeTrue()
+        ->and($policy->view($otherCustomer, $order))->toBeFalse();
+});
+
+test('an order a representative placed is visible to the representative and the customer it was for', function () {
+    $representative = createStoreUser('customer');
+    $customer = createStoreUser('customer');
+    $otherCustomer = createStoreUser('customer');
+    $order = createStoreOrder($representative, ['by_rep' => 1, 'for_customer' => $customer->id]);
+
+    $policy = new OrderPolicy;
+
+    expect($policy->view($representative, $order))->toBeTrue()
+        ->and($policy->view($customer, $order))->toBeTrue()
+        ->and($policy->view($otherCustomer, $order))->toBeFalse()
+        ->and($policy->downloadInvoice($customer, $order))->toBeTrue()
+        ->and($policy->downloadInvoice($otherCustomer, $order))->toBeFalse();
+});
+
 test('the customer who placed an order may download its invoice, another customer may not', function () {
     $customer = createStoreUser('customer');
     $otherCustomer = createStoreUser('customer');

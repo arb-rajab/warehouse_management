@@ -36,3 +36,16 @@ test('getTranslation falls back to the base column when no translation exists fo
 
     expect($product->getTranslation('name', 'en'))->toBe('Widget');
 });
+
+test('getTranslation reads a missing language as the app locale', function () {
+    $product = Product::create(['name' => 'Widget', 'ar_name' => 'ويدجت']);
+    $product->product_translations()->create([
+        'name' => 'Widget FR', 'unit' => 'pc', 'description' => 'desc fr', 'lang' => 'fr',
+    ]);
+    app()->setLocale('fr');
+
+    // The legacy callers pass `$request->lang`, null when the request has none.
+    expect($product->getTranslation('name', null))->toBe('Widget FR')
+        ->and($product->getTranslation('name', ''))->toBe('Widget FR')
+        ->and($product->getTranslation('name'))->toBe('Widget FR');
+});
