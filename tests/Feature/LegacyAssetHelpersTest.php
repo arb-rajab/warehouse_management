@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Upload;
+use Illuminate\Support\Facades\File;
 
 /**
  * Regression test for the webshell-incident fix in
@@ -59,4 +60,44 @@ test('uploaded_asset() returns an upload\'s external_link as-is', function () {
     $upload = Upload::forceCreate(['external_link' => 'https://cdn.example.com/widget.jpg']);
 
     expect(uploaded_asset($upload->id))->toBe('https://cdn.example.com/widget.jpg');
+});
+
+/**
+ * The legacy views load prebuilt theme bundles through static_asset(), not
+ * Mix or Vite (the legacy Mix pipeline was dead and is gone — see
+ * .ai/rules/legacy-albaraka-holland.md section 5), so the only thing that
+ * can break them is a file missing from public/. Only literal paths are
+ * checked: the ones built from a variable (flags, uploads, card images per
+ * gateway) can't be resolved statically.
+ */
+test('every literal theme bundle the legacy views reference exists under public/', function () {
+    $missing = [];
+
+    foreach (File::allFiles(resource_path('views/shop')) as $view) {
+        preg_match_all(
+            '/static_asset\(\s*[\'"]((?:assets\/(?:js|css)|download)\/[^\'"]+\.[a-z0-9]+)[\'"]/i',
+            $view->getContents(),
+            $matches,
+        );
+
+        foreach ($matches[1] as $path) {
+            if (! file_exists(public_path($path))) {
+                $missing[$path] = $view->getRelativePathname();
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
+});
+
+test('the legacy login page loads its bundles from public/assets and none of the Inertia/Vite build', function () {
+    $response = $this->get('/temp/users/login');
+
+    $response->assertOk();
+    $response->assertSee('/assets/css/vendors.css', false);
+    $response->assertSee('/assets/js/vendors.js', false);
+    $response->assertSee('/assets/js/aiz-core.js', false);
+    $response->assertDontSee('data-page=', false);
+    $response->assertDontSee('/build/assets/', false);
+    expect($response->headers->has('X-Inertia'))->toBeFalse();
 });
