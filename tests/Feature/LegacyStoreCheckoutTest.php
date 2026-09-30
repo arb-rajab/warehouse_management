@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
  * - addToCart() mass-assigned two keys (`cash_on_delivery`, `digital`) that
  *   were never cart columns, and the delivery step a `shipping_type` Cart
  *   didn't allow, both of which the legacy app's Eloquent silently dropped;
+ * - a guest's add to cart then failed in the offers step, which loaded the
+ *   signed-in user's offers without checking there was one;
  * - the order row left out `orders.shipping_type` and the order detail wrote
  *   a null `tax`, both NOT NULL, which the legacy app's non-strict MySQL
  *   quietly turned into '' and 0 and this app's strict connection refuses.

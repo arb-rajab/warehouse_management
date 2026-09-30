@@ -44,7 +44,9 @@ return new class extends Migration
      * and `published`, can satisfy: `unit_price` takes 0 here, and `slug`,
      * `serial` and `mat_id` are nullable (MySQL gives a text column no
      * default). `user_id` and `collection_id` match the ids they point at,
-     * `users.id` and `product_collections.id`.
+     * `users.id` and `product_collections.id`. `barcode` is left out: no
+     * store code reads it, and this app keeps barcodes in
+     * `wms_product_barcodes`, which CreateWmsProductBarcodesTableTest pins.
      *
      * Each added column is guarded on its own, since the store's production
      * database already has every one of them. The three column changes at
@@ -228,7 +230,6 @@ return new class extends Migration
                 'pdf' => fn (Blueprint $table) => $table->string('pdf')->nullable(),
                 'slug' => fn (Blueprint $table) => $table->mediumText('slug')->nullable(),
                 'rating' => fn (Blueprint $table) => $table->decimal('rating', 8, 2)->default(0),
-                'barcode' => fn (Blueprint $table) => $table->string('barcode')->nullable(),
                 'digital' => fn (Blueprint $table) => $table->integer('digital')->default(0),
                 'auction_product' => fn (Blueprint $table) => $table->integer('auction_product')->default(0),
                 'file_name' => fn (Blueprint $table) => $table->string('file_name')->nullable(),

@@ -81,6 +81,13 @@ class OfferService
     public function processOffer($product, $data, $product_quantity_in_cart = null, $request = null)
     {
         $offer_message = null;
+
+        // Offers are tracked per account (offer_user, carts_offered.user_id),
+        // so a guest's cart, kept under a temp_user_id, never gets one.
+        if (! Auth::check()) {
+            return $offer_message;
+        }
+
         $user = Auth::user()->load('offers');
 
         if ($product->offers?->count() > 0) {
