@@ -3,21 +3,43 @@
 namespace App\Models;
 
 use App;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Spatie\Permission\Models\Role as SpatieRole;
 
-class Role extends Model
+/**
+ * The legacy store's roles: spatie's role model, held to the `store` guard.
+ *
+ * Both apps' roles share one table, spatie's configured `wms_roles` (see
+ * .ai/rules/legacy-albaraka-holland.md section 3), told apart only by
+ * `guard_name` (WMS's `admin` is `web`). The global scope keeps every store
+ * lookup on this class (the role screens' listing, editing and deletion by
+ * id) from reaching a WMS role, and `$guard_name` gives Role::create() the
+ * store's guard whichever guard the request happens to have as its default.
+ */
+class Role extends SpatieRole
 {
+    public const SUPER_ADMIN = 'Super Admin';
+
     protected $with = ['role_translations'];
 
-    /**
-     * The legacy store read spatie's roles table through this plain model,
-     * by its default name `roles`. Both apps' roles share one table here,
-     * spatie's configured `wms_roles` (see .ai/rules/legacy-albaraka-holland.md
-     * section 3), and `roles` does not exist.
-     */
-    public function getTable(): string
+    protected string $guard_name = 'store';
+
+    protected static function booted(): void
     {
-        return config('permission.table_names.roles');
+        static::addGlobalScope('store_guard', function (Builder $query): void {
+            $query->where($query->qualifyColumn('guard_name'), 'store');
+        });
+    }
+
+    /**
+     * Roles a staff member can be given: everything but Super Admin.
+     *
+     * @param  Builder<Role>  $query
+     * @return Builder<Role>
+     */
+    public function scopeExcludingSuperAdmin(Builder $query): Builder
+    {
+        return $query->where($query->qualifyColumn('name'), '!=', self::SUPER_ADMIN);
     }
 
     public function getTranslation($field = '', $lang = false){

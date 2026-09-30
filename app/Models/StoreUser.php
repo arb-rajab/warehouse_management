@@ -31,6 +31,14 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     protected $table = 'users';
 
     /**
+     * The spatie guard this model's roles and permissions live under, pinned
+     * so it isn't derived from config/auth.php's guard list (`store` and
+     * `store_api` both name this model's provider) or from whichever guard
+     * `Auth::shouldUse()` made the default for the request. User's is `web`.
+     */
+    protected string $guard_name = 'store';
+
+    /**
      * Get the default foreign key name for the model.
      *
      * Eloquent derives it from the class name, so the same rename turned

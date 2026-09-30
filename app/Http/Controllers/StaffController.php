@@ -48,7 +48,7 @@ class StaffController extends Controller implements HasMiddleware
      */
     public function create()
     {
-        $roles = Role::where('id','!=',1)->orderBy('id', 'desc')->get();
+        $roles = Role::excludingSuperAdmin()->orderBy('id', 'desc')->get();
         return view('shop.backend.staff.staffs.create', compact('roles'));
     }
 
@@ -60,6 +60,8 @@ class StaffController extends Controller implements HasMiddleware
      */
     public function store(Request $request)
     {
+        $role = Role::findOrFail($request->role_id);
+
         if(StoreUser::where('email', $request->email)->first() == null){
             $user = new StoreUser;
             $user->name = $request->name;
@@ -71,7 +73,7 @@ class StaffController extends Controller implements HasMiddleware
                 $staff = new Staff;
                 $staff->user_id = $user->id;
                 $staff->role_id = $request->role_id;
-                $user->assignRole(Role::findOrFail($request->role_id)->name);
+                $user->assignRole($role->name);
                 if($staff->save()){
                     flash(translate('Staff has been inserted successfully'))->success();
                     return redirect()->route('staffs.index');
@@ -103,7 +105,7 @@ class StaffController extends Controller implements HasMiddleware
     public function edit($id)
     {
         $staff = Staff::findOrFail(decrypt($id));
-        $roles = $roles = Role::where('id','!=',1)->orderBy('id', 'desc')->get();
+        $roles = $roles = Role::excludingSuperAdmin()->orderBy('id', 'desc')->get();
         return view('shop.backend.staff.staffs.edit', compact('staff', 'roles'));
     }
 
@@ -116,6 +118,7 @@ class StaffController extends Controller implements HasMiddleware
      */
     public function update(Request $request, $id)
     {
+        $role = Role::findOrFail($request->role_id);
         $staff = Staff::findOrFail($id);
         $user = $staff->user;
         $user->name = $request->name;
@@ -127,7 +130,7 @@ class StaffController extends Controller implements HasMiddleware
         if($user->save()){
             $staff->role_id = $request->role_id;
             if($staff->save()){
-                $user->syncRoles(Role::findOrFail($request->role_id)->name);
+                $user->syncRoles($role->name);
                 flash(translate('Staff has been updated successfully'))->success();
                 return redirect()->route('staffs.index');
             }

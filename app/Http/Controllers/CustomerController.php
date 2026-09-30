@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -558,7 +558,7 @@ class CustomerController extends Controller implements HasMiddleware
         $address->save();
 
         if ($request->user_type == 'admin' || $request->user_type == 'accountant') {
-            $user->assignRole(Role::findOrFail(1)->name);
+            $user->assignRole(Role::SUPER_ADMIN);
         }
 
         $user->save();

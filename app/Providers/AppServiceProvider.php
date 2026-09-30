@@ -62,8 +62,12 @@ class AppServiceProvider extends ServiceProvider
         // bucket, while an individual abusive token was never throttled at all.
         // Naming the guard reads the bearer token directly and does not require
         // `auth:sanctum` (which runs after this middleware) to have resolved yet.
+        // The legacy store's tokens resolve on `store_api`, not `sanctum`, and
+        // both user tables' ids overlap, so the key carries the model class.
         RateLimiter::for('api', function (Request $request): Limit {
-            return Limit::perMinute(60)->by($request->user('sanctum')?->id ?: $request->ip());
+            $user = $request->user('sanctum') ?? $request->user('store_api');
+
+            return Limit::perMinute(60)->by($user ? $user::class.':'.$user->getKey() : $request->ip());
         });
     }
 

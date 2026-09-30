@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/trips/', 'middleware' => ['app_language']], function () {
 
-    Route::middleware(['auth:sanctum', 'driver'])->group(function () {
+    Route::middleware(['auth:store_api', 'driver'])->group(function () {
         Route::get('get-trips-history', 'App\Http\Controllers\Api\V2\Trip\DriverController@getTripsHistory');
         Route::get('get-active-trip', 'App\Http\Controllers\Api\V2\Trip\DriverController@getActiveTrip');
         Route::post('update-checkpoint', 'App\Http\Controllers\Api\V2\Trip\DriverController@updateCheckpoint');
@@ -21,7 +21,7 @@ Route::group(['prefix' => 'v2/trips/', 'middleware' => ['app_language']], functi
 
 Route::group(['prefix' => 'v2/driver/', 'middleware' => ['app_language']], function () {
 
-    Route::middleware('auth:sanctum', 'driver')->group(function () {
+    Route::middleware('auth:store_api', 'driver')->group(function () {
         Route::get('notifications', 'App\Http\Controllers\Api\V2\Trip\DriverNotificationController@getAllNotification');
     });
 });

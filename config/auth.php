@@ -54,6 +54,24 @@ return [
             'driver' => 'session',
             'provider' => 'store_users',
         ],
+
+        // The two token guards over the one shared `wms_personal_access_tokens`
+        // table. Sanctum's own guard only accepts a token whose tokenable is an
+        // instance of its provider's model, so giving each API its own provider
+        // is what stops a store customer's token from authenticating on the
+        // warehouse API (and a warehouse token on the store's). `auth:sanctum`
+        // is the warehouse API's (routes/api.php), `auth:store_api` the store's
+        // (routes/shop-api*.php). Spatie's guard names for both user models are
+        // pinned by `$guard_name` on User and StoreUser, not derived from these
+        // entries, since each model now matches two guards here.
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+        'store_api' => [
+            'driver' => 'sanctum',
+            'provider' => 'store_users',
+        ],
     ],
 
     /*

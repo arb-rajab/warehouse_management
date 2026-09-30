@@ -8,6 +8,8 @@ paths:
   - 'config/app.php,config/auth.php,config/cache.php,config/services.php,config/filesystems.php,config/permission.php,config/session.php,config/store.php,config/secure-headers.php'
   - 'routes/web.php,routes/api.php,routes/console.php,routes/store/**'
   - 'app/Models/User.php,app/Models/Product.php,app/Models/Upload.php,app/Models/PersonalAccessToken.php'
+  - 'app/Models/StoreUser.php,app/Models/Role.php,app/Models/Permission.php,app/Providers/AuthServiceProvider.php,config/sanctum.php'
+  - 'routes/shop-*.php,tests/Feature/StoreAuthGuardTest.php,tests/Feature/AuthGuardIsolationTest.php'
   - 'app/Models/Store/**,app/Http/Controllers/Store/**'
   - app/Http/Controllers/Controller.php
   - app/Http/Controllers/WelcomeController.php
@@ -1125,11 +1127,99 @@ it from config. Converge on config.
   - A `web` guard over `wms_users`, which is WMS as today.
   - A new `store` session guard over `users` (`StoreUser`), used by store
     route groups via `auth:store` / `Auth::shouldUse('store')`.
-  - Sanctum's `guard` config lists both.
+  - Two Sanctum token guards, `sanctum` (provider `users`) and `store_api`
+    (provider `store_users`); `sanctum.guard` is empty. See 6.7.1, which
+    records what was built and supersedes this list where they differ.
 - Legacy `user_type` values: `customer`, `seller`, `admin`, `staff`,
   `delivery_boy`, `accountant`, `driver` (the `IsAdmin`/`IsSeller`/`IsDriver`/…
   middleware).
 - If both hosts share a parent domain, give the session cookies different names.
+
+### 6.7.1 Auth guards, as built
+
+Verified 2026-09-30. The store is on its own guards, not the `shop` guard over a
+`shop_users` table the task sketched: it is `store`/`store_api`, over `users`.
+The renamed table is WMS's (`wms_users`), and `StoreUser` kept the store's.
+
+| Guard | Driver | Provider → model → table | Used by | spatie `guard_name` |
+| --- | --- | --- | --- | --- |
+| `web` (default) | session | `users` → `User` → `wms_users` | this app's admin panel (`/admin`, `/admin/login`) | `web` |
+| `sanctum` | sanctum | `users` → `User` | warehouse API (`routes/api.php`, `auth:sanctum`) | `web` |
+| `store` | session | `store_users` → `StoreUser` → `users` | store web/admin/seller routes | `store` |
+| `store_api` | sanctum | `store_users` → `StoreUser` | store API (`routes/shop-api*.php`, `auth:store_api`) | `store` |
+
+**Roles and permissions.** Both apps use spatie's `wms_roles`/`wms_permissions`,
+unique on `(name, guard_name)`. WMS has one role, `('admin', 'web')`. The store's
+are all `guard_name = 'store'`, including `('Super Admin', 'store')`. Rows on the
+two guards never overlap, even for the same name.
+
+- `User::$guard_name = 'web'` and `StoreUser::$guard_name = 'store'` pin spatie's
+  guard. Without them each model matches two guards, and `Auth::shouldUse()`
+  (which `auth:sanctum`, `auth:store_api` and `UseStoreAuthGuard` all call, and
+  which rewrites `auth.defaults.guard`) would make `assignRole('x')` look on
+  `store_api` or `sanctum`.
+- `hasRole()`/`hasAnyRole()`, and so `role:admin`, match by **name across every
+  role the model holds**. `hasAnyRole()` takes no guard, and `RoleMiddleware`'s
+  guard argument only picks the auth guard. Isolation is: the pivot's
+  `model_type` (`User` vs `StoreUser`), `assignRole()` throwing
+  `GuardDoesNotMatch` for a role of the other guard, and
+  `App\Models\Role`/`Permission` (spatie subclasses, `$guard_name = 'store'`,
+  global scope on `guard_name = 'store'`). Before the scope, the store's role
+  screens read and wrote every row of `wms_roles`: a store staff manager could
+  rename or delete WMS's `admin` role by id. `Gate::before` grants only
+  `hasRole('Super Admin', 'store')`. The hardcoded role id 1 is gone
+  (`Role::SUPER_ADMIN`, `Role::excludingSuperAdmin()`).
+- **Phase 5 data merge must keep this true.** The legacy rows arrive as guard
+  `web` with `model_type = 'App\\Models\\User'`. Rewrite roles and permissions
+  to `store` and the pivots' `model_type` to `StoreUser` *before* they go live,
+  or a legacy `admin` role would become a `web` role on a `User` row.
+  `role:admin` cannot detect a raw pivot that crosses guards. Check with:
+  `SELECT COUNT(*) FROM wms_model_has_roles p JOIN wms_roles r ON r.id = p.role_id
+  WHERE (p.model_type = 'App\\Models\\User') <> (r.guard_name = 'web')` must be 0.
+
+**Sessions.** A session guard stores the user id under `login_<guard>_<hash>`, so
+a `store` login is invisible to `web` and vice versa, even when the ids in
+`users` and `wms_users` match.
+
+**Tokens.** Both apps' tokens are rows of `wms_personal_access_tokens`
+(`PersonalAccessToken`), told apart by `tokenable_type`. Sanctum's guard refuses
+a token whose tokenable isn't an instance of its provider's model, so a store
+token gets 401 on `auth:sanctum` and a warehouse token on `auth:store_api`.
+`config/sanctum.php`'s `guard` is `[]`: a listed session guard is checked before
+the token, past that provider check. The `api` rate limiter tries both token
+guards and keys on model class plus id.
+
+**Why bare `Auth::user()` was not rewritten to `Auth::guard('store')`.** The
+task asked for the store's ~680 `Auth::user()`/`auth()->user()` calls to name the
+guard. They already resolve to the right one: store web routes run
+`UseStoreAuthGuard` (`Auth::shouldUse('store')`) before any `auth`/role
+middleware, and `auth:store_api` calls `shouldUse('store_api')` on success. A
+blanket `Auth::guard('store')` would break every token-authenticated `/temp/api`
+controller (the session guard has no user there), and `store_api` would break
+the web ones. `tests/Feature/AuthGuardIsolationTest.php` enforces the
+route-level guarantee instead: every `temp/*` route with `auth` middleware is
+either behind `UseStoreAuthGuard` or on `auth:store_api`, and no other route
+carries either. Code that runs with no request (queue jobs, console) gets the
+default `web` guard, so anything there must name `store` itself.
+
+**WMS untouched.** `LoginController`, `LoginRequest` and the `admin/login`
+routes are unchanged. `role:admin` (45 routes) and `RestrictToAllowedIps` are on
+no `temp/*` route, and `UseStoreAuthGuard` is on no other. Both are asserted in
+the same test file.
+
+**Manual trace** (booted app on a migrated sqlite DB, real requests and models):
+
+- `GET /temp/admin/roles`: `web` → `UseStoreAuthGuard` (default becomes
+  `store`) → `Language` → `HttpsProtocol` → `Authenticate` (reads
+  `login_store_*`) → `IsAdmin` → `permission:view_staff_roles`. A
+  warehouse admin's session has no `login_store_*`, so it redirects to
+  `shop.login`.
+- `GET /admin`: `web` → `Authenticate` (default `web`, reads `login_web_*`) →
+  `role:admin`. A store session has no `login_web_*`, so it redirects to
+  `login`. No store middleware runs.
+- `/temp/api/v2/auth/user` with a warehouse token: 401. With a store token: 200.
+  `/api/v1/products` with a store token: 401, with a warehouse token: 200. The
+  two users had the same id.
 
 ### 6.8 Merging the `Product` models
 
