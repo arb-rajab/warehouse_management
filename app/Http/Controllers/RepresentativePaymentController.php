@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\RepresentativePayment;
-use App\Models\StoreStoreUser;
 use App\Models\StoreUser;
 use Auth;
 use Carbon\Carbon;
@@ -26,7 +25,7 @@ class RepresentativePaymentController extends Controller
 
     public function create()
     {
-        $customers = StoreStoreUser::where('user_type', 'customer')->where('is_rep', false)->get();
+        $customers = StoreUser::where('user_type', 'customer')->where('is_rep', false)->get();
         return view('shop.frontend.user.rep-payments-create', compact('customers'));
     }
     public function show($id)

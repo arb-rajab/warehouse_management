@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AizUploadController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
@@ -69,11 +72,17 @@ Route::controller(AizUploadController::class)->group(function () {
     Route::get('/aiz-uploader/download/{id}', 'attachment_download')->name('download_attachment');
 });
 
-Auth::routes(['verify' => true]);
-
-// Login
+// Auth::routes(['verify' => true]), written out by hand. Three of its
+// names (login, logout, password.update) are also this app's own, and WMS's
+// must keep them, so the store's copies carry a shop. prefix instead; the
+// legacy app's own GET /logout and GET /email/resend (every logout link and
+// the resend link are plain anchors) share one route with the POST that
+// Auth::routes() registers, since Wayfinder can't tell two routes to one
+// action at one URI apart.
 Route::controller(LoginController::class)->group(function () {
-    // /logout is already registered by Auth::routes() above.
+    Route::get('/login', 'showLoginForm')->name('shop.login');
+    Route::post('/login', 'login');
+    Route::match(['get', 'post'], '/logout', 'logout')->name('shop.logout');
     Route::get('/social-login/redirect/{provider}', 'redirectToProvider')->name('social.login');
     Route::get('/social-login/{provider}/callback', 'handleProviderCallback')->name('social.callback');
     //Apple Callback
@@ -81,8 +90,27 @@ Route::controller(LoginController::class)->group(function () {
     Route::get('/account-deletion', 'account_deletion')->name('account_delete');
 });
 
+Route::controller(RegisterController::class)->group(function () {
+    Route::get('/register', 'showRegistrationForm')->name('register');
+    Route::post('/register', 'register');
+});
+
+Route::controller(ForgotPasswordController::class)->group(function () {
+    Route::get('/password/reset', 'showLinkRequestForm')->name('password.request');
+    Route::post('/password/email', 'sendResetLinkEmail')->name('password.email');
+});
+
+Route::controller(ResetPasswordController::class)->group(function () {
+    Route::get('/password/reset/{token}', 'showResetForm')->name('password.reset');
+    // Unnamed: in the legacy app HomeController's reset_password_with_code
+    // route below took the password.update name from this one.
+    Route::post('/password/reset', 'reset');
+});
+
 Route::controller(VerificationController::class)->group(function () {
-    // /email/resend is already registered by Auth::routes() above.
+    Route::get('/email/verify', 'show')->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', 'verify')->name('verification.verify');
+    Route::match(['get', 'post'], '/email/resend', 'resend')->name('verification.resend');
     Route::get('/verification-confirmation/{code}', 'verification_confirmation')->name('email.verification.confirmation');
 });
 
@@ -96,7 +124,7 @@ Route::controller(CustomerController::class)->group(function () {
 
 Route::controller(HomeController::class)->group(function () {
     Route::get('/email_change/callback', 'email_change_callback')->name('email_change.callback');
-    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('password.update');
+    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('shop.password.update');
     Route::get('/users/login', 'login')->name('user.login');
     Route::get('/seller/login', 'login')->name('seller.login');
     Route::get('/deliveryboy/login', 'login')->name('deliveryboy.login');

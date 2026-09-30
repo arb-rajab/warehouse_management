@@ -15,12 +15,16 @@ class AdminController extends Controller
     /**
      * Show the admin dashboard.
      *
+     * A missing `total_visits` setting means no visits yet: the legacy app
+     * seeded that row in a data migration and kept it current from its
+     * CountWebRouteVisits middleware, and this app carries over neither.
+     *
      * @return Response
      */
     public function admin_dashboard(Request $request)
     {
         $root_categories = Category::where('level', 0)->get();
-        $total_visits = json_decode(get_setting('total_visits'), true);
+        $total_visits = json_decode(get_setting('total_visits', '[]'), true);
 
         $cached_graph_data = Cache::remember('cached_graph_data', 86400, function() use ($root_categories, $total_visits){
             $num_of_sale_data = null;

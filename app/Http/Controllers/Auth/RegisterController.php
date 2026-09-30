@@ -50,6 +50,19 @@ class RegisterController extends Controller implements HasMiddleware
     protected $redirectTo = '/';
 
     /**
+     * Show the application registration form.
+     *
+     * Overrides RegistersUsers::showRegistrationForm(), which renders
+     * `auth.register`; see LoginController::showLoginForm().
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showRegistrationForm()
+    {
+        return view('shop.auth.register');
+    }
+
+    /**
      * Create a new controller instance.
      *
      * @return void

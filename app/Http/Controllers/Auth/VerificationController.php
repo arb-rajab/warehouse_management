@@ -46,11 +46,17 @@ class VerificationController extends Controller implements HasMiddleware
      * See LoginController::middleware()'s docblock for why this replaces
      * the constructor-based `$this->middleware()` call.
      *
+     * The legacy constructor had `auth` commented out whole, so that
+     * verification_confirmation()'s emailed code link works for a guest.
+     * show(), verify() and resend() all read $request->user() unguarded, so
+     * a guest got a 500 from them instead of the login page.
+     *
      * @return array<int, \Illuminate\Routing\Controllers\Middleware>
      */
     public static function middleware(): array
     {
         return [
+            new Middleware('auth', except: ['verification_confirmation']),
             new Middleware('signed', only: ['verify']),
             new Middleware('throttle:6,1', only: ['verify', 'resend']),
         ];
@@ -106,7 +112,7 @@ class VerificationController extends Controller implements HasMiddleware
             flash(translate('Sorry, we could not verifiy you. Please try again'))->error();
         }
 
-        if($user->user_type == 'seller') {
+        if($user?->user_type == 'seller') {
             return redirect()->route('seller.dashboard');
         }
 

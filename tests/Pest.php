@@ -5,9 +5,13 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
+use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
@@ -91,6 +95,51 @@ function actingAsMobilePanelUser(): User
     test()->actingAs($mobileUser);
 
     return $mobileUser;
+}
+
+/**
+ * Create a legacy store user (App\Models\StoreUser, the store's own `users`
+ * table) with a verified email and a known password, for tests of the store
+ * mounted under /temp. There is no factory for this model: the store's rows
+ * are never generated anywhere else.
+ *
+ * Returns the row re-read from the database, every column loaded, as a real
+ * request's authenticated user is: the store's views read columns this never
+ * sets, which strict mode refuses to read off a model that doesn't have them.
+ */
+function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password'): StoreUser
+{
+    $user = StoreUser::create([
+        'name' => ucfirst($userType).' Tester',
+        'email' => $email ?? $userType.'-'.Str::random(8).'@example.com',
+        'user_type' => $userType,
+        'phone' => (string) random_int(1000000000, 9999999999),
+    ]);
+    $user->password = Hash::make($password);
+    $user->email_verified_at = now();
+    $user->save();
+
+    return $user->fresh();
+}
+
+/**
+ * Authenticate a legacy store user on the store's own `store` guard.
+ *
+ * actingAs() also makes its guard the default for the rest of the test, which
+ * a real request only reaches partway through its middleware, from
+ * UseStoreAuthGuard. Switching the default back makes each request start on
+ * this app's own guard as a real one does, so a middleware that runs before
+ * UseStoreAuthGuard fails here the way it fails for real users.
+ */
+function actingAsStoreUser(StoreUser $user): StoreUser
+{
+    $defaultGuard = Auth::getDefaultDriver();
+
+    test()->actingAs($user, 'store');
+
+    Auth::shouldUse($defaultGuard);
+
+    return $user;
 }
 
 /**

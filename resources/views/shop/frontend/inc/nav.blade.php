@@ -307,7 +307,7 @@
                         <ul class="list-unstyled no-scrollbar mb-0 text-left">
                             @if(isAdmin())
                                 <li class="user-top-nav-element border border-top-0" data-id="1">
-                                    <a href="{{ route('admin.dashboard') }}" class="text-truncate text-dark px-4 fs-14 d-flex align-items-center hov-column-gap-1">
+                                    <a href="{{ route('shop.admin.dashboard') }}" class="text-truncate text-dark px-4 fs-14 d-flex align-items-center hov-column-gap-1">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
                                             <path id="Path_2916" data-name="Path 2916" d="M15.3,5.4,9.561.481A2,2,0,0,0,8.26,0H7.74a2,2,0,0,0-1.3.481L.7,5.4A2,2,0,0,0,0,6.92V14a2,2,0,0,0,2,2H14a2,2,0,0,0,2-2V6.92A2,2,0,0,0,15.3,5.4M10,15H6V9A1,1,0,0,1,7,8H9a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H11V9A2,2,0,0,0,9,7H7A2,2,0,0,0,5,9v6H2a1,1,0,0,1-1-1V6.92a1,1,0,0,1,.349-.76l5.74-4.92A1,1,0,0,1,7.74,1h.52a1,1,0,0,1,.651.24l5.74,4.92A1,1,0,0,1,15,6.92Z" fill="#b5b5c0"/>
                                         </svg>
@@ -403,7 +403,7 @@
                                 @endif
                             @endif
                             <li class="user-top-nav-element border border-top-0" data-id="1">
-                                <a href="{{ route('logout') }}" class="text-truncate text-dark px-4 fs-14 d-flex align-items-center hov-column-gap-1">
+                                <a href="{{ route('shop.logout') }}" class="text-truncate text-dark px-4 fs-14 d-flex align-items-center hov-column-gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="15.999" viewBox="0 0 16 15.999">
                                         <g id="Group_25503" data-name="Group 25503" transform="translate(-24.002 -377)">
                                           <g id="Group_25265" data-name="Group 25265" transform="translate(-216.534 -160)">
@@ -529,7 +529,7 @@
                 @if(isAdmin())
                     <hr>
                     <li class="mr-0">
-                        <a href="{{ route('admin.dashboard') }}"
+                        <a href="{{ route('shop.admin.dashboard') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links">
                             {{ translate('My Account') }}
                         </a>
@@ -569,7 +569,7 @@
                 @endif
                 <hr>
                 <li class="mr-0">
-                    <a href="{{ route('logout') }}"
+                    <a href="{{ route('shop.logout') }}"
                         class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-primary header_menu_links">
                         {{ translate('Logout') }}
                     </a>

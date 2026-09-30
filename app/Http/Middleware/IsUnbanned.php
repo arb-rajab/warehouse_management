@@ -13,7 +13,7 @@ class IsUnbanned
 
             $redirect_to = "";
             if(auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff'){
-                $redirect_to = "login";
+                $redirect_to = "shop.login";
             }else{
                 $redirect_to = "user.login";
             }

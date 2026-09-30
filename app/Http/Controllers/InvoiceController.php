@@ -22,7 +22,7 @@ class InvoiceController extends Controller
         }
         $language_code =  'sa'; //Session::get('locale', Config::get('app.locale'));
 
-        if (Language::where('code', $language_code)->first()->rtl == 1) {
+        if (Language::where('code', $language_code)->first()?->rtl == 1) {
             $direction = 'rtl';
             $text_align = 'right';
             $not_text_align = 'left';

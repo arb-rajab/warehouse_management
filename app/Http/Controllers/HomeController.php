@@ -682,7 +682,7 @@ class HomeController extends Controller
                 flash(translate('Password updated successfully'))->success();
 
                 if (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff') {
-                    return redirect()->route('admin.dashboard');
+                    return redirect()->route('shop.admin.dashboard');
                 }
                 return redirect()->route('home');
             } else {

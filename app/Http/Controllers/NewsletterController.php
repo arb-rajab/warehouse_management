@@ -74,7 +74,7 @@ class NewsletterController extends Controller implements HasMiddleware
         }
 
     	flash(translate('Newsletter has been send'))->success();
-    	return redirect()->route('admin.dashboard');
+    	return redirect()->route('shop.admin.dashboard');
     }
 
     public function testEmail(Request $request){

@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -74,8 +73,6 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         JsonResource::withoutWrapping();
-
-        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.dashboard'));
 
         Date::use(CarbonImmutable::class);
 

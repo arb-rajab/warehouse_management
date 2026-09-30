@@ -21,25 +21,28 @@ class CompareController extends Controller
         return back();
     }
 
-    //store comparing products ids in session
+    /**
+     * Store the compared product ids in the session, keeping the last three.
+     *
+     * This app serializes sessions as JSON (config/session.php), so the list
+     * comes back as a plain array on the next request rather than the
+     * Collection the legacy code put there, and changing a copy of it no
+     * longer changes what is stored. It is rebuilt as a Collection on read
+     * and written back as an array.
+     */
     public function addToCompare(Request $request)
     {
-        if($request->session()->has('compare')){
-            $compare = $request->session()->get('compare', collect([]));
-            if(!$compare->contains($request->id)){
-                if(count($compare) == 3){
-                    $compare->forget(0);
-                    $compare->push($request->id);
-                }
-                else{
-                    $compare->push($request->id);
-                }
+        $compare = collect($request->session()->get('compare', []));
+
+        if (! $compare->contains($request->id)) {
+            if ($compare->count() == 3) {
+                $compare->shift();
             }
+
+            $compare->push($request->id);
         }
-        else{
-            $compare = collect([$request->id]);
-            $request->session()->put('compare', $compare);
-        }
+
+        $request->session()->put('compare', $compare->values()->all());
 
         return view('shop.frontend.partials.compare');
     }

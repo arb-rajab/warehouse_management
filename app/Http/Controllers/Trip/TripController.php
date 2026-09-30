@@ -120,7 +120,7 @@ class TripController extends Controller
                     $long_lat_array = $this->userService->getUserLongLat($customer);
 
                     // key increased by one because we added the default checkpoint as the first checkpoint
-                    $checkpoints_array[] = $this->formatCheckpointsArray($checkpoint, $formatted_Address , $key + 1, StoreStoreUser::class, $long_lat_array);
+                    $checkpoints_array[] = $this->formatCheckpointsArray($checkpoint, $formatted_Address , $key + 1, StoreUser::class, $long_lat_array);
                 }
             }
 
@@ -188,7 +188,7 @@ class TripController extends Controller
 
                     $formatted_Address = formateAddressArray($customer_address);
 
-                    $checkpoints_array[] = $this->formatCheckpointsArray($checkpoint, $formatted_Address , $key, StoreStoreUser::class);
+                    $checkpoints_array[] = $this->formatCheckpointsArray($checkpoint, $formatted_Address , $key, StoreUser::class);
                 }
             }
 

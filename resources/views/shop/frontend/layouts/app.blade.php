@@ -413,7 +413,7 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     @endif
 
     <script>
-        @foreach (session('flash_notification', collect())->toArray() as $message)
+        @foreach (collect(session('flash_notification', []))->toArray() as $message)
             AIZ.plugins.notify('{{ $message['level'] }}', '{{ $message['message'] }}');
         @endforeach
     </script>

@@ -236,7 +236,7 @@
                     <ul class="list-unstyled">
                         @if (Auth::check())
                             <li class="mb-2">
-                                <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('logout') }}">
+                                <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('shop.logout') }}">
                                     {{ translate('Logout') }}
                                 </a>
                             </li>
@@ -404,7 +404,7 @@
                     <ul class="list-unstyled mt-3">
                         @auth
                             <li class="mb-2 pb-2">
-                                <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('logout') }}">
+                                <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('shop.logout') }}">
                                     {{ translate('Logout') }}
                                 </a>
                             </li>
@@ -627,10 +627,10 @@
         <div class="col">
             @if (Auth::check())
                 @if(isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="text-secondary d-block text-center pb-2 pt-3">
+                    <a href="{{ route('shop.admin.dashboard') }}" class="text-secondary d-block text-center pb-2 pt-3">
                         <span class="d-block mx-auto">
-                            @if(Auth::user()->photo != null)
-                                <img src="{{ custom_asset(Auth::user()->avatar_original)}}" class="rounded-circle size-20px">
+                            @if(Auth::user()->avatar_original != null)
+                                <img src="{{ uploaded_asset(Auth::user()->avatar_original) }}" class="rounded-circle size-20px">
                             @else
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif
@@ -640,8 +640,8 @@
                 @elseif(isSeller())
                     <a href="{{ route('dashboard') }}" class="text-secondary d-block text-center pb-2 pt-3">
                         <span class="d-block mx-auto">
-                            @if(Auth::user()->photo != null)
-                                <img src="{{ custom_asset(Auth::user()->avatar_original)}}" class="rounded-circle size-20px">
+                            @if(Auth::user()->avatar_original != null)
+                                <img src="{{ uploaded_asset(Auth::user()->avatar_original) }}" class="rounded-circle size-20px">
                             @else
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif
@@ -651,8 +651,8 @@
                 @else
                     <a href="javascript:void(0)" class="text-secondary d-block text-center pb-2 pt-3 mobile-side-nav-thumb" data-toggle="class-toggle" data-backdrop="static" data-target=".aiz-mobile-side-nav">
                         <span class="d-block mx-auto">
-                            @if(Auth::user()->photo != null)
-                                <img src="{{ custom_asset(Auth::user()->avatar_original)}}" class="rounded-circle size-20px">
+                            @if(Auth::user()->avatar_original != null)
+                                <img src="{{ uploaded_asset(Auth::user()->avatar_original) }}" class="rounded-circle size-20px">
                             @else
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif

@@ -1,7 +1,7 @@
 <div class="aiz-sidebar-wrap">
     <div class="aiz-sidebar left c-scrollbar">
         <div class="aiz-side-nav-logo-wrap">
-            <a href="{{ route('admin.dashboard') }}" class="d-block text-left">
+            <a href="{{ route('shop.admin.dashboard') }}" class="d-block text-left">
                 @if (get_setting('system_logo_white') != null)
                     <img class="mw-100" src="{{ uploaded_asset(get_setting('system_logo_white')) }}" class="brand-icon"
                         alt="{{ get_setting('site_name') }}">
@@ -24,7 +24,7 @@
                 {{-- Dashboard --}}
                 @can('admin_dashboard')
                     <li class="aiz-side-nav-item">
-                        <a href="{{ route('admin.dashboard') }}" class="aiz-side-nav-link">
+                        <a href="{{ route('shop.admin.dashboard') }}" class="aiz-side-nav-link">
                             <i class="las la-home aiz-side-nav-icon"></i>
                             <span class="aiz-side-nav-text">{{ translate('Dashboard') }}</span>
                         </a>

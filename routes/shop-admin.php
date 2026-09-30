@@ -68,7 +68,7 @@ use Aws\Middleware;
   |
  */
 // test majd
-Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('admin.dashboard')->middleware(['auth', 'admin']);
+Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
 
@@ -634,7 +634,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/cities/status', 'updateStatus')->name('cities.status');
     });
 
-    Route::view('/system/server-status', 'backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
+    Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
     // uploaded files
     Route::resource('/uploaded-files', AizUploadController::class);

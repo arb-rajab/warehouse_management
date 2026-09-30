@@ -34,6 +34,23 @@ class ResetPasswordController extends Controller implements HasMiddleware
     //protected $redirectTo = '/';
 
     /**
+     * Display the password reset view for the given token.
+     *
+     * Overrides ResetsPasswords::showResetForm(), which renders
+     * `auth.passwords.reset`; see LoginController::showLoginForm().
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showResetForm(Request $request)
+    {
+        $token = $request->route()->parameter('token');
+
+        return view('shop.auth.passwords.reset')->with(
+            ['token' => $token, 'email' => $request->email]
+        );
+    }
+
+    /**
      * Create a new controller instance.
      *
      * @return void
@@ -80,7 +97,7 @@ class ResetPasswordController extends Controller implements HasMiddleware
     {
         if(auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff')
         {
-            return redirect()->route('admin.dashboard')
+            return redirect()->route('shop.admin.dashboard')
                             ->with('status', trans($response));
         }
 

@@ -29,7 +29,10 @@ class UseStoreAuthGuard
      * `auth:sanctum`, `wms.auth`), so WMS's own admin panel and the
      * warehouse API are unaffected. Placed first in the shop-web/shop-admin/
      * shop-seller middleware group in RouteServiceProvider::map(), before
-     * any route-level auth/role middleware runs.
+     * any route-level auth/role middleware runs, and listed just ahead of
+     * `auth` in the middleware priority list (bootstrap/app.php): the router
+     * sorts priority-listed middleware ahead of any that are not, which
+     * otherwise ran `auth` first, against this app's own guard.
      */
     public function handle(Request $request, Closure $next): mixed
     {

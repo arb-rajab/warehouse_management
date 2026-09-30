@@ -30,6 +30,22 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
      */
     protected $table = 'users';
 
+    /**
+     * Get the default foreign key name for the model.
+     *
+     * Eloquent derives it from the class name, so the same rename turned
+     * every hasOne/hasMany/belongsToMany below that names no key (shop,
+     * addresses, carts, orders, wishlists, uploads, ...) into a lookup on
+     * `store_user_id`, a column no table has. The store's tables all use the
+     * `user_id` the old class name produced.
+     *
+     * @return string
+     */
+    public function getForeignKey()
+    {
+        return 'user_id';
+    }
+
     public function sendEmailVerificationNotification()
     {
         $this->notify(new EmailVerificationNotification());

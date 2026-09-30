@@ -32,6 +32,19 @@ class ForgotPasswordController extends Controller implements HasMiddleware
     use SendsPasswordResetEmails;
 
     /**
+     * Display the form to request a password reset link.
+     *
+     * Overrides SendsPasswordResetEmails::showLinkRequestForm(), which
+     * renders `auth.passwords.email`; see LoginController::showLoginForm().
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showLinkRequestForm()
+    {
+        return view('shop.auth.passwords.email');
+    }
+
+    /**
      * Create a new controller instance.
      *
      * @return void

@@ -44,6 +44,21 @@ class LoginController extends Controller implements HasMiddleware
      */
     /*protected $redirectTo = '/';*/
 
+    /**
+     * Show the application's login form.
+     *
+     * Overrides AuthenticatesUsers::showLoginForm(), which renders
+     * `auth.login`: the store's views live under `shop.` in this app, and the
+     * sweep that prefixed every view() call never reached laravel/ui's own
+     * traits in vendor/.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showLoginForm()
+    {
+        return view('shop.auth.login');
+    }
+
 
     /**
      * Redirect the user to the Google authentication page.
@@ -267,7 +282,7 @@ class LoginController extends Controller implements HasMiddleware
         }
 
         if (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff') {
-            return redirect()->route('admin.dashboard');
+            return redirect()->route('shop.admin.dashboard');
         } elseif (auth()->user()->user_type == 'seller') {
             return redirect()->route('seller.dashboard');
         } else {
@@ -303,7 +318,7 @@ class LoginController extends Controller implements HasMiddleware
     public function logout(Request $request)
     {
         if (auth()->user() != null && (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff')) {
-            $redirect_route = 'login';
+            $redirect_route = 'shop.login';
         } else {
             $redirect_route = 'home';
         }
