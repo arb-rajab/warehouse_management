@@ -87,6 +87,9 @@ test('resizing keeps every pallet and every logged cell instead of discarding hi
         ->where('flat_number', 4)
         ->whereNotIn('id', [$surplusWithPallet->id, $surplusWithHistory->id])
         ->doesntHave('pallet')
+        ->whereNotIn('id', CellStatusLog::query()->select('cell_id'))
+        ->whereNotIn('id', CellStatusLog::query()->whereNotNull('related_cell_id')->select('related_cell_id'))
+        ->whereNotIn('id', CellVerificationReport::query()->select('cell_id'))
         ->pluck('id');
 
     $palletIdsBefore = Pallet::pluck('id', 'cell_id');

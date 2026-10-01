@@ -49,7 +49,8 @@ use RuntimeException;
  *
  * Re-running is safe: step 1 is a no-op once every row is on the grid, and
  * step 2 is skipped once its marker user (see MARKER_EMAIL) exists. Everything
- * step 2 writes is attributable to the seeded users (staging-*@staging-seed.test).
+ * step 2 writes is attributable to the seeded users, whose emails all end in
+ * "staging-seed.test".
  */
 class StagingRealisticDataSeeder extends Seeder
 {
@@ -98,13 +99,9 @@ class StagingRealisticDataSeeder extends Seeder
         DB::transaction(function (): void {
             $this->normalizeRows();
 
-            if (User::query()->where('email', self::MARKER_EMAIL)->exists()) {
-                $this->command?->info('Staging activity data was already seeded; only the row layout was checked.');
-
-                return;
+            if (! User::query()->where('email', self::MARKER_EMAIL)->exists()) {
+                $this->seedActivity();
             }
-
-            $this->seedActivity();
         });
 
         DashboardStatsCache::flush();
@@ -208,8 +205,8 @@ class StagingRealisticDataSeeder extends Seeder
     }
 
     /**
-     * @param  list<int>  $cellIds
-     * @return array<int, true>
+     * @param  array<int, int|string>  $cellIds
+     * @return array<int|string, true>
      */
     private function cellIdsInUse(array $cellIds): array
     {
@@ -225,13 +222,25 @@ class StagingRealisticDataSeeder extends Seeder
         ], true);
     }
 
+    /**
+     * Remove and return the first `$count` cells of the list.
+     *
+     * @param  list<Cell>  $cells
+     * @return list<Cell>
+     */
+    private function takeCells(array &$cells, int $count): array
+    {
+        $taken = array_slice($cells, 0, $count);
+        $cells = array_slice($cells, $count);
+
+        return $taken;
+    }
+
     private function seedActivity(): void
     {
         $this->products = $this->loadProducts();
 
         if ($this->products === []) {
-            $this->command?->warn('No products exist, so there is nothing to put on pallets; skipped the activity data.');
-
             return;
         }
 
@@ -245,15 +254,16 @@ class StagingRealisticDataSeeder extends Seeder
             ->get()
             ->all();
 
+        /** @var list<Cell> $cells */
         $cells = $this->random->shuffleArray($cells);
 
-        $palletCells = array_splice($cells, 0, intdiv(count($cells) * 45, 100));
-        $scenarioCells = array_splice($palletCells, 0, 19);
-        $transferOriginCells = array_splice($cells, 0, intdiv(count($palletCells), 12));
-        $emptiedCells = array_splice($cells, 0, intdiv(count($cells), 10));
-        $quickFlipCells = array_splice($emptiedCells, 0, 3);
-        $deactivatedEmptyCells = array_splice($cells, 0, 12);
-        $reactivatedCells = array_splice($cells, 0, 5);
+        $palletCells = $this->takeCells($cells, intdiv(count($cells) * 45, 100));
+        $scenarioCells = $this->takeCells($palletCells, 19);
+        $transferOriginCells = $this->takeCells($cells, intdiv(count($palletCells), 12));
+        $emptiedCells = $this->takeCells($cells, intdiv(count($cells), 10));
+        $quickFlipCells = $this->takeCells($emptiedCells, 3);
+        $deactivatedEmptyCells = $this->takeCells($cells, 12);
+        $reactivatedCells = $this->takeCells($cells, 5);
 
         $this->seedFlaggedActivity($scenarioCells, $quickFlipCells);
 
@@ -517,6 +527,7 @@ class StagingRealisticDataSeeder extends Seeder
      */
     private function seedVerificationRounds(): void
     {
+        /** @var list<int> $rowIds */
         $rowIds = Row::query()
             ->whereIn('letter', range(self::FIRST_ROW_LETTER, self::LAST_ROW_LETTER))
             ->orderBy('letter')
@@ -524,6 +535,7 @@ class StagingRealisticDataSeeder extends Seeder
             ->all();
 
         $claimedRowIds = Row::query()->underActiveVerification()->pluck('id')->all();
+        /** @var list<int> $unclaimedRowIds */
         $unclaimedRowIds = $this->random->shuffleArray(array_values(array_diff($rowIds, $claimedRowIds)));
 
         for ($round = 0; $round < self::COMPLETED_ROUNDS; $round++) {
@@ -549,8 +561,8 @@ class StagingRealisticDataSeeder extends Seeder
         $user = $this->regularWorker();
 
         $round = new CellVerificationRound(['user_id' => $user->id, 'completed_at' => $completedAt]);
-        $round->created_at = $startedAt;
-        $round->updated_at = $completedAt ?? $startedAt;
+        $round->setAttribute('created_at', $startedAt);
+        $round->setAttribute('updated_at', $completedAt ?? $startedAt);
         $round->save();
         $round->rows()->attach($rowIds);
 
@@ -650,8 +662,8 @@ class StagingRealisticDataSeeder extends Seeder
     private function saveReport(array $attributes, CarbonInterface $createdAt): void
     {
         $report = new CellVerificationReport($attributes);
-        $report->created_at = $createdAt;
-        $report->updated_at = $createdAt;
+        $report->setAttribute('created_at', $createdAt);
+        $report->setAttribute('updated_at', $createdAt);
         $report->save();
     }
 
@@ -803,6 +815,9 @@ class StagingRealisticDataSeeder extends Seeder
      */
     private function pickRowIds(array $rowIds, int $count): array
     {
-        return array_map(fn (int $key): int => $rowIds[$key], $this->random->pickArrayKeys($rowIds, min($count, count($rowIds))));
+        /** @var list<int> $shuffled */
+        $shuffled = $this->random->shuffleArray($rowIds);
+
+        return array_slice($shuffled, 0, $count);
     }
 }
