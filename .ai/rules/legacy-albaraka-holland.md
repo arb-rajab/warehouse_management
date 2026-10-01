@@ -1642,3 +1642,57 @@ That fix alone got `SharedDatabaseTableNamesTest` and the Playwright webServer b
 
 Estimate for phase 2 in more detail: ~210 controllers, 86 resources and 24
 middleware exist today. After phase 1 roughly 400 PHP files remain to touch.
+
+### 7.1 To-do for the end of the migration (owner input pending)
+
+Left open on purpose, to be done when the production data is to hand (phases 0b
+and 5). Each item says where its answer comes from.
+
+- [ ] **Permission names for the ungated admin routes** (103 of 503, the two
+  lists in `tests/Feature/LegacyAdminPermissionsTest.php`). Modules with no name
+  in the legacy vocabulary: logistics (`TripController`, `TruckController`,
+  `DriverController`, `FeatureOrderController`, `FeatureOrderTripController`),
+  `OffersCatalogController`, `RepresentativePackageController`,
+  `RepresentativePaymentAdminController` and `VisitController`. Get the existing
+  names from production with `SELECT name, guard_name FROM permissions ORDER BY
+  name;` and the role grants with a join of `role_has_permissions`, `roles` and
+  `permissions`. For each module either reuse a production name or create new
+  ones (e.g. `view_trips`, `add_trip`, `edit_trip`, `delete_trip`) in the `store`
+  guard, grant them to the roles that run it, gate the controllers
+  (`HasMiddleware`, as `OfferController` does), and empty the matching entries in
+  the two ratchet lists. Staff keep access only through the role grants, so do
+  this in phase 5's role import.
+- [ ] **Check the six permission rows the offer-deal and notification screens now
+  require** exist in production and are granted to the right staff roles
+  (`view_all_offer_deals`, `add_offer_deal`, `edit_offer_deal`,
+  `delete_offer_deal`, `add_notification`, `delete_notification`). A missing row
+  means 403 for everyone but Super Admin.
+- [ ] **The mobile API's GET routes that change data** (bearer token, so not
+  CSRF-exposed, but the app calls them as GET): `GET api/v2/user/shipping/delete/{address_id}`,
+  `GET api/v2/seller/product/delete/{id}`, `GET api/v2/seller/product/duplicate/{id}`,
+  `GET api/v2/seller/coupon/delete/{id}`, `GET api/v2/seller/file/delete/{id}`,
+  also `GET api/v2/wishlists-remove-product` and
+  `GET api/v2/delivery-boy/cancel-request/{id}`. Find what the app really calls by
+  searching the mobile app's source for those paths, and the production access
+  log for them. Change the app and the routes together: add the POST/DELETE
+  routes first, ship the app, then remove the GET ones.
+- [ ] **Run `php artisan store:move-trade-licenses`** on the server after the
+  first deploy of the licence change (`--dry-run` first), then check
+  `public/uploads/licenses/` is empty.
+- [ ] **Set `WMS_TOKEN` and `OTAJER_TOKEN`** (new values; the old ones were
+  committed) in the server `.env`. `.env.example` carries both as empty
+  placeholders. Without `WMS_TOKEN` the warehouse API answers 401 to everyone.
+- [ ] **Mobile app coordination:** `password/confirm_reset` must send
+  `email_or_phone`; `trade_license` in the API is a stored name, not a URL (no
+  endpoint returns the file yet); old receipt QR and WhatsApp links stop
+  working (signed links replace them); a representative can no longer pay from a
+  customer's wallet by sending that customer's `user_id`; the app's product
+  coupons now count quantities.
+- [ ] **Move a payment gateway's credentials from `env()` to config** before it
+  is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
+  has moved). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
+  not report https it redirects forever.
+- [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
+  (→ `StoreUser`): the SQL check is in §6.7.1.
+- [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
+  `api/v2/delivery-boy/*` routes instead of keeping them guarded.
