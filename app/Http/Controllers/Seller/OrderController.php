@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Models\Order;
+use App\Services\OrderService;
 use App\Models\ProductStock;
 use App\Models\SmsTemplate;
 use App\Models\StoreUser;
@@ -57,7 +58,7 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::findOrFail(decrypt($id));
+        $order = (new OrderService)->findForSeller(decrypt($id), Auth::user()->id);
         $order_shipping_address = json_decode($order->shipping_address);
         $delivery_boys = StoreUser::where('city', $order_shipping_address->city)
             ->where('user_type', 'delivery_boy')
@@ -71,12 +72,14 @@ class OrderController extends Controller
     // Update Delivery Status
     public function update_delivery_status(Request $request)
     {
-        $order = Order::findOrFail($request->order_id);
+        $order = (new OrderService)->findForSeller($request->order_id, Auth::user()->id);
+        // Cancelling twice must not refund or restock twice.
+        $alreadyCancelled = $order->delivery_status == 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
 
-        if ($request->status == 'cancelled' && $order->payment_type == 'wallet') {
+        if ($request->status == 'cancelled' && ! $alreadyCancelled && $order->payment_type == 'wallet') {
             $user = StoreUser::where('id', $order->user_id)->first();
             $user->balance += $order->grand_total;
             $user->save();
@@ -87,7 +90,7 @@ class OrderController extends Controller
             $orderDetail->delivery_status = $request->status;
             $orderDetail->save();
 
-            if ($request->status == 'cancelled') {
+            if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                 $variant = $orderDetail->variation;
                 if ($orderDetail->variation == null) {
                     $variant = '';
@@ -133,7 +136,7 @@ class OrderController extends Controller
     // Update Payment Status
     public function update_payment_status(Request $request)
     {
-        $order = Order::findOrFail($request->order_id);
+        $order = (new OrderService)->findForSeller($request->order_id, Auth::user()->id);
         $order->payment_status_viewed = '0';
         $order->save();
 

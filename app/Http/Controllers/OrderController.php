@@ -548,11 +548,13 @@ class OrderController extends Controller implements HasMiddleware
     public function update_delivery_status(Request $request)
     {
         $order = Order::findOrFail($request->order_id);
+        // Cancelling twice must not refund or restock twice.
+        $alreadyCancelled = $order->delivery_status == 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
 
-        if ($request->status == 'cancelled' && $order->payment_type == 'wallet') {
+        if ($request->status == 'cancelled' && ! $alreadyCancelled && $order->payment_type == 'wallet') {
             $user = StoreUser::where('id', $order->user_id)->first();
             $user->balance += $order->grand_total;
             $user->save();
@@ -563,7 +565,7 @@ class OrderController extends Controller implements HasMiddleware
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
+                if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                     $variant = $orderDetail->variation;
                     if ($orderDetail->variation == null) {
                         $variant = '';
@@ -585,7 +587,7 @@ class OrderController extends Controller implements HasMiddleware
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
+                if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                     $variant = $orderDetail->variation;
                     if ($orderDetail->variation == null) {
                         $variant = '';

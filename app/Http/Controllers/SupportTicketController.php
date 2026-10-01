@@ -147,9 +147,11 @@ class SupportTicketController extends Controller implements HasMiddleware
 
     public function seller_store(Request $request)
     {
+        // The caller's own ticket, replied to as the caller: both used to come from the request.
+        $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail($request->ticket_id);
         $ticket_reply = new TicketReply;
-        $ticket_reply->ticket_id = $request->ticket_id;
-        $ticket_reply->user_id = $request->user_id;
+        $ticket_reply->ticket_id = $ticket->id;
+        $ticket_reply->user_id = Auth::user()->id;
         $ticket_reply->reply = $request->reply;
         $ticket_reply->files = $request->attachments;
         $ticket_reply->ticket->viewed = 0;
@@ -173,7 +175,7 @@ class SupportTicketController extends Controller implements HasMiddleware
      */
     public function show($id)
     {
-        $ticket = Ticket::findOrFail(decrypt($id));
+        $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail(decrypt($id));
         $ticket->client_viewed = 1;
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;

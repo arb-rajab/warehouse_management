@@ -17,7 +17,7 @@ class ShopController extends Controller
 
     public function update(Request $request)
     {
-        $shop = Shop::find($request->shop_id);
+        $shop = Auth::user()->shop ?? abort(404);
 
         if ($request->has('name') && $request->has('address')) {
             if ($request->has('shipping_cost')) {

@@ -25,7 +25,7 @@ class ProductQueryController extends Controller
      */
     public function show($id)
     {
-        $query = ProductQuery::find(decrypt($id));
+        $query = ProductQuery::where('seller_id', Auth::id())->findOrFail(decrypt($id));
         return view('shop.seller.product_query.show', compact('query'));
     }
     /**
@@ -37,7 +37,7 @@ class ProductQueryController extends Controller
         $this->validate($request, [
             'reply' => 'required',
         ]);
-        $query = ProductQuery::find($id);
+        $query = ProductQuery::where('seller_id', Auth::id())->findOrFail($id);
         $query->reply = $request->reply;
         $query->save();
         flash(translate('Replied successfully!'))->success();

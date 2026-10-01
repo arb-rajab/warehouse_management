@@ -13,25 +13,39 @@ use Illuminate\Http\Request;
 
 class OrderService{
 
+    /**
+     * The order, for a seller: one that has a line of theirs. Another seller's
+     * order is not found, whatever id is sent.
+     */
+    public function findForSeller(int|string $orderId, int $sellerId): Order
+    {
+        return Order::whereHas('orderDetails', fn ($lines) => $lines->where('seller_id', $sellerId))->findOrFail($orderId);
+    }
+
     public function handle_delivery_status(Request $request)
     {
-        $order = Order::findOrFail($request->order_id);
+        $isSeller = auth()->user()->user_type == 'seller';
+        $order = $isSeller ? $this->findForSeller($request->order_id, auth()->user()->id) : Order::findOrFail($request->order_id);
+        // Cancelling twice must not refund or restock twice.
+        $alreadyCancelled = $order->delivery_status == 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
 
-        if ($request->status == 'cancelled' && $order->payment_type == 'wallet') {
+        if ($request->status == 'cancelled' && ! $alreadyCancelled && $order->payment_type == 'wallet') {
             $user = StoreUser::where('id', $order->user_id)->first();
             $user->balance += $order->grand_total;
             $user->save();
         }
 
-        foreach ($order->orderDetails as $key => $orderDetail) {
+        $lines = $isSeller ? $order->orderDetails->where('seller_id', auth()->user()->id) : $order->orderDetails;
+
+        foreach ($lines as $key => $orderDetail) {
 
             $orderDetail->delivery_status = $request->status;
             $orderDetail->save();
 
-            if ($request->status == 'cancelled') {
+            if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                 product_restock($orderDetail);
             }
 
@@ -83,7 +97,9 @@ class OrderService{
 
     public function handle_payment_status(Request $request)
     {
-        $order = Order::findOrFail($request->order_id);
+        $order = auth()->user()->user_type == 'seller'
+            ? $this->findForSeller($request->order_id, auth()->user()->id)
+            : Order::findOrFail($request->order_id);
         $order->payment_status_viewed = '0';
         $order->save();
 

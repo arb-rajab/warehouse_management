@@ -380,6 +380,24 @@ prefix. That is the single point every storefront asset URL goes through.
   representative's own rows. **Links issued before this stop working** (an old
   printed QR, an old WhatsApp message): reissue from the receipt list.
   Tests: `LegacyRepresentativePaymentLinksTest`.
+- The seller screens and the seller API acted on records found by an id from the
+  request, whoever they belonged to. **Fixed 2026-10-01:** a seller could cancel
+  or mark paid *any* order (`orders/update_delivery_status`,
+  `update_payment_status`, the API's `update-delivery-status` and
+  `update-payment-status`, and the order page): they find only orders that have
+  a line of the seller's (`OrderService::findForSeller()`), and the API's status
+  change touches only the seller's own lines, not every seller's. Cancelling a
+  wallet order refunded its total to the customer *every time it was repeated*,
+  and restocked each time (the seller screen, the API and the admin's copy of the
+  same code): a repeat is now a no-op. The seller shop update took any
+  `shop_id` (bank details included): it edits the signed-in seller's shop. A
+  ticket reply took the ticket and the author from the request: it is the
+  caller's own ticket, as the caller (the customer's and the seller's screen);
+  ticket and product-query pages are the caller's own; a seller's refund
+  rejection wrote its reason to any seller's refund before checking ownership.
+  Tests: `LegacySellerScopingTest`. **Not checked yet:** the admin screens'
+  own copies of the status changes (trusted accounts), `SellerPackagePayment`,
+  `ReviewController`, and the delivery-boy API.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
