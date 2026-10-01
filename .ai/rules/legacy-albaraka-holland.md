@@ -330,6 +330,15 @@ prefix. That is the single point every storefront asset URL goes through.
   Catalogues uploaded before this are already in
   `storage/app/private/uploads/offers/catalogs/` and are found by their old
   names. Tests: `LegacyOffersCatalogTest`.
+- Two more copies of the uploader, found after `MultipartUploadService`: the
+  driver API's `TripService::uploadFiles` (checkpoint photos and the generated
+  CMR), which now calls the service, and the admin's English app-translation
+  import, which wrote the file to the private disk and read it back from a
+  public path (so it always failed) and now reads the uploaded file directly.
+  Tests: `LegacyTripUploadTest`. **Still open:** the seller shop-verification
+  form's file fields (`Seller/ShopController`) store whatever is sent with a
+  random name on the private disk, so nothing is served from it, but they are
+  unvalidated and no screen can open them yet.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

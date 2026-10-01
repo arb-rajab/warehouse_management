@@ -9,7 +9,6 @@ use App\Models\Translation;
 use Cache;
 use Illuminate\Http\Request;
 use Session;
-use Storage;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -182,9 +181,12 @@ class LanguageController extends Controller implements HasMiddleware
 
     //App-Translation
     public function importEnglishFile(Request $request){
-        $path = Storage::disk('local')->put('app-translations', $request->lang_file);
+        $contents = $request->file('lang_file')?->get();
 
-        $contents = file_get_contents(public_path($path));
+        if ($contents === null) {
+            flash(translate('Error!'))->error();
+            return back();
+        }
 
         try {
             foreach(json_decode($contents) as $key => $value){
