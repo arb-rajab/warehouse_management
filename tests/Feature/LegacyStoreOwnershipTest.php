@@ -49,8 +49,8 @@ test("a store account cannot open, change, delete or default another account's a
 
     $this->get("{$prefix}/{$theirs->id}/edit")->assertForbidden();
     $this->post("{$updateUri}/{$theirs->id}", ['address' => 'Changed 2', 'phone' => '1'])->assertForbidden();
-    $this->get("{$prefix}/set_default/{$theirs->id}")->assertForbidden();
-    $this->get("{$prefix}/destroy/{$theirs->id}")->assertForbidden();
+    $this->post("{$prefix}/set_default/{$theirs->id}")->assertForbidden();
+    $this->post("{$prefix}/destroy/{$theirs->id}")->assertForbidden();
 
     expect($theirs->fresh()->only(['address', 'set_default']))->toEqual(['address' => 'Damrak 1', 'set_default' => 0])
         ->and($mine->fresh()->set_default)->toBe(1);
@@ -64,12 +64,12 @@ test('a store account can open, change, default and delete its own address', fun
     $this->get("{$prefix}/{$other->id}/edit")->assertOk()->assertJsonPath('data.address_data.id', $other->id);
     $this->post("{$updateUri}/{$other->id}", ['address' => 'Changed 2', 'phone' => '1'])->assertRedirect();
     // Re-defaulting the current default keeps it the default.
-    $this->get("{$prefix}/set_default/{$default->id}")->assertRedirect();
+    $this->post("{$prefix}/set_default/{$default->id}")->assertRedirect();
 
     expect($other->fresh()->address)->toBe('Changed 2')
         ->and($default->fresh()->set_default)->toBe(1);
 
-    $this->get("{$prefix}/destroy/{$other->id}")->assertRedirect();
+    $this->post("{$prefix}/destroy/{$other->id}")->assertRedirect();
 
     expect(Address::find($other->id))->toBeNull();
 })->with('address areas');

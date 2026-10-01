@@ -17,8 +17,6 @@ if (!defined("SSLCZ_IS_LOCAL_HOST")) {
 
 class SslCommerzController extends Controller
 {
-    public $sslc_submit_url;
-    public $sslc_validation_url;
     public $sslc_mode;
     public $sslc_data;
     public $store_id;
@@ -27,18 +25,22 @@ class SslCommerzController extends Controller
 
     public function __construct()
     {
-        # IF SANDBOX TRUE, THEN IT WILL CONNECT WITH SSLCOMMERZ SANDBOX (TEST) SYSTEM
-        if (BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1) {
-            $this->setSSLCommerzMode(true);
-        } else {
-            $this->setSSLCommerzMode(false);
-        }
-
         $this->store_id = env('SSLCZ_STORE_ID');
         $this->store_pass = env('SSLCZ_STORE_PASSWD');
+    }
 
-        $this->sslc_submit_url = "https://" . $this->sslc_mode . ".sslcommerz.com/gwprocess/v3/api.php";
-        $this->sslc_validation_url = "https://" . $this->sslc_mode . ".sslcommerz.com/validator/api/validationserverAPI.php";
+    /**
+     * Resolved on use rather than in the constructor: the sandbox flag lives in
+     * `business_settings`, and building a controller (route:list, wayfinder:generate)
+     * must not need that table to exist yet.
+     */
+    private function sslcMode(): string
+    {
+        if ($this->sslc_mode === null) {
+            $this->setSSLCommerzMode(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1);
+        }
+
+        return $this->sslc_mode;
     }
 
     public function begin(Request $request)
@@ -225,7 +227,7 @@ class SslCommerzController extends Controller
 
 
         $handle = curl_init();
-        curl_setopt($handle, CURLOPT_URL, $this->sslc_submit_url);
+        curl_setopt($handle, CURLOPT_URL, "https://" . $this->sslcMode() . ".sslcommerz.com/gwprocess/v3/api.php");
         curl_setopt($handle, CURLOPT_POST, 1);
         curl_setopt($handle, CURLOPT_POSTFIELDS, $data);
         curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
@@ -282,7 +284,7 @@ class SslCommerzController extends Controller
                 $val_id = urlencode($post_data['val_id']);
                 $store_id = urlencode($this->store_id);
                 $store_passwd = urlencode($this->store_pass);
-                $requested_url = ($this->sslc_validation_url . "?val_id=" . $val_id . "&store_id=" . $store_id . "&store_passwd=" . $store_passwd . "&v=1&format=json");
+                $requested_url = ("https://" . $this->sslcMode() . ".sslcommerz.com/validator/api/validationserverAPI.php" . "?val_id=" . $val_id . "&store_id=" . $store_id . "&store_passwd=" . $store_passwd . "&v=1&format=json");
 
                 $handle = curl_init();
                 curl_setopt($handle, CURLOPT_URL, $requested_url);

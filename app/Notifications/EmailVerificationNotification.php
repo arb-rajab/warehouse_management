@@ -36,7 +36,7 @@ class EmailVerificationNotification extends Notification
 
         return (new MailMessage)
             ->view('shop.emails.verification', ['array' => $array])
-            ->subject(translate('Email Verification - ').env('APP_NAME'));
+            ->subject(translate('Email Verification - ').config('app.name'));
     }
 
     public function toArray($notifiable)

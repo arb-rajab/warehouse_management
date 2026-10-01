@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SecondEmailVerifyMailManager;
+use App\Services\TradeLicenseStorage;
 use App\Models\AffiliateConfig;
 use App\Models\Brand;
 use App\Models\Category;
@@ -151,6 +152,11 @@ class HomeController extends Controller
         }
     }
 
+    public function ownTradeLicense(TradeLicenseStorage $licenses)
+    {
+        return $licenses->download(Auth::user()->trade_license) ?? abort(404);
+    }
+
     public function profile(Request $request)
     {
         $countries = Country::where('status', 1)->orderBy('priority')->get();
@@ -187,12 +193,8 @@ class HomeController extends Controller
             $user->password = Hash::make($request->new_password);
         }
 
-        if (request()->has('trade_license')) {
-            $uploadedFile = $request->trade_license;
-            $pdfFileName = $uploadedFile->getClientOriginalName();
-
-            $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-            $user->trade_license = $pdfFileName;
+        if ($request->hasFile('trade_license')) {
+            $user->trade_license = app(TradeLicenseStorage::class)->store($request->file('trade_license'));
         }
 
         $user->avatar_original = $request->photo;
@@ -608,7 +610,7 @@ class HomeController extends Controller
         $verification_code = Str::random(32);
 
         $array['subject'] = translate('Email Verification');
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Verify your account');
         $array['link'] = route('email_change.callback') . '?new_email_verificiation_code=' . $verification_code . '&email=' . $email;
         $array['sender'] = Auth::user()->name;
@@ -665,6 +667,7 @@ class HomeController extends Controller
             if ($request->password == $request->password_confirmation) {
                 $user->password = Hash::make($request->password);
                 $user->email_verified_at = date('Y-m-d h:m:s');
+                $user->verification_code = null;
                 $user->save();
                 event(new PasswordReset($user));
                 auth()->login($user, true);

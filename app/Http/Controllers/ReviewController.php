@@ -60,15 +60,23 @@ class ReviewController extends Controller implements HasMiddleware
      */
     public function store(Request $request)
     {
+        $request->validate(['rating' => 'required|numeric|between:1,5']);
+
+        $product = Product::findOrFail($request->product_id);
+
+        if (! $product->isReviewableBy(Auth::user()->id)) {
+            flash(translate('You cannot review this product'))->error();
+            return back();
+        }
+
         $review = new Review;
-        $review->product_id = $request->product_id;
+        $review->product_id = $product->id;
         $review->user_id = Auth::user()->id;
         $review->rating = $request->rating;
         $review->comment = $request->comment;
-        $review->photos = implode(',', $request->photos);
+        $review->photos = implode(',', (array) $request->photos);
         $review->viewed = '0';
         $review->save();
-        $product = Product::findOrFail($request->product_id);
         if(Review::where('product_id', $product->id)->where('status', 1)->count() > 0){
             $product->rating = Review::where('product_id', $product->id)->where('status', 1)->sum('rating')/Review::where('product_id', $product->id)->where('status', 1)->count();
         }

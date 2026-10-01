@@ -41,7 +41,7 @@
                 </td>
 
                 <td>
-                    <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('offers.destroy', $offer->id)}}" title="{{ translate('Delete') }}">
+                    <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('offers.destroy', $offer->id)}}" title="{{ translate('Delete') }}">
                                             <i class="las la-trash"></i>
                                         </a>
                 </td>

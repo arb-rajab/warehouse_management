@@ -20,7 +20,7 @@ class NotificationUtility
         //sends email to customer with the invoice pdf attached
         $array['view'] = 'shop.emails.invoice';
         $array['subject'] = translate('A new order has been placed') . ' - ' . $order->code;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['order'] = $order;
         try {
           //  Mail::to($order->user->email)->queue(new InvoiceEmailManager($array));
@@ -47,10 +47,13 @@ class NotificationUtility
 
     public static function sendNotification($order, $order_status)
     {
-        if ($order->seller_id == StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->first()->id) {
+        // The shop's own admin (not the vendor's super-admin): none exists on a fresh database.
+        $adminId = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+
+        if ($order->seller_id == $adminId) {
             $users = StoreUser::findMany([$order->user->id, $order->seller_id]);
         } else {
-            $users = StoreUser::findMany([$order->user->id, $order->seller_id, StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->first()->id]);
+            $users = StoreUser::findMany(array_filter([$order->user->id, $order->seller_id, $adminId]));
         }
 
         $order_notification = [];
@@ -84,7 +87,7 @@ class NotificationUtility
 
         //$fields = json_encode($arrayToSend);
         $headers = [
-            'Authorization: key=' . env('FCM_SERVER_KEY'),
+            'Authorization: key=' . config('services.fcm.server_key'),
             'Content-Type: application/json',
         ];
 
@@ -126,7 +129,7 @@ class NotificationUtility
 
     public static function sendPushNotificationToUser($user, $title, $body, $link = null)
     {
-        $credentialsFilePath = storage_path(env('FIREBASE_CREDENTIALS'));
+        $credentialsFilePath = storage_path(config('services.fcm.firebase_credentials'));
 
         $client = new GoogleClient();
         $client->setAuthConfig($credentialsFilePath);
@@ -136,7 +139,7 @@ class NotificationUtility
         $token = $client->getAccessToken();
 
         $access_token = $token['access_token'];
-        $apiurl = "https://fcm.googleapis.com/v1/projects/" . env('FIREBASE_PROJECT') . "/messages:send";
+        $apiurl = "https://fcm.googleapis.com/v1/projects/" . config('services.fcm.firebase_project') . "/messages:send";
 
         $headers = [
             "Authorization: Bearer $access_token",

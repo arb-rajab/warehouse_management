@@ -54,6 +54,28 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // The legacy store's login, and its emailed and texted codes (password
+        // reset, verification): 6 digits is 900,000 guesses, and none of these
+        // routes had any limit. Per account and IP, per account across IPs
+        // (the one that stops a spread-out attack), and per IP across accounts
+        // (the one that stops one address trying many). A request that names
+        // no account, such as the token-authenticated `confirm_code`, falls
+        // back to its user, then to the IP limit alone: sharing one empty key
+        // would let anonymous callers lock each other out.
+        RateLimiter::for('store-auth', function (Request $request): array {
+            $account = Str::lower(trim((string) ($request->input('email') ?: $request->input('email_or_phone') ?: $request->input('phone'))));
+            $account = $account !== '' ? $account : ($request->user('store_api') ? 'user:'.$request->user('store_api')->getKey() : '');
+
+            $limits = [Limit::perMinute(30)->by('store-auth-ip|'.$request->ip())];
+
+            if ($account !== '') {
+                $limits[] = Limit::perMinute(5)->by('store-auth|'.$account.'|'.$request->ip());
+                $limits[] = Limit::perMinutes(15, 10)->by('store-auth|'.$account);
+            }
+
+            return $limits;
+        });
+
         // `user('sanctum')`, never a bare `user()`: with no guard argument the
         // resolver uses auth.defaults.guard (`web`, session driver), and the api
         // middleware group has no StartSession, so that guard resolves null on

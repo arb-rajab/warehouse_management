@@ -48,7 +48,7 @@ class fetchAgents extends Command
             $updated_accounts = 0;
 
 
-            $endpoint = 'https://stores.otajer.com/api/rest/listagents/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '/api/rest/listagents/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
             $allMembers = json_decode($response, true);
             $members_count += count($allMembers['Agents']);

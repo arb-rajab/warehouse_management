@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Services\PaymentOptions;
 use App\Models\Wallet;
 use Auth;
 use Illuminate\Http\Request;
@@ -16,6 +17,11 @@ class WalletController extends Controller
 
     public function recharge(Request $request)
     {
+        if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
+            flash(translate('Select Payment Option.'))->warning();
+            return back();
+        }
+
         $data['amount'] = $request->amount;
         $data['payment_method'] = $request->payment_option;
 

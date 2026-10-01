@@ -19,9 +19,12 @@ class WmsAuthMiddleware
     public function handle(Request $request, Closure $next)
     {
 
-        $token = $request->header('private-token');
+        $expected = (string) config('app.wms_token');
 
-        if ($token != config('app.wms_token')) {
+        // Fail closed: with no token configured a request that sends none would
+        // otherwise compare equal to it. hash_equals() keeps the comparison
+        // constant-time and strict, where `!=` was neither.
+        if ($expected === '' || ! hash_equals($expected, (string) $request->header('private-token'))) {
             return response()->json([
                 'result' => false,
                 'message' => 'invalid token, who are you?',

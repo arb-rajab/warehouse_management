@@ -55,10 +55,23 @@ if (!function_exists('areActiveRoutesHome')) {
 }
 
 //highlights the selected navigation on frontend
+if (!function_exists('clean_html')) {
+    /**
+     * HTML a user wrote (a product or classified description, support-ticket
+     * text), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
+     * Admin-written content (CMS pages, blog posts, settings texts) is trusted
+     * and is printed as it is. See App\Services\HtmlSanitizer.
+     */
+    function clean_html(?string $html): string
+    {
+        return app(\App\Services\HtmlSanitizer::class)->clean($html);
+    }
+}
+
 if (!function_exists('default_language')) {
     function default_language()
     {
-        return env("DEFAULT_LANGUAGE");
+        return config("app.default_language");
     }
 }
 
@@ -826,8 +839,8 @@ function translate($key, $lang = null, $addslashes = false)
     }
 
     // return default lang if session lang not found
-    $translations_default = Cache::rememberForever('translations-' . env('DEFAULT_LANGUAGE', 'en'), function () {
-        return Translation::where('lang', env('DEFAULT_LANGUAGE', 'en'))->pluck('lang_value', 'lang_key')->toArray();
+    $translations_default = Cache::rememberForever('translations-' . config('app.default_language'), function () {
+        return Translation::where('lang', config('app.default_language'))->pluck('lang_value', 'lang_key')->toArray();
     });
     if (isset($translations_default[$lang_key])) {
         return $addslashes ? addslashes(trim($translations_default[$lang_key])) : trim($translations_default[$lang_key]);
@@ -1033,7 +1046,7 @@ if (!function_exists('my_asset')) {
      */
     function my_asset($path, $secure = null)
     {
-        if (env('FILESYSTEM_DRIVER') == 's3') {
+        if (config('filesystems.default') == 's3') {
             return Storage::disk('s3')->url($path);
         } else {
             // No 'public/' prefix: this app serves from public/ already (the
@@ -1085,8 +1098,8 @@ if (!function_exists('getBaseURL')) {
 if (!function_exists('getFileBaseURL')) {
     function getFileBaseURL()
     {
-        if (env('FILESYSTEM_DRIVER') == 's3') {
-            return env('AWS_URL') . '/';
+        if (config('filesystems.default') == 's3') {
+            return config('filesystems.disks.s3.url') . '/';
         } else {
             return getBaseURL() . 'public/';
         }

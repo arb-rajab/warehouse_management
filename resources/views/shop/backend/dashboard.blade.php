@@ -1,7 +1,7 @@
 @extends('shop.backend.layouts.app')
 
 @section('content')
-@if(auth()->user()->can('smtp_settings') && env('MAIL_USERNAME') == null && env('MAIL_PASSWORD') == null)
+@if(auth()->user()->can('smtp_settings') && config('mail.mailers.smtp.username') == null && config('mail.mailers.smtp.password') == null)
     <div class="">
         <div class="alert alert-danger d-flex align-items-center">
             {{translate('Please Configure SMTP Setting to work all email sending functionality')}},

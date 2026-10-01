@@ -23,9 +23,10 @@ class PageController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:add_website_page', only: ['create']),
-            new Middleware('permission:edit_website_page', only: ['edit']),
+            new Middleware('permission:add_website_page', only: ['create', 'store']),
+            new Middleware('permission:edit_website_page', only: ['edit', 'update']),
             new Middleware('permission:delete_website_page', only: ['destroy']),
+            new Middleware('permission:view_all_website_pages', only: ['index', 'show']),
         ];
     }
     /**
@@ -68,7 +69,7 @@ class PageController extends Controller implements HasMiddleware
             $page->meta_image       = $request->meta_image;
             $page->save();
 
-            $page_translation           = PageTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'page_id' => $page->id]);
+            $page_translation           = PageTranslation::firstOrNew(['lang' => config('app.default_language'), 'page_id' => $page->id]);
             $page_translation->title    = $request->title;
             $page_translation->content  = $request->content;
             $page_translation->save();
@@ -128,7 +129,7 @@ class PageController extends Controller implements HasMiddleware
             if($page->type == 'custom_page'){
               $page->slug           = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->slug));
             }
-            if($request->lang == env("DEFAULT_LANGUAGE")){
+            if($request->lang == config("app.default_language")){
               $page->title          = $request->title;
               $page->content        = $request->content;
             }

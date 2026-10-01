@@ -243,16 +243,18 @@ test("a customer can read and write their own conversation and not someone else'
 
 /**
  * A paid digital product whose file sits at public/`$fileName`. The
- * `uploads` stand-in leaves out the store's filename columns on purpose (see
- * CreateUploadsTableTest), and the download names its file from them, so they
- * are added here as the store's own table has them.
+ * `uploads` stand-in gets the store's filename columns from the
+ * add_upload_metadata_to_uploads migration, and the download names its file from
+ * them; they are added here only if a table lacks them.
  */
 function digitalProductWithFile(string $fileName): Product
 {
-    Schema::table('uploads', function (Blueprint $table) {
-        $table->string('file_original_name')->nullable();
-        $table->string('extension')->nullable();
-    });
+    // Added by the metadata migration; guarded for a table that already has them.
+    foreach (['file_original_name', 'extension'] as $column) {
+        if (! Schema::hasColumn('uploads', $column)) {
+            Schema::table('uploads', fn (Blueprint $table) => $table->string($column)->nullable());
+        }
+    }
 
     File::ensureDirectoryExists(dirname(public_path($fileName)));
     File::put(public_path($fileName), 'the digital product');

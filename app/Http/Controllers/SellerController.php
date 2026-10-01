@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ShopVerificationStorage;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
@@ -29,12 +30,12 @@ class SellerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_seller', only: ['index']),
+            new Middleware('permission:view_all_seller', only: ['index', 'show', 'show_verification_request', 'download_verification_file']),
             new Middleware('permission:view_seller_profile', only: ['profile_modal']),
             new Middleware('permission:login_as_seller', only: ['login']),
             new Middleware('permission:pay_to_seller', only: ['payment_modal']),
-            new Middleware('permission:edit_seller', only: ['edit']),
-            new Middleware('permission:delete_seller', only: ['destroy']),
+            new Middleware('permission:edit_seller', only: ['edit', 'update', 'store', 'updateApproved', 'approve_seller', 'reject_seller', 'create']),
+            new Middleware('permission:delete_seller', only: ['destroy', 'bulk_seller_delete']),
             new Middleware('permission:ban_seller', only: ['ban']),
         ];
     }
@@ -215,6 +216,11 @@ class SellerController extends Controller implements HasMiddleware
     {
         $shop = Shop::findOrFail($id);
         return view('shop.backend.sellers.verification', compact('shop'));
+    }
+
+    public function download_verification_file(string $name, ShopVerificationStorage $documents)
+    {
+        return $documents->download($name) ?? abort(404);
     }
 
     public function approve_seller($id)

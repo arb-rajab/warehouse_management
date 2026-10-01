@@ -114,7 +114,7 @@
                     <div class="col-6">
                     </div>
                     <div class="col-6 text-right">
-                        <a href="{{ static_asset('uploads/licenses/' . Auth::user()->trade_license) }}" class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" target="_blank">{{ translate('Show Your Trade License') }}</a>
+                        <a href="{{ route('profile.trade_license') }}" class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" target="_blank">{{ translate('Show Your Trade License') }}</a>
                     </div>
                 </div>
                 @endif
@@ -192,9 +192,9 @@
                                     {{ translate('Edit') }}
                                 </a>
                                 @if (!$address->set_default)
-                                    <a class="dropdown-item" href="{{ route('addresses.set_default', $address->id) }}">{{ translate('Make This Default') }}</a>
+                                    <a class="dropdown-item" data-method="post" href="{{ route('addresses.set_default', $address->id) }}">{{ translate('Make This Default') }}</a>
                                 @endif
-                                <a class="dropdown-item" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                <a class="dropdown-item" data-method="post" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
                             </div>
                         </div>
                     </div>

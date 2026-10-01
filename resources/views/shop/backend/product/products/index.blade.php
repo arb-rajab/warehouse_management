@@ -382,13 +382,13 @@
                                     @can('product_edit')
                                         @if ($type == 'Seller')
                                             <a class="btn btn-soft-primary btn-icon btn-circle btn-sm"
-                                                href="{{ route('products.seller.edit', ['id' => $product->id, 'lang' => env('DEFAULT_LANGUAGE')]) }}"
+                                                href="{{ route('products.seller.edit', ['id' => $product->id, 'lang' => config('app.default_language')]) }}"
                                                 title="{{ translate('Edit') }}">
                                                 <i class="las la-edit"></i>
                                             </a>
                                         @else
                                             <a class="btn btn-soft-primary btn-icon btn-circle btn-sm"
-                                                href="{{ route('products.admin.edit', ['id' => $product->id, 'lang' => env('DEFAULT_LANGUAGE')]) }}"
+                                                href="{{ route('products.admin.edit', ['id' => $product->id, 'lang' => config('app.default_language')]) }}"
                                                 title="{{ translate('Edit') }}">
                                                 <i class="las la-edit"></i>
                                             </a>
@@ -396,7 +396,7 @@
                                     @endcan
                                     @can('product_duplicate')
                                         <a class="btn btn-soft-warning btn-icon btn-circle btn-sm"
-                                            href="{{ route('products.duplicate', ['id' => $product->id, 'type' => $type]) }}"
+                                            data-method="post" href="{{ route('products.duplicate', ['id' => $product->id, 'type' => $type]) }}"
                                             title="{{ translate('Duplicate') }}">
                                             <i class="las la-copy"></i>
                                         </a>
@@ -404,7 +404,7 @@
                                     @can('product_delete')
                                         <a href="#"
                                             class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete"
-                                            data-href="{{ route('products.destroy', $product->id) }}"
+                                            data-method="post" data-href="{{ route('products.destroy', $product->id) }}"
                                             title="{{ translate('Delete') }}">
                                             <i class="las la-trash"></i>
                                         </a>

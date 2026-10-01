@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Auth\RegisterController;
+use App\Services\TradeLicenseStorage;
 use App\Models\Address;
 use App\Models\Country;
 use App\Models\Customer;
@@ -35,10 +36,10 @@ class CustomerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_customers', only: ['index']),
+            new Middleware('permission:view_all_customers', only: ['index', 'store', 'update', 'store_customer', 'update_password', 'update_customer_notes', 'repStore', 'change_activity_status', 'change_password', 'create', 'downloadTradeLicense', 'edit', 'important', 'not_important', 'pages_views', 'repCreate', 'repIndex', 'show', 'verify', 'whatsapp_contact']),
             new Middleware('permission:login_as_customer', only: ['login']),
             new Middleware('permission:ban_customer', only: ['ban']),
-            new Middleware('permission:delete_customer', only: ['destroy']),
+            new Middleware('permission:delete_customer', only: ['destroy', 'bulk_customer_delete', 'archive', 'restore']),
         ];
     }
     protected $userService;
@@ -291,13 +292,7 @@ class CustomerController extends Controller implements HasMiddleware
         // }
 
         if (request()->hasFile('trade_license')) {
-            $uploadedFile = request()->file('trade_license');
-            $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-            // Store the PDF file in the 'local' disk with the specified filename
-            $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-            $customer->trade_license =  $pdfFileName; // Store the path in your database
+            $customer->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
         }
 
         $customer->save();
@@ -407,24 +402,9 @@ class CustomerController extends Controller implements HasMiddleware
         return back();
     }
 
-    public function downloadTradeLicense(Request $req)
+    public function downloadTradeLicense(Request $req, TradeLicenseStorage $licenses)
     {
-        // Retrieve the picture file from the folder
-
-        $filename = $req['filename'];
-        $path = public_path('uploads/licenses/' . $filename);
-
-        // Check if the file exists
-        if (!file_exists($path)) {
-            abort(404);
-        }
-
-        // Generate a filename for the downloaded file
-        $downloadFilename = $filename;
-
-        // Create a download response with the file contents and headers
-
-        return response()->download($path, $downloadFilename);
+        return $licenses->download($req['filename']) ?? abort(404);
     }
 
     public function repIndex(Request $request)
@@ -538,13 +518,7 @@ class CustomerController extends Controller implements HasMiddleware
             'registration_completed' => 0,
         ]);
         if (request()->hasFile('trade_license')) {
-            $uploadedFile = request()->file('trade_license');
-            $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-            // Store the PDF file in the 'local' disk with the specified filename
-            $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-            $user->trade_license = $pdfFileName; // Store the path in your database
+            $user->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
         }
 
         // Create an address for the user Task:BS-130

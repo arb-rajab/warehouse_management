@@ -25,10 +25,12 @@ test('the migration leaves an existing uploads table alone', function () {
     expect(Schema::hasColumn('uploads', 'file_name'))->toBeFalse();
 });
 
-test('the migration creates only the columns this app reads', function () {
+test('the table has the columns this app reads and the store uploader\'s, the latter from the metadata migration', function () {
     expect(Schema::hasColumns('uploads', ['id', 'file_name', 'external_link', 'created_at', 'updated_at']))->toBeTrue();
-    // Deliberately absent, so nothing here can start depending on it.
-    expect(Schema::hasColumn('uploads', 'file_original_name'))->toBeFalse();
+    // The store's uploader columns come from a separate migration, which the
+    // store's own table already has: `add_upload_metadata_to_uploads` adds them
+    // only when they are missing, so this migration stays as it was.
+    expect(Schema::hasColumns('uploads', ['file_original_name', 'extension', 'type', 'file_size']))->toBeTrue();
 });
 
 test('both file_name and external_link are nullable', function () {

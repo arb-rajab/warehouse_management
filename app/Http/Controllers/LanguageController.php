@@ -9,7 +9,6 @@ use App\Models\Translation;
 use Cache;
 use Illuminate\Http\Request;
 use Session;
-use Storage;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -26,7 +25,7 @@ class LanguageController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:language_setup', only: ['index', 'create', 'edit', 'destroy']),
+            new Middleware('permission:language_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'update_rtl_status', 'update_status', 'key_value_store', 'importEnglishFile', 'storeAppTranlsation', 'exportARBFile', 'show', 'showAppTranlsationView']),
         ];
     }
     public function changeLanguage(Request $request)
@@ -94,7 +93,7 @@ class LanguageController extends Controller implements HasMiddleware
             return back();
         }
         $language = Language::findOrFail($id);
-        if (env('DEFAULT_LANGUAGE') == $language->code && env('DEFAULT_LANGUAGE') != $request->code) {
+        if (config('app.default_language') == $language->code && config('app.default_language') != $request->code) {
             flash(translate('Default language code can not be edited'))->error();
             return back();
         } elseif ($language->code == 'en' && $request->code != 'en') {
@@ -138,7 +137,7 @@ class LanguageController extends Controller implements HasMiddleware
     public function update_status(Request $request)
     {
         $language = Language::findOrFail($request->id);
-        if($language->code == env('DEFAULT_LANGUAGE') && $request->status == 0) {
+        if($language->code == config('app.default_language') && $request->status == 0) {
             flash(translate('Default language can not be inactive'))->error();
             return 1;
         }
@@ -164,14 +163,14 @@ class LanguageController extends Controller implements HasMiddleware
     public function destroy($id)
     {
         $language = Language::findOrFail($id);
-        if (env('DEFAULT_LANGUAGE') == $language->code) {
+        if (config('app.default_language') == $language->code) {
             flash(translate('Default language can not be deleted'))->error();
         } elseif($language->code == 'en') {
             flash(translate('English language can not be deleted'))->error();
         }
         else {
             if($language->code == Session::get('locale')){
-                Session::put('locale', env('DEFAULT_LANGUAGE'));
+                Session::put('locale', config('app.default_language'));
             }
             Language::destroy($id);
             flash(translate('Language has been deleted successfully'))->success();
@@ -182,9 +181,12 @@ class LanguageController extends Controller implements HasMiddleware
 
     //App-Translation
     public function importEnglishFile(Request $request){
-        $path = Storage::disk('local')->put('app-translations', $request->lang_file);
+        $contents = $request->file('lang_file')?->get();
 
-        $contents = file_get_contents(public_path($path));
+        if ($contents === null) {
+            flash(translate('Error!'))->error();
+            return back();
+        }
 
         try {
             foreach(json_decode($contents) as $key => $value){

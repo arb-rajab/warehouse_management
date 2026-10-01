@@ -46,8 +46,8 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
         <meta property="og:url" content="{{ route('home') }}" />
         <meta property="og:image" content="{{ uploaded_asset(get_setting('meta_image')) }}" />
         <meta property="og:description" content="{{ get_setting('meta_description') }}" />
-        <meta property="og:site_name" content="{{ env('APP_NAME') }}" />
-        <meta property="fb:app_id" content="{{ env('FACEBOOK_PIXEL_ID') }}">
+        <meta property="og:site_name" content="{{ config('app.name') }}" />
+        <meta property="fb:app_id" content="{{ config('services.facebook.pixel_id') }}">
     @endif
 
     <!-- Favicon -->
@@ -241,13 +241,13 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
 
 @if (get_setting('google_analytics') == 1)
     <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ env('TRACKING_ID') }}"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.tracking_id') }}"></script>
 
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', '{{ env('TRACKING_ID') }}');
+        gtag('config', '{{ config('services.google_analytics.tracking_id') }}');
     </script>
 @endif
 
@@ -262,11 +262,11 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
         t.src=v;s=b.getElementsByTagName(e)[0];
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '{{ env('FACEBOOK_PIXEL_ID') }}');
+        fbq('init', '{{ config('services.facebook.pixel_id') }}');
         fbq('track', 'PageView');
     </script>
     <noscript>
-        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ env('FACEBOOK_PIXEL_ID') }}&ev=PageView&noscript=1"/>
+        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ config('services.facebook.pixel_id') }}&ev=PageView&noscript=1"/>
     </noscript>
     <!-- End Facebook Pixel Code -->
 @endif
@@ -408,7 +408,7 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
         <!-- Your customer chat code -->
         <div class="fb-customerchat"
           attribution=setup_tool
-          page_id="{{ env('FACEBOOK_PAGE_ID') }}">
+          page_id="{{ config('services.facebook.page_id') }}">
         </div>
     @endif
 

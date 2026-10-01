@@ -619,6 +619,21 @@ class Product extends Model
     }
 
     /**
+     * Whether this customer may review the product: they received it, and have
+     * not reviewed it yet. A review is the customer's own word on what they
+     * bought, so the storefront and the app both ask this before saving one.
+     */
+    public function isReviewableBy(int $userId): bool
+    {
+        $received = $this->orderDetails()
+            ->where('delivery_status', 'delivered')
+            ->whereHas('order', fn ($order) => $order->where('user_id', $userId))
+            ->exists();
+
+        return $received && ! Review::where('user_id', $userId)->where('product_id', $this->id)->exists();
+    }
+
+    /**
      * @return HasMany<Review, $this>
      */
     public function reviews(): HasMany

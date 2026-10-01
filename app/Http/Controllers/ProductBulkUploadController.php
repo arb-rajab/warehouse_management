@@ -27,7 +27,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:product_bulk_import', only: ['index']),
+            new Middleware('permission:product_bulk_import', only: ['index', 'bulk_upload', 'pdf_download_brand', 'pdf_download_category', 'pdf_download_seller']),
             new Middleware('permission:product_bulk_export', only: ['export']),
         ];
     }

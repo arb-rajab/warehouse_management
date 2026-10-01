@@ -60,11 +60,11 @@ class CountWebRouteVisits
     private function getCountryCodeFromRequest($request)
     {
         try {
-            $response = $this->client->get("https://api.ipgeolocation.io/ipgeo?apiKey=" . env('IP_GEO_LOCATION_KEY') . "&ip=" . $request->ip(), [
+            $response = $this->client->get("https://api.ipgeolocation.io/ipgeo?apiKey=" . config('services.ip_geolocation.key') . "&ip=" . $request->ip(), [
                 'headers' => [
                     'Accept-Language' => 'en',
                 ],
-                'timeout' => env('IP_GEO_LOCATION_TIMEOUT_SECONDS'), // Timeout in seconds
+                'timeout' => config('services.ip_geolocation.timeout'), // Timeout in seconds
             ]);
             $data = json_decode($response->getBody(), true);
             return $data['country_name'] ?? null;

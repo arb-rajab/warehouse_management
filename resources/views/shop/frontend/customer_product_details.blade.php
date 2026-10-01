@@ -164,7 +164,7 @@
                     <div class="tab-pane active show" id="tab_default_1">
                         <div class="p-4">
                             <div class="mw-100 overflow-hidden text-left">
-                                <?php echo $customer_product->getTranslation('description'); ?>
+                                {!! clean_html($customer_product->getTranslation('description')) !!}
                             </div>
                         </div>
                     </div>

@@ -87,9 +87,9 @@
                             @can('edit_offer_deal')
                             @php
                                 if($offer_deal->offer_type == 'brand_offer'){
-                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'brand', 'lang'=>env('DEFAULT_LANGUAGE')] );
+                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'brand', 'lang'=>config('app.default_language')] );
                                 }else{
-                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'product', 'lang'=>env('DEFAULT_LANGUAGE')] );
+                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'product', 'lang'=>config('app.default_language')] );
                                 }
                             @endphp
                                 <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{ $url }}" title="{{ translate('Edit') }}">
@@ -97,7 +97,7 @@
                                 </a>
                             @endcan
                             @can('delete_offer_deal')
-                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('offer_deals.destroy', $offer_deal->id)}}" title="{{ translate('Delete') }}">
+                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('offer_deals.destroy', $offer_deal->id)}}" title="{{ translate('Delete') }}">
                                     <i class="las la-trash"></i>
                                 </a>
                             @endcan

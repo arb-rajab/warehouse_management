@@ -76,7 +76,7 @@
                                 </div>
                             </div>
                             <div class="">
-                                @php echo $ticketreply->reply; @endphp
+                                {!! clean_html($ticketreply->reply) !!}
 
                                 <div class="mt-3">
                                 @foreach ((explode(",",$ticketreply->files)) as $key => $file)
@@ -108,7 +108,7 @@
                             </div>
                         </div>
                         <div>
-                            @php echo $ticket->details; @endphp
+                            {!! clean_html($ticket->details) !!}
                             <br>
                             @foreach ((explode(",",$ticket->files)) as $key => $file)
                                 @php $file_detail = \App\Models\Upload::where('id', $file)->first(); @endphp

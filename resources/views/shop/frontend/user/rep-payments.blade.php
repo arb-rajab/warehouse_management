@@ -26,7 +26,7 @@
                     @foreach ($payments as $key => $payment)
                         <tr>
                             <td>
-                                <a href="{{route('payments.show', $payment->id)}}">
+                                <a href="{{ URL::signedRoute('payments.show', ['id' => $payment->id]) }}">
                                     {{ $payment->receipt_code }}
                                 </a>
                             </td>
@@ -59,7 +59,7 @@
                                     <i class="lab la-whatsapp"></i>
                                 </a>
 
-                                <a href="{{route('payments.export', $payment->id)}}"
+                                <a href="{{ URL::signedRoute('payments.export', ['id' => $payment->id]) }}"
                                     class="btn btn-soft-info btn-icon btn-circle btn-sm hov-svg-white"
                                     title="{{ translate('Export Payment Details') }}">
                                     <i class="las la-download"></i>

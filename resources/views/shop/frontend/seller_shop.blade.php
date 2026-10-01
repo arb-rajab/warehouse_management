@@ -57,7 +57,7 @@
             <section class="h-160px h-md-200px h-lg-300px h-xl-100 w-100">
                 <img class="d-block lazyload h-100 img-fit"
                     src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                    data-src="{{ uploaded_asset($shop->top_banner) }}" alt="{{ env('APP_NAME') }} offer">
+                    data-src="{{ uploaded_asset($shop->top_banner) }}" alt="{{ config('app.name') }} offer">
             </section>
         @endif
     @endif
@@ -173,14 +173,14 @@
                             <!-- follow -->
                             <div class="d-flex justify-content-md-end pl-lg-3 pt-3 pt-lg-0">
                                 @if(in_array($shop->id, $followed_sellers))
-                                    <a href="{{ route("followed_seller.remove", ['id'=>$shop->id]) }}"  data-toggle="tooltip" data-title="{{ translate('Unfollow Seller') }}" data-placement="top"
+                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$shop->id]) }}"  data-toggle="tooltip" data-title="{{ translate('Unfollow Seller') }}" data-placement="top"
                                         class="btn btn-success d-flex align-items-center justify-content-center fs-12 w-190px follow-btn followed"
                                         style="height: 40px; border-radius: 30px !important; justify-content: center;">
                                         <i class="las la-check fs-16 mr-2"></i>
                                         <span class="fw-700">{{ translate('Followed') }}</span> &nbsp; ({{ count($shop->followers) }})
                                     </a>
                                 @else
-                                    <a href="{{ route("followed_seller.store", ['id'=>$shop->id]) }}"
+                                    <a data-method="post" href="{{ route("followed_seller.store", ['id'=>$shop->id]) }}"
                                         class="btn btn-primary d-flex align-items-center justify-content-center fs-12 w-190px follow-btn"
                                         style="height: 40px; border-radius: 30px !important; justify-content: center;">
                                         <i class="las la-plus fs-16 mr-2"></i>
@@ -283,7 +283,7 @@
                     <div class="w-100">
                         <img class="d-block lazyload h-100 img-fit"
                             src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                            data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                            data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                     </div>
                 </section>
             @endforeach
@@ -298,7 +298,7 @@
                         <div class="w-100">
                             <img class="d-block lazyload h-100 img-fit"
                                 src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                                data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                                data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                         </div>
                     </div>
                     @endforeach
@@ -363,7 +363,7 @@
                         <div class="mt-3 mb-3 w-100">
                             <img class="d-block lazyload h-100 img-fit"
                                 src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                                data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                                data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                         </div>
                     @endforeach
                 @endif

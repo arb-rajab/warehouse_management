@@ -166,7 +166,7 @@ test('the store role screens list only store roles, and cannot edit, rename or d
 
     $this->get("/temp/admin/roles/edit/{$warehouseAdminRole->id}")->assertNotFound();
     $this->put("/temp/admin/roles/{$warehouseAdminRole->id}", ['name' => 'hijacked', 'lang' => 'en'])->assertNotFound();
-    $this->get("/temp/admin/roles/destroy/{$warehouseAdminRole->id}")->assertNotFound();
+    $this->post("/temp/admin/roles/destroy/{$warehouseAdminRole->id}")->assertNotFound();
 
     $this->assertDatabaseHas('wms_roles', ['id' => $warehouseAdminRole->id, 'name' => 'admin', 'guard_name' => 'web']);
 });

@@ -28,9 +28,9 @@ class DigitalProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:show_digital_products', only: ['index']),
-            new Middleware('permission:add_digital_product', only: ['create']),
-            new Middleware('permission:edit_digital_product', only: ['edit']),
+            new Middleware('permission:show_digital_products', only: ['index', 'show']),
+            new Middleware('permission:add_digital_product', only: ['create', 'store']),
+            new Middleware('permission:edit_digital_product', only: ['edit', 'update']),
             new Middleware('permission:delete_digital_product', only: ['destroy']),
             new Middleware('permission:download_digital_product', only: ['download']),
         ];
@@ -123,7 +123,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $product_stock->save();
 
             // Product Translations
-            $product_translation                = ProductTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'product_id' => $product->id]);
+            $product_translation                = ProductTranslation::firstOrNew(['lang' => config('app.default_language'), 'product_id' => $product->id]);
             $product_translation->name          = $request->name;
             $product_translation->description   = $request->description;
             $product_translation->save();
@@ -174,7 +174,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $product                    = Product::findOrFail($id);
-        if ($request->lang == env("DEFAULT_LANGUAGE")) {
+        if ($request->lang == config("app.default_language")) {
             $product->name          = $request->name;
             $product->description   = $request->description;
         }
@@ -266,7 +266,7 @@ class DigitalProductController extends Controller implements HasMiddleware
         $product = Product::findOrFail(decrypt($request->id));
 
         $upload = Upload::findOrFail($product->file_name);
-        if (env('FILESYSTEM_DRIVER') == "s3") {
+        if (config('filesystems.default') == "s3") {
             return \Storage::disk('s3')->download($upload->file_name, $upload->file_original_name . "." . $upload->extension);
         } else {
             if (file_exists(base_path('public/' . $upload->file_name))) {

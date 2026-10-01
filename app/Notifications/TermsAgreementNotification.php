@@ -50,7 +50,7 @@ class TermsAgreementNotification extends Notification
 
         return (new MailMessage)
             ->view('shop.emails.terms', ['array' => $array])
-            ->subject(translate('Terms Agreements - ').env('APP_NAME'));
+            ->subject(translate('Terms Agreements - ').config('app.name'));
     }
 
     /**

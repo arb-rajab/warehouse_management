@@ -326,6 +326,10 @@ class CartController extends Controller
             }
         }
 
+        if (filter_var($request->quantity, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            return response()->json(['result' => false, 'message' => translate('Something went wrong')], 200);
+        }
+
         if ($product->min_qty > $request->quantity) {
             return response()->json(['result' => false, 'message' => translate("Minimum") . " {$product->min_qty} " . translate("item(s) should be ordered")], 200);
         }
@@ -437,7 +441,11 @@ class CartController extends Controller
 
     public function changeQuantity(Request $request)
     {
-        $cart = Cart::find($request->id);
+        // Only the signed-in account's own cart lines, and a whole number of at
+        // least one: a negative quantity would make the order total negative.
+        $cart = filter_var($request->quantity, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false
+            ? null
+            : Cart::where('id', $request->id)->where('user_id', auth()->user()->id)->first();
         if ($cart != null) {
 
             if ($cart->product->stocks->where('variant', $cart->variation)->first()->qty >= $request->quantity) {
@@ -462,8 +470,12 @@ class CartController extends Controller
         if (!empty($cart_ids)) {
             $i = 0;
             foreach ($cart_ids as $cart_id) {
-                $cart_item = Cart::where('id', $cart_id)->first();
+                $cart_item = Cart::where('id', $cart_id)->where('user_id', auth()->user()->id)->first();
                 if ($cart_item) {
+                    if (filter_var($cart_quantities[$i] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+                        return response()->json(['result' => false, 'message' => translate('Something went wrong')], 200);
+                    }
+
                     $product = Product::where('id', $cart_item->product_id)->first();
 
                     if ($product->min_qty > $cart_quantities[$i]) {

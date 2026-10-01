@@ -58,13 +58,13 @@ class ProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:add_new_product', only: ['create']),
+            new Middleware('permission:add_new_product', only: ['create', 'store']),
             new Middleware('permission:show_all_products', only: ['all_products']),
             new Middleware('permission:show_in_house_products', only: ['admin_products']),
             new Middleware('permission:show_seller_products', only: ['seller_products']),
-            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit']),
+            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'setProductDiscount', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate']),
-            new Middleware('permission:product_delete', only: ['destroy']),
+            new Middleware('permission:product_delete', only: ['destroy', 'bulk_product_delete']),
         ];
     }    /**
      * Display a listing of the resource.
@@ -337,7 +337,7 @@ class ProductController extends Controller implements HasMiddleware
         ]), $product);
 
         // Product Translations
-        $request->merge(['lang' => env('DEFAULT_LANGUAGE')]);
+        $request->merge(['lang' => config('app.default_language')]);
         ProductTranslation::create($request->only([
             'lang',
             'name',

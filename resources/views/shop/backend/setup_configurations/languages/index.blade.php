@@ -17,9 +17,9 @@
                         </div>
                         <input type="hidden" name="types[]" value="DEFAULT_LANGUAGE">
                         <div class="col-lg-6">
-                            <select class="form-control aiz-selectpicker" name="DEFAULT_LANGUAGE" data-selected="{{ env('DEFAULT_LANGUAGE') }}">
+                            <select class="form-control aiz-selectpicker" name="DEFAULT_LANGUAGE" data-selected="{{ config('app.default_language') }}">
                                 @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
-                                    <option value="{{ $language->code }}" @if(env('DEFAULT_LANGUAGE') == $language->code) selected @endif>
+                                    <option value="{{ $language->code }}" @if(config('app.default_language') == $language->code) selected @endif>
                                         {{ $language->name }}
                                     </option>
                                 @endforeach
@@ -122,7 +122,7 @@
                                 <i class="las la-edit"></i>
                             </a>
                             @if($language->code != 'en')
-                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('languages.destroy', $language->id)}}" title="{{ translate('Delete') }}">
+                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('languages.destroy', $language->id)}}" title="{{ translate('Delete') }}">
                                     <i class="las la-trash"></i>
                                 </a>
                             @endif

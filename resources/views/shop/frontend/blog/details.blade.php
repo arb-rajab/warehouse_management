@@ -26,7 +26,7 @@
     <meta property="og:url" content="{{ route('blog.details', $blog->slug) }}" />
     <meta property="og:image" content="{{ uploaded_asset($blog->meta_img) }}" />
     <meta property="og:description" content="{{ $blog->meta_description }}" />
-    <meta property="og:site_name" content="{{ env('APP_NAME') }}" />
+    <meta property="og:site_name" content="{{ config('app.name') }}" />
 @endsection
 
 @section('content')
@@ -133,6 +133,6 @@
 @section('script')
     @if (get_setting('facebook_comment') == 1)
         <div id="fb-root"></div>
-        <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v9.0&appId={{ env('FACEBOOK_APP_ID') }}&autoLogAppEvents=1" nonce="ji6tXwgZ"></script>
+        <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v9.0&appId={{ config('services.facebook.app_id') }}&autoLogAppEvents=1" nonce="ji6tXwgZ"></script>
     @endif
 @endsection

@@ -1,6 +1,7 @@
-@extends('shop.frontend.layouts.user_panel')
+{{-- Opened by a customer scanning the receipt's QR code, signed in or not: the account panel needs a signed-in account, so a visitor gets the storefront layout. --}}
+@extends(Auth::check() ? 'shop.frontend.layouts.user_panel' : 'shop.frontend.layouts.app')
 
-@section('panel_content')
+@section(Auth::check() ? 'panel_content' : 'content')
     <!-- Payment id -->
     <div class="aiz-titlebar mb-4">
         <div class="row align-items-center">

@@ -30,7 +30,8 @@ test('a simple permission-gated controller\'s middleware() preserves the origina
     expect($middleware)->toHaveCount(1)
         ->and($middleware[0])->toBeInstanceOf(Middleware::class)
         ->and($middleware[0]->middleware)->toBe('permission:shipping_country_setting')
-        ->and($middleware[0]->only)->toBe(['index']);
+        // The write endpoints share their page's permission (LegacyAdminPermissionsTest).
+        ->and($middleware[0]->only)->toContain('index', 'store', 'update', 'destroy');
 });
 
 test('a controller using the alternate $this->middleware($name, [\'only\' => [...]]) call shape converts correctly', function () {

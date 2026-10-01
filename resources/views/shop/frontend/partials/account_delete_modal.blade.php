@@ -49,7 +49,7 @@
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary rounded-0 w-150px" data-dismiss="modal">{{ translate('Cancel')}}</button>
-                <a id="account_delete_link" class="btn btn-danger rounded-0 w-150px">{{ translate('Delete Account')}}</a>
+                <a id="account_delete_link" data-method="post" class="btn btn-danger rounded-0 w-150px">{{ translate('Delete Account')}}</a>
             </div>
         </div>
     </div>

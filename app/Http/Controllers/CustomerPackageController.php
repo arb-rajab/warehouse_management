@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PaymentOptions;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageTranslation;
 use App\Models\StoreUser;
@@ -25,8 +26,8 @@ class CustomerPackageController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_classified_packages', only: ['index']),
-            new Middleware('permission:edit_classified_package', only: ['edit']),
+            new Middleware('permission:view_classified_packages', only: ['index', 'show']),
+            new Middleware('permission:edit_classified_package', only: ['edit', 'update', 'store', 'create']),
             new Middleware('permission:delete_classified_package', only: ['destroy']),
         ];
     }
@@ -67,7 +68,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
 
         $customer_package->save();
 
-        $customer_package_translation = CustomerPackageTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'customer_package_id' => $customer_package->id]);
+        $customer_package_translation = CustomerPackageTranslation::firstOrNew(['lang' => config('app.default_language'), 'customer_package_id' => $customer_package->id]);
         $customer_package_translation->name = $request->name;
         $customer_package_translation->save();
 
@@ -110,7 +111,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $customer_package = CustomerPackage::findOrFail($id);
-        if ($request->lang == env("DEFAULT_LANGUAGE")) {
+        if ($request->lang == config("app.default_language")) {
             $customer_package->name = $request->name;
         }
         $customer_package->amount = $request->amount;
@@ -163,6 +164,11 @@ class CustomerPackageController extends Controller implements HasMiddleware
                 flash(translate('You can not purchase this package anymore.'))->warning();
                 return back();
             }
+        }
+
+        if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
+            flash(translate('Select Payment Option.'))->warning();
+            return back();
         }
 
         $decorator = __NAMESPACE__ . '\\Payment\\' . str_replace(' ', '', ucwords(str_replace('_', ' ', $request->payment_option))) . "Controller";

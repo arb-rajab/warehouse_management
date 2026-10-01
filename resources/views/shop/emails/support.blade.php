@@ -4,6 +4,6 @@
 <p>
 	<b>{{ translate('Details') }}:</b>
 	<br>
-	@php echo $details; @endphp
+	{!! clean_html($details) !!}
 </p>
 <a class="btn btn-primary btn-md" href="{{ $link }}">{{ translate('See ticket') }}</a>

@@ -235,7 +235,7 @@ class CustomerController extends Controller
         //$user->tax_number = $request->tax_number;
         //$user->bank_account_number =  $request->bank_account_number;
         $user->country = $request->country;
-        $user->verification_code = rand(100000, 999999);
+        $user->verification_code = random_int(100000, 999999);
         if ($request->register_by == 'email') {
 
             $user->email = $request->email_or_phone;
@@ -302,7 +302,7 @@ class CustomerController extends Controller
 
     public function visit_note(Request $request)
     {
-        $visit = Visit::find($request->visit_id);
+        $visit = Visit::where('rep_id', auth()->user()->id)->find($request->visit_id);
         if ($visit) {
             $visit->note = $request->note ?? 'Representative did not add a note for changing the customer';
             $visit->save();

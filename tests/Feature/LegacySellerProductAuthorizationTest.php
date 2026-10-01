@@ -132,7 +132,7 @@ test("a seller cannot open, update or delete another seller's digital product in
         ->assertRedirect()
         ->assertSessionHas('flash_notification');
     $this->post("/temp/seller/digitalproducts/update/{$product->id}", sellerProductForm(['unit_price' => 0.5]))->assertRedirect();
-    $this->get("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect();
+    $this->post("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect();
 
     expect($product->fresh())->not->toBeNull()
         ->and($product->fresh()->only(['name', 'slug', 'unit_price']))->toEqual([
@@ -149,7 +149,7 @@ test('a seller can open and delete their own digital product in the seller area'
     $this->get("/temp/seller/digitalproducts/{$product->id}/edit")
         ->assertOk()
         ->assertSee($product->name);
-    $this->get("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect('/temp/seller/digitalproducts');
+    $this->post("/temp/seller/digitalproducts/destroy/{$product->id}")->assertRedirect('/temp/seller/digitalproducts');
 
     expect(Product::find($product->id))->toBeNull();
 });

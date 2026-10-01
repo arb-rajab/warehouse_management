@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\AddressCollection;
+use App\Services\TradeLicenseStorage;
 use App\Http\Resources\V2\CitiesCollection;
 use App\Http\Resources\V2\CountriesCollection;
 use App\Models\Address;
@@ -11,15 +12,14 @@ use App\Models\City;
 use App\Models\Country;
 use App\Models\Order;
 use App\Models\StoreUser;
-use App\Models\Upload;
 use App\Models\Wishlist;
 use App\Notifications\AppEmailVerificationNotification;
 use Hash;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Storage;
+use App\Services\Base64ImageUploadService;
+use InvalidArgumentException;
 
 class ProfileController extends Controller
 {
@@ -106,7 +106,7 @@ class ProfileController extends Controller
             if ($request->email != $user->email) {
                 $user->email = $request->email;
                 $user->email_verified_at = null;
-                $user->verification_code = rand(100000, 999999);
+                $user->verification_code = random_int(100000, 999999);
                 try {
                     $user->notify(new AppEmailVerificationNotification());
                 } catch (\Exception $e) {
@@ -120,13 +120,7 @@ class ProfileController extends Controller
         }
 
         if (request()->hasFile('trade_license')) {
-            $uploadedFile = request()->file('trade_license');
-            $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-            // Store the PDF file in the 'local' disk with the specified filename
-            $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-            $user->trade_license = $pdfFileName; // Store the path in your database
+            $user->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
         }
 
 
@@ -186,7 +180,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function updateImage(Request $request)
+    public function updateImage(Request $request, Base64ImageUploadService $uploads)
     {
         $user = StoreUser::find(auth()->user()->id);
         if(!$user){
@@ -197,110 +191,28 @@ class ProfileController extends Controller
             ]);
         }
 
-        $type = [
-            "jpg" => "image",
-            "jpeg" => "image",
-            "png" => "image",
-            "svg" => "image",
-            "webp" => "image",
-            "gif" => "image",
-        ];
-
         try {
-            $image = $request->image;
-            $request->filename;
-            $realImage = base64_decode($image);
-
-            $dir = public_path('uploads/all');
-            $full_path = "$dir/$request->filename";
-
-            $file_put = file_put_contents($full_path, $realImage); // int or false
-
-            if ($file_put == false) {
-                return response()->json([
-                    'result' => false,
-                    'message' => "File uploading error",
-                    'path' => ""
-                ]);
-            }
-
-
-            $upload = new Upload;
-            $extension = strtolower(File::extension($full_path));
-            $size = File::size($full_path);
-
-            if (!isset($type[$extension])) {
-                unlink($full_path);
-                return response()->json([
-                    'result' => false,
-                    'message' => "Only image can be uploaded",
-                    'path' => ""
-                ]);
-            }
-
-
-            $upload->file_original_name = null;
-            $arr = explode('.', File::name($full_path));
-            for ($i = 0; $i < count($arr) - 1; $i++) {
-                if ($i == 0) {
-                    $upload->file_original_name .= $arr[$i];
-                } else {
-                    $upload->file_original_name .= "." . $arr[$i];
-                }
-            }
-
-            //unlink and upload again with new name
-            unlink($full_path);
-            $newFileName = rand(10000000000, 9999999999) . date("YmdHis") . "." . $extension;
-            $newFullPath = "$dir/$newFileName";
-
-            $file_put = file_put_contents($newFullPath, $realImage);
-
-            if ($file_put == false) {
-                return response()->json([
-                    'result' => false,
-                    'message' => "Uploading error",
-                    'path' => ""
-                ]);
-            }
-
-            $newPath = "uploads/all/$newFileName";
-
-            if (env('FILESYSTEM_DRIVER') == 's3') {
-                Storage::disk('s3')->put($newPath, file_get_contents(base_path('public/') . $newPath),
-                ['visibility' => 'public']
-            );
-                unlink(base_path('public/') . $newPath);
-            }
-
-            $upload->extension = $extension;
-            $upload->file_name = $newPath;
-            $upload->user_id = $user->id;
-            $upload->type = $type[$upload->extension];
-            $upload->file_size = $size;
-            $upload->save();
-
-            $user->avatar_original = $upload->id;
-            $user->save();
-
-
-
-            return response()->json([
-                'result' => true,
-                'message' => translate("Image updated"),
-                'path' => uploaded_asset($upload->id)
-            ]);
-        } catch (\Exception $e) {
+            $upload = $uploads->store($request->image, $request->filename, $user->id);
+        } catch (InvalidArgumentException $e) {
             return response()->json([
                 'result' => false,
                 'message' => $e->getMessage(),
                 'path' => ""
             ]);
         }
+
+        $user->avatar_original = $upload->id;
+        $user->save();
+
+        return response()->json([
+            'result' => true,
+            'message' => translate("Image updated"),
+            'path' => uploaded_asset($upload->id)
+        ]);
     }
 
     // not user profile image but any other base 64 image through uploader
-    public function imageUpload(Request $request)
+    public function imageUpload(Request $request, Base64ImageUploadService $uploads)
     {
         $user = StoreUser::find(auth()->user()->id);
         if(!$user){
@@ -312,97 +224,9 @@ class ProfileController extends Controller
             ]);
         }
 
-        $type = [
-            "jpg" => "image",
-            "jpeg" => "image",
-            "png" => "image",
-            "svg" => "image",
-            "webp" => "image",
-            "gif" => "image",
-        ];
-
         try {
-            $image = $request->image;
-            $request->filename;
-            $realImage = base64_decode($image);
-
-            $dir = public_path('uploads/all');
-            $full_path = "$dir/$request->filename";
-
-            $file_put = file_put_contents($full_path, $realImage); // int or false
-
-            if ($file_put == false) {
-                return response()->json([
-                    'result' => false,
-                    'message' => "File uploading error",
-                    'path' => "",
-                    'upload_id' => 0
-                ]);
-            }
-
-
-            $upload = new Upload;
-            $extension = strtolower(File::extension($full_path));
-            $size = File::size($full_path);
-
-            if (!isset($type[$extension])) {
-                unlink($full_path);
-                return response()->json([
-                    'result' => false,
-                    'message' => "Only image can be uploaded",
-                    'path' => "",
-                    'upload_id' => 0
-                ]);
-            }
-
-
-            $upload->file_original_name = null;
-            $arr = explode('.', File::name($full_path));
-            for ($i = 0; $i < count($arr) - 1; $i++) {
-                if ($i == 0) {
-                    $upload->file_original_name .= $arr[$i];
-                } else {
-                    $upload->file_original_name .= "." . $arr[$i];
-                }
-            }
-
-            //unlink and upload again with new name
-            unlink($full_path);
-            $newFileName = rand(10000000000, 9999999999) . date("YmdHis") . "." . $extension;
-            $newFullPath = "$dir/$newFileName";
-
-            $file_put = file_put_contents($newFullPath, $realImage);
-
-            if ($file_put == false) {
-                return response()->json([
-                    'result' => false,
-                    'message' => "Uploading error",
-                    'path' => "",
-                    'upload_id' => 0
-                ]);
-            }
-
-            $newPath = "uploads/all/$newFileName";
-
-            if (env('FILESYSTEM_DRIVER') == 's3') {
-                Storage::disk('s3')->put($newPath, file_get_contents(base_path('public/') . $newPath));
-                unlink(base_path('public/') . $newPath);
-            }
-
-            $upload->extension = $extension;
-            $upload->file_name = $newPath;
-            $upload->user_id = $user->id;
-            $upload->type = $type[$upload->extension];
-            $upload->file_size = $size;
-            $upload->save();
-
-            return response()->json([
-                'result' => true,
-                'message' => translate("Image updated"),
-                'path' => uploaded_asset($upload->id),
-                'upload_id' => $upload->id
-            ]);
-        } catch (\Exception $e) {
+            $upload = $uploads->store($request->image, $request->filename, $user->id);
+        } catch (InvalidArgumentException $e) {
             return response()->json([
                 'result' => false,
                 'message' => $e->getMessage(),
@@ -410,6 +234,13 @@ class ProfileController extends Controller
                 'upload_id' => 0
             ]);
         }
+
+        return response()->json([
+            'result' => true,
+            'message' => translate("Image updated"),
+            'path' => uploaded_asset($upload->id),
+            'upload_id' => $upload->id
+        ]);
     }
 
     public function checkIfPhoneAndEmailAvailable()

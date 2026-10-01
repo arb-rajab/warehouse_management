@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="app-url" content="{{ env('APP_URL')}}">
+    <meta name="app-url" content="{{ config('app.url')}}">
 
     <!-- Required meta tags -->
     <meta charset="utf-8">

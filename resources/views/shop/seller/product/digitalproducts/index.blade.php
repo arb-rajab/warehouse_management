@@ -95,13 +95,13 @@
                                 <span class="slider round"></span></label>
                             </td>
                             <td class="text-right">
-                                <a href="{{route('seller.digitalproducts.edit',  ['id'=>$product->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" class="btn btn-soft-info btn-icon btn-circle btn-sm" title="{{ translate('Edit') }}">
+                                <a href="{{route('seller.digitalproducts.edit',  ['id'=>$product->id, 'lang'=>config('app.default_language')] )}}" class="btn btn-soft-info btn-icon btn-circle btn-sm" title="{{ translate('Edit') }}">
                                   <i class="las la-edit"></i>
                                 </a>
                                 <a class="btn btn-soft-success btn-icon btn-circle btn-sm" href="{{route('seller.digitalproducts.download', encrypt($product->id))}}" title="{{ translate('Download') }}">
                                     <i class="las la-download"></i>
                                 </a>
-                                <a href="javascript:void(0)" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('seller.digitalproducts.destroy', $product->id)}}" title="{{ translate('Delete') }}">
+                                <a href="javascript:void(0)" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('seller.digitalproducts.destroy', $product->id)}}" title="{{ translate('Delete') }}">
                                   <i class="las la-trash"></i>
                                 </a>
                             </td>

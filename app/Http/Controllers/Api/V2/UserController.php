@@ -18,7 +18,7 @@ class UserController extends Controller
 
     public function updateName(Request $request)
     {
-        $user = StoreUser::findOrFail($request->user_id);
+        $user = StoreUser::findOrFail(auth()->user()->id);
         $user->update([
             'name' => $request->name
         ]);

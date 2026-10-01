@@ -46,11 +46,11 @@ class PayhereUtility
     {
         $hash = strtoupper(
             md5(
-                env('PAYHERE_MERCHANT_ID').
+                config('services.payhere.merchant_id').
                 $order_id.
                 number_format($payhere_amount, 2, '.', '').
-                env('PAYHERE_CURRENCY').
-                strtoupper(md5(env('PAYHERE_SECRET')))
+                config('services.payhere.currency').
+                strtoupper(md5(config('services.payhere.secret')))
             )
         );
         return $hash;

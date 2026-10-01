@@ -32,7 +32,7 @@
 
                     <div class="mar-top">
                         <a href="{{route('rep.packages.edit', $package->id )}}" class="btn btn-sm btn-info">{{translate('Edit')}}</a>
-                        <a href="#" data-href="{{route('rep.packages.destroy', $package->id)}}" class="btn btn-sm btn-danger confirm-delete">{{translate('Delete')}}</a>
+                        <a href="#" data-method="post" data-href="{{route('rep.packages.destroy', $package->id)}}" class="btn btn-sm btn-danger confirm-delete">{{translate('Delete')}}</a>
                     </div>
                 </div>
             </div>

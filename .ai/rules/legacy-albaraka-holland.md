@@ -119,11 +119,367 @@ prefix. That is the single point every storefront asset URL goes through.
   The only guard on the rest of that file is `wms.auth` (`WmsAuthMiddleware`).
   That guard compares a `private-token` header with `!=` against a secret
   **hardcoded in `config/app.php:110`** (`wms_token`).
+  **Fixed 2026-10-01:** `wms_token` is `env('WMS_TOKEN')` with no default, and
+  `WmsAuthMiddleware` compares with `hash_equals()` and rejects every request
+  while no token is configured (removing the default alone would have admitted a
+  request with no header, since `null != null` is false). The old value is in
+  git history, so treat it as compromised: **set `WMS_TOKEN` in the shared
+  `.env` to a new secret and give it to the warehouse integration before the
+  deploy that carries this, or that integration is refused.**
 - `config/services.php` hardcodes the FCM `project_id`. Nineteen
   `stores.otajer.com/api/...` URLs are hardcoded across 14 files, with the
   token appended from `config('services.otajer.token')`.
-- There are 450 `env()` calls in 170 files outside `config/`. Every one returns
+  **Fixed 2026-10-01:** every one reads `config('services.otajer.url')`
+  (`OTAJER_URL`, default the production host), and `AllProductsCommand`'s two
+  URLs carried the API token itself as a literal; they use
+  `config('services.otajer.token')` now. That literal is in git history, so
+  have the ERP vendor reissue the token and put the new one in `OTAJER_TOKEN`.
+  `OtajerConfigTest` fails on the host or a token in any source file. A scan
+  for other committed secrets (key prefixes, 32-hex tokens, private keys) found
+  none: the other hits were a sample payload, SVG ids and a `Nagad` private key
+  that is read from `NAGAD_MERCHANT_PRIVATE_KEY`.
+- `BusinessSettingsController::overWriteEnvFile()` rewrote the server's `.env`
+  from the request, which is how `POST /admin/env_key_update`,
+  `payment_method_update`, `google_analytics` and the other settings POSTs
+  saved their values. It took any key and any value, with no escaping (a quote
+  and a newline inject lines) and no permission check: the controller's
+  `permission:` list gates the settings *pages*, not these POSTs, so any admin,
+  staff or accountant could replace `APP_KEY`, the database credentials or
+  `WMS_TOKEN`. Its `DEMO_MODE` guard read `env()`, null once config is cached.
+  **Fixed 2026-10-01:** it writes nothing and returns false (logging the key,
+  never the value), `env_key_update` refuses, and the two activation toggles
+  that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
+  Credentials the screens used to save (SMTP, social login, analytics, gateway
+  keys) are now set in the server `.env` by whoever deploys.
+  `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
+  callers against a scratch `.env`. **Permission gap, fixed 2026-10-01 for writes:** the same
+  `permission:`-list gap left 173 of the store admin's write routes (store,
+  update, the status toggles, the bulk deletes; 204 in all) open to every
+  admin, staff or accountant account: `business_settings.update` upserted any
+  settings row and toggled maintenance mode. The controllers gated the page
+  actions (`index`, `create`, `edit`, `destroy`) and not the endpoints behind
+  them. Each write now shares its page's permission (`store` with `create`,
+  `update` with `edit`, the status toggles with `edit`, `bulk_*_delete` with
+  `destroy`; the settings POSTs with their settings page's permission), using
+  only names that already exist. 153 of the 204 are gated. **Reads, same day:**
+  the pages that had no permission of their own (`show`, the secondary
+  create/edit forms, the customer, seller, order, support and payout detail
+  pages, the language and website-page listings) share their module's, and
+  `GET /admin/clear-cache`, which runs `optimize:clear`, is vendor-super-admin
+  only like its button; 226 of the 299 admin pages are gated. In all, 379 of 503
+  admin routes. `LegacyAdminPermissionsTest` lists what is not
+  (`ADMIN_WRITES_STILL_UNGATED`, 52; `ADMIN_READS_STILL_UNGATED`, 51), fails on a
+  new ungated route and on a listed one that has since been gated, and checks
+  that a staff user with no permissions gets 403 on every gated route.
+  **Still open:** those 103, which need permission names (logistics: trips, trucks, drivers, feature orders; the offers
+  catalogue; representative packages and their payments; visits). The offer
+  deals and the notifications already had names in the legacy vocabulary
+  (`view_all_offer_deals`, `add_offer_deal`, `edit_offer_deal`,
+  `delete_offer_deal`, `add_notification`, `delete_notification`: their buttons
+  asked `@can(...)` for them) and are gated with them as of 2026-10-01; the
+  rest need new names created and granted to roles. Also self-service routes and
+  dead ones; they need a permission, and the ones that change state are POST
+  now (see the state-changing GET bullet below). Phase 5's role import is where the
+  owner can say which existing staff roles should get which permission.
+- The store API's base64 image uploads (`POST api/v2/file/image-upload`,
+  `profile/update-image`, `profile/image-upload`; `auth:store_api`, so any
+  self-registered customer) wrote the decoded bytes to
+  `public/uploads/all/<filename>` with the filename taken from the request, and
+  checked the extension only afterwards, deleting the file again if it was not an
+  image. A `../` in the name wrote a file anywhere the web user could write (and
+  deleted it again, `index.php` included), and a PHP file sat on disk until the
+  check ran. **Fixed 2026-10-01:** `Base64ImageUploadService` decodes strictly,
+  caps the size (8 MB) and the pixel count, reads the type from the content,
+  re-encodes raster images with GD (dropping anything appended to or hidden in
+  them), sanitises SVG, and writes one file under a random server-chosen name and
+  extension; the client's filename is kept only as a display name. The three live
+  handlers use it, and the unrouted copy (`Api\V2\FileUploadController`) is gone.
+  `LegacyStoreImageUploadTest` covers each case against a scratch public path. The
+  same endpoints could not have worked against this app's `uploads` stand-in
+  (no `file_original_name`, `extension`, `type` or `file_size`), so a guarded
+  migration adds them there; production's own table already has them. The
+  global WAF also blocks `../` in input, but nothing relies on that. `AizUploadController`
+  and the seller upload store through Laravel's `store()` with an extension
+  whitelist and were not affected.
+- Account recovery was open to guessing. The password-reset and verification
+  codes are 6 digits (900,000 values), generated with `rand()`, and no store
+  route limited attempts. The API's `password/confirm_reset` found the account
+  from the **code alone**, so a guessed code reset the password of whichever
+  user held it at that moment, a registration code included; the web reset
+  (`/password/reset/email/submit`) left the code valid after use, then logged
+  the user in, admins and staff included. **Fixed 2026-10-01:** codes come from
+  `random_int()`; `confirm_reset` now requires `email_or_phone` as well as
+  `verification_code` and matches them on the same account; the web reset
+  clears the code; and the `store-auth` rate limiter (per account and IP: 5/min;
+  per account across IPs: 10 per 15 minutes; per IP: 30/min; no account key when
+  the request names none, so anonymous callers cannot lock each other out)
+  covers the store's web and API login, `forget_request`, `confirm_reset`,
+  `resend_code`, `confirm_code`, the web reset routes and `new-user-verification`.
+  **The mobile app has to send `email_or_phone` with `password/confirm_reset`
+  (the same value it sent to `forget_request`) before it is pointed at this
+  host; without it the call is refused with 422.**
+  `LegacyStoreAccountRecoveryTest` covers each case.
+- The hand-rolled payment gateways (aamarpay, bkash, iyzico, nagad, ngenius,
+  payhere, sslcommerz, voguepay; 53 routes in `routes/shop-web.php` and
+  `routes/shop-api.php`) answered whether or not the store used them, and their
+  callbacks are unauthenticated routes that mark orders paid, top up wallets and
+  activate packages. PayHere's three notify handlers verified their signature
+  with `env('PAYHERE_SECRET')`, null once config is cached, so the secret was
+  empty and anyone could sign a payment-complete call for any order or wallet;
+  they also took the merchant id from the request, and compared with `===`.
+  **Fixed 2026-10-01:** `RouteServiceProvider::guardPaymentGatewayRoutes()`
+  puts `payment.gateway:<name>` on every route that reaches a gateway
+  controller (`config('store.payment_gateway_controllers')`), and
+  `EnsurePaymentGatewayEnabled` answers 404 unless the gateway is listed in
+  `STORE_PAYMENT_GATEWAYS` (`config('store.enabled_payment_gateways')`, empty
+  by default; the routes stay registered, because views link to their names).
+  Cash on delivery, wallet and the manual methods are not gateways. PayHere's
+  credentials are `config('services.payhere.*')`, and one verifier refuses
+  every notification unless a secret and merchant id are configured, the
+  merchant matches, the signature matches (`hash_equals`) and the status is
+  success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
+  controller under `Payment/` the guard does not know about. **Before
+  enabling a gateway:** move its credentials to config (only PayHere is done:
+  bKash, iyzico, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
+  them through `env()`) and check that its callback verifies the gateway's
+  signature before marking anything paid; the audit above did not review them.
+  The admin checkout and settings pages still offer a gateway that
+  `business_settings` has switched on, and choosing one now gives a 404.
+- User-written HTML was printed unescaped, so anyone who could write it could run
+  script in the browser of whoever viewed it. The worst case was the **admin
+  backend's** ticket page (`backend/support/support_tickets/show`), which printed
+  a customer's ticket details and replies with `@php echo`: a customer filing a
+  ticket ran script in a staff member's logged-in session. The seller and
+  customer ticket pages, the support email, and the storefront product,
+  digital-product and classified-ad descriptions (written by sellers and by any
+  customer who posts one) did the same. **Fixed 2026-10-01:** they print
+  `{!! clean_html($x) !!}`. `App\Services\HtmlSanitizer` is an allowlist on
+  PHP 8.4's HTML5 parser (`Dom\HTMLDocument`, the algorithm browsers use):
+  only the named tags, attributes, URL schemes (http, https, mailto, tel,
+  relative; `data:` only for a base64 PNG/JPEG/GIF/WebP image) and CSS
+  properties survive, SVG and MathML are removed, links get
+  `rel="noopener noreferrer nofollow"`, and the output is re-cleaned unchanged.
+  It needs PHP 8.4 or later, which `composer.json` now declares (`^8.4`; CI and
+  the server run 8.5). `HtmlSanitizerTest` has 25 hostile
+  payloads, the admin ticket page, the product description and the email, and a
+  scan that fails on a new raw print of `->details`, `->reply`, `->description`
+  or a translated description. **Not covered:** admin-written content, which is
+  trusted with markup and printed as it is (CMS pages, blog posts, settings
+  texts, payment-method notes), so a compromised admin account can still plant
+  script; and the API, which returns descriptions as stored for the mobile app
+  to render.
+- The store changed data on GET: delete, ban, approve, restore, duplicate and
+  similar endpoints were plain links, so any page an admin or customer visited
+  could fire them (a top-level navigation carries the session cookie).
+  **Fixed 2026-10-01:** 67 web routes take POST only (`routes/shop-*.php`; the
+  list is `STATE_CHANGING_STORE_ROUTES` in
+  `LegacyStoreStateChangingRoutesTest`). The convention is a `data-method="post"`
+  on the link, or on the confirmation modal's own button for the ban and
+  account-deletion modals; `aiz-core.js` submits a POST form with the CSRF token
+  for `a[data-method="post"]`, and `.confirm-delete`/`.confirm-alert` and the
+  other confirm triggers pass the mark to the modal link, clearing it when the
+  trigger has none, so a trigger for a route still on GET keeps working. A new
+  link to one of the 67 without the mark fails the test, as does a new GET route
+  whose action is named like a destroy/ban/approve/restore. **Left as GET on
+  purpose:** the signed email-verification link, `terms-activation/{code}` (the
+  customer's emailed link) and the gateway redirects back to the shop. **Not
+  done:** the mobile API's `GET .../delete/{id}` and `.../duplicate/{id}` routes
+  (bearer token, so no CSRF, but the app calls them as GET; change both
+  together), and the admin notifications page's delete button, which never
+  worked (its modal was commented out) and is wired up now.
+- The multipart uploader (the web admin/seller/customer screens and the two
+  mobile APIs) took the client's extension for the allowlist and stored the file
+  under the extension its *content* had, so an `a.png` holding HTML was stored
+  as `<random>.html`, and one holding an SVG as `<random>.svg`, served from the
+  shop's origin (stored XSS for whoever opened it, an admin included); only the
+  web copy sanitised an SVG, and only if the client said `.svg`. Uploads also
+  went to `storage/app/private` (the WMS `local` disk), where nothing is served.
+  **Fixed 2026-10-01:** `MultipartUploadService` replaces the three copies. The
+  client's extension only picks the kind; an image must be an image and keeps the
+  extension its content has; other kinds keep the allowlisted extension; HTML,
+  XHTML/SVG-in-XML and script content is refused; SVG is sanitised under any
+  name; the file is written to `public/uploads/all/<random>` (or S3) through
+  `WritesUploads`, which `Base64ImageUploadService` shares. The web uploader
+  routes need a signed-in account (`download/{id}` and `get_file_by_ids` took any
+  upload by id from anyone), and `UploadPolicy` limits view/delete to the owner
+  plus admin and staff (`destroy` only stopped a *seller* deleting someone
+  else's). Tests: `LegacyMultipartUploadTest`. **Not done:** the other 18 files
+  that write through `Storage::disk('local')` or `public_path()` (the dedicated
+  `uploads` disk in §6.5), and the web-served ZIP/Office types, which keep their
+  allowlisted extension without a content check.
+- Trade licences (a customer's business document) were saved as
+  `uploads/licenses/<the client's filename>`: one customer's upload overwrote
+  another's of the same name, the registration and profile forms never checked
+  what the file was, the admin download built its path from the request
+  (`public_path('uploads/licenses/'.$filename)`, so a `..` reached any file) and
+  the customer's profile linked a public URL. **Fixed 2026-10-01:**
+  `TradeLicenseStorage` keeps a licence on the private disk under a random name
+  with the extension its content has (PDF, Word, PNG or JPEG, 20 MB), refuses
+  anything else with a validation error, and sends it back only through a
+  controller: `download.trade_license` (admin, `view_all_customers`) and the new
+  `profile.trade_license` (the signed-in customer's own). A name read back is
+  cut to its basename first. Tests: `LegacyTradeLicenseTest`. **Run once on the
+  server after the first deploy of this change:** licences already there sit in
+  `public/uploads/licenses/` (web-served to anyone who guesses the name).
+  `php artisan store:move-trade-licenses` (`--dry-run` first) copies each onto
+  the private disk under the same name, checks the size, then removes it from
+  the web root; a name that already exists on the private disk is never
+  overwritten and is reported (exit code 1). With atomic releases `public/uploads`
+  is the shared directory, so the command moves the shared files. Test:
+  `MoveLegacyTradeLicensesCommandTest`. **Mobile app:** `trade_license` in the API is the stored name, not a
+  public URL, and there is no API endpoint that returns the file yet.
+- The offers catalogue had the same shape as the licences: any file, saved
+  under the client's filename on the private disk, read back from a public path
+  it was never written to (so the download always 404ed), and a delete that
+  crashed when the file was missing. **Fixed 2026-10-01:** `OffersCatalogStorage`
+  (a `PrivateDocumentStorage`, like `TradeLicenseStorage`) keeps one
+  content-checked PDF under a random name and sends it from the private disk;
+  the storefront and API downloads stay public, as they were meant to be.
+  Catalogues uploaded before this are already in
+  `storage/app/private/uploads/offers/catalogs/` and are found by their old
+  names. Tests: `LegacyOffersCatalogTest`.
+- Two more copies of the uploader, found after `MultipartUploadService`: the
+  driver API's `TripService::uploadFiles` (checkpoint photos and the generated
+  CMR), which now calls the service, and the admin's English app-translation
+  import, which wrote the file to the private disk and read it back from a
+  public path (so it always failed) and now reads the uploaded file directly.
+  Tests: `LegacyTripUploadTest`. The seller shop-verification form's file
+  fields stored whatever was sent on the private disk, and the admin's review page
+  linked a public URL for them, so no reviewer could open one. **Fixed
+  2026-10-01:** `ShopVerificationStorage` (a `PrivateDocumentStorage`) keeps a
+  content-checked PDF, Word or image under a random name, and
+  `sellers.verification_file` (permission `view_all_seller`) opens it; the form
+  no longer crashes on a missing file. Tests: `LegacyShopVerificationTest`.
+  Documents submitted before this are on the private disk under their old
+  `uploads/verification_form/` names and are found by those.
+- The mobile API's wallet payment (`POST api/v2/payments/pay/wallet`) took the
+  payer (`user_id`) and the amount from the request, while the order was priced
+  from the cart and marked paid: any signed-in customer could spend another
+  account's balance, or send `amount=0` and pay nothing, and the check-then-deduct
+  was not atomic. **Fixed 2026-10-01:** the payer is the signed-in account, the
+  amount is the order's own `grand_total`, and `WalletPaymentService` deducts it
+  under a row lock; when the balance does not cover it the order's parts go back
+  to `unpaid` and the app is told `Insufficient wallet balance` (the order
+  exists, unpaid: the cart is emptied by the order creation and cannot be
+  restored here). `UserController::updateName` (its route is commented out) now
+  edits the signed-in account, not `user_id`. **Check with the mobile team:** a
+  rep who paid for a customer from *that customer's* wallet by sending the
+  customer's `user_id` no longer can; the wallet that pays is the rep's own.
+  Tests: `LegacyWalletPaymentTest`.
+- Three more mobile-API endpoints acted on a record by an id from the request
+  whoever owned it. **Fixed 2026-10-01:** `clubpoint/convert-into-wallet`
+  converted any account's points into the caller's wallet, as often as it was
+  called (now: the caller's own points, once, under a row lock);
+  `offline/payment/submit` needed no sign-in and set any order to `Submitted`
+  (now `auth:store_api`, the order must be the caller's by `OrderPolicy::view`
+  and not already `paid`); `carts/change-quantity` and `carts/process` changed
+  any account's cart lines (now the caller's own), and `carts/add`,
+  `change-quantity` and `process` accepted a zero or negative quantity, which
+  would make an order total negative (now a whole number of at least one).
+  Tests: `LegacyStoreApiMoneyTest`. The club-point tables and the orders
+  table's `manual_payment*` columns are not in this repository's migrations (they
+  exist on the shared legacy database); the tests create them.
+- A representative's payment receipt (its page, its PDF, its QR image) was
+  public: `payments.show`, `payments.export`, `payments.generate_qr` and the
+  API's `generate-qr` took no sign-in, and a receipt's number counts up from 1,
+  so anyone could read every receipt (customer, company, amount). A visit note
+  (`visit-note`, `visits.note`) could be rewritten by any representative, and
+  `share-by-whatsapp` took any receipt. **Fixed 2026-10-01:** the page, the PDF
+  and the API QR are behind `signed`, and every link the store issues (the
+  receipt list and QR in the app, the QR codes in the PDF, the WhatsApp message,
+  the rep's receipt page) is `URL::signedRoute()` (no expiry, so a printed QR
+  keeps working); the web `generate_qr`, which would sign for any id, needs the
+  owning representative; and the notes and the WhatsApp send are scoped to the
+  representative's own rows. **Links issued before this stop working** (an old
+  printed QR, an old WhatsApp message): reissue from the receipt list.
+  Tests: `LegacyRepresentativePaymentLinksTest`.
+- The seller screens and the seller API acted on records found by an id from the
+  request, whoever they belonged to. **Fixed 2026-10-01:** a seller could cancel
+  or mark paid *any* order (`orders/update_delivery_status`,
+  `update_payment_status`, the API's `update-delivery-status` and
+  `update-payment-status`, and the order page): they find only orders that have
+  a line of the seller's (`OrderService::findForSeller()`), and the API's status
+  change touches only the seller's own lines, not every seller's. Cancelling a
+  wallet order refunded its total to the customer *every time it was repeated*,
+  and restocked each time (the seller screen, the API and the admin's copy of the
+  same code): a repeat is now a no-op. The seller shop update took any
+  `shop_id` (bank details included): it edits the signed-in seller's shop. A
+  ticket reply took the ticket and the author from the request: it is the
+  caller's own ticket, as the caller (the customer's and the seller's screen);
+  ticket and product-query pages are the caller's own; a seller's refund
+  rejection wrote its reason to any seller's refund before checking ownership.
+  Tests: `LegacySellerScopingTest`. **Not checked yet:** the admin screens'
+  own copies of the status changes (trusted accounts), `SellerPackagePayment`,
+  `ReviewController`, and the delivery-boy API.
+- **Seller packages.** `seller-package/free-package` checked that the package
+  named in `seller_package_id` was free and granted the one named in
+  `package_id`, so a seller named a free package for the check and a paid one to
+  receive and got its upload limit and duration for nothing. **Fixed
+  2026-10-01:** one id (`package_id`), checked and granted; a paid package gets
+  "Package is not available". Tests: `LegacySellerPackageTest` (it creates the
+  `seller_packages` and `seller_package_payments` tables, which this repository
+  has no migrations for). `SellerPackagePaymentController::offline_payment_approval`
+  (not routed) extends the seller's package whatever `status` is sent, rejections
+  included: fix it when it is routed.
+- **Reviews.** The storefront form (`reviews.store`) let anyone review any product
+  any number of times with any rating (a rating of 100000 drags the average
+  with it); the app's endpoint checked that the product was received but not the
+  rating. **Fixed 2026-10-01:** both ask `Product::isReviewableBy()` (a delivered
+  order of theirs, no earlier review) and take a numeric rating from 1 to 5.
+  Tests: `LegacyReviewTest`.
+- **Coupons.** Applying a coupon (the storefront's and the app's copy) took off
+  an amount coupon's full value even when it was larger than what it applied to,
+  so a 50-euro coupon on a 5-euro cart made the order total negative (a wallet
+  payment or a free order). The app's copy also discounted the customer's carts
+  from *other* shops, crashed on a code that does not exist, and ignored
+  quantities for product coupons; the two disagreed on what shipping is.
+  **Fixed 2026-10-01:** `CouponService::discountFor()` is the one calculation
+  (per unit for product coupons, held to the price of the lines it applies to,
+  percentage capped by `max_discount`), and both endpoints use it and touch only
+  the coupon owner's lines. The app's product coupons now count quantities, as the
+  storefront's always did. Tests: `LegacyCouponTest`.
+- **Delivery-boy API** (`api/v2/delivery-boy/*`, the legacy delivery-boy addon).
+  The routes needed any signed-in account, took the delivery boy's id from the
+  URL or the request and the order from the request: a customer could read any
+  delivery boy's earnings and collections, mark *any* order delivered (a cash on
+  delivery order becomes paid, a commission is credited to whichever delivery
+  boy they named, again on every repeat) or put in a cancellation request.
+  **Fixed 2026-10-01:** the group needs a delivery boy (`IsDeliveryBoy`, alias
+  `delivery_boy`); the `{id}` of the figures routes must be the caller's own;
+  a status change and a cancellation request find only orders assigned to the
+  caller, act as the caller, take only `picked_up`, `on_the_way`, `delivered` or
+  `cancelled`, and a repeated `delivered` pays and counts nothing more. Tests:
+  `LegacyDeliveryBoyApiTest` (it creates the addon's tables, which this
+  repository has no migrations for). Nothing else in this repository uses the
+  addon: if the shop does not run delivery boys, remove the routes.
+- **Checkout payment option.** `CheckoutController::checkout()` builds the
+  payment controller's class name from the `payment_option` the browser sends and
+  runs its `pay()`, so a gateway that the routes answer 404 for (the
+  `payment.gateway` middleware) could still be started from the checkout form,
+  after an order had been made. **Fixed 2026-10-01:** an option must be a plain
+  word, and one that names a gateway not in `STORE_PAYMENT_GATEWAYS` is refused
+  before the order is created; cash on delivery, the wallet and the manual
+  methods (names with no controller) are unchanged. The wallet's own `pay()`
+  deducted from the in-memory user, unlocked: it uses `WalletPaymentService` now
+  (which also refuses an order that is not the payer's). The wallet recharge
+  and the customer-package purchase used the same class-name-from-the-form
+  pattern; the check is `App\Services\PaymentOptions::isAllowed()` and all three
+  use it. Tests: `LegacyWalletPaymentTest`.
+- There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
+  **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
+  Google Maps key, Google Analytics and Facebook ids, FCM and Firebase
+  credentials, OpenCage, the IP-geolocation key (and a 5 s timeout, where the
+  request had none), Apple and Twitter sign-in, the S3 base URL and the SMTP
+  username/password checks now read `config('services.*')` /
+  `config('mail.*')` / `config('filesystems.*')`
+  (`NoEnvOutsideConfigTest` lists them). **Still `env()`, on purpose:** the
+  payment gateways other than PayHere (unreachable until enabled in
+  `config/store.php`; move a gateway's keys to config before enabling it),
+  `DEMO_MODE` (null means off), `FORCE_HTTPS` (turning it on is a decision:
+  behind a proxy that does not report https it redirects forever), and the
+  admin settings screens under `setup_configurations/`, which print
+  credentials and write nothing now that the `.env` writer refuses.
 
 ### 0.4 `app/Exceptions/` is gitignored, so the legacy repo cannot boot as committed
 
@@ -152,9 +508,10 @@ The upgrade branch (`804dca9`) un-ignores `app/Exceptions` and adds a
   gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius,
   ProxyPay) are hand-rolled with no SDK.
 - `php: ^7.1.3` contradicts `laravel/framework 8.*`, which needs `^7.3|^8.0`.
-- This app declares `php: ^8.3`, but its `composer.lock` actually needs
+- This app declared `php: ^8.3`, but its `composer.lock` actually needs
   **PHP ≥ 8.4.1**: symfony 8.1 components (`symfony/console` v8.1.4 and others)
-  and `phpunit/phpunit` 13. Target PHP 8.4+ for the merged app.
+  and `phpunit/phpunit` 13. **Fixed 2026-10-01:** `composer.json` and the lock's
+  platform now say `^8.4`.
 
 ### 0.6 What `f31f264` changed
 
@@ -900,6 +1257,30 @@ port legacy keys in.
   - Env names differ:
     - Legacy `locale` reads `DEFAULT_LANGUAGE`. WMS reads `APP_LOCALE`, and its
       shared Inertia `locale` prop plus `SetLocale` drive `ar`/`en`.
+    - `DEFAULT_LANGUAGE` is the code the store's default-language rows are keyed
+      on (role, brand, page and product translations, the language switcher,
+      the `translate()` fallback); it is not the UI `locale`. It is
+      `config('app.default_language')` (default `en`), never `env()`: every
+      deploy runs `config:cache`, after which `env()` outside config is null, so
+      role creation failed on `role_translations.lang` NOT NULL and a rename in
+      the default language changed nothing. 66 reads were moved, and
+      `DefaultLanguageConfigTest` fails on any new one. The same trap applies to
+      the other `env()` calls outside config (phase 2's "left" list).
+      **Done 2026-10-01 (66 `DEFAULT_LANGUAGE` reads, then 105 more; about 170 remain):** `DEFAULT_LANGUAGE`, `APP_NAME`,
+      `APP_URL`, `MAIL_FROM_ADDRESS`/`_NAME`, `FILESYSTEM_DRIVER` (now
+      `filesystems.default`, which still honours it as a fallback for
+      `FILESYSTEM_DISK`), and the three settings-screen reads of
+      `SESSION_DRIVER`/`CACHE_DRIVER`/`MAIL_DRIVER`. `NoEnvOutsideConfigTest`
+      lists them. **Still on `env()`:** `DEMO_MODE` (30, unset behaves as off),
+      `FORCE_HTTPS`, and the payment, analytics and captcha credentials (bKash,
+      PayHere, iyzico, SSLCommerz, N-Genius, Nagad, Facebook pixel, reCAPTCHA,
+      FCM, ...), about 140 reads that return null on a deployed host, so each
+      of those gateways is broken there until its keys move to
+      `config/services.php`. The settings screens that rewrite `.env`
+      (`overWriteEnvFile`) take effect only after `config:cache` is rerun.
+      `languages/index.blade.php`'s form still posts `DEFAULT_LANGUAGE`, which
+      the legacy settings controller writes into `.env`; that takes effect only
+      after `config:cache` is rerun, and the shared `.env` is the deploy's.
     - Legacy `timezone` reads `APP_TIMEZONE`. WMS hardcodes `'UTC'`.
   - WMS-only keys: `faker_locale`, `previous_keys`, `maintenance`. Use
     `APP_PREVIOUS_KEYS` to keep decrypting the legacy `APP_KEY`'s outstanding
@@ -1263,3 +1644,63 @@ That fix alone got `SharedDatabaseTableNamesTest` and the Playwright webServer b
 
 Estimate for phase 2 in more detail: ~210 controllers, 86 resources and 24
 middleware exist today. After phase 1 roughly 400 PHP files remain to touch.
+
+### 7.1 To-do for the end of the migration (owner input pending)
+
+Left open on purpose, to be done when the production data is to hand (phases 0b
+and 5). Each item says where its answer comes from.
+
+- [ ] **Permission names for the ungated admin routes** (103 of 503, the two
+  lists in `tests/Feature/LegacyAdminPermissionsTest.php`). Modules with no name
+  in the legacy vocabulary: logistics (`TripController`, `TruckController`,
+  `DriverController`, `FeatureOrderController`, `FeatureOrderTripController`),
+  `OffersCatalogController`, `RepresentativePackageController`,
+  `RepresentativePaymentAdminController` and `VisitController`. Get the existing
+  names from production with `SELECT name, guard_name FROM permissions ORDER BY
+  name;` and the role grants with a join of `role_has_permissions`, `roles` and
+  `permissions`. For each module either reuse a production name or create new
+  ones (e.g. `view_trips`, `add_trip`, `edit_trip`, `delete_trip`) in the `store`
+  guard, grant them to the roles that run it, gate the controllers
+  (`HasMiddleware`, as `OfferController` does), and empty the matching entries in
+  the two ratchet lists. Staff keep access only through the role grants, so do
+  this in phase 5's role import.
+- [ ] **Check the six permission rows the offer-deal and notification screens now
+  require** exist in production and are granted to the right staff roles
+  (`view_all_offer_deals`, `add_offer_deal`, `edit_offer_deal`,
+  `delete_offer_deal`, `add_notification`, `delete_notification`). A missing row
+  means 403 for everyone but Super Admin.
+- [ ] **The mobile API's GET routes that change data** (bearer token, so not
+  CSRF-exposed, but the app calls them as GET): `GET api/v2/user/shipping/delete/{address_id}`,
+  `GET api/v2/seller/product/delete/{id}`, `GET api/v2/seller/product/duplicate/{id}`,
+  `GET api/v2/seller/coupon/delete/{id}`, `GET api/v2/seller/file/delete/{id}`,
+  also `GET api/v2/wishlists-remove-product` and
+  `GET api/v2/delivery-boy/cancel-request/{id}`. Find what the app really calls by
+  searching the mobile app's source for those paths, and the production access
+  log for them. Change the app and the routes together: add the POST/DELETE
+  routes first, ship the app, then remove the GET ones.
+- [ ] **Run `php artisan store:move-trade-licenses`** on the server after the
+  first deploy of the licence change (`--dry-run` first), then check
+  `public/uploads/licenses/` is empty.
+- [ ] **Set `WMS_TOKEN` and `OTAJER_TOKEN`** (new values; the old ones were
+  committed) in the server `.env`. `.env.example` carries both as empty
+  placeholders. Without `WMS_TOKEN` the warehouse API answers 401 to everyone.
+- [ ] **Mobile app coordination:** `password/confirm_reset` must send
+  `email_or_phone`; `trade_license` in the API is a stored name, not a URL (no
+  endpoint returns the file yet); old receipt QR and WhatsApp links stop
+  working (signed links replace them); a representative can no longer pay from a
+  customer's wallet by sending that customer's `user_id`; the app's product
+  coupons now count quantities.
+- [ ] **Move a payment gateway's credentials from `env()` to config** before it
+  is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
+  has moved). A gateway's server-to-server callbacks POST to the shop, and this
+  app has no CSRF exceptions (the legacy `VerifyCsrfToken` excluded
+  `/payhere*`, `/sslcommerz*`, `/iyzico*`, `/bkash*`, `/aamarpay*`,
+  `/apple-callback` and others), so they answer 419 until the enabled gateway's
+  callback paths are added to `validateCsrfTokens(except: [...])` in
+  `bootstrap/app.php`, under `temp/`. Exempt only a gateway that verifies the
+  callback itself (PayHere does; the others do not yet). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
+  not report https it redirects forever.
+- [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
+  (→ `StoreUser`): the SQL check is in §6.7.1.
+- [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
+  `api/v2/delivery-boy/*` routes instead of keeping them guarded.

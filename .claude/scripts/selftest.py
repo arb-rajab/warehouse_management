@@ -228,6 +228,17 @@ def main() -> int:
         code, out = run('php_duplicate_blocks.py', str(alone))
         check('single-file repetition not reported', '0 block(s)' in out, out)
 
+        print('pre_push_check.py')
+        sys.path.insert(0, str(Path(__file__).parent))
+        import pre_push_check
+
+        kept = pre_push_check.pint_checked([
+            'app/Http/Controllers/OrderController.php',  # listed in pint.json notPath
+            'resources/views/shop/emails/support.blade.php',  # Pint skips Blade
+            'app/Services/HtmlSanitizer.php',
+        ])
+        check('files Pint skips are not held to its style', kept == ['app/Services/HtmlSanitizer.php'], str(kept))
+
     print()
     if failures:
         print(f'{len(failures)} case(s) failed: {", ".join(failures)}')
