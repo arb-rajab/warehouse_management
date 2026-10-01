@@ -24,8 +24,8 @@ class RoleController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_staff_roles', only: ['index']),
-            new Middleware('permission:add_staff_role', only: ['create']),
-            new Middleware('permission:edit_staff_role', only: ['edit']),
+            new Middleware('permission:add_staff_role', only: ['create', 'store']),
+            new Middleware('permission:edit_staff_role', only: ['edit', 'update', 'add_permission']),
             new Middleware('permission:delete_staff_role', only: ['destroy']),
         ];
     }

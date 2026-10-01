@@ -29,8 +29,8 @@ class DigitalProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:show_digital_products', only: ['index']),
-            new Middleware('permission:add_digital_product', only: ['create']),
-            new Middleware('permission:edit_digital_product', only: ['edit']),
+            new Middleware('permission:add_digital_product', only: ['create', 'store']),
+            new Middleware('permission:edit_digital_product', only: ['edit', 'update']),
             new Middleware('permission:delete_digital_product', only: ['destroy']),
             new Middleware('permission:download_digital_product', only: ['download']),
         ];

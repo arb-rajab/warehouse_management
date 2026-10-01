@@ -23,8 +23,8 @@ class PageController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:add_website_page', only: ['create']),
-            new Middleware('permission:edit_website_page', only: ['edit']),
+            new Middleware('permission:add_website_page', only: ['create', 'store']),
+            new Middleware('permission:edit_website_page', only: ['edit', 'update']),
             new Middleware('permission:delete_website_page', only: ['destroy']),
         ];
     }

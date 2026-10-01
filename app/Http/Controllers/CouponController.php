@@ -25,8 +25,8 @@ class CouponController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_all_coupons', only: ['index']),
-            new Middleware('permission:add_coupon', only: ['create']),
-            new Middleware('permission:edit_coupon', only: ['edit']),
+            new Middleware('permission:add_coupon', only: ['create', 'store', 'get_coupon_form']),
+            new Middleware('permission:edit_coupon', only: ['edit', 'update', 'get_coupon_form_edit']),
             new Middleware('permission:delete_coupon', only: ['destroy']),
         ];
     }

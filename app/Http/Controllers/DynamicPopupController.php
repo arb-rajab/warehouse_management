@@ -25,9 +25,9 @@ class DynamicPopupController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_all_dynamic_popups', only: ['index']),
-            new Middleware('permission:add_dynamic_popups', only: ['create']),
-            new Middleware('permission:edit_dynamic_popups', only: ['edit']),
-            new Middleware('permission:delete_dynamic_popups', only: ['destroy']),
+            new Middleware('permission:add_dynamic_popups', only: ['create', 'store']),
+            new Middleware('permission:edit_dynamic_popups', only: ['edit', 'update']),
+            new Middleware('permission:delete_dynamic_popups', only: ['destroy', 'bulk_dynamic_popup_delete']),
             new Middleware('permission:publish_dynamic_popups', only: ['update_status']),
         ];
     }

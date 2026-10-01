@@ -25,8 +25,8 @@ class StaffController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_all_staffs', only: ['index']),
-            new Middleware('permission:add_staff', only: ['create']),
-            new Middleware('permission:edit_staff', only: ['edit']),
+            new Middleware('permission:add_staff', only: ['create', 'store']),
+            new Middleware('permission:edit_staff', only: ['edit', 'update']),
             new Middleware('permission:delete_staff', only: ['destroy']),
         ];
     }

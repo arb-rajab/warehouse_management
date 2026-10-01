@@ -26,7 +26,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_classified_packages', only: ['index']),
-            new Middleware('permission:edit_classified_package', only: ['edit']),
+            new Middleware('permission:edit_classified_package', only: ['edit', 'update', 'store']),
             new Middleware('permission:delete_classified_package', only: ['destroy']),
         ];
     }

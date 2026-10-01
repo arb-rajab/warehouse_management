@@ -26,8 +26,8 @@ class FlashDealController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_all_flash_deals', only: ['index']),
-            new Middleware('permission:add_flash_deal', only: ['create']),
-            new Middleware('permission:edit_flash_deal', only: ['edit']),
+            new Middleware('permission:add_flash_deal', only: ['create', 'store', 'product_discount']),
+            new Middleware('permission:edit_flash_deal', only: ['edit', 'update', 'update_status', 'product_discount_edit']),
             new Middleware('permission:delete_flash_deal', only: ['destroy']),
             new Middleware('permission:publish_flash_deal', only: ['update_featured']),
         ];

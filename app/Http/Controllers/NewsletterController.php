@@ -23,7 +23,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:send_newsletter', only: ['index']),
+            new Middleware('permission:send_newsletter', only: ['index', 'send', 'testEmail']),
         ];
     }
     public function index(Request $request)

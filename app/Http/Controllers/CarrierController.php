@@ -25,7 +25,7 @@ class CarrierController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:manage_carriers', only: ['index', 'create', 'edit', 'destroy']),
+            new Middleware('permission:manage_carriers', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'updateStatus']),
         ];
     }
      /**

@@ -24,22 +24,24 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:seller_commission_configuration', only: ['vendor_commission']),
-            new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form']),
+            new Middleware('permission:seller_commission_configuration', only: ['vendor_commission', 'vendor_commission_update']),
+            new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form', 'seller_verification_form_update']),
             new Middleware('permission:general_settings', only: ['general_setting']),
             new Middleware('permission:features_activation', only: ['activation']),
             new Middleware('permission:smtp_settings', only: ['smtp_settings']),
-            new Middleware('permission:payment_methods_configurations', only: ['payment_method']),
+            new Middleware('permission:payment_methods_configurations', only: ['payment_method', 'payment_method_update']),
             new Middleware('permission:order_configuration', only: ['order_configuration']),
             new Middleware('permission:file_system_&_cache_configuration', only: ['file_system']),
             new Middleware('permission:social_media_logins', only: ['social_login']),
-            new Middleware('permission:facebook_chat', only: ['facebook_chat']),
-            new Middleware('permission:facebook_comment', only: ['facebook_comment']),
-            new Middleware('permission:analytics_tools_configuration', only: ['google_analytics']),
-            new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha']),
-            new Middleware('permission:google_map_setting', only: ['google_map']),
-            new Middleware('permission:google_firebase_setting', only: ['google_firebase']),
-            new Middleware('permission:shipping_configuration', only: ['shipping_configuration']),
+            new Middleware('permission:facebook_chat', only: ['facebook_chat', 'facebook_chat_update']),
+            new Middleware('permission:facebook_comment', only: ['facebook_comment', 'facebook_comment_update']),
+            new Middleware('permission:analytics_tools_configuration', only: ['google_analytics', 'google_analytics_update', 'facebook_pixel_update']),
+            new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha', 'google_recaptcha_update']),
+            new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
+            new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
+            new Middleware('permission:shipping_configuration', only: ['shipping_configuration', 'shipping_configuration_update']),
+            // Posted from several pages (general settings, order configuration, google map, currencies, website header/footer/appearance/home page).
+            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
     public function general_setting(Request $request)

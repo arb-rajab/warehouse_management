@@ -152,11 +152,25 @@ prefix. That is the single point every storefront asset URL goes through.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
   keys) are now set in the server `.env` by whoever deploys.
   `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
-  callers against a scratch `.env`. **Still open:** the same `permission:`-list
-  gap leaves the other settings POSTs, including `business_settings.update`,
-  which upserts any `business_settings` row, open to every admin-class
-  account, and `maintenance_mode` is toggled there; wiring permissions to the
-  POSTs, with a test over every gated route, is the next item.
+  callers against a scratch `.env`. **Permission gap, fixed 2026-10-01 for writes:** the same
+  `permission:`-list gap left 173 of the store admin's write routes (store,
+  update, the status toggles, the bulk deletes; 204 in all) open to every
+  admin, staff or accountant account: `business_settings.update` upserted any
+  settings row and toggled maintenance mode. The controllers gated the page
+  actions (`index`, `create`, `edit`, `destroy`) and not the endpoints behind
+  them. Each write now shares its page's permission (`store` with `create`,
+  `update` with `edit`, the status toggles with `edit`, `bulk_*_delete` with
+  `destroy`; the settings POSTs with their settings page's permission), using
+  only names that already exist. 153 of the 204 are gated.
+  `LegacyAdminPermissionsTest` lists the 51 that are not
+  (`ADMIN_WRITES_STILL_UNGATED`), fails on a new ungated write route and on a
+  listed one that has since been gated, and checks that a staff user with no
+  permissions gets 403 on every gated write. **Still open:** those 51, which
+  need permission names from the production permission list (logistics: trips,
+  trucks, drivers; offers; representative packages; notifications), plus about
+  135 admin pages (GET) that no permission covers, among them customer, seller
+  and order listings. Phase 5's role import is also where the owner can say
+  which existing staff roles should get which permission.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

@@ -20,7 +20,7 @@ class CurrencyController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:currency_setup', only: ['currency', 'create', 'edit']),
+            new Middleware('permission:currency_setup', only: ['currency', 'create', 'edit', 'store', 'updateYourCurrency', 'update_status']),
         ];
     }
     public function changeCurrency(Request $request)
