@@ -64,7 +64,7 @@ Route::get('/refresh-csrf', function() {
 });
 
 // AIZ Uploader
-Route::controller(AizUploadController::class)->group(function () {
+Route::controller(AizUploadController::class)->middleware('auth')->group(function () {
     Route::post('/aiz-uploader', 'show_uploader');
     Route::post('/aiz-uploader/upload', 'upload');
     Route::get('/aiz-uploader/get_uploaded_files', 'get_uploaded_files');

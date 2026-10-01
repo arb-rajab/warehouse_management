@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -421,4 +422,43 @@ function sourceFilesUnder(array $directories): Generator
             }
         }
     }
+}
+
+/**
+ * Run `$callback` with the public path pointed at a scratch directory that has
+ * a sentinel `index.php` beside the upload directory, so an upload that
+ * escapes its directory writes there and never into the real `public/`.
+ * The callback gets the scratch public path.
+ */
+function withScratchPublicPath(Closure $callback): void
+{
+    $root = sys_get_temp_dir().'/image-upload-'.bin2hex(random_bytes(4));
+    File::ensureDirectoryExists("$root/public/uploads/all");
+    file_put_contents("$root/public/index.php", '<?php // sentinel');
+    $originalPublicPath = app()->publicPath();
+    app()->usePublicPath("$root/public");
+
+    try {
+        $callback("$root/public");
+    } finally {
+        app()->usePublicPath($originalPublicPath);
+        File::deleteDirectory($root);
+    }
+}
+
+function tinyPng(): string
+{
+    $image = imagecreatetruecolor(4, 4);
+    ob_start();
+    imagepng($image);
+
+    return (string) ob_get_clean();
+}
+
+/**
+ * @return list<string> The names of the files in the scratch upload directory.
+ */
+function storedUploadFiles(string $publicPath): array
+{
+    return array_map('basename', glob("$publicPath/uploads/all/*") ?: []);
 }

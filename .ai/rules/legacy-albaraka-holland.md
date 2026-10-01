@@ -283,6 +283,26 @@ prefix. That is the single point every storefront asset URL goes through.
   (bearer token, so no CSRF, but the app calls them as GET; change both
   together), and the admin notifications page's delete button, which never
   worked (its modal was commented out) and is wired up now.
+- The multipart uploader (the web admin/seller/customer screens and the two
+  mobile APIs) took the client's extension for the allowlist and stored the file
+  under the extension its *content* had, so an `a.png` holding HTML was stored
+  as `<random>.html`, and one holding an SVG as `<random>.svg`, served from the
+  shop's origin (stored XSS for whoever opened it, an admin included); only the
+  web copy sanitised an SVG, and only if the client said `.svg`. Uploads also
+  went to `storage/app/private` (the WMS `local` disk), where nothing is served.
+  **Fixed 2026-10-01:** `MultipartUploadService` replaces the three copies. The
+  client's extension only picks the kind; an image must be an image and keeps the
+  extension its content has; other kinds keep the allowlisted extension; HTML,
+  XHTML/SVG-in-XML and script content is refused; SVG is sanitised under any
+  name; the file is written to `public/uploads/all/<random>` (or S3) through
+  `WritesUploads`, which `Base64ImageUploadService` shares. The web uploader
+  routes need a signed-in account (`download/{id}` and `get_file_by_ids` took any
+  upload by id from anyone), and `UploadPolicy` limits view/delete to the owner
+  plus admin and staff (`destroy` only stopped a *seller* deleting someone
+  else's). Tests: `LegacyMultipartUploadTest`. **Not done:** the other 18 files
+  that write through `Storage::disk('local')` or `public_path()` (the dedicated
+  `uploads` disk in §6.5), and the web-served ZIP/Office types, which keep their
+  allowlisted extension without a content check.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

@@ -3,7 +3,6 @@
 use App\Models\Upload;
 use App\Services\Base64ImageUploadService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\File;
 
 /**
  * The store API's base64 image uploads wrote the request's bytes to
@@ -13,44 +12,7 @@ use Illuminate\Support\Facades\File;
  * user could reach, `index.php` included, and a PHP file sat on disk until the
  * check ran. Any self-registered customer could call it. Base64ImageUploadService
  * is the one place that stores them now.
- *
- * Each test points the public path at a scratch directory with a sentinel
- * `index.php` beside the upload directory, so a regression writes there and
- * never into the real `public/`.
  */
-function withScratchPublicPath(Closure $callback): void
-{
-    $root = sys_get_temp_dir().'/image-upload-'.bin2hex(random_bytes(4));
-    File::ensureDirectoryExists("$root/public/uploads/all");
-    file_put_contents("$root/public/index.php", '<?php // sentinel');
-    $originalPublicPath = app()->publicPath();
-    app()->usePublicPath("$root/public");
-
-    try {
-        $callback("$root/public");
-    } finally {
-        app()->usePublicPath($originalPublicPath);
-        File::deleteDirectory($root);
-    }
-}
-
-function tinyPng(): string
-{
-    $image = imagecreatetruecolor(4, 4);
-    ob_start();
-    imagepng($image);
-
-    return (string) ob_get_clean();
-}
-
-/**
- * @return list<string> The names of the files in the scratch upload directory.
- */
-function storedUploadFiles(string $publicPath): array
-{
-    return array_map('basename', glob("$publicPath/uploads/all/*") ?: []);
-}
-
 test('a valid image is stored under a server-chosen name and recorded', function () {
     $customer = createStoreUser('customer');
 

@@ -3,10 +3,8 @@
 namespace App\Services;
 
 use App\Models\Upload;
+use App\Services\Concerns\WritesUploads;
 use enshrined\svgSanitize\Sanitizer;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -26,6 +24,8 @@ use InvalidArgumentException;
  */
 class Base64ImageUploadService
 {
+    use WritesUploads;
+
     /** The largest decoded image accepted, in bytes. */
     public const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -56,28 +56,7 @@ class Base64ImageUploadService
 
         [$contents, $extension] = $this->normalise($decoded);
 
-        $path = 'uploads/all/'.Str::random(40).'.'.$extension;
-
-        if (config('filesystems.default') === 's3') {
-            Storage::disk('s3')->put($path, $contents, ['visibility' => 'public']);
-        } else {
-            File::ensureDirectoryExists(public_path('uploads/all'));
-
-            if (file_put_contents(public_path($path), $contents, LOCK_EX) === false) {
-                throw new InvalidArgumentException('Uploading error');
-            }
-        }
-
-        $upload = new Upload;
-        $upload->file_original_name = $this->displayName($clientFilename);
-        $upload->extension = $extension;
-        $upload->file_name = $path;
-        $upload->user_id = $userId;
-        $upload->type = 'image';
-        $upload->file_size = strlen($contents);
-        $upload->save();
-
-        return $upload;
+        return $this->writeUpload($contents, $extension, 'image', $clientFilename, $userId);
     }
 
     /**
@@ -134,17 +113,5 @@ class Base64ImageUploadService
         };
 
         return (string) ob_get_clean();
-    }
-
-    /**
-     * The client's filename without its extension, for display only: it is
-     * never used to build a path.
-     */
-    private function displayName(?string $clientFilename): ?string
-    {
-        $name = pathinfo(basename(str_replace('\\', '/', (string) $clientFilename)), PATHINFO_FILENAME);
-        $name = trim((string) preg_replace('/[\x00-\x1F\x7F]/u', '', $name));
-
-        return $name === '' ? null : mb_substr($name, 0, 255);
     }
 }
