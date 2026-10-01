@@ -48,7 +48,7 @@ class ImportCustomersFromArray extends Command
             try {
                 // استدعاء الخدمة المطلوبة
 
-                $apiEndpoint = 'https://stores.otajer.com/api/rest/addmember/' . config('services.otajer.token');
+                $apiEndpoint = config('services.otajer.url') . '/api/rest/addmember/' . config('services.otajer.token');
                 $data = [
                     "CompanyName" => $user->company_name,
                     "Email" => $user->email,

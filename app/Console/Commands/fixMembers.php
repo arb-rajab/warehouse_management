@@ -42,7 +42,7 @@ class fixMembers extends Command
     public function handle()
     {
         try {
-            $endpoint = 'https://stores.otajer.com/api/rest/loadmembers/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '/api/rest/loadmembers/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
             $allMembers = json_decode($response, true);
 

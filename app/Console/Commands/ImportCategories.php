@@ -78,7 +78,7 @@ class ImportCategories extends Command
                 $uncategory->save();
             }
 
-            $endpoint = 'https://stores.otajer.com//api/rest/listcats/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '//api/rest/listcats/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
 
             $categoriesData = json_decode($response, true);

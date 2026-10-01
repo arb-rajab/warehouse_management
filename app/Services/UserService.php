@@ -15,7 +15,7 @@ class UserService
         return true;
         try {
             // API endpoint
-            $members_endpoint = "https://stores.otajer.com/api/rest/loadmembers/" . config('services.otajer.token');
+            $members_endpoint = config('services.otajer.url') . "/api/rest/loadmembers/" . config('services.otajer.token');
             $response = file_get_contents($members_endpoint);
             $allMembers = json_decode($response, true);
 
@@ -34,7 +34,7 @@ class UserService
 
 
             // JSON payload
-            $apiEndpoint = 'https://stores.otajer.com/api/rest/addmember/' . config('services.otajer.token');
+            $apiEndpoint = config('services.otajer.url') . '/api/rest/addmember/' . config('services.otajer.token');
             $data = [
                 "CompanyName" => $new_user->company_name,
                 "Email" => $new_user->email,

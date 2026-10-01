@@ -401,3 +401,24 @@ function assertCellInActiveRoundRejection(TestResponse $response): void
 {
     $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
 }
+
+/**
+ * Every PHP file under the given directories (relative to the project root),
+ * as relative path => contents, for tests that scan the source for something
+ * that must not be there.
+ *
+ * @param  list<string>  $directories
+ * @return Generator<string, string>
+ */
+function sourceFilesUnder(array $directories): Generator
+{
+    foreach ($directories as $directory) {
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($directory), FilesystemIterator::SKIP_DOTS));
+
+        foreach ($files as $file) {
+            if ($file->getExtension() === 'php') {
+                yield str_replace(base_path().'/', '', $file->getPathname()) => file_get_contents($file->getPathname());
+            }
+        }
+    }
+}

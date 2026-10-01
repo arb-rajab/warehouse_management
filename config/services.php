@@ -91,7 +91,12 @@ return [
         'project_id' => env('FCM_PROJECT_ID', 'albarakabv-store'),
     ],
 
+    // The legacy store's ERP ("otajer"): the host its console commands and
+    // UserService call, and the API token they append to the path. The token was
+    // once also committed as a literal in AllProductsCommand, so the one that
+    // was in the repository is compromised and has to be reissued.
     'otajer' => [
+        'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
         'token' => env('OTAJER_TOKEN'),
     ],
 

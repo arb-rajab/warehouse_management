@@ -43,7 +43,7 @@ class TestMatID extends Command
 
 
         // Fetch products from the API
-        $endpoint = 'https://stores.otajer.com/api/rest/listfullproducts/' . config('services.otajer.token') . '/-1';
+        $endpoint = config('services.otajer.url') . '/api/rest/listfullproducts/' . config('services.otajer.token') . '/-1';
         $response = Http::get($endpoint);
         $allProducts = $response->json();
 

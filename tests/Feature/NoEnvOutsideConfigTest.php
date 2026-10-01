@@ -28,14 +28,10 @@ test('nothing outside config reads a key that has a config equivalent through en
     $offenders = [];
     $pattern = '/\benv\(\s*[\'"]('.implode('|', array_keys(ENV_KEYS_WITH_A_CONFIG_EQUIVALENT)).')[\'"]/';
 
-    foreach (['app', 'bootstrap', 'routes', 'resources/views', 'database/migrations'] as $directory) {
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($directory), FilesystemIterator::SKIP_DOTS));
-
-        foreach ($files as $file) {
-            if ($file->getExtension() === 'php' && preg_match_all($pattern, file_get_contents($file->getPathname()), $matches)) {
-                foreach (array_unique($matches[1]) as $key) {
-                    $offenders[] = str_replace(base_path().'/', '', $file->getPathname()).": env('$key') -> ".ENV_KEYS_WITH_A_CONFIG_EQUIVALENT[$key];
-                }
+    foreach (sourceFilesUnder(['app', 'bootstrap', 'routes', 'resources/views', 'database/migrations']) as $path => $source) {
+        if (preg_match_all($pattern, $source, $matches)) {
+            foreach (array_unique($matches[1]) as $key) {
+                $offenders[] = "$path: env('$key') -> ".ENV_KEYS_WITH_A_CONFIG_EQUIVALENT[$key];
             }
         }
     }

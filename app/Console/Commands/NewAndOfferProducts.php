@@ -44,7 +44,7 @@ class NewAndOfferProducts extends Command
         try {
             $start_time = Carbon::now();
             $products_count = 0;
-            $endpoint = 'https://stores.otajer.com/api/rest/newandofferproducts/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '/api/rest/newandofferproducts/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['NewProducts']);

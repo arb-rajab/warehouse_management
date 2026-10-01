@@ -129,6 +129,15 @@ prefix. That is the single point every storefront asset URL goes through.
 - `config/services.php` hardcodes the FCM `project_id`. Nineteen
   `stores.otajer.com/api/...` URLs are hardcoded across 14 files, with the
   token appended from `config('services.otajer.token')`.
+  **Fixed 2026-10-01:** every one reads `config('services.otajer.url')`
+  (`OTAJER_URL`, default the production host), and `AllProductsCommand`'s two
+  URLs carried the API token itself as a literal; they use
+  `config('services.otajer.token')` now. That literal is in git history, so
+  have the ERP vendor reissue the token and put the new one in `OTAJER_TOKEN`.
+  `OtajerConfigTest` fails on the host or a token in any source file. A scan
+  for other committed secrets (key prefixes, 32-hex tokens, private keys) found
+  none: the other hits were a sample payload, SVG ids and a `Nagad` private key
+  that is read from `NAGAD_MERCHANT_PRIVATE_KEY`.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

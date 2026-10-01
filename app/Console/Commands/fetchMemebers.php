@@ -48,7 +48,7 @@ class fetchMemebers extends Command
             $updated_accounts = 0;
 
 
-            $endpoint = 'https://stores.otajer.com/api/rest/loadmembers/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '/api/rest/loadmembers/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
             $allMembers = json_decode($response, true);
             $members_count += count($allMembers['Members']);
