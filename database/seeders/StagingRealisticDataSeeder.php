@@ -42,8 +42,9 @@ use RuntimeException;
  *  2. Unless a previous run already did so, it seeds pallets, cell status logs
  *     (including rule-flagged ones), deactivated cells, low-stock thresholds
  *     and verification rounds with reports, spread so that every dashboard
- *     card and page filter has matching and non-matching rows. Products are
- *     only read, with the two exceptions documented on loadProducts() and
+ *     card and page filter has matching and non-matching rows. The `products`
+ *     table itself is never written (its synced columns belong to
+ *     `products:sync`); only `wms_product_settings.minimum_pallets` is, see
  *     seedLowStockThresholds().
  *
  * Re-running is safe: step 1 is a no-op once every row is on the grid, and
@@ -272,13 +273,10 @@ class StagingRealisticDataSeeder extends Seeder
     }
 
     /**
-     * Products are only read — with one exception: staging needs at least some
-     * unpublished products holding stock for the dashboard's and products
-     * page's "inactive" filters to have anything to show, so when none exist
-     * the two highest-id products are marked unpublished. (`published` is
-     * owned by `products:sync`, which restores it on its next run.) The
-     * unpublished ones are placed first so the skewed product choice in
-     * pickProduct() gives them pallets.
+     * Products are only read: `name`, `ar_name` and `published` are owned by
+     * `products:sync`, so staging's own unpublished products (if any) are what
+     * the "inactive" filters get to show. They are placed first so the skewed
+     * product choice in pickProduct() gives them pallets.
      *
      * @return list<Product>
      */
@@ -289,18 +287,6 @@ class StagingRealisticDataSeeder extends Seeder
             ->with('setting:product_id,boxes_count,minimum_pallets')
             ->orderBy('id')
             ->get();
-
-        if ($products->isNotEmpty() && $products->where('published', false)->isEmpty()) {
-            $unpublishedIds = $products->take(-2)->modelKeys();
-
-            Product::query()->whereKey($unpublishedIds)->update(['published' => false]);
-
-            $products = $products->each(function (Product $product) use ($unpublishedIds): void {
-                if (in_array($product->id, $unpublishedIds, true)) {
-                    $product->published = false;
-                }
-            });
-        }
 
         $unpublished = $products->where('published', false)->take(3);
 

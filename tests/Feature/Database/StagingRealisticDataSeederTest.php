@@ -124,12 +124,11 @@ test('running it twice changes nothing the second time', function () {
 
 test('seeds data for every dashboard card and page filter, each with matching and non-matching rows', function () {
     (new DatabaseSeeder)->run();
-    $productCountBefore = Product::count();
+
+    // Staging gets its unpublished products from `products:sync`; stand in for that.
+    Product::query()->orderBy('id')->limit(2)->get()->each(fn (Product $product) => $product->forceFill(['published' => false])->save());
 
     (new StagingRealisticDataSeeder)->run();
-
-    // Products are only read (the two documented exceptions aside).
-    expect(Product::count())->toBe($productCountBefore);
 
     $totalPallets = Pallet::count();
     $today = today();
@@ -264,15 +263,12 @@ test('keeps unfinished rounds from claiming the same row twice and leaves most r
         ->and(Row::query()->underActiveVerification()->count())->toBeLessThan(Row::count() / 2);
 });
 
-test('leaves the products it finds untouched when some are already unpublished', function () {
+test('never writes the products table, whose synced columns belong to products:sync', function () {
     (new DatabaseSeeder)->run();
 
-    $alreadyUnpublished = Product::query()->orderBy('id')->first();
-    $alreadyUnpublished->forceFill(['published' => false])->save();
-    $publishedBefore = Product::where('published', true)->pluck('id')->all();
+    $before = Product::query()->orderBy('id')->get(['id', 'name', 'ar_name', 'published', 'updated_at'])->toArray();
 
     (new StagingRealisticDataSeeder)->run();
 
-    expect(Product::where('published', true)->pluck('id')->all())->toEqual($publishedBefore)
-        ->and(Product::where('published', false)->pluck('id')->all())->toEqual([$alreadyUnpublished->id]);
+    expect(Product::query()->orderBy('id')->get(['id', 'name', 'ar_name', 'published', 'updated_at'])->toArray())->toEqual($before);
 });
