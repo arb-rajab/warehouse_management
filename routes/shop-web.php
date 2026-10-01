@@ -250,6 +250,7 @@ Route::group(['middleware' => ['user', 'verified', 'unbanned']], function() {
     Route::controller(HomeController::class)->group(function () {
         Route::get('/dashboard', 'dashboard')->name('dashboard');
         Route::get('/profile', 'profile')->name('profile');
+        Route::get('/profile/trade-license', 'ownTradeLicense')->name('profile.trade_license');
         Route::post('/new-user-verification', 'new_verify')->name('user.new.verify')->middleware('throttle:store-auth');
         Route::post('/new-user-email', 'update_email')->name('user.change.email');
         Route::post('/user/update-profile', 'userProfileUpdate')->name('user.profile.update');

@@ -303,6 +303,23 @@ prefix. That is the single point every storefront asset URL goes through.
   that write through `Storage::disk('local')` or `public_path()` (the dedicated
   `uploads` disk in §6.5), and the web-served ZIP/Office types, which keep their
   allowlisted extension without a content check.
+- Trade licences (a customer's business document) were saved as
+  `uploads/licenses/<the client's filename>`: one customer's upload overwrote
+  another's of the same name, the registration and profile forms never checked
+  what the file was, the admin download built its path from the request
+  (`public_path('uploads/licenses/'.$filename)`, so a `..` reached any file) and
+  the customer's profile linked a public URL. **Fixed 2026-10-01:**
+  `TradeLicenseStorage` keeps a licence on the private disk under a random name
+  with the extension its content has (PDF, Word, PNG or JPEG, 20 MB), refuses
+  anything else with a validation error, and sends it back only through a
+  controller: `download.trade_license` (admin, `view_all_customers`) and the new
+  `profile.trade_license` (the signed-in customer's own). A name read back is
+  cut to its basename first. Tests: `LegacyTradeLicenseTest`. **Before Phase 5's
+  data merge:** licences already on the legacy server sit in
+  `public/uploads/licenses/` (web-served to anyone who guesses the name); move
+  them to `storage/app/private/uploads/licenses/` and take them out of the web
+  root. **Mobile app:** `trade_license` in the API is the stored name, not a
+  public URL, and there is no API endpoint that returns the file yet.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\AddressCollection;
+use App\Services\TradeLicenseStorage;
 use App\Http\Resources\V2\CitiesCollection;
 use App\Http\Resources\V2\CountriesCollection;
 use App\Models\Address;
@@ -119,13 +120,7 @@ class ProfileController extends Controller
         }
 
         if (request()->hasFile('trade_license')) {
-            $uploadedFile = request()->file('trade_license');
-            $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-            // Store the PDF file in the 'local' disk with the specified filename
-            $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-            $user->trade_license = $pdfFileName; // Store the path in your database
+            $user->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
         }
 
 

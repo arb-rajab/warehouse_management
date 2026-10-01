@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2\Warehouse;
 
 use App\Http\Controllers\Controller;
+use App\Services\TradeLicenseStorage;
 use App\Http\Resources\V2\Warehouse\CustomerCollection;
 use App\Http\Resources\V2\Warehouse\CustomerDetailsResource;
 use App\Http\Resources\V2\Warehouse\RepCollection;
@@ -75,13 +76,7 @@ class CustomerController extends Controller
 
             // Handle trade_license file upload
             if (request()->hasFile('trade_license')) {
-                $uploadedFile = request()->file('trade_license');
-                $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-                // Store the PDF file in the 'local' disk with the specified filename
-                $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-                $customer->trade_license =  $pdfFileName; // Store the path in your database
+                $customer->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
             }
 
             $customer->save();
