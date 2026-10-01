@@ -255,8 +255,8 @@ prefix. That is the single point every storefront asset URL goes through.
   relative; `data:` only for a base64 PNG/JPEG/GIF/WebP image) and CSS
   properties survive, SVG and MathML are removed, links get
   `rel="noopener noreferrer nofollow"`, and the output is re-cleaned unchanged.
-  It needs PHP 8.4 or later, which the app already does (CI and the server run
-  8.5); `composer.json` still says `^8.3`. `HtmlSanitizerTest` has 25 hostile
+  It needs PHP 8.4 or later, which `composer.json` now declares (`^8.4`; CI and
+  the server run 8.5). `HtmlSanitizerTest` has 25 hostile
   payloads, the admin ticket page, the product description and the email, and a
   scan that fails on a new raw print of `->details`, `->reply`, `->description`
   or a translated description. **Not covered:** admin-written content, which is
@@ -314,11 +314,15 @@ prefix. That is the single point every storefront asset URL goes through.
   anything else with a validation error, and sends it back only through a
   controller: `download.trade_license` (admin, `view_all_customers`) and the new
   `profile.trade_license` (the signed-in customer's own). A name read back is
-  cut to its basename first. Tests: `LegacyTradeLicenseTest`. **Before Phase 5's
-  data merge:** licences already on the legacy server sit in
-  `public/uploads/licenses/` (web-served to anyone who guesses the name); move
-  them to `storage/app/private/uploads/licenses/` and take them out of the web
-  root. **Mobile app:** `trade_license` in the API is the stored name, not a
+  cut to its basename first. Tests: `LegacyTradeLicenseTest`. **Run once on the
+  server after the first deploy of this change:** licences already there sit in
+  `public/uploads/licenses/` (web-served to anyone who guesses the name).
+  `php artisan store:move-trade-licenses` (`--dry-run` first) copies each onto
+  the private disk under the same name, checks the size, then removes it from
+  the web root; a name that already exists on the private disk is never
+  overwritten and is reported (exit code 1). With atomic releases `public/uploads`
+  is the shared directory, so the command moves the shared files. Test:
+  `MoveLegacyTradeLicensesCommandTest`. **Mobile app:** `trade_license` in the API is the stored name, not a
   public URL, and there is no API endpoint that returns the file yet.
 - The offers catalogue had the same shape as the licences: any file, saved
   under the client's filename on the private disk, read back from a public path
@@ -498,9 +502,10 @@ The upgrade branch (`804dca9`) un-ignores `app/Exceptions` and adds a
   gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius,
   ProxyPay) are hand-rolled with no SDK.
 - `php: ^7.1.3` contradicts `laravel/framework 8.*`, which needs `^7.3|^8.0`.
-- This app declares `php: ^8.3`, but its `composer.lock` actually needs
+- This app declared `php: ^8.3`, but its `composer.lock` actually needs
   **PHP ≥ 8.4.1**: symfony 8.1 components (`symfony/console` v8.1.4 and others)
-  and `phpunit/phpunit` 13. Target PHP 8.4+ for the merged app.
+  and `phpunit/phpunit` 13. **Fixed 2026-10-01:** `composer.json` and the lock's
+  platform now say `^8.4`.
 
 ### 0.6 What `f31f264` changed
 
