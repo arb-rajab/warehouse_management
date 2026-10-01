@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, Plus, QrCode, SlidersHorizontal, X } from '@lucide/vue';
+import { Barcode, Check, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -883,7 +883,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                         :title="t('products.columns.qr')"
                         class="inline-flex text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
                     >
-                        <QrCode class="h-4 w-4" />
+                        <Barcode class="h-4 w-4" />
                     </a>
                 </td>
             </template>

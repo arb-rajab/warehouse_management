@@ -518,7 +518,7 @@
             "boxesPerPallet": "Boxes / pallet",
             "minimumPallets": "Min. pallets",
             "barcodes": "Barcodes",
-            "qr": "QR"
+            "qr": "Barcode"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "minimumPalletsLabel": "Minimum pallets for {product}",
@@ -528,7 +528,7 @@
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
         "noBarcodes": "No barcodes added yet.",
-        "exportQrLabel": "Export QR code for {product}",
+        "exportQrLabel": "Export barcode for {product}",
         "empty": "No products yet."
     },
     "pallets": {
@@ -661,8 +661,8 @@
                 "body": "Go to the Products page, find the product, and edit the number in its \"Boxes / pallet\" column. Save it once and every full pallet of that product will use the real count from then on — you only need to do this the first time a product's true pallet size is known."
             },
             "exportingQr": {
-                "heading": "Printing a product's QR label",
-                "body": "Click the QR icon at the end of a product's row to download a printable QR label for it. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the label in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
+                "heading": "Printing a product's barcode label",
+                "body": "Click the barcode icon at the end of a product's row to download a printable Code 128 barcode label for it. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {

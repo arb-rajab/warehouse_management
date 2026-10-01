@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/vue3';
-import { Check, Filter, X } from '@lucide/vue';
+import { Barcode, Check, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
@@ -823,7 +823,7 @@ describe('Products Index', () => {
         expect(href).toContain('expires_within_days=30');
     });
 
-    it('renders a QR export link for the product', () => {
+    it('renders a barcode export link for the product', () => {
         const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
 
         const cell = rowCells(wrapper)[8];
@@ -832,6 +832,8 @@ describe('Products Index', () => {
         expect(link.attributes('aria-label')).toBe(
             t('products.exportQrLabel', { product: 'Widgets' }),
         );
+        expect(link.attributes('title')).toBe(t('products.columns.qr'));
+        expect(link.findComponent(Barcode).exists()).toBe(true);
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {

@@ -7,9 +7,9 @@ use LogicException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
- * Low-level PDF/QR helpers shared by every QR-label export — BuildsCellQrLabels
- * (row/cell labels) and BuildsProductQrLabels (product labels). The SVG QR
- * encoding here isn't specific to what a label encodes.
+ * Low-level SVG/PDF label helpers — QR encoding plus text wrapping/clamping —
+ * used by BuildsCellQrLabels (row/cell labels) and, for its text layout only,
+ * BuildsProductQrLabels (product barcode labels).
  */
 trait BuildsQrLabels
 {

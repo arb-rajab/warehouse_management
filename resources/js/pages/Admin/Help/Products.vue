@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { QrCode } from '@lucide/vue';
+import { Barcode } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DataTable from '@/components/DataTable.vue';
@@ -140,7 +140,7 @@ const previewProducts = [
                     :title="t('products.columns.qr')"
                     class="inline-flex text-gray-400 dark:text-neutral-500"
                 >
-                    <QrCode class="h-4 w-4" />
+                    <Barcode class="h-4 w-4" />
                 </span>
             </HelpUiPreview>
         </section>
