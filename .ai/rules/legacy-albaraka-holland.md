@@ -461,8 +461,10 @@ prefix. That is the single point every storefront asset URL goes through.
   before the order is created; cash on delivery, the wallet and the manual
   methods (names with no controller) are unchanged. The wallet's own `pay()`
   deducted from the in-memory user, unlocked: it uses `WalletPaymentService` now
-  (which also refuses an order that is not the payer's). Tests:
-  `LegacyWalletPaymentTest`.
+  (which also refuses an order that is not the payer's). The wallet recharge
+  and the customer-package purchase used the same class-name-from-the-form
+  pattern; the check is `App\Services\PaymentOptions::isAllowed()` and all three
+  use it. Tests: `LegacyWalletPaymentTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
@@ -1690,7 +1692,13 @@ and 5). Each item says where its answer comes from.
   coupons now count quantities.
 - [ ] **Move a payment gateway's credentials from `env()` to config** before it
   is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
-  has moved). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
+  has moved). A gateway's server-to-server callbacks POST to the shop, and this
+  app has no CSRF exceptions (the legacy `VerifyCsrfToken` excluded
+  `/payhere*`, `/sslcommerz*`, `/iyzico*`, `/bkash*`, `/aamarpay*`,
+  `/apple-callback` and others), so they answer 419 until the enabled gateway's
+  callback paths are added to `validateCsrfTokens(except: [...])` in
+  `bootstrap/app.php`, under `temp/`. Exempt only a gateway that verifies the
+  callback itself (PayHere does; the others do not yet). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
   not report https it redirects forever.
 - [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
   (→ `StoreUser`): the SQL check is in §6.7.1.

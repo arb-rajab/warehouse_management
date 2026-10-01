@@ -109,3 +109,31 @@ test('the storefront checkout leaves an enabled gateway to the gateway', functio
 
     expect($response->getStatusCode())->not->toBe(302);
 });
+
+test('the payment option check passes cash, the wallet and manual methods, and refuses a disabled gateway or an odd name', function (string $option, bool $allowed) {
+    expect(app(App\Services\PaymentOptions::class)->isAllowed($option))->toBe($allowed);
+})->with([
+    'cash on delivery' => ['cash_on_delivery', true],
+    'the wallet' => ['wallet', true],
+    'a manual method' => ['manual_payment_3', true],
+    'a gateway that is off' => ['payhere', false],
+    'another gateway that is off' => ['sslcommerz', false],
+    'a name with a backslash' => ['Foo\\Bar', false],
+    'a name with a dot' => ['..', false],
+    'an empty name' => ['', false],
+]);
+
+test('a gateway enabled in the store settings is allowed', function () {
+    config(['store.enabled_payment_gateways' => ['payhere']]);
+
+    expect(app(App\Services\PaymentOptions::class)->isAllowed('payhere'))->toBeTrue()
+        ->and(app(App\Services\PaymentOptions::class)->isAllowed('aamarpay'))->toBeFalse();
+});
+
+test('the wallet recharge refuses a disabled gateway before it records anything in the session', function () {
+    actingAsStoreUser(createStoreUser('customer'));
+
+    $this->post(route('wallet.recharge'), ['amount' => 100, 'payment_option' => 'aamarpay'])
+        ->assertRedirect()
+        ->assertSessionMissing('payment_type');
+});

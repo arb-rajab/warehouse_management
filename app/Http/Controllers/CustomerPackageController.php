@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PaymentOptions;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageTranslation;
 use App\Models\StoreUser;
@@ -163,6 +164,11 @@ class CustomerPackageController extends Controller implements HasMiddleware
                 flash(translate('You can not purchase this package anymore.'))->warning();
                 return back();
             }
+        }
+
+        if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
+            flash(translate('Select Payment Option.'))->warning();
+            return back();
         }
 
         $decorator = __NAMESPACE__ . '\\Payment\\' . str_replace(' ', '', ucwords(str_replace('_', ' ', $request->payment_option))) . "Controller";
