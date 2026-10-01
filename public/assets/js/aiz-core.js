@@ -1608,25 +1608,37 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
             });
         },
         deleteConfirm: function () {
+            // A confirm trigger carries `data-method="post"` when its URL
+            // changes data: the modal's link then submits a form (with the
+            // CSRF token) instead of navigating, see postLink below.
+            var carryMethod = function (link, trigger) {
+                var method = $(trigger).data("method");
+                if (method) {
+                    link.attr("data-method", method);
+                } else {
+                    link.removeAttr("data-method");
+                }
+            };
+
             $(".confirm-delete").click(function (e) {
                 e.preventDefault();
                 var url = $(this).data("href");
                 $("#delete-modal").modal("show");
-                $("#delete-link").attr("href", url);
+                carryMethod($("#delete-link").attr("href", url), this);
             });
 
             $(".confirm-cancel").click(function (e) {
                 e.preventDefault();
                 var url = $(this).data("href");
                 $("#cancel-modal").modal("show");
-                $("#cancel-link").attr("href", url);
+                carryMethod($("#cancel-link").attr("href", url), this);
             });
 
             $(".confirm-complete").click(function (e) {
                 e.preventDefault();
                 var url = $(this).data("href");
                 $("#complete-modal").modal("show");
-                $("#comfirm-link").attr("href", url);
+                carryMethod($("#comfirm-link").attr("href", url), this);
             });
 
             $(".confirm-alert").click(function (e) {
@@ -1634,9 +1646,35 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
                 var url = $(this).data("href");
                 var target = $(this).data("target");
                 $(target).modal("show");
-                $(target).find(".comfirm-link").attr("href", url);
-                $("#comfirm-link").attr("href", url);
+                carryMethod($(target).find(".comfirm-link").attr("href", url), this);
+                carryMethod($("#comfirm-link").attr("href", url), this);
             });
+
+            AIZ.extra.postLink();
+        },
+        // A link with `data-method="post"` submits a POST form to its href
+        // with the CSRF token. State-changing store routes accept POST only,
+        // because a GET can be fired by any page the signed-in user visits.
+        postLink: function () {
+            $(document)
+                .off("click.aizPostLink")
+                .on("click.aizPostLink", 'a[data-method="post"]', function (e) {
+                    var url = $(this).attr("href");
+                    if (!url || url === "#" || url.indexOf("javascript:") === 0) {
+                        return;
+                    }
+                    e.preventDefault();
+                    $("<form>", { method: "POST", action: url })
+                        .append(
+                            $("<input>", {
+                                type: "hidden",
+                                name: "_token",
+                                value: AIZ.data.csrf,
+                            })
+                        )
+                        .appendTo("body")
+                        .trigger("submit");
+                });
         },
         bytesToSize: function (bytes) {
             var sizes = ["Bytes", "KB", "MB", "GB", "TB"];

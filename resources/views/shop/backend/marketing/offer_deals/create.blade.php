@@ -9,9 +9,9 @@
                 <h5 class="mb-0 h6">{{translate('Offer Deal Information')}}</h5>
             </div>
             <div class="card-body">
-                <form action="{{ route('offer_deals.store') }}" method="get">
+                <form action="{{ route('offer_deals.store') }}" method="post">
                     @csrf
-                    <div class="form-group row">
+                                        <div class="form-group row">
                         <label class="col-sm-3 control-label" for="name">{{translate('Title')}}</label>
                         <div class="col-sm-9">
                             <input type="text" placeholder="{{translate('Title')}}" id="name" name="title" class="form-control" required>

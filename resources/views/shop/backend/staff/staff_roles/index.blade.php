@@ -67,7 +67,7 @@
                                 </a>
                             @endcan
                             @if($role->id != 1 && auth()->user()->can('delete_staff_role'))
-                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('roles.destroy', $role->id)}}" title="{{ translate('Delete') }}">
+                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('roles.destroy', $role->id)}}" title="{{ translate('Delete') }}">
                                     <i class="las la-trash"></i>
                                 </a>
                             @endif

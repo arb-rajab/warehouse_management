@@ -133,12 +133,12 @@
                                     @if ($payment->status == 'pending')
                                         <td class="text-center align-middle">
                                             <a class="btn btn-soft-success btn-icon btn-circle btn-sm"
-                                                href="{{ route('admin.rep.payments.accept', ['id' => $payment->id]) }}"
+                                                data-method="post" href="{{ route('admin.rep.payments.accept', ['id' => $payment->id]) }}"
                                                 title="{{ translate('Accept') }}">
                                                 <i class="las la-check"></i>
                                             </a>
                                             <a class="btn btn-soft-danger btn-icon btn-circle btn-sm"
-                                                href="{{ route('admin.rep.payments.reject', ['id' => $payment->id]) }}"
+                                                data-method="post" href="{{ route('admin.rep.payments.reject', ['id' => $payment->id]) }}"
                                                 title="{{ translate('Reject') }}">
                                                 <i class="las la-times"></i>
                                                 </a>

@@ -67,7 +67,7 @@
 
                                             @can('delete_customer')
                                                 <a href="#" class="dropdown-item confirm-delete"
-                                                    data-href="{{ route('drivers.destroy', $driver->id) }}"
+                                                    data-method="post" data-href="{{ route('drivers.destroy', $driver->id) }}"
                                                     title="{{ translate('Delete') }}">
                                                     {{ translate('Delete') }}
                                                 </a>

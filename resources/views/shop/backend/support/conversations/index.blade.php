@@ -45,7 +45,7 @@
                                 <i class="las la-eye"></i>
                             </a>
                             @can('delete_product_conversations')
-                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('conversations.destroy', encrypt($conversation->id))}}" title="{{ translate('Delete') }}">
+                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('conversations.destroy', encrypt($conversation->id))}}" title="{{ translate('Delete') }}">
                                     <i class="las la-trash"></i>
                                 </a>
                             @endcan

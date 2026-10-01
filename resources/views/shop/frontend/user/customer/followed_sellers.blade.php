@@ -35,7 +35,7 @@
                                         {{ translate('reviews') }})</span>
                                 </div>
                                 <div class="mb-3">
-                                    <a href="{{ route("followed_seller.remove", ['id'=>$followed_seller->shop->id]) }}" class="fs-12 fw-700 hov-text-warning">{{ translate('Unfollow This Seller') }}</a>
+                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$followed_seller->shop->id]) }}" class="fs-12 fw-700 hov-text-warning">{{ translate('Unfollow This Seller') }}</a>
                                 </div>
                                 <!-- Visit Button -->
                                 <a href="{{ route('shop.visit', $followed_seller->shop->slug) }}" class="btn btn-light text-gray-dark btn-block btn-sm rounded-0 border fw-700" tabindex="0" style="padding: 0.75rem">

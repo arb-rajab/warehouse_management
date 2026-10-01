@@ -168,16 +168,14 @@ prefix. That is the single point every storefront asset URL goes through.
   `GET /admin/clear-cache`, which runs `optimize:clear`, is vendor-super-admin
   only like its button; 226 of the 299 admin pages are gated. In all, 379 of 503
   admin routes. `LegacyAdminPermissionsTest` lists what is not
-  (`ADMIN_WRITES_STILL_UNGATED`, 51; `ADMIN_READS_STILL_UNGATED`, 73), fails on a
+  (`ADMIN_WRITES_STILL_UNGATED`, 62; `ADMIN_READS_STILL_UNGATED`, 61), fails on a
   new ungated route and on a listed one that has since been gated, and checks
   that a staff user with no permissions gets 403 on every gated route.
-  **Still open:** those 124, which need permission names from the production
+  **Still open:** those 123, which need permission names from the production
   permission list (logistics: trips, trucks, drivers; offers; representative
   packages and their payments; notifications), and self-service routes and
-  dead ones. Several of those are `GET` routes that change state
-  (`/trips/delete`, `/trucks/delete`, `/offers/destroy`, `/representative
-  payments/accept`), which a link or an image tag can trigger, so give them a
-  permission *and* make them POST/DELETE. Phase 5's role import is where the
+  dead ones; they need a permission, and the ones that change state are POST
+  now (see the state-changing GET bullet below). Phase 5's role import is where the
   owner can say which existing staff roles should get which permission.
 - The store API's base64 image uploads (`POST api/v2/file/image-upload`,
   `profile/update-image`, `profile/image-upload`; `auth:store_api`, so any
@@ -266,6 +264,25 @@ prefix. That is the single point every storefront asset URL goes through.
   texts, payment-method notes), so a compromised admin account can still plant
   script; and the API, which returns descriptions as stored for the mobile app
   to render.
+- The store changed data on GET: delete, ban, approve, restore, duplicate and
+  similar endpoints were plain links, so any page an admin or customer visited
+  could fire them (a top-level navigation carries the session cookie).
+  **Fixed 2026-10-01:** 67 web routes take POST only (`routes/shop-*.php`; the
+  list is `STATE_CHANGING_STORE_ROUTES` in
+  `LegacyStoreStateChangingRoutesTest`). The convention is a `data-method="post"`
+  on the link, or on the confirmation modal's own button for the ban and
+  account-deletion modals; `aiz-core.js` submits a POST form with the CSRF token
+  for `a[data-method="post"]`, and `.confirm-delete`/`.confirm-alert` and the
+  other confirm triggers pass the mark to the modal link, clearing it when the
+  trigger has none, so a trigger for a route still on GET keeps working. A new
+  link to one of the 67 without the mark fails the test, as does a new GET route
+  whose action is named like a destroy/ban/approve/restore. **Left as GET on
+  purpose:** the signed email-verification link, `terms-activation/{code}` (the
+  customer's emailed link) and the gateway redirects back to the shop. **Not
+  done:** the mobile API's `GET .../delete/{id}` and `.../duplicate/{id}` routes
+  (bearer token, so no CSRF, but the app calls them as GET; change both
+  together), and the admin notifications page's delete button, which never
+  worked (its modal was commented out) and is wired up now.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

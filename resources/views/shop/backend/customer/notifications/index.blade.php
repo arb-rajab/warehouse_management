@@ -49,7 +49,7 @@
 
                             <td class="text-right">
                                 @can('delete_notification')
-                                    <a href="{{ route('admin.notifications.delete', ['id' => $notification->id]) }}"
+                                    <a href="#" data-method="post" data-href="{{ route('admin.notifications.delete', ['id' => $notification->id]) }}"
                                         class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete"
                                         title="{{ translate('Delete') }}">
                                         <i class="las la-trash"></i>
@@ -67,11 +67,11 @@
     </div>
 @endsection
 
-{{--
 @section('modal')
     @include('shop.modals.delete_modal')
 @endsection
 
+{{--
 
 @section('script')
     <script type="text/javascript">

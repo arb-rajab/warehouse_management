@@ -8,7 +8,7 @@ Route::group(['prefix' => 'seller', 'middleware' => ['seller', 'verified', 'user
         Route::any('/uploads', 'index')->name('uploaded-files.index');
         Route::any('/uploads/create', 'create')->name('uploads.create');
         Route::any('/uploads/file-info', 'file_info')->name('my_uploads.info');
-        Route::get('/uploads/destroy/{id}', 'destroy')->name('my_uploads.destroy');
+        Route::post('/uploads/destroy/{id}', 'destroy')->name('my_uploads.destroy');
         Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
     });
 });
@@ -25,13 +25,13 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
         Route::post('/products/store/', 'store')->name('products.store');
         Route::get('/product/{id}/edit', 'edit')->name('products.edit');
         Route::post('/products/update/{product}', 'update')->name('products.update');
-        Route::get('/products/duplicate/{id}', 'duplicate')->name('products.duplicate');
+        Route::post('/products/duplicate/{id}', 'duplicate')->name('products.duplicate');
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
         Route::post('/products/sku_combination_edit', 'sku_combination_edit')->name('products.sku_combination_edit');
         Route::post('/products/add-more-choice-option', 'add_more_choice_option')->name('products.add-more-choice-option');
         Route::post('/products/seller/featured', 'updateFeatured')->name('products.featured');
         Route::post('/products/published', 'updatePublished')->name('products.published');
-        Route::get('/products/destroy/{id}', 'destroy')->name('products.destroy');
+        Route::post('/products/destroy/{id}', 'destroy')->name('products.destroy');
     });
 
     // Product Bulk Upload
@@ -51,7 +51,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
         Route::post('/digitalproducts/store', 'store')->name('digitalproducts.store');
         Route::get('/digitalproducts/{id}/edit', 'edit')->name('digitalproducts.edit');
         Route::post('/digitalproducts/update/{id}', 'update')->name('digitalproducts.update');
-        Route::get('/digitalproducts/destroy/{id}', 'destroy')->name('digitalproducts.destroy');
+        Route::post('/digitalproducts/destroy/{id}', 'destroy')->name('digitalproducts.destroy');
         Route::get('/digitalproducts/download/{id}', 'download')->name('digitalproducts.download');
     });
 
@@ -60,7 +60,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
     Route::controller(CouponController::class)->group(function () {
         Route::post('/coupon/get_form', 'get_coupon_form')->name('coupon.get_coupon_form');
         Route::post('/coupon/get_form_edit', 'get_coupon_form_edit')->name('coupon.get_coupon_form_edit');
-        Route::get('/coupon/destroy/{id}', 'destroy')->name('coupon.destroy');
+        Route::post('/coupon/destroy/{id}', 'destroy')->name('coupon.destroy');
     });
 
     //Order
@@ -103,8 +103,8 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
         Route::post('/get-states', 'getStates')->name('get-state');
         Route::post('/get-cities', 'getCities')->name('get-city');
         Route::post('/address/update/{id}', 'update')->name('addresses.update');
-        Route::get('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
-        Route::get('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
+        Route::post('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
+        Route::post('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
     });
 
     // Money Withdraw Requests

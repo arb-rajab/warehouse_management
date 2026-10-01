@@ -87,7 +87,7 @@ Route::controller(LoginController::class)->group(function () {
     Route::get('/social-login/{provider}/callback', 'handleProviderCallback')->name('social.callback');
     //Apple Callback
     Route::post('/apple-callback', 'handleAppleCallback');
-    Route::get('/account-deletion', 'account_deletion')->name('account_delete');
+    Route::post('/account-deletion', 'account_deletion')->name('account_delete');
 });
 
 Route::controller(RegisterController::class)->group(function () {
@@ -118,7 +118,7 @@ Route::controller(VerificationController::class)->group(function () {
 Route::controller(CustomerController::class)->group(function () {
 // Activate the customer account after he agrees on the terms sent by email
     Route::get('/terms-activation/{code}', 'account_activation')->name('terms.activation');
-    Route::get('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
+    Route::post('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
 
 });
 
@@ -238,7 +238,7 @@ Route::controller(SslcommerzController::class)->group(function () {
 // Compare
 Route::controller(CompareController::class)->group(function () {
     Route::get('/compare', 'index')->name('compare');
-    Route::get('/compare/reset', 'reset')->name('compare.reset');
+    Route::post('/compare/reset', 'reset')->name('compare.reset');
     Route::post('/compare/addToCompare', 'addToCompare')->name('compare.addToCompare');
 });
 
@@ -285,7 +285,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     Route::resource('purchase_history', PurchaseHistoryController::class);
     Route::controller(PurchaseHistoryController::class)->group(function () {
         Route::get('/purchase_history/details/{id}', 'purchase_history_details')->name('purchase_history.details');
-        Route::get('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
+        Route::post('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
         Route::get('digital-purchase-history', 'digital_index')->name('digital_purchase_history.index');
         Route::get('/digital-products/download/{id}', 'download')->name('digital-products.download');
     });
@@ -297,8 +297,8 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     //Follow
     Route::controller(FollowSellerController::class)->group(function () {
         Route::get('/followed-seller', 'index')->name('followed_seller');
-        Route::get('/followed-seller/store', [FollowSellerController::class, 'store'])->name('followed_seller.store');
-        Route::get('/followed-seller/remove', [FollowSellerController::class, 'remove'])->name('followed_seller.remove');
+        Route::post('/followed-seller/store', [FollowSellerController::class, 'store'])->name('followed_seller.store');
+        Route::post('/followed-seller/remove', [FollowSellerController::class, 'remove'])->name('followed_seller.remove');
     });
 
     // Wallet
@@ -320,7 +320,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
         Route::get('/customer_products/{id}/edit', 'edit')->name('customer_products.edit');
         Route::post('/customer_products/published', 'updatePublished')->name('customer_products.published');
         Route::post('/customer_products/status', 'updateStatus')->name('customer_products.update.status');
-        Route::get('/customer_products/destroy/{id}', 'destroy')->name('customer_products.destroy');
+        Route::post('/customer_products/destroy/{id}', 'destroy')->name('customer_products.destroy');
     });
 
     // Product Review
@@ -360,7 +360,7 @@ Route::group(['middleware' => ['auth']], function() {
     // Product Conversation
     Route::resource('conversations', ConversationController::class);
     Route::controller(ConversationController::class)->group(function () {
-        Route::get('/conversations/destroy/{id}', 'destroy')->name('conversations.destroy');
+        Route::post('/conversations/destroy/{id}', 'destroy')->name('conversations.destroy');
         Route::post('conversations/refresh', 'refresh')->name('conversations.refresh');
     });
 
@@ -375,8 +375,8 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/get-states', 'getStates')->name('get-state');
         Route::post('/get-cities', 'getCities')->name('get-city');
         Route::post('/addresses/update/{id}', 'update')->name('addresses.update');
-        Route::get('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
-        Route::get('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
+        Route::post('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
+        Route::post('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
     });
 });
 

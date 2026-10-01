@@ -244,7 +244,7 @@
 
                                             @can('delete_customer')
                                                 <a href="#" class="dropdown-item confirm-delete"
-                                                    data-href="{{ route('trips.destroy', $trip->id) }}"
+                                                    data-method="post" data-href="{{ route('trips.destroy', $trip->id) }}"
                                                     title="{{ translate('Delete') }}">
                                                     {{ translate('Delete') }}
                                                 </a>

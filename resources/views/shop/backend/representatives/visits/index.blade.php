@@ -117,7 +117,7 @@
                                                 </a>
 
                                                 <a href="#" class="dropdown-item confirm-delete"
-                                                    data-href="{{ route('admin.rep.visits.destroy', $visit->id) }}"
+                                                    data-method="post" data-href="{{ route('admin.rep.visits.destroy', $visit->id) }}"
                                                     title="{{ translate('Delete') }}">
                                                     {{ translate('Delete') }}
                                                 </a>

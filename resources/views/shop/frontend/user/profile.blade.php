@@ -192,9 +192,9 @@
                                     {{ translate('Edit') }}
                                 </a>
                                 @if (!$address->set_default)
-                                    <a class="dropdown-item" href="{{ route('addresses.set_default', $address->id) }}">{{ translate('Make This Default') }}</a>
+                                    <a class="dropdown-item" data-method="post" href="{{ route('addresses.set_default', $address->id) }}">{{ translate('Make This Default') }}</a>
                                 @endif
-                                <a class="dropdown-item" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                <a class="dropdown-item" data-method="post" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
                             </div>
                         </div>
                     </div>

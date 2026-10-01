@@ -232,7 +232,7 @@
                                                     <a class="dropdown-item" onclick="edit_address('{{$address->id}}')">
                                                         {{ translate('Edit') }}
                                                     </a>
-                                                    <a class="dropdown-item" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                                    <a class="dropdown-item" data-method="post" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
                                                 </div>
                                             </div>
                                         </div>
@@ -252,7 +252,7 @@
             <div class="col-12">
                 <div class="mb-3 text-right">
                     @if(! $customer->registration_completed)
-                    <a href="{{ route("customers.sendAgreement", $customer->id) }}" class="mx-4 btn btn-danger">Send Agreements Email</a>
+                    <a data-method="post" href="{{ route("customers.sendAgreement", $customer->id) }}" class="mx-4 btn btn-danger">Send Agreements Email</a>
                     @endif
                     <button type="submit" name="button" class="mx-4 btn btn-primary">{{ translate('Update Customer') }}</button>
                 </div>
