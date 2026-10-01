@@ -38,7 +38,7 @@ class PayhereController extends Controller
             }
 
             elseif (Session::get('payment_type') == 'wallet_payment') {
-                $order_id = rand(100000, 999999);
+                $order_id = random_int(100000, 999999);
                 $user_id = Auth::user()->id;
                 $amount = $request->amount;
                 $first_name = Auth::user()->name;
@@ -52,7 +52,7 @@ class PayhereController extends Controller
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {
                 $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-                $order_id = rand(100000, 999999);
+                $order_id = random_int(100000, 999999);
                 $user_id = Auth::user()->id;
                 $package_id = $request->customer_package_id;
                 $amount = $customer_package->amount;
@@ -69,7 +69,7 @@ class PayhereController extends Controller
     }
     public function checkout_testing()
     {
-        $order_id = rand(100000, 999999);
+        $order_id = random_int(100000, 999999);
         $amount = 88.00;
         $first_name = 'Hasan';
         $last_name = 'Taluker';
@@ -83,7 +83,7 @@ class PayhereController extends Controller
 
     public function wallet_testing()
     {
-        $order_id = rand(100000, 999999);
+        $order_id = random_int(100000, 999999);
         $user_id = Auth::user()->id;
         $amount = 88.00;
         $first_name = 'Hasan';
@@ -98,7 +98,7 @@ class PayhereController extends Controller
 
     public function customer_package_payment_testing()
     {
-        $order_id = rand(100000, 999999);
+        $order_id = random_int(100000, 999999);
         $user_id = Auth::user()->id;
         $package_id = 4;
         $amount = 88.00;

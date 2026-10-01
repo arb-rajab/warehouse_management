@@ -77,7 +77,7 @@ class ForgotPasswordController extends Controller implements HasMiddleware
         if (filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
             $user = StoreUser::where('email', $request->email)->first();
             if ($user != null) {
-                $user->verification_code = rand(100000,999999);
+                $user->verification_code = random_int(100000, 999999);
                 $user->save();
 
                 $array['view'] = 'shop.emails.verification';
@@ -97,7 +97,7 @@ class ForgotPasswordController extends Controller implements HasMiddleware
         else{
             $user = StoreUser::where('phone', $phone)->first();
             if ($user != null) {
-                $user->verification_code = rand(100000,999999);
+                $user->verification_code = random_int(100000, 999999);
                 $user->save();
                 SmsUtility::password_reset($user);
                 return view('otp_systems.frontend.auth.passwords.reset_with_phone');

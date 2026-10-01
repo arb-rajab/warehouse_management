@@ -6,18 +6,18 @@ use App\Http\Middleware\EnsureSystemKey;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function () {
-    Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login');
+    Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login')->middleware('throttle:store-auth');
     Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('rate.limit');
     Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin');
-    Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest');
-    Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset');
-    Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode');
+    Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest')->middleware('throttle:store-auth');
+    Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset')->middleware('throttle:store-auth');
+    Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode')->middleware('throttle:store-auth');
     Route::middleware('auth:store_api')->group(function () {
         Route::get('logout', 'App\Http\Controllers\Api\V2\AuthController@logout');
         Route::get('account-deletion', 'App\Http\Controllers\Api\V2\AuthController@account_deletion');
         Route::get('user', 'App\Http\Controllers\Api\V2\AuthController@user');
-        Route::get('resend_code', 'App\Http\Controllers\Api\V2\AuthController@resendCode');
-        Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode');
+        Route::get('resend_code', 'App\Http\Controllers\Api\V2\AuthController@resendCode')->middleware('throttle:store-auth');
+        Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode')->middleware('throttle:store-auth');
     });
 
     Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken');

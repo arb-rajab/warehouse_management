@@ -105,7 +105,7 @@ class ProfileController extends Controller
             if ($request->email != $user->email) {
                 $user->email = $request->email;
                 $user->email_verified_at = null;
-                $user->verification_code = rand(100000, 999999);
+                $user->verification_code = random_int(100000, 999999);
                 try {
                     $user->notify(new AppEmailVerificationNotification());
                 } catch (\Exception $e) {

@@ -81,7 +81,7 @@ Route::controller(AizUploadController::class)->group(function () {
 // action at one URI apart.
 Route::controller(LoginController::class)->group(function () {
     Route::get('/login', 'showLoginForm')->name('shop.login');
-    Route::post('/login', 'login');
+    Route::post('/login', 'login')->middleware('throttle:store-auth');
     Route::match(['get', 'post'], '/logout', 'logout')->name('shop.logout');
     Route::get('/social-login/redirect/{provider}', 'redirectToProvider')->name('social.login');
     Route::get('/social-login/{provider}/callback', 'handleProviderCallback')->name('social.callback');
@@ -97,14 +97,14 @@ Route::controller(RegisterController::class)->group(function () {
 
 Route::controller(ForgotPasswordController::class)->group(function () {
     Route::get('/password/reset', 'showLinkRequestForm')->name('password.request');
-    Route::post('/password/email', 'sendResetLinkEmail')->name('password.email');
+    Route::post('/password/email', 'sendResetLinkEmail')->name('password.email')->middleware('throttle:store-auth');
 });
 
 Route::controller(ResetPasswordController::class)->group(function () {
     Route::get('/password/reset/{token}', 'showResetForm')->name('password.reset');
     // Unnamed: in the legacy app HomeController's reset_password_with_code
     // route below took the password.update name from this one.
-    Route::post('/password/reset', 'reset');
+    Route::post('/password/reset', 'reset')->middleware('throttle:store-auth');
 });
 
 Route::controller(VerificationController::class)->group(function () {
@@ -124,12 +124,12 @@ Route::controller(CustomerController::class)->group(function () {
 
 Route::controller(HomeController::class)->group(function () {
     Route::get('/email_change/callback', 'email_change_callback')->name('email_change.callback');
-    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('shop.password.update');
+    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('shop.password.update')->middleware('throttle:store-auth');
     Route::get('/users/login', 'login')->name('user.login');
     Route::get('/seller/login', 'login')->name('seller.login');
     Route::get('/deliveryboy/login', 'login')->name('deliveryboy.login');
     Route::get('/users/registration', 'registration')->name('user.registration');
-    Route::post('/users/login/cart', 'cart_login')->name('cart.login.submit');
+    Route::post('/users/login/cart', 'cart_login')->name('cart.login.submit')->middleware('throttle:store-auth');
     // Route::get('/new-page', 'new_page')->name('new_page');
 
 
@@ -250,7 +250,7 @@ Route::group(['middleware' => ['user', 'verified', 'unbanned']], function() {
     Route::controller(HomeController::class)->group(function () {
         Route::get('/dashboard', 'dashboard')->name('dashboard');
         Route::get('/profile', 'profile')->name('profile');
-        Route::post('/new-user-verification', 'new_verify')->name('user.new.verify');
+        Route::post('/new-user-verification', 'new_verify')->name('user.new.verify')->middleware('throttle:store-auth');
         Route::post('/new-user-email', 'update_email')->name('user.change.email');
         Route::post('/user/update-profile', 'userProfileUpdate')->name('user.profile.update');
     });

@@ -199,6 +199,24 @@ prefix. That is the single point every storefront asset URL goes through.
   global WAF also blocks `../` in input, but nothing relies on that. `AizUploadController`
   and the seller upload store through Laravel's `store()` with an extension
   whitelist and were not affected.
+- Account recovery was open to guessing. The password-reset and verification
+  codes are 6 digits (900,000 values), generated with `rand()`, and no store
+  route limited attempts. The API's `password/confirm_reset` found the account
+  from the **code alone**, so a guessed code reset the password of whichever
+  user held it at that moment, a registration code included; the web reset
+  (`/password/reset/email/submit`) left the code valid after use, then logged
+  the user in, admins and staff included. **Fixed 2026-10-01:** codes come from
+  `random_int()`; `confirm_reset` now requires `email_or_phone` as well as
+  `verification_code` and matches them on the same account; the web reset
+  clears the code; and the `store-auth` rate limiter (per account and IP: 5/min;
+  per account across IPs: 10 per 15 minutes; per IP: 30/min; no account key when
+  the request names none, so anonymous callers cannot lock each other out)
+  covers the store's web and API login, `forget_request`, `confirm_reset`,
+  `resend_code`, `confirm_code`, the web reset routes and `new-user-verification`.
+  **The mobile app has to send `email_or_phone` with `password/confirm_reset`
+  (the same value it sent to `forget_request`) before it is pointed at this
+  host; without it the call is refused with 422.**
+  `LegacyStoreAccountRecoveryTest` covers each case.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

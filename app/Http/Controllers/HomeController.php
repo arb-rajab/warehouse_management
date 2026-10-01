@@ -665,6 +665,7 @@ class HomeController extends Controller
             if ($request->password == $request->password_confirmation) {
                 $user->password = Hash::make($request->password);
                 $user->email_verified_at = date('Y-m-d h:m:s');
+                $user->verification_code = null;
                 $user->save();
                 event(new PasswordReset($user));
                 auth()->login($user, true);
