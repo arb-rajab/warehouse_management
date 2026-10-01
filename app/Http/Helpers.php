@@ -55,6 +55,19 @@ if (!function_exists('areActiveRoutesHome')) {
 }
 
 //highlights the selected navigation on frontend
+if (!function_exists('clean_html')) {
+    /**
+     * HTML a user wrote (a product or classified description, support-ticket
+     * text), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
+     * Admin-written content (CMS pages, blog posts, settings texts) is trusted
+     * and is printed as it is. See App\Services\HtmlSanitizer.
+     */
+    function clean_html(?string $html): string
+    {
+        return app(\App\Services\HtmlSanitizer::class)->clean($html);
+    }
+}
+
 if (!function_exists('default_language')) {
     function default_language()
     {

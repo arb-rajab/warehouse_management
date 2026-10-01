@@ -243,6 +243,29 @@ prefix. That is the single point every storefront asset URL goes through.
   signature before marking anything paid; the audit above did not review them.
   The admin checkout and settings pages still offer a gateway that
   `business_settings` has switched on, and choosing one now gives a 404.
+- User-written HTML was printed unescaped, so anyone who could write it could run
+  script in the browser of whoever viewed it. The worst case was the **admin
+  backend's** ticket page (`backend/support/support_tickets/show`), which printed
+  a customer's ticket details and replies with `@php echo`: a customer filing a
+  ticket ran script in a staff member's logged-in session. The seller and
+  customer ticket pages, the support email, and the storefront product,
+  digital-product and classified-ad descriptions (written by sellers and by any
+  customer who posts one) did the same. **Fixed 2026-10-01:** they print
+  `{!! clean_html($x) !!}`. `App\Services\HtmlSanitizer` is an allowlist on
+  PHP 8.4's HTML5 parser (`Dom\HTMLDocument`, the algorithm browsers use):
+  only the named tags, attributes, URL schemes (http, https, mailto, tel,
+  relative; `data:` only for a base64 PNG/JPEG/GIF/WebP image) and CSS
+  properties survive, SVG and MathML are removed, links get
+  `rel="noopener noreferrer nofollow"`, and the output is re-cleaned unchanged.
+  It needs PHP 8.4 or later, which the app already does (CI and the server run
+  8.5); `composer.json` still says `^8.3`. `HtmlSanitizerTest` has 25 hostile
+  payloads, the admin ticket page, the product description and the email, and a
+  scan that fails on a new raw print of `->details`, `->reply`, `->description`
+  or a translated description. **Not covered:** admin-written content, which is
+  trusted with markup and printed as it is (CMS pages, blog posts, settings
+  texts, payment-method notes), so a compromised admin account can still plant
+  script; and the API, which returns descriptions as stored for the mobile app
+  to render.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 
