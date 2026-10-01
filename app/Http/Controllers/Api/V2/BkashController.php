@@ -11,14 +11,16 @@ use phpDocumentor\Reflection\Types\This;
 
 class BkashController extends Controller
 {
-    private $base_url;
-    public function __construct()
+    /**
+     * Resolved on use rather than in a constructor: the sandbox flag lives in
+     * `business_settings`, and building a controller (route:list, wayfinder:generate)
+     * must not need that table to exist yet.
+     */
+    private function baseUrl(): string
     {
-        if (get_setting('bkash_sandbox', 1)) {
-            $this->base_url = "https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized/";
-        } else {
-            $this->base_url = "https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/";
-        }
+        return get_setting('bkash_sandbox', 1)
+            ? 'https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized/'
+            : 'https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/';
     }
 
     public function begin(Request $request)
@@ -87,7 +89,7 @@ class BkashController extends Controller
             'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY'),
         ];
 
-        $url = curl_init($this->base_url . 'checkout/create');
+        $url = curl_init($this->baseUrl() . 'checkout/create');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
         curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
@@ -151,7 +153,7 @@ class BkashController extends Controller
             'password:' . env('BKASH_CHECKOUT_PASSWORD'),
         ];
 
-        $url = curl_init($this->base_url . 'checkout/token/grant');
+        $url = curl_init($this->baseUrl() . 'checkout/token/grant');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
         curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
@@ -181,7 +183,7 @@ class BkashController extends Controller
             'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY'),
         ];
 
-        $url = curl_init($this->base_url . 'checkout/execute');
+        $url = curl_init($this->baseUrl() . 'checkout/execute');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
         curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
@@ -208,7 +210,7 @@ class BkashController extends Controller
             'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY'),
         ];
 
-        $url = curl_init($this->base_url.'checkout/payment/status');
+        $url = curl_init($this->baseUrl().'checkout/payment/status');
         curl_setopt($url, CURLOPT_HTTPHEADER, $header);
         curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
