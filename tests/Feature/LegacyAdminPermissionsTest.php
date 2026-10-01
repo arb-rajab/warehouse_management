@@ -23,9 +23,10 @@ use Spatie\Permission\Models\Permission;
  * gated.
  *
  * Writes that no permission covers yet, and why:
- * - modules with no permission at all in the legacy vocabulary (logistics,
- *   offers, representative packages, notifications): they need names from the
- *   production permission list, which is not in the repository;
+ * - modules with no permission at all in the legacy vocabulary (logistics:
+ *   trips, trucks, drivers, feature orders; the offers catalogue;
+ *   representative packages and payments; visits): they need new permission
+ *   names (the offer deals and notifications already had theirs, and are gated);
  * - self-service routes (the signed-in user's own profile and uploads);
  * - read-only AJAX helpers the product forms post to;
  * - routes whose controller method does not exist;
@@ -35,9 +36,7 @@ use Spatie\Permission\Models\Permission;
  */
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
-    'AdminNotificationController@deleteNotification',
     'AdminNotificationController@markAsRead',
-    'AdminNotificationController@sendFcmNotification',
     'DriverController@delete',
     'DriverController@store',
     'DriverController@update',
@@ -45,14 +44,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'FeatureOrderTripController@newStore',
     'FeatureOrderTripController@newUpdate',
     'FeatureOrderTripController@store',
-    'OfferController@brand_discount_edit',
-    'OfferController@destroy',
-    'OfferController@product_discount_edit',
-    'OfferController@store',
-    'OfferController@update',
-    'OfferController@update_multiple_usage',
-    'OfferController@update_repeatable',
-    'OfferController@update_status',
     'OffersCatalogController@destroy',
     'OffersCatalogController@store',
     'RepresentativePackageController@delete',
@@ -114,8 +105,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
  */
 const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
-    'AdminNotificationController@createNotification',
-    'AdminNotificationController@getAllNotifications',
     'DriverController@create',
     'DriverController@edit',
     'DriverController@index',
@@ -128,14 +117,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'FeatureOrderTripController@newEdit',
     'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
-    'OfferController@base_brand_discount',
-    'OfferController@base_product_discount',
-    'OfferController@brandCreate',
-    'OfferController@brand_discount',
-    'OfferController@create',
-    'OfferController@edit',
-    'OfferController@index',
-    'OfferController@product_discount',
     'OffersCatalogController@download',
     'OffersCatalogController@index',
     'RepresentativePackageController@create',
@@ -307,4 +288,27 @@ test('the customer pages that carry personal data need the customer permission, 
     $staff->givePermissionTo('delete_customer');
 
     expect($this->get(route('customers.archive'))->getStatusCode())->not->toBe(403);
+});
+
+test('the offer deal pages and the notification pages ask for the permissions their buttons already name', function () {
+    foreach (['view_all_offer_deals', 'add_offer_deal', 'edit_offer_deal', 'delete_offer_deal', 'add_notification', 'delete_notification'] as $name) {
+        Permission::findOrCreate($name, 'store');
+    }
+
+    $staff = createStoreUser('staff');
+    actingAsStoreUser($staff);
+
+    $this->get(route('offer_deals.index'))->assertForbidden();
+    $this->post(route('offer_deals.update_status'), ['id' => 1, 'status' => 1])->assertForbidden();
+    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+    $this->post(route('admin.notifications.delete', ['id' => 1]))->assertForbidden();
+
+    $staff->givePermissionTo('view_all_offer_deals');
+
+    expect($this->get(route('offer_deals.index'))->getStatusCode())->not->toBe(403);
+    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+
+    $staff->givePermissionTo('delete_offer_deal');
+
+    expect($this->post(route('offer_deals.destroy', 1))->getStatusCode())->not->toBe(403);
 });

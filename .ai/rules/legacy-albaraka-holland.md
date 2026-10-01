@@ -168,12 +168,16 @@ prefix. That is the single point every storefront asset URL goes through.
   `GET /admin/clear-cache`, which runs `optimize:clear`, is vendor-super-admin
   only like its button; 226 of the 299 admin pages are gated. In all, 379 of 503
   admin routes. `LegacyAdminPermissionsTest` lists what is not
-  (`ADMIN_WRITES_STILL_UNGATED`, 62; `ADMIN_READS_STILL_UNGATED`, 61), fails on a
+  (`ADMIN_WRITES_STILL_UNGATED`, 52; `ADMIN_READS_STILL_UNGATED`, 51), fails on a
   new ungated route and on a listed one that has since been gated, and checks
   that a staff user with no permissions gets 403 on every gated route.
-  **Still open:** those 123, which need permission names from the production
-  permission list (logistics: trips, trucks, drivers; offers; representative
-  packages and their payments; notifications), and self-service routes and
+  **Still open:** those 103, which need permission names (logistics: trips, trucks, drivers, feature orders; the offers
+  catalogue; representative packages and their payments; visits). The offer
+  deals and the notifications already had names in the legacy vocabulary
+  (`view_all_offer_deals`, `add_offer_deal`, `edit_offer_deal`,
+  `delete_offer_deal`, `add_notification`, `delete_notification`: their buttons
+  asked `@can(...)` for them) and are gated with them as of 2026-10-01; the
+  rest need new names created and granted to roles. Also self-service routes and
   dead ones; they need a permission, and the ones that change state are POST
   now (see the state-changing GET bullet below). Phase 5's role import is where the
   owner can say which existing staff roles should get which permission.

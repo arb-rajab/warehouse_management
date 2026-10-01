@@ -6,9 +6,28 @@ use App\Models\Notification;
 use App\Models\StoreUser;
 use Google\Client as GoogleClient;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AdminNotificationController extends Controller
+class AdminNotificationController extends Controller implements HasMiddleware
 {
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * The legacy store's permission vocabulary has these names (its screens'
+     * buttons already ask `@can(...)` for them); the controller never did, so any
+     * admin or staff account could use the page.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:add_notification', only: ['getAllNotifications', 'createNotification', 'sendFcmNotification']),
+            new Middleware('permission:delete_notification', only: ['deleteNotification']),
+        ];
+    }
+
     public function getAllNotifications()
     {
         $notifications = Notification::with('user')->paginate('10');
