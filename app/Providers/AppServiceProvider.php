@@ -5,15 +5,16 @@ namespace App\Providers;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -27,6 +28,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Merged from the legacy store's AppServiceProvider (see
+        // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
+        // create indexed varchar columns without an explicit length, which
+        // exceeds MySQL's index-key-length limit under utf8mb4 unless capped
+        // here. Paginator::useBootstrap() only changes the default Blade
+        // pagination view (`$items->links()`); this app's own paginated
+        // responses go through paginated() as JSON and are unaffected.
+        Schema::defaultStringLength(191);
+        Paginator::useBootstrap();
 
         Gate::define('viewPulse', User::isAdminGate());
 
@@ -51,8 +62,12 @@ class AppServiceProvider extends ServiceProvider
         // bucket, while an individual abusive token was never throttled at all.
         // Naming the guard reads the bearer token directly and does not require
         // `auth:sanctum` (which runs after this middleware) to have resolved yet.
+        // The legacy store's tokens resolve on `store_api`, not `sanctum`, and
+        // both user tables' ids overlap, so the key carries the model class.
         RateLimiter::for('api', function (Request $request): Limit {
-            return Limit::perMinute(60)->by($request->user('sanctum')?->id ?: $request->ip());
+            $user = $request->user('sanctum') ?? $request->user('store_api');
+
+            return Limit::perMinute(60)->by($user ? $user::class.':'.$user->getKey() : $request->ip());
         });
     }
 
@@ -62,8 +77,6 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         JsonResource::withoutWrapping();
-
-        RedirectIfAuthenticated::redirectUsing(fn () => route('admin.dashboard'));
 
         Date::use(CarbonImmutable::class);
 

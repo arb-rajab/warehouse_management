@@ -4,6 +4,10 @@ import { loginAsAdmin } from './support/auth';
 test('the 3D map view renders a real canvas and survives keyboard/pointer navigation', async ({
     page,
 }) => {
+    // The 3D map renders with software WebGL on CI runners, so a run needs
+    // more than the default 30s.
+    test.slow();
+
     const pageErrors: Error[] = [];
     page.on('pageerror', (error) => pageErrors.push(error));
 
@@ -49,6 +53,10 @@ test('the 3D map view renders a real canvas and survives keyboard/pointer naviga
 test('clicking a cell in the 3D map opens its manage actions (toggle-active, export QR, manage pallet)', async ({
     page,
 }) => {
+    // The 3D map renders with software WebGL on CI runners, so a run needs
+    // more than the default 30s.
+    test.slow();
+
     await loginAsAdmin(page);
 
     await page.goto('/admin/rows/create');

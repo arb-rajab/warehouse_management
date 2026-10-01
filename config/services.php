@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\StoreUser;
+
 return [
 
     /*
@@ -33,6 +35,64 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    // Merged from the legacy store's config/services.php (see
+    // .ai/rules/legacy-albaraka-holland.md sections 0.3 and 1). 'stripe' and
+    // 'paytm-wallet' are inert: both gateway packages were removed in the
+    // legacy repo's own phase-1 pruning, and nothing here reads these keys.
+
+    'mailgun' => [
+        'domain' => env('MAILGUN_DOMAIN'),
+        'secret' => env('MAILGUN_SECRET'),
+        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+    ],
+
+    'sparkpost' => [
+        'secret' => env('SPARKPOST_SECRET'),
+    ],
+
+    'stripe' => [
+        'model' => StoreUser::class,
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('APP_URL').'/social-login/google/callback',
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('APP_URL').'/social-login/facebook/callback',
+    ],
+
+    'twitter' => [
+        'client_id' => env('TWITTER_CLIENT_ID'),
+        'client_secret' => env('TWITTER_CLIENT_SECRET'),
+        'redirect' => env('APP_URL').'/social-login/twitter/callback',
+    ],
+
+    'paytm-wallet' => [
+        'env' => env('PAYTM_ENVIRONMENT'),
+        'merchant_id' => env('PAYTM_MERCHANT_ID'),
+        'merchant_key' => env('PAYTM_MERCHANT_KEY'),
+        'merchant_website' => env('PAYTM_MERCHANT_WEBSITE'),
+        'channel' => env('PAYTM_CHANNEL'),
+        'industry_type' => env('PAYTM_INDUSTRY_TYPE'),
+    ],
+
+    // Was hardcoded to 'albarakabv-store' with no way to override; kept as
+    // the same default, now overridable, per the audit's section 0.3.
+    'fcm' => [
+        'project_id' => env('FCM_PROJECT_ID', 'albarakabv-store'),
+    ],
+
+    'otajer' => [
+        'token' => env('OTAJER_TOKEN'),
     ],
 
 ];

@@ -1,5 +1,45 @@
 <?php
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
+use Laravel\Socialite\Facades\Socialite;
+use Maatwebsite\Excel\Facades\Excel;
+use niklasravnsborg\LaravelPdf\Facades\Pdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 return [
 
     /*
@@ -40,6 +80,31 @@ return [
     */
 
     'debug' => (bool) env('APP_DEBUG', false),
+
+    // Merged from the legacy store's config/app.php (see
+    // .ai/rules/legacy-albaraka-holland.md section 0.3): redacts these keys
+    // from a debug-mode error page's dumped superglobals.
+    'debug_blacklist' => [
+        '_ENV' => [
+            'APP_KEY',
+            'DB_PASSWORD',
+            'REDIS_PASSWORD',
+            'MAIL_PASSWORD',
+            'PUSHER_APP_KEY',
+            'PUSHER_APP_SECRET',
+        ],
+        '_SERVER' => [
+            'APP_KEY',
+            'DB_PASSWORD',
+            'REDIS_PASSWORD',
+            'MAIL_PASSWORD',
+            'PUSHER_APP_KEY',
+            'PUSHER_APP_SECRET',
+        ],
+        '_POST' => [
+            'password',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -97,6 +162,22 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    /*
+    |--------------------------------------------------------------------------
+    | WMS Token
+    |--------------------------------------------------------------------------
+    |
+    | Merged from the legacy store's config/app.php. Guards routes/
+    | api_warehouse.php via WmsAuthMiddleware's `private-token` header check
+    | — see .ai/rules/legacy-albaraka-holland.md section 0.3, which flags
+    | this value as a secret that needs rotating outside this repo's scope.
+    | Kept as the same fallback default (unchanged behavior) but now
+    | overridable via env rather than hardcoded as the only value.
+    |
+    */
+
+    'wms_token' => env('WMS_TOKEN', 'wlak_leash_mch_labes_tagieh'),
+
     'key' => env('APP_KEY'),
 
     'previous_keys' => [
@@ -121,6 +202,61 @@ return [
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class Aliases (legacy store only)
+    |--------------------------------------------------------------------------
+    |
+    | This app's own code never relies on these — it always imports facades
+    | explicitly. The merged legacy store code does not: 120 of its files
+    | `use Auth;`, `use DB;`, etc. as bare global-namespace class references,
+    | which fatal at runtime ("Class not found") without an AliasLoader entry.
+    | See .ai/rules/legacy-albaraka-holland.md section 2.
+    |
+    */
+
+    'aliases' => [
+        'App' => App::class,
+        'Artisan' => Artisan::class,
+        'Auth' => Auth::class,
+        'Blade' => Blade::class,
+        'Broadcast' => Broadcast::class,
+        'Bus' => Bus::class,
+        'Cache' => Cache::class,
+        'Config' => Config::class,
+        'Cookie' => Cookie::class,
+        'Crypt' => Crypt::class,
+        'DB' => DB::class,
+        'Eloquent' => Model::class,
+        'Event' => Event::class,
+        'Excel' => Excel::class,
+        'File' => File::class,
+        'Gate' => Gate::class,
+        'Hash' => Hash::class,
+        'Image' => Image::class,
+        'Lang' => Lang::class,
+        'Log' => Log::class,
+        'Mail' => Mail::class,
+        'Notification' => Notification::class,
+        'Password' => Password::class,
+        'PDF' => Pdf::class,
+        'QrCode' => QrCode::class,
+        'Queue' => Queue::class,
+        'Redirect' => Redirect::class,
+        'Redis' => Redis::class,
+        'Request' => Request::class,
+        'Response' => Response::class,
+        'Route' => Route::class,
+        'Schema' => Schema::class,
+        'Session' => Session::class,
+        'Socialite' => Socialite::class,
+        'Storage' => Storage::class,
+        'Str' => Str::class,
+        'URL' => URL::class,
+        'Validator' => Validator::class,
+        'View' => View::class,
     ],
 
 ];

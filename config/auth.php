@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\StoreUser;
 use App\Models\User;
 
 return [
@@ -42,6 +43,35 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // The legacy store's own guard, merged from its config/auth.php (see
+        // .ai/rules/legacy-albaraka-holland.md sections 2 and 3): a distinct
+        // guard/provider pair, not a second 'web' entry, is what keeps
+        // hasRole() unambiguous between this app's User (guard web, wms_*
+        // permission tables) and the store's StoreUser (same permission
+        // tables, different rows) once their spatie roles share one guard.
+        'store' => [
+            'driver' => 'session',
+            'provider' => 'store_users',
+        ],
+
+        // The two token guards over the one shared `wms_personal_access_tokens`
+        // table. Sanctum's own guard only accepts a token whose tokenable is an
+        // instance of its provider's model, so giving each API its own provider
+        // is what stops a store customer's token from authenticating on the
+        // warehouse API (and a warehouse token on the store's). `auth:sanctum`
+        // is the warehouse API's (routes/api.php), `auth:store_api` the store's
+        // (routes/shop-api*.php). Spatie's guard names for both user models are
+        // pinned by `$guard_name` on User and StoreUser, not derived from these
+        // entries, since each model now matches two guards here.
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+        'store_api' => [
+            'driver' => 'sanctum',
+            'provider' => 'store_users',
+        ],
     ],
 
     /*
@@ -71,6 +101,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        'store_users' => [
+            'driver' => 'eloquent',
+            'model' => StoreUser::class,
+        ],
     ],
 
     /*
@@ -96,6 +131,16 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'wms_password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // The legacy store's own broker/table, kept separate per
+        // .ai/rules/legacy-albaraka-holland.md section 3's "one-config-wins
+        // collisions" table.
+        'store_users' => [
+            'provider' => 'store_users',
+            'table' => 'password_resets',
             'expire' => 60,
             'throttle' => 60,
         ],

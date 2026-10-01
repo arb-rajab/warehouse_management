@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
             CellStatusLogSeeder::class,
             CellVerificationRoundSeeder::class,
             CellVerificationReportSeeder::class,
+            PageSeeder::class,
         ]);
     }
 }

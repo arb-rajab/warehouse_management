@@ -6,13 +6,19 @@ use Database\Factories\UploadFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A row in the store app's shared `uploads` table.
  *
- * Read-only here, like Product: the store owns every write. Only the three
- * columns needed to build an image URL are modelled — see
- * .ai/rules/shared-database.md.
+ * The store's own upload flow (AizUploadController, the import commands) is
+ * the writer — see .ai/rules/legacy-albaraka-holland.md section 2 — with
+ * $fillable merged in from the legacy model for that, though none of those
+ * extra columns exist in this app's local `uploads` stand-in migration yet
+ * (it deliberately carries only the 3 columns this app itself reads). The
+ * legacy model's SoftDeletes trait is dropped for the same reason: it adds a
+ * global `deleted_at` scope to every query, and that column doesn't exist
+ * here either — resolving both is DB-merge-phase work, not this move.
  *
  * @property int $id
  * @property string|null $file_name
@@ -23,6 +29,13 @@ class Upload extends Model
 {
     /** @use HasFactory<UploadFactory> */
     use HasFactory;
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = [
+        'file_original_name', 'file_name', 'user_id', 'extension', 'type', 'file_size',
+    ];
 
     /**
      * The absolute URL for this upload.
@@ -51,5 +64,13 @@ class Upload extends Model
 
             return rtrim((string) $baseUrl, '/').'/'.ltrim($this->file_name, '/');
         });
+    }
+
+    /**
+     * @return BelongsTo<StoreUser, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
     }
 }
