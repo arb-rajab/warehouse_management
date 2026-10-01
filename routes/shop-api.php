@@ -207,7 +207,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         // representative payments
         Route::get('payments/index', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@index')->middleware('auth:store_api');
         Route::post('payments/store', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@store')->middleware('auth:store_api');
-        Route::get('payments/generate-qr', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@generate_qr')->name('api.rep.payment.generate_qr');
+        Route::get('payments/generate-qr', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@generate_qr')->middleware('signed')->name('api.rep.payment.generate_qr');
         Route::post('visit-note', 'App\Http\Controllers\Api\V2\CustomerController@visit_note')->middleware('auth:store_api');
         Route::get('current-visit', 'App\Http\Controllers\Api\V2\CustomerController@current_visit')->middleware('auth:store_api');
     });

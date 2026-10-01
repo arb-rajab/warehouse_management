@@ -335,9 +335,9 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     Route::get('/representatives/payments/create', [RepresentativePaymentController::class, 'create'])->name('payments.create');
     Route::post('/representatives/payments/store', [RepresentativePaymentController::class, 'store'])->name('payments.store');
 
-    Route::get('/representatives/payments/show/{id}', [RepresentativePaymentController::class, 'show'])->name('payments.show')->withoutMiddleware(['customer', 'verified', 'unbanned']);
-    Route::get('/representatives/payments/export/{id}', [RepresentativePaymentController::class, 'export'])->name('payments.export')->withoutMiddleware(['customer', 'verified', 'unbanned']);
-    Route::get('/representatives/payments/generate_qr', [RepresentativePaymentController::class, 'generate_qr'])->name('payments.generate_qr')->withoutMiddleware(['customer', 'verified', 'unbanned']);
+    Route::get('/representatives/payments/show/{id}', [RepresentativePaymentController::class, 'show'])->name('payments.show')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('signed');
+    Route::get('/representatives/payments/export/{id}', [RepresentativePaymentController::class, 'export'])->name('payments.export')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('signed');
+    Route::get('/representatives/payments/generate_qr', [RepresentativePaymentController::class, 'generate_qr'])->name('payments.generate_qr')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('auth');
 
     Route::post('/representatives/visits/note', [VisitController::class, 'update_note'])->name('visits.note');
 

@@ -366,6 +366,20 @@ prefix. That is the single point every storefront asset URL goes through.
   Tests: `LegacyStoreApiMoneyTest`. The club-point tables and the orders
   table's `manual_payment*` columns are not in this repository's migrations (they
   exist on the shared legacy database); the tests create them.
+- A representative's payment receipt (its page, its PDF, its QR image) was
+  public: `payments.show`, `payments.export`, `payments.generate_qr` and the
+  API's `generate-qr` took no sign-in, and a receipt's number counts up from 1,
+  so anyone could read every receipt (customer, company, amount). A visit note
+  (`visit-note`, `visits.note`) could be rewritten by any representative, and
+  `share-by-whatsapp` took any receipt. **Fixed 2026-10-01:** the page, the PDF
+  and the API QR are behind `signed`, and every link the store issues (the
+  receipt list and QR in the app, the QR codes in the PDF, the WhatsApp message,
+  the rep's receipt page) is `URL::signedRoute()` (no expiry, so a printed QR
+  keeps working); the web `generate_qr`, which would sign for any id, needs the
+  owning representative; and the notes and the WhatsApp send are scoped to the
+  representative's own rows. **Links issued before this stop working** (an old
+  printed QR, an old WhatsApp message): reissue from the receipt list.
+  Tests: `LegacyRepresentativePaymentLinksTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

@@ -7,6 +7,7 @@ use App\Models\RepresentativePayment;
 use App\Models\StoreUser;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 
 class RepresentativePaymentController extends Controller
@@ -101,8 +102,8 @@ class RepresentativePaymentController extends Controller
         return response()->json([
             'message' => 'Payment has been added successfully, and it is waiting for approval.',
             'result' => true,
-            'pdf_link' => route('payments.export', ['id' => $representativePayment->id]),
-            'qr' => route('api.rep.payment.generate_qr', ['id' => $representativePayment->id])
+            'pdf_link' => URL::signedRoute('payments.export', ['id' => $representativePayment->id]),
+            'qr' => URL::signedRoute('api.rep.payment.generate_qr', ['id' => $representativePayment->id])
         ], 200);
 
     }
@@ -110,7 +111,7 @@ class RepresentativePaymentController extends Controller
     public function generate_qr(Request $request)
     {
         $payment = RepresentativePayment::findOrFail($request->id);
-        $svgString = \QrCode::size(200)->generate(route('payments.export', ['id' => $payment->id]));
+        $svgString = \QrCode::size(200)->generate(URL::signedRoute('payments.export', ['id' => $payment->id]));
         return response($svgString)
             ->header('Content-Type', 'image/svg+xml');
     }
