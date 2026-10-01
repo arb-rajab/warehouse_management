@@ -65,6 +65,34 @@ test('an admin panel session does not sign anyone into the store, even for a mat
     $this->get('/temp/admin/roles/create')->assertRedirect(route('shop.login'));
 });
 
+test('a warehouse admin session is turned away from every legacy store route it tries', function (string $method, string $uri) {
+    actingAsAdmin();
+    $storeRolesBefore = DB::table('wms_roles')->count();
+
+    $this->call($method, $uri)->assertRedirect(route('shop.login'));
+
+    expect(DB::table('wms_roles')->count())->toBe($storeRolesBefore);
+})->with([
+    'store admin dashboard' => ['GET', '/temp/admin'],
+    'store role creation form' => ['GET', '/temp/admin/roles/create'],
+    'store role creation' => ['POST', '/temp/admin/roles'],
+    'store staff list' => ['GET', '/temp/admin/staffs'],
+]);
+
+test('a store admin session is turned away from every warehouse admin route it tries', function (string $method, string $uri) {
+    actingAsStoreUser(createStoreAdmin());
+    $rowsBefore = DB::table('rows')->count();
+
+    $this->call($method, $uri)->assertRedirect(route('login'));
+
+    expect(DB::table('rows')->count())->toBe($rowsBefore);
+})->with([
+    'warehouse dashboard' => ['GET', '/admin'],
+    'warehouse rows list' => ['GET', '/admin/rows'],
+    'warehouse row creation' => ['POST', '/admin/rows'],
+    'warehouse products list' => ['GET', '/admin/products'],
+]);
+
 /**
  * Both apps' tokens are rows of `wms_personal_access_tokens`, told apart only
  * by tokenable_type, so a route's guard has to check the model.
