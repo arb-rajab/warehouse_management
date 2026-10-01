@@ -608,7 +608,7 @@ class HomeController extends Controller
         $verification_code = Str::random(32);
 
         $array['subject'] = translate('Email Verification');
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Verify your account');
         $array['link'] = route('email_change.callback') . '?new_email_verificiation_code=' . $verification_code . '&email=' . $email;
         $array['sender'] = Auth::user()->name;

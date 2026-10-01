@@ -81,7 +81,7 @@ class ForgotPasswordController extends Controller implements HasMiddleware
                 $user->save();
 
                 $array['view'] = 'shop.emails.verification';
-                $array['from'] = env('MAIL_FROM_ADDRESS');
+                $array['from'] = config('mail.from.address');
                 $array['subject'] = translate('Password Reset');
                 $array['content'] = translate('Verification Code is').': '. $user->verification_code;
 

@@ -465,15 +465,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->type == 'FORCE_HTTPS' && $request->value == '1') {
             $this->overWriteEnvFile($request->type, 'On');
 
-            if(strpos(env('APP_URL'), 'http:') !== FALSE) {
-                $this->overWriteEnvFile('APP_URL', str_replace("http:", "https:", env('APP_URL')));
+            if(strpos(config('app.url'), 'http:') !== FALSE) {
+                $this->overWriteEnvFile('APP_URL', str_replace("http:", "https:", config('app.url')));
             }
 
         }
         elseif ($request->type == 'FORCE_HTTPS' && $request->value == '0') {
             $this->overWriteEnvFile($request->type, 'Off');
-            if(strpos(env('APP_URL'), 'https:') !== FALSE) {
-                $this->overWriteEnvFile('APP_URL', str_replace("https:", "http:", env('APP_URL')));
+            if(strpos(config('app.url'), 'https:') !== FALSE) {
+                $this->overWriteEnvFile('APP_URL', str_replace("https:", "http:", config('app.url')));
             }
 
         }

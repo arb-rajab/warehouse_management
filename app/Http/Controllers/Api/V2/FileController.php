@@ -95,7 +95,7 @@ class FileController extends Controller
 
             $newPath = "uploads/all/$newFileName";
 
-            if (env('FILESYSTEM_DRIVER') == 's3') {
+            if (config('filesystems.default') == 's3') {
                 Storage::disk('s3')->put($newPath, file_get_contents(base_path('public/') . $newPath));
                 unlink(base_path('public/') . $newPath);
             }

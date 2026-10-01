@@ -57,7 +57,7 @@
             <section class="h-160px h-md-200px h-lg-300px h-xl-100 w-100">
                 <img class="d-block lazyload h-100 img-fit"
                     src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                    data-src="{{ uploaded_asset($shop->top_banner) }}" alt="{{ env('APP_NAME') }} offer">
+                    data-src="{{ uploaded_asset($shop->top_banner) }}" alt="{{ config('app.name') }} offer">
             </section>
         @endif
     @endif
@@ -283,7 +283,7 @@
                     <div class="w-100">
                         <img class="d-block lazyload h-100 img-fit"
                             src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                            data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                            data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                     </div>
                 </section>
             @endforeach
@@ -298,7 +298,7 @@
                         <div class="w-100">
                             <img class="d-block lazyload h-100 img-fit"
                                 src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                                data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                                data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                         </div>
                     </div>
                     @endforeach
@@ -363,7 +363,7 @@
                         <div class="mt-3 mb-3 w-100">
                             <img class="d-block lazyload h-100 img-fit"
                                 src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                                data-src="{{ uploaded_asset($banner) }}" alt="{{ env('APP_NAME') }} offer">
+                                data-src="{{ uploaded_asset($banner) }}" alt="{{ config('app.name') }} offer">
                         </div>
                     @endforeach
                 @endif

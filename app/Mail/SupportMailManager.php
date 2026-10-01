@@ -30,7 +30,7 @@ class SupportMailManager extends Mailable
      {
          // dd($array);
          return $this->view($this->array['view'])
-                     ->from($this->array['from'], env('MAIL_FROM_NAME'))
+                     ->from($this->array['from'], config('mail.from.name'))
                      ->subject($this->array['subject'])
                      ->with([
                          'content' => $this->array['content'],

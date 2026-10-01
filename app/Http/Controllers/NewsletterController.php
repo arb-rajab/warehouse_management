@@ -41,7 +41,7 @@ class NewsletterController extends Controller implements HasMiddleware
                 foreach ($request->user_emails as $key => $email) {
                     $array['view'] = 'shop.emails.newsletter';
                     $array['subject'] = $request->subject;
-                    $array['from'] = env('MAIL_FROM_ADDRESS');
+                    $array['from'] = config('mail.from.address');
                     $array['content'] = $request->content;
 
                     try {
@@ -57,7 +57,7 @@ class NewsletterController extends Controller implements HasMiddleware
                 foreach ($request->subscriber_emails as $key => $email) {
                     $array['view'] = 'shop.emails.newsletter';
                     $array['subject'] = $request->subject;
-                    $array['from'] = env('MAIL_FROM_ADDRESS');
+                    $array['from'] = config('mail.from.address');
                     $array['content'] = $request->content;
 
                     try {
@@ -80,7 +80,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public function testEmail(Request $request){
         $array['view'] = 'shop.emails.newsletter';
         $array['subject'] = "SMTP Test";
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = "This is a test email.";
 
         try {

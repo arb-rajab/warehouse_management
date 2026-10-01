@@ -107,7 +107,7 @@ class ConversationController extends Controller implements HasMiddleware
     {
         $array['view'] = 'shop.emails.conversation';
         $array['subject'] = translate('Sender').':- '. Auth::user()->name;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Hi! You recieved a message from ') . Auth::user()->name . '.';
         $array['sender'] = Auth::user()->name;
 

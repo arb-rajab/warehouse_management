@@ -15,9 +15,9 @@
                         <label class="col-md-3 col-form-label">{{translate('Type')}}</label>
                         <div class="col-md-9">
                             <select class="form-control aiz-selectpicker mb-2 mb-md-0" name="MAIL_DRIVER" onchange="checkMailDriver()">
-                                <option value="sendmail" @if (env('MAIL_DRIVER') == "sendmail") selected @endif>{{ translate('Sendmail') }}</option>
-                                <option value="smtp" @if (env('MAIL_DRIVER') == "smtp") selected @endif>{{ translate('SMTP') }}</option>
-                                <option value="mailgun" @if (env('MAIL_DRIVER') == "mailgun") selected @endif>{{ translate('Mailgun') }}</option>
+                                <option value="sendmail" @if (config('mail.default') == "sendmail") selected @endif>{{ translate('Sendmail') }}</option>
+                                <option value="smtp" @if (config('mail.default') == "smtp") selected @endif>{{ translate('SMTP') }}</option>
+                                <option value="mailgun" @if (config('mail.default') == "mailgun") selected @endif>{{ translate('Mailgun') }}</option>
                             </select>
                         </div>
                     </div>
@@ -73,7 +73,7 @@
                                 <label class="col-from-label">{{translate('MAIL FROM ADDRESS')}}</label>
                             </div>
                             <div class="col-md-9">
-                                <input type="email" class="form-control" name="MAIL_FROM_ADDRESS" value="{{  env('MAIL_FROM_ADDRESS') }}" placeholder="{{ translate('MAIL FROM ADDRESS') }}">
+                                <input type="email" class="form-control" name="MAIL_FROM_ADDRESS" value="{{  config('mail.from.address') }}" placeholder="{{ translate('MAIL FROM ADDRESS') }}">
                             </div>
                         </div>
                         <div class="form-group row">
@@ -82,7 +82,7 @@
                                 <label class="col-from-label">{{translate('MAIL FROM NAME')}}</label>
                             </div>
                             <div class="col-md-9">
-                                <input type="text" class="form-control" name="MAIL_FROM_NAME" value="{{  env('MAIL_FROM_NAME') }}" placeholder="{{ translate('MAIL FROM NAME') }}">
+                                <input type="text" class="form-control" name="MAIL_FROM_NAME" value="{{  config('mail.from.name') }}" placeholder="{{ translate('MAIL FROM NAME') }}">
                             </div>
                         </div>
                     </div>

@@ -1033,7 +1033,7 @@ if (!function_exists('my_asset')) {
      */
     function my_asset($path, $secure = null)
     {
-        if (env('FILESYSTEM_DRIVER') == 's3') {
+        if (config('filesystems.default') == 's3') {
             return Storage::disk('s3')->url($path);
         } else {
             // No 'public/' prefix: this app serves from public/ already (the
@@ -1085,7 +1085,7 @@ if (!function_exists('getBaseURL')) {
 if (!function_exists('getFileBaseURL')) {
     function getFileBaseURL()
     {
-        if (env('FILESYSTEM_DRIVER') == 's3') {
+        if (config('filesystems.default') == 's3') {
             return env('AWS_URL') . '/';
         } else {
             return getBaseURL() . 'public/';

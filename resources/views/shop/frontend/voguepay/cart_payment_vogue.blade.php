@@ -2,14 +2,14 @@
 
 <script>
     closedFunction=function() {
-        location.href = '{{ env('APP_URL') }}'
+        location.href = '{{ config('app.url') }}'
     }
 
     successFunction=function(transaction_id) {
-        location.href = '{{ env('APP_URL') }}'+'/vogue-pay/success/'+transaction_id
+        location.href = '{{ config('app.url') }}'+'/vogue-pay/success/'+transaction_id
     }
     failedFunction=function(transaction_id) {
-        location.href = '{{ env('APP_URL') }}'+'/vogue-pay/failure/'+transaction_id
+        location.href = '{{ config('app.url') }}'+'/vogue-pay/failure/'+transaction_id
     }
 </script>
 @if (get_setting('voguepay_sandbox') == 1)

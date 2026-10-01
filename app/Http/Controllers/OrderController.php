@@ -737,7 +737,7 @@ class OrderController extends Controller implements HasMiddleware
             if (env('MAIL_USERNAME') != null && get_setting('delivery_boy_mail_notification') == '1') {
                 $array['view'] = 'shop.emails.invoice';
                 $array['subject'] = translate('You are assigned to delivery an order. Order code') . ' - ' . $order->code;
-                $array['from'] = env('MAIL_FROM_ADDRESS');
+                $array['from'] = config('mail.from.address');
                 $array['order'] = $order;
 
                 try {

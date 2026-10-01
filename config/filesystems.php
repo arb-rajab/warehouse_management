@@ -13,7 +13,9 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    // FILESYSTEM_DRIVER is the legacy store's name for the same setting, and
+    // what its production .env carries; the store code reads it through here.
+    'default' => env('FILESYSTEM_DISK', env('FILESYSTEM_DRIVER', 'local')),
 
     /*
     |--------------------------------------------------------------------------

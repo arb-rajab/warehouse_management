@@ -20,7 +20,7 @@ class NotificationUtility
         //sends email to customer with the invoice pdf attached
         $array['view'] = 'shop.emails.invoice';
         $array['subject'] = translate('A new order has been placed') . ' - ' . $order->code;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['order'] = $order;
         try {
           //  Mail::to($order->user->email)->queue(new InvoiceEmailManager($array));

@@ -93,7 +93,7 @@ class SupportTicketController extends Controller implements HasMiddleware
     public function send_support_mail_to_admin($ticket){
         $array['view'] = 'shop.emails.support';
         $array['subject'] = translate('Support ticket Code is').':- '.$ticket->code;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Hi. A ticket has been created. Please check the ticket.');
         $array['link'] = route('support_ticket.admin_show', encrypt($ticket->id));
         $array['sender'] = $ticket->user->name;
@@ -111,7 +111,7 @@ class SupportTicketController extends Controller implements HasMiddleware
     public function send_support_reply_email_to_user($ticket, $tkt_reply){
         $array['view'] = 'shop.emails.support';
         $array['subject'] = translate('Support ticket Code is').':- '.$ticket->code;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Hi. A ticket has been created. Please check the ticket.');
         $array['link'] = route('support_ticket.show', encrypt($ticket->id));
         $array['sender'] = $tkt_reply->user->name;

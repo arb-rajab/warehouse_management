@@ -1,6 +1,7 @@
 <?php
 
 use App\Mail\SecondEmailVerifyMailManager;
+use App\Notifications\PasswordResetRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -60,4 +61,15 @@ test('a reset for an unknown email sends nothing', function () {
         ->assertRedirect('/temp/password/reset');
 
     Mail::assertNothingQueued();
+});
+
+/**
+ * Read through env(), the link's host was null once `config:cache` had run.
+ */
+test('the emailed password reset link is built from the configured app url', function () {
+    config(['app.url' => 'https://shop.example.test']);
+
+    $mail = (new PasswordResetRequest('abc123'))->toMail(createStoreUser());
+
+    expect($mail->actionUrl)->toBe('https://shop.example.test/password/reset/abc123');
 });

@@ -909,6 +909,18 @@ port legacy keys in.
       the default language changed nothing. 66 reads were moved, and
       `DefaultLanguageConfigTest` fails on any new one. The same trap applies to
       the other `env()` calls outside config (phase 2's "left" list).
+      **Done 2026-10-01 (171 of 271 reads):** `DEFAULT_LANGUAGE`, `APP_NAME`,
+      `APP_URL`, `MAIL_FROM_ADDRESS`/`_NAME`, `FILESYSTEM_DRIVER` (now
+      `filesystems.default`, which still honours it as a fallback for
+      `FILESYSTEM_DISK`), and the three settings-screen reads of
+      `SESSION_DRIVER`/`CACHE_DRIVER`/`MAIL_DRIVER`. `NoEnvOutsideConfigTest`
+      lists them. **Still on `env()`:** `DEMO_MODE` (30, unset behaves as off),
+      `FORCE_HTTPS`, and the payment, analytics and captcha credentials (bKash,
+      PayHere, iyzico, SSLCommerz, N-Genius, Nagad, Facebook pixel, reCAPTCHA,
+      FCM, ...), roughly 100 reads that return null on a deployed host, so each
+      of those gateways is broken there until its keys move to
+      `config/services.php`. The settings screens that rewrite `.env`
+      (`overWriteEnvFile`) take effect only after `config:cache` is rerun.
       `languages/index.blade.php`'s form still posts `DEFAULT_LANGUAGE`, which
       the legacy settings controller writes into `.env`; that takes effect only
       after `config:cache` is rerun, and the shared `.env` is the deploy's.
