@@ -5,6 +5,7 @@ use App\Http\Middleware\BlockMaliciousRequests;
 use App\Http\Middleware\CheckoutMiddleware;
 use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\EnsurePasswordHasBeenChanged;
+use App\Http\Middleware\EnsurePaymentGatewayEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsAppUserUnbanned;
@@ -114,6 +115,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'log.request.time' => LogRequestTime::class,
             'rate.limit' => RateLimitMiddleware::class,
             'driver' => IsDriver::class,
+            'payment.gateway' => EnsurePaymentGatewayEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

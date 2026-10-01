@@ -95,6 +95,14 @@ return [
     // UserService call, and the API token they append to the path. The token was
     // once also committed as a literal in AllProductsCommand, so the one that
     // was in the repository is compromised and has to be reissued.
+    // PayHere's credentials. The notify handlers verify the gateway's signature
+    // with `secret`, so they refuse every notification while it is empty.
+    'payhere' => [
+        'merchant_id' => env('PAYHERE_MERCHANT_ID'),
+        'secret' => env('PAYHERE_SECRET'),
+        'currency' => env('PAYHERE_CURRENCY'),
+    ],
+
     'otajer' => [
         'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
         'token' => env('OTAJER_TOKEN'),

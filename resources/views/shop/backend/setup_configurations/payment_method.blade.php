@@ -306,7 +306,7 @@
                                 <label class="col-from-label">{{translate('PAYHERE MERCHANT ID')}}</label>
                             </div>
                             <div class="col-md-8">
-                                <input type="text" class="form-control" name="PAYHERE_MERCHANT_ID" value="{{  env('PAYHERE_MERCHANT_ID') }}" placeholder="{{ translate('PAYHERE MERCHANT ID') }}" required>
+                                <input type="text" class="form-control" name="PAYHERE_MERCHANT_ID" value="{{  config('services.payhere.merchant_id') }}" placeholder="{{ translate('PAYHERE MERCHANT ID') }}" required>
                             </div>
                         </div>
                         <div class="form-group row">
@@ -315,7 +315,7 @@
                                 <label class="col-from-label">{{translate('PAYHERE SECRET')}}</label>
                             </div>
                             <div class="col-md-8">
-                                <input type="text" class="form-control" name="PAYHERE_SECRET" value="{{  env('PAYHERE_SECRET') }}" placeholder="{{ translate('PAYHERE SECRET') }}" required>
+                                <input type="text" class="form-control" name="PAYHERE_SECRET" value="{{  config('services.payhere.secret') }}" placeholder="{{ translate('PAYHERE SECRET') }}" required>
                             </div>
                         </div>
                         <div class="form-group row">
@@ -324,7 +324,7 @@
                                 <label class="col-from-label">{{translate('PAYHERE CURRENCY')}}</label>
                             </div>
                             <div class="col-md-8">
-                                <input type="text" class="form-control" name="PAYHERE_CURRENCY" value="{{  env('PAYHERE_CURRENCY') }}" placeholder="{{ translate('PAYHERE CURRENCY') }}" required>
+                                <input type="text" class="form-control" name="PAYHERE_CURRENCY" value="{{  config('services.payhere.currency') }}" placeholder="{{ translate('PAYHERE CURRENCY') }}" required>
                             </div>
                         </div>
                         <div class="form-group row">

@@ -217,6 +217,32 @@ prefix. That is the single point every storefront asset URL goes through.
   (the same value it sent to `forget_request`) before it is pointed at this
   host; without it the call is refused with 422.**
   `LegacyStoreAccountRecoveryTest` covers each case.
+- The hand-rolled payment gateways (aamarpay, bkash, iyzico, nagad, ngenius,
+  payhere, sslcommerz, voguepay; 53 routes in `routes/shop-web.php` and
+  `routes/shop-api.php`) answered whether or not the store used them, and their
+  callbacks are unauthenticated routes that mark orders paid, top up wallets and
+  activate packages. PayHere's three notify handlers verified their signature
+  with `env('PAYHERE_SECRET')`, null once config is cached, so the secret was
+  empty and anyone could sign a payment-complete call for any order or wallet;
+  they also took the merchant id from the request, and compared with `===`.
+  **Fixed 2026-10-01:** `RouteServiceProvider::guardPaymentGatewayRoutes()`
+  puts `payment.gateway:<name>` on every route that reaches a gateway
+  controller (`config('store.payment_gateway_controllers')`), and
+  `EnsurePaymentGatewayEnabled` answers 404 unless the gateway is listed in
+  `STORE_PAYMENT_GATEWAYS` (`config('store.enabled_payment_gateways')`, empty
+  by default; the routes stay registered, because views link to their names).
+  Cash on delivery, wallet and the manual methods are not gateways. PayHere's
+  credentials are `config('services.payhere.*')`, and one verifier refuses
+  every notification unless a secret and merchant id are configured, the
+  merchant matches, the signature matches (`hash_equals`) and the status is
+  success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
+  controller under `Payment/` the guard does not know about. **Before
+  enabling a gateway:** move its credentials to config (only PayHere is done:
+  bKash, iyzico, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
+  them through `env()`) and check that its callback verifies the gateway's
+  signature before marking anything paid; the audit above did not review them.
+  The admin checkout and settings pages still offer a gateway that
+  `business_settings` has switched on, and choosing one now gives a 404.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

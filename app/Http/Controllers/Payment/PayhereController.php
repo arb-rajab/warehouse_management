@@ -136,20 +136,41 @@ class PayhereController extends Controller
 
 
     //checkout related functions ------------------------------------<starts>
+    /**
+     * Whether a PayHere notification is for this merchant, signed with its
+     * secret, and reports a completed payment.
+     *
+     * The three notify handlers each rebuilt the signature from
+     * config('services.payhere.secret'), which is null once config is cached, so the
+     * "secret" was empty and anyone could sign a payment-complete call for any
+     * order. They also took the merchant id from the request. With no secret or
+     * merchant id configured this refuses everything, and it compares in
+     * constant time.
+     *
+     * @param  array<string, mixed>  $post
+     */
+    private static function notificationIsAuthentic(array $post): bool
+    {
+        $secret = (string) config('services.payhere.secret');
+        $merchantId = (string) config('services.payhere.merchant_id');
+
+        if ($secret === '' || $merchantId === '') {
+            return false;
+        }
+
+        $expected = strtoupper(md5(
+            ($post['merchant_id'] ?? '').($post['order_id'] ?? '').($post['payhere_amount'] ?? '')
+            .($post['payhere_currency'] ?? '').($post['status_code'] ?? '').strtoupper(md5($secret))
+        ));
+
+        return hash_equals($merchantId, (string) ($post['merchant_id'] ?? ''))
+            && hash_equals($expected, strtoupper((string) ($post['md5sig'] ?? '')))
+            && (string) ($post['status_code'] ?? '') === '2';
+    }
+
     public static function checkout_notify()
     {
-        $merchant_id = $_POST['merchant_id'];
-        $order_id = $_POST['order_id'];
-        $payhere_amount = $_POST['payhere_amount'];
-        $payhere_currency = $_POST['payhere_currency'];
-        $status_code = $_POST['status_code'];
-        $md5sig = $_POST['md5sig'];
-
-        $merchant_secret = env('PAYHERE_SECRET'); // Replace with your Merchant Secret (Can be found on your PayHere account's Settings page)
-
-        $local_md5sig = strtoupper(md5($merchant_id . $order_id . $payhere_amount . $payhere_currency . $status_code . strtoupper(md5($merchant_secret))));
-
-        if (($local_md5sig === $md5sig) and ($status_code == 2)) {
+        if (self::notificationIsAuthentic($_POST)) {
             //custom_1 will have order_id
             return PayhereController::checkout_success($_POST['custom_1'],$_POST);
         }
@@ -194,20 +215,9 @@ class PayhereController extends Controller
     //wallet related functions ------------------------------------<starts>
     public static function wallet_notify()
     {
-        $merchant_id = $_POST['merchant_id'];
-        $order_id = $_POST['order_id'];
-        $payhere_amount = $_POST['payhere_amount'];
-        $payhere_currency = $_POST['payhere_currency'];
-        $status_code = $_POST['status_code'];
-        $md5sig = $_POST['md5sig'];
-
-        $merchant_secret = env('PAYHERE_SECRET'); // Replace with your Merchant Secret (Can be found on your PayHere account's Settings page)
-
-        $local_md5sig = strtoupper(md5($merchant_id . $order_id . $payhere_amount . $payhere_currency . $status_code . strtoupper(md5($merchant_secret))));
-
-        if (($local_md5sig === $md5sig) and ($status_code == 2)) {
+        if (self::notificationIsAuthentic($_POST)) {
             //custom_1 will have user_id
-            return PayhereController::wallet_success($_POST['custom_1'],$payhere_amount,$_POST);
+            return PayhereController::wallet_success($_POST['custom_1'],$_POST['payhere_amount'],$_POST);
         }
 
         return PayhereController::wallet_incomplete();
@@ -252,18 +262,7 @@ class PayhereController extends Controller
     //customer package related functions ------------------------------------<starts>
     public static function customer_package_notify()
     {
-        $merchant_id = $_POST['merchant_id'];
-        $order_id = $_POST['order_id'];
-        $payhere_amount = $_POST['payhere_amount'];
-        $payhere_currency = $_POST['payhere_currency'];
-        $status_code = $_POST['status_code'];
-        $md5sig = $_POST['md5sig'];
-
-        $merchant_secret = env('PAYHERE_SECRET'); // Replace with your Merchant Secret (Can be found on your PayHere account's Settings page)
-
-        $local_md5sig = strtoupper(md5($merchant_id . $order_id . $payhere_amount . $payhere_currency . $status_code . strtoupper(md5($merchant_secret))));
-
-        if (($local_md5sig === $md5sig) and ($status_code == 2)) {
+        if (self::notificationIsAuthentic($_POST)) {
             //custom_1 will have user_id custom_2 will have package_id
             return PayhereController::customer_package_success($_POST['custom_1'],$_POST['custom_2'],$_POST);
         }
