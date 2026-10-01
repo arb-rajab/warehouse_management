@@ -8,7 +8,13 @@ test('every route controller can be built before any migrated table exists', fun
     // The deploy boots the new release (route:list, wayfinder:generate) against the
     // previous release's database, before its migrations have run — so no
     // controller constructor may read a table.
-    Schema::dropAllTables();
+    // Table by table: dropAllTables() VACUUMs on sqlite, which cannot run inside
+    // the test's transaction.
+    Schema::disableForeignKeyConstraints();
+
+    foreach (Schema::getTables() as $table) {
+        Schema::dropIfExists($table['name']);
+    }
 
     $queryFailures = [];
 
