@@ -339,6 +339,20 @@ prefix. That is the single point every storefront asset URL goes through.
   form's file fields (`Seller/ShopController`) store whatever is sent with a
   random name on the private disk, so nothing is served from it, but they are
   unvalidated and no screen can open them yet.
+- The mobile API's wallet payment (`POST api/v2/payments/pay/wallet`) took the
+  payer (`user_id`) and the amount from the request, while the order was priced
+  from the cart and marked paid: any signed-in customer could spend another
+  account's balance, or send `amount=0` and pay nothing, and the check-then-deduct
+  was not atomic. **Fixed 2026-10-01:** the payer is the signed-in account, the
+  amount is the order's own `grand_total`, and `WalletPaymentService` deducts it
+  under a row lock; when the balance does not cover it the order's parts go back
+  to `unpaid` and the app is told `Insufficient wallet balance` (the order
+  exists, unpaid: the cart is emptied by the order creation and cannot be
+  restored here). `UserController::updateName` (its route is commented out) now
+  edits the signed-in account, not `user_id`. **Check with the mobile team:** a
+  rep who paid for a customer from *that customer's* wallet by sending the
+  customer's `user_id` no longer can; the wallet that pays is the rep's own.
+  Tests: `LegacyWalletPaymentTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
