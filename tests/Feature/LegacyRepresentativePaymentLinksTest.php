@@ -34,6 +34,7 @@ function receiptFor(StoreUser $rep, ?StoreUser $customer = null): string
 }
 
 test('a receipt opens only through a link the store signed', function () {
+    seedStoreCurrency();
     $id = receiptFor(repUser(), createStoreUser('customer'));
 
     $this->get(route('payments.show', ['id' => $id]))->assertForbidden();

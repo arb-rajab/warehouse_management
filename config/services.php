@@ -141,7 +141,7 @@ return [
 
     'otajer' => [
         'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
-        'token' => env('OTAJER_TOKEN'),
+        'token' => env('OTAJER_TOKEN') ?: null,
     ],
 
 ];

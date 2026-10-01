@@ -7,6 +7,7 @@ use App\Http\Middleware\Language;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WrapStoreApiResources;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
@@ -99,7 +100,12 @@ class RouteServiceProvider extends ServiceProvider
             $gateway = $gatewayByController[$route->getControllerClass()] ?? null;
 
             if ($gateway !== null) {
-                $route->middleware('payment.gateway:'.$gateway);
+                // First, not last: a route that asks for a sign-in or an unbanned
+                // account would otherwise answer with its redirect before the
+                // gateway's 404, and say a disabled gateway exists.
+                $action = $route->getAction();
+                $action['middleware'] = array_merge(['payment.gateway:'.$gateway], Arr::wrap($action['middleware'] ?? []));
+                $route->setAction($action);
             }
         }
     }

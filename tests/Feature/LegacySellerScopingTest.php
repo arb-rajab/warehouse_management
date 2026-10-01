@@ -61,11 +61,14 @@ test('cancelling an order twice refunds and restocks once, whoever cancels it', 
     $product = createStoreProduct(['user_id' => $seller->id, 'current_stock' => 10]);
     $order = walletOrderOf($seller, $customer, $product);
     $cancel = function () use ($channel, $seller, $order) {
-        app('auth')->forgetGuards();
+        if ($channel === 'api') {
+            // A token's user is cached on the guard for the rest of the test.
+            app('auth')->forgetGuards();
 
-        return $channel === 'api'
-            ? test()->withToken(storeApiToken($seller))->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled'])
-            : test()->post('/temp/seller/orders/update_delivery_status', ['order_id' => $order->id, 'status' => 'cancelled']);
+            return test()->withToken(storeApiToken($seller))->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled']);
+        }
+
+        return test()->post('/temp/seller/orders/update_delivery_status', ['order_id' => $order->id, 'status' => 'cancelled']);
     };
 
     if ($channel === 'web') {

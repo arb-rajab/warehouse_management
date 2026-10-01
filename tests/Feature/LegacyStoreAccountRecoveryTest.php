@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\StoreUser;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Testing\TestResponse;
 
 /**
  * The store's password-reset and verification codes are 6 digits: 900,000
@@ -10,7 +12,7 @@ use Illuminate\Support\Facades\Hash;
  * could be tried, the codes came from rand(), and the web reset left the code
  * valid after using it.
  */
-function storeUserWithCode(string $email, string $code, ?string $phone = null): App\Models\StoreUser
+function storeUserWithCode(string $email, string $code, ?string $phone = null): StoreUser
 {
     $user = createStoreUser('customer', $email, 'old-password');
     $user->forceFill(['verification_code' => $code, 'phone' => $phone ?? $user->phone])->save();
@@ -18,7 +20,7 @@ function storeUserWithCode(string $email, string $code, ?string $phone = null): 
     return $user->fresh();
 }
 
-function confirmReset(array $data): Illuminate\Testing\TestResponse
+function confirmReset(array $data): TestResponse
 {
     return test()->postJson('/temp/api/v2/auth/password/confirm_reset', $data + ['password' => 'hacked-password1']);
 }

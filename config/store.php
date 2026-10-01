@@ -1,5 +1,18 @@
 <?php
 
+use App\Http\Controllers\Api\V2\BkashController as ApiBkashController;
+use App\Http\Controllers\Api\V2\IyzicoController as ApiIyzicoController;
+use App\Http\Controllers\Api\V2\NagadController as ApiNagadController;
+use App\Http\Controllers\Api\V2\SslCommerzController as ApiSslCommerzController;
+use App\Http\Controllers\Payment\AamarpayController;
+use App\Http\Controllers\Payment\BkashController;
+use App\Http\Controllers\Payment\IyzicoController;
+use App\Http\Controllers\Payment\NagadController;
+use App\Http\Controllers\Payment\NgeniusController;
+use App\Http\Controllers\Payment\PayhereController;
+use App\Http\Controllers\Payment\SslcommerzController;
+use App\Http\Controllers\Payment\VoguepayController;
+
 return [
 
     /*
@@ -68,14 +81,14 @@ return [
     */
 
     'payment_gateway_controllers' => [
-        'aamarpay' => [App\Http\Controllers\Payment\AamarpayController::class],
-        'bkash' => [App\Http\Controllers\Payment\BkashController::class, App\Http\Controllers\Api\V2\BkashController::class],
-        'iyzico' => [App\Http\Controllers\Payment\IyzicoController::class, App\Http\Controllers\Api\V2\IyzicoController::class],
-        'nagad' => [App\Http\Controllers\Payment\NagadController::class, App\Http\Controllers\Api\V2\NagadController::class],
-        'ngenius' => [App\Http\Controllers\Payment\NgeniusController::class],
-        'payhere' => [App\Http\Controllers\Payment\PayhereController::class],
-        'sslcommerz' => [App\Http\Controllers\Payment\SslcommerzController::class, App\Http\Controllers\Api\V2\SslCommerzController::class],
-        'voguepay' => [App\Http\Controllers\Payment\VoguepayController::class],
+        'aamarpay' => [AamarpayController::class],
+        'bkash' => [BkashController::class, ApiBkashController::class],
+        'iyzico' => [IyzicoController::class, ApiIyzicoController::class],
+        'nagad' => [NagadController::class, ApiNagadController::class],
+        'ngenius' => [NgeniusController::class],
+        'payhere' => [PayhereController::class],
+        'sslcommerz' => [SslcommerzController::class, ApiSslCommerzController::class],
+        'voguepay' => [VoguepayController::class],
     ],
 
 ];

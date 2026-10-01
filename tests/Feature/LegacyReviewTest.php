@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Product;
 use App\Models\Review;
+use App\Models\StoreUser;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -10,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * the app's endpoint checked that the customer had received the product but not
  * the rating. Both ask Product::isReviewableBy() now and take a rating from 1 to 5.
  */
-function receivedProductFor(App\Models\StoreUser $customer): App\Models\Product
+function receivedProductFor(StoreUser $customer): Product
 {
     $product = createStoreProduct();
     orderStoreProduct($customer, $product)->forceFill(['delivery_status' => 'delivered'])->save();
