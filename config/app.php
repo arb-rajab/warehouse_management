@@ -145,6 +145,21 @@ return [
 
     'locale' => env('APP_LOCALE', 'en'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Content Language
+    |--------------------------------------------------------------------------
+    |
+    | The language code the legacy store keeps its default-language rows under
+    | (role, brand, page and product translations, the language switcher, the
+    | translate() fallback). It is a config key because env() returns null
+    | outside config files once `config:cache` has run, as it does on every
+    | deploy. Distinct from `locale` above, which is the UI language.
+    |
+    */
+
+    'default_language' => env('DEFAULT_LANGUAGE', 'en'),
+
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
@@ -167,16 +182,19 @@ return [
     | WMS Token
     |--------------------------------------------------------------------------
     |
-    | Merged from the legacy store's config/app.php. Guards routes/
-    | api_warehouse.php via WmsAuthMiddleware's `private-token` header check
-    | — see .ai/rules/legacy-albaraka-holland.md section 0.3, which flags
-    | this value as a secret that needs rotating outside this repo's scope.
-    | Kept as the same fallback default (unchanged behavior) but now
-    | overridable via env rather than hardcoded as the only value.
+    | Merged from the legacy store's config/app.php. The shared secret that
+    | WmsAuthMiddleware compares with the `private-token` header on
+    | routes/shop-api_warehouse.php, which exposes customers and orders.
+    |
+    | There is deliberately no default. The legacy value was committed here as
+    | the fallback, so any host without WMS_TOKEN in its .env was protected by
+    | a string anyone with the repository (or its history) could read; that
+    | value must be treated as compromised and the integration given a new
+    | token. With no token configured the middleware rejects every request.
     |
     */
 
-    'wms_token' => env('WMS_TOKEN', 'wlak_leash_mch_labes_tagieh'),
+    'wms_token' => env('WMS_TOKEN'),
 
     'key' => env('APP_KEY'),
 

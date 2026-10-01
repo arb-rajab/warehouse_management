@@ -22,7 +22,7 @@ class PaymentController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:seller_payment_history', only: ['payment_histories']),
+            new Middleware('permission:seller_payment_history', only: ['payment_histories', 'show']),
         ];
     }    /**
      * Display a listing of the resource.

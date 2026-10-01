@@ -10,9 +10,9 @@ class AppleRevoke implements ProviderRevoke
     {
         $grant_type = "refresh_token";
         $refresh_token = auth()->user()->refresh_token;
-        $client_id = env('SIGN_IN_WITH_APPLE_CLIENT_ID');
-        $client_secret = env('SIGN_IN_WITH_APPLE_CLIENT_SECRET');
-        $redirect_uri = env('SIGN_IN_WITH_APPLE_REDIRECT');
+        $client_id = config('services.apple.client_id');
+        $client_secret = config('services.apple.client_secret');
+        $redirect_uri = config('services.apple.redirect');
 
         $server_output = Http::asForm()->post('https://appleid.apple.com/auth/token', [
             'client_id' => $client_id,

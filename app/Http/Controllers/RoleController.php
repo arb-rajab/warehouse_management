@@ -23,9 +23,9 @@ class RoleController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_staff_roles', only: ['index']),
-            new Middleware('permission:add_staff_role', only: ['create']),
-            new Middleware('permission:edit_staff_role', only: ['edit']),
+            new Middleware('permission:view_staff_roles', only: ['index', 'show']),
+            new Middleware('permission:add_staff_role', only: ['create', 'store']),
+            new Middleware('permission:edit_staff_role', only: ['edit', 'update', 'add_permission', 'create_admin_permissions']),
             new Middleware('permission:delete_staff_role', only: ['destroy']),
         ];
     }
@@ -65,7 +65,7 @@ class RoleController extends Controller implements HasMiddleware
         $role = Role::create(['name' => $request->name]);
         $role->givePermissionTo($this->permissionIds($request));
 
-        $role_translation = RoleTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'role_id' => $role->id]);
+        $role_translation = RoleTranslation::firstOrNew(['lang' => config('app.default_language'), 'role_id' => $role->id]);
         $role_translation->name = $request->name;
         $role_translation->save();
 
@@ -107,7 +107,7 @@ class RoleController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $role->name = $request->name;
         }
         $role->syncPermissions($this->permissionIds($request));

@@ -112,7 +112,7 @@ class DigitalProductController  extends Controller
             $product_stock->save();
 
             // Product Translations
-            $product_translation                = ProductTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'product_id' => $product->id]);
+            $product_translation                = ProductTranslation::firstOrNew(['lang' => config('app.default_language'), 'product_id' => $product->id]);
             $product_translation->name          = $request->name;
             $product_translation->description   = $request->description;
             $product_translation->save();
@@ -160,7 +160,7 @@ class DigitalProductController  extends Controller
             return back();
         }
 
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $product->name          = $request->name;
             $product->description   = $request->description;
         }
@@ -265,7 +265,7 @@ class DigitalProductController  extends Controller
         $product = Product::findOrFail(decrypt($request->id));
         if(Auth::user()->id == $product->user_id){
             $upload = Upload::findOrFail($product->file_name);
-            if (env('FILESYSTEM_DRIVER') == "s3") {
+            if (config('filesystems.default') == "s3") {
                 return \Storage::disk('s3')->download($upload->file_name, $upload->file_original_name.".".$upload->extension);
             }
             else {

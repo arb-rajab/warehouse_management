@@ -48,7 +48,7 @@
                         <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('tax.edit', $tax->id )}}" title="{{ translate('Edit') }}">
                             <i class="las la-edit"></i>
                         </a>
-                        <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('tax.destroy', $tax->id)}}" title="{{ translate('Delete') }}">
+                        <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('tax.destroy', $tax->id)}}" title="{{ translate('Delete') }}">
                             <i class="las la-trash"></i>
                         </a>
                     </td>

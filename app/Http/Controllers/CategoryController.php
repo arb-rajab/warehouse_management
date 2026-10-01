@@ -26,9 +26,9 @@ class CategoryController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_product_categories', only: ['index']),
-            new Middleware('permission:add_product_category', only: ['create']),
-            new Middleware('permission:edit_product_category', only: ['edit']),
+            new Middleware('permission:view_product_categories', only: ['index', 'show']),
+            new Middleware('permission:add_product_category', only: ['create', 'store']),
+            new Middleware('permission:edit_product_category', only: ['edit', 'update', 'updateFeatured']),
             new Middleware('permission:delete_product_category', only: ['destroy']),
         ];
     }
@@ -105,7 +105,7 @@ class CategoryController extends Controller implements HasMiddleware
 
         $category->attributes()->sync($request->filtering_attributes);
 
-        $category_translation = CategoryTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'category_id' => $category->id]);
+        $category_translation = CategoryTranslation::firstOrNew(['lang' => config('app.default_language'), 'category_id' => $category->id]);
         $category_translation->name = $request->name;
         $category_translation->save();
 
@@ -153,7 +153,7 @@ class CategoryController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $category = Category::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $category->name = $request->name;
         }
         if($request->order_level != null) {

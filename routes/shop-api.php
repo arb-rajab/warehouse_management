@@ -6,18 +6,18 @@ use App\Http\Middleware\EnsureSystemKey;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function () {
-    Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login');
+    Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login')->middleware('throttle:store-auth');
     Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('rate.limit');
     Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin');
-    Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest');
-    Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset');
-    Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode');
+    Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest')->middleware('throttle:store-auth');
+    Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset')->middleware('throttle:store-auth');
+    Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode')->middleware('throttle:store-auth');
     Route::middleware('auth:store_api')->group(function () {
         Route::get('logout', 'App\Http\Controllers\Api\V2\AuthController@logout');
         Route::get('account-deletion', 'App\Http\Controllers\Api\V2\AuthController@account_deletion');
         Route::get('user', 'App\Http\Controllers\Api\V2\AuthController@user');
-        Route::get('resend_code', 'App\Http\Controllers\Api\V2\AuthController@resendCode');
-        Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode');
+        Route::get('resend_code', 'App\Http\Controllers\Api\V2\AuthController@resendCode')->middleware('throttle:store-auth');
+        Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode')->middleware('throttle:store-auth');
     });
 
     Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken');
@@ -40,7 +40,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // varient price
     // Route::get('varient-price', [ProductController::class, 'getPrice']);
 
-    Route::prefix('delivery-boy')->group(function () {
+    Route::prefix('delivery-boy')->middleware('delivery_boy')->group(function () {
         Route::get('dashboard-summary/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@dashboard_summary')->middleware('auth:store_api');
         Route::get('deliveries/completed/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@completed_delivery')->middleware('auth:store_api');
         Route::get('deliveries/cancelled/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@cancelled_delivery')->middleware('auth:store_api');
@@ -207,7 +207,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         // representative payments
         Route::get('payments/index', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@index')->middleware('auth:store_api');
         Route::post('payments/store', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@store')->middleware('auth:store_api');
-        Route::get('payments/generate-qr', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@generate_qr')->name('api.rep.payment.generate_qr');
+        Route::get('payments/generate-qr', 'App\Http\Controllers\Api\V2\RepresentativePaymentController@generate_qr')->middleware('signed')->name('api.rep.payment.generate_qr');
         Route::post('visit-note', 'App\Http\Controllers\Api\V2\CustomerController@visit_note')->middleware('auth:store_api');
         Route::get('current-visit', 'App\Http\Controllers\Api\V2\CustomerController@current_visit')->middleware('auth:store_api');
     });
@@ -321,7 +321,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
 
 
-    Route::post('offline/payment/submit', 'App\Http\Controllers\Api\V2\OfflinePaymentController@submit')->name('api.offline.payment.submit');
+    Route::post('offline/payment/submit', 'App\Http\Controllers\Api\V2\OfflinePaymentController@submit')->middleware('auth:store_api')->name('api.offline.payment.submit');
 
 
     Route::get('flash-deals', 'App\Http\Controllers\Api\V2\FlashDealController@index');

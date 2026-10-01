@@ -6,9 +6,30 @@ use App\Models\Offer;
 use App\Models\OfferProduct;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class OfferController extends Controller
+class OfferController extends Controller implements HasMiddleware
 {
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * The legacy store's permission vocabulary has these names (its screens'
+     * buttons already ask `@can(...)` for them); the controller never did, so any
+     * admin or staff account could use the page.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_offer_deals', only: ['index']),
+            new Middleware('permission:add_offer_deal', only: ['create', 'store', 'brandCreate', 'base_product_discount', 'product_discount', 'base_brand_discount', 'brand_discount']),
+            new Middleware('permission:edit_offer_deal', only: ['edit', 'update', 'update_status', 'update_repeatable', 'update_multiple_usage', 'product_discount_edit', 'brand_discount_edit']),
+            new Middleware('permission:delete_offer_deal', only: ['destroy']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $sort_search = null;

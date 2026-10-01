@@ -27,14 +27,13 @@ class SellerPackageController extends Controller
 
     public function purchase_free_package(Request $request)
     {
-        $data['seller_package_id'] = $request->package_id;
-        $data['payment_method'] = $request->payment_option;
-
-
-        $seller_package = SellerPackage::findOrFail($request->seller_package_id);
+        // One package id, used for the price check and for what is granted: the
+        // check read `seller_package_id` and the grant `package_id`, so a free
+        // package could be named for the first and a paid one for the second.
+        $seller_package = SellerPackage::findOrFail($request->package_id);
 
         if ($seller_package->amount == 0) {
-            seller_purchase_payment_done(auth()->user()->id, $request->package_id, $request->amount, 'Free Package', null);
+            seller_purchase_payment_done(auth()->user()->id, $seller_package->id, 0, 'Free Package', null);
             return $this->success(translate('Package purchasing successful'));
         } elseif (
             auth()->user()->shop->seller_package != null &&
@@ -42,6 +41,8 @@ class SellerPackageController extends Controller
         ) {
             return $this->failed(translate('You have more uploaded products than this package limit. You need to remove excessive products to downgrade.'));
         }
+
+        return $this->failed(translate('Package is not available'));
     }
 
     public function purchase_package_offline(Request $request)

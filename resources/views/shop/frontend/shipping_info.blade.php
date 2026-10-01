@@ -104,7 +104,7 @@
                                         <!-- Edit Address Button -->
                                         <div class="col-md-4 p-3 text-right">
                                             <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4" onclick="edit_address('{{$address->id}}')">{{ translate('Edit') }}</a>
-                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4 confirm-delete" href="#" data-href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4 confirm-delete" href="#" data-method="post" data-href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
                                         </div>
                                     </div>
                                 </div>

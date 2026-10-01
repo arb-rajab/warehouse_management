@@ -7,7 +7,7 @@
             <div class="bg-white shadow-sm rounded">
                 <div class="py-3 d-flex justify-content-between align-items-center">
                     <div class="fs-16 fs-md-20 fw-700 text-dark">{{ translate('Compare Products')}}</div>
-                    <a href="{{ route('compare.reset') }}" style="text-decoration: none;border-radius: 25px;" class="btn btn-soft-primary btn-sm fs-12 fw-600">{{ translate('Reset Compare List')}}</a>
+                    <a data-method="post" href="{{ route('compare.reset') }}" style="text-decoration: none;border-radius: 25px;" class="btn btn-soft-primary btn-sm fs-12 fw-600">{{ translate('Reset Compare List')}}</a>
                 </div>
                 @if(Session::has('compare'))
                     @if(count(Session::get('compare')) > 0)

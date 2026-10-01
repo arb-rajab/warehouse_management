@@ -32,7 +32,7 @@
     <!-- meta property="og:price:amount" content="{{ single_price($detailedProduct->unit_price) }}" /-->
     <meta property="product:price:currency"
         content="{{ \App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code }}" />
-    <meta property="fb:app_id" content="{{ env('FACEBOOK_PIXEL_ID') }}">
+    <meta property="fb:app_id" content="{{ config('services.facebook.pixel_id') }}">
 @endsection
 
 @section('content')

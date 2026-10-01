@@ -9,7 +9,7 @@
                 <h5 class="mb-0 h6">{{translate('Offer Deal Information')}}</h5>
             </div>
             <div class="card-body">
-                <form action="{{ route('offer_deals.store') }}" method="get">
+                <form action="{{ route('offer_deals.store') }}" method="post">
                     @csrf
 
                     <input type="hidden" name="brand_offer" value="true">

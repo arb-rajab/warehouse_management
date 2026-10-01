@@ -28,7 +28,7 @@ class AuctionProductBidController extends Controller
                     $product = Product::where('id', $request->product_id)->first();
                     $array['view'] = 'shop.emails.auction_bid';
                     $array['subject'] = translate('Auction Bid');
-                    $array['from'] = env('MAIL_FROM_ADDRESS');
+                    $array['from'] = config('mail.from.address');
                     $array['content'] = 'Hi! A new user bidded more then you for the product, ' . $product->name . '. ' . 'Highest bid amount: ' . $bid->amount;
                     $array['link'] = route('auction-product', $product->slug);
                     try {

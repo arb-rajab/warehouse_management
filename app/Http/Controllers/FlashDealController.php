@@ -25,9 +25,9 @@ class FlashDealController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_flash_deals', only: ['index']),
-            new Middleware('permission:add_flash_deal', only: ['create']),
-            new Middleware('permission:edit_flash_deal', only: ['edit']),
+            new Middleware('permission:view_all_flash_deals', only: ['index', 'show']),
+            new Middleware('permission:add_flash_deal', only: ['create', 'store', 'product_discount']),
+            new Middleware('permission:edit_flash_deal', only: ['edit', 'update', 'update_status', 'product_discount_edit']),
             new Middleware('permission:delete_flash_deal', only: ['destroy']),
             new Middleware('permission:publish_flash_deal', only: ['update_featured']),
         ];
@@ -93,7 +93,7 @@ class FlashDealController extends Controller implements HasMiddleware
                 $root_product->save();
             }
 
-            $flash_deal_translation = FlashDealTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'flash_deal_id' => $flash_deal->id]);
+            $flash_deal_translation = FlashDealTranslation::firstOrNew(['lang' => config('app.default_language'), 'flash_deal_id' => $flash_deal->id]);
             $flash_deal_translation->title = $request->title;
             $flash_deal_translation->save();
 
@@ -149,7 +149,7 @@ class FlashDealController extends Controller implements HasMiddleware
 
         $flash_deal->background_color = $request->background_color;
 
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
           $flash_deal->title = $request->title;
           if (($flash_deal->slug == null) || ($flash_deal->title != $request->title)) {
               $flash_deal->slug = strtolower(str_replace(' ', '-', $request->title) . '-' . Str::random(5));

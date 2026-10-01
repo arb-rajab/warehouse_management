@@ -48,7 +48,7 @@ class OrderController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders', only: ['all_orders']),
+            new Middleware('permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders', only: ['all_orders', 'store', 'update', 'order_details', 'update_delivery_status', 'update_tracking_code', 'update_payment_status', 'assign_delivery_boy', 'update_manager_notes', 'edit_item_price', 'create', 'edit']),
             new Middleware('permission:view_order_details', only: ['show']),
             new Middleware('permission:delete_order', only: ['destroy', 'bulk_order_delete']),
         ];
@@ -548,11 +548,13 @@ class OrderController extends Controller implements HasMiddleware
     public function update_delivery_status(Request $request)
     {
         $order = Order::findOrFail($request->order_id);
+        // Cancelling twice must not refund or restock twice.
+        $alreadyCancelled = $order->delivery_status == 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
 
-        if ($request->status == 'cancelled' && $order->payment_type == 'wallet') {
+        if ($request->status == 'cancelled' && ! $alreadyCancelled && $order->payment_type == 'wallet') {
             $user = StoreUser::where('id', $order->user_id)->first();
             $user->balance += $order->grand_total;
             $user->save();
@@ -563,7 +565,7 @@ class OrderController extends Controller implements HasMiddleware
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
+                if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                     $variant = $orderDetail->variation;
                     if ($orderDetail->variation == null) {
                         $variant = '';
@@ -585,7 +587,7 @@ class OrderController extends Controller implements HasMiddleware
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
+                if ($request->status == 'cancelled' && ! $alreadyCancelled) {
                     $variant = $orderDetail->variation;
                     if ($orderDetail->variation == null) {
                         $variant = '';
@@ -734,10 +736,10 @@ class OrderController extends Controller implements HasMiddleware
 
             $delivery_history->save();
 
-            if (env('MAIL_USERNAME') != null && get_setting('delivery_boy_mail_notification') == '1') {
+            if (config('mail.mailers.smtp.username') != null && get_setting('delivery_boy_mail_notification') == '1') {
                 $array['view'] = 'shop.emails.invoice';
                 $array['subject'] = translate('You are assigned to delivery an order. Order code') . ' - ' . $order->code;
-                $array['from'] = env('MAIL_FROM_ADDRESS');
+                $array['from'] = config('mail.from.address');
                 $array['order'] = $order;
 
                 try {

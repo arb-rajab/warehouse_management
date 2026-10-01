@@ -99,7 +99,7 @@ class CheckForCommands extends Command
             $this->call('import:all-products-v2');
             $products_count = 0;
 
-            //             $endpoint = 'https://stores.otajer.com/api/rest/listfullproducts/'. config('services.otajer.token'). '/-1';
+            //             $endpoint = config('services.otajer.url') . '/api/rest/listfullproducts/'. config('services.otajer.token'). '/-1';
             //             $response = Http::get($endpoint);
             //             $allProducts = json_decode($response, true);
             //             $products_count += count($allProducts['Products']);
@@ -302,7 +302,7 @@ class CheckForCommands extends Command
             // /*******************************************  If the product does not exist ********************************************/
 
             //                 else { // if the product does not exist, create it.
-            //                         $endpoint = 'https://stores.otajer.com/api/rest/productdetails/'.$product['Serial'].'/' . config('services.otajer.token');
+            //                         $endpoint = config('services.otajer.url') . '/api/rest/productdetails/'.$product['Serial'].'/' . config('services.otajer.token');
             //                         $response = Http::get($endpoint);
             //                         $productDetails = json_decode($response, true);
             //                         $productDetails = $productDetails['ProductDetails'];

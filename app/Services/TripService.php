@@ -3,65 +3,36 @@
 namespace App\Services;
 
 use App\Models\Checkpoint;
-use App\Models\Upload;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Image;
 use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\TcpdfFpdi;  // Make sure you use the correct FPDI class;
 
 class  TripService
 {
 
+    /**
+     * Store the files a driver sends (checkpoint photos, the generated CMR) and
+     * give back the ids of the ones the uploader accepted.
+     *
+     * @param  iterable<UploadedFile>  $files
+     * @return list<int>
+     */
     public function uploadFiles($files)
     {
-        $photos_ids = [];
+        $uploads = app(MultipartUploadService::class);
+        $ids = [];
+
         foreach ($files as $file) {
+            $upload = $uploads->store($file, Auth::user()->id);
 
-            $upload = new Upload;
-
-            $upload->file_original_name = null;
-            $arr = explode('.', $file->getClientOriginalName());
-            for ($i = 0; $i < count($arr) - 1; $i++) {
-                if ($i == 0) {
-                    $upload->file_original_name .= $arr[$i];
-                } else {
-                    $upload->file_original_name .= "." . $arr[$i];
-                }
+            if ($upload !== null) {
+                $ids[] = $upload->id;
             }
-
-            $path = $file->store('uploads/all', 'local');
-            $size = $file->getSize();
-
-            try {
-                $img = Image::make($file->getRealPath())->encode();
-                $height = $img->height();
-                $width = $img->width();
-                if ($width > $height && $width > 1500) {
-                    $img->resize(1500, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                } elseif ($height > 1500) {
-                    $img->resize(null, 800, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-                $img->save(base_path('public/') . $path);
-                clearstatcache();
-                $size = $img->filesize();
-            } catch (\Exception $e) {
-                //dd($e);
-            }
-
-            $upload->file_name = $path;
-            $upload->user_id = Auth::user()->id;
-            $upload->file_size = $size;
-            $upload->save();
-
-            $photos_ids[] = $upload->id;
         }
-        return $photos_ids;
+
+        return $ids;
     }
 
     public function process_cmr_file($id, Request $request)

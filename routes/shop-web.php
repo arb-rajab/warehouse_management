@@ -64,7 +64,7 @@ Route::get('/refresh-csrf', function() {
 });
 
 // AIZ Uploader
-Route::controller(AizUploadController::class)->group(function () {
+Route::controller(AizUploadController::class)->middleware('auth')->group(function () {
     Route::post('/aiz-uploader', 'show_uploader');
     Route::post('/aiz-uploader/upload', 'upload');
     Route::get('/aiz-uploader/get_uploaded_files', 'get_uploaded_files');
@@ -81,13 +81,13 @@ Route::controller(AizUploadController::class)->group(function () {
 // action at one URI apart.
 Route::controller(LoginController::class)->group(function () {
     Route::get('/login', 'showLoginForm')->name('shop.login');
-    Route::post('/login', 'login');
+    Route::post('/login', 'login')->middleware('throttle:store-auth');
     Route::match(['get', 'post'], '/logout', 'logout')->name('shop.logout');
     Route::get('/social-login/redirect/{provider}', 'redirectToProvider')->name('social.login');
     Route::get('/social-login/{provider}/callback', 'handleProviderCallback')->name('social.callback');
     //Apple Callback
     Route::post('/apple-callback', 'handleAppleCallback');
-    Route::get('/account-deletion', 'account_deletion')->name('account_delete');
+    Route::post('/account-deletion', 'account_deletion')->name('account_delete');
 });
 
 Route::controller(RegisterController::class)->group(function () {
@@ -97,14 +97,14 @@ Route::controller(RegisterController::class)->group(function () {
 
 Route::controller(ForgotPasswordController::class)->group(function () {
     Route::get('/password/reset', 'showLinkRequestForm')->name('password.request');
-    Route::post('/password/email', 'sendResetLinkEmail')->name('password.email');
+    Route::post('/password/email', 'sendResetLinkEmail')->name('password.email')->middleware('throttle:store-auth');
 });
 
 Route::controller(ResetPasswordController::class)->group(function () {
     Route::get('/password/reset/{token}', 'showResetForm')->name('password.reset');
     // Unnamed: in the legacy app HomeController's reset_password_with_code
     // route below took the password.update name from this one.
-    Route::post('/password/reset', 'reset');
+    Route::post('/password/reset', 'reset')->middleware('throttle:store-auth');
 });
 
 Route::controller(VerificationController::class)->group(function () {
@@ -118,18 +118,18 @@ Route::controller(VerificationController::class)->group(function () {
 Route::controller(CustomerController::class)->group(function () {
 // Activate the customer account after he agrees on the terms sent by email
     Route::get('/terms-activation/{code}', 'account_activation')->name('terms.activation');
-    Route::get('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
+    Route::post('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
 
 });
 
 Route::controller(HomeController::class)->group(function () {
     Route::get('/email_change/callback', 'email_change_callback')->name('email_change.callback');
-    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('shop.password.update');
+    Route::post('/password/reset/email/submit', 'reset_password_with_code')->name('shop.password.update')->middleware('throttle:store-auth');
     Route::get('/users/login', 'login')->name('user.login');
     Route::get('/seller/login', 'login')->name('seller.login');
     Route::get('/deliveryboy/login', 'login')->name('deliveryboy.login');
     Route::get('/users/registration', 'registration')->name('user.registration');
-    Route::post('/users/login/cart', 'cart_login')->name('cart.login.submit');
+    Route::post('/users/login/cart', 'cart_login')->name('cart.login.submit')->middleware('throttle:store-auth');
     // Route::get('/new-page', 'new_page')->name('new_page');
 
 
@@ -238,7 +238,7 @@ Route::controller(SslcommerzController::class)->group(function () {
 // Compare
 Route::controller(CompareController::class)->group(function () {
     Route::get('/compare', 'index')->name('compare');
-    Route::get('/compare/reset', 'reset')->name('compare.reset');
+    Route::post('/compare/reset', 'reset')->name('compare.reset');
     Route::post('/compare/addToCompare', 'addToCompare')->name('compare.addToCompare');
 });
 
@@ -250,7 +250,8 @@ Route::group(['middleware' => ['user', 'verified', 'unbanned']], function() {
     Route::controller(HomeController::class)->group(function () {
         Route::get('/dashboard', 'dashboard')->name('dashboard');
         Route::get('/profile', 'profile')->name('profile');
-        Route::post('/new-user-verification', 'new_verify')->name('user.new.verify');
+        Route::get('/profile/trade-license', 'ownTradeLicense')->name('profile.trade_license');
+        Route::post('/new-user-verification', 'new_verify')->name('user.new.verify')->middleware('throttle:store-auth');
         Route::post('/new-user-email', 'update_email')->name('user.change.email');
         Route::post('/user/update-profile', 'userProfileUpdate')->name('user.profile.update');
     });
@@ -285,7 +286,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     Route::resource('purchase_history', PurchaseHistoryController::class);
     Route::controller(PurchaseHistoryController::class)->group(function () {
         Route::get('/purchase_history/details/{id}', 'purchase_history_details')->name('purchase_history.details');
-        Route::get('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
+        Route::post('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
         Route::get('digital-purchase-history', 'digital_index')->name('digital_purchase_history.index');
         Route::get('/digital-products/download/{id}', 'download')->name('digital-products.download');
     });
@@ -297,8 +298,8 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     //Follow
     Route::controller(FollowSellerController::class)->group(function () {
         Route::get('/followed-seller', 'index')->name('followed_seller');
-        Route::get('/followed-seller/store', [FollowSellerController::class, 'store'])->name('followed_seller.store');
-        Route::get('/followed-seller/remove', [FollowSellerController::class, 'remove'])->name('followed_seller.remove');
+        Route::post('/followed-seller/store', [FollowSellerController::class, 'store'])->name('followed_seller.store');
+        Route::post('/followed-seller/remove', [FollowSellerController::class, 'remove'])->name('followed_seller.remove');
     });
 
     // Wallet
@@ -320,7 +321,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
         Route::get('/customer_products/{id}/edit', 'edit')->name('customer_products.edit');
         Route::post('/customer_products/published', 'updatePublished')->name('customer_products.published');
         Route::post('/customer_products/status', 'updateStatus')->name('customer_products.update.status');
-        Route::get('/customer_products/destroy/{id}', 'destroy')->name('customer_products.destroy');
+        Route::post('/customer_products/destroy/{id}', 'destroy')->name('customer_products.destroy');
     });
 
     // Product Review
@@ -334,9 +335,9 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     Route::get('/representatives/payments/create', [RepresentativePaymentController::class, 'create'])->name('payments.create');
     Route::post('/representatives/payments/store', [RepresentativePaymentController::class, 'store'])->name('payments.store');
 
-    Route::get('/representatives/payments/show/{id}', [RepresentativePaymentController::class, 'show'])->name('payments.show')->withoutMiddleware(['customer', 'verified', 'unbanned']);
-    Route::get('/representatives/payments/export/{id}', [RepresentativePaymentController::class, 'export'])->name('payments.export')->withoutMiddleware(['customer', 'verified', 'unbanned']);
-    Route::get('/representatives/payments/generate_qr', [RepresentativePaymentController::class, 'generate_qr'])->name('payments.generate_qr')->withoutMiddleware(['customer', 'verified', 'unbanned']);
+    Route::get('/representatives/payments/show/{id}', [RepresentativePaymentController::class, 'show'])->name('payments.show')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('signed');
+    Route::get('/representatives/payments/export/{id}', [RepresentativePaymentController::class, 'export'])->name('payments.export')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('signed');
+    Route::get('/representatives/payments/generate_qr', [RepresentativePaymentController::class, 'generate_qr'])->name('payments.generate_qr')->withoutMiddleware(['customer', 'verified', 'unbanned'])->middleware('auth');
 
     Route::post('/representatives/visits/note', [VisitController::class, 'update_note'])->name('visits.note');
 
@@ -360,7 +361,7 @@ Route::group(['middleware' => ['auth']], function() {
     // Product Conversation
     Route::resource('conversations', ConversationController::class);
     Route::controller(ConversationController::class)->group(function () {
-        Route::get('/conversations/destroy/{id}', 'destroy')->name('conversations.destroy');
+        Route::post('/conversations/destroy/{id}', 'destroy')->name('conversations.destroy');
         Route::post('conversations/refresh', 'refresh')->name('conversations.refresh');
     });
 
@@ -375,8 +376,8 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/get-states', 'getStates')->name('get-state');
         Route::post('/get-cities', 'getCities')->name('get-city');
         Route::post('/addresses/update/{id}', 'update')->name('addresses.update');
-        Route::get('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
-        Route::get('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
+        Route::post('/addresses/destroy/{id}', 'destroy')->name('addresses.destroy');
+        Route::post('/addresses/set_default/{id}', 'set_default')->name('addresses.set_default');
     });
 });
 

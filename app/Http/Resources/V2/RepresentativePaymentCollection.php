@@ -6,6 +6,7 @@ use App\Models\RepresentativePayment;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Support\Facades\URL;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
 
@@ -13,12 +14,12 @@ class RepresentativePaymentCollection extends ResourceCollection
 {
     public function generate_pdf_url($data)
     {
-        return route('payments.export', $data->id);
+        return URL::signedRoute('payments.export', ['id' => $data->id]);
 
     }
     public function generate_qr($data)
     {
-        return route('api.rep.payment.generate_qr', ['id' => $data->id]);
+        return URL::signedRoute('api.rep.payment.generate_qr', ['id' => $data->id]);
 
     }
     public function generate_whatsapp_url($data)
@@ -34,7 +35,7 @@ class RepresentativePaymentCollection extends ResourceCollection
                 $phoneUtil = PhoneNumberUtil::getInstance();
                 $numberProto = $phoneUtil->parse($formattedPhoneNumber, 'NL');
                 $formattedPhoneNumber = $phoneUtil->format($numberProto, PhoneNumberFormat::INTERNATIONAL);
-                $paymentLink = route('payments.export', ['id' => $data->id]);
+                $paymentLink = URL::signedRoute('payments.export', ['id' => $data->id]);
 
                 $url = isset($formattedPhoneNumber) ? 'https://wa.me/' . str_replace(' ', '', $formattedPhoneNumber) . '?text=Thank%20you%20for%20your%20payment!%0A%0AClick%20here%20to%20view%20your%20payment%20details:%0A' . $paymentLink : null;
 

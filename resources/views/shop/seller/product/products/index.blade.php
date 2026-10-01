@@ -133,13 +133,13 @@
                                 </label>
                             </td>
                             <td class="text-right">
-		                      <a class="btn btn-soft-info btn-icon btn-circle btn-sm" href="{{route('seller.products.edit', ['id'=>$product->id, 'lang'=>env('DEFAULT_LANGUAGE')])}}" title="{{ translate('Edit') }}">
+		                      <a class="btn btn-soft-info btn-icon btn-circle btn-sm" href="{{route('seller.products.edit', ['id'=>$product->id, 'lang'=>config('app.default_language')])}}" title="{{ translate('Edit') }}">
 		                          <i class="las la-edit"></i>
 		                      </a>
-                              <a href="{{route('seller.products.duplicate', $product->id)}}" class="btn btn-soft-success btn-icon btn-circle btn-sm"  title="{{ translate('Duplicate') }}">
+                              <a data-method="post" href="{{route('seller.products.duplicate', $product->id)}}" class="btn btn-soft-success btn-icon btn-circle btn-sm"  title="{{ translate('Duplicate') }}">
     							   <i class="las la-copy"></i>
     						  </a>
-                              <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('seller.products.destroy', $product->id)}}" title="{{ translate('Delete') }}">
+                              <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('seller.products.destroy', $product->id)}}" title="{{ translate('Delete') }}">
                                   <i class="las la-trash"></i>
                               </a>
                           </td>

@@ -21,7 +21,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * here either — resolving both is DB-merge-phase work, not this move.
  *
  * @property int $id
+ * @property string|null $file_original_name
  * @property string|null $file_name
+ * @property int|null $user_id
+ * @property string|null $extension
+ * @property string|null $type
+ * @property int|null $file_size
  * @property string|null $external_link
  * @property-read string|null $url
  */

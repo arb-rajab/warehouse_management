@@ -117,7 +117,7 @@ class RepresentativePaymentAdminController extends Controller
     public function generate_qr_to_show_payment(Request $request)
     {
         $payment = RepresentativePayment::findOrFail($request->id);
-        return QrCode::size(200)->generate(route('payments.show', ['id' => $payment->id]));
+        return QrCode::size(200)->generate(\Illuminate\Support\Facades\URL::signedRoute('payments.show', ['id' => $payment->id]));
 
     }
 }

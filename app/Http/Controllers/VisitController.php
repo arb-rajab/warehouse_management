@@ -99,7 +99,7 @@ class VisitController extends Controller
 
     public function update_note(Request $request)
     {
-        $visit = Visit::find($request->visit_id);
+        $visit = Visit::where('rep_id', auth()->user()->id)->find($request->visit_id);
         if($visit){
             $visit->note = $request->note;
             $visit->save();

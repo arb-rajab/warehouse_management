@@ -26,7 +26,7 @@ class ProductQueryController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_product_queries', only: ['admin_index']),
+            new Middleware('permission:view_all_product_queries', only: ['admin_index', 'reply', 'index', 'show']),
         ];
     }
     /**

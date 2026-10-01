@@ -73,7 +73,7 @@
                 </div>
                 <div class="card-body">
                     <label class="aiz-switch mb-0">
-                        <input type="checkbox" onchange="updateSettings(this, 'FILESYSTEM_DRIVER')" <?php if(env('FILESYSTEM_DRIVER') == 's3') echo "checked";?>>
+                        <input type="checkbox" onchange="updateSettings(this, 'FILESYSTEM_DRIVER')" <?php if(config('filesystems.default') == 's3') echo "checked";?>>
                         <span></span>
                     </label>
                 </div>
@@ -98,8 +98,8 @@
                             </div>
                             <div class="col-lg-8">
                                 <select class="form-control aiz-selectpicker mb-2 mb-md-0" name="CACHE_DRIVER">
-                                    <option value="file" @if (env('CACHE_DRIVER') == "file") selected @endif>{{ translate('file') }}</option>
-                                    <option value="redis" @if (env('CACHE_DRIVER') == "redis") selected @endif>{{ translate('redis') }}</option>
+                                    <option value="file" @if (config('cache.default') == "file") selected @endif>{{ translate('file') }}</option>
+                                    <option value="redis" @if (config('cache.default') == "redis") selected @endif>{{ translate('redis') }}</option>
                                 </select>
                             </div>
                         </div>
@@ -110,8 +110,8 @@
                             </div>
                             <div class="col-lg-8">
                                 <select class="form-control aiz-selectpicker mb-2 mb-md-0" name="SESSION_DRIVER">
-                                    <option value="file" @if (env('SESSION_DRIVER') == "file") selected @endif>{{ translate('file') }}</option>
-                                    <option value="redis" @if (env('SESSION_DRIVER') == "redis") selected @endif>{{ translate('redis') }}</option>
+                                    <option value="file" @if (config('session.driver') == "file") selected @endif>{{ translate('file') }}</option>
+                                    <option value="redis" @if (config('session.driver') == "redis") selected @endif>{{ translate('redis') }}</option>
                                 </select>
                             </div>
                         </div>

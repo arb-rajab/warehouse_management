@@ -27,7 +27,7 @@ class ConversationController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_product_conversations', only: ['admin_index']),
+            new Middleware('permission:view_all_product_conversations', only: ['admin_index', 'admin_show']),
             new Middleware('permission:delete_product_conversations', only: ['destroy']),
         ];
     }
@@ -107,7 +107,7 @@ class ConversationController extends Controller implements HasMiddleware
     {
         $array['view'] = 'shop.emails.conversation';
         $array['subject'] = translate('Sender').':- '. Auth::user()->name;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Hi! You recieved a message from ') . Auth::user()->name . '.';
         $array['sender'] = Auth::user()->name;
 

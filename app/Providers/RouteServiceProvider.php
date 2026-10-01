@@ -7,6 +7,7 @@ use App\Http\Middleware\Language;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WrapStoreApiResources;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
@@ -75,7 +76,38 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/shop-web.php'));
         });
 
+        $this->guardPaymentGatewayRoutes();
+
         $this->keepLastRegisteredRouteNames();
+    }
+
+    /**
+     * Put `payment.gateway:<name>` on every route that reaches a payment
+     * gateway's controller, so none of them answers unless the store has
+     * enabled that gateway (config/store.php).
+     */
+    protected function guardPaymentGatewayRoutes(): void
+    {
+        $gatewayByController = [];
+
+        foreach (config('store.payment_gateway_controllers') as $gateway => $controllers) {
+            foreach ($controllers as $controller) {
+                $gatewayByController[$controller] = $gateway;
+            }
+        }
+
+        foreach (Route::getRoutes()->getRoutes() as $route) {
+            $gateway = $gatewayByController[$route->getControllerClass()] ?? null;
+
+            if ($gateway !== null) {
+                // First, not last: a route that asks for a sign-in or an unbanned
+                // account would otherwise answer with its redirect before the
+                // gateway's 404, and say a disabled gateway exists.
+                $action = $route->getAction();
+                $action['middleware'] = array_merge(['payment.gateway:'.$gateway], Arr::wrap($action['middleware'] ?? []));
+                $route->setAction($action);
+            }
+        }
     }
 
     /**

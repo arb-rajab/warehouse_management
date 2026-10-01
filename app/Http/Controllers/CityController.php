@@ -23,7 +23,7 @@ class CityController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:manage_shipping_cities', only: ['index', 'create', 'destroy']),
+            new Middleware('permission:manage_shipping_cities', only: ['index', 'create', 'destroy', 'store', 'update', 'updateStatus', 'edit']),
         ];
     }    /**
      * Display a listing of the resource.
@@ -102,7 +102,7 @@ class CityController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $city = City::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $city->name = $request->name;
         }
 

@@ -32,7 +32,7 @@ class PasswordResetController extends Controller
         }
 
         if ($user) {
-            $user->verification_code = rand(100000, 999999);
+            $user->verification_code = random_int(100000, 999999);
             $user->save();
             if ($request->send_code_by == 'phone') {
 
@@ -49,9 +49,32 @@ class PasswordResetController extends Controller
         ], 200);
     }
 
+    /**
+     * Resets the password of the account `email_or_phone` names, if
+     * `verification_code` is the code it was sent.
+     *
+     * The account used to be looked up by the code alone, so a guessed code
+     * reset the password of whichever user held it at that moment, a
+     * registration code included. It now has to match the named account, and
+     * the route is throttled per account (`store-auth`).
+     */
     public function confirmReset(Request $request)
     {
-        $user = StoreUser::where('verification_code', $request->verification_code)->first();
+        $identifier = trim((string) $request->email_or_phone);
+        $code = (string) $request->verification_code;
+
+        if ($identifier === '' || $code === '') {
+            return response()->json([
+                'result' => false,
+                'message' => translate('Validation Error'),
+                'errors' => ['email_or_phone' => [translate('The email or phone and the code are required.')]],
+                'user_id' => 0
+            ], 422);
+        }
+
+        $user = StoreUser::where(str_contains($identifier, '@') ? 'email' : 'phone', $identifier)
+            ->where('verification_code', $code)
+            ->first();
 
         if ($user != null) {
             $validatedData = Validator::make($request->all(), [
@@ -96,7 +119,7 @@ class PasswordResetController extends Controller
                 'message' => translate('User is not found')], 404);
         }
 
-        $user->verification_code = rand(100000, 999999);
+        $user->verification_code = random_int(100000, 999999);
         $user->save();
 
         if ($request->verify_by == 'email') {

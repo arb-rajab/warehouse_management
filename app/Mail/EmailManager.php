@@ -29,7 +29,7 @@ class EmailManager extends Mailable
     public function build()
     {
         return $this->view($this->array['view'])
-                    ->from($this->array['from'], env('MAIL_FROM_NAME'))
+                    ->from($this->array['from'], config('mail.from.name'))
                     ->subject($this->array['subject']);
     }
 }

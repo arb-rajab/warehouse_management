@@ -163,7 +163,7 @@
 
                                                 @can('delete_customer')
                                                     <a href="#" class="dropdown-item confirm-delete"
-                                                        data-href="{{ route('customers.destroy', $user->id) }}"
+                                                        data-method="post" data-href="{{ route('customers.destroy', $user->id) }}"
                                                         title="{{ translate('Delete') }}">
                                                         {{ translate('Delete') }}
                                                     </a>
@@ -198,7 +198,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-dismiss="modal">{{ translate('Cancel') }}</button>
-                    <a type="button" id="confirmation" class="btn btn-primary">{{ translate('Proceed!') }}</a>
+                    <a type="button" id="confirmation" data-method="post" class="btn btn-primary">{{ translate('Proceed!') }}</a>
                 </div>
             </div>
         </div>
@@ -216,7 +216,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-dismiss="modal">{{ translate('Cancel') }}</button>
-                    <a type="button" id="confirmationunban" class="btn btn-primary">{{ translate('Proceed!') }}</a>
+                    <a type="button" id="confirmationunban" data-method="post" class="btn btn-primary">{{ translate('Proceed!') }}</a>
                 </div>
             </div>
         </div>

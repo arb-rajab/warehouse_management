@@ -168,7 +168,7 @@
                                         @endif
                                     @endcan
                                     @can('delete_seller')
-                                        <a href="#" class="dropdown-item confirm-delete" data-href="{{route('sellers.destroy', $shop->id)}}" class="">
+                                        <a href="#" class="dropdown-item confirm-delete" data-method="post" data-href="{{route('sellers.destroy', $shop->id)}}" class="">
                                             {{translate('Delete')}}
                                         </a>
                                     @endcan
@@ -224,7 +224,7 @@
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-light" data-dismiss="modal">{{translate('Cancel')}}</button>
-					<a class="btn btn-primary" id="confirmation">{{translate('Proceed!')}}</a>
+					<a class="btn btn-primary" id="confirmation" data-method="post">{{translate('Proceed!')}}</a>
 				</div>
 			</div>
 		</div>
@@ -244,7 +244,7 @@
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-light" data-dismiss="modal">{{translate('Cancel')}}</button>
-						<a class="btn btn-primary" id="confirmationunban">{{translate('Proceed!')}}</a>
+						<a class="btn btn-primary" id="confirmationunban" data-method="post">{{translate('Proceed!')}}</a>
 					</div>
 				</div>
 			</div>

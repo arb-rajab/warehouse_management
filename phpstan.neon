@@ -88,7 +88,7 @@ parameters:
         - app/Http/Controllers/Api/V2/DigitalProductController.php
         - app/Http/Controllers/Api/V2/DynamicPopupController.php
         - app/Http/Controllers/Api/V2/FileController.php
-        - app/Http/Controllers/Api/V2/FileUploadController.php
+        - app/Http/Controllers/Api/V2/FileUploadController.php (?)
         - app/Http/Controllers/Api/V2/FilterController.php
         - app/Http/Controllers/Api/V2/FlashDealController.php
         - app/Http/Controllers/Api/V2/GeneralSettingController.php

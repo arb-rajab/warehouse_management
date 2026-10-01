@@ -1,7 +1,7 @@
 
 
     <form style="display: none" method="POST" action="{{ \App\Utility\PayhereUtility::get_action_url() }}" id="payhere-wallet-form">
-        <input type="hidden" name="merchant_id" value="{{ env('PAYHERE_MERCHANT_ID') }}">
+        <input type="hidden" name="merchant_id" value="{{ config('services.payhere.merchant_id') }}">
         <!-- Replace your Merchant ID -->
         <input type="hidden" name="return_url" value="{{ route('payhere.customer_package_payment.return') }}">
         <input type="hidden" name="cancel_url" value="{{ route('payhere.customer_package_payment.cancel') }}">
@@ -12,7 +12,7 @@
         <br><br>Item Details<br>
         <input type="text" name="order_id" value="{{ $order_id }}">
         <input type="text" name="items" value="{{ translate("Customer Package Payment")  }}"><br>
-        <input type="text" name="currency" value="{{ env('PAYHERE_CURRENCY') }}">
+        <input type="text" name="currency" value="{{ config('services.payhere.currency') }}">
         <input type="text" name="amount" value="{{ $amount }}">
         <br><br>Customer Details<br>
         <input type="text" name="first_name" value="{{ $first_name }}">

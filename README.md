@@ -16,7 +16,7 @@ Creating a `Row` automatically generates its full grid of `Cell` rows (see `App\
 
 ## Tech stack
 
-- **Backend**: Laravel 13 (PHP 8.3+), Inertia.js v3 for the admin panel, Laravel Sanctum for the mobile API, `spatie/laravel-permission` for role-based access, `dedoc/scramble` for auto-generated OpenAPI docs.
+- **Backend**: Laravel 13 (PHP 8.4+), Inertia.js v3 for the admin panel, Laravel Sanctum for the mobile API, `spatie/laravel-permission` for role-based access, `dedoc/scramble` for auto-generated OpenAPI docs.
 - **Frontend**: Vue 3 + TypeScript, Tailwind CSS, `vue-i18n` for translations.
 - **Testing**: Pest (backend), Vitest (frontend units), Playwright (e2e).
 

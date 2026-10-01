@@ -43,7 +43,7 @@ class ImportCollections extends Command
         try {
             $start_time = Carbon::now();
 
-            $endpoint = 'https://stores.otajer.com/api/rest/listproductfilters/' . config('services.otajer.token');
+            $endpoint = config('services.otajer.url') . '/api/rest/listproductfilters/' . config('services.otajer.token');
             $response = file_get_contents($endpoint);
 
             $filters = json_decode($response, true);

@@ -43,12 +43,13 @@ class RefundController extends Controller
 
     public function reject_refund_request(Request $request){
       $refund = RefundRequest::findOrFail($request->refund_id);
-       $refund->reject_reason  = $request->reject_reason;
       if (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff') {
+          $refund->reject_reason  = $request->reject_reason;
           $refund->admin_approval = 2;
           $refund->refund_status  = 2;
       }
       elseif (auth()->user()->user_type == 'seller' && $refund->seller_id==auth()->user()->id){
+          $refund->reject_reason  = $request->reject_reason;
           $refund->seller_approval = 2;
       }
 

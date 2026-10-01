@@ -52,7 +52,7 @@ class SupportTicketController extends Controller
     public function send_support_mail_to_admin($ticket){
         $array['view'] = 'shop.emails.support';
         $array['subject'] = translate('Support ticket Code is').':- '.$ticket->code;
-        $array['from'] = env('MAIL_FROM_ADDRESS');
+        $array['from'] = config('mail.from.address');
         $array['content'] = translate('Hi. A ticket has been created. Please check the ticket.');
         $array['link'] = route('support_ticket.admin_show', encrypt($ticket->id));
         $array['sender'] = $ticket->user->name;
@@ -73,7 +73,7 @@ class SupportTicketController extends Controller
      */
     public function show($id)
     {
-        $ticket = Ticket::findOrFail(decrypt($id));
+        $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail(decrypt($id));
         $ticket->client_viewed = 1;
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;
@@ -82,9 +82,11 @@ class SupportTicketController extends Controller
 
     public function ticket_reply_store(Request $request)
     {
+        // The caller's own ticket, replied to as the caller: both used to come from the request.
+        $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail($request->ticket_id);
         $ticket_reply = new TicketReply;
-        $ticket_reply->ticket_id = $request->ticket_id;
-        $ticket_reply->user_id = $request->user_id;
+        $ticket_reply->ticket_id = $ticket->id;
+        $ticket_reply->user_id = Auth::user()->id;
         $ticket_reply->reply = $request->reply;
         $ticket_reply->files = $request->attachments;
         $ticket_reply->ticket->viewed = 0;

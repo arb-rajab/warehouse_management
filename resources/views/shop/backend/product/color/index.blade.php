@@ -41,14 +41,14 @@
                                     <td class="text-right">
                                         @can('edit_color')
                                             <a class="btn btn-soft-primary btn-icon btn-circle btn-sm"
-                                                href="{{ route('colors.edit', ['id' => $color->id, 'lang' => env('DEFAULT_LANGUAGE')]) }}"
+                                                href="{{ route('colors.edit', ['id' => $color->id, 'lang' => config('app.default_language')]) }}"
                                                 title="{{ translate('Edit') }}">
                                                 <i class="las la-edit"></i>
                                             </a>
                                         @endcan
                                         @can('delete_color')
                                             <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete"
-                                                data-href="{{ route('colors.destroy', $color->id) }}"
+                                                data-method="post" data-href="{{ route('colors.destroy', $color->id) }}"
                                                 title="{{ translate('Delete') }}">
                                                 <i class="las la-trash"></i>
                                             </a>

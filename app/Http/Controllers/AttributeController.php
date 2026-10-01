@@ -26,13 +26,13 @@ class AttributeController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_product_attributes', only: ['index']),
-            new Middleware('permission:edit_product_attribute', only: ['edit']),
+            new Middleware('permission:edit_product_attribute', only: ['edit', 'update', 'store', 'create']),
             new Middleware('permission:delete_product_attribute', only: ['destroy']),
             new Middleware('permission:view_product_attribute_values', only: ['show']),
-            new Middleware('permission:edit_product_attribute_value', only: ['edit_attribute_value']),
+            new Middleware('permission:edit_product_attribute_value', only: ['edit_attribute_value', 'store_attribute_value', 'update_attribute_value']),
             new Middleware('permission:delete_product_attribute_value', only: ['destroy_attribute_value']),
             new Middleware('permission:view_colors', only: ['colors']),
-            new Middleware('permission:edit_color', only: ['edit_color']),
+            new Middleware('permission:edit_color', only: ['edit_color', 'store_color', 'update_color']),
             new Middleware('permission:delete_color', only: ['destroy_color']),
         ];
     }
@@ -70,7 +70,7 @@ class AttributeController extends Controller implements HasMiddleware
         $attribute->name = $request->name;
         $attribute->save();
 
-        $attribute_translation = AttributeTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'attribute_id' => $attribute->id]);
+        $attribute_translation = AttributeTranslation::firstOrNew(['lang' => config('app.default_language'), 'attribute_id' => $attribute->id]);
         $attribute_translation->name = $request->name;
         $attribute_translation->save();
         flash(translate('Attribute has been inserted successfully'))->success();
@@ -116,7 +116,7 @@ class AttributeController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $attribute = Attribute::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
           $attribute->name = $request->name;
         }
         $attribute->save();

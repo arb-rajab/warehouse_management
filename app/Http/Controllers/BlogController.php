@@ -23,9 +23,9 @@ class BlogController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_blogs', only: ['index']),
-            new Middleware('permission:add_blog', only: ['create']),
-            new Middleware('permission:edit_blog', only: ['edit']),
+            new Middleware('permission:view_blogs', only: ['index', 'show']),
+            new Middleware('permission:add_blog', only: ['create', 'store']),
+            new Middleware('permission:edit_blog', only: ['edit', 'update']),
             new Middleware('permission:delete_blog', only: ['destroy']),
             new Middleware('permission:publish_blog', only: ['change_status']),
         ];

@@ -24,9 +24,9 @@ class BrandController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_brands', only: ['index']),
-            new Middleware('permission:add_brand', only: ['create']),
-            new Middleware('permission:edit_brand', only: ['edit']),
+            new Middleware('permission:view_all_brands', only: ['index', 'brandsWiseProductDiscount', 'show']),
+            new Middleware('permission:add_brand', only: ['create', 'store']),
+            new Middleware('permission:edit_brand', only: ['edit', 'update']),
             new Middleware('permission:delete_brand', only: ['destroy']),
         ];
     }    /**
@@ -78,7 +78,7 @@ class BrandController extends Controller implements HasMiddleware
         $brand->logo = $request->logo;
         $brand->save();
 
-        $brand_translation = BrandTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'brand_id' => $brand->id]);
+        $brand_translation = BrandTranslation::firstOrNew(['lang' => config('app.default_language'), 'brand_id' => $brand->id]);
         $brand_translation->name = $request->name;
         $brand_translation->save();
 
@@ -121,7 +121,7 @@ class BrandController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $brand = Brand::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $brand->name = $request->name;
         }
         $brand->meta_title = $request->meta_title;

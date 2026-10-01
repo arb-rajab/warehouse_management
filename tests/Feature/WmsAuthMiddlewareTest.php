@@ -37,6 +37,7 @@ test('WmsAuthMiddleware rejects a request with no private-token header', functio
 });
 
 test('WmsAuthMiddleware rejects an incorrect private-token header', function () {
+    config(['app.wms_token' => 'the-real-token']);
     $called = false;
 
     $request = Request::create('/api/v2/warehouse/customers');
@@ -52,10 +53,11 @@ test('WmsAuthMiddleware rejects an incorrect private-token header', function () 
 });
 
 test('WmsAuthMiddleware admits the configured private-token and passes the request through', function () {
+    config(['app.wms_token' => 'the-real-token']);
     $called = false;
 
     $request = Request::create('/api/v2/warehouse/customers');
-    $request->headers->set('private-token', config('app.wms_token'));
+    $request->headers->set('private-token', 'the-real-token');
 
     $response = (new WmsAuthMiddleware)->handle($request, function ($req) use (&$called) {
         $called = true;
@@ -66,6 +68,50 @@ test('WmsAuthMiddleware admits the configured private-token and passes the reque
     expect($called)->toBeTrue()
         ->and($response->getContent())->toBe('ok');
 });
+
+/**
+ * config/app.php used to fall back to a token committed in the repository, and
+ * the old `!=` comparison let a request with no header through the moment that
+ * fallback was removed (null == null). No configured token must mean no access.
+ */
+test('WmsAuthMiddleware rejects every request while no token is configured', function (?string $sent) {
+    config(['app.wms_token' => null]);
+    $called = false;
+
+    $request = Request::create('/api/v2/warehouse/customers');
+    if ($sent !== null) {
+        $request->headers->set('private-token', $sent);
+    }
+
+    $response = (new WmsAuthMiddleware)->handle($request, function () use (&$called) {
+        $called = true;
+
+        return new Response('ok');
+    });
+
+    expect($called)->toBeFalse()
+        ->and($response->getData(true)['status'])->toBe(401);
+})->with([
+    'no header' => [null],
+    'an empty header' => [''],
+    'a guess' => ['wms-token'],
+]);
+
+test('WmsAuthMiddleware compares the token exactly', function (string $sent) {
+    config(['app.wms_token' => 'Secret-Token']);
+    $called = false;
+
+    $request = Request::create('/api/v2/warehouse/customers');
+    $request->headers->set('private-token', $sent);
+
+    (new WmsAuthMiddleware)->handle($request, function () use (&$called) {
+        $called = true;
+
+        return new Response('ok');
+    });
+
+    expect($called)->toBeFalse();
+})->with(['another case' => ['secret-token'], 'a prefix' => ['Secret'], 'trailing space' => ['Secret-Token ']]);
 
 test('every routes/shop-api_warehouse.php route rejects a request with no private-token header', function (string $method, string $uri) {
     $response = $this->json($method, $uri);

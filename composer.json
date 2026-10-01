@@ -9,7 +9,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "barryvdh/laravel-dompdf": "*",
         "bepsvpt/secure-headers": "^9.1",
         "dedoc/scramble": "^0.13.39",

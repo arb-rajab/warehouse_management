@@ -769,7 +769,7 @@
 
 
                 <li class="aiz-side-nav-item">
-                    <a href="{{ env('APP_URL') . '/admin/website/custom-pages/edit/home?page=home' }}"
+                    <a href="{{ config('app.url') . '/admin/website/custom-pages/edit/home?page=home' }}"
                         class="aiz-side-nav-link">
                         <i class="las la-folder-open aiz-side-nav-icon"></i>
                         <span class="aiz-side-nav-text">{{ translate('Home Banners') }}</span>

@@ -78,7 +78,7 @@ class AamarpayController extends Controller
             'ship_state' => '',
             'ship_postcode' => '',
             'ship_country' => 'Bangladesh',
-            'desc' => env('APP_NAME').' payment',
+            'desc' => config('app.name').' payment',
             'success_url' => route('aamarpay.success'), //your success route
             'fail_url' => route('aamarpay.fail'), //your fail route
             'cancel_url' => route('cart'), //your cancel url

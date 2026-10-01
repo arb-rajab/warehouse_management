@@ -79,7 +79,7 @@ class AllProductsCommand extends Command
             $start_time = Carbon::now();
             $products_count = 0;
 
-            $endpoint = 'https://stores.otajer.com/api/rest/listfullproducts/7D0F1431A09796822632E2AB19DC0231/-1';
+            $endpoint = config('services.otajer.url') . '/api/rest/listfullproducts/' . config('services.otajer.token') . '/-1';
             $response = file_get_contents($endpoint);
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
@@ -254,7 +254,7 @@ class AllProductsCommand extends Command
                         }
 
                 else { // if the product does not exist
-                        $endpoint = 'https://stores.otajer.com/api/rest/productdetails/'.$product['Serial'].'/7D0F1431A09796822632E2AB19DC0231';
+                        $endpoint = config('services.otajer.url') . '/api/rest/productdetails/'.$product['Serial'].'/'.config('services.otajer.token');
                         $response = file_get_contents($endpoint);
                         $productDetails = json_decode($response, true);
                         $productDetails = $productDetails['ProductDetails'];

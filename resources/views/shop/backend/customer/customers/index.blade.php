@@ -307,11 +307,11 @@
 
                                         <div class="dropdown-menu dropdown-menu-right">
                                             @if($user->admin_verified != 1)
-                                                <a href="{{ route('customers.verify', encrypt($user->id)) }}" class="dropdown-item" title="{{ translate('Verify Customer') }}">
+                                                <a data-method="post" href="{{ route('customers.verify', encrypt($user->id)) }}" class="dropdown-item" title="{{ translate('Verify Customer') }}">
                                                     {{ translate('Verify Customer') }}
                                                 </a>
                                             @else
-                                                <a href="{{ route('customers.verify', encrypt($user->id)) }}" class="dropdown-item"  title="{{ translate('UnVerify Customer') }}">
+                                                <a data-method="post" href="{{ route('customers.verify', encrypt($user->id)) }}" class="dropdown-item"  title="{{ translate('UnVerify Customer') }}">
                                                     {{ translate('UnVerify Customer') }}
                                                 </a>
                                             @endif
@@ -355,13 +355,13 @@
                                             </a>
 
                                             @if (!$user->is_important)
-                                                <a href="{{route('customers.important', $user->id)}}"
+                                                <a data-method="post" href="{{route('customers.important', $user->id)}}"
                                                     class="dropdown-item" data-href="{{route('customers.important', $user->id)}}"
                                                     title="{{ translate('Important') }}">
                                                     {{ translate('Important') . '?' }}
                                                 </a>
                                             @else
-                                                <a href="{{route('customers.not_important', $user->id)}}"
+                                                <a data-method="post" href="{{route('customers.not_important', $user->id)}}"
                                                     class="dropdown-item" data-href="{{route('customers.not_important', $user->id)}}"
                                                     title="{{ translate('Not important') }}">
                                                     {{ translate('Not important') . '?' }}
@@ -369,13 +369,13 @@
                                             @endif
 
                                             @if ($user->activity_status == 'has_been_contacted')
-                                                <a href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'new_user'])}}"
+                                                <a data-method="post" href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'new_user'])}}"
                                                     class="dropdown-item" data-href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'has_been_contacted'])}}"
                                                     title="{{ translate('New User') }}">
                                                     {{ translate('New User') . '?' }}
                                                 </a>
                                                 @else
-                                                <a href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'has_been_contacted'])}}"
+                                                <a data-method="post" href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'has_been_contacted'])}}"
                                                     class="dropdown-item" data-href="{{route('customers.change_activity_status', ['user_id' => $user->id, 'new_status' => 'has_been_contacted'])}}"
                                                     title="{{ translate('Has been contacted') }}">
                                                     {{ translate('Has been contacted') . '?' }}
@@ -383,7 +383,7 @@
                                             @endif
 
                                             @can('delete_customer')
-                                                <a href="#" class="dropdown-item confirm-delete" data-href="{{route('customers.destroy', $user->id)}}" title="{{ translate('Delete') }}">
+                                                <a href="#" class="dropdown-item confirm-delete" data-method="post" data-href="{{route('customers.destroy', $user->id)}}" title="{{ translate('Delete') }}">
                                                     {{ translate('Delete') }}
                                                 </a>
                                             @endcan
@@ -436,7 +436,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-dismiss="modal">{{translate('Cancel')}}</button>
-                <a type="button" id="confirmation" class="btn btn-primary">{{translate('Proceed!')}}</a>
+                <a type="button" id="confirmation" data-method="post" class="btn btn-primary">{{translate('Proceed!')}}</a>
             </div>
         </div>
     </div>
@@ -454,7 +454,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-dismiss="modal">{{translate('Cancel')}}</button>
-                <a type="button" id="confirmationunban" class="btn btn-primary">{{translate('Proceed!')}}</a>
+                <a type="button" id="confirmationunban" data-method="post" class="btn btn-primary">{{translate('Proceed!')}}</a>
             </div>
         </div>
     </div>

@@ -26,7 +26,7 @@
     <meta property="og:url" content="{{ URL($page->slug) }}" />
     <meta property="og:image" content="{{ uploaded_asset($page->meta_image) }}" />
     <meta property="og:description" content="{{ $page->meta_description }}" />
-    <meta property="og:site_name" content="{{ env('APP_NAME') }}" />
+    <meta property="og:site_name" content="{{ config('app.name') }}" />
 @endsection
 
 @section('content')

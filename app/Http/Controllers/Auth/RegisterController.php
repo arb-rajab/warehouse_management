@@ -146,7 +146,7 @@ class RegisterController extends Controller implements HasMiddleware
                     'name' => $data['name'],
                     'phone' => '+'.$data['country_code'].$data['phone'],
                     'password' => Hash::make($data['password']),
-                    'verification_code' => rand(100000, 999999)
+                    'verification_code' => random_int(100000, 999999)
                 ]);
 
                 $otpController = new OTPVerificationController;

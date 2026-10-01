@@ -7,6 +7,7 @@ use App\Models\StoreUser;
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
@@ -81,15 +82,15 @@ class RepresentativePaymentController extends Controller
 
     public function generate_qr(Request $request)
     {
-        $payment = RepresentativePayment::findOrFail($request->id);
-        return QrCode::size(200)->generate(route('payments.export', ['id' => $payment->id]));
+        $payment = RepresentativePayment::where('rep_id', auth()->user()->id)->findOrFail($request->id);
+        return QrCode::size(200)->generate(URL::signedRoute('payments.export', ['id' => $payment->id]));
 
     }
 
     public function generate_qr_to_show_payment(Request $request)
     {
         $payment = RepresentativePayment::findOrFail($request->id);
-        return QrCode::size(200)->generate(route('payments.show', ['id' => $payment->id]));
+        return QrCode::size(200)->generate(URL::signedRoute('payments.show', ['id' => $payment->id]));
 
     }
 
@@ -108,7 +109,7 @@ class RepresentativePaymentController extends Controller
 
     public function shareByWhatsapp($id)
     {
-        $payment = RepresentativePayment::findOrFail($id);
+        $payment = RepresentativePayment::where('rep_id', auth()->user()->id)->findOrFail($id);
 
         if ($payment->customer) {
             $formattedPhoneNumber = $payment->customer->phone;
@@ -121,7 +122,7 @@ class RepresentativePaymentController extends Controller
             $phoneUtil = PhoneNumberUtil::getInstance();
             $numberProto = $phoneUtil->parse($formattedPhoneNumber, 'NL');
             $formattedPhoneNumber = $phoneUtil->format($numberProto, PhoneNumberFormat::INTERNATIONAL);
-            $paymentLink = route('payments.export', ['id' => $payment->id]);
+            $paymentLink = URL::signedRoute('payments.export', ['id' => $payment->id]);
 
             $url = isset($formattedPhoneNumber) ? 'https://wa.me/' . str_replace(' ', '', $formattedPhoneNumber) . '?text=Thank%20you%20for%20your%20payment!%0A%0AClick%20here%20to%20view%20your%20payment%20details:%0A' . $paymentLink : null;
 

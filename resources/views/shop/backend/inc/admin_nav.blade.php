@@ -32,7 +32,7 @@
             <div class="d-flex justify-content-around align-items-center align-items-stretch ml-3">
                 <div class="aiz-topbar-item">
                     <div class="d-flex align-items-center">
-                        <a class="btn btn-soft-danger btn-sm d-flex align-items-center" href="{{ route('cache.clear')}}">
+                        <a class="btn btn-soft-danger btn-sm d-flex align-items-center" data-method="post" href="{{ route('cache.clear')}}">
                             <i class="las la-hdd fs-20"></i>
                             <span class="fw-500 ml-1 mr-0 d-none d-md-block">{{ translate('Clear Cache') }}</span>
                         </a>
@@ -113,7 +113,7 @@
                     $locale = Session::get('locale', Config::get('app.locale'));
                 }
                 else{
-                    $locale = env('DEFAULT_LANGUAGE');
+                    $locale = config('app.default_language');
                 }
             @endphp
             <div class="aiz-topbar-item ml-2">

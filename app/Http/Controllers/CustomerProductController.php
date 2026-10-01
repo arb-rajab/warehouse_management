@@ -118,7 +118,7 @@ class CustomerProductController extends Controller implements HasMiddleware
             $user->remaining_uploads -= 1;
             $user->save();
 
-            $customer_product_translation               = CustomerProductTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'customer_product_id' => $customer_product->id]);
+            $customer_product_translation               = CustomerProductTranslation::firstOrNew(['lang' => config('app.default_language'), 'customer_product_id' => $customer_product->id]);
             $customer_product_translation->name         = $request->name;
             $customer_product_translation->unit         = $request->unit;
             $customer_product_translation->description  = $request->description;
@@ -171,7 +171,7 @@ class CustomerProductController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $customer_product                       = CustomerProduct::find($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $customer_product->name             = $request->name;
             $customer_product->unit             = $request->unit;
             $customer_product->description      = $request->description;

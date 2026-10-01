@@ -125,7 +125,7 @@
                                         </a>
                                     @endcan
                                     @can('delete_dynamic_popups')
-                                        <a class="dropdown-item confirm-delete" href="javascript:void(0)" data-href="{{route('dynamic-popups.destroy', $dynamic_popup->id)}}">
+                                        <a class="dropdown-item confirm-delete" href="javascript:void(0)" data-method="post" data-href="{{route('dynamic-popups.destroy', $dynamic_popup->id)}}">
                                             {{translate('Delete')}}
                                         </a>
                                     @endcan

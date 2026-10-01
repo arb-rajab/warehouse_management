@@ -83,7 +83,7 @@
 										<i class="las la-clipboard mr-2"></i>
 										<span>{{ translate('Copy Link') }}</span>
 									</a>
-									<a href="javascript:void(0)" class="dropdown-item confirm-alert" data-href="{{ route('seller.my_uploads.destroy', $file->id ) }}" data-target="#delete-modal">
+									<a href="javascript:void(0)" class="dropdown-item confirm-alert" data-method="post" data-href="{{ route('seller.my_uploads.destroy', $file->id ) }}" data-target="#delete-modal">
 										<i class="las la-trash mr-2"></i>
 										<span>{{ translate('Delete') }}</span>
 									</a>

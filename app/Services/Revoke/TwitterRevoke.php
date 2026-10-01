@@ -8,7 +8,7 @@ class TwitterRevoke implements ProviderRevoke
     public function apply()
     {
         $token = auth()->user()->access_token;
-        $client_id = env('TWITTER_CLIENT_ID');
+        $client_id = config('services.twitter.client_id');
 
         $request_data = ['client_id' => $client_id, 'token' => $token];
         $request_data_json = json_encode($request_data);

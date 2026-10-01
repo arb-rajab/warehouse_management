@@ -31,8 +31,17 @@ class DeliveryBoyController extends Controller
      * @return Response
      */
 
+    /**
+     * The `{id}` of these routes is a delivery boy's user id: the signed-in one's own.
+     */
+    private function ownDeliveryBoy($id): void
+    {
+        abort_unless((int) $id === auth()->user()->id, 403);
+    }
+
     public function dashboard_summary($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('assign_delivery_boy', $id);
 
@@ -68,6 +77,7 @@ class DeliveryBoyController extends Controller
 
     public function assigned_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
 //        $order_query = Order::query();
 //        $order_query->where('delivery_status', 'pending');
 //        $order_query->where('cancel_request', '0');
@@ -94,6 +104,7 @@ class DeliveryBoyController extends Controller
      */
     public function picked_up_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('delivery_status', 'picked_up');
         $order_query->where('cancel_request', '0');
@@ -109,6 +120,7 @@ class DeliveryBoyController extends Controller
      */
     public function on_the_way_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('delivery_status', 'on_the_way');
         $order_query->where('cancel_request', '0');
@@ -124,6 +136,7 @@ class DeliveryBoyController extends Controller
      */
     public function completed_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('delivery_status', 'delivered');
 
@@ -166,6 +179,7 @@ class DeliveryBoyController extends Controller
      */
     public function pending_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('delivery_status', '!=', 'delivered');
         $order_query->where('delivery_status', '!=', 'cancelled');
@@ -182,6 +196,7 @@ class DeliveryBoyController extends Controller
      */
     public function cancelled_delivery($id)
     {
+        $this->ownDeliveryBoy($id);
         $order_query = Order::query();
         $order_query->where('delivery_status', 'cancelled');
 
@@ -222,6 +237,7 @@ class DeliveryBoyController extends Controller
      */
     public function collection($id)
     {
+        $this->ownDeliveryBoy($id);
         $collection_query = DeliveryHistory::query();
         $collection_query->where('delivery_status', 'delivered');
         $collection_query->where('payment_type', 'cash_on_delivery');
@@ -231,6 +247,7 @@ class DeliveryBoyController extends Controller
 
     public function earning($id)
     {
+        $this->ownDeliveryBoy($id);
         $collection_query = DeliveryHistory::query();
         $collection_query->where('delivery_status', 'delivered');
 
@@ -239,6 +256,7 @@ class DeliveryBoyController extends Controller
 
     public function collection_summary($id)
     {
+        $this->ownDeliveryBoy($id);
         $collection_query = DeliveryHistory::query();
         $collection_query->where('delivery_status', 'delivered');
         $collection_query->where('payment_type', 'cash_on_delivery');
@@ -274,6 +292,7 @@ class DeliveryBoyController extends Controller
 
     public function earning_summary($id)
     {
+        $this->ownDeliveryBoy($id);
         $collection_query = DeliveryHistory::query();
         $collection_query->where('delivery_status', 'delivered');
 //        $collection_query->where('payment_type', 'cash_on_delivery');
@@ -313,7 +332,12 @@ class DeliveryBoyController extends Controller
      * @return Response
      */
     public function change_delivery_status(Request $request) {
-        $order = Order::find($request->order_id);
+        $request->validate(['status' => 'required|in:picked_up,on_the_way,delivered,cancelled']);
+
+        // Only an order assigned to the signed-in delivery boy, and as them.
+        $order = Order::where('id', $request->order_id)->where('assign_delivery_boy', auth()->user()->id)->firstOrFail();
+        // Delivered twice must not pay the commission or count the collection twice.
+        $alreadyDelivered = $order->delivery_status == 'delivered';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
@@ -321,11 +345,11 @@ class DeliveryBoyController extends Controller
         $delivery_history = new DeliveryHistory;
 
         $delivery_history->order_id         = $order->id;
-        $delivery_history->delivery_boy_id  = $request->delivery_boy_id;
+        $delivery_history->delivery_boy_id  = auth()->user()->id;
         $delivery_history->delivery_status  = $order->delivery_status;
         $delivery_history->payment_type     = $order->payment_type;
 
-        if($order->delivery_status == 'delivered') {
+        if($order->delivery_status == 'delivered' && ! $alreadyDelivered) {
             foreach ($order->orderDetails as $key => $orderDetail) {
                 if (addon_is_activated('affiliate_system')) {
                     if ($orderDetail->product_referral_code) {
@@ -346,7 +370,7 @@ class DeliveryBoyController extends Controller
                     }
                 }
             }
-            $delivery_boy = DeliveryBoy::where('user_id', $request->delivery_boy_id)->first();
+            $delivery_boy = DeliveryBoy::where('user_id', auth()->user()->id)->first();
 
             if (get_setting('delivery_boy_payment_type') == 'commission') {
                 $delivery_history->earning = get_setting('delivery_boy_commission');
@@ -387,7 +411,7 @@ class DeliveryBoyController extends Controller
 
     public function cancel_request($id)
     {
-        $order =  Order::find($id);
+        $order = Order::where('id', $id)->where('assign_delivery_boy', auth()->user()->id)->firstOrFail();
 
         $order->cancel_request = 1;
         $order->cancel_request_at = date('Y-m-d H:i:s');
@@ -410,7 +434,7 @@ class DeliveryBoyController extends Controller
 
     public function items($id)
     {
-        $order_id = Order::select('id')->where('id', $id)->where('assign_delivery_boy', auth()->user()->id)->first();
+        $order_id = Order::select('id')->where('id', $id)->where('assign_delivery_boy', auth()->user()->id)->firstOrFail();
         $order_query = OrderDetail::where('order_id', $order_id->id);
         return new PurchaseHistoryItemsCollection($order_query->get());
     }
