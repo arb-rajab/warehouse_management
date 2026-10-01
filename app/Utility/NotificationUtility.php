@@ -84,7 +84,7 @@ class NotificationUtility
 
         //$fields = json_encode($arrayToSend);
         $headers = [
-            'Authorization: key=' . env('FCM_SERVER_KEY'),
+            'Authorization: key=' . config('services.fcm.server_key'),
             'Content-Type: application/json',
         ];
 
@@ -126,7 +126,7 @@ class NotificationUtility
 
     public static function sendPushNotificationToUser($user, $title, $body, $link = null)
     {
-        $credentialsFilePath = storage_path(env('FIREBASE_CREDENTIALS'));
+        $credentialsFilePath = storage_path(config('services.fcm.firebase_credentials'));
 
         $client = new GoogleClient();
         $client->setAuthConfig($credentialsFilePath);
@@ -136,7 +136,7 @@ class NotificationUtility
         $token = $client->getAccessToken();
 
         $access_token = $token['access_token'];
-        $apiurl = "https://fcm.googleapis.com/v1/projects/" . env('FIREBASE_PROJECT') . "/messages:send";
+        $apiurl = "https://fcm.googleapis.com/v1/projects/" . config('services.fcm.firebase_project') . "/messages:send";
 
         $headers = [
             "Authorization: Bearer $access_token",

@@ -35,7 +35,7 @@ class NewsletterController extends Controller implements HasMiddleware
 
     public function send(Request $request)
     {
-        if (env('MAIL_USERNAME') != null) {
+        if (config('mail.mailers.smtp.username') != null) {
             //sends newsletter to selected users
         	if ($request->has('user_emails')) {
                 foreach ($request->user_emails as $key => $email) {

@@ -1099,7 +1099,7 @@ if (!function_exists('getFileBaseURL')) {
     function getFileBaseURL()
     {
         if (config('filesystems.default') == 's3') {
-            return env('AWS_URL') . '/';
+            return config('filesystems.disks.s3.url') . '/';
         } else {
             return getBaseURL() . 'public/';
         }

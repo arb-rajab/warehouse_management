@@ -283,8 +283,21 @@ prefix. That is the single point every storefront asset URL goes through.
   (bearer token, so no CSRF, but the app calls them as GET; change both
   together), and the admin notifications page's delete button, which never
   worked (its modal was commented out) and is wired up now.
-- There are 450 `env()` calls in 170 files outside `config/`. Every one returns
+- There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
+  **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
+  Google Maps key, Google Analytics and Facebook ids, FCM and Firebase
+  credentials, OpenCage, the IP-geolocation key (and a 5 s timeout, where the
+  request had none), Apple and Twitter sign-in, the S3 base URL and the SMTP
+  username/password checks now read `config('services.*')` /
+  `config('mail.*')` / `config('filesystems.*')`
+  (`NoEnvOutsideConfigTest` lists them). **Still `env()`, on purpose:** the
+  payment gateways other than PayHere (unreachable until enabled in
+  `config/store.php`; move a gateway's keys to config before enabling it),
+  `DEMO_MODE` (null means off), `FORCE_HTTPS` (turning it on is a decision:
+  behind a proxy that does not report https it redirects forever), and the
+  admin settings screens under `setup_configurations/`, which print
+  credentials and write nothing now that the `.env` writer refuses.
 
 ### 0.4 `app/Exceptions/` is gitignored, so the legacy repo cannot boot as committed
 

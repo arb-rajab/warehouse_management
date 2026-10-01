@@ -77,7 +77,7 @@ class UserService
                 return $this->defaultCoordinates();
             }
 
-            $apiKey = env('OPENCAGE_API_KEY');
+            $apiKey = config('services.opencage.key');
             $url = "https://api.opencagedata.com/geocode/v1/json";
 
             $response = Http::get($url, [

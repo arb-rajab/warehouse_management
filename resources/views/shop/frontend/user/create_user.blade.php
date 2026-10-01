@@ -224,7 +224,7 @@
                 <!-- Recaptcha -->
                 @if (get_setting('google_recaptcha') == 1)
                     <div class="form-group">
-                        <div class="g-recaptcha" data-sitekey="{{ env('CAPTCHA_KEY') }}">
+                        <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}">
                         </div>
                     </div>
                 @endif
