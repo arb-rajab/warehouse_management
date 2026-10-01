@@ -65,7 +65,7 @@ class RoleController extends Controller implements HasMiddleware
         $role = Role::create(['name' => $request->name]);
         $role->givePermissionTo($this->permissionIds($request));
 
-        $role_translation = RoleTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'role_id' => $role->id]);
+        $role_translation = RoleTranslation::firstOrNew(['lang' => config('app.default_language'), 'role_id' => $role->id]);
         $role_translation->name = $request->name;
         $role_translation->save();
 
@@ -107,7 +107,7 @@ class RoleController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $role->name = $request->name;
         }
         $role->syncPermissions($this->permissionIds($request));

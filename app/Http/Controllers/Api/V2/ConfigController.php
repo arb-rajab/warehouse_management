@@ -31,10 +31,10 @@ class ConfigController extends Controller
         // $language_object = new stdClass();
         // $language_object->id = -123123;
         // $language_object->type = 'default_lanuage';
-        // $language_object->value = env('DEFAULT_LANGUAGE');
+        // $language_object->value = config('app.default_language');
         // $language_object->lang = null;
 
-		// $language_info = Language::where('code', env('DEFAULT_LANGUAGE'))->first();
+		// $language_info = Language::where('code', config('app.default_language'))->first();
 		// $mobile_app = new stdClass();
 		// $mobile_app->id = -12312;
         // $mobile_app->type = 'mobile_app_code';

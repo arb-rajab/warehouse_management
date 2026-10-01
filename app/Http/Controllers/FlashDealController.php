@@ -93,7 +93,7 @@ class FlashDealController extends Controller implements HasMiddleware
                 $root_product->save();
             }
 
-            $flash_deal_translation = FlashDealTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'flash_deal_id' => $flash_deal->id]);
+            $flash_deal_translation = FlashDealTranslation::firstOrNew(['lang' => config('app.default_language'), 'flash_deal_id' => $flash_deal->id]);
             $flash_deal_translation->title = $request->title;
             $flash_deal_translation->save();
 
@@ -149,7 +149,7 @@ class FlashDealController extends Controller implements HasMiddleware
 
         $flash_deal->background_color = $request->background_color;
 
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
           $flash_deal->title = $request->title;
           if (($flash_deal->slug == null) || ($flash_deal->title != $request->title)) {
               $flash_deal->slug = strtolower(str_replace(' ', '-', $request->title) . '-' . Str::random(5));

@@ -62,7 +62,7 @@
                         <td>{{ $role->name}}</td>
                         <td class="text-right">
                             @can('edit_staff_role')
-                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('roles.edit', ['id'=>$role->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('roles.edit', ['id'=>$role->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
                                     <i class="las la-edit"></i>
                                 </a>
                             @endcan

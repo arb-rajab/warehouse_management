@@ -68,7 +68,7 @@ class PickupPointController extends Controller implements HasMiddleware
         $pickup_point->staff_id = $request->staff_id;
         if ($pickup_point->save()) {
 
-            $pickup_point_translation = PickupPointTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'pickup_point_id' => $pickup_point->id]);
+            $pickup_point_translation = PickupPointTranslation::firstOrNew(['lang' => config('app.default_language'), 'pickup_point_id' => $pickup_point->id]);
             $pickup_point_translation->name = $request->name;
             $pickup_point_translation->address = $request->address;
             $pickup_point_translation->save();
@@ -117,7 +117,7 @@ class PickupPointController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $pickup_point = PickupPoint::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $pickup_point->name = $request->name;
             $pickup_point->address = $request->address;
         }

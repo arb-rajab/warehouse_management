@@ -60,7 +60,7 @@
                                         </label>
                                       </td>
                                     <td class="text-right">
-                                        <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{ route('cities.edit', ['id'=>$city->id, 'lang'=>env('DEFAULT_LANGUAGE')]) }}" title="{{ translate('Edit') }}">
+                                        <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{ route('cities.edit', ['id'=>$city->id, 'lang'=>config('app.default_language')]) }}" title="{{ translate('Edit') }}">
                                             <i class="las la-edit"></i>
                                         </a>
                                         <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('cities.destroy', $city->id)}}" title="{{ translate('Delete') }}">

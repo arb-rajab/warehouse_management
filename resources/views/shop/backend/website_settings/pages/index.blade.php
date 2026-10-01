@@ -42,11 +42,11 @@
         		<td class="text-right">
 					@can('edit_website_page')
 						@if($page->type == 'home_page')
-							<a href="{{route('custom-pages.edit', ['id'=>$page->slug, 'lang'=>env('DEFAULT_LANGUAGE'), 'page'=>'home'] )}}" class="btn btn-icon btn-circle btn-sm btn-soft-primary" title="Edit">
+							<a href="{{route('custom-pages.edit', ['id'=>$page->slug, 'lang'=>config('app.default_language'), 'page'=>'home'] )}}" class="btn btn-icon btn-circle btn-sm btn-soft-primary" title="Edit">
 								<i class="las la-pen"></i>
 							</a>
 						@else
-							<a href="{{route('custom-pages.edit', ['id'=>$page->slug, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" class="btn btn-icon btn-circle btn-sm btn-soft-primary" title="Edit">
+							<a href="{{route('custom-pages.edit', ['id'=>$page->slug, 'lang'=>config('app.default_language')] )}}" class="btn btn-icon btn-circle btn-sm btn-soft-primary" title="Edit">
 								<i class="las la-pen"></i>
 							</a>
 						@endif

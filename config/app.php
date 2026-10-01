@@ -145,6 +145,21 @@ return [
 
     'locale' => env('APP_LOCALE', 'en'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Content Language
+    |--------------------------------------------------------------------------
+    |
+    | The language code the legacy store keeps its default-language rows under
+    | (role, brand, page and product translations, the language switcher, the
+    | translate() fallback). It is a config key because env() returns null
+    | outside config files once `config:cache` has run, as it does on every
+    | deploy. Distinct from `locale` above, which is the UI language.
+    |
+    */
+
+    'default_language' => env('DEFAULT_LANGUAGE', 'en'),
+
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),

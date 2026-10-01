@@ -70,7 +70,7 @@ class AttributeController extends Controller implements HasMiddleware
         $attribute->name = $request->name;
         $attribute->save();
 
-        $attribute_translation = AttributeTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'attribute_id' => $attribute->id]);
+        $attribute_translation = AttributeTranslation::firstOrNew(['lang' => config('app.default_language'), 'attribute_id' => $attribute->id]);
         $attribute_translation->name = $request->name;
         $attribute_translation->save();
         flash(translate('Attribute has been inserted successfully'))->success();
@@ -116,7 +116,7 @@ class AttributeController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $attribute = Attribute::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
           $attribute->name = $request->name;
         }
         $attribute->save();

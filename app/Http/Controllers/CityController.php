@@ -102,7 +102,7 @@ class CityController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $city = City::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $city->name = $request->name;
         }
 

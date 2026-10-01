@@ -80,7 +80,7 @@
 						</td>
 						<td class="text-right">
                             @can('edit_offer_deal')
-                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('offer_deals.edit', ['id'=>$offer_deal->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('offer_deals.edit', ['id'=>$offer_deal->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
                                     <i class="las la-edit"></i>
                                 </a>
                             @endcan

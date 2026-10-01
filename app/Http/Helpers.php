@@ -58,7 +58,7 @@ if (!function_exists('areActiveRoutesHome')) {
 if (!function_exists('default_language')) {
     function default_language()
     {
-        return env("DEFAULT_LANGUAGE");
+        return config("app.default_language");
     }
 }
 
@@ -826,8 +826,8 @@ function translate($key, $lang = null, $addslashes = false)
     }
 
     // return default lang if session lang not found
-    $translations_default = Cache::rememberForever('translations-' . env('DEFAULT_LANGUAGE', 'en'), function () {
-        return Translation::where('lang', env('DEFAULT_LANGUAGE', 'en'))->pluck('lang_value', 'lang_key')->toArray();
+    $translations_default = Cache::rememberForever('translations-' . config('app.default_language'), function () {
+        return Translation::where('lang', config('app.default_language'))->pluck('lang_value', 'lang_key')->toArray();
     });
     if (isset($translations_default[$lang_key])) {
         return $addslashes ? addslashes(trim($translations_default[$lang_key])) : trim($translations_default[$lang_key]);

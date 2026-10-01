@@ -900,6 +900,18 @@ port legacy keys in.
   - Env names differ:
     - Legacy `locale` reads `DEFAULT_LANGUAGE`. WMS reads `APP_LOCALE`, and its
       shared Inertia `locale` prop plus `SetLocale` drive `ar`/`en`.
+    - `DEFAULT_LANGUAGE` is the code the store's default-language rows are keyed
+      on (role, brand, page and product translations, the language switcher,
+      the `translate()` fallback); it is not the UI `locale`. It is
+      `config('app.default_language')` (default `en`), never `env()`: every
+      deploy runs `config:cache`, after which `env()` outside config is null, so
+      role creation failed on `role_translations.lang` NOT NULL and a rename in
+      the default language changed nothing. 66 reads were moved, and
+      `DefaultLanguageConfigTest` fails on any new one. The same trap applies to
+      the other `env()` calls outside config (phase 2's "left" list).
+      `languages/index.blade.php`'s form still posts `DEFAULT_LANGUAGE`, which
+      the legacy settings controller writes into `.env`; that takes effect only
+      after `config:cache` is rerun, and the shared `.env` is the deploy's.
     - Legacy `timezone` reads `APP_TIMEZONE`. WMS hardcodes `'UTC'`.
   - WMS-only keys: `faker_locale`, `previous_keys`, `maintenance`. Use
     `APP_PREVIOUS_KEYS` to keep decrypting the legacy `APP_KEY`'s outstanding

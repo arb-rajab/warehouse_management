@@ -41,7 +41,7 @@
 										</a>
 									@endcan
 									@can('edit_product_attribute')
-										<a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('attributes.edit', ['id'=>$attribute->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+										<a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('attributes.edit', ['id'=>$attribute->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
 											<i class="las la-edit"></i>
 										</a>
 									@endcan

@@ -110,7 +110,7 @@
                             @endif
                         </td>
                         <td class="text-right pr-0" style="vertical-align: middle;">
-                            <a class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" href="{{route('customer_products.edit', ['id'=>$product->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+                            <a class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" href="{{route('customer_products.edit', ['id'=>$product->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="12.001" viewBox="0 0 12 12.001">
                                     <defs>
                                     <clipPath id="clip-path">

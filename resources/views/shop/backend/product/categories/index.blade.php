@@ -93,7 +93,7 @@
                         <td>{{ $category->commision_rate }} %</td>
                         <td class="text-right">
                             @can('edit_product_category')
-                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('categories.edit', ['id'=>$category->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('categories.edit', ['id'=>$category->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
                                     <i class="las la-edit"></i>
                                 </a>
                             @endcan

@@ -67,7 +67,7 @@
                             @endif
                         </td>
 						<td class="text-right">
-							<a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('pick_up_points.edit', ['id'=>$pickup_point->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" title="{{ translate('Edit') }}">
+							<a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('pick_up_points.edit', ['id'=>$pickup_point->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
 								<i class="las la-edit"></i>
 							</a>
 							<a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-href="{{route('pick_up_points.destroy', $pickup_point->id)}}" title="{{ translate('Delete') }}">

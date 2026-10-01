@@ -29,7 +29,7 @@
                     </p>
                     <div class="mar-top">
                         @can('edit_classified_package')
-                            <a href="{{route('customer_packages.edit', ['id'=>$customer_package->id, 'lang'=>env('DEFAULT_LANGUAGE')] )}}" class="btn btn-sm btn-info">{{translate('Edit')}}</a>
+                            <a href="{{route('customer_packages.edit', ['id'=>$customer_package->id, 'lang'=>config('app.default_language')] )}}" class="btn btn-sm btn-info">{{translate('Edit')}}</a>
                         @endcan
                         @can('delete_classified_package')
                             <a href="#" data-href="{{route('customer_packages.destroy', $customer_package->id)}}" class="btn btn-sm btn-danger confirm-delete" >{{translate('Delete')}}</a>

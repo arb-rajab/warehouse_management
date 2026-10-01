@@ -21,8 +21,8 @@ class AppLanguage
         if($request->hasHeader('App-Language')){
             $locale = $request->header('App-Language');
         }
-        elseif(env('DEFAULT_LANGUAGE') != null){
-            $locale = env('DEFAULT_LANGUAGE');
+        elseif(config('app.default_language') != null){
+            $locale = config('app.default_language');
         }
         else{
             $locale = 'en';

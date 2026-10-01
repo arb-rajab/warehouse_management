@@ -67,7 +67,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
 
         $customer_package->save();
 
-        $customer_package_translation = CustomerPackageTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'customer_package_id' => $customer_package->id]);
+        $customer_package_translation = CustomerPackageTranslation::firstOrNew(['lang' => config('app.default_language'), 'customer_package_id' => $customer_package->id]);
         $customer_package_translation->name = $request->name;
         $customer_package_translation->save();
 
@@ -110,7 +110,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $customer_package = CustomerPackage::findOrFail($id);
-        if ($request->lang == env("DEFAULT_LANGUAGE")) {
+        if ($request->lang == config("app.default_language")) {
             $customer_package->name = $request->name;
         }
         $customer_package->amount = $request->amount;

@@ -78,7 +78,7 @@ class BrandController extends Controller implements HasMiddleware
         $brand->logo = $request->logo;
         $brand->save();
 
-        $brand_translation = BrandTranslation::firstOrNew(['lang' => env('DEFAULT_LANGUAGE'), 'brand_id' => $brand->id]);
+        $brand_translation = BrandTranslation::firstOrNew(['lang' => config('app.default_language'), 'brand_id' => $brand->id]);
         $brand_translation->name = $request->name;
         $brand_translation->save();
 
@@ -121,7 +121,7 @@ class BrandController extends Controller implements HasMiddleware
     public function update(Request $request, $id)
     {
         $brand = Brand::findOrFail($id);
-        if($request->lang == env("DEFAULT_LANGUAGE")){
+        if($request->lang == config("app.default_language")){
             $brand->name = $request->name;
         }
         $brand->meta_title = $request->meta_title;

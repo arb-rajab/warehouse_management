@@ -87,9 +87,9 @@
                             @can('edit_offer_deal')
                             @php
                                 if($offer_deal->offer_type == 'brand_offer'){
-                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'brand', 'lang'=>env('DEFAULT_LANGUAGE')] );
+                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'brand', 'lang'=>config('app.default_language')] );
                                 }else{
-                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'product', 'lang'=>env('DEFAULT_LANGUAGE')] );
+                                    $url = route('offer_deals.edit', ['id'=>$offer_deal->id, 'type' => 'product', 'lang'=>config('app.default_language')] );
                                 }
                             @endphp
                                 <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{ $url }}" title="{{ translate('Edit') }}">
