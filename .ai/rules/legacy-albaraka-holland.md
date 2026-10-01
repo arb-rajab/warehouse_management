@@ -414,6 +414,17 @@ prefix. That is the single point every storefront asset URL goes through.
   rating. **Fixed 2026-10-01:** both ask `Product::isReviewableBy()` (a delivered
   order of theirs, no earlier review) and take a numeric rating from 1 to 5.
   Tests: `LegacyReviewTest`.
+- **Coupons.** Applying a coupon (the storefront's and the app's copy) took off
+  an amount coupon's full value even when it was larger than what it applied to,
+  so a 50-euro coupon on a 5-euro cart made the order total negative (a wallet
+  payment or a free order). The app's copy also discounted the customer's carts
+  from *other* shops, crashed on a code that does not exist, and ignored
+  quantities for product coupons; the two disagreed on what shipping is.
+  **Fixed 2026-10-01:** `CouponService::discountFor()` is the one calculation
+  (per unit for product coupons, held to the price of the lines it applies to,
+  percentage capped by `max_discount`), and both endpoints use it and touch only
+  the coupon owner's lines. The app's product coupons now count quantities, as the
+  storefront's always did. Tests: `LegacyCouponTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
