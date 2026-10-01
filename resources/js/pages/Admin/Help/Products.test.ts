@@ -65,9 +65,12 @@ describe('Help Products', () => {
         expect(wrapper.text()).toContain(t('help.products.settingBoxes.body'));
     });
 
-    it('explains how to print a products QR label', () => {
+    it('explains how to print a products barcode label', () => {
         const wrapper = mountPage();
 
+        expect(wrapper.text()).toContain(
+            t('help.products.exportingQr.heading'),
+        );
         expect(wrapper.text()).toContain(t('help.products.exportingQr.body'));
     });
 
@@ -111,7 +114,7 @@ describe('Help Products', () => {
         expect((input.element as HTMLInputElement).value).toBe('50');
     });
 
-    it('renders a preview of the export-QR control', () => {
+    it('renders a preview of the export-barcode control', () => {
         const wrapper = mountPage();
 
         const preview = wrapper
