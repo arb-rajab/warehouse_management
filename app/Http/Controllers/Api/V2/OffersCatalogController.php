@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
 use App\Models\OffersCatalog;
+use App\Services\OffersCatalogStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -87,26 +88,17 @@ class OffersCatalogController extends Controller
         //
     }
 
-    public function download()
+    public function download(OffersCatalogStorage $catalogs)
     {
         $offer = OffersCatalog::first();
-        if (isset($offer)) {
 
-            $filename = $offer->file;
-            $path = public_path('uploads/offers/catalogs/' . $filename);
-
-            if (!file_exists($path)) {
-                abort(404);
-            }
-
-            Log::info(asset($path));
-
-            return response()->download($path, $filename);
-        } else {
+        if ($offer === null) {
             return response()->json([
                 'success' => false,
                 'message' => "No Offers Available"
             ], 404);
         }
+
+        return $catalogs->download($offer->file) ?? abort(404);
     }
 }

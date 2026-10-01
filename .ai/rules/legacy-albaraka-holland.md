@@ -320,6 +320,16 @@ prefix. That is the single point every storefront asset URL goes through.
   them to `storage/app/private/uploads/licenses/` and take them out of the web
   root. **Mobile app:** `trade_license` in the API is the stored name, not a
   public URL, and there is no API endpoint that returns the file yet.
+- The offers catalogue had the same shape as the licences: any file, saved
+  under the client's filename on the private disk, read back from a public path
+  it was never written to (so the download always 404ed), and a delete that
+  crashed when the file was missing. **Fixed 2026-10-01:** `OffersCatalogStorage`
+  (a `PrivateDocumentStorage`, like `TradeLicenseStorage`) keeps one
+  content-checked PDF under a random name and sends it from the private disk;
+  the storefront and API downloads stay public, as they were meant to be.
+  Catalogues uploaded before this are already in
+  `storage/app/private/uploads/offers/catalogs/` and are found by their old
+  names. Tests: `LegacyOffersCatalogTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
