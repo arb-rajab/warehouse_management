@@ -439,6 +439,17 @@ prefix. That is the single point every storefront asset URL goes through.
   `LegacyDeliveryBoyApiTest` (it creates the addon's tables, which this
   repository has no migrations for). Nothing else in this repository uses the
   addon: if the shop does not run delivery boys, remove the routes.
+- **Checkout payment option.** `CheckoutController::checkout()` builds the
+  payment controller's class name from the `payment_option` the browser sends and
+  runs its `pay()`, so a gateway that the routes answer 404 for (the
+  `payment.gateway` middleware) could still be started from the checkout form,
+  after an order had been made. **Fixed 2026-10-01:** an option must be a plain
+  word, and one that names a gateway not in `STORE_PAYMENT_GATEWAYS` is refused
+  before the order is created; cash on delivery, the wallet and the manual
+  methods (names with no controller) are unchanged. The wallet's own `pay()`
+  deducted from the in-memory user, unlocked: it uses `WalletPaymentService` now
+  (which also refuses an order that is not the payer's). Tests:
+  `LegacyWalletPaymentTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

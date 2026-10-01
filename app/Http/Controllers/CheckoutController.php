@@ -64,6 +64,11 @@ class CheckoutController extends Controller
         // Minumum order amount check end
 
         if ($request->payment_option != null) {
+            if (! $this->paymentOptionIsAllowed((string) $request->payment_option)) {
+                flash(translate('Select Payment Option.'))->warning();
+                return back();
+            }
+
             (new OrderController)->store($request);
 
             $request->session()->put('payment_type', 'cart_payment');
@@ -98,6 +103,30 @@ class CheckoutController extends Controller
             flash(translate('Select Payment Option.'))->warning();
             return back();
         }
+    }
+
+    /**
+     * The payment option names a controller in the Payment namespace, which
+     * `checkout()` instantiates, so the gateway routes' 404 for a disabled
+     * gateway did not cover it: any option that names a gateway the store has not
+     * enabled is refused, before an order is made. Cash on delivery, the wallet
+     * and the manual payment methods (names with no controller) pass.
+     */
+    private function paymentOptionIsAllowed(string $option): bool
+    {
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $option)) {
+            return false;
+        }
+
+        $controller = __NAMESPACE__.'\\Payment\\'.str_replace(' ', '', ucwords(str_replace('_', ' ', $option))).'Controller';
+
+        foreach (config('store.payment_gateway_controllers', []) as $gateway => $controllers) {
+            if (in_array($controller, $controllers, true)) {
+                return in_array($gateway, config('store.enabled_payment_gateways', []), true);
+            }
+        }
+
+        return true;
     }
 
     //redirects to this method after a successful checkout

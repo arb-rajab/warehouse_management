@@ -20,17 +20,25 @@ use Illuminate\Support\Facades\DB;
 class WalletPaymentService
 {
     /**
-     * Charge `$payer` the total of the combined order. When the balance does not
-     * cover it, nothing is deducted and the order's parts are put back to unpaid.
+     * Charge `$payer` the total of their combined order. When the balance does not
+     * cover it, nothing is deducted and the order's parts are put back to unpaid;
+     * an order that is not theirs is refused.
      */
     public function charge(StoreUser $payer, int $combinedOrderId): bool
     {
         return DB::transaction(function () use ($payer, $combinedOrderId): bool {
             $account = StoreUser::query()->whereKey($payer->id)->lockForUpdate()->firstOrFail();
-            $total = (float) CombinedOrder::query()
+            $total = CombinedOrder::query()
                 ->whereKey($combinedOrderId)
                 ->where('user_id', $payer->id)
                 ->value('grand_total');
+
+            // Not this account's order: nothing to pay, and nothing is marked paid.
+            if ($total === null) {
+                return false;
+            }
+
+            $total = (float) $total;
 
             if ($account->balance < $total) {
                 Order::query()->where('combined_order_id', $combinedOrderId)->update(['payment_status' => 'unpaid']);
