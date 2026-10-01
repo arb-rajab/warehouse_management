@@ -17,7 +17,9 @@ class ReviewController extends Controller
 
     public function submit(Request $request)
     {
-        $product = Product::find($request->product_id);
+        $request->validate(['rating' => 'required|numeric|between:1,5']);
+
+        $product = Product::findOrFail($request->product_id);
         $user = StoreUser::find(auth()->user()->id);
 
         /*
@@ -30,13 +32,7 @@ class ReviewController extends Controller
                                         @endforeach
         */
 
-        $reviewable = false;
-
-        foreach ($product->orderDetails as $key => $orderDetail) {
-            if($orderDetail->order != null && $orderDetail->order->user_id == auth()->user()->id && $orderDetail->delivery_status == 'delivered' && Review::where('user_id', auth()->user()->id)->where('product_id', $product->id)->first() == null){
-                $reviewable = true;
-            }
-        }
+        $reviewable = $product->isReviewableBy(auth()->user()->id);
 
         if(!$reviewable){
             return response()->json([

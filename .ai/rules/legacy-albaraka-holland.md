@@ -398,6 +398,22 @@ prefix. That is the single point every storefront asset URL goes through.
   Tests: `LegacySellerScopingTest`. **Not checked yet:** the admin screens'
   own copies of the status changes (trusted accounts), `SellerPackagePayment`,
   `ReviewController`, and the delivery-boy API.
+- **Seller packages.** `seller-package/free-package` checked that the package
+  named in `seller_package_id` was free and granted the one named in
+  `package_id`, so a seller named a free package for the check and a paid one to
+  receive and got its upload limit and duration for nothing. **Fixed
+  2026-10-01:** one id (`package_id`), checked and granted; a paid package gets
+  "Package is not available". Tests: `LegacySellerPackageTest` (it creates the
+  `seller_packages` and `seller_package_payments` tables, which this repository
+  has no migrations for). `SellerPackagePaymentController::offline_payment_approval`
+  (not routed) extends the seller's package whatever `status` is sent, rejections
+  included: fix it when it is routed.
+- **Reviews.** The storefront form (`reviews.store`) let anyone review any product
+  any number of times with any rating (a rating of 100000 drags the average
+  with it); the app's endpoint checked that the product was received but not the
+  rating. **Fixed 2026-10-01:** both ask `Product::isReviewableBy()` (a delivered
+  order of theirs, no earlier review) and take a numeric rating from 1 to 5.
+  Tests: `LegacyReviewTest`.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
