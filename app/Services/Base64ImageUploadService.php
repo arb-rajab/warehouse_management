@@ -110,6 +110,8 @@ class Base64ImageUploadService
             'image/png' => imagepng($image),
             'image/gif' => imagegif($image),
             'image/webp' => imagewebp($image, null, 90),
+            // normalise() only passes the four types above.
+            default => false,
         };
 
         return (string) ob_get_clean();

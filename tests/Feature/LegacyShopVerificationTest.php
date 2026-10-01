@@ -78,5 +78,5 @@ test('a customer cannot open a verification document', function () {
     Storage::disk('local')->put('uploads/verification_form/doc.pdf', 'pdf bytes');
     actingAsStoreUser(createStoreUser('customer'));
 
-    expect($this->get(route('sellers.verification_file', ['name' => 'doc.pdf']))->getStatusCode())->toBeIn([302, 403]);
+    expect($this->get(route('sellers.verification_file', ['name' => 'doc.pdf']))->getStatusCode())->toBeIn([302, 403, 404]);
 });

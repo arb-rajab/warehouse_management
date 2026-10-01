@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\StoreUser;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,7 +20,9 @@ class IsDeliveryBoy
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->user_type === 'delivery_boy') {
+        $user = $request->user();
+
+        if ($user instanceof StoreUser && $user->user_type === 'delivery_boy') {
             return $next($request);
         }
 
