@@ -321,7 +321,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
 
 
-    Route::post('offline/payment/submit', 'App\Http\Controllers\Api\V2\OfflinePaymentController@submit')->name('api.offline.payment.submit');
+    Route::post('offline/payment/submit', 'App\Http\Controllers\Api\V2\OfflinePaymentController@submit')->middleware('auth:store_api')->name('api.offline.payment.submit');
 
 
     Route::get('flash-deals', 'App\Http\Controllers\Api\V2\FlashDealController@index');

@@ -353,6 +353,19 @@ prefix. That is the single point every storefront asset URL goes through.
   rep who paid for a customer from *that customer's* wallet by sending the
   customer's `user_id` no longer can; the wallet that pays is the rep's own.
   Tests: `LegacyWalletPaymentTest`.
+- Three more mobile-API endpoints acted on a record by an id from the request
+  whoever owned it. **Fixed 2026-10-01:** `clubpoint/convert-into-wallet`
+  converted any account's points into the caller's wallet, as often as it was
+  called (now: the caller's own points, once, under a row lock);
+  `offline/payment/submit` needed no sign-in and set any order to `Submitted`
+  (now `auth:store_api`, the order must be the caller's by `OrderPolicy::view`
+  and not already `paid`); `carts/change-quantity` and `carts/process` changed
+  any account's cart lines (now the caller's own), and `carts/add`,
+  `change-quantity` and `process` accepted a zero or negative quantity, which
+  would make an order total negative (now a whole number of at least one).
+  Tests: `LegacyStoreApiMoneyTest`. The club-point tables and the orders
+  table's `manual_payment*` columns are not in this repository's migrations (they
+  exist on the shared legacy database); the tests create them.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,
