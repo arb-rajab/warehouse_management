@@ -40,7 +40,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // varient price
     // Route::get('varient-price', [ProductController::class, 'getPrice']);
 
-    Route::prefix('delivery-boy')->group(function () {
+    Route::prefix('delivery-boy')->middleware('delivery_boy')->group(function () {
         Route::get('dashboard-summary/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@dashboard_summary')->middleware('auth:store_api');
         Route::get('deliveries/completed/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@completed_delivery')->middleware('auth:store_api');
         Route::get('deliveries/cancelled/{id}', 'App\Http\Controllers\Api\V2\DeliveryBoyController@cancelled_delivery')->middleware('auth:store_api');

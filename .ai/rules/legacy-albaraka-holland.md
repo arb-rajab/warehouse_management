@@ -425,6 +425,20 @@ prefix. That is the single point every storefront asset URL goes through.
   percentage capped by `max_discount`), and both endpoints use it and touch only
   the coupon owner's lines. The app's product coupons now count quantities, as the
   storefront's always did. Tests: `LegacyCouponTest`.
+- **Delivery-boy API** (`api/v2/delivery-boy/*`, the legacy delivery-boy addon).
+  The routes needed any signed-in account, took the delivery boy's id from the
+  URL or the request and the order from the request: a customer could read any
+  delivery boy's earnings and collections, mark *any* order delivered (a cash on
+  delivery order becomes paid, a commission is credited to whichever delivery
+  boy they named, again on every repeat) or put in a cancellation request.
+  **Fixed 2026-10-01:** the group needs a delivery boy (`IsDeliveryBoy`, alias
+  `delivery_boy`); the `{id}` of the figures routes must be the caller's own;
+  a status change and a cancellation request find only orders assigned to the
+  caller, act as the caller, take only `picked_up`, `on_the_way`, `delivered` or
+  `cancelled`, and a repeated `delivered` pays and counts nothing more. Tests:
+  `LegacyDeliveryBoyApiTest` (it creates the addon's tables, which this
+  repository has no migrations for). Nothing else in this repository uses the
+  addon: if the shop does not run delivery boys, remove the routes.
 - There were 450 `env()` calls in 170 files outside `config/`; each returns
   `null` once `config:cache` runs, and this app's deploy caches config.
   **Fixed 2026-10-01** for what the store uses at runtime: reCAPTCHA site key,

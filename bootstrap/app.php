@@ -10,6 +10,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsAppUserUnbanned;
 use App\Http\Middleware\IsCustomer;
+use App\Http\Middleware\IsDeliveryBoy;
 use App\Http\Middleware\IsDriver;
 use App\Http\Middleware\IsSeller;
 use App\Http\Middleware\IsUnbanned;
@@ -115,6 +116,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'log.request.time' => LogRequestTime::class,
             'rate.limit' => RateLimitMiddleware::class,
             'driver' => IsDriver::class,
+            'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
         ]);
     })
