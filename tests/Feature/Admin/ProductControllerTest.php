@@ -1208,136 +1208,105 @@ test('removing a non-existent barcode returns a 404', function () {
     $response->assertNotFound();
 });
 
-test('an authenticated admin can export a QR code image for a product, with both its names', function () {
+test('an authenticated admin can export a Code 128 barcode label for a product, with only the active locale name', function () {
     actingAsAdmin();
 
-    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    $product = Product::factory()->create(['id' => 1, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
 
     $response = $this->get("/admin/products/{$product->id}/export-qr");
 
     $response->assertOk();
     $response->assertHeader('content-type', 'image/svg+xml');
+    $response->assertHeader('content-disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
 
     $svg = $response->getContent();
-    // A real QR is spliced in as inline SVG markup rather than a nested
-    // `<image>` reference, which dompdf silently skips (see
-    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
-    // failing to render rather than just the surrounding text.
-    expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
-        ->and($svg)->toContain('<path fill-rule="evenodd"')
+    // Code 128-B of "1": start B (211214), '1' (123122), checksum
+    // (104 + 17) % 103 = 18 (223211), stop (2331112) — 13 bars in total —
+    // drawn as one path of 13 subpaths, with no QR matrix left behind.
+    expect(substr_count($svg, 'M'))->toBe(13)
+        ->and($svg)->toContain('<path fill="#000000" d="M')
+        ->and($svg)->not->toContain('fill-rule="evenodd"')
         ->and($svg)->not->toContain('<image');
     expect($svg)->toContain('Widgets');
-    expect($svg)->toContain('ودجات');
+    expect($svg)->not->toContain('ودجات');
     expect($svg)->toContain("ID: {$product->id}");
-    // Regression guard: a short name must still render as a single line per
-    // field (one <text> for the id caption, one for the name, one for the
-    // Arabic name), not wrapped.
-    expect(substr_count($svg, '<text'))->toBe(3);
+    // One <text> for the id, one for the (short, unwrapped) name.
+    expect(substr_count($svg, '<text'))->toBe(2);
 });
 
-test('a product QR export uses the configured QR code size instead of the default', function () {
+test('a product barcode label shows the Arabic name only when the locale is Arabic', function () {
     actingAsAdmin();
-    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+
     $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
 
-    $response = $this->get("/admin/products/{$product->id}/export-qr");
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
 
-    $response->assertOk();
     $svg = $response->getContent();
-    // The label canvas width is exactly the configured total-box width, and
-    // the embedded QR square is that width minus padding on both sides
-    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
-    // ceiling on the whole label including text, not the QR's own size.
-    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
+    expect($svg)->toContain('ودجات')
+        ->and($svg)->not->toContain('Widgets')
+        ->and($svg)->toContain('direction="rtl"');
 });
 
-test('a product with a long name has its QR code label text wrapped across multiple lines, up to the configured height', function () {
+test('a product barcode label falls back to the base name when the Arabic locale has no translation', function () {
     actingAsAdmin();
-    // Pinned to a box this specific name is known to overflow, rather than
-    // relying on whatever Setting::DEFAULT_QR_CODE_WIDTH/HEIGHT happens to be
-    // — the current defaults are sized generously (for cell QR scan distance,
-    // see Setting::DEFAULT_QR_CODE_WIDTH's docblock), large enough that even
-    // this column's 200-char max name never needs to wrap, let alone
-    // truncate. This test needs a genuinely tight box to exercise
-    // clampLinesToHeight()'s truncation path at all.
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
+
+    expect($response->getContent())->toContain('Widgets');
+});
+
+test('a product barcode label draws the id and name in enlarged type', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>ID: '.$product->id.'<\/text>/')
+        ->and($svg)->toMatch('/<text[^>]*font-size="28"[^>]*>Widgets<\/text>/');
+});
+
+test('a product barcode export uses the configured width instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('<g transform="translate(20,20)">');
+});
+
+test('a product with a long name has its barcode label text wrapped, up to the configured height', function () {
+    actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 380]);
 
-    $longName = trim(str_repeat('Widget Component ', 11)); // 187 chars, under the 191-char column limit
+    $longName = trim(str_repeat('Widget Component ', 11));
     $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
 
-    $response = $this->get("/admin/products/{$product->id}/export-qr");
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
 
-    $response->assertOk();
-
-    $svg = $response->getContent();
-    // The name wraps across several <text> lines rather than one, so the full
-    // name doesn't appear as one contiguous string — but qr_code_height is a
-    // ceiling on the whole label (see BuildsQrLabels::qrLabelImage()), so a
-    // name that would need more lines than fit within it is truncated with
-    // an ellipsis instead of growing the label past the configured height.
-    expect(substr_count($svg, '<text'))->toBeGreaterThan(1);
+    expect(substr_count($svg, '<text'))->toBeGreaterThan(2);
     expect($svg)->toContain('…');
-    // The id caption is drawn and budget-clamped before the primary text, so
-    // truncating a long name never costs the id its own line.
+    // The id is drawn and budget-clamped before the name, so truncating a
+    // long name never costs the id its own line.
     expect($svg)->toContain("ID: {$product->id}");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
     expect((int) $matches[1])->toBeLessThanOrEqual(380);
 });
 
-test('a QR label never grows past the configured height, even with three long/mandatory text fields', function () {
-    actingAsAdmin();
-    // 260 was tight enough to fit exactly one primary line before the id
-    // caption existed; now the mandatory id line eats into that same budget,
-    // so the height is raised just enough to keep both the id and one
-    // truncated primary line while still forcing the Arabic name out.
-    Setting::factory()->create(['qr_code_width' => 240, 'qr_code_height' => 300]);
-
-    $longName = trim(str_repeat('Widget Component ', 11));
-    $longArName = trim(str_repeat('منتج تجريبي ', 11));
-    $product = Product::factory()->create(['name' => $longName, 'ar_name' => $longArName]);
-
-    $response = $this->get("/admin/products/{$product->id}/export-qr");
-
-    $response->assertOk();
-    $svg = $response->getContent();
-
-    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
-    expect((int) $matches[1])->toBeLessThanOrEqual(300);
-    expect($svg)->toContain("ID: {$product->id}");
-    expect($svg)->toContain('…');
-    // The id caption plus the name alone fill the entire text budget at this
-    // height, so the Arabic name is dropped rather than the label growing
-    // past the cap — never shrinking the QR itself to squeeze all fields in.
-    expect($svg)->not->toContain('منتج');
-});
-
-test('a product QR export label renders the product id as its own visible text line', function () {
+test('a multi-digit product id encodes to a longer barcode', function () {
     actingAsAdmin();
 
-    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    $product = Product::factory()->create(['id' => 4821, 'name' => 'Widgets', 'ar_name' => '']);
 
-    $response = $this->get("/admin/products/{$product->id}/export-qr");
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
 
-    $response->assertOk();
-    $svg = $response->getContent();
-
-    // Not just encoded somewhere inside the QR's own markup —
-    // asserted as its own readable <text> element a person could read off
-    // the printed sticker.
-    expect($svg)->toMatch('/<text[^>]*>ID: '.$product->id.'<\/text>/');
-});
-
-test('a product with no Arabic name ships a QR code image with only the English name', function () {
-    actingAsAdmin();
-
-    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
-
-    $response = $this->get("/admin/products/{$product->id}/export-qr");
-
-    $response->assertOk();
-    expect($response->getContent())->toContain('Widgets');
+    // start + 4 digits + checksum = 6 symbols x 3 bars, + the 4-bar stop.
+    expect(substr_count($svg, 'M'))->toBe(22);
 });
 
 test('a mobile app user cannot export a products QR code', function () {

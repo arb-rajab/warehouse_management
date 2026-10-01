@@ -42,3 +42,35 @@ test("a customer's addresses, carts, orders, wishlist and uploads resolve by use
         ->and($customer->wishlists->pluck('user_id')->all())->toBe([$customer->id])
         ->and($customer->uploads->pluck('file_name')->all())->toBe(['uploads/all/'.$customer->id.'.png']);
 });
+
+/**
+ * Converted from the legacy repo's tests/Unit/StoreUserTest.php. Its
+ * factory-based persistence check is dropped (StoreUser has no factory here;
+ * createStoreUser() builds the row) and its relation-class assertions are
+ * superseded by the data-resolving tests above.
+ */
+test('a store user is persisted in the legacy users table with its mass-assignable attributes', function () {
+    $user = StoreUser::create([
+        'name' => 'Rep Tester',
+        'email' => 'rep@example.com',
+        'user_type' => 'customer',
+        'phone' => '+31600000000',
+        'is_rep' => true,
+    ]);
+
+    $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'rep@example.com']);
+    expect($user->fresh()->user_type)->toBe('customer')
+        ->and($user->fresh()->phone)->toBe('+31600000000')
+        ->and((bool) $user->fresh()->is_rep)->toBeTrue();
+});
+
+test('the drivers scope returns only users of type driver', function () {
+    $driver = createStoreUser('driver');
+    createStoreUser('customer');
+    createStoreUser('seller');
+
+    $drivers = StoreUser::drivers()->get();
+
+    expect($drivers->pluck('id')->all())->toBe([$driver->id])
+        ->and($drivers->first()->user_type)->toBe('driver');
+});

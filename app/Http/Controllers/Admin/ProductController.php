@@ -222,7 +222,7 @@ class ProductController extends Controller
     }
 
     /**
-     * One QR per product id, meant to be printed and stuck on every
+     * One Code 128 barcode per product id, meant to be printed and stuck on every
      * box/pallet of that product — see BuildsProductQrLabels.
      */
     public function exportQr(Product $product): HttpResponse
@@ -231,7 +231,7 @@ class ProductController extends Controller
 
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
-            ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-qr.svg\"");
+            ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
     }
 
     /**
