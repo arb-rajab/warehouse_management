@@ -179,6 +179,26 @@ prefix. That is the single point every storefront asset URL goes through.
   payments/accept`), which a link or an image tag can trigger, so give them a
   permission *and* make them POST/DELETE. Phase 5's role import is where the
   owner can say which existing staff roles should get which permission.
+- The store API's base64 image uploads (`POST api/v2/file/image-upload`,
+  `profile/update-image`, `profile/image-upload`; `auth:store_api`, so any
+  self-registered customer) wrote the decoded bytes to
+  `public/uploads/all/<filename>` with the filename taken from the request, and
+  checked the extension only afterwards, deleting the file again if it was not an
+  image. A `../` in the name wrote a file anywhere the web user could write (and
+  deleted it again, `index.php` included), and a PHP file sat on disk until the
+  check ran. **Fixed 2026-10-01:** `Base64ImageUploadService` decodes strictly,
+  caps the size (8 MB) and the pixel count, reads the type from the content,
+  re-encodes raster images with GD (dropping anything appended to or hidden in
+  them), sanitises SVG, and writes one file under a random server-chosen name and
+  extension; the client's filename is kept only as a display name. The three live
+  handlers use it, and the unrouted copy (`Api\V2\FileUploadController`) is gone.
+  `LegacyStoreImageUploadTest` covers each case against a scratch public path. The
+  same endpoints could not have worked against this app's `uploads` stand-in
+  (no `file_original_name`, `extension`, `type` or `file_size`), so a guarded
+  migration adds them there; production's own table already has them. The
+  global WAF also blocks `../` in input, but nothing relies on that. `AizUploadController`
+  and the seller upload store through Laravel's `store()` with an extension
+  whitelist and were not affected.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 
