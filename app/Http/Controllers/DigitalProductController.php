@@ -28,7 +28,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:show_digital_products', only: ['index']),
+            new Middleware('permission:show_digital_products', only: ['index', 'show']),
             new Middleware('permission:add_digital_product', only: ['create', 'store']),
             new Middleware('permission:edit_digital_product', only: ['edit', 'update']),
             new Middleware('permission:delete_digital_product', only: ['destroy']),

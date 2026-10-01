@@ -647,7 +647,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
-    Route::get('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear');
+    Route::get('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
 
     Route::get('/admin-permissions', [RoleController::class, 'create_admin_permissions']);
 

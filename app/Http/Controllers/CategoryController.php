@@ -26,7 +26,7 @@ class CategoryController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_product_categories', only: ['index']),
+            new Middleware('permission:view_product_categories', only: ['index', 'show']),
             new Middleware('permission:add_product_category', only: ['create', 'store']),
             new Middleware('permission:edit_product_category', only: ['edit', 'update', 'updateFeatured']),
             new Middleware('permission:delete_product_category', only: ['destroy']),

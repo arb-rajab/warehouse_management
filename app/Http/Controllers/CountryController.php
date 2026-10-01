@@ -21,7 +21,7 @@ class CountryController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:shipping_country_setting', only: ['index', 'store', 'update', 'destroy', 'updateStatus']),
+            new Middleware('permission:shipping_country_setting', only: ['index', 'store', 'update', 'destroy', 'updateStatus', 'create', 'edit', 'show']),
         ];
     }
     /**

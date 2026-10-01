@@ -22,7 +22,7 @@ class PickupPointController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:pickup_point_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update']),
+            new Middleware('permission:pickup_point_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'show']),
         ];
     }
     /**

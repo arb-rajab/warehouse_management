@@ -26,7 +26,7 @@ class SupportTicketController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_support_tickets', only: ['admin_index', 'admin_store']),
+            new Middleware('permission:view_all_support_tickets', only: ['admin_index', 'admin_store', 'admin_show']),
         ];
     }
     /**

@@ -21,7 +21,7 @@ class TaxController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:vat_&_tax_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'change_tax_status']),
+            new Middleware('permission:vat_&_tax_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'change_tax_status', 'show']),
         ];
     }
     /**

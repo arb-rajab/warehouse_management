@@ -26,7 +26,7 @@ class AttributeController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_product_attributes', only: ['index']),
-            new Middleware('permission:edit_product_attribute', only: ['edit', 'update', 'store']),
+            new Middleware('permission:edit_product_attribute', only: ['edit', 'update', 'store', 'create']),
             new Middleware('permission:delete_product_attribute', only: ['destroy']),
             new Middleware('permission:view_product_attribute_values', only: ['show']),
             new Middleware('permission:edit_product_attribute_value', only: ['edit_attribute_value', 'store_attribute_value', 'update_attribute_value']),

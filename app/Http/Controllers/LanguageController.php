@@ -26,7 +26,7 @@ class LanguageController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:language_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'update_rtl_status', 'update_status', 'key_value_store', 'importEnglishFile', 'storeAppTranlsation']),
+            new Middleware('permission:language_setup', only: ['index', 'create', 'edit', 'destroy', 'store', 'update', 'update_rtl_status', 'update_status', 'key_value_store', 'importEnglishFile', 'storeAppTranlsation', 'exportARBFile', 'show', 'showAppTranlsationView']),
         ];
     }
     public function changeLanguage(Request $request)

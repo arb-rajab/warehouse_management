@@ -23,7 +23,7 @@ class SellerWithdrawRequestController extends Controller implements HasMiddlewar
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_seller_payout_requests', only: ['index', 'store', 'update', 'destroy', 'payment_modal', 'message_modal']),
+            new Middleware('permission:view_seller_payout_requests', only: ['index', 'store', 'update', 'destroy', 'payment_modal', 'message_modal', 'create', 'edit', 'show']),
         ];
     }    /**
      * Display a listing of the resource.

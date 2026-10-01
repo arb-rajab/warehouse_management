@@ -35,10 +35,10 @@ class CustomerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_customers', only: ['index', 'store', 'update', 'store_customer', 'update_password', 'update_customer_notes', 'repStore']),
+            new Middleware('permission:view_all_customers', only: ['index', 'store', 'update', 'store_customer', 'update_password', 'update_customer_notes', 'repStore', 'change_activity_status', 'change_password', 'create', 'downloadTradeLicense', 'edit', 'important', 'not_important', 'pages_views', 'repCreate', 'repIndex', 'show', 'verify', 'whatsapp_contact']),
             new Middleware('permission:login_as_customer', only: ['login']),
             new Middleware('permission:ban_customer', only: ['ban']),
-            new Middleware('permission:delete_customer', only: ['destroy', 'bulk_customer_delete']),
+            new Middleware('permission:delete_customer', only: ['destroy', 'bulk_customer_delete', 'archive', 'restore']),
         ];
     }
     protected $userService;

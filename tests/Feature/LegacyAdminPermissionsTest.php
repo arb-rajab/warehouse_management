@@ -16,9 +16,11 @@ use Spatie\Permission\Models\Permission;
  * the server's .env.
  *
  * The write endpoints now share their page's permission (store with create,
- * update with edit, and so on). What is still open is listed below and can only
- * shrink: a new ungated write route fails the first test, and so does an entry
- * here that has since been gated.
+ * update with edit, and so on), and the pages with no permission of their own
+ * (show, the secondary create/edit forms) share their module's. What is still
+ * open is listed below, writes and reads apart, and can only shrink: a new
+ * ungated route fails the first test, and so does an entry that has since been
+ * gated.
  *
  * Writes that no permission covers yet, and why:
  * - modules with no permission at all in the legacy vocabulary (logistics,
@@ -28,9 +30,6 @@ use Spatie\Permission\Models\Permission;
  * - read-only AJAX helpers the product forms post to;
  * - routes whose controller method does not exist;
  * - env_key_update, which refuses every request.
- *
- * Reads (GET) are not covered here: a number of admin listings are still open
- * to every staff account.
  *
  * @var list<string>
  */
@@ -98,16 +97,105 @@ const ADMIN_WRITES_STILL_UNGATED = [
 ];
 
 /**
- * The store admin's write routes (POST, PUT, PATCH, DELETE).
+ * The GET pages that no permission covers yet, for the same reasons.
+ *
+ * @var list<string>
+ */
+const ADMIN_READS_STILL_UNGATED = [
+    // No permission for the module yet.
+    'AdminNotificationController@createNotification',
+    'AdminNotificationController@deleteNotification',
+    'AdminNotificationController@getAllNotifications',
+    'DriverController@create',
+    'DriverController@delete',
+    'DriverController@edit',
+    'DriverController@index',
+    'FeatureOrderController@create',
+    'FeatureOrderController@getNeededData',
+    'FeatureOrderController@getRepDiscount',
+    'FeatureOrderTripController@create',
+    'FeatureOrderTripController@getNeededData',
+    'FeatureOrderTripController@newCreate',
+    'FeatureOrderTripController@newEdit',
+    'FeatureOrderTripController@newGetNeededData',
+    'NotificationController@index',
+    'OfferController@base_brand_discount',
+    'OfferController@base_product_discount',
+    'OfferController@brandCreate',
+    'OfferController@brand_discount',
+    'OfferController@create',
+    'OfferController@destroy',
+    'OfferController@edit',
+    'OfferController@index',
+    'OfferController@product_discount',
+    'OfferController@store',
+    'OffersCatalogController@destroy',
+    'OffersCatalogController@download',
+    'OffersCatalogController@index',
+    'RepresentativePackageController@create',
+    'RepresentativePackageController@delete',
+    'RepresentativePackageController@edit',
+    'RepresentativePackageController@index',
+    'RepresentativePaymentAdminController@accept',
+    'RepresentativePaymentAdminController@export',
+    'RepresentativePaymentAdminController@index',
+    'RepresentativePaymentAdminController@reject',
+    'TripController@all_orders',
+    'TripController@create',
+    'TripController@create_from_map',
+    'TripController@delete',
+    'TripController@edit',
+    'TripController@getAllTrips',
+    'TripController@getTodayTrips',
+    'TripController@print_cmr',
+    'TripController@show',
+    'TruckController@create',
+    'TruckController@delete',
+    'TruckController@edit',
+    'TruckController@index',
+    'VisitController@destroy',
+    'VisitController@index',
+    'VisitController@show',
+    'VisitController@show_all_visits_in_a_day',
+
+    // Self-service: the signed-in user's own dashboard, profile and uploads.
+    'AdminController@admin_dashboard',
+    'AizUploadController@all_file',
+    'AizUploadController@create',
+    'AizUploadController@destroy',
+    'AizUploadController@edit',
+    'AizUploadController@index',
+    'AizUploadController@show',
+    'ProfileController@create',
+    'ProfileController@edit',
+    'ProfileController@index',
+    'ProfileController@show',
+
+    // Read-only AJAX helpers the product forms use.
+    'BusinessSettingsController@search',
+    'ProductController@getDetails',
+
+    // The controller has no such method, so the request errors out.
+    'CarrierController@show',
+    'CityController@show',
+    'OrderController@index',
+    'ProductBulkUploadController@import_product',
+    'ProductBulkUploadController@import_vendor_product',
+    'ZoneController@show',
+];
+
+/**
+ * The store admin's routes: every one, only the writes (POST, PUT, PATCH,
+ * DELETE), or only the reads.
  *
  * @return list<RoutingRoute>
  */
-function storeAdminWriteRoutes(): array
+function storeAdminRoutes(?bool $writes = null): array
 {
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
         fn (RoutingRoute $route) => str_starts_with($route->uri(), 'temp/admin')
-            && array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== [],
+            && ($writes === null || (array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== []) === $writes),
     ));
 }
 
@@ -129,27 +217,30 @@ function adminActionName(RoutingRoute $route): string
     return class_basename($controller).'@'.$method;
 }
 
-test('every store admin write route is permission-gated or listed as still open', function () {
-    $ungated = collect(storeAdminWriteRoutes())
+test('every store admin route is permission-gated or listed as still open', function (bool $writes, array $listed, int $atLeast) {
+    $ungated = collect(storeAdminRoutes($writes))
         ->reject(fn (RoutingRoute $route) => isPermissionGated($route))
         ->map(fn (RoutingRoute $route) => adminActionName($route))
         ->unique()
         ->sort()
         ->values();
 
-    // First: a write route with no permission check that is not on the list.
+    // First: a route with no permission check that is not on the list.
     // Second: a listed route that is gated now, so it comes off the list.
-    expect(count(storeAdminWriteRoutes()))->toBeGreaterThan(150)
-        ->and($ungated->diff(ADMIN_WRITES_STILL_UNGATED)->values()->all())->toBe([])
-        ->and(collect(ADMIN_WRITES_STILL_UNGATED)->diff($ungated)->values()->all())->toBe([]);
-});
+    expect(count(storeAdminRoutes($writes)))->toBeGreaterThan($atLeast)
+        ->and($ungated->diff($listed)->values()->all())->toBe([])
+        ->and(collect($listed)->diff($ungated)->values()->all())->toBe([]);
+})->with([
+    'writes' => [true, ADMIN_WRITES_STILL_UNGATED, 150],
+    'reads' => [false, ADMIN_READS_STILL_UNGATED, 250],
+]);
 
-test('a staff user with no permissions is refused on every permission-gated admin write route', function () {
+test('a staff user with no permissions is refused on every permission-gated admin route', function () {
     actingAsStoreUser(createStoreUser('staff'));
     $notRefused = [];
     $checked = 0;
 
-    foreach (storeAdminWriteRoutes() as $route) {
+    foreach (storeAdminRoutes() as $route) {
         if (! isPermissionGated($route)) {
             continue;
         }
@@ -167,7 +258,7 @@ test('a staff user with no permissions is refused on every permission-gated admi
         }
     }
 
-    expect($checked)->toBeGreaterThan(140)
+    expect($checked)->toBeGreaterThan(340)
         ->and($notRefused)->toBe([]);
 });
 
@@ -195,4 +286,26 @@ test('a staff user cannot change a business setting or take the site down', func
 
     $this->assertDatabaseMissing('business_settings', ['type' => 'planted_setting']);
     $this->assertDatabaseMissing('business_settings', ['type' => 'maintenance_mode', 'value' => 1]);
+});
+
+test('the customer pages that carry personal data need the customer permission, and the archive needs the delete one', function () {
+    Permission::findOrCreate('view_all_customers', 'store');
+    Permission::findOrCreate('delete_customer', 'store');
+
+    $staff = createStoreUser('staff');
+    actingAsStoreUser($staff);
+
+    $this->get(route('customers.archive'))->assertForbidden();
+    $this->get(route('customers.create'))->assertForbidden();
+    $this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->assertForbidden();
+
+    $staff->givePermissionTo('view_all_customers');
+
+    $this->get(route('customers.archive'))->assertForbidden();
+    expect($this->get(route('customers.create'))->getStatusCode())->not->toBe(403)
+        ->and($this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->getStatusCode())->not->toBe(403);
+
+    $staff->givePermissionTo('delete_customer');
+
+    expect($this->get(route('customers.archive'))->getStatusCode())->not->toBe(403);
 });

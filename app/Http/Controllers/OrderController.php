@@ -48,7 +48,7 @@ class OrderController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders', only: ['all_orders', 'store', 'update', 'order_details', 'update_delivery_status', 'update_tracking_code', 'update_payment_status', 'assign_delivery_boy', 'update_manager_notes', 'edit_item_price']),
+            new Middleware('permission:view_all_orders|view_inhouse_orders|view_seller_orders|view_pickup_point_orders', only: ['all_orders', 'store', 'update', 'order_details', 'update_delivery_status', 'update_tracking_code', 'update_payment_status', 'assign_delivery_boy', 'update_manager_notes', 'edit_item_price', 'create', 'edit']),
             new Middleware('permission:view_order_details', only: ['show']),
             new Middleware('permission:delete_order', only: ['destroy', 'bulk_order_delete']),
         ];

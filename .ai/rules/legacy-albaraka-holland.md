@@ -161,16 +161,24 @@ prefix. That is the single point every storefront asset URL goes through.
   them. Each write now shares its page's permission (`store` with `create`,
   `update` with `edit`, the status toggles with `edit`, `bulk_*_delete` with
   `destroy`; the settings POSTs with their settings page's permission), using
-  only names that already exist. 153 of the 204 are gated.
-  `LegacyAdminPermissionsTest` lists the 51 that are not
-  (`ADMIN_WRITES_STILL_UNGATED`), fails on a new ungated write route and on a
-  listed one that has since been gated, and checks that a staff user with no
-  permissions gets 403 on every gated write. **Still open:** those 51, which
-  need permission names from the production permission list (logistics: trips,
-  trucks, drivers; offers; representative packages; notifications), plus about
-  135 admin pages (GET) that no permission covers, among them customer, seller
-  and order listings. Phase 5's role import is also where the owner can say
-  which existing staff roles should get which permission.
+  only names that already exist. 153 of the 204 are gated. **Reads, same day:**
+  the pages that had no permission of their own (`show`, the secondary
+  create/edit forms, the customer, seller, order, support and payout detail
+  pages, the language and website-page listings) share their module's, and
+  `GET /admin/clear-cache`, which runs `optimize:clear`, is vendor-super-admin
+  only like its button; 226 of the 299 admin pages are gated. In all, 379 of 503
+  admin routes. `LegacyAdminPermissionsTest` lists what is not
+  (`ADMIN_WRITES_STILL_UNGATED`, 51; `ADMIN_READS_STILL_UNGATED`, 73), fails on a
+  new ungated route and on a listed one that has since been gated, and checks
+  that a staff user with no permissions gets 403 on every gated route.
+  **Still open:** those 124, which need permission names from the production
+  permission list (logistics: trips, trucks, drivers; offers; representative
+  packages and their payments; notifications), and self-service routes and
+  dead ones. Several of those are `GET` routes that change state
+  (`/trips/delete`, `/trucks/delete`, `/offers/destroy`, `/representative
+  payments/accept`), which a link or an image tag can trigger, so give them a
+  permission *and* make them POST/DELETE. Phase 5's role import is where the
+  owner can say which existing staff roles should get which permission.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

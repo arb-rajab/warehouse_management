@@ -23,7 +23,7 @@ class CityController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:manage_shipping_cities', only: ['index', 'create', 'destroy', 'store', 'update', 'updateStatus']),
+            new Middleware('permission:manage_shipping_cities', only: ['index', 'create', 'destroy', 'store', 'update', 'updateStatus', 'edit']),
         ];
     }    /**
      * Display a listing of the resource.

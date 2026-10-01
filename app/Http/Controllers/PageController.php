@@ -26,6 +26,7 @@ class PageController extends Controller implements HasMiddleware
             new Middleware('permission:add_website_page', only: ['create', 'store']),
             new Middleware('permission:edit_website_page', only: ['edit', 'update']),
             new Middleware('permission:delete_website_page', only: ['destroy']),
+            new Middleware('permission:view_all_website_pages', only: ['index', 'show']),
         ];
     }
     /**

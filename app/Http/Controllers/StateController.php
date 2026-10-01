@@ -22,7 +22,7 @@ class StateController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:manage_shipping_states', only: ['index', 'edit', 'update', 'store', 'destroy', 'updateStatus']),
+            new Middleware('permission:manage_shipping_states', only: ['index', 'edit', 'update', 'store', 'destroy', 'updateStatus', 'create', 'show']),
         ];
     }
     /**
