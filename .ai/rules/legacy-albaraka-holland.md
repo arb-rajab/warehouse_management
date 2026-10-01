@@ -119,6 +119,13 @@ prefix. That is the single point every storefront asset URL goes through.
   The only guard on the rest of that file is `wms.auth` (`WmsAuthMiddleware`).
   That guard compares a `private-token` header with `!=` against a secret
   **hardcoded in `config/app.php:110`** (`wms_token`).
+  **Fixed 2026-10-01:** `wms_token` is `env('WMS_TOKEN')` with no default, and
+  `WmsAuthMiddleware` compares with `hash_equals()` and rejects every request
+  while no token is configured (removing the default alone would have admitted a
+  request with no header, since `null != null` is false). The old value is in
+  git history, so treat it as compromised: **set `WMS_TOKEN` in the shared
+  `.env` to a new secret and give it to the warehouse integration before the
+  deploy that carries this, or that integration is refused.**
 - `config/services.php` hardcodes the FCM `project_id`. Nineteen
   `stores.otajer.com/api/...` URLs are hardcoded across 14 files, with the
   token appended from `config('services.otajer.token')`.
