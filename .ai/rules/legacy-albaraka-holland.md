@@ -335,10 +335,15 @@ prefix. That is the single point every storefront asset URL goes through.
   CMR), which now calls the service, and the admin's English app-translation
   import, which wrote the file to the private disk and read it back from a
   public path (so it always failed) and now reads the uploaded file directly.
-  Tests: `LegacyTripUploadTest`. **Still open:** the seller shop-verification
-  form's file fields (`Seller/ShopController`) store whatever is sent with a
-  random name on the private disk, so nothing is served from it, but they are
-  unvalidated and no screen can open them yet.
+  Tests: `LegacyTripUploadTest`. The seller shop-verification form's file
+  fields stored whatever was sent on the private disk, and the admin's review page
+  linked a public URL for them, so no reviewer could open one. **Fixed
+  2026-10-01:** `ShopVerificationStorage` (a `PrivateDocumentStorage`) keeps a
+  content-checked PDF, Word or image under a random name, and
+  `sellers.verification_file` (permission `view_all_seller`) opens it; the form
+  no longer crashes on a missing file. Tests: `LegacyShopVerificationTest`.
+  Documents submitted before this are on the private disk under their old
+  `uploads/verification_form/` names and are found by those.
 - The mobile API's wallet payment (`POST api/v2/payments/pay/wallet`) took the
   payer (`user_id`) and the amount from the request, while the order was priced
   from the cart and marked paid: any signed-in customer could spend another

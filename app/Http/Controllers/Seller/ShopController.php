@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Services\ShopVerificationStorage;
 use App\Models\BusinessSetting;
 use App\Models\Shop;
 use Auth;
@@ -104,7 +105,8 @@ class ShopController extends Controller
             } elseif ($element->type == 'file') {
                 $item['type'] = 'file';
                 $item['label'] = $element->label;
-                $item['value'] = $request['element_' . $i]->store('uploads/verification_form');
+                $file = $request->file('element_' . $i);
+                $item['value'] = $file ? app(ShopVerificationStorage::class)->store($file) : null;
             }
             array_push($data, $item);
             $i++;

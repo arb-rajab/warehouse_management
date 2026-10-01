@@ -158,6 +158,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/sellers/destroy/{id}', 'destroy')->name('sellers.destroy');
         Route::post('/bulk-seller-delete', 'bulk_seller_delete')->name('bulk-seller-delete');
         Route::get('/sellers/view/{id}/verification', 'show_verification_request')->name('sellers.show_verification_request');
+        Route::get('/sellers/verification-file/{name}', 'download_verification_file')->name('sellers.verification_file');
         Route::post('/sellers/approve/{id}', 'approve_seller')->name('sellers.approve');
         Route::post('/sellers/reject/{id}', 'reject_seller')->name('sellers.reject');
         Route::get('/sellers/login/{id}', 'login')->name('sellers.login');
