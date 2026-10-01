@@ -12,8 +12,9 @@ What it runs, in this order (matching `.github/workflows/tests.yml`):
   3. `npm run types:check`  (vue-tsc)
   4. `npm run test:unit`    (Vitest, full run)
   5. `php -l` on every changed PHP file (syntax only — not Pint/PHPStan)
-  6. `.claude/scripts/php_import_order.py` on every changed PHP file
-  7. `.claude/scripts/php_pint_style.py` on every changed PHP file
+  6. `.claude/scripts/php_import_order.py` on every changed PHP file Pint checks
+  7. `.claude/scripts/php_pint_style.py` on every changed PHP file Pint checks
+     (steps 6-7 skip what `pint.json` lists under `notPath`)
   8. `.claude/scripts/js_balance.py` on every changed .ts/.js/.vue file
   9. `.claude/scripts/vue_unused_imports.py` on every changed .vue file
      (advisory — never fails the run)
@@ -40,6 +41,7 @@ Exits non-zero (and stops at the first failing step) if any blocking check
 fails. Advisory steps print their output but never fail the run.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -88,6 +90,22 @@ def changed_files() -> list[str]:
     return sorted(set(tracked) | {line for line in untracked.stdout.splitlines() if line})
 
 
+def pint_checked(files: list[str]) -> list[str]:
+    """Drop the files CI's Pint never looks at: Blade templates, and what
+    `pint.json` lists under `notPath` (the legacy store's controllers among
+    them). The stand-ins must not fail a push on formatting CI would not check.
+    A `notPath` entry that is a directory excludes everything under it.
+    """
+    config = ROOT / 'pint.json'
+    excluded = json.loads(config.read_text()).get('notPath', []) if config.exists() else []
+    prefixes = tuple(entry.rstrip('/') + '/' for entry in excluded)
+
+    return [
+        f for f in files
+        if not f.endswith('.blade.php') and f not in excluded and not f.startswith(prefixes)
+    ]
+
+
 def run_step(label: str, command: list[str], *, advisory: bool = False) -> bool:
     """Run one command, printing a header, and return whether it passed."""
     print(f'\n=== {label} ===')
@@ -123,15 +141,17 @@ def main() -> int:
     for php_file in php_files:
         steps.append((f'php -l {php_file}', ['php', '-l', php_file], False))
 
-    if php_files:
+    pint_files = pint_checked(php_files)
+
+    if pint_files:
         steps.append((
             'Pint import order (stand-in)',
-            [sys.executable, str(SCRIPTS / 'php_import_order.py'), *php_files],
+            [sys.executable, str(SCRIPTS / 'php_import_order.py'), *pint_files],
             False,
         ))
         steps.append((
             'Pint style (stand-in)',
-            [sys.executable, str(SCRIPTS / 'php_pint_style.py'), *php_files],
+            [sys.executable, str(SCRIPTS / 'php_pint_style.py'), *pint_files],
             False,
         ))
 
