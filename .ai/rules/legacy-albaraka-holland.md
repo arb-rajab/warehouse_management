@@ -138,6 +138,25 @@ prefix. That is the single point every storefront asset URL goes through.
   for other committed secrets (key prefixes, 32-hex tokens, private keys) found
   none: the other hits were a sample payload, SVG ids and a `Nagad` private key
   that is read from `NAGAD_MERCHANT_PRIVATE_KEY`.
+- `BusinessSettingsController::overWriteEnvFile()` rewrote the server's `.env`
+  from the request, which is how `POST /admin/env_key_update`,
+  `payment_method_update`, `google_analytics` and the other settings POSTs
+  saved their values. It took any key and any value, with no escaping (a quote
+  and a newline inject lines) and no permission check: the controller's
+  `permission:` list gates the settings *pages*, not these POSTs, so any admin,
+  staff or accountant could replace `APP_KEY`, the database credentials or
+  `WMS_TOKEN`. Its `DEMO_MODE` guard read `env()`, null once config is cached.
+  **Fixed 2026-10-01:** it writes nothing and returns false (logging the key,
+  never the value), `env_key_update` refuses, and the two activation toggles
+  that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
+  Credentials the screens used to save (SMTP, social login, analytics, gateway
+  keys) are now set in the server `.env` by whoever deploys.
+  `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
+  callers against a scratch `.env`. **Still open:** the same `permission:`-list
+  gap leaves the other settings POSTs, including `business_settings.update`,
+  which upserts any `business_settings` row, open to every admin-class
+  account, and `maintenance_mode` is toggled there; wiring permissions to the
+  POSTs, with a test over every gated route, is the next item.
 - There are 450 `env()` calls in 170 files outside `config/`. Every one returns
   `null` once `config:cache` runs, and this app's deploy caches config.
 

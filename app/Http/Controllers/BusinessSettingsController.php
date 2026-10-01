@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Log;
 
 class BusinessSettingsController extends Controller implements HasMiddleware
 {
@@ -307,38 +308,51 @@ class BusinessSettingsController extends Controller implements HasMiddleware
      * @param  Request  $request
      * @return Response
      */
+    /**
+     * The settings screens used to post `.env` keys here. The server's `.env` is
+     * managed by the deploy, so nothing in the admin panel writes it any more.
+     *
+     * @param  Request  $request
+     * @return Response
+     */
     public function env_key_update(Request $request)
     {
-        foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
-        }
+        flash(translate('These settings are managed in the server environment and cannot be changed here.'))->error();
 
-        flash(translate("Settings updated successfully"))->success();
         return back();
     }
 
     /**
-     * overWrite the Env File values.
-     * @param  String type
-     * @param  String value
-     * @return Response
+     * Refuses to edit the `.env` file; kept so the settings screens that call
+     * it still run.
+     *
+     * It took the key and the value straight from the request, with no list of
+     * keys, no escaping and no permission check on most routes that reach it,
+     * so any admin, staff or accountant account could rewrite `APP_KEY`, the
+     * database credentials or `WMS_TOKEN`. Its `DEMO_MODE` guard read env(),
+     * which is null once config is cached, so it never held on a deployed
+     * host. The file is shared between releases and managed by the deploy, and
+     * a changed value is ignored under `config:cache` anyway.
+     *
+     * Only the key is logged, never the value: it may be a credential.
+     *
+     * @param  mixed  $type
+     * @param  mixed  $val
+     * @return bool Always false: nothing was written.
      */
     public function overWriteEnvFile($type, $val)
     {
-        if(env('DEMO_MODE') != 'On'){
-            $path = base_path('.env');
-            if (file_exists($path)) {
-                $val = '"'.trim($val).'"';
-                if(is_numeric(strpos(file_get_contents($path), $type)) && strpos(file_get_contents($path), $type) >= 0){
-                    file_put_contents($path, str_replace(
-                        $type.'="'.env($type).'"', $type.'='.$val, file_get_contents($path)
-                    ));
-                }
-                else{
-                    file_put_contents($path, file_get_contents($path)."\r\n".$type.'='.$val);
-                }
-            }
+        Log::warning('Refused to write the .env file from the admin panel.', [
+            'key' => is_scalar($type) ? (string) $type : gettype($type),
+            'user_id' => auth()->id(),
+        ]);
+
+        if (! session()->has('env_write_refused')) {
+            session()->flash('env_write_refused', true);
+            flash(translate('Environment settings are managed on the server and were not saved.'))->warning();
         }
+
+        return false;
     }
 
     public function seller_verification_form(Request $request)
@@ -460,31 +474,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return '1';
     }
 
+    /**
+     * `FORCE_HTTPS` and `FILESYSTEM_DRIVER` live in `.env`, which the panel no
+     * longer writes. '0' is what the toggle's script reads as a failure.
+     */
     public function updateActivationSettingsInEnv($request)
     {
-        if ($request->type == 'FORCE_HTTPS' && $request->value == '1') {
-            $this->overWriteEnvFile($request->type, 'On');
+        $this->overWriteEnvFile($request->type, $request->value);
 
-            if(strpos(config('app.url'), 'http:') !== FALSE) {
-                $this->overWriteEnvFile('APP_URL', str_replace("http:", "https:", config('app.url')));
-            }
-
-        }
-        elseif ($request->type == 'FORCE_HTTPS' && $request->value == '0') {
-            $this->overWriteEnvFile($request->type, 'Off');
-            if(strpos(config('app.url'), 'https:') !== FALSE) {
-                $this->overWriteEnvFile('APP_URL', str_replace("https:", "http:", config('app.url')));
-            }
-
-        }
-        elseif ($request->type == 'FILESYSTEM_DRIVER' && $request->value == '1') {
-            $this->overWriteEnvFile($request->type, 's3');
-        }
-        elseif ($request->type == 'FILESYSTEM_DRIVER' && $request->value == '0') {
-            $this->overWriteEnvFile($request->type, 'local');
-        }
-
-        return '1';
+        return '0';
     }
 
     public function vendor_commission(Request $request)
