@@ -1239,7 +1239,7 @@ test('a product barcode label shows the Arabic name only when the locale is Arab
 
     $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
 
-    $response = $this->withHeader('App-Language', 'ar')->get("/admin/products/{$product->id}/export-qr");
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
 
     $svg = $response->getContent();
     expect($svg)->toContain('ودجات')
@@ -1252,7 +1252,7 @@ test('a product barcode label falls back to the base name when the Arabic locale
 
     $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
 
-    $response = $this->withHeader('App-Language', 'ar')->get("/admin/products/{$product->id}/export-qr");
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
 
     expect($response->getContent())->toContain('Widgets');
 });
