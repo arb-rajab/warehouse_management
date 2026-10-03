@@ -8,9 +8,9 @@ use App\Models\StoreUser;
 use App\Models\Translation;
 use Cache;
 use Illuminate\Http\Request;
-use Session;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Session;
 use Throwable;
 
 class LanguageController extends Controller implements HasMiddleware
