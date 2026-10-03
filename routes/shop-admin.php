@@ -242,45 +242,45 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
     Route::group(['prefix' => 'trips'], function () {
         Route::controller(TripController::class)->group(function() {
-            Route::get('/index', 'getAllTrips')->name('trips.index');
-            Route::get('/orders', 'all_orders')->name('trips.orders');
-            Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status');
-            Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number');
-            Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered');
-            Route::get('/today-trips', 'getTodayTrips')->name('trips.today-trips');
-            Route::get('/create', 'create')->name('trips.create');
-            Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map');
-            Route::post('/store', 'store')->name('trips.store');
-            Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map');
-            Route::get('/show/{id}', 'show')->name('trips.show');
-            Route::get('/edit/{id}', 'edit')->name('trips.edit');
-            Route::post('/update', 'update')->name('trips.update');
-            Route::post('/delete/{id}', 'delete')->name('trips.destroy');
-            Route::post('/bulk-trips-delete', 'bulk_trip_delete')->name('trips.bulk-trip-delete');
-            Route::post('/update-trip-status', 'update_trip_status')->name('trips.update-status');
-            Route::post('/update-trip-notes', 'update_trip_notes')->name('trips.update-notes');
-            Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes');
-            Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status');
-            Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr');
+            Route::get('/index', 'getAllTrips')->name('trips.index')->middleware('permission:view_all_trips');
+            Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
+            Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
+            Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
+            Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered')->middleware('permission:edit_trip');
+            Route::get('/today-trips', 'getTodayTrips')->name('trips.today-trips')->middleware('permission:view_all_trips');
+            Route::get('/create', 'create')->name('trips.create')->middleware('permission:add_trip');
+            Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
+            Route::post('/store', 'store')->name('trips.store')->middleware('permission:add_trip');
+            Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
+            Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');
+            Route::get('/edit/{id}', 'edit')->name('trips.edit')->middleware('permission:edit_trip');
+            Route::post('/update', 'update')->name('trips.update')->middleware('permission:edit_trip');
+            Route::post('/delete/{id}', 'delete')->name('trips.destroy')->middleware('permission:delete_trip');
+            Route::post('/bulk-trips-delete', 'bulk_trip_delete')->name('trips.bulk-trip-delete')->middleware('permission:delete_trip');
+            Route::post('/update-trip-status', 'update_trip_status')->name('trips.update-status')->middleware('permission:edit_trip');
+            Route::post('/update-trip-notes', 'update_trip_notes')->name('trips.update-notes')->middleware('permission:edit_trip');
+            Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes')->middleware('permission:edit_trip');
+            Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status')->middleware('permission:edit_trip');
+            Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');
         });
 
         Route::controller(DriverController::class)->group(function() {
-            Route::get('/drivers/index', 'index')->name('drivers.index');
-            Route::get('/drivers/create', 'create')->name('drivers.create');
-            Route::post('/drivers/store', 'store')->name('drivers.store');
-            Route::get('/drivers/edit/{id}', 'edit')->name('drivers.edit');
-            Route::post('/drivers/update', 'update')->name('drivers.update');
-            Route::post('/drivers/delete/{id}', 'delete')->name('drivers.destroy');
+            Route::get('/drivers/index', 'index')->name('drivers.index')->middleware('permission:view_all_drivers');
+            Route::get('/drivers/create', 'create')->name('drivers.create')->middleware('permission:add_driver');
+            Route::post('/drivers/store', 'store')->name('drivers.store')->middleware('permission:add_driver');
+            Route::get('/drivers/edit/{id}', 'edit')->name('drivers.edit')->middleware('permission:edit_driver');
+            Route::post('/drivers/update', 'update')->name('drivers.update')->middleware('permission:edit_driver');
+            Route::post('/drivers/delete/{id}', 'delete')->name('drivers.destroy')->middleware('permission:delete_driver');
         });
 
         Route::controller(TruckController::class)->group(function() {
-            Route::get('/trucks/index', 'index')->name('trucks.index');
-            Route::get('/trucks/create', 'create')->name('trucks.create');
-            Route::post('/trucks/store', 'store')->name('trucks.store');
-            Route::get('/trucks/edit/{id}', 'edit')->name('trucks.edit');
-            Route::post('/trucks/update', 'update')->name('trucks.update');
-            Route::post('/trucks/delete/{id}', 'delete')->name('trucks.destroy');
-            Route::post('/trucks/bulk-trucks-delete', 'bulk_truck_delete')->name('trucks.bulk-truck-delete');
+            Route::get('/trucks/index', 'index')->name('trucks.index')->middleware('permission:view_all_trucks');
+            Route::get('/trucks/create', 'create')->name('trucks.create')->middleware('permission:add_truck');
+            Route::post('/trucks/store', 'store')->name('trucks.store')->middleware('permission:add_truck');
+            Route::get('/trucks/edit/{id}', 'edit')->name('trucks.edit')->middleware('permission:edit_truck');
+            Route::post('/trucks/update', 'update')->name('trucks.update')->middleware('permission:edit_truck');
+            Route::post('/trucks/delete/{id}', 'delete')->name('trucks.destroy')->middleware('permission:delete_truck');
+            Route::post('/trucks/bulk-trucks-delete', 'bulk_truck_delete')->name('trucks.bulk-truck-delete')->middleware('permission:delete_truck');
 
         });
     });

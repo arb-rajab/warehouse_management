@@ -9,6 +9,7 @@ use App\Models\Product;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class CouponController extends Controller
 {
@@ -71,6 +72,7 @@ class CouponController extends Controller
     public function edit($id)
     {
         $coupon = Coupon::findOrFail(decrypt($id));
+        Gate::authorize('update', $coupon);
         return view('shop.seller.coupons.edit', compact('coupon'));
     }
 
@@ -83,6 +85,7 @@ class CouponController extends Controller
      */
     public function update(CouponRequest $request, Coupon $coupon)
     {
+        Gate::authorize('update', $coupon);
         $coupon->update($request->validated());
 
         flash(translate('Coupon has been updated successfully'))->success();
@@ -97,7 +100,9 @@ class CouponController extends Controller
      */
     public function destroy($id)
     {
-        Coupon::destroy($id);
+        $coupon = Coupon::findOrFail($id);
+        Gate::authorize('delete', $coupon);
+        $coupon->delete();
         flash(translate('Coupon has been deleted successfully'))->success();
         return redirect()->route('seller.coupon.index');
     }
@@ -117,11 +122,13 @@ class CouponController extends Controller
     {
         if($request->coupon_type == "product_base") {
             $coupon = Coupon::findOrFail($request->id);
+            Gate::authorize('update', $coupon);
             $products = filter_products(Product::where('user_id', Auth::user()->id))->get();
             return view('shop.partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
         }
         elseif($request->coupon_type == "cart_base"){
             $coupon = Coupon::findOrFail($request->id);
+            Gate::authorize('update', $coupon);
             return view('shop.partials.coupons.cart_base_coupon_edit',compact('coupon'));
         }
     }

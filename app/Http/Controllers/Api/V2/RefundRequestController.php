@@ -22,7 +22,24 @@ class RefundRequestController extends Controller
 
     public function send(Request $request)
     {
-        $order_detail = OrderDetail::where('id', $request->id)->first();
+        $order_detail = OrderDetail::where('id', $request->id)
+            ->whereHas('order', fn ($order) => $order->where('user_id', auth()->user()->id))
+            ->where('delivery_status', 'delivered')
+            ->where('payment_status', 'paid')
+            ->firstOrFail();
+
+        $has_open_refund = RefundRequest::where('order_detail_id', $order_detail->id)
+            ->where('seller_approval', '!=', 2)
+            ->where('admin_approval', '!=', 2)
+            ->exists();
+
+        if ($has_open_refund) {
+            return response()->json([
+                'success' => false,
+                'message' => translate('A refund request already exists for this item')
+            ], 422);
+        }
+
         $refund = new RefundRequest;
         $refund->user_id = auth()->user()->id;
         $refund->order_id = $order_detail->order_id;

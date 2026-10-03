@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\V2\Seller\SellerPackageController;
 use App\Http\Controllers\Api\V2\Seller\ShopController;
 use App\Http\Controllers\Api\V2\Seller\WithdrawRequestController;
 
-Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:store_api']], function () {
+Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:store_api', 'seller']], function () {
     //Order Section
     Route::controller(OrderController::class)->group(function () {
         Route::get('orders', 'getOrderList');

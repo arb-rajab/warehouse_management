@@ -7,6 +7,7 @@ use App\Models\Upload;
 use App\Services\MultipartUploadService;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Response;
 use Storage;
 
@@ -82,7 +83,7 @@ class SellerFileUploadController extends Controller
     {
         $upload = Upload::findOrFail($id);
 
-        if (auth()->user()->user_type == 'seller' && $upload->user_id != auth()->user()->id) {
+        if (Gate::denies('delete', $upload)) {
             return $this->failed(translate("You don't have permission for deleting this!"));
         }
         try {
