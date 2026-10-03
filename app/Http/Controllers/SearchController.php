@@ -243,14 +243,21 @@ class SearchController extends Controller
     {
         $query = $request->input('query');
 
-        if(!$query){
-            $users = StoreUser::where('id', '!=', Auth::user()->id)->where('is_rep', false)->take(10)->get();
-            return response()->json(['users' => $users]);
-        }
-        $users = StoreUser::where('name', 'like', '%' . $query . '%')
-            ->orWhere('phone', 'like', '%' . $query . '%')
-            ->orWhere('company_name', 'like', '%' . $query . '%')
+        $users = StoreUser::query()
+            ->select(['id', 'name', 'company_name'])
+            ->where('user_type', 'customer')
+            ->where('is_rep', false)
+            ->where('id', '!=', Auth::id())
+            ->when($query, function ($users) use ($query) {
+                $users->where(function ($matching) use ($query) {
+                    $matching->where('name', 'like', '%' . $query . '%')
+                        ->orWhere('phone', 'like', '%' . $query . '%')
+                        ->orWhere('company_name', 'like', '%' . $query . '%');
+                });
+            })
+            ->limit(10)
             ->get();
+
         return response()->json(['users' => $users]);
     }
 }

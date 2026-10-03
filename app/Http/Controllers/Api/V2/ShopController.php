@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\ProductCollection;
 use App\Http\Resources\V2\ProductMiniCollection;
+use App\Http\Resources\V2\PublicShopDetailsCollection;
 use App\Http\Resources\V2\ShopCollection;
-use App\Http\Resources\V2\ShopDetailsCollection;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Utility\SearchUtility;
@@ -30,7 +30,7 @@ class ShopController extends Controller
 
     public function info($id)
     {
-        return new ShopDetailsCollection(Shop::where('id', $id)->first());
+        return new PublicShopDetailsCollection(Shop::whereIn('user_id', verified_sellers_id())->findOrFail($id));
     }
 
     public function shopOfUser($id)

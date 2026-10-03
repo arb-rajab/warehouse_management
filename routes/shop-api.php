@@ -196,7 +196,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
     Route::apiResource('currencies', 'App\Http\Controllers\Api\V2\CurrencyController')->only('index');
 
-    Route::apiResource('customers', 'App\Http\Controllers\Api\V2\CustomerController')->only('show');
+    Route::apiResource('customers', 'App\Http\Controllers\Api\V2\CustomerController')->only('show')->middleware('auth:store_api');
 
     Route::group(['prefix' => 'representatives'], function () {
         Route::get('get-customers', 'App\Http\Controllers\Api\V2\CustomerController@get_customers')->middleware('auth:store_api');
@@ -283,7 +283,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // Route::post('user/info/update', 'App\Http\Controllers\Api\V2\UserController@updateName')->middleware('auth:store_api');
 
     Route::post('get-user-by-access_token', 'App\Http\Controllers\Api\V2\UserController@getUserInfoByAccessToken')->middleware('throttle:store-auth');
-    Route::get('check_user_verified/{user_id}', 'App\Http\Controllers\Api\V2\UserController@check_verified_by_admin');
+    Route::get('check_user_verified/{user_id}', 'App\Http\Controllers\Api\V2\UserController@check_verified_by_admin')->middleware('auth:store_api');
 
     Route::get('cities', 'App\Http\Controllers\Api\V2\AddressController@getCities');
     Route::get('states', 'App\Http\Controllers\Api\V2\AddressController@getStates');
