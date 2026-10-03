@@ -59,6 +59,8 @@ test('markup a browser would run is refused whatever the file is called', functi
     'a file that is not an image called png' => ['a.png', 'plain text, not an image'],
     'an extension off the list' => ['page.html', '<p>hi</p>'],
     'php called php' => ['shell.php', '<?php system($_GET[1]); ?>'],
+    'a flash movie' => ['movie.swf', "FWS\x09\x00\x00\x00\x00"],
+    'a plain xml file' => ['data.xml', '<?xml version="1.0"?><a/>'],
 ]);
 
 test('PHP source that gets through the allowlist is never stored with a PHP extension', function (string $filename) {
@@ -170,5 +172,30 @@ test('the web uploader hands another account\'s files to no one but admin and st
         actingAsStoreUser($owner);
 
         expect($this->get("/temp/aiz-uploader/download/{$theirs->id}")->getStatusCode())->not->toBe(403);
+    });
+});
+
+test('a file whose content is not what its extension claims is refused', function () {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer) {
+        foreach (['clip.mp4' => tinyPng(), 'song.mp3' => tinyPng(), 'bundle.zip' => 'not an archive'] as $name => $contents) {
+            expect(app(MultipartUploadService::class)->store(uploadedFile($name, $contents), $customer->id))->toBeNull();
+        }
+
+        expect(storedUploadFiles($publicPath))->toBe([])
+            ->and(Upload::count())->toBe(0);
+    });
+});
+
+test('a file over the size limit is refused before it is read', function () {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer) {
+        $oversized = UploadedFile::fake()->create('big.zip', 512 * 1024 + 1);
+
+        expect(app(MultipartUploadService::class)->store($oversized, $customer->id))->toBeNull()
+            ->and(storedUploadFiles($publicPath))->toBe([])
+            ->and(Upload::count())->toBe(0);
     });
 });

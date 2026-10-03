@@ -55,6 +55,7 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
+    'AizUploadController@all_file',
     'AizUploadController@bulk_uploaded_files_delete',
     'AizUploadController@destroy',
     'AizUploadController@file_info',
@@ -109,7 +110,6 @@ const ADMIN_READS_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
-    'AizUploadController@all_file',
     'AizUploadController@create',
     'AizUploadController@edit',
     'AizUploadController@index',

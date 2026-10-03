@@ -83,7 +83,9 @@ class MultipartUploadService
 
         $extension = $this->storedExtension($kind, $clientExtension, $guessed, $mimeType);
 
-        if ($extension === null || !$this->mimeTypeMatchesKind($mimeType, $kind)) {
+        $type = $extension === 'svg' ? 'image' : $kind;
+
+        if ($extension === null || ! $this->mimeTypeMatchesKind($mimeType, $type)) {
             return null;
         }
 
@@ -96,8 +98,6 @@ class MultipartUploadService
         } elseif ($kind === 'image' && get_setting('disable_image_optimization') != 1) {
             $contents = $this->optimised($contents);
         }
-
-        $type = $extension === 'svg' ? 'image' : $kind;
 
         try {
             return $this->writeUpload($contents, $extension, $type, $file->getClientOriginalName(), $userId, $extension === 'svg' ? 'image/svg+xml' : $mimeType);
@@ -120,8 +120,7 @@ class MultipartUploadService
     {
         return match ($kind) {
             'image' => str_starts_with($mimeType, 'image/'),
-            'video' => str_starts_with($mimeType, 'video/'),
-            'audio' => str_starts_with($mimeType, 'audio/'),
+            'video', 'audio' => str_starts_with($mimeType, 'video/') || str_starts_with($mimeType, 'audio/') || $mimeType === 'application/ogg',
             'archive' => in_array($mimeType, ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'], true),
             'document' => str_starts_with($mimeType, 'text/') || str_starts_with($mimeType, 'application/'),
             default => false,

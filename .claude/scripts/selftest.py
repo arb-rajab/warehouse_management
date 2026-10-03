@@ -157,6 +157,7 @@ def main() -> int:
         (root / 'NoTrailingNewline.php').write_text('<?php\n\n$value = 1;')
         (root / 'ClosingTag.php').write_text('<?php\n\n$value = 1;\n?>\n')
         (root / 'FullyQualifiedReference.php').write_text(FULLY_QUALIFIED_REFERENCE_PHP)
+        (root / 'NotOperator.php').write_text('<?php\n\nif (!$value) {\n}\n')
 
         duplicated = root / 'duplicated'
         duplicated.mkdir()
@@ -211,6 +212,9 @@ def main() -> int:
             code == 1 and 'fully_qualified_strict_types' in out,
             out,
         )
+
+        code, out = run('php_pint_style.py', str(root / 'NotOperator.php'))
+        check('`!$x` without a space is reported', code == 1 and 'not_operator_with_successor_space' in out, out)
 
         print('vue_unused_imports.py')
         code, out = run('vue_unused_imports.py', str(root / 'Apostrophe.vue'))
