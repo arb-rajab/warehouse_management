@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Session;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Throwable;
 
 class LanguageController extends Controller implements HasMiddleware
 {
@@ -20,7 +21,7 @@ class LanguageController extends Controller implements HasMiddleware
      * See Auth\LoginController::middleware()'s docblock for why this
      * replaces the constructor-based $this->middleware() call.
      *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     * @return array<int, Middleware>
      */
     public static function middleware(): array
     {
@@ -203,7 +204,7 @@ class LanguageController extends Controller implements HasMiddleware
                     ['lang_value' => $value]
                 );
             }
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             flash(translate('Invalid JSON file format'))->error();
             return back();
         }
