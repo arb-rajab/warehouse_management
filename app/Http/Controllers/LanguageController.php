@@ -36,8 +36,8 @@ class LanguageController extends Controller implements HasMiddleware
             flash(translate('Language not found'))->error();
             return back();
         }
-    	$request->session()->put('locale', $request->locale);
-    	flash(translate('Language changed to ').$language->name)->success();
+        $request->session()->put('locale', $request->locale);
+        flash(translate('Language changed to ').$language->name)->success();
     }
 
     public function index(Request $request)
