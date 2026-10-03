@@ -31,8 +31,16 @@ test('the 3D map view renders a real canvas and survives keyboard/pointer naviga
     // WebGL/three.js behavior jsdom can't render, so it's only verifiable
     // here, in a real browser.
     await viewport.click();
+
+    // The mini-map marker follows the walking camera, so wait for it to
+    // move instead of sleeping for a fixed time.
+    const marker = page.getByTestId('map-3d-mini-map-marker');
+    const markerBefore = await marker.getAttribute('style');
+
     await page.keyboard.down('w');
-    await page.waitForTimeout(150);
+    await expect
+        .poll(() => marker.getAttribute('style'), { timeout: 5_000 })
+        .not.toBe(markerBefore);
     await page.keyboard.up('w');
 
     const box = await viewport.boundingBox();

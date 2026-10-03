@@ -44,6 +44,7 @@ jobs:
   generate-wayfinder:
     name: Generate Wayfinder types
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,6 +70,7 @@ jobs:
     name: ESLint
     needs: generate-wayfinder
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,6 +92,7 @@ jobs:
   format-js:
     name: Prettier
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -106,6 +109,7 @@ jobs:
     name: vue-tsc
     needs: generate-wayfinder
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -128,6 +132,7 @@ jobs:
     name: Vitest
     needs: generate-wayfinder
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -149,6 +154,7 @@ jobs:
   lint-php:
     name: Pint
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -168,6 +174,7 @@ jobs:
   test-deploy-script:
     name: Deploy script
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -180,6 +187,7 @@ jobs:
   types-php:
     name: PHPStan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -192,9 +200,16 @@ jobs:
       - name: Run PHPStan
         run: composer types:check
 
+  # composer.json requires ^8.4 while the other jobs run the newest PHP, so
+  # run the suite on the supported floor as well.
   test-php:
-    name: Pest
+    name: Pest (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.4', '8.5']
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -203,6 +218,8 @@ jobs:
 
       - name: Setup backend
         uses: ./.github/actions/setup-backend
+        with:
+          php-version: ${{ matrix.php-version }}
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
@@ -219,9 +236,81 @@ jobs:
       - name: Run Pest
         run: composer test:pest
 
+  # The suite runs on in-memory SQLite, but production is MySQL, and the
+  # migration tests under tests/Feature/Database are the ones whose behaviour
+  # differs between the two (foreign-key indexes, fulltext, identifier
+  # lengths). Run them against a real MySQL server.
+  test-php-mysql:
+    name: Pest (MySQL, tests/Feature/Database)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: warehouse_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: warehouse_test
+      DB_USERNAME: root
+      DB_PASSWORD: password
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup backend
+        uses: ./.github/actions/setup-backend
+
+      - name: Run database Pest tests on MySQL
+        run: php artisan test tests/Feature/Database
+
+  # `composer audit` reads composer.lock and `npm audit` reads
+  # package-lock.json, so neither needs the dependencies installed. Abandoned
+  # packages are reported but do not fail the run; advisories do.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Composer audit
+        run: composer audit --locked --abandoned=report
+
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high
+
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

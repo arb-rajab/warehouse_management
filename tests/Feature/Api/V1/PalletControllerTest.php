@@ -1182,8 +1182,6 @@ test('storing and then quickly emptying a pallet in the same cell flags the empt
     $emptiedLog = CellStatusLog::query()->where('action', CellLogAction::Emptied->value)->sole();
 
     expect($emptiedLog->flags()->where('reason', CellLogFlagReason::QuickFlip->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('performing a pallet action outside working hours flags it as off-hours', function () {
@@ -1204,8 +1202,6 @@ test('performing a pallet action outside working hours flags it as off-hours', f
     $log = CellStatusLog::query()->sole();
 
     expect($log->flags()->where('reason', CellLogFlagReason::OffHours->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('performing many pallet actions quickly as the same user flags rapid actions past the configured threshold', function () {
@@ -1235,8 +1231,6 @@ test('performing many pallet actions quickly as the same user flags rapid action
     expect($logs[9]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeFalse();
     expect($logs[10]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
     expect($logs[11]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('adding a pallet to an inactive slot is rejected and nothing changes', function () {
