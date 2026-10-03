@@ -29,7 +29,7 @@ class DynamicPopupRequest extends FormRequest
             'banner'               => 'required',
             'delay_seconds'        => 'required|integer|max:100',
             'btn_text'             => 'required|string|max:191',
-            'offer_id'             => 'required|integer',
+            'offer_id'             => 'required|integer|exists:offers,id',
             'show_page'            => 'required|integer',
         ];
     }
