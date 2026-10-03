@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V2;
 
 use App\Models\Shop;
+use App\Models\StoreUser;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -11,9 +12,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * the shop is ShopDetailsCollection.
  *
  * @mixin Shop
+ *
+ * @property-read StoreUser $user
  */
 class PublicShopDetailsCollection extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray($request)
     {
         return [

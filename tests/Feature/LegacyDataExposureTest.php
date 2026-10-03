@@ -327,7 +327,7 @@ test('the new-products list leaves out unpublished products', function () {
 
 test('a product that is unpublished or unapproved is a 404 by id and a published one is not', function () {
     seedStoreCurrency();
-    $published = createStoreProduct(['added_by' => 'admin']);
+    $published = createStoreProduct(['added_by' => 'admin', 'user_id' => createStoreUser('admin')->id]);
     $unpublished = createStoreProduct(['published' => false]);
     $unapproved = createStoreProduct(['approved' => 0]);
 
