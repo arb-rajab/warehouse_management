@@ -236,12 +236,13 @@ jobs:
       - name: Run Pest
         run: composer test:pest
 
-  # The suite runs on in-memory SQLite, but production is MySQL, and the
-  # migration tests under tests/Feature/Database are the ones whose behaviour
-  # differs between the two (foreign-key indexes, fulltext, identifier
-  # lengths). Run them against a real MySQL server.
+  # The suite runs on in-memory SQLite, but production is MySQL. These are the
+  # migration tests whose behaviour differs between the two (foreign-key
+  # indexes, fulltext, identifier lengths), run against a real MySQL server.
+  # The whole tests/Feature/Database folder (~130 files, each migrating the
+  # schema) ran past 20 minutes there without output, so only these run.
   test-php-mysql:
-    name: Pest (MySQL, tests/Feature/Database)
+    name: Pest (MySQL migrations)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -274,7 +275,14 @@ jobs:
         uses: ./.github/actions/setup-backend
 
       - name: Run database Pest tests on MySQL
-        run: php artisan test tests/Feature/Database
+        timeout-minutes: 10
+        run: >-
+          php artisan test
+          tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php
+          tests/Feature/Database/SchemaIdentifierLengthTest.php
+          tests/Feature/Database/AddFulltextIndexToProductsTableTest.php
+          tests/Feature/Database/AddIndexesToStoreTablesTest.php
+          tests/Feature/Database/LegacyCreateMigrationGuardsTest.php
 
   # `composer audit` reads composer.lock and `npm audit` reads
   # package-lock.json, so neither needs the dependencies installed. Abandoned
