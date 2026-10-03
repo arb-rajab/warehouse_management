@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\WalletController;
 use App\Models\BusinessSetting;
-use GuzzleHttp\Client;
+use App\Services\GatewayPaymentService;
+use App\Services\SessionGatewayPayment;
+use App\Services\VerifiedPayment;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Session;
 
 class VoguepayController extends Controller
 {
     public function pay()
     {
+        // The reference the payment form sends and paymentSuccess() checks.
+        Session::put('voguepay_merchant_ref', Str::random(20));
+
         if (Session::get('payment_type') == 'cart_payment') {
             return view('shop.frontend.voguepay.cart_payment_vogue');
         }
@@ -25,37 +29,42 @@ class VoguepayController extends Controller
         }
     }
 
+    /**
+     * VoguePay sends the customer to /vogue-pay/success/<transaction id>, and any
+     * approved transaction used to pay whatever this session was paying for. The
+     * transaction, as VoguePay's server reports it, must carry the reference this
+     * session's payment form sent and pay at least the amount due, and a
+     * transaction completes one payment only.
+     */
     public function paymentSuccess($id)
     {
-        if (BusinessSetting::where('type', 'voguepay_sandbox')->first()?->value == 1) {
-            $url = '//voguepay.com/?v_transaction_id='.$id.'&type=json&demo=true';
-        }
-        else {
-            $url = '//voguepay.com/?v_transaction_id='.$id.'&type=json';
-        }
-        $client = new Client();
-        $response = $client->request('GET',$url);
-        $obj = json_decode($response->getBody());
+        $merchantRef = (string) Session::get('voguepay_merchant_ref');
+        $amountDue = app(SessionGatewayPayment::class)->amountDue();
 
-        if($obj->response_message == 'Approved'){
-            $payment_detalis = json_encode($obj);
-            // dd($payment_detalis);
-            if(Session::has('payment_type')){
-                if(Session::get('payment_type') == 'cart_payment'){
-                    return (new CheckoutController)->checkout_done(Session::get('combined_order_id'), $payment_detalis);
-                }
-                elseif (Session::get('payment_type') == 'wallet_payment') {
-                    return (new WalletController)->wallet_payment_done(Session::get('payment_data'), $payment_detalis);
-                }
-                elseif (Session::get('payment_type') == 'customer_package_payment') {
-                    return (new CustomerPackageController)->purchase_payment_done(Session::get('payment_data'), $payment_detalis);
-                }
-            }
+        if ($merchantRef === '' || $amountDue === null) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
-        else {
+
+        $query = ['v_transaction_id' => (string) $id, 'type' => 'json'];
+        if (BusinessSetting::where('type', 'voguepay_sandbox')->first()?->value == 1) {
+            $query['demo'] = 'true';
+        }
+
+        $transaction = Http::timeout(30)->get('https://voguepay.com/', $query)->json();
+        $isApproved = is_array($transaction)
+            && ($transaction['response_message'] ?? null) === 'Approved'
+            && hash_equals((string) $id, (string) ($transaction['transaction_id'] ?? ''))
+            && hash_equals($merchantRef, (string) ($transaction['merchant_ref'] ?? ''))
+            && GatewayPaymentService::covers((float) ($transaction['total'] ?? 0), $amountDue);
+
+        if (! $isApproved) {
             flash(translate('Payment Failed'))->error();
             return redirect()->route('home');
         }
+
+        Session::forget('voguepay_merchant_ref');
+
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('voguepay', (string) $id, (float) $transaction['total'], json_encode($transaction)));
     }
 
     public function paymentFailure($id)

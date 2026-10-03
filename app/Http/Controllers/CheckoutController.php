@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\PaymentOptions;
 use App\Services\CouponService;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use App\Models\Address;
 use App\Models\Carrier;
 use App\Models\Cart;
@@ -22,6 +24,7 @@ use App\Utility\PayfastUtility;
 use App\Utility\PayhereUtility;
 use Auth;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Session;
 
@@ -106,19 +109,21 @@ class CheckoutController extends Controller
         }
     }
 
-    //redirects to this method after a successful checkout
-    public function checkout_done($combined_order_id, $payment)
+    /**
+     * Where a gateway's callback finishes a cart payment, once its server has
+     * confirmed it. The signed-in customer must own the order and the amount must
+     * pay its total (GatewayPaymentService); a forged, short or repeated callback
+     * leaves the order as it was.
+     */
+    public function checkout_done(int $combined_order_id, VerifiedPayment $payment): RedirectResponse
     {
-        $combined_order = CombinedOrder::findOrFail($combined_order_id);
+        $payerId = Auth::id();
 
-        foreach ($combined_order->orders as $key => $order) {
-            $order = Order::findOrFail($order->id);
-            $order->payment_status = 'paid';
-            $order->payment_details = $payment;
-            $order->save();
-
-            calculateCommissionAffilationClubPoint($order);
+        if ($payerId === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $payerId, GatewayPaymentService::CART, $combined_order_id)) {
+            flash(translate('Payment could not be verified'))->error();
+            return redirect()->route('cart');
         }
+
         Session::put('combined_order_id', $combined_order_id);
         return redirect()->route('order_confirmed');
     }

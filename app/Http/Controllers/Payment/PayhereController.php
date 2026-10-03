@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
-use App\Models\StoreUser;
-use App\Models\Wallet;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use App\Utility\PayhereUtility;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Session;
 
 class PayhereController extends Controller
@@ -38,8 +38,9 @@ class PayhereController extends Controller
             }
 
             elseif (Session::get('payment_type') == 'wallet_payment') {
-                $order_id = random_int(100000, 999999);
                 $user_id = Auth::user()->id;
+                // The account rides in the signed order_id; custom_1 is not signed.
+                $order_id = 'W'.$user_id.'-'.Str::random(10);
                 $amount = $request->amount;
                 $first_name = Auth::user()->name;
                 $last_name = 'X';
@@ -52,9 +53,10 @@ class PayhereController extends Controller
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {
                 $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-                $order_id = random_int(100000, 999999);
                 $user_id = Auth::user()->id;
-                $package_id = $request->customer_package_id;
+                $package_id = $customer_package->id;
+                // The account and the package ride in the signed order_id; custom_1 and custom_2 are not signed.
+                $order_id = 'P'.$user_id.'-'.$package_id.'-'.Str::random(10);
                 $amount = $customer_package->amount;
                 $first_name = Auth::user()->name;
                 $last_name = 'X';
@@ -168,11 +170,14 @@ class PayhereController extends Controller
             && (string) ($post['status_code'] ?? '') === '2';
     }
 
+    /**
+     * The combined order is the signed `order_id` (the checkout form sets it to
+     * the combined order's id); `custom_1` is not signed and is not read.
+     */
     public static function checkout_notify()
     {
-        if (self::notificationIsAuthentic($_POST)) {
-            //custom_1 will have order_id
-            return PayhereController::checkout_success($_POST['custom_1'],$_POST);
+        if (self::notificationIsAuthentic($_POST) && ctype_digit((string) $_POST['order_id'])) {
+            return PayhereController::checkout_success((int) $_POST['order_id'], $_POST);
         }
 
         return PayhereController::checkout_incomplete();
@@ -195,11 +200,36 @@ class PayhereController extends Controller
         return PayhereController::checkout_incomplete();
     }
 
+    /**
+     * Pay the combined order once, when the signed amount pays its total: the
+     * notification comes from PayHere's server with no session, so the payer is
+     * the order's own customer, and `payment_id` is recorded so a repeated
+     * notification pays nothing.
+     */
     public static function checkout_success($combined_order_id,$responses)
     {
-        $payment_details = json_encode($responses);
-        $checkoutController = new CheckoutController;
-        return $checkoutController->checkout_done($combined_order_id, $payment_details);
+        $payment = self::verifiedPayment($responses);
+        $combined_order = CombinedOrder::find($combined_order_id);
+
+        if ($payment === null || $combined_order === null
+            || ! app(GatewayPaymentService::class)->complete($payment, (int) $combined_order->user_id, GatewayPaymentService::CART, $combined_order->id)) {
+            return PayhereController::checkout_incomplete();
+        }
+
+        return response('', 200);
+    }
+
+    /**
+     * The payment an authentic notification reports, under PayHere's own
+     * `payment_id`; null when it carries none.
+     *
+     * @param  array<string, mixed>  $post
+     */
+    private static function verifiedPayment(array $post): ?VerifiedPayment
+    {
+        $payment_id = (string) ($post['payment_id'] ?? '');
+
+        return $payment_id === '' ? null : new VerifiedPayment('payhere', $payment_id, (float) $post['payhere_amount'], json_encode($post));
     }
 
     public static function checkout_incomplete()
@@ -213,11 +243,14 @@ class PayhereController extends Controller
     //checkout related functions ------------------------------------<ends>
 
     //wallet related functions ------------------------------------<starts>
+    /**
+     * The account is in the signed `order_id` (`W<user id>-<random>`, see pay());
+     * `custom_1` is not signed and is not read.
+     */
     public static function wallet_notify()
     {
-        if (self::notificationIsAuthentic($_POST)) {
-            //custom_1 will have user_id
-            return PayhereController::wallet_success($_POST['custom_1'],$_POST['payhere_amount'],$_POST);
+        if (self::notificationIsAuthentic($_POST) && preg_match('/^W(\d+)-/', (string) $_POST['order_id'], $matches)) {
+            return PayhereController::wallet_success((int) $matches[1], $_POST['payhere_amount'], $_POST);
         }
 
         return PayhereController::wallet_incomplete();
@@ -237,18 +270,20 @@ class PayhereController extends Controller
         return PayhereController::wallet_incomplete();
     }
 
+    /**
+     * Top up the account by the signed amount, once per PayHere `payment_id`
+     * (GatewayPaymentService locks the account, checks it exists and increments
+     * the balance).
+     */
     public static function wallet_success($id,$amount,$payment_details)
     {
-        $user = StoreUser::find($id);
-        $user->balance = $user->balance + $amount;
-        $user->save();
+        $payment = self::verifiedPayment($payment_details);
 
-        $wallet = new Wallet;
-        $wallet->user_id = $user->id;
-        $wallet->amount = $amount;
-        $wallet->payment_method = 'payhere';
-        $wallet->payment_details = json_encode($payment_details);
-        $wallet->save();
+        if ($payment === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $id, GatewayPaymentService::WALLET)) {
+            return PayhereController::wallet_incomplete();
+        }
+
+        return response('', 200);
     }
 
     public static function wallet_incomplete()
@@ -260,11 +295,15 @@ class PayhereController extends Controller
     //wallet related functions ------------------------------------<ends>
 
     //customer package related functions ------------------------------------<starts>
+    /**
+     * The account and the package are in the signed `order_id`
+     * (`P<user id>-<package id>-<random>`, see pay()); `custom_1` and `custom_2`
+     * are not signed and are not read.
+     */
     public static function customer_package_notify()
     {
-        if (self::notificationIsAuthentic($_POST)) {
-            //custom_1 will have user_id custom_2 will have package_id
-            return PayhereController::customer_package_success($_POST['custom_1'],$_POST['custom_2'],$_POST);
+        if (self::notificationIsAuthentic($_POST) && preg_match('/^P(\d+)-(\d+)-/', (string) $_POST['order_id'], $matches)) {
+            return PayhereController::customer_package_success((int) $matches[1], (int) $matches[2], $_POST);
         }
 
         return PayhereController::customer_package_incomplete();
@@ -282,13 +321,19 @@ class PayhereController extends Controller
         return PayhereController::customer_package_incomplete();
     }
 
+    /**
+     * Activate the package once per PayHere `payment_id`, when the signed amount
+     * pays its price (read from the database).
+     */
     public static function customer_package_success($id,$customer_package_id,$payment_details)
     {
-        $user = StoreUser::findOrFail($id);
-        $user->customer_package_id = $customer_package_id;
-        $customer_package = CustomerPackage::findOrFail($customer_package_id);
-        $user->remaining_uploads += $customer_package->product_upload;
-        $user->save();
+        $payment = self::verifiedPayment($payment_details);
+
+        if ($payment === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $id, GatewayPaymentService::CUSTOMER_PACKAGE, null, (int) $customer_package_id)) {
+            return PayhereController::customer_package_incomplete();
+        }
+
+        return response('', 200);
     }
 
     public static function customer_package_incomplete()

@@ -30,7 +30,7 @@
              v_merchant_id: document.getElementById("merchant_id").value,
              total: '{{ Session::get('payment_data')['amount'] }}',
              cur: '{{\App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code}}',
-             merchant_ref: 'ref123',
+             merchant_ref: '{{ Session::get('voguepay_merchant_ref') }}',
              loadText:'Custom load text',
              customer: {
                 name: '{{ Auth::user()->name }}',

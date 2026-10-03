@@ -4,15 +4,16 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Models\BusinessSetting;
-use App\Models\CombinedOrder;
-use App\Models\StoreUser;
-use App\Models\Wallet;
+use App\Services\ApiGatewayPayment;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use App\Utility\NagadUtility;
 use Illuminate\Http\Request;
 
 class NagadController
 {
+    /** @var array{user_id: int, payment_type: string, combined_order_id: int|null, package_id: int|null, amount: float}|null */
+    private $payment = null;
 
     private $amount = null;
     private $tnx = null;
@@ -32,26 +33,25 @@ class NagadController
         }
     }
 
+    /**
+     * The payer is the signed-in customer and the amount their own order's total
+     * or the package's price, from the database; verify() pays exactly what is
+     * recorded here (the request's `user_id` and, except for a top-up, `amount`
+     * are not read).
+     */
     public function begin(Request $request)
     {
-        $this->amount = $request->amount;
-        $this->tnx_status = false;
+        $this->payment = app(ApiGatewayPayment::class)->resolve($request);
 
-        $combined_order_id = $request->combined_order_id;
-
-        if ($request->payment_type == 'cart_payment') {
-            $this->tnx = $request->combined_order_id;
-            $combined_order = CombinedOrder::find($combined_order_id);
-            $this->amount = $combined_order->grand_total;
-        } else if (
-            $request->payment_type == 'wallet_payment' ||
-            $request->payment_type == 'seller_package_payment' ||
-            $request->payment_type == 'customer_package_payment'
-        ) {
-            $this->tnx = rand(10000, 99999);
+        if ($this->payment === null) {
+            return response()->json(['data' => null, 'result' => false, 'url' => '', 'message' => translate('Nothing to pay')]);
         }
 
-        return $this->getSession($request->payment_type);
+        $this->amount = $this->payment['amount'];
+        $this->tnx_status = false;
+        $this->tnx = $this->payment['combined_order_id'] ?? rand(10000, 99999);
+
+        return $this->getSession($this->payment['payment_type']);
     }
 
 
@@ -61,7 +61,7 @@ class NagadController
         $DateTime = Date('YmdHis');
         $MerchantID = config('nagad.merchant_id');
         //$invoice_no = 'Inv'.Date('YmdH').rand(1000, 10000);
-        $invoice_no = $this->tnx_status ? $this->tnx : 'Inv' . Date('YmdH') . rand(1000, 10000);
+        $invoice_no = $this->tnx_status ? $this->tnx : 'Inv' . Date('ymdHis') . random_int(1000, 9999);
         $merchantCallbackURL = route('app.nagad.callback_url', ['payment_type' => $payment_type]);
 
         $SensitiveData = [
@@ -77,6 +77,9 @@ class NagadController
             'sensitiveData' => NagadUtility::EncryptDataWithPublicKey(json_encode($SensitiveData)),
             'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveData)),
         ];
+
+        // What verify() will pay for this Nagad order, fixed now, by the signed-in payer.
+        app(GatewayPaymentService::class)->begin('nagad', $invoice_no, $this->payment['user_id'], $this->payment['payment_type'], $this->payment['combined_order_id'], $this->payment['package_id'], $this->payment['amount']);
 
         $ur = $this->nagadHost . "api/dfs/check-out/initialize/" . $MerchantID . "/" . $invoice_no;
         $Result_Data = NagadUtility::HttpPostMethod($ur, $PostData);
@@ -161,16 +164,29 @@ class NagadController
         }
     }
 
+    /**
+     * Nagad redirects the app's web view here. `payment_ref_id` is read from the
+     * request (it used to be cut out of $_SERVER['REQUEST_URI'] by position), and
+     * Nagad's server must report the payment successful; it then pays the order
+     * begin() recorded under Nagad's `orderId`, once, when the amount covers it.
+     * The app's own `process` call, which credited whatever it was sent with no
+     * sign-in, is gone.
+     */
     public function verify(Request $request, $payment_type)
     {
-        $Query_String = explode("&", explode("?", $_SERVER['REQUEST_URI'])[1]);
-        $payment_ref_id = substr($Query_String[2], 15);
-        $url = $this->nagadHost . "api/dfs/verify/payment/" . $payment_ref_id;
-        $json = NagadUtility::HttpGet($url);
-        if (json_decode($json)->status == 'Success') {
+        $payment_ref_id = (string) $request->input('payment_ref_id');
+        $json = $payment_ref_id === '' ? '' : NagadUtility::HttpGet($this->nagadHost . "api/dfs/verify/payment/" . rawurlencode($payment_ref_id));
+        $result = json_decode((string) $json, true);
+
+        $isPaid = is_array($result)
+            && ($result['status'] ?? null) === 'Success'
+            && hash_equals($payment_ref_id, (string) ($result['paymentRefId'] ?? ''))
+            && app(GatewayPaymentService::class)->completePending(new VerifiedPayment('nagad', (string) ($result['orderId'] ?? ''), (float) ($result['amount'] ?? 0), $json));
+
+        if ($isPaid) {
             return response()->json([
                 'result' => true,
-                'message' => translate('Payment Processing'),
+                'message' => translate('Payment is successful'),
                 'payment_details' => $json
             ]);
         }
@@ -179,33 +195,5 @@ class NagadController
             'message' => translate('Payment failed !'),
             'payment_details' => ''
         ]);
-    }
-
-    public function process(Request $request)
-    {
-        try {
-
-            $payment_type = $request->payment_type;
-
-            if ($payment_type == 'cart_payment') {
-                checkout_done($request->combined_order_id, $request->payment_details);
-            }
-
-            if ($payment_type == 'wallet_payment') {
-                wallet_payment_done($request->user_id, $request->amount, 'Nagad', $request->payment_details);
-            }
-
-            if ($payment_type == 'seller_package_payment') {
-                seller_purchase_payment_done($request->user_id, $request->package_id, $request->amount, 'Nagad', $request->payment_details);
-            }
-
-            if ($payment_type == 'customer_package_payment') {
-                customer_purchase_payment_done($request->user_id, $request->package_id);
-            }
-
-            return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
-        } catch (\Exception $e) {
-            return response()->json(['result' => false, 'message' => $e->getMessage()]);
-        }
     }
 }

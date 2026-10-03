@@ -239,12 +239,49 @@ prefix. That is the single point every storefront asset URL goes through.
   merchant matches, the signature matches (`hash_equals`) and the status is
   success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
   controller under `Payment/` the guard does not know about. **Before
-  enabling a gateway:** move its credentials to config (only PayHere is done:
-  bKash, iyzico, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
-  them through `env()`) and check that its callback verifies the gateway's
-  signature before marking anything paid; the audit above did not review them.
+  enabling a gateway:** move its credentials to config (PayHere and iyzico are
+  done: bKash, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
+  them through `env()`); the callbacks' verification is in "Gateway crediting"
+  below.
   The admin checkout and settings pages still offer a gateway that
   `business_settings` has switched on, and choosing one now gives a 404.
+- **Gateway crediting.** Behind the 404, every gateway's callback credited what
+  it was told: the order, the payer and the amount came from the request or the
+  session, `checkout_done()`/`wallet_payment_done()` (and the API's global
+  helpers of the same names) applied them as often as they were called, and
+  SSLCommerz signed the browser in as the account its post named
+  (`Auth::login(StoreUser::find($request->value_d))`). The mobile API had
+  unauthenticated `bkash/api/process` and `nagad/process` routes that credited
+  anything. **Fixed 2026-10-03:** `App\Services\GatewayPaymentService` is the
+  one sink: one transaction under row locks, the order must be the payer's
+  (`combined_orders.user_id`), not paid, without commission, and the amount due
+  is read from the database (`covers()` accepts the whole-unit charge the
+  gateways send); the gateway's reference goes into `wms_gateway_payments`
+  (unique per gateway), so a repeated callback credits nothing. A callback hands
+  it a `VerifiedPayment` built only from the gateway's own server: SSLCommerz
+  `orderValidate`/`sslcommerz_validate`, aamarpay's search API, bKash
+  execute/status (status code 0000 required; the web `callback` sets a one-shot
+  session flag `success` pulls), iyzico retrieve (basket and paid price; one
+  token one payment; `App\Services\IyzicoPayments`, keys now in
+  `config('services.iyzico.*')`), PayHere's signed `order_id`
+  (`<combined order>`, `W<user>-…`, `P<user>-<package>-…`) and `payment_id`,
+  N-Genius/VoguePay/Nagad order lookups bound to a reference the session
+  stored. Storefront callbacks finish the session's own payment
+  (`SessionGatewayPayment`); the API's `begin`/`init` endpoints and the app's
+  bKash/iyzico success calls need `auth:store_api` and price from the database
+  (`ApiGatewayPayment`); the API's SSLCommerz and Nagad callbacks, which have no
+  token, complete only a payment `begin` recorded as pending. The SSLCommerz
+  IPN handler and route are gone. Tests: `LegacyGatewayPaymentCreditingTest`.
+  **Before enabling a storefront gateway that posts back** (SSLCommerz,
+  aamarpay, iyzico): with `SESSION_SAME_SITE=lax` the browser does not send the
+  session cookie on that cross-site POST, so the callback finds no session and
+  credits nothing (it fails safe; the payment then needs reconciling by hand).
+  **Mobile app:** `sslcommerz/begin`, `iyzico/init`, `iyzico/success` and
+  `bkash/api/success` now need the bearer token, `bkash/api/process` and
+  `nagad/process` are gone (Nagad completes in `nagad/verify`), and
+  `user_id`/`amount` are no longer read except a top-up's amount. Seller-package
+  payments go through the same sink (it needs the seller's shop), but have no
+  test: this repository has no `seller_packages` migration.
 - User-written HTML was printed unescaped, so anyone who could write it could run
   script in the browser of whoever viewed it. The worst case was the **admin
   backend's** ticket page (`backend/support/support_tickets/show`), which printed

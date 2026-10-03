@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\SellerPackageController;
-use App\Http\Controllers\WalletController;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
+use App\Services\GatewayPaymentService;
+use App\Services\SessionGatewayPayment;
+use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Session;
 
 class BkashController extends Controller
@@ -64,50 +65,31 @@ class BkashController extends Controller
             'intent' => 'sale',
             'merchantInvoiceNumber' => "Inv".Date('YmdH').rand(1000, 10000),
         ];
-        $requestbodyJson = json_encode($requestbody);
 
-        $header = [
-            'Content-Type:application/json',
-            'Authorization:' . Session::get('bkash_token'),
-            'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY'),
-        ];
+        $result = $this->api('checkout/create', $requestbody, Session::get('bkash_token'));
 
-        $url = curl_init($this->baseUrl().'checkout/create');
-        curl_setopt($url, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url, CURLOPT_POSTFIELDS, $requestbodyJson);
-        curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        $resultdata = curl_exec($url);
+        // The payment callback() may verify: only this one, for this session.
+        Session::put('bkash_payment_id', $result['paymentID'] ?? null);
 
-        return redirect(json_decode($resultdata)->bkashURL);
+        return redirect($result['bkashURL'] ?? route('cart'));
     }
 
     public function getToken(){
-        $request_data = ['app_key'=> env('BKASH_CHECKOUT_APP_KEY'), 'app_secret'=>env('BKASH_CHECKOUT_APP_SECRET')];
-        $request_data_json=json_encode($request_data);
+        $response = Http::timeout(30)
+            ->withHeaders(['username' => env('BKASH_CHECKOUT_USER_NAME'), 'password' => env('BKASH_CHECKOUT_PASSWORD')])
+            ->post($this->baseUrl().'checkout/token/grant', ['app_key' => env('BKASH_CHECKOUT_APP_KEY'), 'app_secret' => env('BKASH_CHECKOUT_APP_SECRET')]);
 
-        $header = [
-                'Content-Type:application/json',
-                'username:'.env('BKASH_CHECKOUT_USER_NAME'),
-                'password:'.env('BKASH_CHECKOUT_PASSWORD'),
-                ];
-
-        $url = curl_init($this->baseUrl().'checkout/token/grant');
-        curl_setopt($url,CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url,CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url,CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url,CURLOPT_POSTFIELDS, $request_data_json);
-        curl_setopt($url,CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-
-        $resultdata = curl_exec($url);
-
-        $token = json_decode($resultdata)->id_token;
-        return $token;
+        return $response->json('id_token');
     }
 
+    /**
+     * bKash sends the customer back here with the payment's id and a status, all
+     * of which the customer controls. The payment must be the one this session
+     * created, and bKash's own execute (or, when that does not answer, its
+     * status query) must report it completed with status code 0000 and for at
+     * least the amount due; a response without a status code is not a success.
+     * Only then is the one-shot flag set that success() requires.
+     */
     public function callback(Request $request)
     {
         $allRequest = $request->all();
@@ -121,101 +103,81 @@ class BkashController extends Controller
                 'errorMessage' => 'Payment Cancelled'
             ]);
 
-        }else{
-
-            $resultdata = $this->execute($allRequest['paymentID']);
-            Session::forget('payment_details');
-            Session::put('payment_details', $resultdata);
-
-            $result_data_array = json_decode($resultdata,true);
-            if(array_key_exists("statusCode",$result_data_array) && $result_data_array['statusCode'] != '0000'){
-                return view('shop.frontend.bkash.fail')->with([
-                    'errorMessage' => $result_data_array['statusMessage'],
-                ]);
-            }else if(array_key_exists("statusMessage",$result_data_array)){
-                // if execute api failed to response
-                sleep(1);
-                $resultdata = $this->query($allRequest['paymentID']);
-
-                if($resultdata['transactionStatus'] == 'Initiated'){
-                    return redirect()->route('bkash.create_payment');
-                }
-            }
-
-            return redirect()->route('bkash.success');
         }
 
+        $paymentID = (string) $request->input('paymentID');
+        $expected = (string) Session::get('bkash_payment_id');
+        $amountDue = app(SessionGatewayPayment::class)->amountDue();
+
+        if ($paymentID === '' || $expected === '' || ! hash_equals($expected, $paymentID) || $amountDue === null) {
+            return view('shop.frontend.bkash.fail')->with(['errorMessage' => 'Payment could not be verified']);
+        }
+
+        $result = $this->execute($paymentID);
+        if (! self::isCompleted($result)) {
+            // execute did not answer with a completed payment: ask bKash for its status
+            Sleep::for(1)->second();
+            $result = $this->query($paymentID);
+        }
+
+        if (! self::isCompleted($result) || ! GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $amountDue)) {
+            return view('shop.frontend.bkash.fail')->with([
+                'errorMessage' => $result['statusMessage'] ?? 'Payment could not be verified',
+            ]);
+        }
+
+        Session::forget('bkash_payment_id');
+        Session::put('bkash_verified_payment', ['payment_id' => $paymentID, 'amount' => (float) $result['amount'], 'details' => json_encode($result)]);
+
+        return redirect()->route('bkash.success');
     }
 
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private static function isCompleted(array $result): bool
+    {
+        return ($result['statusCode'] ?? null) === '0000' && ($result['transactionStatus'] ?? null) === 'Completed';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function execute($paymentID) {
-
-        $auth = Session::get('bkash_token');
-
-        $requestbody = [
-            'paymentID' => $paymentID,
-        ];
-        $requestbodyJson = json_encode($requestbody);
-
-        $header = [
-            'Content-Type:application/json',
-            'Authorization:' . $auth,
-            'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY'),
-        ];
-
-        $url = curl_init($this->baseUrl().'checkout/execute');
-        curl_setopt($url, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url, CURLOPT_POSTFIELDS, $requestbodyJson);
-        curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        $resultdata = curl_exec($url);
-
-        return $resultdata;
+        return $this->api('checkout/execute', ['paymentID' => $paymentID], Session::get('bkash_token'));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function query($paymentID){
-
-        $auth = Session::get('bkash_token');
-
-        $requestbody = [
-            'paymentID' => $paymentID,
-        ];
-        $requestbodyJson = json_encode($requestbody);
-
-        $header = [
-            'Content-Type:application/json',
-            'Authorization:' . $auth,
-            'X-APP-Key:'.env('BKASH_CHECKOUT_APP_KEY'),
-        ];
-
-        $url = curl_init($this->baseUrl().'checkout/payment/status');
-        curl_setopt($url, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url, CURLOPT_POSTFIELDS, $requestbodyJson);
-        curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        $resultdata = curl_exec($url);
-
-        return $resultdata;
+        return $this->api('checkout/payment/status', ['paymentID' => $paymentID], Session::get('bkash_token'));
     }
 
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    private function api(string $path, array $body, ?string $token): array
+    {
+        $response = Http::timeout(30)
+            ->withHeaders(['Authorization' => (string) $token, 'X-APP-Key' => (string) env('BKASH_CHECKOUT_APP_KEY')])
+            ->post($this->baseUrl().$path, $body);
 
+        return is_array($response->json()) ? $response->json() : [];
+    }
+
+    /**
+     * Finishes the payment callback() verified for this session, once: the flag
+     * is taken out of the session as it is read, and without it nothing is paid.
+     */
     public function success(Request $request){
-        $payment_type = Session::get('payment_type');
+        $verified = Session::pull('bkash_verified_payment');
 
-        if ($payment_type == 'cart_payment') {
-            return (new CheckoutController)->checkout_done(Session::get('combined_order_id'), $request->payment_details);
+        if (! is_array($verified) || ! isset($verified['payment_id'], $verified['amount'])) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
-        if ($payment_type == 'wallet_payment') {
-            return (new WalletController)->wallet_payment_done(Session::get('payment_data'), $request->payment_details);
-        }
-        if ($payment_type == 'customer_package_payment') {
-            return (new CustomerPackageController)->purchase_payment_done(Session::get('payment_data'), $request->payment_details);
-        }
-        if($payment_type == 'seller_package_payment') {
-            return (new SellerPackageController)->purchase_payment_done(Session::get('payment_data'), $request->payment_details);
-        }
+
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('bkash', (string) $verified['payment_id'], (float) $verified['amount'], $verified['details'] ?? null));
     }
 }

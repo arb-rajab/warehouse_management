@@ -1,13 +1,12 @@
 <?php
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\SellerPackageController;
-use App\Http\Controllers\WalletController;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
+use App\Services\GatewayPaymentService;
+use App\Services\SessionGatewayPayment;
+use App\Services\VerifiedPayment;
 use App\Utility\NagadUtility;
 use Illuminate\Http\Request;
 use Session;
@@ -90,6 +89,9 @@ class NagadController{
             'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveData)),
         ];
 
+        // The only Nagad order verify() accepts for this session.
+        Session::put('nagad_order_id', $invoice_no);
+
         $ur = $this->nagadHost."api/dfs/check-out/initialize/" . $MerchantID . "/" . $invoice_no;
         $Result_Data = NagadUtility::HttpPostMethod($ur,$PostData);
 
@@ -152,27 +154,38 @@ class NagadController{
 
     }
 
+    /**
+     * Nagad sends the customer back with `payment_ref_id` in the query string,
+     * which used to be cut out of $_SERVER['REQUEST_URI'] by its position, and any
+     * successful payment then paid whatever this session was paying for. Nagad's
+     * server must report the payment successful, for the order this session
+     * created and for at least the amount due, and a payment completes one
+     * payment only.
+     */
     public function verify(Request $request){
-        $Query_String = explode("&", explode("?", $_SERVER['REQUEST_URI'])[1]);
-        $payment_ref_id = substr($Query_String[2], 15);
-        $url = $this->nagadHost."api/dfs/verify/payment/" . $payment_ref_id;
-        $json = NagadUtility::HttpGet($url);
-        if(json_decode($json)->status == 'Success'){
-            $payment_type = Session::get('payment_type');
-            if ($payment_type == 'cart_payment') {
-                return (new CheckoutController)->checkout_done(Session::get('combined_order_id'), $json);
-            }
-            if ($payment_type == 'wallet_payment') {
-                return (new WalletController)->wallet_payment_done(Session::get('payment_data'), $json);
-            }
-            if ($payment_type == 'customer_package_payment') {
-                return (new CustomerPackageController)->purchase_payment_done(Session::get('payment_data'), $json);
-            }
-            if($payment_type == 'seller_package_payment') {
-                return (new SellerPackageController)->purchase_payment_done(Session::get('payment_data'), $json);
-            }
+        $payment_ref_id = (string) $request->input('payment_ref_id');
+        $order_id = (string) Session::get('nagad_order_id');
+        $amountDue = app(SessionGatewayPayment::class)->amountDue();
+
+        if ($payment_ref_id === '' || $order_id === '' || $amountDue === null) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
-        flash(translate('Payment Failed'))->error();
-        return redirect()->route('home');
+
+        $json = NagadUtility::HttpGet($this->nagadHost."api/dfs/verify/payment/" . rawurlencode($payment_ref_id));
+        $result = json_decode((string) $json, true);
+        $isPaid = is_array($result)
+            && ($result['status'] ?? null) === 'Success'
+            && hash_equals($order_id, (string) ($result['orderId'] ?? ''))
+            && hash_equals($payment_ref_id, (string) ($result['paymentRefId'] ?? ''))
+            && GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $amountDue);
+
+        if (! $isPaid) {
+            flash(translate('Payment Failed'))->error();
+            return redirect()->route('home');
+        }
+
+        Session::forget('nagad_order_id');
+
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('nagad', $payment_ref_id, (float) $result['amount'], $json));
     }
 }

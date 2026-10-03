@@ -128,7 +128,7 @@ test('a forged PayHere wallet notification adds nothing to the wallet', function
     $customer = createStoreUser('customer');
     $customer->forceFill(['balance' => 0])->save();
 
-    $_POST = payhereNotification('', ['payhere_amount' => '1000.00', 'custom_1' => (string) $customer->id]);
+    $_POST = payhereNotification('', ['order_id' => 'W'.$customer->id.'-abc', 'payment_id' => 'PH-1', 'payhere_amount' => '1000.00', 'custom_1' => (string) $customer->id]);
 
     try {
         $this->post(route('payhere.wallet.notify'));
@@ -145,7 +145,8 @@ test('a correctly signed PayHere wallet notification credits the wallet once', f
     $customer = createStoreUser('customer');
     $customer->forceFill(['balance' => 0])->save();
 
-    $_POST = payhereNotification('real-secret', ['payhere_amount' => '25.00', 'custom_1' => (string) $customer->id]);
+    // The account is the signed order_id's (W<user id>-…); custom_1 is not signed.
+    $_POST = payhereNotification('real-secret', ['order_id' => 'W'.$customer->id.'-abc', 'payment_id' => 'PH-1', 'payhere_amount' => '25.00', 'custom_1' => '999999']);
 
     try {
         $this->post(route('payhere.wallet.notify'))->assertOk();
