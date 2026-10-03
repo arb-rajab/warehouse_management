@@ -58,9 +58,9 @@ if (!function_exists('areActiveRoutesHome')) {
 if (!function_exists('clean_html')) {
     /**
      * HTML a user wrote (a product or classified description, support-ticket
-     * text), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
-     * Admin-written content (CMS pages, blog posts, settings texts) is trusted
-     * and is printed as it is. See App\Services\HtmlSanitizer.
+     * text) or an admin (CMS pages, blog posts, popup, footer and copyright
+     * texts), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
+     * See App\Services\HtmlSanitizer.
      */
     function clean_html(?string $html): string
     {

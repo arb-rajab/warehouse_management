@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Blog;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -156,10 +157,56 @@ test('the support email prints ticket details without their script', function ()
         ->and($html)->not->toContain('email-xss');
 });
 
+test('the mobile custom page prints an admin\'s page content without its script', function () {
+    $page = new class
+    {
+        public function getTranslation(string $field): string
+        {
+            return $field === 'content' ? '<p>kept page</p><script>alert("page-xss")</script><img src=x onerror=alert("page-onerror")>' : 'A page';
+        }
+    };
+
+    $html = view('shop.frontend.m_custom_page', ['page' => $page])->render();
+
+    expect($html)->toContain('<p>kept page</p>')
+        ->and($html)->not->toContain('page-xss')
+        ->and($html)->not->toContain('page-onerror');
+});
+
+test('a blog post prints its body without its script', function () {
+    Blog::forceCreate([
+        'category_id' => 1, 'title' => 'A post', 'slug' => 'a-post', 'status' => 1, 'created_at' => now(),
+        'description' => '<p>kept post</p><script>alert("post-xss")</script><a href="javascript:alert(\'post-link\')">x</a>',
+    ]);
+
+    $this->get('/temp/blog/a-post')
+        ->assertOk()
+        ->assertSee('kept post', false)
+        ->assertDontSee('post-xss', false)
+        ->assertDontSee('post-link', false);
+});
+
+test('the storefront layout prints the popup, about-us and copyright texts without their script', function () {
+    DB::table('business_settings')->insert([
+        ['type' => 'show_website_popup', 'value' => 'on'],
+        ['type' => 'website_popup_content', 'value' => '<p>kept popup</p><script>alert("popup-xss")</script>'],
+        ['type' => 'about_us_description', 'value' => '<p>kept about</p><img src=x onerror=alert("about-xss")>'],
+        ['type' => 'frontend_copyright_text', 'value' => '<p>kept copyright</p><script>alert("copyright-xss")</script>'],
+    ]);
+
+    $this->get('/temp/users/login')
+        ->assertOk()
+        ->assertSee('kept popup', false)
+        ->assertSee('kept about', false)
+        ->assertSee('kept copyright', false)
+        ->assertDontSee('popup-xss', false)
+        ->assertDontSee('about-xss', false)
+        ->assertDontSee('copyright-xss', false);
+});
+
 test('no view prints user-written text unescaped without clean_html', function () {
-    // Written by an admin, who is trusted with markup: CMS pages, blog posts,
-    // payment-method notes.
-    $adminAuthored = ['shop/frontend/blog/details.blade.php', 'shop/frontend/payment_select.blade.php'];
+    // Written by an admin, who is trusted with markup: payment-method notes.
+    $adminAuthored = ['shop/frontend/payment_select.blade.php'];
     $rawSink = '/(\{!!|@php\s+echo|<\?php\s+echo|<\?=)\s*+(?!clean_html\()[^;}]*?(->details\b|->reply\b|->description\b|getTranslation\(\'description\'\))/';
     $offenders = [];
 

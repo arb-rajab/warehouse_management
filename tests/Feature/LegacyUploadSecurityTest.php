@@ -10,8 +10,8 @@ use Spatie\Permission\Models\Permission;
 
 /**
  * The admin "delete every upload" action was a GET link anyone signed in to the
- * panel could follow (or be tricked into following), and several views printed
- * admin-editable HTML without sanitising it.
+ * panel could follow (or be tricked into following), and the page editor printed
+ * its values unescaped.
  */
 function uploadOwnedBy(int $userId): Upload
 {
@@ -89,19 +89,6 @@ test('a super admin can delete every upload', function () {
             ->and(storedUploadFiles($publicPath))->toBe([]);
     });
 });
-
-test('admin-editable html is sanitised before the views print it unescaped', function (string $view, string $expression) {
-    $contents = file_get_contents(resource_path("views/$view"));
-
-    expect($contents)->toContain('{!! clean_html('.$expression.') !!}')
-        ->and($contents)->not->toContain('{!! '.$expression.' !!}');
-})->with([
-    'blog body' => ['shop/frontend/blog/details.blade.php', '$blog->description'],
-    'custom page body' => ['shop/frontend/m_custom_page.blade.php', "\$page->getTranslation('content')"],
-    'popup content' => ['shop/frontend/layouts/app.blade.php', "get_setting('website_popup_content')"],
-    'footer about us' => ['shop/frontend/inc/footer.blade.php', "get_setting('about_us_description',null,App::getLocale())"],
-    'footer copyright' => ['shop/frontend/inc/footer.blade.php', "get_setting('frontend_copyright_text', null, App::getLocale())"],
-]);
 
 test('the page editor prints its values escaped', function () {
     expect(file_get_contents(resource_path('views/shop/backend/website_settings/pages/edit.blade.php')))->not->toContain('{!!');
