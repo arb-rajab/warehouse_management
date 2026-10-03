@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
+import { ArrowLeft, Download, SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
     exportReports,
@@ -17,6 +17,7 @@ import CellVerificationRoundStatusBadge from '@/components/CellVerificationRound
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
@@ -36,9 +37,7 @@ import {
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
-    filterApplyButtonClass,
     filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -347,24 +346,12 @@ const actionError = computed(
             </form>
 
             <template #footer>
-                <div :class="filterFooterClass">
-                    <button
-                        type="submit"
-                        form="cell-verification-report-filter-form"
-                        :class="filterApplyButtonClass"
-                    >
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationReport.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationReport.filters.clear') }}
-                    </button>
-                </div>
+                <FilterDialogFooter
+                    form-id="cell-verification-report-filter-form"
+                    :apply-label="t('cellVerificationReport.filters.apply')"
+                    :clear-label="t('cellVerificationReport.filters.clear')"
+                    @clear="clearFilters"
+                />
             </template>
         </FilterDialog>
 

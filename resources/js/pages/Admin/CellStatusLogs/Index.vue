@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
+import { SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -11,6 +11,7 @@ import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
@@ -28,9 +29,6 @@ import {
     createdDateRangeExclusivity,
     dateRangeActive,
     exclusivePair,
-    filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -307,24 +305,12 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             </form>
 
             <template #footer>
-                <div :class="filterFooterClass">
-                    <button
-                        type="submit"
-                        form="cell-status-logs-filter-form"
-                        :class="filterApplyButtonClass"
-                    >
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.clear') }}
-                    </button>
-                </div>
+                <FilterDialogFooter
+                    form-id="cell-status-logs-filter-form"
+                    :apply-label="t('cellLog.filters.apply')"
+                    :clear-label="t('cellLog.filters.clear')"
+                    @clear="clearFilters"
+                />
             </template>
         </FilterDialog>
 

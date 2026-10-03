@@ -1876,6 +1876,52 @@ describe('CellMap3D', () => {
             });
         });
 
+        it('disposes a texture that finishes loading after unmount instead of tracking it', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            wrapper.unmount();
+            const texture = loadTexture(1);
+
+            expect(texture.dispose).toHaveBeenCalledTimes(1);
+            expect(texture.colorSpace).toBe('');
+        });
+
+        it('does not dispose a texture that finishes loading while still mounted', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const texture = loadTexture(1);
+
+            expect(texture.dispose).not.toHaveBeenCalled();
+        });
+
         it("swaps a cell's image when its pallet's product changes in place", async () => {
             const bandsWithImage = (productId: number) => [
                 band({
