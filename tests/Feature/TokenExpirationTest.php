@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\DB;
  * after thirty days, on the guards and on the store's token-lookup endpoints,
  * which find a token themselves and so check it themselves.
  */
+// The test app keeps a guard's resolved user between requests, which a real request
+// (a fresh process) does not, so each guard is forgotten before the request that
+// should find the token expired.
 test('tokens expire after thirty days', function () {
     expect(config('sanctum.expiration'))->toBe(60 * 24 * 30);
 });
@@ -19,6 +22,7 @@ test('a warehouse token works until it is thirty days old and not after', functi
     $this->travel(29)->days();
     $this->withToken($token)->getJson('/api/v1/user')->assertOk();
 
+    app('auth')->forgetGuards();
     $this->travel(2)->days();
     $this->withToken($token)->getJson('/api/v1/user')->assertUnauthorized();
 });
@@ -29,6 +33,7 @@ test('a store token works until it is thirty days old and not after', function (
     $this->travel(29)->days();
     $this->withToken($token)->getJson('/temp/api/v2/auth/user')->assertOk();
 
+    app('auth')->forgetGuards();
     $this->travel(2)->days();
     $this->withToken($token)->getJson('/temp/api/v2/auth/user')->assertUnauthorized();
 });

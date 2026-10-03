@@ -97,9 +97,7 @@ class SocialAccounts
      */
     private function providerVerifiedEmail(AbstractUser $social): bool
     {
-        $profile = is_array($social->user) ? $social->user : [];
-
-        return filter_var($profile['email_verified'] ?? $profile['verified_email'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        return filter_var($social->user['email_verified'] ?? $social->user['verified_email'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -108,9 +106,7 @@ class SocialAccounts
      */
     private function sharesEmail(AbstractUser $social): bool
     {
-        $profile = is_array($social->user) ? $social->user : [];
-
-        return ! isset($profile['is_private_email']) && $social->getEmail() !== null;
+        return ! isset($social->user['is_private_email']) && $social->getEmail() !== null;
     }
 
     private function emailBelongsToAnother(AbstractUser $social, StoreUser $user): bool

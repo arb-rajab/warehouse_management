@@ -87,7 +87,7 @@ test('confirm_code verifies the signed-in account with its code, once', function
 
     expect($user->fresh()->email_verified_at)->not->toBeNull();
 
-    $user->forceFill(['email_verified_at' => null])->save();
+    $user->fresh()->forceFill(['email_verified_at' => null])->save();
 
     $this->withToken($token)->postJson('/temp/api/v2/auth/confirm_code', ['verification_code' => $code])
         ->assertOk()->assertJsonPath('result', false);

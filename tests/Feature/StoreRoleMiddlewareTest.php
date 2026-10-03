@@ -114,6 +114,9 @@ test('the app ban gate answers a banned user with a 403 and revokes the token th
 
     expect(DB::table('wms_personal_access_tokens')->count())->toBe(1);
 
+    // A real request is a fresh process; the test app would keep the guard's user.
+    app('auth')->forgetGuards();
+
     $this->withToken($token)->getJson('/temp/api/v2/wallet/history')->assertUnauthorized();
     expect($this->withToken($bystanderToken)->getJson('/temp/api/v2/wallet/history')->status())->not->toBe(403);
 });
