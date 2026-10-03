@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V2\Warehouse;
 
+use App\Models\StoreUser;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -16,8 +17,14 @@ class OrderCollection extends ResourceCollection
      */
     public function toArray($request)
     {
+        // Order::representative() is a conditional relation that an eager load
+        // can't evaluate (it branches on `by_rep` of a blank model), so the
+        // reps of the whole page are fetched once here instead.
+        $repSerials = StoreUser::whereIn('id', $this->collection->where('by_rep', true)->pluck('user_id')->unique()->all())
+            ->pluck('rep_serial', 'id');
+
         return [
-            'data' => $this->collection->map(function($data) {
+            'data' => $this->collection->map(function($data) use ($repSerials) {
                 return [
                     'id'                        =>  $data->id,
                     'code'                      =>  $data->code,
@@ -37,7 +44,7 @@ class OrderCollection extends ResourceCollection
                     'manager_notes'             =>  $data->manager_notes,
                     'delivery_date'             =>  $data->delivery_date,
                     'by_rep'                    =>  $data->by_rep,
-                    'rep_serial'                =>  $data->representative ? $data->representative->rep_serial : null,
+                    'rep_serial'                =>  $data->by_rep ? $repSerials->get($data->user_id) : null,
                     'for_customer'              =>  $data->for_customer,
                     'discount_percent'          =>  $data->discount_percent,
                     'indicator'                 =>  $data->indicator,

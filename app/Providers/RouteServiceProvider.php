@@ -66,8 +66,9 @@ class RouteServiceProvider extends ServiceProvider
 
             // No outer `api` group, matching the legacy app's own
             // mapApiWareHouseRoutes()/mapApiTripRoutes(): each route in these
-            // two files carries its own inline middleware (wms.auth,
-            // auth:store_api, driver). WrapStoreApiResources is this app's own
+            // two files carries its own middleware (routes/shop-api_warehouse.php
+            // one group of throttle:wms + wms.auth, the trip routes auth:store_api
+            // and driver). WrapStoreApiResources is this app's own
             // addition, as above.
             Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_warehouse.php'));
             Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_trip.php'));

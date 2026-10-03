@@ -103,6 +103,10 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($user ? $user::class.':'.$user->getKey() : $request->ip());
         });
+
+        // The warehouse client is one server calling in with a static token, so the
+        // bucket is per IP and sized for a sync that pages through every list.
+        RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
     }
 
     /**

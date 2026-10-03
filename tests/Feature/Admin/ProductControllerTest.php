@@ -1099,6 +1099,18 @@ test('a barcode is required and cannot be blank', function () {
     $this->assertDatabaseCount('wms_product_barcodes', 0);
 });
 
+test('a barcode is checked for uniqueness after trimming surrounding whitespace', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123 ']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 1);
+});
+
 test('a barcode must be unique across every product, not just the one it is being added to', function () {
     actingAsAdmin();
 
@@ -1441,6 +1453,61 @@ test('the product image route never re-serves a store response that is not a ras
     $response->assertStatus(502);
     expect($response->headers->get('Content-Type'))->not->toContain('svg')
         ->and($response->getContent())->not->toBe($svg);
+});
+
+test('the product image route refuses a host that is not allowlisted without calling it', function (string $url) {
+    actingAsAdmin();
+    Http::fake();
+    $product = Product::factory()->imageUrl($url)->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+
+    Http::assertNothingSent();
+})->with([
+    'internal address' => ['https://169.254.169.254/latest/meta-data'],
+    'another host' => ['https://evil.example.org/widgets.png'],
+    'plain http' => ['http://cdn.example.com/widgets.png'],
+    'a custom port' => ['https://cdn.example.com:8443/widgets.png'],
+    'a lookalike host' => ['https://cdn.example.com.evil.org/widgets.png'],
+]);
+
+test('the product image route allows the asset base urls host', function () {
+    actingAsAdmin();
+    config(['store.asset_base_url' => 'https://assets.example.net']);
+    Http::fake(['assets.example.net/*' => Http::response(productImageFixtureBytes(32, 32, 'png'), 200)]);
+    $product = Product::factory()->imageUrl('https://assets.example.net/uploads/widget.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertOk();
+});
+
+test('the product image route does not follow redirects and refuses a redirecting host', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response('', 302, ['Location' => 'http://127.0.0.1/admin'])]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($request) => $request->url() === 'https://cdn.example.com/widgets.png');
+});
+
+test('the product image route refuses an oversized response body', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response(str_repeat('a', 5 * 1024 * 1024 + 1), 200)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+});
+
+test('the product image route refuses an image that declares an enormous canvas', function () {
+    actingAsAdmin();
+    // Rewrites the IHDR width and height (bytes 16-23) of a 1x1 PNG to 20000x20000.
+    $tiny = productImageFixtureBytes(1, 1, 'png');
+    $png = substr($tiny, 0, 16).pack('N2', 20000, 20000).substr($tiny, 24);
+    Http::fake(['cdn.example.com/*' => Http::response($png, 200)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
 });
 
 test('a mobile app user cannot fetch a products image', function () {
