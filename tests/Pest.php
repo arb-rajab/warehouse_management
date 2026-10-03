@@ -15,7 +15,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -118,12 +117,10 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
     $user = StoreUser::create([
         'name' => ucfirst($userType).' Tester',
         'email' => $email ?? $userType.'-'.Str::random(8).'@example.com',
-        'user_type' => $userType,
         'phone' => (string) random_int(1000000000, 9999999999),
     ]);
-    $user->password = Hash::make($password);
-    $user->email_verified_at = now();
-    $user->save();
+    $user->password = $password;
+    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now()])->save();
 
     return $user->fresh();
 }

@@ -58,35 +58,37 @@ class fetchAgents extends Command
                 $email = $user['OSerial'] . env('AGENT_MAIL');
                 $selectedUser = StoreUser::where('rep_id', $user['ID'])->first();
                 if (! $selectedUser) {
-                    $newUser = StoreUser::create([
+                    $newUser = new StoreUser([
                         'name' => $user['Name'],
-                        'user_type' => 'customer',
                         'rep_serial' => $user['OSerial'],
-                        'rep_id' => $user['ID'],
-                        'is_rep' => true,
                         'email' => $email,
                         'country' => "Netherlands",
                         'from_api'  => true,
-                        'email_verified_at' => date('Y-m-d H:m:s'),
                         'password' => Hash::make("123456"),
                         'registration_completed' => true,
-                        'admin_verified' => true,
                         'synched_with_otajer' => true
                     ]);
+                    $newUser->forceFill([
+                        'user_type' => 'customer',
+                        'rep_id' => $user['ID'],
+                        'is_rep' => true,
+                        'email_verified_at' => date('Y-m-d H:m:s'),
+                        'admin_verified' => true,
+                    ])->save();
                     if ($newUser) {
                         $created_accounts++;
                     }
                 }
                 // If the agent exists, update his information in case it has been changed
                 else {
-                    $selectedUser->update([
+                    $selectedUser->forceFill([
                         // 'name' => $user['Name'],
                         'rep_serial' => $user['OSerial'],
                         'rep_id' => $user['ID'],
                         'registration_completed' => true,
                         'admin_verified' => true,
                         'synched_with_otajer' => true
-                    ]);
+                    ])->save();
                     $updated_accounts++;
                 }
             }
