@@ -151,32 +151,6 @@ class AizUploadController extends Controller
         // return $files;
     }
 
-    public function all_file()
-    {
-        $uploads = Upload::all();
-        foreach ($uploads as $upload) {
-            try {
-                if (config('filesystems.default') == 's3') {
-                    Storage::disk('s3')->delete($upload->file_name);
-                    if (file_exists(public_path() . '/' . $upload->file_name)) {
-                        unlink(public_path() . '/' . $upload->file_name);
-                    }
-                } else {
-                    unlink(public_path() . '/' . $upload->file_name);
-                }
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            } catch (\Exception $e) {
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            }
-        }
-
-        Upload::query()->truncate();
-
-        return back();
-    }
-
     //Download project attachment
     public function attachment_download($id)
     {
