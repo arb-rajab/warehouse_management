@@ -264,6 +264,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');
         });
 
+        // The trip forms' lookups: the driver API's own handlers, reached with
+        // the admin's session instead of an app token.
+        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles');
+        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates');
+
         Route::controller(DriverController::class)->group(function() {
             Route::get('/drivers/index', 'index')->name('drivers.index')->middleware('permission:view_all_drivers');
             Route::get('/drivers/create', 'create')->name('drivers.create')->middleware('permission:add_driver');

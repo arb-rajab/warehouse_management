@@ -15,7 +15,7 @@
 
         // Function to fetch coordinates from API
         function fetchCoordinates(id, type = null) {
-            fetch(`/api/get-user-coordinates/${id}?type=${type}`) // Your route URL here
+            fetch(`{{ route('trips.user-coordinates', ['id' => '__ID__']) }}`.replace('__ID__', id) + `?type=${type}`) // Your route URL here
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.latitude && data.longitude) {

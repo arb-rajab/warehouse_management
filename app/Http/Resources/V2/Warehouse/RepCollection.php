@@ -23,7 +23,6 @@ class RepCollection extends ResourceCollection
                     'member_serial'             =>  $data->member_serial,
                     'otajer_id'                 =>  $data->AccSysID,
                     'name'                      =>  $data->name,
-                    'password'                  =>  $data->password,
                     'company_name'              =>  $data->company_name,
                     'email'                     =>  $data->email,
                     'country'                   =>  $data->country,

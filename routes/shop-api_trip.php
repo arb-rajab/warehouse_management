@@ -14,9 +14,9 @@ Route::group(['prefix' => 'v2/trips/', 'middleware' => ['app_language']], functi
         Route::post('update-trip', 'App\Http\Controllers\Api\V2\Trip\DriverController@updateTrip');
         Route::post('assign-trip-by-qr', 'App\Http\Controllers\Api\V2\Trip\DriverController@assignTruckByQrScan');
         Route::get('notifications', 'App\Http\Controllers\Api\V2\Trip\DriverController@assignTripByQrScan');
+        Route::get('get-available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('getAvailableVehicles');
 
     });
-    Route::get('/get-available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('getAvailableVehicles');
 });
 
 Route::group(['prefix' => 'v2/driver/', 'middleware' => ['app_language']], function () {
@@ -26,7 +26,7 @@ Route::group(['prefix' => 'v2/driver/', 'middleware' => ['app_language']], funct
     });
 });
 
-Route::get('/get-user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('test');
+Route::get('/get-user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('test')->middleware(['auth:store_api', 'driver']);
 
 Route::fallback(function () {
     return response()->json([
