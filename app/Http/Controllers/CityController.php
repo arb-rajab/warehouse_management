@@ -34,7 +34,7 @@ class CityController extends Controller implements HasMiddleware
     {
         $sort_city = $request->sort_city;
         $sort_state = $request->sort_state;
-        $cities_queries = City::query();
+        $cities_queries = City::with('state');
         if($request->sort_city) {
             $cities_queries->where('name', 'like', "%$sort_city%");
         }

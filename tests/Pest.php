@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -40,6 +41,12 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+// A test that freezes the clock must not leak it into the next test, including
+// when one of its assertions fails before it gets to reset it itself.
+afterEach(function () {
+    Carbon::setTestNow();
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -504,6 +511,34 @@ function assertInertiaPaginates(
     );
 
     expect($response->inertiaProps("{$prop}.meta.links"))->not->toBeEmpty();
+}
+
+/**
+ * Assert that a listing pages instead of returning every row: page 1 holds
+ * `$perPage` of the `$total` rows, page 2 holds the rest (so `$total` is more
+ * than one page and at most two) and repeats none of page 1, and none of
+ * `$excluded` -- the keys of rows that belong to someone else -- shows on
+ * either page.
+ *
+ * @param  Closure(int): TestResponse  $fetchPage  Requests the given page.
+ * @param  Closure(TestResponse): list<int|string>  $keysOf  Identifies each row of a response.
+ * @param  list<int|string>  $excluded
+ */
+function assertPagesWithoutOverlap(Closure $fetchPage, Closure $keysOf, int $total, int $perPage, array $excluded = []): void
+{
+    $first = $fetchPage(1);
+    $second = $fetchPage(2);
+
+    $first->assertOk();
+    $second->assertOk();
+
+    $firstKeys = $keysOf($first);
+    $secondKeys = $keysOf($second);
+
+    expect($firstKeys)->toHaveCount($perPage)
+        ->and($secondKeys)->toHaveCount($total - $perPage)
+        ->and(array_intersect($firstKeys, $secondKeys))->toBe([])
+        ->and(array_intersect($excluded, [...$firstKeys, ...$secondKeys]))->toBe([]);
 }
 
 /**

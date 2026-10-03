@@ -88,7 +88,7 @@ test('sqlite has no mysql-only auto foreign-key index to touch, and the composit
     expect(tableHasIndexNamed('cell_verification_round_row', 'cell_verification_round_row_cell_verification_round_id_foreign'))->toBeFalse();
     expect(tableHasIndexOnColumns('cells', ['row_id', 'cell_number', 'flat_number']))->toBeTrue();
     expect(tableHasIndexOnColumns('cell_verification_round_row', ['cell_verification_round_id', 'row_id']))->toBeTrue();
-});
+})->skip(fn () => DB::connection()->getDriverName() !== 'sqlite', 'Asserts sqlite behaviour; the MySQL behaviour is covered by the tests around it.');
 
 test('drops an explicit index only once another index actually covers the column, proving the redundancy check works, not just that it is cautious', function () {
     // Simulates what a real duplicate looks like on MySQL: a second index on
