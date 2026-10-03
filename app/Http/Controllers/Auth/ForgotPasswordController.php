@@ -5,15 +5,12 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Models\StoreUser;
+use App\Services\StoreVerificationCodes;
 use App\Utility\SmsUtility;
-use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Password;
 use Mail;
 
 class ForgotPasswordController extends Controller implements HasMiddleware
@@ -66,46 +63,52 @@ class ForgotPasswordController extends Controller implements HasMiddleware
     }
 
     /**
-     * Send a reset link to the given user.
+     * Send a reset code to the given user.
+     *
+     * The answer is the same whether or not an account matches, and when its
+     * last code is still inside the resend cooldown: it used to say "No
+     * account exists with this email" (or phone number), which tells anyone
+     * which addresses are customers.
+     *
+     * The signature is the trait's: laravel/ui's SendsPasswordResetEmails
+     * declares `sendResetLinkEmail(Request $request)`, so the service is
+     * resolved here rather than injected.
      *
      * @param  Request  $request
-     * @return RedirectResponse|JsonResponse
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse
      */
     public function sendResetLinkEmail(Request $request)
     {
-        $phone = "+{$request['country_code']}{$request['phone']}";
+        $codes = app(StoreVerificationCodes::class);
+
         if (filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
             $user = StoreUser::where('email', $request->email)->first();
-            if ($user != null) {
-                $user->verification_code = random_int(100000, 999999);
-                $user->save();
+            $code = $user !== null ? $codes->issueUnlessCoolingDown($user) : null;
 
+            if ($code !== null) {
                 $array['view'] = 'shop.emails.verification';
                 $array['from'] = config('mail.from.address');
                 $array['subject'] = translate('Password Reset');
-                $array['content'] = translate('Verification Code is').': '. $user->verification_code;
+                $array['content'] = translate('Verification Code is').': '.$code;
 
                 Mail::to($user->email)->queue(new SecondEmailVerifyMailManager($array));
+            }
 
-                return view('shop.auth.passwords.reset');
-            }
-            else {
-                flash(translate('No account exists with this email'))->error();
-                return back();
-            }
+            return view('shop.auth.passwords.reset');
         }
-        else{
-            $user = StoreUser::where('phone', $phone)->first();
-            if ($user != null) {
-                $user->verification_code = random_int(100000, 999999);
-                $user->save();
-                SmsUtility::password_reset($user);
-                return view('otp_systems.frontend.auth.passwords.reset_with_phone');
-            }
-            else {
-                flash(translate('No account exists with this phone number'))->error();
-                return back();
-            }
+
+        $user = StoreUser::where('phone', "+{$request['country_code']}{$request['phone']}")->first();
+        $code = $user !== null ? $codes->issueUnlessCoolingDown($user) : null;
+
+        if ($code !== null) {
+            SmsUtility::password_reset($user, $code);
         }
+
+        // Back to the form that asked, with the same notice either way. The
+        // phone-code reset page the SMS add-on supplies is not part of this
+        // app, and the notice must not depend on an account having matched.
+        flash(translate('If an account matches, a code has been sent.'))->info();
+
+        return back();
     }
 }

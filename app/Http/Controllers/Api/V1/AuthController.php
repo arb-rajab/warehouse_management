@@ -15,11 +15,20 @@ class AuthController extends Controller
 {
     use FailsAuthenticationUniformly;
 
+    /**
+     * What a mobile token may do: every /api/v1 route, and nothing a future
+     * token of another kind (an integration, a one-off export) would carry.
+     * No route checks abilities yet, so this names the scope instead of `*`.
+     *
+     * @var list<string>
+     */
+    public const MOBILE_ABILITIES = ['warehouse:use'];
+
     public function login(LoginRequest $request): JsonResponse
     {
         $user = $this->findUserOrFailUniformly($request->input('email'), $request->input('password'));
 
-        $token = $user->createToken('mobile');
+        $token = $user->createToken('mobile', self::MOBILE_ABILITIES);
 
         return response()->json([
             'token' => $token->plainTextToken,

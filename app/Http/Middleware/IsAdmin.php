@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use Auth;
+use App\Http\Middleware\Concerns\RequiresUnbannedStoreUser;
 use Closure;
 use Illuminate\Http\Request;
 
 class IsAdmin
 {
+    use RequiresUnbannedStoreUser;
+
     /**
      * Handle an incoming request.
      *
@@ -17,11 +19,10 @@ class IsAdmin
      */
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && (Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff' || Auth::user()->user_type == 'accountant')) {
+        if ($this->isUnbannedStoreUserOfType($request, 'admin', 'staff', 'accountant')) {
             return $next($request);
         }
-        else{
-            abort(404);
-        }
+
+        abort(404);
     }
 }

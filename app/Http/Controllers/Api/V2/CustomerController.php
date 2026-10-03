@@ -235,7 +235,6 @@ class CustomerController extends Controller
         //$user->tax_number = $request->tax_number;
         //$user->bank_account_number =  $request->bank_account_number;
         $user->country = $request->country;
-        $user->verification_code = random_int(100000, 999999);
         if ($request->register_by == 'email') {
 
             $user->email = $request->email_or_phone;

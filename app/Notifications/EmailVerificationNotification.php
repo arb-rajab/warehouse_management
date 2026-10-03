@@ -15,6 +15,11 @@ class EmailVerificationNotification extends Notification
 {
     use Queueable;
 
+    /**
+     * How long the emailed confirmation link works.
+     */
+    public const LINK_LIFETIME_HOURS = 24;
+
     public function __construct()
     {
     }
@@ -26,13 +31,17 @@ class EmailVerificationNotification extends Notification
 
     public function toMail($notifiable)
     {
-        $notifiable->verification_code = encrypt($notifiable->id);
-        $notifiable->save();
-
         $array['view'] = 'shop.emails.verification';
         $array['subject'] = translate('Account Verification & Terms Agreement');
         $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
-        $array['link'] = route('email.verification.confirmation', $notifiable->verification_code);
+        // Signed and expiring, and bound to the address it was sent to: it
+        // used to carry `users.verification_code`, which never expired and
+        // is the same column the six-digit reset codes went into.
+        $array['link'] = URL::temporarySignedRoute(
+            'email.verification.confirmation',
+            now()->addHours(self::LINK_LIFETIME_HOURS),
+            ['id' => $notifiable->getKey(), 'hash' => sha1((string) $notifiable->email)],
+        );
 
         return (new MailMessage)
             ->view('shop.emails.verification', ['array' => $array])

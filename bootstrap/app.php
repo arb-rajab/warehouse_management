@@ -17,7 +17,6 @@ use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
 use App\Http\Middleware\LogRequestTime;
 use App\Http\Middleware\RaizerSuperAdmin;
-use App\Http\Middleware\RateLimitMiddleware;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\StoreInertiaPreviousUrl;
@@ -114,7 +113,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'RaizerSuperAdmin' => RaizerSuperAdmin::class,
             'wms.auth' => WmsAuthMiddleware::class,
             'log.request.time' => LogRequestTime::class,
-            'rate.limit' => RateLimitMiddleware::class,
             'driver' => IsDriver::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,

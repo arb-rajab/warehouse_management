@@ -92,7 +92,7 @@ Route::controller(LoginController::class)->group(function () {
 
 Route::controller(RegisterController::class)->group(function () {
     Route::get('/register', 'showRegistrationForm')->name('register');
-    Route::post('/register', 'register');
+    Route::post('/register', 'register')->middleware('throttle:store-auth');
 });
 
 Route::controller(ForgotPasswordController::class)->group(function () {
@@ -111,7 +111,7 @@ Route::controller(VerificationController::class)->group(function () {
     Route::get('/email/verify', 'show')->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', 'verify')->name('verification.verify');
     Route::match(['get', 'post'], '/email/resend', 'resend')->name('verification.resend');
-    Route::get('/verification-confirmation/{code}', 'verification_confirmation')->name('email.verification.confirmation');
+    Route::get('/verification-confirmation/{id}', 'verification_confirmation')->name('email.verification.confirmation')->whereNumber('id')->middleware('throttle:store-auth');
 });
 
 

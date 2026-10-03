@@ -210,6 +210,14 @@ function storeApiToken(StoreUser $user): string
 }
 
 /**
+ * A six-digit code that is not `$code`.
+ */
+function wrongCode(string $code): string
+{
+    return $code === '100000' ? '100001' : '100000';
+}
+
+/**
  * A store admin with the store's `Super Admin` role, which
  * AuthServiceProvider's Gate::before() grants every ability.
  */

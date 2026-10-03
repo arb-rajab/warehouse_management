@@ -3,60 +3,43 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\OTPVerificationController;
-use App\Models\PasswordReset;
 use App\Models\StoreUser;
 use App\Notifications\AppEmailVerificationNotification;
-use App\Notifications\PasswordResetRequest;
+use App\Services\StoreVerificationCodes;
 use Hash;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-
-use Illuminate\Validation\ValidationException;
 
 class PasswordResetController extends Controller
 {
+    public function __construct(private readonly StoreVerificationCodes $codes)
+    {
+    }
+
+    /**
+     * Sends the account a reset code, if there is one.
+     *
+     * The answer never says whether an account matched, nor whether a code
+     * was held back because the last one is still inside the resend cooldown
+     * (StoreVerificationCodes): it used to be a 404 "User is not found".
+     */
     public function forgetRequest(Request $request)
     {
-        if ($request->send_code_by == 'email') {
-            $user = StoreUser::where('email', $request->email_or_phone)->first();
-        } else {
-            $user = StoreUser::where('phone', $request->email_or_phone)->first();
-        }
-
-
-        if (!$user) {
-            return response()->json([
-                'result' => false,
-                'message' => translate('User is not found')], 404);
-        }
-
-        if ($user) {
-            $user->verification_code = random_int(100000, 999999);
-            $user->save();
-            if ($request->send_code_by == 'phone') {
-
-                $otpController = new OTPVerificationController();
-                $otpController->send_code($user);
-            } else {
-                $user->notify(new AppEmailVerificationNotification());
-            }
-        }
-
-        return response()->json([
-            'result' => true,
-            'message' => translate('A code is sent')
-        ], 200);
+        return $this->sendCode($request->send_code_by, $request->email_or_phone, translate('A code is sent'));
     }
 
     /**
      * Resets the password of the account `email_or_phone` names, if
-     * `verification_code` is the code it was sent.
+     * `verification_code` is the live code it was sent.
      *
      * The account used to be looked up by the code alone, so a guessed code
      * reset the password of whichever user held it at that moment, a
-     * registration code included. It now has to match the named account, and
-     * the route is throttled per account (`store-auth`).
+     * registration code included. It has to match the named account, is
+     * checked as a hash, expires, is used up after a few wrong tries or one
+     * right one, and the route is throttled per account (`store-auth`). The
+     * new password is validated before the account is looked up, so a 422 says
+     * nothing about whether the account exists.
      */
     public function confirmReset(Request $request)
     {
@@ -72,68 +55,64 @@ class PasswordResetController extends Controller
             ], 422);
         }
 
-        $user = StoreUser::where(str_contains($identifier, '@') ? 'email' : 'phone', $identifier)
-            ->where('verification_code', $code)
-            ->first();
+        $validatedData = Validator::make($request->all(), [
+            'password' => 'required|string|min:6|max:255',
+        ]);
 
-        if ($user != null) {
-            $validatedData = Validator::make($request->all(), [
-                    'password' => 'required|string|min:6',
-                ]);
-            if ($validatedData->fails()) {
-                return response()->json([
-                    'result' => false,
-                    'message' => translate('Validation Error'),
-                    'errors' => $validatedData->errors(),
-                    'user_id' => 0
-                ], 422);
-            }
-            $user->verification_code = null;
-            $user->password = Hash::make($request->password);
-            $user->save();
-            return response()->json([
-                'result' => true,
-                'message' => translate('Your password is reset.Please login'),
-            ], 200);
-        } else {
+        if ($validatedData->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => translate('No user is found'),
+                'message' => translate('Validation Error'),
+                'errors' => $validatedData->errors(),
+                'user_id' => 0
+            ], 422);
+        }
+
+        $user = StoreUser::where(str_contains($identifier, '@') ? 'email' : 'phone', $identifier)->first();
+
+        if ($user === null || ! $this->codes->consume($user, $code)) {
+            return response()->json([
+                'result' => false,
+                'message' => translate('The code is invalid or has expired'),
             ], 404);
         }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'result' => true,
+            'message' => translate('Your password is reset.Please login'),
+        ], 200);
     }
 
     public function resendCode(Request $request)
     {
+        return $this->sendCode($request->verify_by, $request->email_or_phone, translate('A code is sent again'));
+    }
 
-        if ($request->verify_by == 'email') {
-            $user = StoreUser::where('email', $request->email_or_phone)->first();
-        } else {
-            $user = StoreUser::where('phone', $request->email_or_phone)->first();
+    private function sendCode(?string $by, mixed $identifier, string $message): JsonResponse
+    {
+        $identifier = trim((string) $identifier);
+        $user = null;
+
+        if ($identifier !== '') {
+            $user = StoreUser::where($by == 'email' ? 'email' : 'phone', $identifier)->first();
         }
 
+        $code = $user !== null ? $this->codes->issueUnlessCoolingDown($user) : null;
 
-        if (!$user) {
-            return response()->json([
-                'result' => false,
-                'message' => translate('User is not found')], 404);
+        if ($code !== null) {
+            if ($by == 'email') {
+                $user->notify(new AppEmailVerificationNotification($code));
+            } else {
+                (new OTPVerificationController())->send_code($user, $code);
+            }
         }
-
-        $user->verification_code = random_int(100000, 999999);
-        $user->save();
-
-        if ($request->verify_by == 'email') {
-            $user->notify(new AppEmailVerificationNotification());
-        } else {
-            $otpController = new OTPVerificationController();
-            $otpController->send_code($user);
-        }
-
-
 
         return response()->json([
             'result' => true,
-            'message' => translate('A code is sent again'),
+            'message' => $message,
         ], 200);
     }
 }

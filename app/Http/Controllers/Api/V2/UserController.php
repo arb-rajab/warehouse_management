@@ -44,8 +44,8 @@ class UserController extends Controller
 
 
 
-        $token = PersonalAccessToken::findToken($request->access_token);
-        if (!$token) {
+        $token = PersonalAccessToken::findToken((string) $request->access_token);
+        if (!$token || $token->isExpired()) {
             return response()->json($false_response);
         }
 
