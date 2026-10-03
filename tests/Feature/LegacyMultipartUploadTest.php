@@ -179,7 +179,7 @@ test('a file whose content is not what its extension claims is refused', functio
     $customer = createStoreUser('customer');
 
     withScratchPublicPath(function (string $publicPath) use ($customer) {
-        foreach (['clip.mp4' => tinyPng(), 'song.mp3' => tinyPng(), 'bundle.zip' => 'not an archive'] as $name => $contents) {
+        foreach (['clip.mp4' => tinyPng(), 'song.mp3' => tinyPng(), 'bundle.zip' => 'not an archive', 'invoice.pdf' => 'not a pdf', 'notes.txt' => tinyPng(), 'prices.csv' => "PK\x03\x04binary"] as $name => $contents) {
             expect(app(MultipartUploadService::class)->store(uploadedFile($name, $contents), $customer->id))->toBeNull();
         }
 
@@ -199,3 +199,20 @@ test('a file over the size limit is refused before it is read', function () {
             ->and(Upload::count())->toBe(0);
     });
 });
+
+test('a pdf, a text file and a csv that hold what they claim to they claim are kept', function (string $filename, string $contents, string $extension) {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $contents, $extension) {
+        $upload = app(MultipartUploadService::class)->store(uploadedFile($filename, $contents), $customer->id);
+
+        expect($upload)->not->toBeNull()
+            ->and($upload->extension)->toBe($extension)
+            ->and($upload->type)->toBe('document')
+            ->and(storedUploadFiles($publicPath))->toHaveCount(1);
+    });
+})->with([
+    'a pdf' => ['cmr.pdf', "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n", 'pdf'],
+    'a text file' => ['notes.txt', "Delivery note\nGate 4\n", 'txt'],
+    'a csv' => ['prices.csv', "sku,price\nA1,10\n", 'csv'],
+]);

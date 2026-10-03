@@ -85,7 +85,7 @@ class MultipartUploadService
 
         $type = $extension === 'svg' ? 'image' : $kind;
 
-        if ($extension === null || ! $this->mimeTypeMatchesKind($mimeType, $type)) {
+        if ($extension === null || ! $this->mimeTypeMatchesKind($mimeType, $type, $extension)) {
             return null;
         }
 
@@ -116,14 +116,29 @@ class MultipartUploadService
         return $guessed === 'svg' ? 'svg' : $clientExtension;
     }
 
-    private function mimeTypeMatchesKind(string $mimeType, string $kind): bool
+    private function mimeTypeMatchesKind(string $mimeType, string $kind, string $extension): bool
     {
         return match ($kind) {
             'image' => str_starts_with($mimeType, 'image/'),
             'video', 'audio' => str_starts_with($mimeType, 'video/') || str_starts_with($mimeType, 'audio/') || $mimeType === 'application/ogg',
             'archive' => in_array($mimeType, ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'], true),
-            'document' => str_starts_with($mimeType, 'text/') || str_starts_with($mimeType, 'application/'),
+            'document' => $this->documentMimeTypeMatches($mimeType, $extension),
             default => false,
+        };
+    }
+
+    /**
+     * A PDF must be one and a text file must be text. The office formats keep
+     * the broad check: `finfo` reports OOXML and OLE files as zip, CDFV2 or
+     * octet-stream depending on the file, and a spreadsheet export that is
+     * really CSV or HTML is common, so a stricter list would refuse real files.
+     */
+    private function documentMimeTypeMatches(string $mimeType, string $extension): bool
+    {
+        return match ($extension) {
+            'pdf' => $mimeType === 'application/pdf',
+            'txt', 'csv' => str_starts_with($mimeType, 'text/') || in_array($mimeType, ['application/csv', 'application/json', 'application/x-empty'], true),
+            default => str_starts_with($mimeType, 'text/') || str_starts_with($mimeType, 'application/'),
         };
     }
 
