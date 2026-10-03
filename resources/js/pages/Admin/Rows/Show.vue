@@ -17,6 +17,7 @@ import {
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
     CellMapRow,
@@ -96,8 +97,7 @@ function firstHighlightMatchLabel(): string | null {
     return null;
 }
 
-const pulsingLabel = ref<string | null>(null);
-let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+const { pulsingLabel, pulse } = usePulse();
 
 /**
  * Scrolls the given slot into view and briefly pulses it — this page has no
@@ -107,17 +107,12 @@ let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
  * verification-report row linking to the exact cell it refers to).
  */
 function pulseAndScrollTo(label: string): void {
-    pulsingLabel.value = label;
+    pulse(label);
     document.querySelector(`[data-slot-label="${label}"]`)?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'nearest',
     });
-
-    clearTimeout(pulseTimeout);
-    pulseTimeout = setTimeout(() => {
-        pulsingLabel.value = null;
-    }, 1500);
 }
 
 /**

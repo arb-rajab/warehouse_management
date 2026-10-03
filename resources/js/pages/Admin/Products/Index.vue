@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Barcode, Check, Plus, SlidersHorizontal, X } from '@lucide/vue';
+import { Barcode, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -13,11 +13,13 @@ import {
     updateBoxCount,
     updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
@@ -25,6 +27,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
@@ -34,8 +37,6 @@ import {
     dateRangeActive,
     fieldLabelClass,
     filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -214,6 +215,35 @@ function occupancyHref(
     });
 }
 
+/**
+ * One in-flight mutation / error message shared by the box-count,
+ * minimum-pallets and barcodes dialogs — only one of them is ever open, so a
+ * single pair serves all three. Dialogs close (or clear their draft) only in
+ * `onSuccess`, so a failed request leaves the input in place with the
+ * server's message beside it instead of discarding the user's edit.
+ */
+const mutationProcessing = ref(false);
+const mutationError = ref('');
+
+function mutationOptions(onSuccess: () => void) {
+    return {
+        preserveScroll: true,
+        preserveState: true,
+        onStart: () => {
+            mutationProcessing.value = true;
+            mutationError.value = '';
+        },
+        onSuccess,
+        onError: (errors: Record<string, string>) => {
+            mutationError.value =
+                Object.values(errors)[0] ?? t('products.saveFailed');
+        },
+        onFinish: () => {
+            mutationProcessing.value = false;
+        },
+    };
+}
+
 const boxCountDialogProduct = ref<ProductSummary | null>(null);
 const boxCountDraft = ref('');
 
@@ -231,6 +261,7 @@ const boxCountDialogOpen = computed({
 });
 
 function openBoxCountDialog(product: ProductSummary): void {
+    mutationError.value = '';
     boxCountDraft.value = String(product.boxes_count);
     boxCountDialogProduct.value = product;
 }
@@ -244,22 +275,29 @@ function openBoxCountDialog(product: ProductSummary): void {
 function submitBoxCount(): void {
     const product = boxCountDialogProduct.value;
 
-    if (product === null || boxCountDraft.value === '') {
+    if (product === null) {
         return;
     }
 
     const boxesCount = Number(boxCountDraft.value);
 
-    if (!Number.isInteger(boxesCount) || boxesCount < 1) {
+    if (
+        boxCountDraft.value === '' ||
+        !Number.isInteger(boxesCount) ||
+        boxesCount < 1
+    ) {
+        mutationError.value = t('products.invalidCount');
+
         return;
     }
 
     router.patch(
         updateBoxCount(product.id, { mergeQuery: {} }).url,
         { boxes_count: boxesCount },
-        { preserveScroll: true, preserveState: true },
+        mutationOptions(() => {
+            boxCountDialogProduct.value = null;
+        }),
     );
-    boxCountDialogProduct.value = null;
 }
 
 const minimumPalletsDialogProduct = ref<ProductSummary | null>(null);
@@ -279,6 +317,7 @@ const minimumPalletsDialogOpen = computed({
 });
 
 function openMinimumPalletsDialog(product: ProductSummary): void {
+    mutationError.value = '';
     minimumPalletsDraft.value =
         product.minimum_pallets === null ? '' : String(product.minimum_pallets);
     minimumPalletsDialogProduct.value = product;
@@ -298,29 +337,27 @@ function submitMinimumPallets(): void {
         return;
     }
 
-    if (minimumPalletsDraft.value === '') {
-        router.patch(
-            updateMinimumPallets(product.id, { mergeQuery: {} }).url,
-            { minimum_pallets: null },
-            { preserveScroll: true, preserveState: true },
-        );
-        minimumPalletsDialogProduct.value = null;
+    const minimumPallets =
+        minimumPalletsDraft.value === ''
+            ? null
+            : Number(minimumPalletsDraft.value);
 
-        return;
-    }
+    if (
+        minimumPallets !== null &&
+        (!Number.isInteger(minimumPallets) || minimumPallets < 1)
+    ) {
+        mutationError.value = t('products.invalidCount');
 
-    const minimumPallets = Number(minimumPalletsDraft.value);
-
-    if (!Number.isInteger(minimumPallets) || minimumPallets < 1) {
         return;
     }
 
     router.patch(
         updateMinimumPallets(product.id, { mergeQuery: {} }).url,
         { minimum_pallets: minimumPallets },
-        { preserveScroll: true, preserveState: true },
+        mutationOptions(() => {
+            minimumPalletsDialogProduct.value = null;
+        }),
     );
-    minimumPalletsDialogProduct.value = null;
 }
 
 function isLowStock(product: ProductSummary): boolean {
@@ -347,6 +384,7 @@ const barcodesDialogOpen = computed({
 });
 
 function openBarcodesDialog(product: ProductSummary): void {
+    mutationError.value = '';
     newBarcodeDraft.value = '';
     barcodesDialogProduct.value = product;
 }
@@ -373,13 +411,11 @@ function submitNewBarcode(): void {
     router.post(
         addBarcode(product.id, { mergeQuery: {} }).url,
         { barcode },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => refreshBarcodesDialogProduct(product.id),
-        },
+        mutationOptions(() => {
+            newBarcodeDraft.value = '';
+            refreshBarcodesDialogProduct(product.id);
+        }),
     );
-    newBarcodeDraft.value = '';
 }
 
 function removeProductBarcode(barcode: ProductBarcode): void {
@@ -394,11 +430,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             { product: product.id, barcode: barcode.id },
             { mergeQuery: {} },
         ),
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => refreshBarcodesDialogProduct(product.id),
-        },
+        mutationOptions(() => refreshBarcodesDialogProduct(product.id)),
     );
 }
 </script>
@@ -435,7 +467,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellLog.filters.title') }}
+                    {{ t('products.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -445,8 +477,8 @@ function removeProductBarcode(barcode: ProductBarcode): void {
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellLog.filters.title')"
-            :close-label="t('cellLog.filters.close')"
+            :title="t('products.filters.title')"
+            :close-label="t('products.filters.close')"
         >
             <form
                 id="products-filter-form"
@@ -511,24 +543,12 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             </form>
 
             <template #footer>
-                <div :class="filterFooterClass">
-                    <button
-                        type="submit"
-                        form="products-filter-form"
-                        :class="filterApplyButtonClass"
-                    >
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.clear') }}
-                    </button>
-                </div>
+                <FilterDialogFooter
+                    form-id="products-filter-form"
+                    :apply-label="t('cellLog.filters.apply')"
+                    :clear-label="t('cellLog.filters.clear')"
+                    @clear="clearFilters"
+                />
             </template>
         </FilterDialog>
 
@@ -542,6 +562,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                 class="space-y-4"
                 @submit.prevent="submitBoxCount"
             >
+                <ActionErrorBanner :message="mutationError" />
                 <FilterNumberField
                     id="products-box-count"
                     v-model="boxCountDraft"
@@ -559,14 +580,12 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             </form>
 
             <template #footer>
-                <button
-                    type="submit"
+                <SubmitButton
                     form="products-box-count-form"
-                    :class="filterApplyButtonClass"
-                >
-                    <Check class="h-4 w-4 shrink-0" />
-                    {{ t('expiringWindow.apply') }}
-                </button>
+                    :label="t('expiringWindow.apply')"
+                    :processing-label="t('products.saving')"
+                    :processing="mutationProcessing"
+                />
             </template>
         </FilterDialog>
 
@@ -580,6 +599,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                 class="space-y-4"
                 @submit.prevent="submitMinimumPallets"
             >
+                <ActionErrorBanner :message="mutationError" />
                 <FilterNumberField
                     id="products-minimum-pallets"
                     v-model="minimumPalletsDraft"
@@ -598,14 +618,12 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             </form>
 
             <template #footer>
-                <button
-                    type="submit"
+                <SubmitButton
                     form="products-minimum-pallets-form"
-                    :class="filterApplyButtonClass"
-                >
-                    <Check class="h-4 w-4 shrink-0" />
-                    {{ t('expiringWindow.apply') }}
-                </button>
+                    :label="t('expiringWindow.apply')"
+                    :processing-label="t('products.saving')"
+                    :processing="mutationProcessing"
+                />
             </template>
         </FilterDialog>
 
@@ -614,6 +632,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             :title="t('products.columns.barcodes')"
             :close-label="t('cellLog.filters.close')"
         >
+            <ActionErrorBanner :message="mutationError" />
             <form
                 id="products-add-barcode-form"
                 class="flex items-end gap-2"
@@ -640,7 +659,11 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
                     />
                 </div>
-                <button type="submit" :class="filterApplyButtonClass">
+                <button
+                    type="submit"
+                    :disabled="mutationProcessing"
+                    :class="filterApplyButtonClass"
+                >
                     <Plus class="h-4 w-4 shrink-0" />
                     {{ t('products.addBarcode') }}
                 </button>
@@ -669,7 +692,8 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                                 barcode: barcode.barcode,
                             })
                         "
-                        class="text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        :disabled="mutationProcessing"
+                        class="text-gray-400 hover:text-red-600 disabled:opacity-50 dark:text-neutral-500 dark:hover:text-red-400"
                         @click="removeProductBarcode(barcode)"
                     >
                         <X class="h-4 w-4" />

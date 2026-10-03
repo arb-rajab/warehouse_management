@@ -61,6 +61,7 @@ import {
     viewportTransform,
     zoomToFit,
 } from '@/lib/mapViewport';
+import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
     CellHighlightSample,
@@ -591,8 +592,7 @@ function toggleCameraMode(): void {
     );
 }
 
-const pulsingLabel = ref<string | null>(null);
-let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+const { pulsingLabel, pulse } = usePulse();
 
 /**
  * Every flat's cells, reshaped for the 3D view (CellMap3D.vue), which renders
@@ -655,18 +655,13 @@ function pulseAndCenterLabel(
     cellNumber: number,
     flatNumber: number,
 ): void {
-    pulsingLabel.value = label;
+    pulse(label);
 
     if (viewMode.value === '3d') {
         map3DRef.value?.focusCell(rowLetter, cellNumber, flatNumber);
     } else {
         centerLabelInViewport(label);
     }
-
-    clearTimeout(pulseTimeout);
-    pulseTimeout = setTimeout(() => {
-        pulsingLabel.value = null;
-    }, 1500);
 }
 
 function centerLabelInViewport(label: string): void {
@@ -889,6 +884,11 @@ watch(
         <template v-else>
             <div
                 data-testid="map-section"
+                :role="isMapFullscreen ? 'dialog' : undefined"
+                :aria-modal="isMapFullscreen ? 'true' : undefined"
+                :aria-label="
+                    isMapFullscreen ? t('cells.map.fullscreen') : undefined
+                "
                 :class="
                     isMapFullscreen
                         ? 'fixed inset-0 z-50 flex flex-col overflow-auto bg-white p-4 dark:bg-neutral-950'

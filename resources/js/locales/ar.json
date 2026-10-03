@@ -13,7 +13,8 @@
         "confirmLogout": "هل تريد تسجيل الخروج من حسابك؟",
         "openMenu": "فتح القائمة",
         "closeMenu": "إغلاق القائمة",
-        "account": "الحساب"
+        "account": "الحساب",
+        "skipToContent": "تخطَّ إلى المحتوى الرئيسي"
     },
     "language": {
         "label": "اللغة",
@@ -504,6 +505,8 @@
             "placeholder": "ابحث عن منتج…"
         },
         "filters": {
+            "title": "الفلاتر",
+            "close": "إغلاق الفلاتر",
             "sections": {
                 "occupancy": "الإشغال"
             },
@@ -530,7 +533,10 @@
         "removeBarcode": "إزالة الباركود {barcode}",
         "noBarcodes": "لم تتم إضافة أي باركود بعد.",
         "exportQrLabel": "تصدير الباركود لـ {product}",
-        "empty": "لا توجد منتجات بعد."
+        "empty": "لا توجد منتجات بعد.",
+        "saving": "جارٍ الحفظ…",
+        "invalidCount": "أدخل عددًا صحيحًا لا يقل عن 1.",
+        "saveFailed": "تعذّر الحفظ. حاول مرة أخرى."
     },
     "pallets": {
         "title": "المنصات المطابقة",

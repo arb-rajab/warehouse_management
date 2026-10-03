@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
+import { SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
     index as cellVerificationRoundsIndex,
@@ -13,6 +13,7 @@ import CellVerificationRoundStatusBadge from '@/components/CellVerificationRound
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
@@ -26,9 +27,6 @@ import {
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
-    filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -222,24 +220,12 @@ function onPerPageChange(perPage: number): void {
             </form>
 
             <template #footer>
-                <div :class="filterFooterClass">
-                    <button
-                        type="submit"
-                        form="cell-verification-rounds-filter-form"
-                        :class="filterApplyButtonClass"
-                    >
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationRound.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationRound.filters.clear') }}
-                    </button>
-                </div>
+                <FilterDialogFooter
+                    form-id="cell-verification-rounds-filter-form"
+                    :apply-label="t('cellVerificationRound.filters.apply')"
+                    :clear-label="t('cellVerificationRound.filters.clear')"
+                    @clear="clearFilters"
+                />
             </template>
         </FilterDialog>
 

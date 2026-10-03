@@ -1,6 +1,7 @@
 import { CircleUser, Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { t } from '@/lib/i18n';
 import AdminLayout from './AdminLayout.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -224,6 +225,14 @@ describe('AdminLayout', () => {
 
         expect(wrapper.text()).toContain('English');
         expect(wrapper.text()).toContain('Arabic');
+    });
+
+    it('renders a skip link that targets the main landmark', () => {
+        const wrapper = mountLayout('/admin/rows');
+        const skipLink = wrapper.get('a[href="#main"]');
+
+        expect(skipLink.text()).toBe(t('nav.skipToContent'));
+        expect(wrapper.get('main').attributes('id')).toBe('main');
     });
 
     it('renders the default slot content inside main', () => {

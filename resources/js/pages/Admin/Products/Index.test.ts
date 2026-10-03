@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/vue3';
 import { Barcode, Check, Filter, X } from '@lucide/vue';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -112,7 +112,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) => button.text().includes(t('cellLog.filters.title')));
+        .find((button) => button.text().includes(t('products.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -324,7 +324,7 @@ describe('Products Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellLog.filters.title'),
+            t('products.filters.title'),
         );
         expect(wrapper.find('#filter-product').exists()).toBe(true);
     });
@@ -362,7 +362,7 @@ describe('Products Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('products.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -377,7 +377,7 @@ describe('Products Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('products.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -534,7 +534,10 @@ describe('Products Index', () => {
         expect(routerPatchMock).toHaveBeenCalledWith(
             '/admin/products/42/box-count?state=full&per_page=20',
             { boxes_count: 30 },
-            { preserveScroll: true, preserveState: true },
+            expect.objectContaining({
+                preserveScroll: true,
+                preserveState: true,
+            }),
         );
 
         window.history.pushState({}, '', '/');
@@ -613,7 +616,10 @@ describe('Products Index', () => {
         expect(routerPatchMock).toHaveBeenCalledWith(
             '/admin/products/42/minimum-pallets?state=full&per_page=20',
             { minimum_pallets: 10 },
-            { preserveScroll: true, preserveState: true },
+            expect.objectContaining({
+                preserveScroll: true,
+                preserveState: true,
+            }),
         );
 
         window.history.pushState({}, '', '/');
@@ -629,7 +635,10 @@ describe('Products Index', () => {
         expect(routerPatchMock).toHaveBeenCalledWith(
             '/admin/products/42/minimum-pallets',
             { minimum_pallets: null },
-            { preserveScroll: true, preserveState: true },
+            expect.objectContaining({
+                preserveScroll: true,
+                preserveState: true,
+            }),
         );
     });
 
@@ -774,6 +783,262 @@ describe('Products Index', () => {
         );
 
         window.history.pushState({}, '', '/');
+    });
+
+    describe('save feedback', () => {
+        type PatchOptions = {
+            onStart?: () => void;
+            onSuccess?: () => void;
+            onError?: (errors: Record<string, string>) => void;
+            onFinish?: () => void;
+        };
+
+        function failPatchWith(errors: Record<string, string>): void {
+            routerPatchMock.mockImplementation(
+                (_url: string, _data: unknown, options: PatchOptions) => {
+                    options.onStart?.();
+                    options.onError?.(errors);
+                    options.onFinish?.();
+                },
+            );
+        }
+
+        it('keeps the box-count dialog open with the server error when the save fails', async () => {
+            failPatchWith({ boxes_count: 'The boxes count is too large.' });
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+            await wrapper.get('#products-box-count').setValue('99999');
+            await wrapper.get('form').trigger('submit');
+
+            expect(wrapper.find('#products-box-count').exists()).toBe(true);
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                'The boxes count is too large.',
+            );
+            expect(
+                (wrapper.get('#products-box-count').element as HTMLInputElement)
+                    .value,
+            ).toBe('99999');
+        });
+
+        it('closes the box-count dialog only once the save succeeds', async () => {
+            let options: PatchOptions = {};
+            routerPatchMock.mockImplementation(
+                (_url: string, _data: unknown, given: PatchOptions) => {
+                    options = given;
+                    given.onStart?.();
+                },
+            );
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+            await wrapper.get('#products-box-count').setValue('30');
+            await wrapper.get('form').trigger('submit');
+
+            expect(wrapper.find('#products-box-count').exists()).toBe(true);
+
+            options.onSuccess?.();
+            options.onFinish?.();
+            await flushPromises();
+
+            expect(wrapper.find('#products-box-count').exists()).toBe(false);
+        });
+
+        it('disables the box-count submit button while the save is in flight', async () => {
+            routerPatchMock.mockImplementation(
+                (_url: string, _data: unknown, options: PatchOptions) =>
+                    options.onStart?.(),
+            );
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+            await wrapper.get('#products-box-count').setValue('30');
+            await wrapper.get('form').trigger('submit');
+
+            const submit = wrapper.get(
+                'button[form="products-box-count-form"]',
+            );
+            expect(submit.attributes('disabled')).toBeDefined();
+            expect(submit.text()).toBe(t('products.saving'));
+        });
+
+        it('shows an inline message for an invalid box count instead of failing silently', async () => {
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+            await wrapper.get('#products-box-count').setValue('0');
+            await wrapper.get('form').trigger('submit');
+
+            expect(routerPatchMock).not.toHaveBeenCalled();
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                t('products.invalidCount'),
+            );
+        });
+
+        it('keeps the minimum-pallets dialog open with the server error when the save fails', async () => {
+            failPatchWith({ minimum_pallets: 'Must be at most 500.' });
+            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+            await rowCells(wrapper)[2].get('button').trigger('click');
+            await wrapper.get('#products-minimum-pallets').setValue('900');
+            await wrapper.get('form').trigger('submit');
+
+            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
+                true,
+            );
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                'Must be at most 500.',
+            );
+        });
+
+        it('keeps the minimum-pallets dialog open when clearing the threshold fails', async () => {
+            failPatchWith({ minimum_pallets: 'Could not clear.' });
+            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+            await rowCells(wrapper)[2].get('button').trigger('click');
+            await wrapper.get('#products-minimum-pallets').setValue('');
+            await wrapper.get('form').trigger('submit');
+
+            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
+                true,
+            );
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                'Could not clear.',
+            );
+        });
+
+        it('shows an inline message for an invalid minimum-pallets threshold', async () => {
+            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+            await rowCells(wrapper)[2].get('button').trigger('click');
+            await wrapper.get('#products-minimum-pallets').setValue('0');
+            await wrapper.get('form').trigger('submit');
+
+            expect(routerPatchMock).not.toHaveBeenCalled();
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                t('products.invalidCount'),
+            );
+        });
+
+        it('keeps the typed barcode and shows the server error when adding fails', async () => {
+            routerPostMock.mockImplementation(
+                (_url: string, _data: unknown, options: PatchOptions) => {
+                    options.onStart?.();
+                    options.onError?.({ barcode: 'Barcode already taken.' });
+                    options.onFinish?.();
+                },
+            );
+            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+            await wrapper
+                .get('#products-new-barcode')
+                .setValue('1234567890123');
+            await wrapper.get('#products-add-barcode-form').trigger('submit');
+
+            expect(
+                (
+                    wrapper.get('#products-new-barcode')
+                        .element as HTMLInputElement
+                ).value,
+            ).toBe('1234567890123');
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                'Barcode already taken.',
+            );
+        });
+
+        it('clears the typed barcode only after adding succeeds', async () => {
+            routerPostMock.mockImplementation(
+                (_url: string, _data: unknown, options: PatchOptions) => {
+                    options.onStart?.();
+                    options.onSuccess?.();
+                    options.onFinish?.();
+                },
+            );
+            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+            await wrapper
+                .get('#products-new-barcode')
+                .setValue('1234567890123');
+            await wrapper.get('#products-add-barcode-form').trigger('submit');
+
+            expect(
+                (
+                    wrapper.get('#products-new-barcode')
+                        .element as HTMLInputElement
+                ).value,
+            ).toBe('');
+        });
+
+        it('shows the server error when removing a barcode fails', async () => {
+            routerDeleteMock.mockImplementation(
+                (_url: string, options: PatchOptions) => {
+                    options.onStart?.();
+                    options.onError?.({ barcode: 'Could not remove.' });
+                    options.onFinish?.();
+                },
+            );
+            const wrapper = mountPage([
+                product({
+                    id: 42,
+                    barcodes: [{ id: 7, barcode: '1234567890123' }],
+                }),
+            ]);
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+            await wrapper
+                .get(
+                    `[aria-label="${t('products.removeBarcode', { barcode: '1234567890123' })}"]`,
+                )
+                .trigger('click');
+
+            expect(wrapper.get('[role="alert"]').text()).toContain(
+                'Could not remove.',
+            );
+        });
+
+        it('clears a previous error when a dialog is reopened', async () => {
+            failPatchWith({ boxes_count: 'Nope.' });
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+            await wrapper.get('form').trigger('submit');
+            expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+
+            await wrapper
+                .get(`[aria-label="${t('cellLog.filters.close')}"]`)
+                .trigger('click');
+            await rowCells(wrapper)[1].get('button').trigger('click');
+
+            expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+        });
+    });
+
+    it('labels the filters button and dialog with the products filter strings', async () => {
+        const wrapper = mountPage([]);
+
+        await openFilters(wrapper);
+
+        expect(t('products.filters.title')).toBe('Filters');
+        expect(wrapper.text()).toContain(t('products.filters.title'));
+        expect(
+            wrapper
+                .find(`[aria-label="${t('products.filters.close')}"]`)
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('renders the Arabic filters title and close label', async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountPage([]);
+
+        await openFilters(wrapper);
+
+        expect(wrapper.text()).toContain('الفلاتر');
+        expect(wrapper.find('[aria-label="إغلاق الفلاتر"]').exists()).toBe(
+            true,
+        );
     });
 
     it('renders the full count linking to the map filtered to this product and state=full', () => {
