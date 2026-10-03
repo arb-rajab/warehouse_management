@@ -62,7 +62,7 @@
 						data-min-height="300"
 						name="content"
 						required
-					>{!! $page->getTranslation('content',$lang) !!}</textarea>
+					>{{ $page->getTranslation('content',$lang) }}</textarea>
 				</div>
 			</div>
 		</div>
@@ -82,14 +82,14 @@
 			<div class="form-group row">
 				<label class="col-sm-2 col-from-label" for="name">{{translate('Meta Description')}}</label>
 				<div class="col-sm-10">
-					<textarea class="resize-off form-control" placeholder="{{translate('Description')}}" name="meta_description">{!! $page->meta_description !!}</textarea>
+					<textarea class="resize-off form-control" placeholder="{{translate('Description')}}" name="meta_description">{{ $page->meta_description }}</textarea>
 				</div>
 			</div>
 
 			<div class="form-group row">
 				<label class="col-sm-2 col-from-label" for="name">{{translate('Keywords')}}</label>
 				<div class="col-sm-10">
-					<textarea class="resize-off form-control" placeholder="{{translate('Keyword, Keyword')}}" name="keywords">{!! $page->keywords !!}</textarea>
+					<textarea class="resize-off form-control" placeholder="{{translate('Keyword, Keyword')}}" name="keywords">{{ $page->keywords }}</textarea>
 					<small class="text-muted">{{ translate('Separate with coma') }}</small>
 				</div>
 			</div>

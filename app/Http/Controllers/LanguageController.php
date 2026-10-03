@@ -8,9 +8,10 @@ use App\Models\StoreUser;
 use App\Models\Translation;
 use Cache;
 use Illuminate\Http\Request;
-use Session;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Session;
+use Throwable;
 
 class LanguageController extends Controller implements HasMiddleware
 {
@@ -20,7 +21,7 @@ class LanguageController extends Controller implements HasMiddleware
      * See Auth\LoginController::middleware()'s docblock for why this
      * replaces the constructor-based $this->middleware() call.
      *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     * @return array<int, Middleware>
      */
     public static function middleware(): array
     {
@@ -30,9 +31,13 @@ class LanguageController extends Controller implements HasMiddleware
     }
     public function changeLanguage(Request $request)
     {
-    	$request->session()->put('locale', $request->locale);
         $language = Language::where('code', $request->locale)->first();
-    	flash(translate('Language changed to ').$language->name)->success();
+        if (!$language) {
+            flash(translate('Language not found'))->error();
+            return back();
+        }
+        $request->session()->put('locale', $request->locale);
+        flash(translate('Language changed to ').$language->name)->success();
     }
 
     public function index(Request $request)
@@ -181,6 +186,10 @@ class LanguageController extends Controller implements HasMiddleware
 
     //App-Translation
     public function importEnglishFile(Request $request){
+        $request->validate([
+            'lang_file' => 'required|file|mimes:json|max:5120',
+        ]);
+
         $contents = $request->file('lang_file')?->get();
 
         if ($contents === null) {
@@ -195,8 +204,9 @@ class LanguageController extends Controller implements HasMiddleware
                     ['lang_value' => $value]
                 );
             }
-        } catch (\Throwable $th) {
-            //throw $th;
+        } catch (Throwable $th) {
+            flash(translate('Invalid JSON file format'))->error();
+            return back();
         }
 
         flash(translate('Translation keys has been imported successfully. Go to App Translation for more..'))->success();

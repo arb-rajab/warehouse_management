@@ -18,9 +18,9 @@ class AizUploadController extends Controller
         $search = null;
         $sort_by = null;
 
-        if ($request->search != null) {
+        if (is_string($request->search) && $request->search !== '') {
             $search = $request->search;
-            $all_uploads->where('file_original_name', 'like', '%' . $request->search . '%');
+            $all_uploads->originalNameContains($request->search);
         }
 
         $sort_by = $request->sort;
@@ -74,7 +74,11 @@ class AizUploadController extends Controller
                 return '{}';
             }
 
-            $uploads->store($request->file('aiz_file'), Auth::user()->id);
+            $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
+
+            if ($upload === null) {
+                return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+            }
 
             return '{}';
         }
@@ -83,8 +87,8 @@ class AizUploadController extends Controller
     public function get_uploaded_files(Request $request)
     {
         $uploads = Upload::where('user_id', Auth::user()->id);
-        if ($request->search != null) {
-            $uploads->where('file_original_name', 'like', '%' . $request->search . '%');
+        if (is_string($request->search) && $request->search !== '') {
+            $uploads->originalNameContains($request->search);
         }
         if ($request->sort != null) {
             switch ($request->sort) {
@@ -192,8 +196,8 @@ class AizUploadController extends Controller
     //Download project attachment
     public function attachment_download($id)
     {
-        $project_attachment = Upload::find($id);
-        abort_if($project_attachment !== null && auth()->user()->cannot('view', $project_attachment), 403);
+        $project_attachment = Upload::findOrFail($id);
+        abort_if(auth()->user()->cannot('view', $project_attachment), 403);
         try {
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);

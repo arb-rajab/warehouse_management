@@ -80,7 +80,7 @@
             <!-- about & subscription -->
             <div class="col-xl-6 col-lg-7">
                 <div class="mb-4 text-secondary text-justify">
-                    {!! get_setting('about_us_description',null,App::getLocale()) !!}
+                    {!! clean_html(get_setting('about_us_description',null,App::getLocale())) !!}
                 </div>
                 @if(get_setting('Newsletters') == 1)
                 <h5 class="fs-14 fw-700 text-soft-light mt-1 mb-3">{{ translate('Subscribe to our newsletter for regular updates about Offers, Coupons & more') }}</h5>
@@ -515,7 +515,7 @@
             <!-- Copyright -->
             <div class="col-lg-6 order-1 order-lg-0">
                 <div class="text-center text-lg-left fs-14" current-verison="{{get_setting("current_version")}}">
-                    {!! get_setting('frontend_copyright_text', null, App::getLocale()) !!}
+                    {!! clean_html(get_setting('frontend_copyright_text', null, App::getLocale())) !!}
                 </div>
             </div>
 

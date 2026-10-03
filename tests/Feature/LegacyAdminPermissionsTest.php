@@ -109,7 +109,6 @@ const ADMIN_READS_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
-    'AizUploadController@all_file',
     'AizUploadController@create',
     'AizUploadController@edit',
     'AizUploadController@index',

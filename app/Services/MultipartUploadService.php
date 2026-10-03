@@ -39,11 +39,11 @@ class MultipartUploadService
     public const KINDS = [
         'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image', 'svg' => 'image', 'webp' => 'image', 'gif' => 'image',
         'mp4' => 'video', 'mpg' => 'video', 'mpeg' => 'video', 'webm' => 'video', 'ogg' => 'video', 'avi' => 'video',
-        'mov' => 'video', 'flv' => 'video', 'swf' => 'video', 'mkv' => 'video', 'wmv' => 'video',
+        'mov' => 'video', 'flv' => 'video', 'mkv' => 'video', 'wmv' => 'video',
         'wma' => 'audio', 'aac' => 'audio', 'wav' => 'audio', 'mp3' => 'audio',
         'zip' => 'archive', 'rar' => 'archive', '7z' => 'archive',
         'doc' => 'document', 'txt' => 'document', 'docx' => 'document', 'pdf' => 'document', 'csv' => 'document',
-        'xml' => 'document', 'ods' => 'document', 'xlr' => 'document', 'xls' => 'document', 'xlsx' => 'document',
+        'ods' => 'document', 'xlr' => 'document', 'xls' => 'document', 'xlsx' => 'document',
     ];
 
     /** Extensions of content a browser runs when it is served from the shop. */
@@ -53,6 +53,9 @@ class MultipartUploadService
 
     /** The most pixels an image may hold and still be decoded for resizing, so a small file cannot expand into gigabytes. */
     private const MAX_DECODED_PIXELS = 40_000_000;
+
+    /** Maximum file size in bytes (512 MB). */
+    private const MAX_BYTES = 512 * 1024 * 1024;
 
     private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
@@ -66,7 +69,7 @@ class MultipartUploadService
         $kind = self::KINDS[$clientExtension] ?? null;
         $path = $file->getRealPath();
 
-        if ($kind === null || $path === false) {
+        if ($kind === null || $path === false || $file->getSize() > self::MAX_BYTES) {
             return null;
         }
 
@@ -74,13 +77,15 @@ class MultipartUploadService
         $mimeType = (string) (new finfo(FILEINFO_MIME_TYPE))->file($path);
         $guessed = MimeTypes::getDefault()->getExtensions($mimeType)[0] ?? null;
 
-        if (in_array($guessed, self::ACTIVE_CONTENT_EXTENSIONS, true) || ($clientExtension === 'xml' && $this->isActiveXml($contents))) {
+        if (in_array($guessed, self::ACTIVE_CONTENT_EXTENSIONS, true)) {
             return null;
         }
 
         $extension = $this->storedExtension($kind, $clientExtension, $guessed, $mimeType);
 
-        if ($extension === null) {
+        $type = $extension === 'svg' ? 'image' : $kind;
+
+        if ($extension === null || ! $this->mimeTypeMatchesKind($mimeType, $type, $extension)) {
             return null;
         }
 
@@ -93,8 +98,6 @@ class MultipartUploadService
         } elseif ($kind === 'image' && get_setting('disable_image_optimization') != 1) {
             $contents = $this->optimised($contents);
         }
-
-        $type = $extension === 'svg' ? 'image' : $kind;
 
         try {
             return $this->writeUpload($contents, $extension, $type, $file->getClientOriginalName(), $userId, $extension === 'svg' ? 'image/svg+xml' : $mimeType);
@@ -113,12 +116,30 @@ class MultipartUploadService
         return $guessed === 'svg' ? 'svg' : $clientExtension;
     }
 
-    /**
-     * XML a browser would run as a page: XHTML or SVG markup, or a script.
-     */
-    private function isActiveXml(string $contents): bool
+    private function mimeTypeMatchesKind(string $mimeType, string $kind, string $extension): bool
     {
-        return preg_match('~xmlns(:\w+)?\s*=\s*["\']http://www\.w3\.org/(1999/xhtml|2000/svg)|<\s*(\w+:)?(script|html|svg)\b~i', $contents) === 1;
+        return match ($kind) {
+            'image' => str_starts_with($mimeType, 'image/'),
+            'video', 'audio' => str_starts_with($mimeType, 'video/') || str_starts_with($mimeType, 'audio/') || $mimeType === 'application/ogg',
+            'archive' => in_array($mimeType, ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'], true),
+            'document' => $this->documentMimeTypeMatches($mimeType, $extension),
+            default => false,
+        };
+    }
+
+    /**
+     * A PDF must be one and a text file must be text. The office formats keep
+     * the broad check: `finfo` reports OOXML and OLE files as zip, CDFV2 or
+     * octet-stream depending on the file, and a spreadsheet export that is
+     * really CSV or HTML is common, so a stricter list would refuse real files.
+     */
+    private function documentMimeTypeMatches(string $mimeType, string $extension): bool
+    {
+        return match ($extension) {
+            'pdf' => $mimeType === 'application/pdf',
+            'txt', 'csv' => str_starts_with($mimeType, 'text/') || in_array($mimeType, ['application/csv', 'application/json', 'application/x-empty'], true),
+            default => str_starts_with($mimeType, 'text/') || str_starts_with($mimeType, 'application/'),
+        };
     }
 
     /**

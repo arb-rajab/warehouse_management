@@ -4,6 +4,7 @@ use App\Models\Upload;
 use App\Services\MultipartUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The store's uploader (the web screens and the mobile APIs) let the client's
@@ -46,7 +47,8 @@ test('markup a browser would run is refused whatever the file is called', functi
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $contents) {
         $this->withToken(storeApiToken($customer))
             ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, $contents)])
-            ->assertOk();
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
 
         expect(storedUploadFiles($publicPath))->toBe([])
             ->and(Upload::count())->toBe(0);
@@ -59,15 +61,19 @@ test('markup a browser would run is refused whatever the file is called', functi
     'a file that is not an image called png' => ['a.png', 'plain text, not an image'],
     'an extension off the list' => ['page.html', '<p>hi</p>'],
     'php called php' => ['shell.php', '<?php system($_GET[1]); ?>'],
+    'a flash movie' => ['movie.swf', "FWS\x09\x00\x00\x00\x00"],
+    'a plain xml file' => ['data.xml', '<?xml version="1.0"?><a/>'],
 ]);
 
 test('PHP source that gets through the allowlist is never stored with a PHP extension', function (string $filename) {
     $customer = createStoreUser('customer');
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename) {
-        $this->withToken(storeApiToken($customer))
+        $status = $this->withToken(storeApiToken($customer))
             ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, '<?php system($_GET[1]); ?>')])
-            ->assertOk();
+            ->status();
+
+        expect($status)->toBeIn([200, 422]);
 
         foreach (storedUploadFiles($publicPath) as $stored) {
             expect($stored)->not->toMatch('/\.(php\d?|phtml|phar)$/i');
@@ -144,6 +150,19 @@ test('the web uploader needs a signed-in account and stores for it', function ()
     });
 });
 
+test('the web uploader answers a refused file with a 422 so the browser shows it as failed', function () {
+    actingAsStoreUser(createStoreUser('customer'));
+
+    withScratchPublicPath(function (string $publicPath) {
+        $this->post('/temp/aiz-uploader/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
+
+        expect(Upload::count())->toBe(0)
+            ->and(storedUploadFiles($publicPath))->toBe([]);
+    });
+});
+
 test('the web uploader hands another account\'s files to no one but admin and staff', function () {
     $owner = createStoreUser('customer');
     $stranger = createStoreUser('customer');
@@ -170,5 +189,68 @@ test('the web uploader hands another account\'s files to no one but admin and st
         actingAsStoreUser($owner);
 
         expect($this->get("/temp/aiz-uploader/download/{$theirs->id}")->getStatusCode())->not->toBe(403);
+    });
+});
+
+test('a file whose content is not what its extension claims is refused', function () {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer) {
+        foreach (['clip.mp4' => tinyPng(), 'song.mp3' => tinyPng(), 'bundle.zip' => 'not an archive', 'invoice.pdf' => 'not a pdf', 'notes.txt' => tinyPng(), 'prices.csv' => "PK\x03\x04binary"] as $name => $contents) {
+            expect(app(MultipartUploadService::class)->store(uploadedFile($name, $contents), $customer->id))->toBeNull();
+        }
+
+        expect(storedUploadFiles($publicPath))->toBe([])
+            ->and(Upload::count())->toBe(0);
+    });
+});
+
+test('a file over the size limit is refused before it is read', function () {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer) {
+        $oversized = UploadedFile::fake()->create('big.zip', 512 * 1024 + 1);
+
+        expect(app(MultipartUploadService::class)->store($oversized, $customer->id))->toBeNull()
+            ->and(storedUploadFiles($publicPath))->toBe([])
+            ->and(Upload::count())->toBe(0);
+    });
+});
+
+test('a pdf, a text file and a csv that hold what they claim to they claim are kept', function (string $filename, string $contents, string $extension) {
+    $customer = createStoreUser('customer');
+
+    withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $contents, $extension) {
+        $upload = app(MultipartUploadService::class)->store(uploadedFile($filename, $contents), $customer->id);
+
+        expect($upload)->not->toBeNull()
+            ->and($upload->extension)->toBe($extension)
+            ->and($upload->type)->toBe('document')
+            ->and(storedUploadFiles($publicPath))->toHaveCount(1);
+    });
+})->with([
+    'a pdf' => ['cmr.pdf', "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n", 'pdf'],
+    'a text file' => ['notes.txt', "Delivery note\nGate 4\n", 'txt'],
+    'a csv' => ['prices.csv', "sku,price\nA1,10\n", 'csv'],
+]);
+
+test('the seller API answers a refused file with a 422 and an accepted one with a success', function () {
+    $seller = createStoreUser('seller');
+    DB::table('shops')->insert(['user_id' => $seller->id, 'name' => 'Shop', 'slug' => 'shop-1']);
+
+    withScratchPublicPath(function (string $publicPath) use ($seller) {
+        $this->withToken(storeApiToken($seller))
+            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
+
+        expect(storedUploadFiles($publicPath))->toBe([]);
+
+        $this->withToken(storeApiToken($seller))
+            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('ok.png', tinyPng())])
+            ->assertOk()
+            ->assertJsonPath('result', true);
+
+        expect(storedUploadFiles($publicPath))->toHaveCount(1);
     });
 });

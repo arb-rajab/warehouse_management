@@ -18,7 +18,7 @@
     </section>
     <section class="mb-4">
     	<div class="container-fluid">
-    		{!! $page->getTranslation('content') !!}
+    		{!! clean_html($page->getTranslation('content')) !!}
     	</div>
     </section>
 </body>

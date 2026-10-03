@@ -19,6 +19,10 @@ line-based checks, without needing Pint's actual tokenizer:
     as much as in a real type-hint. This is exactly what slipped through and
     failed CI once already (see the `ProductSummaryResource` incident): the
     stand-in caught everything else in that diff, but not this.
+  - `not_operator_with_successor_space`: `!$x` / `!foo()` / `!(...)` where Pint
+    wants `! $x`. Quoted strings are blanked first, `!=`/`!==` are untouched.
+    Files that `pint.json` lists under `notPath` are not checked by Pint at all,
+    so a hit there is not a CI failure.
 
 Usage:
     python3 .claude/scripts/php_pint_style.py app/Models/Product.php
@@ -57,6 +61,8 @@ import re
 import sys
 
 ARRAY_SYNTAX = re.compile(r'(?<![\w$>:])array\s*\(')
+NOT_OPERATOR = re.compile(r'(?<![!=\w])!(?=[$(\w\\])')
+STRING_LITERAL = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
 FQCN_REFERENCE = re.compile(r'(?<!\w)\\[A-Z][A-Za-z0-9_]*(?:\\[A-Za-z0-9_]+)+')
 
 
@@ -138,6 +144,16 @@ def fully_qualified_reference_violations(lines: list[str]) -> list[int]:
     return found
 
 
+def not_operator_violations(lines: list[str]) -> list[int]:
+    """Return line numbers with `!` directly followed by its operand."""
+    return [
+        n
+        for n, line in enumerate(lines, 1)
+        if not line.strip().startswith(('//', '*', '/*'))
+        and NOT_OPERATOR.search(STRING_LITERAL.sub('""', line))
+    ]
+
+
 def array_trailing_comma_violations(lines: list[str]) -> list[int]:
     """Return line numbers of `]` closing a multi-line array with no trailing comma."""
     found = []
@@ -188,6 +204,9 @@ def main(paths: list[str]) -> int:
 
         for number in fully_qualified_reference_violations(lines):
             problems.append(f'  {number}: fully-qualified class reference outside a use import (fully_qualified_strict_types)')
+
+        for number in not_operator_violations(lines):
+            problems.append(f'  {number}: `!` needs a space before its operand (not_operator_with_successor_space)')
 
         if problems:
             bad_files += 1
