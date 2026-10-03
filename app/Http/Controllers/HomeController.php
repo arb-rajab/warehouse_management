@@ -256,7 +256,7 @@ class HomeController extends Controller
         } else {
             $variations = null;
         }
-        if ($detailedProduct != null /*&& $detailedProduct->published*/) {
+        if ($detailedProduct != null && $detailedProduct->published) {
 
             $product_queries = ProductQuery::where('product_id', $detailedProduct->id)->where('customer_id', '!=', Auth::id())->latest('id')->paginate(3);
             $total_query = ProductQuery::where('product_id', $detailedProduct->id)->count();

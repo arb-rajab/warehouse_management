@@ -12,6 +12,7 @@ use App\Http\Middleware\IsAppUserUnbanned;
 use App\Http\Middleware\IsCustomer;
 use App\Http\Middleware\IsDeliveryBoy;
 use App\Http\Middleware\IsDriver;
+use App\Http\Middleware\IsRepresentativeOrAdmin;
 use App\Http\Middleware\IsSeller;
 use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
@@ -114,6 +115,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'wms.auth' => WmsAuthMiddleware::class,
             'log.request.time' => LogRequestTime::class,
             'driver' => IsDriver::class,
+            'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
         ]);

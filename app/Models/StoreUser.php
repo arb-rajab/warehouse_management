@@ -105,6 +105,12 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'verification_code',
+        'device_token',
+        'device_key',
+        'bank_account_number',
+        'provider_id',
+        'tax_number',
     ];
 
     /**
