@@ -20,7 +20,8 @@ class AizUploadController extends Controller
 
         if ($request->search != null) {
             $search = $request->search;
-            $all_uploads->where('file_original_name', 'like', '%' . $request->search . '%');
+            $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->search);
+            $all_uploads->where('file_original_name', 'like', '%' . $escaped . '%', '\\');
         }
 
         $sort_by = $request->sort;
@@ -84,7 +85,8 @@ class AizUploadController extends Controller
     {
         $uploads = Upload::where('user_id', Auth::user()->id);
         if ($request->search != null) {
-            $uploads->where('file_original_name', 'like', '%' . $request->search . '%');
+            $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->search);
+            $uploads->where('file_original_name', 'like', '%' . $escaped . '%', '\\');
         }
         if ($request->sort != null) {
             switch ($request->sort) {
@@ -163,8 +165,13 @@ class AizUploadController extends Controller
         // return $files;
     }
 
-    public function all_file()
+    public function all_file(Request $request)
     {
+        if (auth()->user()->cannot('delete_all_uploads')) {
+            flash(translate("You don't have permission for deleting all files!"))->error();
+            return back();
+        }
+
         $uploads = Upload::all();
         foreach ($uploads as $upload) {
             try {
@@ -192,8 +199,8 @@ class AizUploadController extends Controller
     //Download project attachment
     public function attachment_download($id)
     {
-        $project_attachment = Upload::find($id);
-        abort_if($project_attachment !== null && auth()->user()->cannot('view', $project_attachment), 403);
+        $project_attachment = Upload::findOrFail($id);
+        abort_if(auth()->user()->cannot('view', $project_attachment), 403);
         try {
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);

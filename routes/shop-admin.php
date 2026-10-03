@@ -648,7 +648,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::any('/uploaded-files/file-info', 'file_info')->name('uploaded-files.info');
         Route::post('/uploaded-files/destroy/{id}', 'destroy')->name('uploaded-files.destroy');
         Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
-        Route::get('/all-file', 'all_file');
+        Route::post('/all-file', 'all_file')->name('all-file');
     });
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');

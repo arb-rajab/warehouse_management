@@ -30,8 +30,12 @@ class LanguageController extends Controller implements HasMiddleware
     }
     public function changeLanguage(Request $request)
     {
-    	$request->session()->put('locale', $request->locale);
         $language = Language::where('code', $request->locale)->first();
+        if (!$language) {
+            flash(translate('Language not found'))->error();
+            return back();
+        }
+    	$request->session()->put('locale', $request->locale);
     	flash(translate('Language changed to ').$language->name)->success();
     }
 
@@ -181,6 +185,10 @@ class LanguageController extends Controller implements HasMiddleware
 
     //App-Translation
     public function importEnglishFile(Request $request){
+        $request->validate([
+            'lang_file' => 'required|file|mimes:json|max:5120',
+        ]);
+
         $contents = $request->file('lang_file')?->get();
 
         if ($contents === null) {
@@ -196,7 +204,8 @@ class LanguageController extends Controller implements HasMiddleware
                 );
             }
         } catch (\Throwable $th) {
-            //throw $th;
+            flash(translate('Invalid JSON file format'))->error();
+            return back();
         }
 
         flash(translate('Translation keys has been imported successfully. Go to App Translation for more..'))->success();

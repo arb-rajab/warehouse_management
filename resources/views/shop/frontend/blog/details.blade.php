@@ -69,7 +69,7 @@
                         class="img-fluid lazyload w-100 mt-3 mb-4">
                     <!-- Description -->
                     <div class="mb-4 overflow-hidden">
-                        {!! $blog->description !!}
+                        {!! clean_html($blog->description) !!}
                     </div>
                     <!-- Facebook Comment -->
                     @if (get_setting('facebook_comment') == 1)
