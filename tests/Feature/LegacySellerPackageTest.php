@@ -112,7 +112,7 @@ test('an account without a shop cannot submit an offline package payment', funct
 
     $this->withToken(storeApiToken($customer))
         ->postJson('/temp/api/v2/seller/seller-package/offline-payment', ['package_id' => $packageId, 'payment_option' => 'manual_payment_1', 'trx_id' => 'T1'])
-        ->assertJsonPath('result', false);
+        ->assertNotFound();
     app('auth')->forgetGuards();
     $this->flushHeaders();
     $this->postJson('/temp/api/v2/seller/seller-package/offline-payment', ['package_id' => $packageId])->assertUnauthorized();

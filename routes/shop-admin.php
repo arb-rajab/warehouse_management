@@ -266,8 +266,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         // The trip forms' lookups: the driver API's own handlers, reached with
         // the admin's session instead of an app token.
-        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles');
-        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates');
+        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
+        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
 
         Route::controller(DriverController::class)->group(function() {
             Route::get('/drivers/index', 'index')->name('drivers.index')->middleware('permission:view_all_drivers');

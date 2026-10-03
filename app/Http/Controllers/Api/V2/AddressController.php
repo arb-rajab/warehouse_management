@@ -114,6 +114,7 @@ class AddressController extends Controller
     {
         $address = $this->manageableAddress($request->id);
         Address::where('user_id', $address->user_id)->update(['set_default' => 0]); //make all the owner's addresses non default first
+        $address->refresh();
 
         $address->set_default = 1;
         $address->save();
