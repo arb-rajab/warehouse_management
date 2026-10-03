@@ -241,7 +241,7 @@ class GatewayPaymentService
     {
         $package = SellerPackage::query()->find($packageId);
 
-        if ($package === null || ! Shop::query()->where('user_id', $userId)->exists() || ! self::covers($payment->amount, (float) $package->amount)) {
+        if ($package === null || ! Shop::query()->where('user_id', $userId)->exists() || ! self::covers($payment->amount, (float) $package->getAttribute('amount'))) {
             return false;
         }
 

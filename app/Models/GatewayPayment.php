@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * A payment a store gateway reported, recorded once under the gateway's own
@@ -19,7 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $combined_order_id
  * @property int|null $package_id
  * @property string $amount
- * @property Carbon|null $completed_at
+ * @property CarbonInterface|null $completed_at
  */
 #[Fillable(['gateway', 'reference', 'user_id', 'payment_type', 'combined_order_id', 'package_id', 'amount', 'completed_at'])]
 class GatewayPayment extends Model

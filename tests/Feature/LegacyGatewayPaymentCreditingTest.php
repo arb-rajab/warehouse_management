@@ -578,7 +578,8 @@ test('Nagad: the session\'s payment pays once, its reference read from the query
 test('API bKash: the unauthenticated process endpoint is gone', function () {
     $victim = gatewayCustomer(0);
 
-    $this->postJson('/temp/api/v2/bkash/api/process', ['payment_type' => 'wallet_payment', 'user_id' => $victim->id, 'amount' => 1000])->assertNotFound();
+    // No route takes a POST there any more (another route's path answers 405 for it).
+    expect($this->postJson('/temp/api/v2/bkash/api/process', ['payment_type' => 'wallet_payment', 'user_id' => $victim->id, 'amount' => 1000])->getStatusCode())->toBeIn([404, 405]);
 
     expect((float) $victim->fresh()->balance)->toBe(0.0);
 });
@@ -638,7 +639,8 @@ test('API bKash: begin prices the signed-in customer\'s own order, not someone e
 test('API Nagad: the unauthenticated process endpoint is gone', function () {
     $combined = unpaidGatewayOrder(gatewayCustomer(), 30);
 
-    $this->postJson('/temp/api/v2/nagad/process', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id])->assertNotFound();
+    // No route takes a POST there any more (another route's path answers 405 for it).
+    expect($this->postJson('/temp/api/v2/nagad/process', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id])->getStatusCode())->toBeIn([404, 405]);
 
     expectOrderUnpaid($combined);
 });

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * `for_customer` is declared here because the migration that adds it
@@ -36,7 +37,10 @@ class Order extends Model
         'payment_type',
     ];
 
-    public function orderDetails()
+    /**
+     * @return HasMany<OrderDetail, $this>
+     */
+    public function orderDetails(): HasMany
     {
         return $this->hasMany(OrderDetail::class);
     }
