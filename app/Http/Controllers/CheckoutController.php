@@ -80,7 +80,12 @@ class CheckoutController extends Controller
                 $request->validate(app(PaymentOptions::class)->proofRules());
             }
 
-            (new OrderController)->store($request);
+            // A refused order (empty cart, out of stock, a coupon that cannot be used)
+            // comes back as a redirect, with nothing placed.
+            $refusal = (new OrderController)->store($request);
+            if ($refusal instanceof RedirectResponse) {
+                return $refusal;
+            }
 
             $request->session()->put('payment_type', 'cart_payment');
 

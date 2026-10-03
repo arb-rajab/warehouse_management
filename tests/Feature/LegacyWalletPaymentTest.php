@@ -13,13 +13,6 @@ use App\Services\WalletPaymentService;
  * `amount=0` and pay nothing. The payer is the signed-in account and the amount
  * is the order's own total now (WalletPaymentService).
  */
-function fundedCustomer(float $balance): StoreUser
-{
-    $customer = createStoreUser('customer');
-    $customer->forceFill(['balance' => $balance])->save();
-
-    return $customer;
-}
 
 /**
  * A combined order of `$total` that `$customer` placed, with one order marked paid.

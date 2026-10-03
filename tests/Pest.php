@@ -195,7 +195,8 @@ function createStoreProduct(array $attributes = []): Product
  */
 function addStoreAddress(int $userId): int
 {
-    $countryId = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
+    $countryId = DB::table('countries')->where('code', 'NL')->value('id')
+        ?? DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
 
     return DB::table('addresses')->insertGetId([
         'user_id' => $userId, 'address' => 'Damrak 1', 'country_id' => $countryId, 'phone' => '612345678', 'set_default' => 1,
@@ -333,6 +334,43 @@ function cartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, arra
     $product = createStoreProduct(['user_id' => $shopOwner->id, ...$productAttributes]);
 
     return Cart::create(['user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity, 'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0]);
+}
+
+/**
+ * A cart line of `$customer` that checks out: a new product of `$shopOwner`'s
+ * shop with `$stock` units, a home-delivery cart row with an address.
+ *
+ * @param  array<string, mixed>  $cartAttributes
+ */
+function orderableCartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, int $stock = 50, array $cartAttributes = []): Cart
+{
+    $product = createStoreProduct(['user_id' => $shopOwner->id, 'current_stock' => $stock]);
+    $addressId = DB::table('addresses')->where('user_id', $customer->id)->value('id') ?? addStoreAddress($customer->id);
+
+    return Cart::create([
+        'user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity,
+        'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0, 'shipping_type' => 'home_delivery',
+        'address_id' => $addressId, ...$cartAttributes,
+    ]);
+}
+
+/**
+ * The units of stock left for `$productId`, read straight from the table.
+ */
+function stockLeft(int $productId): int
+{
+    return (int) DB::table('product_stocks')->where('product_id', $productId)->value('qty');
+}
+
+/**
+ * A store customer whose wallet holds `$balance`.
+ */
+function fundedCustomer(float $balance): StoreUser
+{
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['balance' => $balance])->save();
+
+    return $customer;
 }
 
 /**
