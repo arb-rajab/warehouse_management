@@ -30,3 +30,18 @@ Schedule::command('health:check')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:schedule-check-heartbeat')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:queue-check-heartbeat')->everyFiveMinutes();
 Schedule::command('model:prune', ['--model' => [HealthCheckResultHistoryItem::class]])->daily();
+
+// Deliberately NOT scheduled: every command below changes data, and none may be
+// put on the scheduler without sign-off from the business owner. Run them by
+// hand (php artisan <name>) until that referral exists.
+//
+//   carts:purge-old                 permanently deletes carts soft-deleted over 30 days ago
+//   check:unordered-carts           notifies admins and flags carts untouched for 5 days
+//   check:customers                 unverifies customers with no order for 30 days (hides prices)
+//   import:members, import:agents   create and update store users from the otajer ERP
+//   import:brands, import:categories, import:collections,
+//   import:offer-new-products, import:all-products
+//                                   overwrite catalogue data from the otajer ERP
+//   sync:users                      creates accounts in the otajer ERP for store users
+//   fix:members                     bans duplicate members (preview with --dry-run)
+//   check:commands                  runs the product import once an admin queues it

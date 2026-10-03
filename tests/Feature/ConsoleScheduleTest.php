@@ -71,3 +71,22 @@ test('products:sync reports a scheduled run failure instead of failing silently'
 
     expect($afterCallbacks)->not->toBeEmpty();
 });
+
+/**
+ * These commands change data, so they stay manual until the business owner
+ * signs off on scheduling them (see the comment at the end of routes/console.php).
+ */
+test('commands that modify data are not scheduled', function (string $command) {
+    $scheduled = collect(app(Schedule::class)->events())
+        ->contains(fn ($event) => str_contains($event->command, $command));
+
+    expect($scheduled)->toBeFalse();
+})->with([
+    'carts:purge-old',
+    'check:unordered-carts',
+    'check:customers',
+    'import:',
+    'sync:users',
+    'fix:members',
+    'check:commands',
+]);
