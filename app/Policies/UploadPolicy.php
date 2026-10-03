@@ -13,6 +13,11 @@ use App\Models\Upload;
  */
 class UploadPolicy
 {
+    public function viewAny(StoreUser $user): bool
+    {
+        return $this->managesUploads($user);
+    }
+
     public function view(StoreUser $user, Upload $upload): bool
     {
         return $this->managesUploads($user) || (int) $upload->user_id === $user->id;

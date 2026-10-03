@@ -9,12 +9,55 @@ use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Models\Wallet;
 use Auth;
+use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
 class ReportController extends Controller implements HasMiddleware
 {
+    /**
+     * Rules for the filters the history reports take: the date picker's
+     * "YYYY-MM-DD / YYYY-MM-DD" range, start not after end, and the account ids.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function filterRules(): array
+    {
+        return [
+            'date_range' => ['nullable', 'string', function (string $attribute, mixed $value, Closure $fail): void {
+                $bounds = explode(' / ', $value);
+
+                if (count($bounds) !== 2 || ! $this->areOrderedDates(...$bounds)) {
+                    $fail(translate('The date range must be two valid dates, the start not after the end.'));
+                }
+            }],
+            'seller_id' => ['nullable', 'integer'],
+            'user_id' => ['nullable', 'integer'],
+        ];
+    }
+
+    private function areOrderedDates(string $start, string $end): bool
+    {
+        $start = $this->parseDay($start);
+        $end = $this->parseDay($end);
+
+        return $start !== null && $end !== null && $start <= $end;
+    }
+
+    private function parseDay(string $day): ?Carbon
+    {
+        try {
+            $parsed = Carbon::createFromFormat('!Y-m-d', $day);
+        } catch (InvalidFormatException) {
+            return null;
+        }
+
+        return $parsed instanceof Carbon && $parsed->format('Y-m-d') === $day ? $parsed : null;
+    }
+
     /**
      * Get the middleware that should be assigned to the controller.
      *
@@ -93,9 +136,11 @@ class ReportController extends Controller implements HasMiddleware
         $seller_id = null;
         $date_range = null;
 
+        $request->validate($this->filterRules());
+
         if(Auth::user()->user_type == 'seller') {
             $seller_id = Auth::user()->id;
-        } if($request->seller_id) {
+        } elseif($request->seller_id) {
             $seller_id = $request->seller_id;
         }
 
@@ -122,6 +167,8 @@ class ReportController extends Controller implements HasMiddleware
     public function wallet_transaction_history(Request $request) {
         $user_id = null;
         $date_range = null;
+
+        $request->validate($this->filterRules());
 
         if($request->user_id) {
             $user_id = $request->user_id;

@@ -26,6 +26,7 @@ use Auth;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Session;
 
 class CheckoutController extends Controller
@@ -182,6 +183,8 @@ class CheckoutController extends Controller
             flash(translate('Your cart is empty'))->warning();
             return redirect()->route('home');
         }
+
+        Gate::authorize('manage', Address::findOrFail($request->address_id));
 
         foreach ($carts as $key => $cartItem) {
             $cartItem->address_id = $request->address_id;

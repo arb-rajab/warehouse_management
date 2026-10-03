@@ -153,7 +153,7 @@ test('a customer\'s token cannot cancel or mark paid an order through the seller
 
     $this->withToken(storeApiToken($customer))
         ->postJson("/temp/api/v2/seller/orders/{$endpoint}", ['order_id' => $order->id, 'status' => $status])
-        ->assertForbidden();
+        ->assertNotFound();
 
     expect($order->fresh()->only(['delivery_status', 'payment_status']))->toBe(['delivery_status' => 'pending', 'payment_status' => 'paid'])
         ->and((float) $customer->fresh()->balance)->toBe(0.0)

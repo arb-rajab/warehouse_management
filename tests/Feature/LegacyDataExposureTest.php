@@ -274,6 +274,7 @@ test('the customer profile and verification routes turn away a guest', function 
 ]);
 
 test('a signed-in customer reads their own profile and no one else', function () {
+    seedStoreCurrency();
     $customer = createUserWithSecrets();
     $other = createUserWithSecrets();
 
@@ -294,6 +295,7 @@ test('a signed-in user can ask whether an account is verified', function () {
 // unpublished products
 
 test('the product list leaves out unpublished and unapproved products and is paginated', function () {
+    seedStoreCurrency();
     $unpublished = createStoreProduct(['published' => false]);
     $unapproved = createStoreProduct(['approved' => 0]);
     foreach (range(1, 11) as $ignored) {
@@ -311,6 +313,7 @@ test('the product list leaves out unpublished and unapproved products and is pag
 });
 
 test('the new-products list leaves out unpublished products', function () {
+    seedStoreCurrency();
     $new = createStoreProduct(['isNewProduct' => true]);
     $offer = createStoreProduct(['isOfferProduct' => true]);
     $unpublished = createStoreProduct(['isNewProduct' => true, 'published' => false]);
@@ -324,7 +327,7 @@ test('the new-products list leaves out unpublished products', function () {
 
 test('a product that is unpublished or unapproved is a 404 by id and a published one is not', function () {
     seedStoreCurrency();
-    $published = createStoreProduct();
+    $published = createStoreProduct(['added_by' => 'admin', 'user_id' => createStoreUser('admin')->id]);
     $unpublished = createStoreProduct(['published' => false]);
     $unapproved = createStoreProduct(['approved' => 0]);
 

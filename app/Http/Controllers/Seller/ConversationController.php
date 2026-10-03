@@ -9,6 +9,7 @@ use App\Models\ProductQuery;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class ConversationController extends Controller
 {
@@ -37,6 +38,7 @@ class ConversationController extends Controller
     public function show($id)
     {
         $conversation = Conversation::findOrFail(decrypt($id));
+        Gate::authorize('participate', $conversation);
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;
         } elseif ($conversation->receiver_id == Auth::user()->id) {
@@ -55,6 +57,7 @@ class ConversationController extends Controller
     public function refresh(Request $request)
     {
         $conversation = Conversation::findOrFail(decrypt($request->id));
+        Gate::authorize('participate', $conversation);
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;
             $conversation->save();
@@ -73,12 +76,14 @@ class ConversationController extends Controller
      */
     public function message_store(Request $request)
     {
+        $conversation = Conversation::findOrFail($request->conversation_id);
+        Gate::authorize('participate', $conversation);
+
         $message = new Message;
-        $message->conversation_id = $request->conversation_id;
+        $message->conversation_id = $conversation->id;
         $message->user_id = Auth::user()->id;
         $message->message = $request->message;
         $message->save();
-        $conversation = $message->conversation;
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->receiver_viewed = "1";
         } elseif ($conversation->receiver_id == Auth::user()->id) {

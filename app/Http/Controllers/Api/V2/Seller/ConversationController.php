@@ -46,10 +46,10 @@ class ConversationController extends Controller
     public function send_message_to_customer(Request $requrest)
     {
         $message = new Message();
-        $conversation = Conversation::find($requrest->conversation_id)->where("receiver_id",auth()->user()->id)->first();
+        $conversation = Conversation::where('id', $requrest->conversation_id)->where('receiver_id', auth()->user()->id)->first();
 
         if($conversation){
-        $message->conversation_id = $requrest->conversation_id;
+        $message->conversation_id = $conversation->id;
         $message->user_id = auth()->user()->id;
         $message->message = $requrest->message;
         $message->save();

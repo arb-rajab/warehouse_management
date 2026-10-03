@@ -23,9 +23,14 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    /**
+     * What ProductMiniCollection reads off each product of a list.
+     */
+    private const LIST_RELATIONS = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
+
     public function index()
     {
-        return new ProductMiniCollection(Product::where('published', 1)->where('approved', 1)->latest()->paginate(10));
+        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)->latest()->paginate(10));
     }
 
 
@@ -38,7 +43,7 @@ class ProductController extends Controller
             $order = 'name';
         }
 
-        return new ProductMiniCollection(Product::where('published', 1)->where('approved', 1)
+        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)
             ->where(function ($products) {
                 $products->where('isNewProduct', true)->orWhere('isOfferProduct', true);
             })

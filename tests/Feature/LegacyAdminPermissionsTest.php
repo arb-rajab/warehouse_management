@@ -24,9 +24,10 @@ use Spatie\Permission\Models\Permission;
  *
  * Writes that no permission covers yet, and why:
  * - modules with no permission at all in the legacy vocabulary (logistics:
- *   trips, trucks, drivers, feature orders; the offers catalogue;
- *   representative packages and payments; visits): they need new permission
- *   names (the offer deals and notifications already had theirs, and are gated);
+ *   feature orders; the offers catalogue; representative packages and
+ *   payments; visits): they need new permission names (the offer deals,
+ *   notifications and the trips, trucks and drivers screens now have theirs,
+ *   and are gated);
  * - self-service routes (the signed-in user's own profile and uploads);
  * - read-only AJAX helpers the product forms post to;
  * - routes whose controller method does not exist;
@@ -37,9 +38,6 @@ use Spatie\Permission\Models\Permission;
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
     'AdminNotificationController@markAsRead',
-    'DriverController@delete',
-    'DriverController@store',
-    'DriverController@update',
     'FeatureOrderController@store',
     'FeatureOrderTripController@newStore',
     'FeatureOrderTripController@newUpdate',
@@ -53,22 +51,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'RepresentativePackageController@update',
     'RepresentativePaymentAdminController@accept',
     'RepresentativePaymentAdminController@reject',
-    'TripController@bulk_change_delivery_status',
-    'TripController@bulk_trip_delete',
-    'TripController@delete',
-    'TripController@store',
-    'TripController@store_from_map',
-    'TripController@update',
-    'TripController@updateInvoiceNumber',
-    'TripController@updateOrderStatusToDelivered',
-    'TripController@update_checkpoint_notes',
-    'TripController@update_checkpoint_status',
-    'TripController@update_trip_notes',
-    'TripController@update_trip_status',
-    'TruckController@bulk_truck_delete',
-    'TruckController@delete',
-    'TruckController@store',
-    'TruckController@update',
     'VisitController@bulk_visit_delete',
     'VisitController@destroy',
 
@@ -105,9 +87,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
  */
 const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
-    'DriverController@create',
-    'DriverController@edit',
-    'DriverController@index',
     'FeatureOrderController@create',
     'FeatureOrderController@getNeededData',
     'FeatureOrderController@getRepDiscount',
@@ -124,17 +103,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'RepresentativePackageController@index',
     'RepresentativePaymentAdminController@export',
     'RepresentativePaymentAdminController@index',
-    'TripController@all_orders',
-    'TripController@create',
-    'TripController@create_from_map',
-    'TripController@edit',
-    'TripController@getAllTrips',
-    'TripController@getTodayTrips',
-    'TripController@print_cmr',
-    'TripController@show',
-    'TruckController@create',
-    'TruckController@edit',
-    'TruckController@index',
     'VisitController@index',
     'VisitController@show',
     'VisitController@show_all_visits_in_a_day',

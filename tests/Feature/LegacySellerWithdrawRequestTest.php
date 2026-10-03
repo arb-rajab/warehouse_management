@@ -78,7 +78,7 @@ test('an account without a shop cannot open a withdraw request', function () {
     $customer = createStoreUser('customer');
 
     postApiWithdrawRequest($this, storeApiToken($customer), ['amount' => 10])
-        ->assertOk()->assertJsonPath('result', false);
+        ->assertNotFound();
 
     expect(withdrawRequestCount())->toBe(0);
 });

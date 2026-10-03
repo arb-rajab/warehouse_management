@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StaffRequest;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\StoreUser;
+use Auth;
+use DB;
 use Hash;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -55,34 +57,32 @@ class StaffController extends Controller implements HasMiddleware
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Request  $request
+     * @param  StaffRequest  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StaffRequest $request)
     {
-        $role = Role::findOrFail($request->role_id);
+        $role = Role::excludingSuperAdmin()->findOrFail($request->role_id);
 
-        if(StoreUser::where('email', $request->email)->first() == null){
+        DB::transaction(function () use ($request, $role) {
             $user = new StoreUser;
             $user->name = $request->name;
             $user->email = $request->email;
             $user->phone = $request->mobile;
             $user->user_type = "staff";
             $user->password = Hash::make($request->password);
-            if($user->save()){
-                $staff = new Staff;
-                $staff->user_id = $user->id;
-                $staff->role_id = $request->role_id;
-                $user->assignRole($role->name);
-                if($staff->save()){
-                    flash(translate('Staff has been inserted successfully'))->success();
-                    return redirect()->route('staffs.index');
-                }
-            }
-        }
+            $user->save();
 
-        flash(translate('Email already used'))->error();
-        return back();
+            $staff = new Staff;
+            $staff->user_id = $user->id;
+            $staff->role_id = $role->id;
+            $staff->save();
+
+            $user->assignRole($role->name);
+        });
+
+        flash(translate('Staff has been inserted successfully'))->success();
+        return redirect()->route('staffs.index');
     }
 
     /**
@@ -104,40 +104,43 @@ class StaffController extends Controller implements HasMiddleware
      */
     public function edit($id)
     {
-        $staff = Staff::findOrFail(decrypt($id));
-        $roles = $roles = Role::excludingSuperAdmin()->orderBy('id', 'desc')->get();
+        $staff = Staff::with('user')->findOrFail(decrypt($id));
+        abort_if($this->isSuperAdmin($staff), 403);
+        $roles = Role::excludingSuperAdmin()->orderBy('id', 'desc')->get();
         return view('shop.backend.staff.staffs.edit', compact('staff', 'roles'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  Request  $request
+     * @param  StaffRequest  $request
      * @param  int  $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function update(StaffRequest $request, $id)
     {
-        $role = Role::findOrFail($request->role_id);
-        $staff = Staff::findOrFail($id);
-        $user = $staff->user;
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->phone = $request->mobile;
-        if(strlen($request->password) > 0){
-            $user->password = Hash::make($request->password);
-        }
-        if($user->save()){
-            $staff->role_id = $request->role_id;
-            if($staff->save()){
-                $user->syncRoles($role->name);
-                flash(translate('Staff has been updated successfully'))->success();
-                return redirect()->route('staffs.index');
-            }
-        }
+        $role = Role::excludingSuperAdmin()->findOrFail($request->role_id);
+        $staff = Staff::with('user')->findOrFail($id);
+        abort_if($this->isSuperAdmin($staff), 403);
 
-        flash(translate('Something went wrong'))->error();
-        return back();
+        DB::transaction(function () use ($request, $role, $staff) {
+            $user = $staff->user;
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->phone = $request->mobile;
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
+            $user->save();
+
+            $staff->role_id = $role->id;
+            $staff->save();
+
+            $user->syncRoles($role->name);
+        });
+
+        flash(translate('Staff has been updated successfully'))->success();
+        return redirect()->route('staffs.index');
     }
 
     /**
@@ -148,13 +151,20 @@ class StaffController extends Controller implements HasMiddleware
      */
     public function destroy($id)
     {
-        StoreUser::destroy(Staff::findOrFail($id)->user->id);
-        if(Staff::destroy($id)){
-            flash(translate('Staff has been deleted successfully'))->success();
-            return redirect()->route('staffs.index');
-        }
+        $staff = Staff::with('user')->findOrFail($id);
+        abort_if((int) $staff->user_id === (int) Auth::id() || $this->isSuperAdmin($staff), 403);
 
-        flash(translate('Something went wrong'))->error();
-        return back();
+        DB::transaction(function () use ($staff) {
+            StoreUser::destroy($staff->user_id);
+            $staff->delete();
+        });
+
+        flash(translate('Staff has been deleted successfully'))->success();
+        return redirect()->route('staffs.index');
+    }
+
+    private function isSuperAdmin(Staff $staff): bool
+    {
+        return $staff->user->hasRole(Role::SUPER_ADMIN, 'store');
     }
 }
