@@ -19,8 +19,7 @@ class SellerFileUploadController extends Controller
             $all_uploads = Upload::where('user_id', auth()->user()->id);
 
             if ($request->search != null) {
-                $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->search);
-                $all_uploads->where('file_original_name', 'like', '%' . $escaped . '%', '\\');
+                $all_uploads->originalNameContains($request->search);
             }
             if ($request->type != null) {
                 $all_uploads->where('type', $request->type);

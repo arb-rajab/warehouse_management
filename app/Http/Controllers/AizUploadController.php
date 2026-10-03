@@ -20,8 +20,7 @@ class AizUploadController extends Controller
 
         if ($request->search != null) {
             $search = $request->search;
-            $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->search);
-            $all_uploads->where('file_original_name', 'like', '%' . $escaped . '%', '\\');
+            $all_uploads->originalNameContains($request->search);
         }
 
         $sort_by = $request->sort;
@@ -85,8 +84,7 @@ class AizUploadController extends Controller
     {
         $uploads = Upload::where('user_id', Auth::user()->id);
         if ($request->search != null) {
-            $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->search);
-            $uploads->where('file_original_name', 'like', '%' . $escaped . '%', '\\');
+            $uploads->originalNameContains($request->search);
         }
         if ($request->sort != null) {
             switch ($request->sort) {
