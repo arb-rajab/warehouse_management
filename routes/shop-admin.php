@@ -174,7 +174,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     // Seller Withdraw Request
-    Route::resource('/withdraw_requests', SellerWithdrawRequestController::class);
+    Route::resource('/withdraw_requests', SellerWithdrawRequestController::class)->except(['store']);
     Route::controller(SellerWithdrawRequestController::class)->group(function () {
         Route::get('/withdraw_requests_all', 'index')->name('withdraw_requests_all');
         Route::post('/withdraw_request/payment_modal', 'payment_modal')->name('withdraw_request.payment_modal');

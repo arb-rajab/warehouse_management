@@ -267,6 +267,30 @@ function orderStoreProduct(StoreUser $customer, Product $product, string $paymen
 }
 
 /**
+ * A shop for seller `$seller`, owed `$balance` by the admin (`admin_to_pay`).
+ */
+function createShopFor(StoreUser $seller, float $balance): int
+{
+    return DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop of '.$seller->id, 'admin_to_pay' => $balance]);
+}
+
+/**
+ * A withdraw request of `$amount` from `$seller` (status 0 pending, 1 paid).
+ */
+function createWithdrawRequestFor(StoreUser $seller, float $amount, ?int $status = 0): int
+{
+    return DB::table('seller_withdraw_requests')->insertGetId(['user_id' => $seller->id, 'amount' => $amount, 'status' => $status, 'viewed' => 0]);
+}
+
+/**
+ * The `admin_to_pay` balance of shop `$shopId`, read straight from the table.
+ */
+function shopBalance(int $shopId): float
+{
+    return (float) DB::table('shops')->where('id', $shopId)->value('admin_to_pay');
+}
+
+/**
  * Make the test cache serialize, through the same serializable_classes
  * allow-list (config/cache.php) production's database store applies. The
  * array store tests use otherwise keeps values as they are, so a cached

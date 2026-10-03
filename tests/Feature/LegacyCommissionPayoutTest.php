@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -9,20 +8,6 @@ use Illuminate\Support\Facades\DB;
  * locked transaction. A forged or negative amount, a request that is already
  * paid or belongs to another seller, must leave every one of those untouched.
  */
-function createShopFor(StoreUser $seller, float $balance): int
-{
-    return DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop of '.$seller->id, 'admin_to_pay' => $balance]);
-}
-
-function createWithdrawRequestFor(StoreUser $seller, float $amount, ?int $status = 0): int
-{
-    return DB::table('seller_withdraw_requests')->insertGetId(['user_id' => $seller->id, 'amount' => $amount, 'status' => $status, 'viewed' => 0]);
-}
-
-function shopBalance(int $shopId): float
-{
-    return (float) DB::table('shops')->where('id', $shopId)->value('admin_to_pay');
-}
 
 /**
  * @param  array<string, mixed>  $overrides

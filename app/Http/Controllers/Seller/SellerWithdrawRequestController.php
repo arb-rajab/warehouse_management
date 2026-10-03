@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Models\SellerWithdrawRequest;
+use App\Services\SellerWithdrawService;
 use Auth;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -27,21 +29,21 @@ class SellerWithdrawRequestController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(Request $request, SellerWithdrawService $withdrawals)
     {
-        $seller_withdraw_request = new SellerWithdrawRequest;
-        $seller_withdraw_request->user_id = Auth::user()->id;
-        $seller_withdraw_request->amount = $request->amount;
-        $seller_withdraw_request->message = $request->message;
-        $seller_withdraw_request->status = '0';
-        $seller_withdraw_request->viewed = '0';
-        if ($seller_withdraw_request->save()) {
-            flash(translate('Request has been sent successfully'))->success();
-            return redirect()->route('seller.money_withdraw_requests.index');
-        }
-        else{
-            flash(translate('Something went wrong'))->error();
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        try {
+            $withdrawals->request(Auth::user(), (float) $validated['amount'], $validated['message'] ?? null);
+        } catch (DomainException $exception) {
+            flash($exception->getMessage())->error();
             return back();
         }
+
+        flash(translate('Request has been sent successfully'))->success();
+        return redirect()->route('seller.money_withdraw_requests.index');
     }
 }
