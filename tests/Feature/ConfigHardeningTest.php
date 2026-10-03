@@ -6,53 +6,51 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Pulse\Http\Middleware\Authorize;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Process\Process;
 
 /**
- * Evaluates a config file as if the environment held `$env`, then restores it.
- * env() reads $_ENV and $_SERVER live, so no bootstrapping is needed.
+ * Evaluates a config file in a clean child process whose environment holds
+ * only `$env` (the variables this file's tests care about start out unset),
+ * so a default can be tested even though the test run's own environment, .env
+ * file included, sets some of them.
  *
  * @param  array<string, string>  $env
  * @return array<string, mixed>
  */
 function loadConfigWithEnv(string $file, array $env): array
 {
-    $previous = [];
+    $code = <<<'PHP'
+function env($key, $default = null) {
+    $value = getenv($key);
+    if ($value === false) { return $default; }
+    return match (strtolower($value)) { 'true', '(true)' => true, 'false', '(false)' => false, 'null', '(null)' => null, 'empty', '(empty)' => '', default => $value };
+}
+function base_path($path = '') { return '/base/'.$path; }
+function storage_path($path = '') { return '/storage/'.$path; }
+require getenv('TEST_AUTOLOAD');
+echo json_encode(require getenv('TEST_CONFIG_FILE'), JSON_PARTIAL_OUTPUT_ON_ERROR);
+PHP;
 
-    foreach ($env as $key => $value) {
-        $previous[$key] = [$_ENV[$key] ?? null, $_SERVER[$key] ?? null];
-        $_ENV[$key] = $_SERVER[$key] = $value;
-    }
+    $unset = array_fill_keys(['APP_ENV', 'TELESCOPE_ENABLED', 'CSP_REPORT_ONLY', 'BACKUP_OFFSITE_DISK', 'FORCE_HTTPS'], false);
 
-    try {
-        return require config_path($file);
-    } finally {
-        foreach ($previous as $key => [$envValue, $serverValue]) {
-            $envValue === null ? Arr::forget($_ENV, $key) : $_ENV[$key] = $envValue;
-            $serverValue === null ? Arr::forget($_SERVER, $key) : $_SERVER[$key] = $serverValue;
-        }
-    }
+    $process = new Process([PHP_BINARY, '-d', 'display_errors=0', '-r', $code], base_path(), [
+        ...$unset,
+        ...$env,
+        'TEST_AUTOLOAD' => base_path('vendor/autoload.php'),
+        'TEST_CONFIG_FILE' => config_path($file),
+    ]);
+    $process->mustRun();
+
+    return json_decode($process->getOutput(), true);
 }
 
 test('telescope defaults to disabled outside local when TELESCOPE_ENABLED is unset', function () {
-    $saved = [$_ENV['TELESCOPE_ENABLED'] ?? null, $_SERVER['TELESCOPE_ENABLED'] ?? null];
-    unset($_ENV['TELESCOPE_ENABLED'], $_SERVER['TELESCOPE_ENABLED']);
-
-    try {
-        expect(loadConfigWithEnv('telescope.php', ['APP_ENV' => 'production'])['enabled'])->toBeFalse()
-            ->and(loadConfigWithEnv('telescope.php', ['APP_ENV' => 'local'])['enabled'])->toBeTrue();
-    } finally {
-        if ($saved[0] !== null) {
-            $_ENV['TELESCOPE_ENABLED'] = $saved[0];
-        }
-        if ($saved[1] !== null) {
-            $_SERVER['TELESCOPE_ENABLED'] = $saved[1];
-        }
-    }
+    expect(loadConfigWithEnv('telescope.php', ['APP_ENV' => 'production'])['enabled'])->toBeFalse()
+        ->and(loadConfigWithEnv('telescope.php', ['APP_ENV' => 'local'])['enabled'])->toBeTrue();
 });
 
 test('an explicit TELESCOPE_ENABLED still overrides the default', function () {
@@ -71,23 +69,11 @@ test('the WAF only skips the _boost routes locally', function () {
 });
 
 test('the CSP is enforced in production unless CSP_REPORT_ONLY says otherwise', function () {
-    $saved = [$_ENV['CSP_REPORT_ONLY'] ?? null, $_SERVER['CSP_REPORT_ONLY'] ?? null];
-    unset($_ENV['CSP_REPORT_ONLY'], $_SERVER['CSP_REPORT_ONLY']);
+    $reportOnly = fn (array $env) => loadConfigWithEnv('secure-headers.php', $env)['csp']['report-only'];
 
-    try {
-        $cspIn = fn (string $appEnv) => loadConfigWithEnv('secure-headers.php', ['APP_ENV' => $appEnv])['csp']['report-only'];
-
-        expect($cspIn('production'))->toBeFalse()
-            ->and($cspIn('local'))->toBeTrue()
-            ->and(loadConfigWithEnv('secure-headers.php', ['APP_ENV' => 'production', 'CSP_REPORT_ONLY' => 'true'])['csp']['report-only'])->toBeTrue();
-    } finally {
-        if ($saved[0] !== null) {
-            $_ENV['CSP_REPORT_ONLY'] = $saved[0];
-        }
-        if ($saved[1] !== null) {
-            $_SERVER['CSP_REPORT_ONLY'] = $saved[1];
-        }
-    }
+    expect($reportOnly(['APP_ENV' => 'production']))->toBeFalse()
+        ->and($reportOnly(['APP_ENV' => 'local']))->toBeTrue()
+        ->and($reportOnly(['APP_ENV' => 'production', 'CSP_REPORT_ONLY' => 'true']))->toBeTrue();
 });
 
 test('no permissions-policy feature is open to every origin', function () {

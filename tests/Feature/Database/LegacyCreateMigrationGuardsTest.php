@@ -12,7 +12,7 @@ function legacyCreateMigrations(): array
 {
     $migrations = [];
 
-    foreach (glob(database_path('migrations/2026_09_28_*_create_*_table.php')) as $path) {
+    foreach (glob(__DIR__.'/../../../database/migrations/2026_09_28_*_create_*_table.php') as $path) {
         if (preg_match("/Schema::create\('(\w+)'/", file_get_contents($path), $match)) {
             $migrations[basename($path)] = [$path, $match[1]];
         }
