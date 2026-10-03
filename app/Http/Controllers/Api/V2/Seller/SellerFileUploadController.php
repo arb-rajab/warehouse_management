@@ -18,7 +18,7 @@ class SellerFileUploadController extends Controller
         if (auth()->user()->user_type == 'seller') {
             $all_uploads = Upload::where('user_id', auth()->user()->id);
 
-            if ($request->search != null) {
+            if (is_string($request->search) && $request->search !== '') {
                 $all_uploads->originalNameContains($request->search);
             }
             if ($request->type != null) {
@@ -136,7 +136,7 @@ class SellerFileUploadController extends Controller
     //Download project attachment
     public function attachment_download($id)
     {
-        $project_attachment = Upload::find($id);
+        $project_attachment = Upload::findOrFail($id);
         try {
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);

@@ -36,11 +36,12 @@ test('the uploader search lists only the signed-in account\'s files that match, 
     namedUpload('report_stranger', $stranger->id);
     actingAsStoreUser($customer);
 
-    $names = fn (string $search): array => $this->get('/temp/aiz-uploader/get_uploaded_files?'.http_build_query(['search' => $search]))
+    $names = fn (string|array $search): array => $this->get('/temp/aiz-uploader/get_uploaded_files?'.http_build_query(['search' => $search]))
         ->assertOk()
         ->json('data.*.file_original_name');
 
     expect($names('_'))->toBe(['report_final'])
         ->and($names('report'))->toEqualCanonicalizing(['report_final', 'reportXfinal'])
-        ->and($names('%'))->toBe([]);
+        ->and($names('%'))->toBe([])
+        ->and($names(['_']))->toEqualCanonicalizing(['report_final', 'reportXfinal']);
 });
