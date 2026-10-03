@@ -8,6 +8,17 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreProductBarcodeRequest extends FormRequest
 {
     /**
+     * Trimmed before validation, so `unique` compares what is actually stored
+     * and a scanner's trailing whitespace can't slip a duplicate past it.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('barcode'))) {
+            $this->merge(['barcode' => trim($this->input('barcode'))]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * `unique` is global across every product, not scoped to the one being

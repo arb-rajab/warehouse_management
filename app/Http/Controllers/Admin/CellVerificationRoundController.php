@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -104,6 +105,10 @@ class CellVerificationRoundController extends Controller
     {
         return response()->streamDownload(function () use ($request, $cellVerificationRound) {
             $csv = Writer::createFromPath('php://output', 'w');
+            // Notes are free text typed by warehouse staff and product names come
+            // from the store feed; a leading = + - @ would run as a formula when
+            // an admin opens the export in a spreadsheet.
+            $csv->addFormatter(new EscapeFormula);
             $csv->insertOne([
                 'id', 'row', 'cell_number', 'flat_number',
                 'is_correct', 'expected_cell_state', 'expected_product', 'expected_boxes_count',

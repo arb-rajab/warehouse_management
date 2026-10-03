@@ -30,6 +30,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
+use Psr\Http\Message\StreamInterface;
 
 class ProductController extends Controller
 {
@@ -45,6 +46,10 @@ class ProductController extends Controller
 
     /** Longest side, in pixels, of an image served by {@see image()} — ample for a 3D map box face. */
     private const int PRODUCT_IMAGE_MAX_SIZE = 256;
+
+    private const int PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+    private const int PRODUCT_IMAGE_MAX_PIXELS = 25_000_000;
 
     public function index(FilterProductsRequest $request): Response
     {
@@ -184,7 +189,7 @@ class ProductController extends Controller
     public function addBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
     {
         $product->barcodes()->create([
-            'barcode' => $request->string('barcode')->trim()->value(),
+            'barcode' => $request->validated('barcode'),
         ]);
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
@@ -253,15 +258,21 @@ class ProductController extends Controller
             abort(HttpResponse::HTTP_NOT_FOUND);
         }
 
+        abort_unless($this->isAllowedImageUrl($url), HttpResponse::HTTP_BAD_GATEWAY);
+
         try {
-            $upstream = Http::timeout(10)->get($url);
+            $upstream = Http::timeout(10)
+                ->withOptions(['allow_redirects' => false, 'stream' => true])
+                ->get($url);
         } catch (ConnectionException) {
             abort(HttpResponse::HTTP_BAD_GATEWAY);
         }
 
         abort_unless($upstream->successful(), HttpResponse::HTTP_BAD_GATEWAY);
 
-        $png = $this->normalizedProductImage($upstream->body());
+        $body = $this->readCapped($upstream->toPsrResponse()->getBody(), self::PRODUCT_IMAGE_MAX_BYTES);
+
+        $png = $body === null ? null : $this->normalizedProductImage($body);
 
         if ($png === null) {
             abort(HttpResponse::HTTP_BAD_GATEWAY);
@@ -273,12 +284,64 @@ class ProductController extends Controller
     }
 
     /**
+     * Whether the image may be fetched server-side: https, the default port and
+     * a host the store serves its images from (the asset base URL's host plus
+     * `store.image_hosts`). `external_link` is whatever the store's uploads
+     * table holds, so it is never trusted to point somewhere harmless.
+     */
+    private function isAllowedImageUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        $host = strtolower((string) ($parts['host'] ?? ''));
+
+        if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https' || $host === '') {
+            return false;
+        }
+
+        if (isset($parts['port']) && $parts['port'] !== 443) {
+            return false;
+        }
+
+        $assetHost = parse_url((string) config('store.asset_base_url'), PHP_URL_HOST);
+        $allowed = array_map('strtolower', array_filter([...config('store.image_hosts'), $assetHost]));
+
+        return in_array($host, $allowed, true);
+    }
+
+    /**
+     * The stream's bytes, or null once it holds more than `$maxBytes` — read
+     * in chunks so an oversized body is abandoned rather than buffered.
+     */
+    private function readCapped(StreamInterface $stream, int $maxBytes): ?string
+    {
+        $body = '';
+
+        while (! $stream->eof()) {
+            $body .= $stream->read(8192);
+
+            if (strlen($body) > $maxBytes) {
+                return null;
+            }
+        }
+
+        return $body;
+    }
+
+    /**
      * Decodes any raster format GD reads, downscales it to fit
      * PRODUCT_IMAGE_MAX_SIZE (never upscaling) and re-encodes it as PNG,
      * keeping transparency. Null when the bytes aren't a decodable image.
      */
     private function normalizedProductImage(string $bytes): ?string
     {
+        $dimensions = @getimagesizefromstring($bytes);
+
+        // Refuse before decoding: a small file can declare a huge canvas, and GD
+        // allocates width x height x 4 bytes for it.
+        if ($dimensions === false || $dimensions[0] * $dimensions[1] > self::PRODUCT_IMAGE_MAX_PIXELS) {
+            return null;
+        }
+
         // `@`: GD warns on undecodable input; a false return is handled below.
         $source = @imagecreatefromstring($bytes);
 
