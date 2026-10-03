@@ -70,6 +70,7 @@ class CellVerificationRoundController extends Controller
      * warehouse-wide round holds everything until it is finished.
      */
     #[DocumentedResponse(409, description: 'One or more of the requested rows are already covered by another unfinished round (`error_code`: `rows_already_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(422, description: 'The round would cover no rows, or a requested row no longer exists (`error_code`: `verification_round_scope_empty` / `verification_round_rows_not_found`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationRoundRequest $request): JsonResponse
     {
         /** @var User $user */

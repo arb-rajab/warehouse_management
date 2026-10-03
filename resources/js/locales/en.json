@@ -220,7 +220,8 @@
             "transferred_in": "Transferred in",
             "transferred": "Transferred",
             "deactivated": "Deactivated",
-            "reactivated": "Reactivated"
+            "reactivated": "Reactivated",
+            "product_changed": "Product changed"
         },
         "states": {
             "empty": "Empty",
@@ -679,7 +680,8 @@
                 "emptied": "Emptied — the last boxes were taken and the cell is now empty again.",
                 "transferred": "Transferred — a pallet was moved from one cell to another; the log shows both where it left and where it landed.",
                 "deactivated": "Deactivated — a cell was marked unusable (for example, damaged shelving) and can't hold pallets until it's reactivated.",
-                "reactivated": "Reactivated — a previously deactivated cell was marked usable again."
+                "reactivated": "Reactivated — a previously deactivated cell was marked usable again.",
+                "productChanged": "Product changed — an admin corrected which product a stored pallet holds; the entry shows the new product, and the pallet's earlier entries show the old one."
             },
             "legend": {
                 "heading": "Cell colors",

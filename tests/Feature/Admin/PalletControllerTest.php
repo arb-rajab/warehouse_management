@@ -925,7 +925,7 @@ test('transferring a non-existent pallet returns a 404', function () {
 });
 
 test('an authenticated admin can update a pallet\'s product, expiration date, and remaining boxes', function () {
-    actingAsAdmin();
+    $admin = actingAsAdmin();
     $originalProduct = Product::factory()->create();
     $newProduct = Product::factory()->create();
     $pallet = Pallet::factory()->create(['product_id' => $originalProduct->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
@@ -942,6 +942,20 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
     expect($pallet->product_id)->toBe($newProduct->id);
     expect($pallet->expiration_date->toDateString())->toBe('2026-12-25');
     expect($pallet->remaining_boxes)->toBe(3);
+
+    $this->assertDatabaseCount('cell_status_logs', 1);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $pallet->cell_id,
+        'related_cell_id' => null,
+        'action' => CellLogAction::ProductChanged->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Full->value,
+        'product_id' => $newProduct->id,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 3,
+        'user_id' => $admin->id,
+        'note' => null,
+    ]);
 });
 
 test('an admin can update an already-expired pallet without changing its expiration date', function () {

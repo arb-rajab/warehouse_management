@@ -6,6 +6,7 @@ use App\Enums\CellState;
 use App\Exceptions\CellOutsideRoundRowsException;
 use App\Exceptions\CellVerificationReportNotAcceptableException;
 use App\Exceptions\InvalidSlotStateException;
+use App\Exceptions\InvalidVerificationRoundScopeException;
 use App\Exceptions\OverlappingVerificationRoundException;
 use App\Exceptions\VerificationRoundCompletedException;
 use App\Models\Cell;
@@ -49,8 +50,16 @@ class CellVerificationService
      * either commits would lock nothing. Whoever takes the row locks first
      * commits their claim; the other's check then reads it and is refused.
      *
+     * The resolved scope is also checked for being what was asked for: a round
+     * over no rows at all (an empty warehouse, or a caller passing `[]`) would
+     * freeze nothing and verify nothing, and a named id that no longer resolves
+     * — a row deleted after the request was validated — would otherwise just
+     * drop out of the round silently. The request already rejects both; this is
+     * the check that holds under the row locks.
+     *
      * @param  array<int, int>|null  $rowIds
      *
+     * @throws InvalidVerificationRoundScopeException
      * @throws OverlappingVerificationRoundException
      */
     public function startRound(int $userId, ?array $rowIds): CellVerificationRound
@@ -73,6 +82,14 @@ class CellVerificationService
                 ->toBase()
                 ->map(fn (Row $row): int => $row->id)
                 ->all();
+
+            if ($scopedIds === []) {
+                throw new InvalidVerificationRoundScopeException('verification_round_scope_empty', __('messages.verification_round_scope_empty'));
+            }
+
+            if ($rowIds !== null && count($scopedIds) !== count(array_unique($rowIds))) {
+                throw new InvalidVerificationRoundScopeException('verification_round_rows_not_found', __('messages.verification_round_rows_not_found'));
+            }
 
             $conflictingLetters = Row::query()
                 ->whereIn('id', $scopedIds)
@@ -98,14 +115,22 @@ class CellVerificationService
     /**
      * Mark a round completed. Idempotent: completing an already-completed
      * round is a no-op that returns the round unchanged, rather than an error.
+     *
+     * The round is locked and re-read rather than trusted as passed in, so a
+     * completion queues behind any report() still holding the round (see
+     * there) and two concurrent completions can't both stamp completed_at.
      */
     public function completeRound(CellVerificationRound $round): CellVerificationRound
     {
-        if (! $round->isCompleted()) {
-            $round->update(['completed_at' => now()]);
-        }
+        return DB::transaction(function () use ($round) {
+            $lockedRound = CellVerificationRound::query()->lockForUpdate()->findOrFail($round->id);
 
-        return $round;
+            if (! $lockedRound->isCompleted()) {
+                $lockedRound->update(['completed_at' => now()]);
+            }
+
+            return $lockedRound;
+        });
     }
 
     /**
@@ -117,6 +142,17 @@ class CellVerificationService
      * are frozen against pallet actions, so a report from outside them could
      * be read against a pallet that is moving underneath it.
      *
+     * The round is locked and re-checked inside the transaction, not read off
+     * the caller's copy: a round completed between the caller loading it and
+     * this report would otherwise accept a report against a round whose rows
+     * are no longer frozen. completeRound() takes the same lock, so the two
+     * serialize — a report either lands before the completion or is refused.
+     *
+     * The cell and then its pallet are locked before the expected snapshot is
+     * read — the same cell-then-pallet order PalletActionService uses, so this
+     * never deadlocks against a pallet action — so the snapshot is the cell's
+     * committed state at the moment of the report.
+     *
      * @param  array{is_correct: bool, reported_cell_state?: string|null, reported_product_id?: int|null, reported_boxes_count?: int|null, reported_expiration_date?: string|null, note?: string|null}  $reported
      *
      * @throws VerificationRoundCompletedException
@@ -124,21 +160,23 @@ class CellVerificationService
      */
     public function report(CellVerificationRound $round, int $cellId, int $userId, array $reported): CellVerificationReport
     {
-        if ($round->isCompleted()) {
-            throw new VerificationRoundCompletedException;
-        }
-
         return DB::transaction(function () use ($round, $cellId, $userId, $reported) {
-            $cell = Cell::query()->with('pallet')->findOrFail($cellId);
+            $lockedRound = CellVerificationRound::query()->lockForUpdate()->findOrFail($round->id);
 
-            if (! $round->coversRow($cell->row_id)) {
+            if ($lockedRound->isCompleted()) {
+                throw new VerificationRoundCompletedException;
+            }
+
+            $cell = Cell::query()->lockForUpdate()->findOrFail($cellId);
+
+            if (! $lockedRound->coversRow($cell->row_id)) {
                 throw new CellOutsideRoundRowsException;
             }
 
-            $pallet = $cell->pallet;
+            $pallet = Pallet::query()->where('cell_id', $cell->id)->lockForUpdate()->first();
 
             return CellVerificationReport::create([
-                'cell_verification_round_id' => $round->id,
+                'cell_verification_round_id' => $lockedRound->id,
                 'cell_id' => $cell->id,
                 'user_id' => $userId,
                 'is_correct' => $reported['is_correct'],

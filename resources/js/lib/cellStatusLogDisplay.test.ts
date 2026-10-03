@@ -37,6 +37,10 @@ describe('cellLogActionLabel', () => {
     it('translates the action key', () => {
         expect(cellLogActionLabel('opened')).toBe(t('cellLog.actions.opened'));
     });
+
+    it('labels a product correction with its own translation, not the raw key', () => {
+        expect(cellLogActionLabel('product_changed')).toBe('Product changed');
+    });
 });
 
 describe('flagReasonLabel', () => {

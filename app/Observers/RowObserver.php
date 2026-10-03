@@ -6,6 +6,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Row;
 use App\Services\DashboardStatsCache;
+use Illuminate\Support\Facades\DB;
 
 class RowObserver
 {
@@ -27,6 +28,10 @@ class RowObserver
      * regenerating cells discards the previous ones — deleting a cell with
      * status logs or verification reports against it fails the
      * `restrictOnDelete` constraint on those tables.
+     *
+     * The delete and the regeneration run in one transaction (a savepoint when,
+     * as from RowController, the caller already holds one), so a failed insert
+     * can't leave the row with no cells at all.
      */
     public function updated(Row $row): void
     {
@@ -34,9 +39,11 @@ class RowObserver
             return;
         }
 
-        $row->cells()->delete();
+        DB::transaction(function () use ($row) {
+            $row->cells()->delete();
 
-        $this->generateCells($row);
+            $this->generateCells($row);
+        });
 
         DashboardStatsCache::flush();
     }
