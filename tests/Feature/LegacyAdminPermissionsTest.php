@@ -55,7 +55,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
-    'AizUploadController@all_file',
     'AizUploadController@bulk_uploaded_files_delete',
     'AizUploadController@destroy',
     'AizUploadController@file_info',

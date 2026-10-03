@@ -163,13 +163,8 @@ class AizUploadController extends Controller
         // return $files;
     }
 
-    public function all_file(Request $request)
+    public function all_file()
     {
-        if (auth()->user()->cannot('delete_all_uploads')) {
-            flash(translate("You don't have permission for deleting all files!"))->error();
-            return back();
-        }
-
         $uploads = Upload::all();
         foreach ($uploads as $upload) {
             try {

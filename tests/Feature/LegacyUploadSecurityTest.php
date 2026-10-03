@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V2\Seller\SellerFileUploadController;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Models\Permission;
 
 /**
  * The admin "delete every upload" action was a GET link anyone signed in to the
@@ -53,10 +54,26 @@ test('a staff member without the permission cannot delete every upload', functio
     uploadOwnedBy(createStoreUser('customer')->id);
     actingAsStoreUser(createStoreUser('staff'));
 
-    $response = $this->post('/temp/admin/all-file');
+    $this->post('/temp/admin/all-file')->assertForbidden();
 
-    expect($response->status())->toBeIn([302, 403])
-        ->and(Upload::count())->toBe(1);
+    expect(Upload::count())->toBe(1);
+});
+
+test('a staff member granted the permission can delete every upload', function () {
+    uploadOwnedBy(createStoreUser('customer')->id);
+    Permission::findOrCreate('delete_all_uploads', 'store');
+    $staff = createStoreUser('staff');
+    $staff->givePermissionTo('delete_all_uploads');
+
+    withScratchPublicPath(function (string $publicPath) use ($staff) {
+        file_put_contents("$publicPath/uploads/all/mine.png", tinyPng());
+        actingAsStoreUser($staff);
+
+        $this->post('/temp/admin/all-file')->assertRedirect();
+
+        expect(Upload::count())->toBe(0)
+            ->and(storedUploadFiles($publicPath))->toBe([]);
+    });
 });
 
 test('a super admin can delete every upload', function () {
