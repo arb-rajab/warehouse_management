@@ -2,8 +2,10 @@
 
 use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Cart;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Pallet;
@@ -11,10 +13,12 @@ use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -288,6 +292,47 @@ function createWithdrawRequestFor(StoreUser $seller, float $amount, ?int $status
 function shopBalance(int $shopId): float
 {
     return (float) DB::table('shops')->where('id', $shopId)->value('admin_to_pay');
+}
+
+/**
+ * The store's own orders table has `manual_payment` and `manual_payment_data`;
+ * this app's stand-in does not carry them yet, so tests of a manual payment
+ * add them first.
+ */
+function addManualPaymentColumnsToOrders(): void
+{
+    foreach (['manual_payment' => fn (Blueprint $table) => $table->boolean('manual_payment')->default(false), 'manual_payment_data' => fn (Blueprint $table) => $table->text('manual_payment_data')->nullable()] as $column => $define) {
+        if (! Schema::hasColumn('orders', $column)) {
+            Schema::table('orders', $define);
+        }
+    }
+}
+
+/**
+ * A cart-base coupon of `$owner`'s shop, valid today.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function couponFor(StoreUser $owner, array $attributes = []): Coupon
+{
+    return Coupon::forceCreate([
+        'user_id' => $owner->id, 'type' => 'cart_base', 'code' => 'SAVE'.random_int(1000, 9999),
+        'details' => json_encode(['min_buy' => 1, 'max_discount' => 1000]), 'discount' => 50, 'discount_type' => 'amount',
+        'start_date' => strtotime('-1 day'), 'end_date' => strtotime('+1 day'),
+        ...$attributes,
+    ]);
+}
+
+/**
+ * A cart line of `$customer` for a new product of `$shopOwner`'s shop.
+ *
+ * @param  array<string, mixed>  $productAttributes
+ */
+function cartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, array $productAttributes = []): Cart
+{
+    $product = createStoreProduct(['user_id' => $shopOwner->id, ...$productAttributes]);
+
+    return Cart::create(['user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity, 'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0]);
 }
 
 /**
