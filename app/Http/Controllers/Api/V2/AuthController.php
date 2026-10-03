@@ -13,7 +13,9 @@ use App\Models\Customer;
 use App\Models\StoreUser;
 use App\Notifications\AppEmailVerificationNotification;
 use App\Rules\Recaptcha;
+use App\Services\SocialAccounts;
 use App\Services\SocialRevoke;
+use App\Services\StoreVerificationCodes;
 use App\Services\UserService;
 use App\Utility\PayhereUtility;
 use Carbon\Carbon;
@@ -29,6 +31,10 @@ use Socialite;
 class AuthController extends Controller
 {
     protected $userService;
+
+    public function __construct(private readonly StoreVerificationCodes $codes)
+    {
+    }
 
     protected function userService()
     {
@@ -76,7 +82,6 @@ class AuthController extends Controller
         // $user->tax_number = $request->tax_number;
         // $user->bank_account_number =  $request->bank_account_number;
         $user->country = $request->country;
-        $user->verification_code = random_int(100000, 999999);
         if ($request->register_by == 'email') {
             $user->email = $request->email_or_phone;
         }
@@ -95,7 +100,6 @@ class AuthController extends Controller
         // }
 
         $user->password = bcrypt($request->password);
-        $user->verification_code = random_int(100000, 999999);
 
         $user->email_verified_at = null;
         if ($user->email != null) {
@@ -104,19 +108,22 @@ class AuthController extends Controller
             }
         }
 
+        $user->save();
+
         if ($user->email_verified_at == null) {
+            $code = $this->codes->issue($user);
+
             if ($request->register_by == 'email') {
                 try {
-                    $user->notify(new AppEmailVerificationNotification());
+                    $user->notify(new AppEmailVerificationNotification($code));
                 } catch (\Exception $e) {
                 }
             } else {
                 $otpController = new OTPVerificationController();
-                $otpController->send_code($user);
+                $otpController->send_code($user, $code);
             }
         }
 
-        $user->save();
         //create token
         $user->createToken('tokens')->plainTextToken;
 
@@ -139,19 +146,24 @@ class AuthController extends Controller
     public function resendCode()
     {
         $user = auth()->user();
-        $user->verification_code = random_int(100000, 999999);
+        $code = $this->codes->issueUnlessCoolingDown($user);
+
+        if ($code === null) {
+            return response()->json([
+                'result' => false,
+                'message' => translate('Please wait a moment before asking for another code'),
+            ], 429);
+        }
 
         if ($user->email) {
             try {
-                $user->notify(new AppEmailVerificationNotification());
+                $user->notify(new AppEmailVerificationNotification($code));
             } catch (\Exception $e) {
             }
         } else {
             $otpController = new OTPVerificationController();
-            $otpController->send_code($user);
+            $otpController->send_code($user, $code);
         }
-
-        $user->save();
 
         return response()->json([
             'result' => true,
@@ -163,9 +175,8 @@ class AuthController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->verification_code == $request->verification_code) {
+        if ($this->codes->consume($user, (string) $request->verification_code)) {
             $user->email_verified_at = date('Y-m-d H:i:s');
-            $user->verification_code = null;
             $user->save();
             return response()->json([
                 'result' => true,
@@ -288,16 +299,16 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Signs in with a provider's access token.
+     *
+     * The account is the one the provider returns for that token. It used to
+     * be looked up by the `provider` field the client sent as if it were the
+     * provider id, so a caller with any valid token of their own could name
+     * someone else's provider id and be signed in as them.
+     */
     public function socialLogin(Request $request)
     {
-        if (!$request->provider) {
-            return response()->json([
-                'result' => false,
-                'message' => translate('User not found'),
-                'user' => null
-            ]);
-        }
-
         switch ($request->social_provider) {
             case 'facebook':
                 $social_user = Socialite::driver('facebook')->fields([
@@ -335,44 +346,21 @@ class AuthController extends Controller
             return response()->json(['result' => false, 'message' => translate('No social account matches'), 'user' => null]);
         }
 
-        $existingUserByProviderId = StoreUser::where('provider_id', $request->provider)->first();
+        $user = app(SocialAccounts::class)->resolve($request->social_provider, $social_user_details, $request->name);
 
-        if ($existingUserByProviderId) {
-            $existingUserByProviderId->access_token = $social_user_details->token;
-            if ($request->social_provider == 'apple') {
-                $existingUserByProviderId->refresh_token = $social_user_details->refreshToken;
-                if (!isset($social_user->user['is_private_email'])) {
-                    $existingUserByProviderId->email = $social_user_details->email;
-                }
-            }
-            $existingUserByProviderId->save();
-            return $this->loginSuccess($existingUserByProviderId);
-        } else {
-            $existing_or_new_user = StoreUser::firstOrNew(
-                [['email', '!=', null], 'email' => $social_user_details->email]
-            );
-
-            $existing_or_new_user->user_type = 'customer';
-            $existing_or_new_user->provider_id = $social_user_details->id;
-
-            if (!$existing_or_new_user->exists) {
-                if ($request->social_provider == 'apple') {
-                    if ($request->name) {
-                        $existing_or_new_user->name = $request->name;
-                    } else {
-                        $existing_or_new_user->name = 'Apple User';
-                    }
-                } else {
-                    $existing_or_new_user->name = $social_user_details->name;
-                }
-                $existing_or_new_user->email = $social_user_details->email;
-                $existing_or_new_user->email_verified_at = date('Y-m-d H:m:s');
-            }
-
-            $existing_or_new_user->save();
-
-            return $this->loginSuccess($existing_or_new_user);
+        if ($user === null) {
+            return response()->json([
+                'result' => false,
+                'message' => translate('An account with this email already exists. Sign in with your password instead.'),
+                'user' => null
+            ], 403);
         }
+
+        if ($user->banned) {
+            return response()->json(['result' => false, 'message' => translate('User is banned'), 'user' => null], 401);
+        }
+
+        return $this->loginSuccess($user);
     }
 
     public function loginSuccess($user, $token = null)
@@ -463,8 +451,8 @@ class AuthController extends Controller
 
     public function getUserInfoByAccessToken(Request $request)
     {
-        $token = PersonalAccessToken::findToken($request->access_token);
-        if (!$token) {
+        $token = PersonalAccessToken::findToken((string) $request->access_token);
+        if (!$token || $token->isExpired()) {
             return $this->loginFailed();
         }
         $user = $token->tokenable;

@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function () {
     Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login')->middleware('throttle:store-auth');
-    Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('rate.limit');
-    Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin');
+    Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('throttle:store-signup');
+    Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin')->middleware('throttle:store-auth');
     Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest')->middleware('throttle:store-auth');
     Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset')->middleware('throttle:store-auth');
     Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode')->middleware('throttle:store-auth');
@@ -20,7 +20,7 @@ Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function
         Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode')->middleware('throttle:store-auth');
     });
 
-    Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken');
+    Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken')->middleware('throttle:store-auth');
 });
 
 
@@ -282,7 +282,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // Route::get('user/info/{id}', 'App\Http\Controllers\Api\V2\UserController@info')->middleware('auth:store_api');
     // Route::post('user/info/update', 'App\Http\Controllers\Api\V2\UserController@updateName')->middleware('auth:store_api');
 
-    Route::post('get-user-by-access_token', 'App\Http\Controllers\Api\V2\UserController@getUserInfoByAccessToken');
+    Route::post('get-user-by-access_token', 'App\Http\Controllers\Api\V2\UserController@getUserInfoByAccessToken')->middleware('throttle:store-auth');
     Route::get('check_user_verified/{user_id}', 'App\Http\Controllers\Api\V2\UserController@check_verified_by_admin');
 
     Route::get('cities', 'App\Http\Controllers\Api\V2\AddressController@getCities');

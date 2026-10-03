@@ -15,7 +15,10 @@ class AppEmailVerificationNotification extends Notification
 {
     use Queueable;
 
-    public function __construct()
+    /**
+     * @param  string  $code  The clear-text code StoreVerificationCodes::issue() returned.
+     */
+    public function __construct(public readonly string $code)
     {
     }
 
@@ -28,7 +31,7 @@ class AppEmailVerificationNotification extends Notification
     {
         $array['view'] = 'shop.emails.app_verification';
         $array['subject'] = translate('Email Verification');
-        $array['content'] = translate('Please enter the code:'.$notifiable->verification_code);
+        $array['content'] = translate('Please enter the code:'.$this->code);
 
         return (new MailMessage)
             ->view('shop.emails.app_verification', ['array' => $array])

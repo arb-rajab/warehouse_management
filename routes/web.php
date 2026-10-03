@@ -35,7 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('password/change', [PasswordChangeController::class, 'edit'])->name('password.change');
-    Route::put('password/change', [PasswordChangeController::class, 'update'])->name('password.update');
+    Route::put('password/change', [PasswordChangeController::class, 'update'])->middleware('throttle:password-change')->name('password.update');
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

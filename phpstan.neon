@@ -260,7 +260,6 @@ parameters:
         - app/Http/Middleware/Language.php
         - app/Http/Middleware/LogRequestTime.php
         - app/Http/Middleware/RaizerSuperAdmin.php
-        - app/Http/Middleware/RateLimitMiddleware.php
         - app/Http/Middleware/RedirectIfAuthenticated.php
         - app/Http/Middleware/TrimStrings.php
         - app/Http/Middleware/TrustProxies.php

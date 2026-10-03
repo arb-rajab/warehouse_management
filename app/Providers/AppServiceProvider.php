@@ -54,6 +54,11 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // The admin panel's own password change: it asks for the current
+        // password, so without a limit a stolen session could guess it. Keyed on
+        // the signed-in user, falling back to the IP.
+        RateLimiter::for('password-change', fn (Request $request): Limit => Limit::perMinute(5)->by('password-change|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
+
         // The legacy store's login, and its emailed and texted codes (password
         // reset, verification): 6 digits is 900,000 guesses, and none of these
         // routes had any limit. Per account and IP, per account across IPs
@@ -75,6 +80,13 @@ class AppServiceProvider extends ServiceProvider
 
             return $limits;
         });
+
+        // The store's sign-up: the sole job of the `rate.limit` middleware this
+        // replaces, which counted attempts with a get-then-increment on the
+        // cache (two simultaneous requests both read the same count) and
+        // was keyed on IP and path with a hand-rolled 429 body. Same budget, 5
+        // sign-ups per IP per 15 minutes, on the framework's atomic limiter.
+        RateLimiter::for('store-signup', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by('store-signup|'.$request->ip()));
 
         // `user('sanctum')`, never a bare `user()`: with no guard argument the
         // resolver uses auth.defaults.guard (`web`, session driver), and the api

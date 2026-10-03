@@ -11,6 +11,7 @@ use App\Models\Country;
 use App\Models\Customer;
 use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
+use App\Services\StoreVerificationCodes;
 use App\Services\UserService;
 use Carbon\Carbon;
 use Cookie;
@@ -146,11 +147,10 @@ class RegisterController extends Controller implements HasMiddleware
                     'name' => $data['name'],
                     'phone' => '+'.$data['country_code'].$data['phone'],
                     'password' => Hash::make($data['password']),
-                    'verification_code' => random_int(100000, 999999)
                 ]);
 
                 $otpController = new OTPVerificationController;
-                $otpController->send_code($user);
+                $otpController->send_code($user, app(StoreVerificationCodes::class)->issue($user));
             }
         }
 

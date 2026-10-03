@@ -18,7 +18,6 @@ use App\Http\Middleware\IsUser;
 use App\Http\Middleware\Language;
 use App\Http\Middleware\LogRequestTime;
 use App\Http\Middleware\RaizerSuperAdmin;
-use App\Http\Middleware\RateLimitMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
@@ -117,7 +116,6 @@ class Kernel extends HttpKernel
         'RaizerSuperAdmin' => RaizerSuperAdmin::class,
         'wms.auth' => WmsAuthMiddleware::class,
         'log.request.time' => LogRequestTime::class,
-        'rate.limit' => RateLimitMiddleware::class,
         'driver' => IsDriver::class,
     ];
 

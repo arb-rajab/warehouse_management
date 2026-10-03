@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use Auth;
+use App\Http\Middleware\Concerns\RequiresUnbannedStoreUser;
 use Closure;
 use Illuminate\Http\Request;
 
 class IsUser
 {
+    use RequiresUnbannedStoreUser;
+
     /**
      * Handle an incoming request.
      *
@@ -17,16 +19,12 @@ class IsUser
      */
     public function handle($request, Closure $next)
     {
-        if (Auth::check() &&
-                (Auth::user()->user_type == 'customer' ||
-                Auth::user()->user_type == 'seller' ||
-                Auth::user()->user_type == 'delivery_boy') ) {
-
+        if ($this->isUnbannedStoreUserOfType($request, 'customer', 'seller', 'delivery_boy')) {
             return $next($request);
         }
-        else{
-            session(['link' => url()->current()]);
-            return redirect()->route('user.login');
-        }
+
+        session(['link' => url()->current()]);
+
+        return redirect()->route('user.login');
     }
 }
