@@ -6,12 +6,14 @@ use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
@@ -19,6 +21,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +43,15 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrap();
 
         Gate::define('viewPulse', User::isAdminGate());
+
+        // spatie/laravel-backup silently skips encryption when no password is
+        // set. A production backup holds the whole shared store database, so
+        // refuse to write one unencrypted.
+        Event::listen(function (CommandStarting $event): void {
+            if ($event->command === 'backup:run' && app()->isProduction() && blank(config('backup.backup.password'))) {
+                throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD must be set to run backups in production.');
+            }
+        });
 
         RateLimiter::for('login', function (Request $request): array {
             $email = Str::lower((string) $request->input('email'));

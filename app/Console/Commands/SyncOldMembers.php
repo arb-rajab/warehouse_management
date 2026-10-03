@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\StoreUser;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 
 class SyncOldMembers extends Command
 {
@@ -37,12 +38,12 @@ class SyncOldMembers extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         try {
 
             $members_endpoint = config('services.otajer.url') . "/api/rest/loadmembers/" . config('services.otajer.token');
-            $response = file_get_contents($members_endpoint);
+            $response = Http::timeout(30)->throw()->get($members_endpoint)->body();
             $allMembers = json_decode($response, true);
             $accounts_updated = 0;
             // first let's check if the registered user already have an account in otajer! if so, don't create a new account for him in otajer, but retrieve his old data
@@ -101,8 +102,12 @@ class SyncOldMembers extends Command
             }
 
             $this->info($usersCreatedSuccessfullyCounter . " users created successfully " . "And " . $usersFailedCounter . " Failed" . " And " . $accounts_updated . " Updated");
+
+            return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->info('Command failed ' . $e);
+            $this->error('Command failed '.$e->getMessage());
+
+            return self::FAILURE;
         }
     }
 }

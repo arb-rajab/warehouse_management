@@ -19,53 +19,40 @@ class calculate_order_pointer extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
-
-    /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
+    protected $description = 'Recalculate every order\'s discount_percent and indicator from its order details';
 
     /**
      * Execute the console command.
-     *
-     * @return int
      */
-    public function handle()
+    public function handle(): int
     {
-        $orders = Order::all();
+        Order::query()
+            ->select('id')
+            ->with('orderDetails:id,order_id,price,original_price,is_price_changed,profits')
+            ->chunkById(200, function ($orders): void {
+                foreach ($orders as $order) {
+                    $originalPrice = 0;
+                    $repPrice = 0;
+                    $totalProfits = 0;
 
-        foreach ($orders as $key => $order) {
-            $original_price = 0;
-            $rep_price = 0;
-            $total_profits = 0;
-            $order_details = $order->orderDetails;
+                    foreach ($order->orderDetails as $orderDetail) {
+                        $totalProfits += $orderDetail->profits;
+                        $originalPrice += $orderDetail->is_price_changed != 0 ? $orderDetail->original_price : $orderDetail->price;
+                        $repPrice += $orderDetail->price;
+                    }
 
-            foreach ($order_details as $order_detail) {
-                $total_profits += $order_detail->profits;
-                if ($order_detail->is_price_changed != 0) {
-                    $original_price += $order_detail->original_price;
-                    $rep_price += $order_detail->price;
-                } else {
-                    $original_price += $order_detail->price;
-                    $rep_price += $order_detail->price;
+                    if ($originalPrice == 0) {
+                        $order->discount_percent = 100;
+                        $order->indicator = 0;
+                    } else {
+                        $order->discount_percent = 100 - (($repPrice / $originalPrice) * 100);
+                        $order->indicator = $repPrice == 0 ? 0 : ($totalProfits / $repPrice) * 100;
+                    }
+
+                    $order->save();
                 }
-            }
+            });
 
-            if ($original_price == 0) {
-                $order->discount_percent = 100;
-                $order->indicator = 0;
-                $order->save();
-            } else {
-                $order->discount_percent = 100 - (($rep_price /  $original_price)  * 100);
-                $order->indicator = ($total_profits /  $rep_price) * 100;
-                $order->save();
-            }
-        }
+        return self::SUCCESS;
     }
 }

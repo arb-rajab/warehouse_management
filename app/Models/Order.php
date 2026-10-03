@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Larastan's migration reader can't follow.
  *
  * @property int|null $for_customer the customer a representative placed the order for
+ * @property-read StoreUser|null $customer
+ * @property-read StoreUser|null $representative
  */
 class Order extends Model
 {
@@ -67,13 +70,18 @@ class Order extends Model
         return $this->belongsTo(StoreUser::class);
     }
 
-    public function customer()
+    /**
+     * The customer the order belongs to: whoever the representative placed it
+     * for, or the user who placed it. An accessor over the `rep` and `user`
+     * relations rather than a relation of its own, which could not pick a
+     * foreign key from `by_rep` while eager loading, when the model it is
+     * called on is blank.
+     *
+     * @return Attribute<StoreUser|null, never>
+     */
+    protected function customer(): Attribute
     {
-        if ($this->by_rep) {
-            return $this->belongsTo(StoreUser::class, 'for_customer', 'id');
-        } else {
-            return $this->belongsTo(StoreUser::class, 'user_id', 'id');
-        }
+        return Attribute::get(fn (): ?StoreUser => $this->by_rep ? $this->rep : $this->user);
     }
 
     public function rep()
@@ -81,14 +89,15 @@ class Order extends Model
         return $this->belongsTo(StoreUser::class, 'for_customer');
     }
 
-    public function representative()
+    /**
+     * The representative who placed the order, if one did. Accessor for the
+     * same reason as `customer`.
+     *
+     * @return Attribute<StoreUser|null, never>
+     */
+    protected function representative(): Attribute
     {
-        if ($this->by_rep) {
-            return $this->belongsTo(StoreUser::class, 'user_id');
-        } else {
-            // Returning a dummy relationship instance (e.g., an empty BelongsTo)
-            return $this->belongsTo(StoreUser::class, 'user_id')->where('id', '=', null);
-        }
+        return Attribute::get(fn (): ?StoreUser => $this->by_rep ? $this->user : null);
     }
 
     public function shop()
@@ -118,7 +127,7 @@ class Order extends Model
 
     public function proxy_cart_reference_id()
     {
-        return $this->hasMany(ProxyPayment::class)->select('reference_id');
+        return $this->hasMany(ProxyPayment::class)->select('order_id', 'reference_id');
     }
 
     public function get_order_details_profits()

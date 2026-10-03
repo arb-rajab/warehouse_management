@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('addresses')) {
+            return;
+        }
+
         Schema::create('addresses', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->integer('user_id');
@@ -27,6 +31,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('addresses');
     }
 };

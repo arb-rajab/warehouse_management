@@ -7,6 +7,7 @@ use App\Models\BrandTranslation;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class ImportBrands extends Command
@@ -40,13 +41,13 @@ class ImportBrands extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         try {
             $start_time = Carbon::now();
 
             $endpoint = config('services.otajer.url') . '/api/rest/listproductfilters/' . config('services.otajer.token');
-            $response = file_get_contents($endpoint);
+            $response = Http::timeout(30)->throw()->get($endpoint)->body();
 
             $filters = json_decode($response, true);
 $number_of_brands = 0;
@@ -100,8 +101,12 @@ $number_of_brands = 0;
             $end_time = Carbon::now();
             $time = (int) $end_time->diffInSeconds($start_time, true);
             $this->info($number_of_brands . ' brands fetched and added successfully. It took ' . $time . ' seconds');
+
+            return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->info('Command was not successful' . $e);
+            $this->error('Command was not successful '.$e->getMessage());
+
+            return self::FAILURE;
         }
     }
 }

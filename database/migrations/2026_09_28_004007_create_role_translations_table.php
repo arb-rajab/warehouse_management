@@ -17,6 +17,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('role_translations')) {
+            return;
+        }
+
         Schema::create('role_translations', function (Blueprint $table) {
             $table->bigInteger('id')->autoIncrement();
             $table->bigInteger('role_id');
@@ -29,9 +33,16 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Guarded on the environment rather than on `hasTable()`, which cannot
+     * tell the store's table from a local stand-in.
      */
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('role_translations');
     }
 };

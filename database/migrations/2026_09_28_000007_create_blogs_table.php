@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('blogs')) {
+            return;
+        }
+
         Schema::create('blogs', function (Blueprint $table) {
             $table->id();
             $table->integer('category_id');
@@ -29,6 +33,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('blogs');
     }
 };

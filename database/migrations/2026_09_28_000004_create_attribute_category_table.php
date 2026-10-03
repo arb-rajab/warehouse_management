@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('attribute_category')) {
+            return;
+        }
+
         Schema::create('attribute_category', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->integer('category_id');
@@ -19,6 +23,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('attribute_category');
     }
 };

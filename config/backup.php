@@ -161,11 +161,11 @@ return [
             'filename_prefix' => '',
 
             /*
-             * The disk names on which the backups will be stored.
+             * The disk names on which the backups will be stored. `local`
+             * lives on the same machine as the data it protects, so set
+             * BACKUP_OFFSITE_DISK to an off-site disk (e.g. `s3`) as well.
              */
-            'disks' => [
-                'local',
-            ],
+            'disks' => array_values(array_filter(['local', env('BACKUP_OFFSITE_DISK')])),
 
             /*
              * Determines whether to allow backups to continue when some targets fail instead of failing completely.
@@ -182,7 +182,7 @@ return [
          * The password to be used for archive encryption.
          * Set to `null` to disable encryption.
          */
-        'password' => env('BACKUP_ARCHIVE_PASSWORD'),
+        'password' => env('BACKUP_ARCHIVE_PASSWORD'), // required in production, see AppServiceProvider
 
         /*
          * The encryption algorithm to be used for archive encryption.
@@ -304,7 +304,7 @@ return [
     'monitor_backups' => [
         [
             'name' => env('APP_NAME', 'laravel-backup'),
-            'disks' => ['local'],
+            'disks' => array_values(array_filter(['local', env('BACKUP_OFFSITE_DISK')])),
             'health_checks' => [
                 MaximumAgeInDays::class => 1,
                 MaximumStorageInMegabytes::class => 5000,

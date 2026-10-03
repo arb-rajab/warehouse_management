@@ -34,8 +34,4 @@ class Cart extends Model
     {
         return $this->belongsTo(Address::class);
     }
-    public function carts_offer()
-    {
-        return $this->hasOne(CartOffered::class, 'product_id', 'product_id')->whereColumn('user_id', 'user_id');
-    }
 }
