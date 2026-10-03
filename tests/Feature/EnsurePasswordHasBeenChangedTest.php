@@ -90,7 +90,7 @@ test('a StoreUser passes through untouched, since must_change_password is a WMS-
     // route, since satisfying every other legacy role/verification
     // middleware isn't this middleware's own concern.
     $storeUser = StoreUser::create([
-        'name' => 'Store Customer', 'email' => 'store-customer@example.com', 'user_type' => 'customer', 'phone' => '5555555555',
+        'name' => 'Store Customer', 'email' => 'store-customer@example.com', 'phone' => '5555555555',
     ]);
 
     $request = Request::create('/temp/dashboard');

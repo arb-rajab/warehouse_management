@@ -66,12 +66,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
      */
     public function store(DynamicPopupRequest $request)
     {
-        $offer = Offer::find($request->offer_id);
-        $request->merge(['btn_link' => route('product', ['slug' => $offer?->base_product?->product->slug])]);
-        $request->merge(['btn_background_color' => '#000000']);
-        $request->merge(['btn_text_color' => 'white']);
-
-        DynamicPopup::create($request->except('_token'));
+        DynamicPopup::create($this->popupAttributes($request));
         flash(translate('Dynamic Popup has been inserted successfully'))->success();
         return redirect()->route('dynamic-popups.index');
     }
@@ -107,13 +102,29 @@ class DynamicPopupController extends Controller implements HasMiddleware
      */
     public function update(DynamicPopupRequest $request, DynamicPopup $dynamic_popup)
     {
-        $offer = Offer::find($request->offer_id);
-        $request->merge(['btn_link' => route('product', ['slug' => $offer?->base_product?->product->slug])]);
-        $request->merge(['btn_background_color' => '#000000']);
-        $request->merge(['btn_text_color' => 'white']);
-        $dynamic_popup->update($request->except(['_token','_method']));
+        $dynamic_popup->update($this->popupAttributes($request));
         flash(translate('Dynamic Popup has been updated successfully'))->success();
         return redirect()->route('dynamic-popups.index');
+    }
+
+    /**
+     * The validated fields plus the button columns the server derives from the
+     * chosen offer. Nothing else in the request reaches the model, so a forged
+     * `status` or `btn_link` is ignored.
+     *
+     * @return array<string, mixed>
+     */
+    private function popupAttributes(DynamicPopupRequest $request): array
+    {
+        $validated = $request->validated();
+        $offer = Offer::find($validated['offer_id']);
+
+        return [
+            ...$validated,
+            'btn_link' => route('product', ['slug' => $offer?->base_product?->product->slug]),
+            'btn_background_color' => '#000000',
+            'btn_text_color' => 'white',
+        ];
     }
 
     /**

@@ -103,10 +103,10 @@ class ProductController extends Controller
             return $this->failed(translate('Unauthenticated User.'));
         }
 
-        $request->merge(['added_by' => 'seller']);
-        $product = $this->productService->store($request->except([
-            '_token', 'sku', 'choice', 'tax_id', 'tax', 'tax_type', 'flash_deal_id', 'flash_discount', 'flash_discount_type'
-        ]));
+        $product = $this->productService->store([
+            ...$this->productService->sellerAttributes($request->all()),
+            'added_by' => 'seller',
+        ]);
         $request->merge(['product_id' => $product->id]);
 
         //VAT & Tax
@@ -162,9 +162,7 @@ class ProductController extends Controller
         }
 
         //Product
-        $product = $this->productService->update($request->except([
-            '_token', 'sku', 'choice', 'tax_id', 'tax', 'tax_type', 'flash_deal_id', 'flash_discount', 'flash_discount_type'
-        ]), $product);
+        $product = $this->productService->update($this->productService->sellerAttributes($request->all()), $product);
 
         //Product Stock
         foreach ($product->stocks as $key => $stock) {

@@ -28,7 +28,6 @@ class Order extends Model
         'seller_id',
         'order_from',
         'by_rep',
-        'for_customer',
         'code',
         'date',
         'delivery_date',
@@ -36,6 +35,19 @@ class Order extends Model
         'combined_order_id',
         'payment_type',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'by_rep' => 'boolean',
+            'for_customer' => 'integer',
+            'profits' => 'float',
+            'indicator' => 'float',
+        ];
+    }
 
     /**
      * @return HasMany<OrderDetail, $this>

@@ -23,7 +23,7 @@ class SellerWithdrawRequestController extends Controller implements HasMiddlewar
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_seller_payout_requests', only: ['index', 'store', 'update', 'destroy', 'payment_modal', 'message_modal', 'create', 'edit', 'show']),
+            new Middleware('permission:view_seller_payout_requests', only: ['index', 'update', 'destroy', 'payment_modal', 'message_modal', 'create', 'edit', 'show']),
         ];
     }    /**
      * Display a listing of the resource.
@@ -45,30 +45,6 @@ class SellerWithdrawRequestController extends Controller implements HasMiddlewar
     public function create()
     {
         //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  Request  $request
-     * @return Response
-     */
-    public function store(Request $request)
-    {
-        $seller_withdraw_request = new SellerWithdrawRequest;
-        $seller_withdraw_request->user_id = Auth::user()->shop->id;
-        $seller_withdraw_request->amount = $request->amount;
-        $seller_withdraw_request->message = $request->message;
-        $seller_withdraw_request->status = '0';
-        $seller_withdraw_request->viewed = '0';
-        if ($seller_withdraw_request->save()) {
-            flash(translate('Request has been sent successfully'))->success();
-            return redirect()->route('withdraw_requests.index');
-        }
-        else{
-            flash(translate('Something went wrong'))->error();
-            return back();
-        }
     }
 
     /**

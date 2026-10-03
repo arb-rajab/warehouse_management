@@ -10,7 +10,6 @@ class CartOffered extends Model
     use SoftDeletes;
 
     protected $table = 'carts_offered';
-    protected $guarded = [];
     protected $fillable = ['address_id', 'price', 'tax', 'shipping_cost', 'discount', 'by_rep', 'for_customer', 'quantity', 'user_id', 'owner_id', 'product_id', 'variation', 'variation_qty', 'item_notes', 'offer_id', 'is_postponed'];
 
 

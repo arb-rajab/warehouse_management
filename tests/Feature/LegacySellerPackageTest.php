@@ -78,3 +78,44 @@ test('a paid package is not granted through the free-package call', function () 
 
     expect(DB::table('shops')->where('id', $shopId)->value('seller_package_id'))->toBeNull();
 });
+
+test('an offline package payment is validated and cannot be submitted twice while pending', function () {
+    createSellerPackageTables();
+    $seller = createStoreUser('seller');
+    DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop', 'slug' => 'shop-1']);
+    $packageId = DB::table('seller_packages')->insertGetId(['name' => 'Gold', 'amount' => 500, 'product_upload_limit' => 500, 'duration' => 365]);
+    $otherPackageId = DB::table('seller_packages')->insertGetId(['name' => 'Silver', 'amount' => 100, 'product_upload_limit' => 50, 'duration' => 365]);
+    $valid = ['package_id' => $packageId, 'payment_option' => 'manual_payment_1', 'trx_id' => 'T1'];
+    $submit = function (array $body) use ($seller) {
+        app('auth')->forgetGuards();
+
+        return test()->withToken(storeApiToken($seller))->postJson('/temp/api/v2/seller/seller-package/offline-payment', $body);
+    };
+
+    foreach ([['package_id' => 9999], ['package_id' => null], ['trx_id' => null], ['payment_option' => null], ['photo' => '<b>x</b>']] as $forged) {
+        $submit([...$valid, ...$forged])->assertUnprocessable();
+    }
+    expect(DB::table('seller_package_payments')->count())->toBe(0);
+
+    $submit([...$valid, 'photo' => '7'])->assertJsonPath('result', true);
+    $submit([...$valid, 'trx_id' => 'T2'])->assertJsonPath('result', false);
+    $submit([...$valid, 'package_id' => $otherPackageId])->assertJsonPath('result', true);
+
+    expect(DB::table('seller_package_payments')->where('seller_package_id', $packageId)->pluck('payment_details')->all())->toBe(['T1'])
+        ->and(DB::table('seller_package_payments')->count())->toBe(2);
+});
+
+test('an account without a shop cannot submit an offline package payment', function () {
+    createSellerPackageTables();
+    $customer = createStoreUser('customer');
+    $packageId = DB::table('seller_packages')->insertGetId(['name' => 'Gold', 'amount' => 500, 'product_upload_limit' => 500, 'duration' => 365]);
+
+    $this->withToken(storeApiToken($customer))
+        ->postJson('/temp/api/v2/seller/seller-package/offline-payment', ['package_id' => $packageId, 'payment_option' => 'manual_payment_1', 'trx_id' => 'T1'])
+        ->assertJsonPath('result', false);
+    app('auth')->forgetGuards();
+    $this->flushHeaders();
+    $this->postJson('/temp/api/v2/seller/seller-package/offline-payment', ['package_id' => $packageId])->assertUnauthorized();
+
+    expect(DB::table('seller_package_payments')->count())->toBe(0);
+});

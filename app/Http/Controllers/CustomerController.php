@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
-use App\Models\Role;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -190,7 +189,20 @@ class CustomerController extends Controller implements HasMiddleware
 
         $response['status'] = 'Error';
 
-        $user = StoreUser::create($request->all());
+        $user = StoreUser::create($request->only([
+            'name',
+            'email',
+            'phone',
+            'company_name',
+            'country',
+            'city',
+            'address',
+            'postal_code',
+            'shipping_address',
+            'company_address',
+            'tax_number',
+        ]));
+        $user->forceFill(['user_type' => 'customer'])->save();
 
         $customer = new Customer;
 
@@ -505,18 +517,17 @@ class CustomerController extends Controller implements HasMiddleware
         $user = StoreUser::create([
             'name' => $request->name,
             'company_name' => $request->company_name,
-            'user_type' => $request->user_type ?? 'customer',
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => $request->password,
             'company_address' => $request->company_address,
             'shipping_address' => $request->shipping_address,
             'tax_number' => $request->tax_number,
-            'email_verified_at' => now(),
             'bank_account_number' => $request->bank_account_number,
             'phone' => $request->phone,
             'country' => $request->country,
             'registration_completed' => 0,
         ]);
+        $user->forceFill(['user_type' => 'customer', 'email_verified_at' => now()])->save();
         if (request()->hasFile('trade_license')) {
             $user->trade_license = app(TradeLicenseStorage::class)->store(request()->file('trade_license'));
         }
@@ -530,10 +541,6 @@ class CustomerController extends Controller implements HasMiddleware
         $address->phone         = $request->phone;
         $address->set_default   = 1;
         $address->save();
-
-        if ($request->user_type == 'admin' || $request->user_type == 'accountant') {
-            $user->assignRole(Role::SUPER_ADMIN);
-        }
 
         $user->save();
 

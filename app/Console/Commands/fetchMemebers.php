@@ -61,21 +61,23 @@ class fetchMemebers extends Command
                     if (! $selectedUser) {
                         if(! StoreUser::where('AccSysID', $user['AccSystemID'])->exists())
                         {
-                            $newUser = StoreUser::create([
+                            $newUser = new StoreUser([
                                 'name' => $user['FirstName'] . " " . $user['LastName'],
-                                'user_type' => 'customer',
                                 'company_name' => $user['CompanyName'] ? $user['CompanyName'] : 'none',
                                 'email' => $user['Email'],
                                 'tax_number' => $user['TaxNumber'],
                                 'country' => $country_name,
                                 'from_api'  => true,
                                 'member_serial' => $user['Serial'],
-                                'email_verified_at' => date('Y-m-d H:m:s'),
                                 'AccSysID' => intval($user['AccSystemID']),
                                 'password' => Hash::make("123456"),
                                 'registration_completed' => false,
                                 'synched_with_otajer' => true
                             ]);
+                            $newUser->forceFill([
+                                'user_type' => 'customer',
+                                'email_verified_at' => date('Y-m-d H:m:s'),
+                            ])->save();
                             if ($newUser) {
                                 $created_accounts++;
                             }

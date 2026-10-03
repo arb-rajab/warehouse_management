@@ -7,8 +7,6 @@ use App\Mail\InvoiceEmailManager;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CombinedOrder;
-use App\Models\Coupon;
-use App\Models\CouponUsage;
 use App\Models\DeliveryHistory;
 use App\Models\Order;
 use App\Models\OrderDetail;
@@ -18,12 +16,14 @@ use App\Models\ProductVariation;
 use App\Models\SmsTemplate;
 use App\Models\StoreUser;
 use App\Services\OfferService;
+use App\Services\OrderPlacementService;
 use App\Services\OrderService;
 use App\Utility\NotificationUtility;
 use App\Utility\SmsUtility;
 use Auth;
 use Carbon\Carbon;
 use DB;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -53,6 +53,12 @@ class OrderController extends Controller implements HasMiddleware
             new Middleware('permission:delete_order', only: ['destroy', 'bulk_order_delete']),
         ];
     }
+
+    protected function orderPlacementService(): OrderPlacementService
+    {
+        return app(OrderPlacementService::class);
+    }
+
     protected function offerService()
     {
         return app(OfferService::class);
@@ -197,12 +203,30 @@ class OrderController extends Controller implements HasMiddleware
     public function store(Request $request)
     {
         $user = StoreUser::find(Auth::user()->id);
+
+        // Everything below is one transaction: a refused line (out of stock, a
+        // coupon that cannot be used) takes the whole order back with it,
+        // instead of leaving the earlier sellers' orders and their stock
+        // deductions behind.
+        try {
+            DB::transaction(fn () => $this->placeOrder($request, $user));
+        } catch (DomainException $exception) {
+            flash($exception->getMessage())->warning();
+            return redirect()->route('cart');
+        }
+    }
+
+    /**
+     * @throws DomainException with the message to show the customer when the cart cannot be ordered
+     */
+    private function placeOrder(Request $request, StoreUser $user): void
+    {
         $carts = Cart::where('user_id', $user->id)
+            ->lockForUpdate()
             ->get();
 
         if ($carts->isEmpty()) {
-            flash(translate('Your cart is empty'))->warning();
-            return redirect()->route('home');
+            throw new DomainException(translate('Your cart is empty'));
         }
 
         $address = Address::where('id', $carts[0]['address_id'])->first();
@@ -212,7 +236,7 @@ class OrderController extends Controller implements HasMiddleware
             $shippingAddress['name']        = $user->name;
             $shippingAddress['email']       = $user->email;
             $shippingAddress['address']     = $address->address;
-            $shippingAddress['country']     = $address->country->name;
+            $shippingAddress['country']     = $address->country?->name;
             $shippingAddress['state']       = $address->state ? $address->state->name : null;
             $shippingAddress['city']        = $address->city  ? $address->city->name : null;
             $shippingAddress['postal_code'] = $address->postal_code;
@@ -234,6 +258,10 @@ class OrderController extends Controller implements HasMiddleware
         foreach ($carts as $cartItem) {
             $product_ids = [];
             $product = Product::find($cartItem['product_id']);
+            if ($product === null) {
+                $cartItem->delete();
+                continue;
+            }
             if (isset($seller_products[$product->user_id])) {
                 $product_ids = $seller_products[$product->user_id];
             }
@@ -241,6 +269,11 @@ class OrderController extends Controller implements HasMiddleware
             $seller_products[$product->user_id] = $product_ids;
         }
 
+        if ($seller_products === []) {
+            throw new DomainException(translate('Your cart is empty'));
+        }
+
+        $lastOrder = null;
         foreach ($seller_products as $seller_product) {
             $order = new Order;
             $order->combined_order_id = $combined_order->id;
@@ -249,7 +282,7 @@ class OrderController extends Controller implements HasMiddleware
 
             // for making order.member_serial = customer serial
             if ($user->is_rep) {
-                $user_serial = $seller_product[0]->rep_customer->member_serial;
+                $user_serial = $seller_product[0]->rep_customer?->member_serial;
             } else {
                 $user_serial = $user->member_serial;
             }
@@ -299,7 +332,10 @@ class OrderController extends Controller implements HasMiddleware
             //Order Details Storing
             foreach ($seller_product as $cartItem) {
                 $product = Product::find($cartItem['product_id']);
-                $product_stocks = ProductStock::where('product_id', $product->id);
+                if ($product === null) {
+                    $cartItem->delete();
+                    continue;
+                }
                 if (0 == $product->published) {
                     $order_deleted_products_info .= ' -' . $product->ar_name . ', ';
                     $cartItem->delete();
@@ -317,15 +353,7 @@ class OrderController extends Controller implements HasMiddleware
 
                 $product_variation = $cartItem['variation'];
 
-                $product_stock = $product_stocks->where('variant', 'like', '%' . $product_variation . '%')->first();
-                if ($product->digital != 1 && $cartItem['quantity'] > $product_stock->qty) {
-                    flash(translate('The requested quantity is not available for ') . $product->getTranslation('name'))->warning();
-                    $order->delete();
-                    return redirect()->route('cart')->send();
-                } elseif ($product->digital != 1) {
-                    $product_stock->qty -= $cartItem['quantity'];
-                    $product_stock->save();
-                }
+                $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
 
                 $order_detail = new OrderDetail;
                 $order_detail->order_id = $order->id;
@@ -374,8 +402,7 @@ class OrderController extends Controller implements HasMiddleware
 
                 $order_detail->save();
 
-                $product->num_of_sale += $cartItem['quantity'];
-                $product->save();
+                $product->increment('num_of_sale', $cartItem['quantity']);
 
                 $order->seller_id = $product->user_id;
                 $order->shipping_type = $cartItem['shipping_type'];
@@ -403,6 +430,11 @@ class OrderController extends Controller implements HasMiddleware
                 //     }
                 // }
             }
+            if ($order->orderDetails()->doesntExist()) {
+                $order->delete();
+                continue;
+            }
+
             $order_new_data_array = $this->orderService()->checkForOtajerProblems($order);
 
             if ($order_new_data_array['is_down']) {
@@ -412,14 +444,11 @@ class OrderController extends Controller implements HasMiddleware
             $order->grand_total = $subtotal + $tax + $shipping;
             $order->additional_info .= $order_deleted_products_info ? $order_deleted_products_info . ' تمت إزالتهم من سلة التسوق الخاصة بك، المنتجات غير النشطة' : null;
 
-            if ($seller_product[0]->coupon_code != null) {
+            $coupon_code = collect($seller_product)->pluck('coupon_code')->filter()->first();
+            if ($coupon_code != null) {
+                $coupon_discount = $this->orderPlacementService()->useCoupon($user->id, $coupon_code, collect($seller_product));
                 $order->coupon_discount = $coupon_discount;
-                $order->grand_total -= $coupon_discount;
-
-                $coupon_usage = new CouponUsage;
-                $coupon_usage->user_id = Auth::user()->id;
-                $coupon_usage->coupon_id = Coupon::where('code', $seller_product[0]->coupon_code)->first()->id;
-                $coupon_usage->save();
+                $order->grand_total = max(0, $order->grand_total - $coupon_discount);
             }
 
             $combined_order->grand_total += $order->grand_total;
@@ -431,10 +460,18 @@ class OrderController extends Controller implements HasMiddleware
             $order->save();
             if (auth()->user()->is_rep) {
                 $visit = auth()->user()->rep_last_open_visit();
-                $visit->order_id = $order->id;
-                $visit->save();
+                if ($visit !== null) {
+                    $visit->order_id = $order->id;
+                    $visit->save();
+                }
             }
+            $lastOrder = $order;
         }
+
+        if ($lastOrder === null) {
+            throw new DomainException(translate('Your cart is empty'));
+        }
+        $order = $lastOrder;
 
         $combined_order->save();
 
@@ -448,9 +485,11 @@ class OrderController extends Controller implements HasMiddleware
             $user->save();
 
             $rep_customer = $seller_product[0]->rep_customer;
-            $rep_customer->last_order_at = Carbon::now()->format('Y-m-d');
-            $rep_customer->profits += $order->profits;
-            $rep_customer->save();
+            if ($rep_customer !== null) {
+                $rep_customer->last_order_at = Carbon::now()->format('Y-m-d');
+                $rep_customer->profits += $order->profits;
+                $rep_customer->save();
+            }
         } else {
             $user->last_order_at = Carbon::now()->format('Y-m-d');
             $user->profits += $order->profits;

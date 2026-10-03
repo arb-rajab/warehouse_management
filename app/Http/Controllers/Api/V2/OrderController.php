@@ -8,23 +8,31 @@ use App\Models\Address;
 use App\Models\BusinessSetting;
 use App\Models\Cart;
 use App\Models\CombinedOrder;
-use App\Models\Coupon;
-use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
-use App\Models\ProductStock;
 use App\Models\StoreUser;
 use App\Services\OfferService;
+use App\Services\OrderPlacementService;
 use App\Services\OrderService;
+use App\Services\PaymentOptions;
+use App\Services\WalletPaymentService;
 use Auth;
 use Carbon\Carbon;
 use DB;
+use DomainException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class OrderController extends Controller
 {
     protected $offerService;
+
+    protected function orderPlacementService(): OrderPlacementService
+    {
+        return app(OrderPlacementService::class);
+    }
 
     protected function offerService()
     {
@@ -38,9 +46,18 @@ class OrderController extends Controller
         return app(OrderService::class);
     }
 
-    public function store(Request $request, $set_paid = false)
+    /**
+     * Place the signed-in customer's cart as an order. With `$payFromWallet`
+     * the wallet pays for it in the same transaction, and a balance that does
+     * not cover it places no order and keeps the cart.
+     */
+    public function store(Request $request, bool $payFromWallet = false)
     {
         set_time_limit(0);
+
+        if ($request->filled('payment_type') && ! app(PaymentOptions::class)->isAllowed((string) $request->payment_type)) {
+            return $this->failed(translate('Select Payment Option.'));
+        }
 
         if (auth()->user()->is_rep) {
             $filteredCarts = Cart::where('user_id', auth()->user()->id)->where('for_customer', null)->get();
@@ -116,6 +133,27 @@ class OrderController extends Controller
             }
         }
 
+        // One transaction: a refused line (out of stock, a coupon that cannot be
+        // used, a wallet that cannot pay) takes the whole order back with it,
+        // keeping the cart, instead of leaving half an order behind.
+        try {
+            return DB::transaction(fn () => $this->placeOrder($request, $cartItems, $payFromWallet));
+        } catch (DomainException $exception) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param  Collection<int, Cart>  $cartItems
+     *
+     * @throws DomainException with the message to show the customer when the cart cannot be ordered
+     */
+    private function placeOrder(Request $request, Collection $cartItems, bool $payFromWallet): JsonResponse
+    {
         $user = StoreUser::find(auth()->user()->id);
 
         $address = Address::where('id', $cartItems->first()->address_id)->first();
@@ -143,6 +181,10 @@ class OrderController extends Controller
         foreach ($cartItems as $cartItem) {
             $product_ids = [];
             $product = Product::find($cartItem['product_id']);
+            if ($product === null) {
+                $cartItem->delete();
+                continue;
+            }
             if (isset($seller_products[$product->user_id])) {
                 $product_ids = $seller_products[$product->user_id];
             }
@@ -150,6 +192,11 @@ class OrderController extends Controller
             $seller_products[$product->user_id] = $product_ids;
         }
 
+        if ($seller_products === []) {
+            throw new DomainException(translate('Cart is Empty'));
+        }
+
+        $lastOrder = null;
         foreach ($seller_products as $seller_product) {
             $order = new Order;
             $order->combined_order_id = $combined_order->id;
@@ -173,7 +220,7 @@ class OrderController extends Controller
 
             // for making order.member_serial = customer serial
             if ($user->is_rep) {
-                $user_serial = $seller_product[0]->rep_customer->member_serial;
+                $user_serial = $seller_product[0]->rep_customer?->member_serial;
             } else {
                 $user_serial = $user->member_serial;
             }
@@ -189,7 +236,7 @@ class OrderController extends Controller
             $order->payment_status_viewed = '0';
             $order->code = date('Ymd-His') . rand(10, 99);
             $order->date = strtotime('now');
-            if ($set_paid) {
+            if ($payFromWallet) {
                 $order->payment_status = 'paid';
             } else {
                 $order->payment_status = 'unpaid';
@@ -210,7 +257,10 @@ class OrderController extends Controller
                     $order->for_customer = $cartItem->for_customer;
                 }
                 $product = Product::find($cartItem['product_id']);
-                $product_stocks = ProductStock::where('product_id', $product->id);
+                if ($product === null) {
+                    $cartItem->delete();
+                    continue;
+                }
 
                 if (0 == $product->published) {
                     $order_deleted_products_info .= ' -' . $product->ar_name . ', ';
@@ -224,23 +274,10 @@ class OrderController extends Controller
                 }
 
                 $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
-                $coupon_discount += $cartItem['discount'];
 
                 $product_variation = $cartItem['variation'];
 
-                $product_stock = $product_stocks->where('variant', 'like', '%' . $product_variation . '%')->first();
-                if ($product->digital != 1 && $cartItem['quantity'] > $product_stock->qty) {
-                    $order->delete();
-                    $combined_order->delete();
-                    return response()->json([
-                        'combined_order_id' => 0,
-                        'result' => false,
-                        'message' => translate('The requested quantity is not available for ') . $product->name
-                    ]);
-                } elseif ($product->digital != 1) {
-                    $product_stock->qty -= $cartItem['quantity'];
-                    $product_stock->save();
-                }
+                $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
 
                 $order_detail = new OrderDetail;
                 $order_detail->order_id = $order->id;
@@ -284,8 +321,7 @@ class OrderController extends Controller
                 $order_detail->quantity = $cartItem['quantity'];
                 $order_detail->save();
 
-                $product->num_of_sale = $product->num_of_sale + $cartItem['quantity'];
-                $product->save();
+                $product->increment('num_of_sale', $cartItem['quantity']);
 
                 $order->seller_id = $product->user_id;
                 //======== Added By Kiron ==========
@@ -316,6 +352,11 @@ class OrderController extends Controller
                 }
             }
 
+            if ($order->orderDetails()->doesntExist()) {
+                $order->delete();
+                continue;
+            }
+
             $order_new_data_array = $this->orderService()->checkForOtajerProblems($order);
 
             if ($order_new_data_array['is_down']) {
@@ -326,22 +367,16 @@ class OrderController extends Controller
             $order->grand_total = $subtotal + $tax + $shipping;
             $order->additional_info .= $order_deleted_products_info ? $order_deleted_products_info . 'تمت إزالتهم من سلة التسوق الخاصة بك، المنتجات غير النشطة' : null;
 
-            if ($seller_product[0]->coupon_code != null) {
-                // if (Session::has('club_point')) {
-                //     $order->club_point = Session::get('club_point');
-                // }
+            $coupon_code = collect($seller_product)->pluck('coupon_code')->filter()->first();
+            if ($coupon_code != null) {
+                $coupon_discount = $this->orderPlacementService()->useCoupon($user->id, $coupon_code, collect($seller_product));
                 $order->coupon_discount = $coupon_discount;
-                $order->grand_total -= $coupon_discount;
-
-                $coupon_usage = new CouponUsage;
-                $coupon_usage->user_id = $user->id;
-                $coupon_usage->coupon_id = Coupon::where('code', $seller_product[0]->coupon_code)->first()->id;
-                $coupon_usage->save();
+                $order->grand_total = max(0, $order->grand_total - $coupon_discount);
             }
 
             $combined_order->grand_total += $order->grand_total;
 
-            if (strpos($request->payment_type, "manual_payment_") !== false) { // if payment type like  manual_payment_1 or  manual_payment_25 etc)
+            if (str_contains((string) $request->payment_type, "manual_payment_")) { // if payment type like  manual_payment_1 or  manual_payment_25 etc)
 
                 $order->manual_payment = 1;
                 $order->save();
@@ -356,11 +391,26 @@ class OrderController extends Controller
 
             if (auth()->user()->is_rep) {
                 $visit = auth()->user()->rep_last_open_visit();
-                $visit->order_id = $order->id;
-                $visit->save();
+                if ($visit !== null) {
+                    $visit->order_id = $order->id;
+                    $visit->save();
+                }
             }
+            $lastOrder = $order;
         }
+
+        if ($lastOrder === null) {
+            throw new DomainException(translate('Cart is Empty'));
+        }
+        $order = $lastOrder;
+
         $combined_order->save();
+
+        // Charged before the cart is emptied: a wallet that cannot cover the
+        // order rolls the whole order back and the cart stays as it was.
+        if ($payFromWallet && ! app(WalletPaymentService::class)->charge($user, $combined_order->id)) {
+            throw new DomainException(translate('Insufficient wallet balance'));
+        }
 
         if ($user->is_rep) {
             $user->last_order_at = Carbon::now()->format('Y-m-d');
@@ -368,9 +418,11 @@ class OrderController extends Controller
             $user->save();
 
             $rep_customer = $seller_product[0]->rep_customer;
-            $rep_customer->last_order_at = Carbon::now()->format('Y-m-d');
-            $rep_customer->profits += $order->profits;
-            $rep_customer->save();
+            if ($rep_customer !== null) {
+                $rep_customer->last_order_at = Carbon::now()->format('Y-m-d');
+                $rep_customer->profits += $order->profits;
+                $rep_customer->save();
+            }
         } else {
             $user->last_order_at = Carbon::now()->format('Y-m-d');
             $user->profits += $order->profits;
@@ -382,9 +434,9 @@ class OrderController extends Controller
         if (
             $request->payment_type == 'cash_on_delivery'
             || $request->payment_type == 'wallet'
-            || strpos($request->payment_type, "manual_payment_") !== false // if payment type like  manual_payment_1 or  manual_payment_25 etc
+            || str_contains((string) $request->payment_type, "manual_payment_") // if payment type like  manual_payment_1 or  manual_payment_25 etc
         ) {
-            NotificationUtility::sendOrderPlacedNotification($order);
+            DB::afterCommit(fn () => NotificationUtility::sendOrderPlacedNotification($order));
         }
 
         // default rep logic
