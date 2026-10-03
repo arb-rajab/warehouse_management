@@ -150,6 +150,19 @@ test('the web uploader needs a signed-in account and stores for it', function ()
     });
 });
 
+test('the web uploader answers a refused file with a 422 so the browser shows it as failed', function () {
+    actingAsStoreUser(createStoreUser('customer'));
+
+    withScratchPublicPath(function (string $publicPath) {
+        $this->post('/temp/aiz-uploader/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
+
+        expect(Upload::count())->toBe(0)
+            ->and(storedUploadFiles($publicPath))->toBe([]);
+    });
+});
+
 test('the web uploader hands another account\'s files to no one but admin and staff', function () {
     $owner = createStoreUser('customer');
     $stranger = createStoreUser('customer');
