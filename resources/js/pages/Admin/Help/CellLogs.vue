@@ -50,7 +50,8 @@ type ActionKey =
     | 'emptied'
     | 'transferred'
     | 'deactivated'
-    | 'reactivated';
+    | 'reactivated'
+    | 'productChanged';
 
 const actionKeys: ActionKey[] = [
     'stored',
@@ -60,15 +61,16 @@ const actionKeys: ActionKey[] = [
     'transferred',
     'deactivated',
     'reactivated',
+    'productChanged',
 ];
 
 /**
  * Only actions with an icon already established elsewhere in the app get one
  * here (stored=CalendarPlus, opened/emptied reuse the matching cell-state
  * icon, transferred=ArrowLeftRight, deactivated=Ban — see js.md's icon
- * conventions and CellSlot.vue's own deactivate button) — boxesRemoved and
- * reactivated have no established icon, so they stay text-only rather than
- * inventing one.
+ * conventions and CellSlot.vue's own deactivate button) — boxesRemoved,
+ * reactivated and productChanged have no established icon, so they stay
+ * text-only rather than inventing one.
  */
 const actionIcons: Partial<Record<ActionKey, Component>> = {
     stored: CalendarPlus,

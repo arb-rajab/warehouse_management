@@ -18,6 +18,11 @@ function loadDropRedundantForeignKeyIndexesMigration(): object
  * explicit index turned out to be the *only* one. So every column here is
  * handled identically by dropIndexIfRedundant(), with no exceptions.
  *
+ * `cell_status_logs_user_id_index` is not listed: a later migration
+ * (add_user_id_created_at_index_to_cell_status_logs_table) replaced it with a
+ * composite index that leads with user_id, so it is genuinely redundant now —
+ * see the dedicated test below.
+ *
  * @return array<int, array{table: string, column: string, index: string}>
  */
 function foreignKeyIndexColumns(): array
@@ -26,7 +31,6 @@ function foreignKeyIndexColumns(): array
         ['table' => 'cell_status_logs', 'column' => 'cell_id', 'index' => 'cell_status_logs_cell_id_index'],
         ['table' => 'cell_status_logs', 'column' => 'related_cell_id', 'index' => 'cell_status_logs_related_cell_id_index'],
         ['table' => 'cell_status_logs', 'column' => 'product_id', 'index' => 'cell_status_logs_product_id_index'],
-        ['table' => 'cell_status_logs', 'column' => 'user_id', 'index' => 'cell_status_logs_user_id_index'],
         ['table' => 'cell_verification_reports', 'column' => 'cell_verification_round_id', 'index' => 'cell_verification_reports_cell_verification_round_id_index'],
         ['table' => 'cell_verification_reports', 'column' => 'cell_id', 'index' => 'cell_verification_reports_cell_id_index'],
         ['table' => 'cell_verification_reports', 'column' => 'user_id', 'index' => 'cell_verification_reports_user_id_index'],
@@ -115,4 +119,17 @@ test('every index is untouched, and left untouched again, by a down()/up() cycle
             "expected {$case['index']} to still be there on {$case['table']}"
         );
     }
+});
+
+test('cell_status_logs.user_id is covered by the later composite (user_id, created_at) index, so re-running up() keeps its single-column index dropped', function () {
+    $migration = loadDropRedundantForeignKeyIndexesMigration();
+
+    $migration->down();
+    // down() restores the single-column index because it was missing...
+    expect(tableHasIndexNamed('cell_status_logs', 'cell_status_logs_user_id_index'))->toBeTrue();
+
+    $migration->up();
+    // ...and up() drops it again, because the composite still covers user_id.
+    expect(tableHasIndexNamed('cell_status_logs', 'cell_status_logs_user_id_index'))->toBeFalse()
+        ->and(tableHasIndexOnColumns('cell_status_logs', ['user_id', 'created_at']))->toBeTrue();
 });

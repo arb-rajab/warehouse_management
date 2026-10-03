@@ -247,7 +247,8 @@ export type CellLogAction =
     | 'transferred_out'
     | 'transferred_in'
     | 'deactivated'
-    | 'reactivated';
+    | 'reactivated'
+    | 'product_changed';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 

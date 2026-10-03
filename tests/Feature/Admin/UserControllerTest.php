@@ -4,6 +4,7 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the user list with every property the table renders', function () {
@@ -354,6 +355,29 @@ test('a newly created user must change their password on first login', function 
     expect($user->must_change_password)->toBeTrue();
 });
 
+test('a newly created user is inserted already flagged to change their password, not flagged by a second write', function () {
+    actingAsAdmin();
+    $flagAtInsert = null;
+    User::created(function (User $user) use (&$flagAtInsert) {
+        $flagAtInsert = $user->must_change_password;
+    });
+
+    DB::enableQueryLog();
+    $this->post('/admin/users', [
+        'name' => 'Jane Doe',
+        'email' => 'jane@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'is_admin' => '0',
+    ])->assertRedirect(route('admin.users.index'));
+    $userUpdates = collect(DB::getQueryLog())->filter(fn (array $query): bool => str_starts_with($query['query'], 'update "wms_users"'));
+    DB::disableQueryLog();
+
+    expect($flagAtInsert)->toBeTrue()
+        ->and($userUpdates)->toBeEmpty()
+        ->and(User::query()->where('email', 'jane@example.com')->sole()->must_change_password)->toBeTrue();
+});
+
 test('creating a user with a duplicate email is rejected and nothing changes', function () {
     actingAsAdmin();
     User::factory()->create(['email' => 'jane@example.com']);
@@ -656,6 +680,63 @@ test('an admin cannot revoke their own admin access and nothing changes', functi
     expect($admin->fresh()->isAdmin())->toBeTrue();
 });
 
+/**
+ * Stand in for the losing side of two admins revoking each other at once:
+ * the acting admin's own access was revoked (in the database) after their
+ * request had already passed the role middleware, which reads the roles
+ * loaded on the authenticated instance — so the request goes ahead, and only
+ * the fresh, locked read in UserController::isLastAdmin() sees the truth.
+ */
+function actingAsAdminWhoseAccessWasJustRevoked(): User
+{
+    $admin = actingAsAdmin();
+    $admin->loadMissing('roles');
+
+    DB::table(config('permission.table_names.model_has_roles'))
+        ->where('model_id', $admin->id)
+        ->where('model_type', $admin->getMorphClass())
+        ->delete();
+
+    return $admin;
+}
+
+test('the last remaining admin cannot be demoted, even by an admin whose own access was revoked mid-request, and nothing changes', function () {
+    actingAsAdminWhoseAccessWasJustRevoked();
+    $lastAdmin = User::factory()->create(['name' => 'Last Admin']);
+    User::factory()->mobileUser()->create();
+
+    $response = $this->put("/admin/users/{$lastAdmin->id}", [
+        'name' => 'Renamed',
+        'email' => $lastAdmin->email,
+        'password' => '',
+        'password_confirmation' => '',
+        'is_admin' => '0',
+    ]);
+
+    $response->assertRedirect(route('admin.users.edit', $lastAdmin));
+    $response->assertSessionHasErrors(['is_admin' => __('messages.cannot_remove_last_admin')]);
+    expect($lastAdmin->fresh()->isAdmin())->toBeTrue()
+        ->and($lastAdmin->fresh()->name)->toBe('Last Admin');
+});
+
+test('the last remaining admin can still be edited while keeping their admin access', function () {
+    actingAsAdminWhoseAccessWasJustRevoked();
+    $lastAdmin = User::factory()->create();
+
+    $response = $this->put("/admin/users/{$lastAdmin->id}", [
+        'name' => 'Renamed',
+        'email' => $lastAdmin->email,
+        'password' => '',
+        'password_confirmation' => '',
+        'is_admin' => '1',
+    ]);
+
+    $response->assertRedirect(route('admin.users.index'));
+    $response->assertSessionHasNoErrors();
+    expect($lastAdmin->fresh()->name)->toBe('Renamed')
+        ->and($lastAdmin->fresh()->isAdmin())->toBeTrue();
+});
+
 test('updating a user with a duplicate email is rejected and nothing changes', function () {
     actingAsAdmin();
     User::factory()->create(['email' => 'taken@example.com']);
@@ -768,6 +849,29 @@ test('an admin cannot delete their own account and nothing changes', function ()
 
     $response->assertForbidden();
     $this->assertDatabaseHas('wms_users', ['id' => $admin->id]);
+});
+
+test('the last remaining admin cannot be deleted, even by an admin whose own access was revoked mid-request, and nothing changes', function () {
+    actingAsAdminWhoseAccessWasJustRevoked();
+    $lastAdmin = User::factory()->create();
+
+    $response = $this->delete("/admin/users/{$lastAdmin->id}?page=2");
+
+    $response->assertRedirect(route('admin.users.index', ['page' => 2]));
+    $response->assertSessionHasErrors(['user' => __('messages.cannot_remove_last_admin')]);
+    $this->assertDatabaseHas('wms_users', ['id' => $lastAdmin->id]);
+    expect($lastAdmin->fresh()->isAdmin())->toBeTrue();
+});
+
+test('an admin can delete another admin while at least one other admin remains', function () {
+    actingAsAdmin();
+    $otherAdmin = User::factory()->create();
+
+    $response = $this->delete("/admin/users/{$otherAdmin->id}");
+
+    $response->assertRedirect(route('admin.users.index'));
+    $response->assertSessionHasNoErrors();
+    $this->assertDatabaseMissing('wms_users', ['id' => $otherAdmin->id]);
 });
 
 test('a mobile app user cannot delete a user and nothing changes', function () {

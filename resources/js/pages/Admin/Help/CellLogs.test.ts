@@ -65,12 +65,20 @@ describe('Help CellLogs', () => {
     it('explains what each action type means', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.text()).toContain(t('help.cellLogs.actions.stored'));
-        expect(wrapper.text()).toContain(t('help.cellLogs.actions.opened'));
-        expect(wrapper.text()).toContain(t('help.cellLogs.actions.emptied'));
-        expect(wrapper.text()).toContain(
-            t('help.cellLogs.actions.transferred'),
-        );
+        for (const action of [
+            'stored',
+            'opened',
+            'boxesRemoved',
+            'emptied',
+            'transferred',
+            'deactivated',
+            'reactivated',
+            'productChanged',
+        ]) {
+            expect(wrapper.text()).toContain(
+                t(`help.cellLogs.actions.${action}`),
+            );
+        }
     });
 
     it('renders an icon next to actions with an established icon, and a preview of the Filters button', () => {
