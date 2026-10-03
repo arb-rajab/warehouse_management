@@ -60,6 +60,7 @@ test('the product reviews API pages, and leaves out other products and hidden re
 });
 
 test("the purchase history API pages, and lists only the signed-in customer's orders", function () {
+    seedStoreCurrency();
     $customer = createStoreUser('customer');
 
     foreach (range(1, 18) as $number) {
@@ -149,6 +150,7 @@ test('the shop list API pages, and leaves out shops that are not verified', func
 });
 
 test("the seller order list API pages, and lists only the signed-in seller's orders", function () {
+    seedStoreCurrency();
     $seller = createStoreUser('seller');
     $customer = createStoreUser('customer');
 
@@ -157,7 +159,7 @@ test("the seller order list API pages, and lists only the signed-in seller's ord
     }
     $otherSellersOrder = createStoreOrder($customer, ['seller_id' => createStoreUser('seller')->id, 'code' => 'OTHER-1']);
 
-    $this->withoutExceptionHandling()->withToken(storeApiToken($seller));
+    $this->withToken(storeApiToken($seller));
 
     assertPagesWithoutOverlap(
         fn (int $page) => $this->getJson("/temp/api/v2/seller/orders?page=$page"),
