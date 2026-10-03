@@ -27,7 +27,7 @@ abstract class WarehouseRequest extends FormRequest
     }
 
     /**
-     * @return string|list<string>
+     * @return string|array<string>
      */
     protected function failureMessage(Validator $validator): string|array
     {

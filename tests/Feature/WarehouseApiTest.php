@@ -54,11 +54,11 @@ test('a partial customer update keeps every field it did not send', function () 
 
 test('a customer update can clear a field by sending it empty', function () {
     $customer = createStoreUser('customer');
-    $customer->forceFill(['company_name' => 'Old Company'])->save();
+    $customer->forceFill(['tax_number' => 'TAX-1'])->save();
 
-    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['company_name' => null])->assertOk();
+    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['tax_number' => null])->assertOk();
 
-    expect($customer->fresh()->company_name)->toBeNull()
+    expect($customer->fresh()->tax_number)->toBeNull()
         ->and($customer->fresh()->name)->toBe($customer->name);
 });
 
@@ -72,8 +72,9 @@ test('a customer update rejects over-long and non-string values and changes noth
     expect($customer->fresh()->name)->toBe($customer->name);
 })->with([
     'a name over 255' => [['name' => str_repeat('a', 256)]],
-    'a company address over 500' => [['company_address' => str_repeat('a', 501)]],
-    'a phone over 50' => [['phone' => str_repeat('1', 51)]],
+    'a company address over 255' => [['company_address' => str_repeat('a', 256)]],
+    'a null company name' => [['company_name' => null]],
+    'a phone over 20' => [['phone' => str_repeat('1', 21)]],
     'an array name' => [['name' => ['x']]],
 ]);
 
