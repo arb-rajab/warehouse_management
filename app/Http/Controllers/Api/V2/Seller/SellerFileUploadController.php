@@ -68,7 +68,11 @@ class SellerFileUploadController extends Controller
                     return $this->failed(translate('File has been inserted successfully'));
                 }
 
-                $uploads->store($request->file('aiz_file'), Auth::user()->id);
+                $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
+
+                if ($upload === null) {
+                    return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+                }
 
                 return $this->success(translate('File has been inserted successfully'));
             } else {

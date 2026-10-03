@@ -4,6 +4,7 @@ use App\Models\Upload;
 use App\Services\MultipartUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The store's uploader (the web screens and the mobile APIs) let the client's
@@ -46,7 +47,8 @@ test('markup a browser would run is refused whatever the file is called', functi
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $contents) {
         $this->withToken(storeApiToken($customer))
             ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, $contents)])
-            ->assertOk();
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
 
         expect(storedUploadFiles($publicPath))->toBe([])
             ->and(Upload::count())->toBe(0);
@@ -67,9 +69,11 @@ test('PHP source that gets through the allowlist is never stored with a PHP exte
     $customer = createStoreUser('customer');
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename) {
-        $this->withToken(storeApiToken($customer))
+        $status = $this->withToken(storeApiToken($customer))
             ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, '<?php system($_GET[1]); ?>')])
-            ->assertOk();
+            ->status();
+
+        expect($status)->toBeIn([200, 422]);
 
         foreach (storedUploadFiles($publicPath) as $stored) {
             expect($stored)->not->toMatch('/\.(php\d?|phtml|phar)$/i');
@@ -216,3 +220,24 @@ test('a pdf, a text file and a csv that hold what they claim to they claim are k
     'a text file' => ['notes.txt', "Delivery note\nGate 4\n", 'txt'],
     'a csv' => ['prices.csv', "sku,price\nA1,10\n", 'csv'],
 ]);
+
+test('the seller API answers a refused file with a 422 and an accepted one with a success', function () {
+    $seller = createStoreUser('seller');
+    DB::table('shops')->insert(['user_id' => $seller->id, 'name' => 'Shop', 'slug' => 'shop-1']);
+
+    withScratchPublicPath(function (string $publicPath) use ($seller) {
+        $this->withToken(storeApiToken($seller))
+            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
+            ->assertUnprocessable()
+            ->assertJsonPath('result', false);
+
+        expect(storedUploadFiles($publicPath))->toBe([]);
+
+        $this->withToken(storeApiToken($seller))
+            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('ok.png', tinyPng())])
+            ->assertOk()
+            ->assertJsonPath('result', true);
+
+        expect(storedUploadFiles($publicPath))->toHaveCount(1);
+    });
+});
