@@ -123,3 +123,19 @@ test('the orderedByCoordinates scope orders cells by cell number then flat numbe
     expect($cells->map(fn (Cell $cell) => [$cell->cell_number, $cell->flat_number])->all())
         ->toBe([[1, 1], [1, 2], [2, 1]]);
 });
+
+test('the cell factory creates a row of its own only when the caller supplies none', function () {
+    $row = Row::withoutEvents(fn () => Row::factory()->create(['letter' => 'Z']));
+
+    $viaFor = Cell::factory()->for($row)->create();
+    $viaOverride = Cell::factory()->create(['row_id' => $row->id]);
+
+    expect($viaFor->row_id)->toBe($row->id)
+        ->and($viaOverride->row_id)->toBe($row->id)
+        ->and(Row::query()->count())->toBe(1);
+
+    $withOwnRow = Cell::factory()->create();
+
+    expect($withOwnRow->row_id)->not->toBe($row->id)
+        ->and(Row::query()->count())->toBe(2);
+});
