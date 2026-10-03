@@ -2,12 +2,15 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Models\Shop;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * A shop as any visitor may read it: no payout balance, bank details, sales
  * figures, package, contact details or owner e-mail. The owner's own view of
  * the shop is ShopDetailsCollection.
+ *
+ * @mixin Shop
  */
 class PublicShopDetailsCollection extends JsonResource
 {
@@ -35,6 +38,9 @@ class PublicShopDetailsCollection extends JsonResource
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function with($request)
     {
         return [

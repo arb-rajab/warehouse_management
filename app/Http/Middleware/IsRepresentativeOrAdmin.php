@@ -15,7 +15,7 @@ class IsRepresentativeOrAdmin
      * Let through an unbanned admin, staff or accountant, or a sales
      * representative (a customer account with `is_rep` set).
      *
-     * @param  \Closure(Request): Response  $next
+     * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): mixed
     {
