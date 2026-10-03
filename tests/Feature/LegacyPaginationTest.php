@@ -129,9 +129,9 @@ test('the product list API pages, and leaves out unpublished and unapproved prod
 });
 
 test('the shop list API pages, and leaves out shops that are not verified', function () {
-    $owner = createStoreUser('seller');
+    // A shop counts as verified through its owner, so the unverified shop needs its own owner.
     $shop = fn (string $name, int $verified) => DB::table('shops')->insertGetId([
-        'user_id' => $owner->id, 'name' => $name, 'verification_status' => $verified,
+        'user_id' => createStoreUser('seller')->id, 'name' => $name, 'verification_status' => $verified,
     ]);
 
     foreach (range(1, 13) as $number) {
@@ -157,7 +157,7 @@ test("the seller order list API pages, and lists only the signed-in seller's ord
     }
     $otherSellersOrder = createStoreOrder($customer, ['seller_id' => createStoreUser('seller')->id, 'code' => 'OTHER-1']);
 
-    $this->withToken(storeApiToken($seller));
+    $this->withoutExceptionHandling()->withToken(storeApiToken($seller));
 
     assertPagesWithoutOverlap(
         fn (int $page) => $this->getJson("/temp/api/v2/seller/orders?page=$page"),

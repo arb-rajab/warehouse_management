@@ -12,7 +12,7 @@ class ReviewController extends Controller
 {
     public function index($id)
     {
-        return new ReviewCollection(Review::where('product_id', $id)->where('status', 1)->orderBy('updated_at', 'desc')->paginate(10));
+        return new ReviewCollection(Review::with('user')->where('product_id', $id)->where('status', 1)->orderBy('updated_at', 'desc')->paginate(10));
     }
 
     public function submit(Request $request)

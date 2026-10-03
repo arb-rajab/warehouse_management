@@ -94,7 +94,7 @@ class CouponController extends Controller
 
         if($request->coupon_type == "product_base") {
 
-            $products = Product::where('name','LIKE',"%".$request->name."%")->where('user_id', auth()->user()->id)->paginate(10);
+            $products = Product::with(['category', 'stocks'])->where('name','LIKE',"%".$request->name."%")->where('user_id', auth()->user()->id)->paginate(10);
             // $products = filter_products(Product::where('user_id', auth()->user()->id))->get();
             return new ProductCollection($products);
         }

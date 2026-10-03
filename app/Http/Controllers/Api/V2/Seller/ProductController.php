@@ -53,7 +53,7 @@ class ProductController extends Controller
 
     public function index()
     {
-        $products = Product::with('category')->where('user_id', auth()->user()->id)->paginate(10);
+        $products = Product::with(['category', 'stocks'])->where('user_id', auth()->user()->id)->paginate(10);
         return new ProductCollection($products);
     }
 
