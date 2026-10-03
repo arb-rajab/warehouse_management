@@ -4,12 +4,14 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Http\Controllers\SSLCommerz;
+use App\Services\ApiGatewayPayment;
 use App\Models\BusinessSetting;
-use App\Models\CombinedOrder;
-use App\Models\StoreUser;
-use App\Models\Wallet;
+use App\Models\GatewayPayment;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 # IF BROWSE FROM LOCAL HOST, KEEP true
 if (!defined("SSLCZ_IS_LOCAL_HOST")) {
     define("SSLCZ_IS_LOCAL_HOST", true);
@@ -43,44 +45,31 @@ class SslCommerzController extends Controller
         return $this->sslc_mode;
     }
 
+    /**
+     * The payer is the signed-in customer and the amount their own order's total
+     * or the package's price, from the database (the request's `amount` was
+     * charged even for an order). What payment_success() will credit is recorded
+     * now, under a transaction id of its own.
+     */
     public function begin(Request $request)
     {
+        $payment = app(ApiGatewayPayment::class)->resolve($request);
 
-        $payment_type = $request->payment_type;
-        $combined_order_id = $request->combined_order_id;
-        $amount = $request->amount;
-        $user_id = $request->user_id;
+        if ($payment === null) {
+            return response()->json(['result' => false, 'url' => '', 'message' => translate('Nothing to pay')]);
+        }
 
         $post_data = [];
-        $post_data['total_amount'] = $request->amount; # You cant not pay less than 10
+        $post_data['total_amount'] = $payment['amount']; # You cant not pay less than 10
         $post_data['currency'] = "BDT";
+        $post_data['tran_id'] = 'AIZ-' . Str::random(20); // tran_id must be unique
 
-        if ($request->payment_type == "cart_payment") {
-            $post_data['tran_id'] = 'AIZ-' . $request->combined_order_id . '-' . date('Ymd'); // tran_id must be unique
+        app(GatewayPaymentService::class)->begin('sslcommerz', $post_data['tran_id'], $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'], $payment['amount']);
 
-        } else if (
-            $request->payment_type == "wallet_payment" ||
-            $request->payment_type ==  "seller_package_payment" ||
-            $request->payment_type ==  "customer_package_payment"
-
-        ) {
-            $post_data['tran_id'] = 'AIZ-' . $request->user_id . '-' . date('Ymd');
-        }
-
-        $post_data['value_a'] = $request->user_id;
-        $post_data['value_b'] = $request->combined_order_id;
-        $post_data['value_c'] = $request->payment_type;
-        $post_data['value_d'] = $request->amount;
-
-        if ($request->payment_type == "cart_payment") {
-            $combined_order = CombinedOrder::find($combined_order_id);
-            $post_data['value_d'] = $combined_order->grand_total;
-        } else if ($request->payment_type == "wallet_payment") {
-            $post_data['value_b'] = 'sslcommerz';
-        } else if ($request->payment_type == "seller_package_payment" || $request->payment_type == "customer_package_payment") {
-            $post_data['value_b'] = $request->package_id;
-        }
-
+        $post_data['value_a'] = $payment['user_id'];
+        $post_data['value_b'] = $payment['combined_order_id'] ?? $payment['package_id'];
+        $post_data['value_c'] = $payment['payment_type'];
+        $post_data['value_d'] = $payment['amount'];
 
         # CUSTOMER INFORMATION
         $post_data['cus_name'] = "Customer Name";
@@ -99,46 +88,28 @@ class SslCommerzController extends Controller
         return $this->initiate($post_data);
     }
 
+    /**
+     * SSLCommerz posts the app's web view back here. The post's `value_a`..`value_d`
+     * (the account, the order or package, the type, the amount) used to be
+     * credited as they came. Now the transaction must be one begin() recorded,
+     * SSLCommerz's validation server must confirm it for the amount recorded
+     * (sslcommerz_validate), and it pays what begin() recorded, once.
+     */
     public function payment_success(Request $request)
     {
-        $sslc = new SSLCommerz();
-        #Start to received these value from session. which was saved in index function.
-        $tran_id = $request->value_a;
-        #End to received these value from session. which was saved in index function.
-        $payment = json_encode($request->all());
+        $tran_id = (string) $request->input('tran_id');
+        $pending = GatewayPayment::query()->where('gateway', 'sslcommerz')->where('reference', $tran_id)->whereNull('completed_at')->first();
 
-        if (isset($request->value_c)) {
-
-            try {
-                if ($request->value_c == 'cart_payment') {
-
-                    checkout_done($request->value_b, $payment);
-                } elseif ($request->value_c == 'wallet_payment') {
-
-                    wallet_payment_done($request->value_a, $request->value_d, 'SslCommerz', $payment);
-                } elseif ($request->value_c == 'seller_package_payment') {
-
-                    seller_purchase_payment_done($request->value_a, $request->value_b, $request->value_d, 'SslCommerz', $payment);
-                } else if ($request->value_c == 'customer_package_payment') {
-                    customer_purchase_payment_done($request->value_a, $request->value_b);
-                }
-
-                return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
-            } catch (\Exception $e) {
-                return response()->json(['result' => false, 'message' => $e->getMessage()]);
-            }
+        if ($tran_id === '' || $pending === null || $this->sslcommerz_validate($tran_id, (float) $pending->amount, 'BDT', $request->all()) !== true) {
+            return response()->json(['result' => false, 'message' => translate('Payment Failed')]);
         }
 
-        return response()->json([
-            'result' => false,
-            'message' => translate('Payment Failed')
-        ]);
+        $verified = new VerifiedPayment('sslcommerz', $tran_id, (float) ($this->sslc_data->amount ?? 0), json_encode($this->sslc_data));
+        if (! app(GatewayPaymentService::class)->completePending($verified)) {
+            return response()->json(['result' => false, 'message' => translate('Payment Failed')]);
+        }
 
-        /*return response()->json([
-            'result' => false,
-            'payment_type'=> $payment_type,
-            'message' => 'Payment Successful'
-        ]);*/
+        return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
     }
 
     public function payment_process(Request $request)
@@ -281,61 +252,23 @@ class SslCommerzController extends Controller
 
             if ($this->SSLCOMMERZ_hash_varify($this->store_pass, $post_data)) {
 
-                $val_id = urlencode($post_data['val_id']);
+                $val_id = urlencode((string) ($post_data['val_id'] ?? ''));
                 $store_id = urlencode($this->store_id);
                 $store_passwd = urlencode($this->store_pass);
                 $requested_url = ("https://" . $this->sslcMode() . ".sslcommerz.com/validator/api/validationserverAPI.php" . "?val_id=" . $val_id . "&store_id=" . $store_id . "&store_passwd=" . $store_passwd . "&v=1&format=json");
 
-                $handle = curl_init();
-                curl_setopt($handle, CURLOPT_URL, $requested_url);
-                curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                $response = Http::timeout(30)->get($requested_url);
+                $result = $response->successful() ? json_decode($response->body()) : null;
 
-                if (SSLCZ_IS_LOCAL_HOST) {
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
-                } else {
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2); // Its default value is now 2
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
-                }
-
-
-                $result = curl_exec($handle);
-
-                $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-
-                if ($code == 200 && !(curl_errno($handle))) {
-
-                    # TO CONVERT AS ARRAY
-                    # $result = json_decode($result, true);
-                    # $status = $result['status'];
-
-                    # TO CONVERT AS OBJECT
-                    $result = json_decode($result);
+                if (is_object($result)) {
                     $this->sslc_data = $result;
 
-                    # TRANSACTION INFO
-                    $status = $result->status;
-                    $tran_date = $result->tran_date;
-                    $tran_id = $result->tran_id;
-                    $val_id = $result->val_id;
-                    $amount = $result->amount;
-                    $store_amount = $result->store_amount;
-                    $bank_tran_id = $result->bank_tran_id;
-                    $card_type = $result->card_type;
-                    $currency_type = $result->currency_type;
-                    $currency_amount = $result->currency_amount;
-
-                    # ISSUER INFO
-                    $card_no = $result->card_no;
-                    $card_issuer = $result->card_issuer;
-                    $card_brand = $result->card_brand;
-                    $card_issuer_country = $result->card_issuer_country;
-                    $card_issuer_country_code = $result->card_issuer_country_code;
-
-                    # API AUTHENTICATION
-                    $APIConnect = $result->APIConnect;
-                    $validated_on = $result->validated_on;
-                    $gw_version = $result->gw_version;
+                    # TRANSACTION INFO (only what the checks below read: a missing field fails them rather than throwing)
+                    $status = $result->status ?? null;
+                    $tran_id = $result->tran_id ?? '';
+                    $amount = (float) ($result->amount ?? 0);
+                    $currency_type = $result->currency_type ?? '';
+                    $currency_amount = (float) ($result->currency_amount ?? 0);
 
                     # GIVE SERVICE
                     if ($status == "VALID" || $status == "VALIDATED") {

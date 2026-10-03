@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\BusinessSetting;
+use Illuminate\Support\Facades\Http;
 use Session;
 
 # IF BROWSE FROM LOCAL HOST, KEEP true
@@ -23,14 +24,9 @@ class SSLCommerz
     {
         if(Session::has('payment_type')){
             # IF SANDBOX TRUE, THEN IT WILL CONNECT WITH SSLCOMMERZ SANDBOX (TEST) SYSTEM
-            if(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1){
-                define("SSLCZ_IS_SANDBOX", true);
-            }
-            else{
-                define("SSLCZ_IS_SANDBOX", false);
-            }
-
-            $this->setSSLCommerzMode((SSLCZ_IS_SANDBOX) ? 1 : 0);
+            # (a property, not a define(): a constant cannot be defined twice, so a
+            # second instance in one process threw)
+            $this->setSSLCommerzMode(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1 ? 1 : 0);
             $this->store_id = env('SSLCZ_STORE_ID');
             $this->store_pass = env('SSLCZ_STORE_PASSWD');
         }
@@ -308,64 +304,30 @@ class SSLCommerz
 
             if ($this->SSLCOMMERZ_hash_varify($this->store_pass, $post_data)) {
 
-                $val_id = urlencode($post_data['val_id']);
+                $val_id = urlencode((string) ($post_data['val_id'] ?? ''));
                 $store_id = urlencode($this->store_id);
                 $store_passwd = urlencode($this->store_pass);
                 $requested_url = ($this->sslc_validation_url . "?val_id=" . $val_id . "&store_id=" . $store_id . "&store_passwd=" . $store_passwd . "&v=1&format=json");
 
-                $handle = curl_init();
-                curl_setopt($handle, CURLOPT_URL, $requested_url);
-                curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+                $response = Http::timeout(30)->get($requested_url);
 
-                if (SSLCZ_IS_LOCAL_HOST)
-                {
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
-                }
-                else
-                {
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);// Its default value is now 2
-                    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
-                }
-
-
-                $result = curl_exec($handle);
-
-                $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-
-                if ($code == 200 && !(curl_errno($handle))) {
-
-                    # TO CONVERT AS ARRAY
-                    # $result = json_decode($result, true);
-                    # $status = $result['status'];
+                if ($response->successful()) {
 
                     # TO CONVERT AS OBJECT
-                    $result = json_decode($result);
+                    $result = json_decode($response->body());
                     $this->sslc_data = $result;
 
-                    # TRANSACTION INFO
-                    $status = $result->status;
-                    $tran_date = $result->tran_date;
-                    $tran_id = $result->tran_id;
-                    $val_id = $result->val_id;
-                    $amount = $result->amount;
-                    $store_amount = $result->store_amount;
-                    $bank_tran_id = $result->bank_tran_id;
-                    $card_type = $result->card_type;
-                    $currency_type = $result->currency_type;
-                    $currency_amount = $result->currency_amount;
+                    if (! is_object($result)) {
+                        $this->error = "Faile to connect with SSLCOMMERZ";
+                        return false;
+                    }
 
-                    # ISSUER INFO
-                    $card_no = $result->card_no;
-                    $card_issuer = $result->card_issuer;
-                    $card_brand = $result->card_brand;
-                    $card_issuer_country = $result->card_issuer_country;
-                    $card_issuer_country_code = $result->card_issuer_country_code;
-
-                    # API AUTHENTICATION
-                    $APIConnect = $result->APIConnect;
-                    $validated_on = $result->validated_on;
-                    $gw_version = $result->gw_version;
+                    # TRANSACTION INFO (only what the checks below read: a missing field fails them rather than throwing)
+                    $status = $result->status ?? null;
+                    $tran_id = $result->tran_id ?? '';
+                    $amount = (float) ($result->amount ?? 0);
+                    $currency_type = $result->currency_type ?? '';
+                    $currency_amount = (float) ($result->currency_amount ?? 0);
 
                     # GIVE SERVICE
                     if ($status == "VALID" || $status == "VALIDATED") {

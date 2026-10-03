@@ -296,9 +296,9 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // Route::post('coupon/apply', 'App\Http\Controllers\Api\V2\CouponController@apply')->middleware('auth:store_api');
 
 
-    Route::any('iyzico/init', 'App\Http\Controllers\Api\V2\IyzicoController@init')->name('api.iyzico.init');
+    Route::any('iyzico/init', 'App\Http\Controllers\Api\V2\IyzicoController@init')->middleware('auth:store_api')->name('api.iyzico.init');
     Route::any('iyzico/callback', 'App\Http\Controllers\Api\V2\IyzicoController@callback')->name('api.iyzico.callback');
-    Route::post('iyzico/success', 'App\Http\Controllers\Api\V2\IyzicoController@payment_success')->name('api.iyzico.success');
+    Route::post('iyzico/success', 'App\Http\Controllers\Api\V2\IyzicoController@payment_success')->middleware('auth:store_api')->name('api.iyzico.success');
 
 
     Route::get('bkash/api/webpage/{token}/{amount}', 'App\Http\Controllers\Api\V2\BkashController@webpage')->name('api.bkash.webpage');
@@ -307,14 +307,12 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
     Route::any('bkash/api/execute/{token}', 'App\Http\Controllers\Api\V2\BkashController@execute')->name('api.bkash.execute');
     Route::any('bkash/api/fail', 'App\Http\Controllers\Api\V2\BkashController@fail')->name('api.bkash.fail');
-    Route::post('bkash/api/success', 'App\Http\Controllers\Api\V2\BkashController@payment_success')->name('api.bkash.success');
-    Route::post('bkash/api/process', 'App\Http\Controllers\Api\V2\BkashController@process')->name('api.bkash.process');
+    Route::post('bkash/api/success', 'App\Http\Controllers\Api\V2\BkashController@payment_success')->middleware('auth:store_api')->name('api.bkash.success');
 
 
     Route::any('nagad/verify/{payment_type}', 'App\Http\Controllers\Api\V2\NagadController@verify')->name('app.nagad.callback_url');
-    Route::post('nagad/process', 'App\Http\Controllers\Api\V2\NagadController@process');
 
-    Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V2\SslCommerzController@begin');
+    Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V2\SslCommerzController@begin')->middleware('auth:store_api');
     Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_success');
     Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_fail');
     Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_cancel');

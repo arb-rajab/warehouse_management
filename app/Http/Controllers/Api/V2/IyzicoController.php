@@ -4,13 +4,12 @@
 namespace App\Http\Controllers\Api\V2;
 
 
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\WalletController;
-use App\Models\BusinessSetting;
-use App\Models\CombinedOrder;
-use App\Models\StoreUser;
+use App\Services\ApiGatewayPayment;
+use App\Services\GatewayPaymentService;
+use App\Services\IyzicoPayments;
+use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Iyzipay\Model\Address;
 use Iyzipay\Model\BasketItem;
 use Iyzipay\Model\BasketItemType;
@@ -18,31 +17,23 @@ use Iyzipay\Model\Buyer;
 use Iyzipay\Model\Currency;
 use Iyzipay\Model\Locale;
 use Iyzipay\Model\PaymentGroup;
-use Iyzipay\Model\PayWithIyzico;
 use Iyzipay\Model\PayWithIyzicoInitialize;
-use Iyzipay\Options;
 use Iyzipay\Request\CreatePayWithIyzicoInitializeRequest;
-use Iyzipay\Request\RetrievePayWithIyzicoRequest;
 use Redirect;
 
 class IyzicoController extends Controller
 {
-
+    /**
+     * The payer is the signed-in customer and the price their own order's total
+     * or the package's price, from the database; the request's `user_id` and
+     * (except for a top-up) `amount` are not read.
+     */
     public function init(Request $request)
     {
-        $payment_type = $request->payment_type;
-        $combined_order_id = $request->combined_order_id;
-        $amount = $request->amount;
-        $user_id = $request->user_id;
+        $payment = app(ApiGatewayPayment::class)->resolve($request);
 
-        $options = new Options();
-        $options->setApiKey(env('IYZICO_API_KEY'));
-        $options->setSecretKey(env('IYZICO_SECRET_KEY'));
-
-        if (get_setting('iyzico_sandbox') == 1) {
-            $options->setBaseUrl("https://sandbox-api.iyzipay.com");
-        } else {
-            $options->setBaseUrl("https://api.iyzipay.com");
+        if ($payment === null) {
+            return response()->json(['result' => false, 'message' => translate('Nothing to pay')]);
         }
 
         $iyzicoRequest = new CreatePayWithIyzicoInitializeRequest();
@@ -73,146 +64,75 @@ class IyzicoController extends Controller
         $billingAddress->setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
         $iyzicoRequest->setBillingAddress($billingAddress);
 
+        [$itemName, $itemCategory] = match ($payment['payment_type']) {
+            GatewayPaymentService::CART => ['Cart Payment', 'Accessories'],
+            GatewayPaymentService::WALLET => ['Wallet Payment', 'Wallet'],
+            GatewayPaymentService::SELLER_PACKAGE => ['Seller Package Payment', 'SellerPackage'],
+            default => ['Customer Package Payment', 'CustomerPackage'],
+        };
 
-        if ($payment_type == 'cart_payment') {
-            $combined_order = CombinedOrder::find($combined_order_id);
-            $iyzicoRequest->setPrice(round($combined_order->grand_total));
-            $iyzicoRequest->setPaidPrice(round($combined_order->grand_total));
-            $iyzicoRequest->setCurrency(Currency::TL);
-            $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
-            $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
+        $iyzicoRequest->setPrice(round($payment['amount']));
+        $iyzicoRequest->setPaidPrice(round($payment['amount']));
+        $iyzicoRequest->setCurrency(Currency::TL);
+        $iyzicoRequest->setBasketId(Str::random(20));
+        $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
+        $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
 
-            $basketItems = [];
-            $firstBasketItem = new BasketItem();
-            $firstBasketItem->setId(rand(1000, 9999));
-            $firstBasketItem->setName("Cart Payment");
-            $firstBasketItem->setCategory1("Accessories");
-            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
-            $firstBasketItem->setPrice(round($combined_order->grand_total));
-            $basketItems[0] = $firstBasketItem;
+        $firstBasketItem = new BasketItem();
+        $firstBasketItem->setId(rand(1000, 9999));
+        $firstBasketItem->setName($itemName);
+        $firstBasketItem->setCategory1($itemCategory);
+        $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
+        $firstBasketItem->setPrice(round($payment['amount']));
+        $iyzicoRequest->setBasketItems([$firstBasketItem]);
 
-            $iyzicoRequest->setBasketItems($basketItems);
-        } elseif ($payment_type == 'wallet_payment') {
-            $iyzicoRequest->setPrice(round($amount));
-            $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(Currency::TL);
-            $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
-            $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
-
-            $basketItems = [];
-            $firstBasketItem = new BasketItem();
-            $firstBasketItem->setId(rand(1000, 9999));
-            $firstBasketItem->setName("Wallet Payment");
-            $firstBasketItem->setCategory1("Wallet");
-            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
-            $firstBasketItem->setPrice(round($amount));
-            $basketItems[0] = $firstBasketItem;
-
-            $iyzicoRequest->setBasketItems($basketItems);
-        } elseif ($payment_type == 'seller_package_payment') {
-            $iyzicoRequest->setPrice(round($amount));
-            $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(Currency::TL);
-            $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
-            $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
-
-            $basketItems = [];
-            $firstBasketItem = new BasketItem();
-            $firstBasketItem->setId(rand(1000, 9999));
-            $firstBasketItem->setName("Seller Package Payment");
-            $firstBasketItem->setCategory1("SellerPackage");
-            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
-            $firstBasketItem->setPrice(round($amount));
-            $basketItems[0] = $firstBasketItem;
-
-            $iyzicoRequest->setBasketItems($basketItems);
-        } elseif ($payment_type == 'customer_package_payment') {
-            $iyzicoRequest->setPrice(round($amount));
-            $iyzicoRequest->setPaidPrice(round($amount));
-            $iyzicoRequest->setCurrency(Currency::TL);
-            $iyzicoRequest->setBasketId(rand(000000, 999999));
-            $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
-            $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
-
-            $basketItems = [];
-            $firstBasketItem = new BasketItem();
-            $firstBasketItem->setId(rand(1000, 9999));
-            $firstBasketItem->setName("Customer Package Payment");
-            $firstBasketItem->setCategory1("CustomerPackage");
-            $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
-            $firstBasketItem->setPrice(round($amount));
-            $basketItems[0] = $firstBasketItem;
-
-            $iyzicoRequest->setBasketItems($basketItems);
-        }
-
-        $payWithIyzicoInitialize = PayWithIyzicoInitialize::create($iyzicoRequest, $options);
+        $payWithIyzicoInitialize = PayWithIyzicoInitialize::create($iyzicoRequest, app(IyzicoPayments::class)->options());
 
         # print result
         return Redirect::to($payWithIyzicoInitialize->getPayWithIyzicoPageUrl());
     }
 
+    /**
+     * iyzico posts the token back here; this only reports what iyzico's server
+     * says about it, and credits nothing.
+     */
     public function callback(Request $request)
     {
-        $options = new Options();
-        $options->setApiKey(env('IYZICO_API_KEY'));
-        $options->setSecretKey(env('IYZICO_SECRET_KEY'));
+        $payment = app(IyzicoPayments::class)->retrieve((string) $request->input('token'));
 
-        if (BusinessSetting::where('type', 'iyzico_sandbox')->first()?->value == 1) {
-            $options->setBaseUrl("https://sandbox-api.iyzipay.com");
+        if ($payment['paid']) {
+            return response()->json(['result' => true, 'message' => translate("Payment is successful"), 'payment_details' => $payment['raw']]);
         } else {
-            $options->setBaseUrl("https://api.iyzipay.com");
-        }
-
-        $iyzicoRequest = new RetrievePayWithIyzicoRequest();
-        $iyzicoRequest->setLocale(Locale::TR);
-        $iyzicoRequest->setConversationId('123456789');
-        $iyzicoRequest->setToken($request->token);
-        # make request
-        $payWithIyzico = PayWithIyzico::retrieve($iyzicoRequest, $options);
-
-        $payment = $payWithIyzico->getRawResult();
-
-        if ($payWithIyzico->getStatus() == 'success') {
-            return response()->json(['result' => true, 'message' => translate("Payment is successful"), 'payment_details' => $payment]);
-        } else {
-            return response()->json(['result' => false, 'message' => translate("Payment unsuccessful"), 'payment_details' => $payment]);
+            return response()->json(['result' => false, 'message' => translate("Payment unsuccessful"), 'payment_details' => $payment['raw']]);
         }
     }
 
-
-    // the callback function is in the main controller of web | paystackcontroller
-
+    /**
+     * The app reports a payment here. The report used to be credited as it came:
+     * the order, the account, the package and the amount, with no sign-in. Now
+     * the payment is looked up on iyzico's server by its token (the `token`
+     * field, or the one in the `payment_details` the callback returned), must be
+     * successful and pay what the signed-in customer owes (from the database),
+     * and a token is credited once.
+     */
     public function payment_success(Request $request)
     {
-        try {
+        $payment = app(ApiGatewayPayment::class)->resolve($request);
+        $details = json_decode((string) $request->input('payment_details'), true);
+        $token = (string) ($request->input('token') ?: (is_array($details) ? ($details['token'] ?? '') : ''));
 
-            $payment_type = $request->payment_type;
-
-            if ($payment_type == 'cart_payment') {
-                checkout_done($request->combined_order_id, $request->payment_details);
-            }
-
-            if ($payment_type == 'wallet_payment') {
-                wallet_payment_done($request->user_id, $request->amount, 'Iyzico', $request->payment_details);
-            }
-
-            if ($payment_type == 'seller_package_payment') {
-                seller_purchase_payment_done($request->user_id, $request->package_id, $request->amount, 'Iyzico', $request->payment_details);
-            }
-            if ($payment_type == 'customer_package_payment') {
-                customer_purchase_payment_done($request->user_id, $request->package_id);
-            }
-
-            return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
-
-
-        } catch (\Exception $e) {
-            return response()->json(['result' => false, 'message' => $e->getMessage()]);
+        if ($payment === null || $token === '') {
+            return response()->json(['result' => false, 'message' => translate('Payment could not be verified')]);
         }
-    }
 
+        $retrieved = app(IyzicoPayments::class)->retrieve($token);
+        $verified = new VerifiedPayment('iyzico', $token, $retrieved['paid_price'], $retrieved['raw']);
+
+        if (! $retrieved['paid'] || ! GatewayPaymentService::covers($retrieved['paid_price'], $payment['amount'])
+            || ! app(GatewayPaymentService::class)->complete($verified, $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'])) {
+            return response()->json(['result' => false, 'message' => translate('Payment could not be verified')]);
+        }
+
+        return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
+    }
 }

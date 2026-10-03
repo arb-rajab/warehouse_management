@@ -231,7 +231,6 @@ Route::controller(SslcommerzController::class)->group(function () {
     Route::POST('/sslcommerz/success', 'success');
     Route::POST('/sslcommerz/fail', 'fail');
     Route::POST('/sslcommerz/cancel', 'cancel');
-    Route::POST('/sslcommerz/ipn', 'ipn');
 });
 //SSLCOMMERZ END
 

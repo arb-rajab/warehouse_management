@@ -139,6 +139,14 @@ return [
         'currency' => env('PAYHERE_CURRENCY'),
     ],
 
+    // iyzico's credentials, read by App\Services\IyzicoPayments for the
+    // storefront's and the mobile API's checkout.
+    'iyzico' => [
+        'api_key' => env('IYZICO_API_KEY'),
+        'secret_key' => env('IYZICO_SECRET_KEY'),
+        'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
+    ],
+
     'otajer' => [
         'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
         'token' => env('OTAJER_TOKEN') ?: null,

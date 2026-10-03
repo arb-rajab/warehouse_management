@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Utility;
+use Illuminate\Support\Facades\Http;
 use Cache;
 
 class NagadUtility {
@@ -104,18 +105,7 @@ class NagadUtility {
 
     public static function HttpGet($url)
     {
-        $ch = curl_init();
-        $timeout = 10;
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/0 (Windows; U; Windows NT 0; zh-CN; rv:3)");
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        $file_contents = curl_exec($ch);
-        echo curl_error($ch);
-        return $file_contents;
+        return Http::timeout(10)->get($url)->body();
     }
 
     public static function create_balance_reference($key)
