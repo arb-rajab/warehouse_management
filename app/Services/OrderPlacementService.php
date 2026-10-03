@@ -33,7 +33,7 @@ class OrderPlacementService
      */
     public function reserveStock(Product $product, ?string $variation, int|float $quantity): void
     {
-        if ($product->digital == 1) {
+        if ($product->getAttribute('digital') == 1) {
             return;
         }
 

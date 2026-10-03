@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\StoreUser;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\MassAssignmentException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
@@ -68,7 +68,7 @@ test('the flags and the verification time are cast', function () {
     expect($fresh->is_rep)->toBeTrue()
         ->and($fresh->admin_verified)->toBeTrue()
         ->and($fresh->registration_completed)->toBeFalse()
-        ->and($fresh->email_verified_at)->toBeInstanceOf(Carbon::class);
+        ->and($fresh->email_verified_at)->toBeInstanceOf(CarbonInterface::class);
 });
 
 test('creating a customer through the admin form ignores forged privileged fields', function () {

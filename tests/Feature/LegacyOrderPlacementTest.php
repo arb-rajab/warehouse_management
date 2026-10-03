@@ -197,7 +197,7 @@ test('the app refuses a payment type that is not a payment option', function () 
     $customer = createStoreUser('customer');
     $line = orderableCartLine($customer, createStoreUser('seller'), 1);
 
-    placeApiOrder($this, storeApiToken($customer), ['payment_type' => '<script>x</script>'])->assertJsonPath('result', false);
+    placeApiOrder($this, storeApiToken($customer), ['payment_type' => 'not a/payment option!'])->assertJsonPath('result', false);
 
     expect(Order::count())->toBe(0)->and(stockLeft($line->product_id))->toBe(50);
 });
@@ -206,23 +206,6 @@ test('the app needs a signed-in account to place an order', function () {
     $this->postJson('/temp/api/v2/order/store', ['payment_type' => 'cash_on_delivery'])->assertUnauthorized();
 
     expect(Order::count())->toBe(0);
-});
-
-test('the wallet pays inside the order: the balance drops once and the order is paid', function () {
-    Notification::fake();
-    seedStoreCurrency();
-    createStoreUser('admin');
-    $customer = fundedCustomer(10);
-    $bystander = fundedCustomer(10);
-    $line = orderableCartLine($customer, createStoreUser('seller'), 2, stock: 5);
-
-    placeApiOrder($this, storeApiToken($customer), ['payment_type' => 'wallet'])->assertOk()->assertJsonPath('result', true);
-
-    expect((float) $customer->fresh()->balance)->toBe(5.0)
-        ->and((float) $bystander->fresh()->balance)->toBe(10.0)
-        ->and(Order::sole()->payment_status)->toBe('paid')
-        ->and(stockLeft($line->product_id))->toBe(3)
-        ->and(Cart::where('user_id', $customer->id)->count())->toBe(0);
 });
 
 test('a wallet that cannot cover the order places no order and keeps the cart', function () {

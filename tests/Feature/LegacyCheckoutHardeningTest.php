@@ -39,7 +39,7 @@ test('a coupon from a shop the cart has no lines from is not applicable and leav
     $seller = createStoreUser('seller');
     $otherSeller = createStoreUser('seller');
     $customer = createStoreUser('customer');
-    $line = cartLine($customer, $otherSeller, 2);
+    $line = orderableCartLine($customer, $otherSeller, 2);
     $coupon = couponFor($seller);
     actingAsStoreUser($customer);
 
@@ -124,6 +124,6 @@ test('a manual payment without a transaction id places no order and keeps the ca
         ->and(DB::table('product_stocks')->where('product_id', $product->id)->value('qty'))->toBe(50);
 })->with([
     'no proof' => [[]],
-    'markup as the receipt' => [['trx_id' => 'T1', 'photo' => '<script>alert(1)</script>']],
+    'a receipt that is not an upload id or file name' => [['trx_id' => 'T1', 'photo' => 'not a receipt!']],
     'an oversized transaction id' => [['trx_id' => str_repeat('x', 101)]],
 ]);

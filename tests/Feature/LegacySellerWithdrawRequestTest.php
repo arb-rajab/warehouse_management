@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
  * asked for and has not been paid; the check and the insert share one locked
  * transaction.
  */
-
 function withdrawRequestCount(): int
 {
     return DB::table('seller_withdraw_requests')->count();

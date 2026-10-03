@@ -98,10 +98,10 @@ test('the storefront checkout leaves an enabled gateway to the gateway', functio
     $customer = createStoreUser('customer');
     actingAsStoreUser($customer);
 
-    // No cart: the order step is reached (and fails on the empty cart) rather than refused up front.
+    // No cart: the order step is reached and refuses the empty cart (back to the cart), rather than the option being refused up front.
     $response = $this->post(route('payment.checkout'), ['payment_option' => 'payhere']);
 
-    expect($response->getStatusCode())->not->toBe(302);
+    $response->assertRedirect(route('cart'));
 });
 
 test('the payment option check passes cash, the wallet and manual methods, and refuses a disabled gateway or an odd name', function (string $option, bool $allowed) {

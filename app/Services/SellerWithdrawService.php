@@ -45,8 +45,8 @@ class SellerWithdrawService
             $withdrawRequest->user_id = $seller->id;
             $withdrawRequest->amount = $amount;
             $withdrawRequest->message = $message;
-            $withdrawRequest->status = '0';
-            $withdrawRequest->viewed = '0';
+            $withdrawRequest->status = 0;
+            $withdrawRequest->viewed = 0;
             $withdrawRequest->save();
 
             return $withdrawRequest;
