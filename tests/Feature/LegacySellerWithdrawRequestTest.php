@@ -49,7 +49,7 @@ test('a request above the balance is refused', function () {
     createShopFor($seller, 100);
 
     postApiWithdrawRequest($this, storeApiToken($seller), ['amount' => 100.01])
-        ->assertNotFound();
+        ->assertOk()->assertJsonPath('result', false);
 
     expect(withdrawRequestCount())->toBe(0);
 });
@@ -78,7 +78,7 @@ test('an account without a shop cannot open a withdraw request', function () {
     $customer = createStoreUser('customer');
 
     postApiWithdrawRequest($this, storeApiToken($customer), ['amount' => 10])
-        ->assertOk()->assertJsonPath('result', false);
+        ->assertNotFound();
 
     expect(withdrawRequestCount())->toBe(0);
 });
