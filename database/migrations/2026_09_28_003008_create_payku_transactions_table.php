@@ -16,6 +16,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('payku_transactions')) {
+            return;
+        }
+
         Schema::create('payku_transactions', function (Blueprint $table) {
             $table->string('id', 191)->primary();
             $table->string('status', 191)->nullable();
@@ -32,9 +36,16 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Guarded on the environment rather than on `hasTable()`, which cannot
+     * tell the store's table from a local stand-in.
      */
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('payku_transactions');
     }
 };

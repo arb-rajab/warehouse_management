@@ -28,8 +28,7 @@ return [
     'exclude_paths' => [
         'telescope',
         'telescope/*',
-        '_boost',
-        '_boost/*',
+        ...(env('APP_ENV') === 'local' ? ['_boost', '_boost/*'] : []),
         'up',
         '.well-known/*',
     ],

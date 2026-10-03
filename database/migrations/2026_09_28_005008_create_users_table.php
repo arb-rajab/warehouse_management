@@ -17,6 +17,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('users')) {
+            return;
+        }
+
         Schema::create('users', function (Blueprint $table) {
             $table->unsignedInteger('id')->autoIncrement();
             $table->integer('referred_by')->nullable();
@@ -53,9 +57,16 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Guarded on the environment rather than on `hasTable()`, which cannot
+     * tell the store's table from a local stand-in.
      */
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('users');
     }
 };

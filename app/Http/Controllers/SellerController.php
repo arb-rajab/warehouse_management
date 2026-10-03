@@ -100,7 +100,7 @@ class SellerController extends Controller implements HasMiddleware
 
         if ($user->save()) {
             if (get_setting('email_verification') != 1) {
-                $user->email_verified_at = date('Y-m-d H:m:s');
+                $user->email_verified_at = now();
             } else {
                 $user->notify(new EmailVerificationNotification());
             }

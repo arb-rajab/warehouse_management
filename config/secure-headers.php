@@ -236,9 +236,9 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy/attribution-reporting
         'attribution-reporting' => [
-            'none' => false,
+            'none' => true,
 
-            '*' => true,
+            '*' => false,
 
             'self' => false,
 
@@ -269,9 +269,9 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy/browsing-topics
         'browsing-topics' => [
-            'none' => false,
+            'none' => true,
 
-            '*' => true,
+            '*' => false,
 
             'self' => false,
 
@@ -324,9 +324,9 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy/document-domain
         'document-domain' => [
-            'none' => false,
+            'none' => true,
 
-            '*' => true,
+            '*' => false,
 
             'self' => false,
 
@@ -489,9 +489,9 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy/picture-in-picture
         'picture-in-picture' => [
-            'none' => false,
+            'none' => true,
 
-            '*' => true,
+            '*' => false,
 
             'self' => false,
 
@@ -555,9 +555,9 @@ return [
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy/storage-access
         'storage-access' => [
-            'none' => false,
+            'none' => true,
 
-            '*' => true,
+            '*' => false,
 
             'self' => false,
 
@@ -627,7 +627,7 @@ return [
         // compiles messages with new Function() and would need 'unsafe-eval'
         // unless messages are precompiled. Walk the admin panel with the
         // console open, fix what reports, then set CSP_REPORT_ONLY=false.
-        'report-only' => env('CSP_REPORT_ONLY', true),
+        'report-only' => env('CSP_REPORT_ONLY', env('APP_ENV') !== 'production'),
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/report-to
         'report-to' => '',

@@ -1,13 +1,12 @@
 <?php
+
 namespace App\Console\Commands;
 
-use App\Models\CombinedOrder;
-use App\Models\Customer;
-use App\Models\Order;
 use App\Models\StoreUser;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
+use Throwable;
 
 class UnverifyUsers extends Command
 {
@@ -27,57 +26,38 @@ class UnverifyUsers extends Command
     // unverify means: don't let him see the prices of the products
 
     /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
      * Execute the console command.
-     *
-     * @return int
      */
-    public function handle()
-    { // Refactor this code.
+    public function handle(): int
+    {
+        try {
+            $cutoff = Carbon::today()->subDays(30)->toDateString();
 
-        try{
-            $verified_customers = StoreUser::where("admin_verified", true)->where('user_type', 'customer')->get();
-            $total_customers_unverified = 0;
-            foreach ($verified_customers as $customer) {
-                $last_order_at = $customer->last_order_at;
-                $todays_date = Carbon::today();
-                if ($last_order_at != null) { //
-                    $diffInDays = (int) $todays_date->diffInDays($last_order_at, true);
-                    if ($diffInDays >= 30) {
-                        $customer->admin_verified = 0;
-                        $customer->last_order_at = null; // for consistency reasons
-                        $customer->admin_verified_at = null;
-                        $customer->save();
-                        $total_customers_unverified += 1; //
-                    }
-                } else { // If the `Verified Customer` didn't place any orders at all, get the days difference from his account activation date til todays date.
-                    $admin_verified_at = $customer->admin_verified_at;
-                    $diffInDays = (int) $todays_date->diffInDays($admin_verified_at, true);
-                    if ($diffInDays >= 30) { //
-                        $customer->admin_verified = 0;
-                        $customer->admin_verified_at = null;
-                        $customer->last_order_at = null; // for consistency reasons
-                        $customer->save();
-                        $total_customers_unverified += 1;
-                    }
-                }
-            }
+            // A verified customer is unverified 30 days after their last order, or,
+            // if they never ordered, 30 days after their account was verified.
+            $totalCustomersUnverified = StoreUser::query()
+                ->where('admin_verified', true)
+                ->where('user_type', 'customer')
+                ->where(function (Builder $query) use ($cutoff): void {
+                    $query->where(function (Builder $query) use ($cutoff): void {
+                        $query->whereNotNull('last_order_at')->whereDate('last_order_at', '<=', $cutoff);
+                    })->orWhere(function (Builder $query) use ($cutoff): void {
+                        $query->whereNull('last_order_at')->whereDate('admin_verified_at', '<=', $cutoff);
+                    });
+                })
+                ->update([
+                    'admin_verified' => 0,
+                    'admin_verified_at' => null,
+                    'last_order_at' => null, // for consistency reasons
+                ]);
 
-            $this->info("Total customers that have been unverified for not placing orders for the last 30 days: " . $total_customers_unverified);
-        }
+            $this->info('Total customers that have been unverified for not placing orders for the last 30 days: '.$totalCustomersUnverified);
 
-        catch(Exception $e){
-            $this->info('Command failed ' . $e);
+            return self::SUCCESS;
+        } catch (Throwable $e) {
+            $this->error('Command failed '.$e->getMessage());
 
+            return self::FAILURE;
         }
     }
 }

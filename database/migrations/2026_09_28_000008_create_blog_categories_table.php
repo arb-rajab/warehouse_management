@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('blog_categories')) {
+            return;
+        }
+
         Schema::create('blog_categories', function (Blueprint $table) {
             $table->id();
             $table->string('category_name');
@@ -20,6 +24,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('blog_categories');
     }
 };
