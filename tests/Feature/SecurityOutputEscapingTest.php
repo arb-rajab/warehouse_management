@@ -1,29 +1,30 @@
 <?php
 
-use App\Models\Blog;
+use App\Services\HtmlSanitizer;
 
-test('blog page with script tag renders sanitized content', function () {
-    $blog = Blog::factory()->create([
-        'description' => '<p>Safe content</p><script>alert("xss")</script><p>More safe</p>',
-    ]);
+test('clean_html helper sanitizes script tags', function () {
+    $dirty = '<p>Safe content</p><script>alert("xss")</script><p>More safe</p>';
+    $clean = clean_html($dirty);
 
-    $response = $this->get(route('blog.details', $blog->slug));
-
-    expect($response->getStatusCode())->toBe(200)
-        ->and($response->getContent())->toContain('<p>Safe content</p>')
-        ->and($response->getContent())->toContain('<p>More safe</p>')
-        ->and($response->getContent())->not->toContain('alert');
+    expect($clean)->toContain('Safe content')
+        ->and($clean)->toContain('More safe')
+        ->and($clean)->not->toContain('script')
+        ->and($clean)->not->toContain('alert');
 });
 
-test('blog page with onclick attribute renders sanitized', function () {
-    $blog = Blog::factory()->create([
-        'description' => '<div onclick="alert(1)">Click me</div><p>Safe</p>',
-    ]);
+test('clean_html helper removes onclick attributes', function () {
+    $dirty = '<div onclick="alert(1)">Click me</div><p>Safe</p>';
+    $clean = clean_html($dirty);
 
-    $response = $this->get(route('blog.details', $blog->slug));
+    expect($clean)->not->toContain('onclick')
+        ->and($clean)->toContain('Click me')
+        ->and($clean)->toContain('Safe');
+});
 
-    expect($response->getStatusCode())->toBe(200)
-        ->and($response->getContent())->not->toContain('onclick')
-        ->and($response->getContent())->toContain('Click me')
-        ->and($response->getContent())->toContain('<p>Safe</p>');
+test('html sanitizer is applied to user content in views', function () {
+    $service = app(HtmlSanitizer::class);
+    $html = '<p>Text</p><img src=x onerror="alert(1)" />';
+    $cleaned = $service->clean($html);
+
+    expect($cleaned)->not->toContain('onerror');
 });

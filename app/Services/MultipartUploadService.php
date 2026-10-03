@@ -123,14 +123,7 @@ class MultipartUploadService
             'video' => str_starts_with($mimeType, 'video/'),
             'audio' => str_starts_with($mimeType, 'audio/'),
             'archive' => in_array($mimeType, ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'], true),
-            'document' => in_array($mimeType, [
-                'text/plain', 'text/csv',
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.oasis.opendocument.spreadsheet',
-            ], true),
+            'document' => str_starts_with($mimeType, 'text/') || str_starts_with($mimeType, 'application/'),
             default => false,
         };
     }
