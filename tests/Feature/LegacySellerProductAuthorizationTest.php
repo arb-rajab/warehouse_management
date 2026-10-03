@@ -3,6 +3,7 @@
 use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\StoreUser;
+use App\Services\ProductService;
 
 /**
  * A store seller's own products and coupons, and nobody else's. The seller
@@ -160,3 +161,55 @@ test("a seller cannot download another seller's digital product file", function 
 
     $this->get('/temp/seller/digitalproducts/download/'.encrypt($product->id))->assertNotFound();
 });
+
+/**
+ * Fields a seller's form must never be able to set: the service decides them
+ * (ownership, approval, publication, featuring).
+ *
+ * @return array<string, mixed>
+ */
+function forgedProductFields(): array
+{
+    return [
+        'user_id' => 1, 'approved' => 1, 'published' => 1, 'added_by' => 'admin', 'featured' => 1,
+        'todays_deal' => 1, 'seller_featured' => 1, 'num_of_sale' => 999, 'rating' => 5, 'digital' => 1,
+    ];
+}
+
+test('the service cuts a seller\'s input down to the fields a seller may set', function () {
+    $input = [
+        ...sellerProductForm(),
+        ...forgedProductFields(),
+        'choice_options_3' => ['S'], 'price_Red-M' => 5, 'sku_Red-M' => 'X', 'qty_Red-M' => 2, 'img_Red-M' => 3,
+        '_token' => 'abc', 'tax_id' => [1], 'sku' => ['a'],
+    ];
+
+    $allowed = app(ProductService::class)->sellerAttributes($input);
+
+    expect(array_keys($allowed))->toBe([
+        'name', 'slug', 'category_id', 'unit', 'min_qty', 'unit_price', 'current_stock', 'lang', 'tags',
+        'choice_options_3', 'price_Red-M', 'sku_Red-M', 'qty_Red-M', 'img_Red-M',
+    ])->and($allowed['name'])->toBe('Renamed');
+});
+
+test('a seller\'s product form reaches the service without the forged fields', function (string $method) {
+    $captured = null;
+    $this->partialMock(ProductService::class, function ($mock) use ($method, &$captured) {
+        $mock->shouldReceive($method)->once()->andReturnUsing(function (array $data) use (&$captured) {
+            $captured = $data;
+
+            throw new RuntimeException('captured');
+        });
+    });
+    $seller = createStoreUser('seller');
+    $product = sellerProduct($seller);
+    actingAsStoreUser($seller);
+
+    $url = $method === 'store' ? '/temp/seller/products/store' : "/temp/seller/products/update/{$product->id}";
+    $this->post($url, sellerProductForm(forgedProductFields()));
+
+    expect($captured)->not->toBeNull()
+        ->and(array_keys($captured))->not->toContain('user_id', 'approved', 'published', 'featured', 'todays_deal', 'seller_featured', 'num_of_sale', 'rating', 'digital')
+        ->and($captured['name'])->toBe('Renamed')
+        ->and($captured['added_by'] ?? 'seller')->toBe('seller');
+})->with(['store', 'update']);
