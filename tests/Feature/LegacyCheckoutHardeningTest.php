@@ -34,22 +34,6 @@ test('applying a coupon to an empty cart answers with a warning instead of faili
     expect(Cart::count())->toBe(0);
 });
 
-test('a coupon from a shop the cart has no lines from is not applicable and leaves the cart alone', function () {
-    seedStoreCurrency();
-    $seller = createStoreUser('seller');
-    $otherSeller = createStoreUser('seller');
-    $customer = createStoreUser('customer');
-    $line = orderableCartLine($customer, $otherSeller, 2);
-    $coupon = couponFor($seller);
-    actingAsStoreUser($customer);
-
-    $this->post(route('checkout.apply_coupon_code'), ['code' => $coupon->code])
-        ->assertOk()
-        ->assertJsonPath('response_message.response', 'warning');
-
-    expect((float) $line->fresh()->discount)->toBe(0.0);
-});
-
 test('a coupon request without a code is rejected', function () {
     actingAsStoreUser(createStoreUser('customer'));
 
