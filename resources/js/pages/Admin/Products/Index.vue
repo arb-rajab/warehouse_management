@@ -113,8 +113,8 @@ const productColumnFiltered = computed(
 
 /**
  * State narrows every occupancy-derived column identically on the backend
- * (see `ProductController::occupancyCountSubquery()`/
- * `applyHistoryLogFilters()`), so the Full/Opened/Expired/Expiring-soon
+ * (see `Product::withOccupancyCounts()`/`matchingHistoryFilters()`), so
+ * the Full/Opened/Expired/Expiring-soon
  * columns are always marked filtered together.
  */
 const occupancyColumnsFiltered = computed(
