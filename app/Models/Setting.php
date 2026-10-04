@@ -107,7 +107,7 @@ class Setting extends Model
     {
         $setting = static::query()->first(['id', 'allowed_open_levels']);
 
-        return in_array($level, $setting?->allowed_open_levels ?? self::DEFAULT_ALLOWED_OPEN_LEVELS, true);
+        return in_array($level, $setting->allowed_open_levels ?? self::DEFAULT_ALLOWED_OPEN_LEVELS, true);
     }
 
     /**
