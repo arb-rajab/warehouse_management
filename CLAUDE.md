@@ -279,6 +279,12 @@ When they are installed, run the checks locally instead of waiting for CI:
   test:pest` hits composer's 300s process timeout on this suite; in parallel it
   takes about 90s. Note `types:check` runs *before* Pest in `composer ci:check`,
   so a PHPStan error means the suite never ran at all.
+- **Pest needs `.env` with an `APP_KEY`.** `phpunit.xml` sets none, so in a
+  container with no `.env` every test that boots the app errors with "No
+  application encryption key has been specified" (925 errors in one run). The
+  hook copies `.env.example` and runs `php artisan key:generate` when `.env` is
+  missing; if you see that error, do the same by hand rather than reading it as
+  a code defect.
 - **Pest needs `public/build/manifest.json`.** Every Inertia feature test renders
   the root view, which reads the Vite manifest, so without it ~200 tests fail
   with `ViteManifestNotFoundException` — a missing build, not a defect in the
