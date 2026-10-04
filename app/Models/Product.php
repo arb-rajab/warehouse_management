@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CellState;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 
@@ -310,6 +312,92 @@ class Product extends Model
     protected function inWarehouse(EloquentBuilder $query): void
     {
         $query->whereExists(Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id'));
+    }
+
+    /**
+     * Scope a query to products with at least one pallet matching the admin
+     * products index's occupancy filters (state/expired/expires_within_days) —
+     * e.g. `state=full` only returns products that actually have a full
+     * pallet. A no-op when none of those filters is set. Unlike
+     * {@see withOccupancyCounts()}, which only feeds the displayed per-column
+     * counts, this restricts which products appear, and it doesn't pin a cell
+     * state: it means "matches everything the user filtered by," not
+     * "matches one column."
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function matchingOccupancyFilters(EloquentBuilder $query, Request $request): void
+    {
+        if (! $request->filled('state') && ! $request->filled('expired') && ! $request->filled('expires_within_days')) {
+            return;
+        }
+
+        $query->whereExists(
+            Pallet::query()
+                ->selectRaw('1')
+                ->whereColumn('pallets.product_id', 'products.id')
+                ->matchingOccupancyFilters($request),
+        );
+    }
+
+    /**
+     * Add the admin products index's per-column pallet counts — full,
+     * opened, expired and expiring within `$expiringSoonDays` — each narrowed
+     * by the request's occupancy filters, as correlated scalar subquery
+     * selects (the same idiom `CellStatusLog::sorted()` uses to sort by a
+     * related pallet's column).
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function withOccupancyCounts(EloquentBuilder $query, Request $request, int $expiringSoonDays): void
+    {
+        $today = today();
+        $matchingPalletsCount = fn (?CellState $cellState = null): EloquentBuilder => Pallet::query()
+            ->selectRaw('count(*)')
+            ->whereColumn('pallets.product_id', 'products.id')
+            ->matchingOccupancyFilters($request, $cellState);
+
+        $query->addSelect([
+            'full_cells_count' => $matchingPalletsCount(CellState::Full),
+            'opened_cells_count' => $matchingPalletsCount(CellState::Opened),
+            'expired_cells_count' => $matchingPalletsCount()->where('expiration_date', '<', $today),
+            'expiring_soon_count' => $matchingPalletsCount()->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
+        ]);
+    }
+
+    /**
+     * Scope a query to products with at least one cell-log entry matching the
+     * admin products index's Activity filters (user/action/date range/
+     * created-within-days, plus the occupancy `state` on the log's cell). A
+     * no-op when none of the Activity filters is set — `state` alone is an
+     * occupancy filter, see {@see matchingOccupancyFilters()}.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function matchingHistoryFilters(EloquentBuilder $query, Request $request): void
+    {
+        $historyFiltersActive = $request->filled('user_id')
+            || $request->filled('action')
+            || $request->filled('date_from')
+            || $request->filled('date_to')
+            || $request->filled('created_within_days');
+
+        if (! $historyFiltersActive) {
+            return;
+        }
+
+        $query->whereExists(
+            CellStatusLog::query()
+                ->whereColumn('cell_status_logs.product_id', 'products.id')
+                ->matchingHistoryFilters($request)
+                ->when(
+                    $request->filled('state'),
+                    fn (EloquentBuilder $logQuery) => $logQuery->whereHas('cell', fn (EloquentBuilder $cellQuery) => $cellQuery->where('state', $request->string('state')->value())),
+                ),
+        );
     }
 
     /**

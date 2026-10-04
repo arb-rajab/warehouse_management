@@ -1,10 +1,16 @@
 <?php
 
+use App\Enums\CellState;
+use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Upload;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
@@ -574,4 +580,109 @@ test('inWarehouse matches a product with more than one pallet', function () {
     Pallet::factory()->count(2)->create(['product_id' => $product->id]);
 
     expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$product->id]);
+});
+
+test('matchingOccupancyFilters is a no-op when no occupancy filter is set, keeping a product with no pallets', function () {
+    $withPallet = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $withPallet->id]);
+    $withoutPallets = Product::factory()->create();
+
+    $results = Product::query()->matchingOccupancyFilters(Request::create('/', 'GET'))->pluck('id')->sort()->values()->all();
+
+    expect($results)->toBe(collect([$withPallet->id, $withoutPallets->id])->sort()->values()->all());
+});
+
+test('matchingOccupancyFilters keeps only products with a pallet matching the state filter, excluding an opened-only product and one with no pallets', function () {
+    $full = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $full->id]);
+    // Noise: only an opened pallet, and no pallets at all.
+    $openedOnly = Product::factory()->create();
+    Pallet::factory()->opened()->create(['product_id' => $openedOnly->id]);
+    Product::factory()->create();
+
+    $results = Product::query()->matchingOccupancyFilters(Request::create('/', 'GET', ['state' => 'full']))->pluck('id')->all();
+
+    expect($results)->toBe([$full->id]);
+});
+
+test('withOccupancyCounts counts each product\'s own full, opened, expired and expiring-soon pallets, excluding another product\'s', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-20']);
+    Pallet::factory()->opened()->create(['product_id' => $product->id, 'expiration_date' => '2026-12-01']);
+    // Noise: another product's pallets must not leak into these counts.
+    $other = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $other->id, 'expiration_date' => '2026-08-01']);
+
+    $counted = Product::query()
+        ->select('id')
+        ->withOccupancyCounts(Request::create('/', 'GET'), 7)
+        ->findOrFail($product->id);
+
+    expect($counted->full_cells_count)->toBe(2)
+        ->and($counted->opened_cells_count)->toBe(1)
+        ->and($counted->expired_cells_count)->toBe(1)
+        // The products page's window is on-or-before today + N, so the
+        // already-expired pallet counts here too.
+        ->and($counted->expiring_soon_count)->toBe(2);
+
+    Carbon::setTestNow();
+});
+
+test('withOccupancyCounts narrows every count by the request\'s occupancy filters', function () {
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id]);
+    Pallet::factory()->opened()->create(['product_id' => $product->id]);
+
+    $counted = Product::query()
+        ->select('id')
+        ->withOccupancyCounts(Request::create('/', 'GET', ['state' => 'opened']), 7)
+        ->findOrFail($product->id);
+
+    expect($counted->full_cells_count)->toBe(0)
+        ->and($counted->opened_cells_count)->toBe(1);
+});
+
+test('matchingHistoryFilters is a no-op when no activity filter is set, even with a state filter', function () {
+    $logged = Product::factory()->create();
+    CellStatusLog::factory()->create(['product_id' => $logged->id]);
+    $neverLogged = Product::factory()->create();
+
+    $results = Product::query()->matchingHistoryFilters(Request::create('/', 'GET', ['state' => 'full']))->pluck('id')->sort()->values()->all();
+
+    expect($results)->toBe(collect([$logged->id, $neverLogged->id])->sort()->values()->all());
+});
+
+test('matchingHistoryFilters keeps only products with a log by the filtered user, excluding another user\'s product', function () {
+    $user = User::factory()->create();
+    $matching = Product::factory()->create();
+    CellStatusLog::factory()->create(['product_id' => $matching->id, 'user_id' => $user->id]);
+    // Noise: a product only someone else logged.
+    CellStatusLog::factory()->create();
+
+    $results = Product::query()->matchingHistoryFilters(Request::create('/', 'GET', ['user_id' => [$user->id]]))->pluck('id')->all();
+
+    expect($results)->toBe([$matching->id]);
+});
+
+test('matchingHistoryFilters narrows the matching logs to cells in the filtered state, excluding a log on a cell in another state', function () {
+    $user = User::factory()->create();
+    $matching = Product::factory()->create();
+    CellStatusLog::factory()->create([
+        'product_id' => $matching->id,
+        'user_id' => $user->id,
+        'cell_id' => Cell::factory()->create(['state' => CellState::Full])->id,
+    ]);
+    // Noise: the same user's log, but on an empty cell.
+    $excluded = Product::factory()->create();
+    CellStatusLog::factory()->create([
+        'product_id' => $excluded->id,
+        'user_id' => $user->id,
+        'cell_id' => Cell::factory()->create(['state' => CellState::Empty])->id,
+    ]);
+
+    $request = Request::create('/', 'GET', ['user_id' => [$user->id], 'state' => 'full']);
+
+    expect(Product::query()->matchingHistoryFilters($request)->pluck('id')->all())->toBe([$matching->id]);
 });
