@@ -1,3 +1,4 @@
+import { Form } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatDate, formatDateTime } from '@/lib/date';
@@ -8,20 +9,23 @@ import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { Cell, CellMapRow, CellSlotLocation, Row } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, formSubmitMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
-    routerPostMock: vi.fn(),
+    formSubmitMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
         Link: createLinkStub(),
+        useForm: createUseFormStub(formSubmitMock),
         usePage: usePageMock,
-        router: { get: routerGetMock, post: routerPostMock },
+        router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -110,7 +114,7 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 
 describe('Rows Show', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        resetMocks({ usePageMock, routerGetMock, formSubmitMock });
         Element.prototype.scrollIntoView = vi.fn();
     });
 
@@ -529,7 +533,7 @@ describe('Rows Show', () => {
         );
     });
 
-    it('opens the toggle-active dialog for the clicked cell and posts the toggle on submit', async () => {
+    it('opens the toggle-active dialog for the clicked cell and posts the toggle through its form', async () => {
         const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
             cell({
                 id: 42,
@@ -551,13 +555,14 @@ describe('Rows Show', () => {
         const dialog = wrapper.get('[role="dialog"]');
         expect(dialog.text()).toContain(formatSlot('A', 1, 1));
 
-        await dialog.get('textarea').setValue('Sensor malfunction');
-        await dialog.get('form').trigger('submit');
-
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cells/42/toggle-active',
-            { note: 'Sensor malfunction', return_to: 'row' },
-            expect.objectContaining({ preserveScroll: true }),
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual({
+            url: '/admin/cells/42/toggle-active',
+            method: 'post',
+        });
+        expect(form.props('options')).toEqual({ preserveScroll: true });
+        expect(dialog.get('input[name="return_to"]').attributes('value')).toBe(
+            'row',
         );
     });
 
@@ -595,9 +600,9 @@ describe('Rows Show', () => {
         await dialog.get('#pallet-action-boxes-count').setValue('3');
         await dialog.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/pallets/9/open',
-            expect.objectContaining({ boxes_count: 3 }),
+        expect(formSubmitMock).toHaveBeenCalledWith(
+            { url: '/admin/pallets/9/open', method: 'post' },
+            expect.objectContaining({ boxes_count: 3, return_to: 'row' }),
             expect.objectContaining({ preserveScroll: true }),
         );
     });

@@ -1,36 +1,52 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    empty as emptyPallet,
+    open as openPallet,
+    removeBoxes,
+    store,
+    transfer,
+    update as updatePallet,
+} from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { formatDate, formatDateTime } from '@/lib/date';
 import type { CellMapRow, CellWithLocation } from '@/types/admin';
+import ActionErrorBanner from './ActionErrorBanner.vue';
 import PalletActionsDialog from './PalletActionsDialog.vue';
 import SubmitButton from './SubmitButton.vue';
 
-const { routerPostMock, routerPutMock } = vi.hoisted(() => ({
-    routerPostMock: vi.fn(),
-    routerPutMock: vi.fn(),
+const { submitMock, formState } = vi.hoisted(() => ({
+    submitMock: vi.fn(),
+    formState: {
+        processing: false,
+        errors: {} as Record<string, string>,
+    },
 }));
 
-vi.mock('@inertiajs/vue3', () => ({
-    router: { post: routerPostMock, put: routerPutMock },
-    useHttp: () => ({
-        get: (
-            _url: string,
-            options?: { onSuccess?: (response: unknown) => void },
-        ) =>
-            options?.onSuccess?.({
-                data: [],
-                meta: {
-                    current_page: 1,
-                    last_page: 1,
-                    per_page: 20,
-                    total: 0,
-                    from: null,
-                    to: 0,
-                    links: [],
-                },
-            }),
-    }),
-}));
+vi.mock('@inertiajs/vue3', async () => {
+    const { createUseFormStub } = await import('@/testing/inertiaStubs');
+
+    return {
+        useForm: createUseFormStub(submitMock, () => formState),
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.({
+                    data: [],
+                    meta: {
+                        current_page: 1,
+                        last_page: 1,
+                        per_page: 20,
+                        total: 0,
+                        from: null,
+                        to: 0,
+                        links: [],
+                    },
+                }),
+        }),
+    };
+});
 
 const rows: CellMapRow[] = [
     { id: 1, letter: 'A', cells_count: 5, flats_count: 1 },
@@ -117,8 +133,9 @@ async function mountDialog(cell: CellWithLocation | null) {
 
 describe('PalletActionsDialog', () => {
     beforeEach(() => {
-        routerPostMock.mockReset();
-        routerPutMock.mockReset();
+        submitMock.mockReset();
+        formState.processing = false;
+        formState.errors = {};
     });
 
     it('does not offer the confirm-empty checkbox while boxes_count is below remaining_boxes', async () => {
@@ -151,11 +168,11 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
+        expect(submitMock).toHaveBeenCalledTimes(1);
         // The static type="number" input auto-casts through v-model (see
         // js.md's FilterNumberField note) — boxes_count posts as a number
         // despite boxesCount being declared as a string ref.
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             boxes_count: 4,
             confirm_empty: false,
         });
@@ -168,8 +185,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('input[type="checkbox"]').setValue(true);
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             boxes_count: 6,
             confirm_empty: true,
         });
@@ -233,8 +250,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-note').setValue('Fragile');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             product_id: null,
             expiration_date: '2026-12-25',
             note: 'Fragile',
@@ -252,8 +269,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-note').setValue('No label on box');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             product_id: null,
             expiration_date: '',
             note: 'No label on box',
@@ -306,8 +323,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('input[type="checkbox"]').setValue(true);
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             boxes_count: 6,
             confirm_empty: true,
         });
@@ -322,8 +339,8 @@ describe('PalletActionsDialog', () => {
 
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             boxes_count: null,
         });
     });
@@ -374,8 +391,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-note').setValue('Damaged boxes');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toEqual({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toEqual({
             note: 'Damaged boxes',
             return_to: null,
         });
@@ -406,8 +423,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-to-flat').setValue('2');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             row_letter: 'A',
             cell_number: 3,
             flat_number: 2,
@@ -452,8 +469,8 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-edit-boxes').setValue('4');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledTimes(1);
-        expect(routerPutMock.mock.calls[0][1]).toEqual({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toEqual({
             product_id: 1,
             expiration_date: '2027-01-01',
             remaining_boxes: 4,
@@ -486,8 +503,8 @@ describe('PalletActionsDialog', () => {
         await checkbox.setValue(true);
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledTimes(1);
-        expect(routerPutMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             remaining_boxes: 0,
             confirm_empty: true,
         });
@@ -509,36 +526,108 @@ describe('PalletActionsDialog', () => {
         await wrapper.get('#pallet-action-edit-expiration').setValue('');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledTimes(1);
-        expect(routerPutMock.mock.calls[0][1]).toMatchObject({
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
             expiration_date: '',
         });
     });
 
-    it('closes the dialog on success and stops the submit button processing state on finish', async () => {
+    it('closes the dialog when the request succeeds, preserving scroll', async () => {
         const wrapper = await mountDialog(openedCell(6));
 
         await wrapper.get('#pallet-action-boxes-count').setValue('4');
         await wrapper.get('form').trigger('submit');
 
-        expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
-            true,
-        );
-
-        const options = routerPostMock.mock.calls[0][2] as {
+        const options = submitMock.mock.calls[0][2] as {
+            preserveScroll: boolean;
             onSuccess: () => void;
-            onFinish: () => void;
         };
+        expect(options.preserveScroll).toBe(true);
+        expect(wrapper.emitted('update:open')).toBeUndefined();
+
         options.onSuccess();
         await wrapper.vm.$nextTick();
 
         expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false]);
+    });
 
-        options.onFinish();
-        await wrapper.vm.$nextTick();
+    it('passes the form’s processing state to the submit button', async () => {
+        formState.processing = true;
+        const wrapper = await mountDialog(openedCell(6));
 
         expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
-            false,
+            true,
         );
+    });
+
+    it('shows the form’s first server error in a banner', async () => {
+        formState.errors = { boxes_count: 'Too many boxes' };
+        const wrapper = await mountDialog(openedCell(6));
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'Too many boxes',
+        );
+    });
+
+    it('posts each action to its own route with its own method', async () => {
+        const full = fullCell(6);
+        const expected: [number, unknown][] = [
+            [0, openPallet(43, { mergeQuery: {} })],
+            [1, emptyPallet(43, { mergeQuery: {} })],
+            [2, transfer(43, { mergeQuery: {} })],
+            [3, updatePallet(43, { mergeQuery: {} })],
+        ];
+
+        for (const [tabIndex, action] of expected) {
+            submitMock.mockReset();
+            const wrapper = await mountDialog(full);
+            await wrapper
+                .findAll('[data-testid="pallet-action-tab"]')
+                [tabIndex].trigger('click');
+            await wrapper.get('form').trigger('submit');
+
+            expect(submitMock.mock.calls[0][0]).toEqual(action);
+        }
+
+        submitMock.mockReset();
+        const storeWrapper = await mountDialog(emptyCell());
+        await storeWrapper.get('form').trigger('submit');
+        expect(submitMock.mock.calls[0][0]).toEqual(
+            store(8, { mergeQuery: {} }),
+        );
+
+        submitMock.mockReset();
+        const removeWrapper = await mountDialog(openedCell(6));
+        await removeWrapper.get('form').trigger('submit');
+        expect(submitMock.mock.calls[0][0]).toEqual(
+            removeBoxes(42, { mergeQuery: {} }),
+        );
+    });
+
+    it('sends return_to when the dialog was opened from a row page', async () => {
+        const wrapper = mount(PalletActionsDialog, {
+            props: {
+                cell: emptyCell(),
+                label: 'A2·1',
+                rows,
+                returnTo: 'row',
+                open: false,
+                'onUpdate:open': () => {},
+            },
+        });
+        await wrapper.setProps({ open: true });
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
+            return_to: 'row',
+        });
+    });
+
+    it('does not submit when there is no cell', async () => {
+        const wrapper = await mountDialog(null);
+
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock).not.toHaveBeenCalled();
     });
 });

@@ -179,7 +179,7 @@ const pair = computed(() => transferPair(props.log));
         {{ log.note ?? '—' }}
     </td>
     <td v-if="showUserColumn" class="px-4 py-2">
-        <TableLink :href="showUser({ id: log.user.id })">
+        <TableLink :href="showUser(log.user)">
             {{ log.user.name }}
         </TableLink>
     </td>

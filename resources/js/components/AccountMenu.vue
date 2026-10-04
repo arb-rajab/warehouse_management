@@ -7,7 +7,7 @@ import LogoutLink from '@/components/LogoutLink.vue';
 import { t } from '@/lib/i18n';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
-defineProps<{ userName: string | undefined }>();
+defineProps<{ userName?: string }>();
 
 const { open, containerRef } = useDismissibleListbox();
 </script>
@@ -33,7 +33,7 @@ const { open, containerRef } = useDismissibleListbox();
             class="absolute end-0 z-10 mt-1 w-56 rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
         >
             <Link
-                :href="settingsEdit().url"
+                :href="settingsEdit()"
                 class="flex items-center gap-1.5 rounded px-1 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
                 @click="open = false"
             >

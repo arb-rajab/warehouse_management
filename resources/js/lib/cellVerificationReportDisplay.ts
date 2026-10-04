@@ -49,10 +49,7 @@ export function acceptReport(
     }
 
     router.post(
-        acceptReportAction(
-            { cellVerificationReport: report.id },
-            { mergeQuery: {} },
-        ).url,
+        acceptReportAction(report, { mergeQuery: {} }).url,
         { return_to: returnTo ?? null },
         { preserveScroll: true },
     );

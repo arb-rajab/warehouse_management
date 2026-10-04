@@ -138,7 +138,7 @@ function onManagePallet(): void {
 
         <a
             v-if="cell"
-            :href="exportQrCode.url(cell.id)"
+            :href="exportQrCode.url(cell)"
             :title="t('rows.show.reprintQr')"
             class="absolute end-1 top-1"
             @click.stop
