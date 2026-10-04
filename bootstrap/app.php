@@ -12,12 +12,12 @@ use App\Http\Middleware\IsAppUserUnbanned;
 use App\Http\Middleware\IsCustomer;
 use App\Http\Middleware\IsDeliveryBoy;
 use App\Http\Middleware\IsDriver;
+use App\Http\Middleware\IsRepresentativeOrAdmin;
 use App\Http\Middleware\IsSeller;
 use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
 use App\Http\Middleware\LogRequestTime;
 use App\Http\Middleware\RaizerSuperAdmin;
-use App\Http\Middleware\RateLimitMiddleware;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\StoreInertiaPreviousUrl;
@@ -114,13 +114,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'RaizerSuperAdmin' => RaizerSuperAdmin::class,
             'wms.auth' => WmsAuthMiddleware::class,
             'log.request.time' => LogRequestTime::class,
-            'rate.limit' => RateLimitMiddleware::class,
             'driver' => IsDriver::class,
+            'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation']);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

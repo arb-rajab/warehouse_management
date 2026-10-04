@@ -6,6 +6,7 @@ use App\Models\ProductCollection;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 
 class ImportCollections extends Command
 {
@@ -38,13 +39,13 @@ class ImportCollections extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         try {
             $start_time = Carbon::now();
 
             $endpoint = config('services.otajer.url') . '/api/rest/listproductfilters/' . config('services.otajer.token');
-            $response = file_get_contents($endpoint);
+            $response = Http::timeout(30)->throw()->get($endpoint)->body();
 
             $filters = json_decode($response, true);
             $number_of_collections = 0;
@@ -92,8 +93,12 @@ class ImportCollections extends Command
             $end_time = Carbon::now();
             $time = (int) $end_time->diffInSeconds($start_time, true);
             $this->info($number_of_collections . ' collections fetched and added successfully. It took ' . $time . ' seconds');
+
+            return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->info('Command was not successful' . $e);
+            $this->error('Command was not successful '.$e->getMessage());
+
+            return self::FAILURE;
         }
     }
 }

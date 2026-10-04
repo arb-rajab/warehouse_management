@@ -58,9 +58,9 @@ if (!function_exists('areActiveRoutesHome')) {
 if (!function_exists('clean_html')) {
     /**
      * HTML a user wrote (a product or classified description, support-ticket
-     * text), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
-     * Admin-written content (CMS pages, blog posts, settings texts) is trusted
-     * and is printed as it is. See App\Services\HtmlSanitizer.
+     * text) or an admin (CMS pages, blog posts, popup, footer and copyright
+     * texts), cleaned so it is safe to print unescaped: `{!! clean_html($x) !!}`.
+     * See App\Services\HtmlSanitizer.
      */
     function clean_html(?string $html): string
     {
@@ -102,7 +102,7 @@ if (!function_exists('filter_products')) {
         $verified_sellers = verified_sellers_id();
         if (get_setting('vendor_system_activation') == 1) {
             return $products->where('approved', '1')
-                /*->where('published', '1')*/
+                ->where('published', '1')
                 ->where('auction_product', 0)
                 ->where(function ($p) use ($verified_sellers) {
                     $p->where('added_by', 'admin')->orWhere(function ($q) use ($verified_sellers) {
@@ -1266,43 +1266,6 @@ if (!function_exists('get_images_path')) {
     }
 }
 
-//for api
-if (!function_exists('checkout_done')) {
-    function checkout_done($combined_order_id, $payment)
-    {
-        $combined_order = CombinedOrder::find($combined_order_id);
-
-        foreach ($combined_order->orders as $key => $order) {
-            $order->payment_status = 'paid';
-            $order->payment_details = $payment;
-            $order->save();
-
-            try {
-                NotificationUtility::sendOrderPlacedNotification($order);
-                calculateCommissionAffilationClubPoint($order);
-            } catch (\Exception $e) {
-            }
-        }
-    }
-}
-
-//for api
-if (!function_exists('wallet_payment_done')) {
-    function wallet_payment_done($user_id, $amount, $payment_method, $payment_details)
-    {
-        $user = StoreUser::find($user_id);
-        $user->balance = $user->balance + $amount;
-        $user->save();
-
-        $wallet = new Wallet;
-        $wallet->user_id = $user->id;
-        $wallet->amount = $amount;
-        $wallet->payment_method = $payment_method;
-        $wallet->payment_details = $payment_details;
-        $wallet->save();
-    }
-}
-
 if (!function_exists('purchase_payment_done')) {
     function purchase_payment_done($user_id, $package_id)
     {
@@ -1334,17 +1297,6 @@ if (!function_exists('seller_purchase_payment_done')) {
         $seller_package->approval = 1;
         $seller_package->offline_payment = 2;
         $seller_package->save();
-    }
-}
-
-if (!function_exists('customer_purchase_payment_done')) {
-    function customer_purchase_payment_done($user_id, $customer_package_id)
-    {
-        $user = StoreUser::findOrFail($user_id);
-        $user->customer_package_id = $customer_package_id;
-        $customer_package = CustomerPackage::findOrFail($customer_package_id);
-        $user->remaining_uploads += $customer_package->product_upload;
-        $user->save();
     }
 }
 

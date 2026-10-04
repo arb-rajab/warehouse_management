@@ -6,6 +6,7 @@ use App\Enums\CellLogAction;
 use App\Enums\CellLogFlagReason;
 use App\Models\CellStatusLog;
 use App\Services\DashboardStatsCache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Evaluates the rule-based auto-flagging thresholds (config/cell_status_log_flags.php)
@@ -14,6 +15,16 @@ use App\Services\DashboardStatsCache;
  * point for all of them (see PalletController::logCellStatus()). This is also the single
  * choke point for every occupancy/activity-changing pallet action, so it doubles as the
  * dashboard stats cache's invalidation trigger (see DashboardStatsCache, RowObserver).
+ *
+ * The flags are written inside the caller's transaction, so they commit or roll back
+ * together with the log they belong to. Only the cache flush waits for the commit:
+ * flushed mid-transaction, a dashboard request landing before the commit would
+ * recompute from the pre-commit data and cache that under the new version, leaving
+ * the action invisible until the TTL ran out — and a rolled-back action needs no
+ * flush at all. This is DB::afterCommit() rather than ShouldHandleEventsAfterCommit
+ * on the whole observer on purpose: the latter would also move the flag writes out
+ * of the transaction, so a failure there would surface as an error after the pallet
+ * action had already committed — inviting a client retry that repeats it.
  */
 class CellStatusLogObserver
 {
@@ -23,7 +34,7 @@ class CellStatusLogObserver
             $log->flags()->create(['reason' => $reason]);
         }
 
-        DashboardStatsCache::flush();
+        DB::afterCommit(fn () => DashboardStatsCache::flush());
     }
 
     /**

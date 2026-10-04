@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('business_settings')) {
+            return;
+        }
+
         Schema::create('business_settings', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->string('type', 30);
@@ -20,6 +24,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('business_settings');
     }
 };

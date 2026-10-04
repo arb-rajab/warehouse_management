@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function () {
     Route::post('login', 'App\Http\Controllers\Api\V2\AuthController@login')->middleware('throttle:store-auth');
-    Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('rate.limit');
-    Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin');
+    Route::post('signup', 'App\Http\Controllers\Api\V2\AuthController@signup')->middleware('throttle:store-signup');
+    Route::post('social-login', 'App\Http\Controllers\Api\V2\AuthController@socialLogin')->middleware('throttle:store-auth');
     Route::post('password/forget_request', 'App\Http\Controllers\Api\V2\PasswordResetController@forgetRequest')->middleware('throttle:store-auth');
     Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V2\PasswordResetController@confirmReset')->middleware('throttle:store-auth');
     Route::post('password/resend_code', 'App\Http\Controllers\Api\V2\PasswordResetController@resendCode')->middleware('throttle:store-auth');
@@ -20,7 +20,7 @@ Route::group(['prefix' => 'v2/auth', 'middleware' => ['app_language']], function
         Route::post('confirm_code', 'App\Http\Controllers\Api\V2\AuthController@confirmCode')->middleware('throttle:store-auth');
     });
 
-    Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken');
+    Route::post('info', 'App\Http\Controllers\Api\V2\AuthController@getUserInfoByAccessToken')->middleware('throttle:store-auth');
 });
 
 
@@ -196,7 +196,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
     Route::apiResource('currencies', 'App\Http\Controllers\Api\V2\CurrencyController')->only('index');
 
-    Route::apiResource('customers', 'App\Http\Controllers\Api\V2\CustomerController')->only('show');
+    Route::apiResource('customers', 'App\Http\Controllers\Api\V2\CustomerController')->only('show')->middleware('auth:store_api');
 
     Route::group(['prefix' => 'representatives'], function () {
         Route::get('get-customers', 'App\Http\Controllers\Api\V2\CustomerController@get_customers')->middleware('auth:store_api');
@@ -282,8 +282,8 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // Route::get('user/info/{id}', 'App\Http\Controllers\Api\V2\UserController@info')->middleware('auth:store_api');
     // Route::post('user/info/update', 'App\Http\Controllers\Api\V2\UserController@updateName')->middleware('auth:store_api');
 
-    Route::post('get-user-by-access_token', 'App\Http\Controllers\Api\V2\UserController@getUserInfoByAccessToken');
-    Route::get('check_user_verified/{user_id}', 'App\Http\Controllers\Api\V2\UserController@check_verified_by_admin');
+    Route::post('get-user-by-access_token', 'App\Http\Controllers\Api\V2\UserController@getUserInfoByAccessToken')->middleware('throttle:store-auth');
+    Route::get('check_user_verified/{user_id}', 'App\Http\Controllers\Api\V2\UserController@check_verified_by_admin')->middleware('auth:store_api');
 
     Route::get('cities', 'App\Http\Controllers\Api\V2\AddressController@getCities');
     Route::get('states', 'App\Http\Controllers\Api\V2\AddressController@getStates');
@@ -296,9 +296,9 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     // Route::post('coupon/apply', 'App\Http\Controllers\Api\V2\CouponController@apply')->middleware('auth:store_api');
 
 
-    Route::any('iyzico/init', 'App\Http\Controllers\Api\V2\IyzicoController@init')->name('api.iyzico.init');
+    Route::any('iyzico/init', 'App\Http\Controllers\Api\V2\IyzicoController@init')->middleware('auth:store_api')->name('api.iyzico.init');
     Route::any('iyzico/callback', 'App\Http\Controllers\Api\V2\IyzicoController@callback')->name('api.iyzico.callback');
-    Route::post('iyzico/success', 'App\Http\Controllers\Api\V2\IyzicoController@payment_success')->name('api.iyzico.success');
+    Route::post('iyzico/success', 'App\Http\Controllers\Api\V2\IyzicoController@payment_success')->middleware('auth:store_api')->name('api.iyzico.success');
 
 
     Route::get('bkash/api/webpage/{token}/{amount}', 'App\Http\Controllers\Api\V2\BkashController@webpage')->name('api.bkash.webpage');
@@ -307,14 +307,12 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
     Route::any('bkash/api/execute/{token}', 'App\Http\Controllers\Api\V2\BkashController@execute')->name('api.bkash.execute');
     Route::any('bkash/api/fail', 'App\Http\Controllers\Api\V2\BkashController@fail')->name('api.bkash.fail');
-    Route::post('bkash/api/success', 'App\Http\Controllers\Api\V2\BkashController@payment_success')->name('api.bkash.success');
-    Route::post('bkash/api/process', 'App\Http\Controllers\Api\V2\BkashController@process')->name('api.bkash.process');
+    Route::post('bkash/api/success', 'App\Http\Controllers\Api\V2\BkashController@payment_success')->middleware('auth:store_api')->name('api.bkash.success');
 
 
     Route::any('nagad/verify/{payment_type}', 'App\Http\Controllers\Api\V2\NagadController@verify')->name('app.nagad.callback_url');
-    Route::post('nagad/process', 'App\Http\Controllers\Api\V2\NagadController@process');
 
-    Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V2\SslCommerzController@begin');
+    Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V2\SslCommerzController@begin')->middleware('auth:store_api');
     Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_success');
     Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_fail');
     Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V2\SslCommerzController@payment_cancel');

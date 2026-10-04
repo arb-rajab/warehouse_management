@@ -2,12 +2,7 @@
 
 namespace App\Utility;
 
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\SellerPackageController;
-use App\Http\Controllers\WalletController;
-use App\Models\StoreUser;
-use Session;
+use Illuminate\Support\Facades\Http;
 
 class NgeniusUtility
 {
@@ -45,9 +40,9 @@ class NgeniusUtility
 //        $tokenResponse = self::invokeCurlRequest("POST", $idServiceURL, $tokenHeaders, null);
 
 
-        $tokenResponse = json_decode($tokenResponse);
+        $tokenResponse = json_decode((string) $tokenResponse);
         //dd($tokenResponse);
-        $access_token = $tokenResponse->access_token;
+        $access_token = $tokenResponse->access_token ?? '';
 
 
         return $access_token;
@@ -87,6 +82,8 @@ class NgeniusUtility
         $paymentLink = $orderCreateResponse->_links->payment->href;     // the link to the payment page for redirection (either full-page redirect or iframe)
         $orderReference = $orderCreateResponse->reference;              // the reference to the order, which you should store in your records for future interaction with this order
 
+        // The only order the callback accepts for this session.
+        session()->put('ngenius_order_ref', $orderReference);
         session()->save();
 
         /*echo "<!DOCTYPE html>
@@ -103,74 +100,39 @@ class NgeniusUtility
 
     }
 
-    public static function check_callback($orderRef, $payment_type)
+    /**
+     * The order as N-Genius's own server reports it, or null when it cannot be
+     * read.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function retrieve_order($orderRef)
     {
         $outletRef = env("NGENIUS_OUTLET_ID"); // set your outlet reference/ID value here (example only)
-        $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/$orderRef";             // set the transaction service URL (example only)
+        $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/" . rawurlencode($orderRef);
         $access_token = self::getAccessToken();
 
         $headers = ["Authorization: Bearer " . $access_token];
-        $orderStatusResponse = self::invokeCurlRequest("GET", $orderCheckURL, $headers, null);
+        $orderStatusResponse = json_decode((string) self::invokeCurlRequest("GET", $orderCheckURL, $headers, null), true);
 
-        $orderStatusResponse = json_decode($orderStatusResponse);
-
-        if ($orderStatusResponse->_embedded->payment[0]->state == "FAILED") {
-            // fail or cancel or incomplete
-            Session::forget('payment_data');
-            flash(translate('Payment incomplete'))->error();
-            return redirect()->route('home');
-
-        } else if ($orderStatusResponse->_embedded->payment[0]->state == "CAPTURED") {
-            // success
-
-            $payment = json_encode($orderStatusResponse);
-
-            //dd($payment_type, Session::get('order_id'),Session::get('payment_data'), $payment);
-
-            if ($payment_type == 'cart_payment') {
-                $checkoutController = new CheckoutController;
-                return $checkoutController->checkout_done(session()->get('combined_order_id'), $payment);
-            }
-
-            if ($payment_type == 'wallet_payment') {
-                $walletController = new WalletController;
-                return $walletController->wallet_payment_done(Session::get('payment_data'), $payment);
-            }
-
-            if ($payment_type == 'customer_package_payment') {
-                $customer_package_controller = new CustomerPackageController;
-                return $customer_package_controller->purchase_payment_done(session()->get('payment_data'), $payment);
-            }
-
-            if ($payment_type == 'seller_package_payment') {
-                $seller_package_controller = new SellerPackageController;
-                return $seller_package_controller->purchase_payment_done(session()->get('payment_data'), $payment);
-            }
-
-        }
+        return is_array($orderStatusResponse) ? $orderStatusResponse : null;
     }
 
     public static function invokeCurlRequest($type, $url, $headers, $post)
     {
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        if ($type == "POST") {
-
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-
+        $headerMap = [];
+        foreach ($headers as $header) {
+            [$name, $value] = array_map('trim', explode(':', $header, 2));
+            $headerMap[$name] = $value;
         }
 
-        $server_output = curl_exec($ch);
-        // print_r($server_output);
-        // exit();
+        $request = Http::timeout(30)->withHeaders($headerMap);
 
-        return $server_output;
+        if ($type == "POST") {
+            return $request->withBody((string) $post, $headerMap['Content-Type'] ?? 'application/json')->post($url)->body();
+        }
 
+        return $request->get($url)->body();
     }
 
     public static function initPayment(){

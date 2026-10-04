@@ -49,6 +49,7 @@ export interface Row {
 export interface Setting {
     qr_code_width: number;
     qr_code_height: number;
+    allowed_open_levels: number[];
 }
 
 /**
@@ -247,7 +248,8 @@ export type CellLogAction =
     | 'transferred_out'
     | 'transferred_in'
     | 'deactivated'
-    | 'reactivated';
+    | 'reactivated'
+    | 'product_changed';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 

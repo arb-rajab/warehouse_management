@@ -14,9 +14,11 @@ use App\Models\Order;
 use App\Models\StoreUser;
 use App\Models\Wishlist;
 use App\Notifications\AppEmailVerificationNotification;
+use App\Services\StoreVerificationCodes;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\Base64ImageUploadService;
 use InvalidArgumentException;
@@ -60,17 +62,20 @@ class ProfileController extends Controller
             ]);
         }
 
-        // try {
-        //     $validatedData = $this->validator($request->all(), $user)->validate();
-        // } catch (ValidationException $e) {
-        //     return response()->json([
-        //         'result' => false,
-        //         'message' => translate('Validation Error'),
-        //         'errors' => $e->validator->getMessageBag()->all(),
-        //         'user_id' => 0
-        //     ], 422);
-        // }
-        // $user->fill($validatedData);
+        $validator = Validator::make($request->all(), [
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:50', Rule::unique('users', 'phone')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:6', 'max:255'],
+            'current_password' => ['required_with:password', 'nullable', 'string', 'current_password:store_api'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => translate('Validation Error'),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         if(isset($request->name)){
             $user->name = $request->name;
@@ -106,9 +111,8 @@ class ProfileController extends Controller
             if ($request->email != $user->email) {
                 $user->email = $request->email;
                 $user->email_verified_at = null;
-                $user->verification_code = random_int(100000, 999999);
                 try {
-                    $user->notify(new AppEmailVerificationNotification());
+                    $user->notify(new AppEmailVerificationNotification(app(StoreVerificationCodes::class)->issue($user)));
                 } catch (\Exception $e) {
                     return response()->json([
                         'result' => false,

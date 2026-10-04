@@ -1,9 +1,12 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Services\GatewayPaymentService;
 use App\Services\PaymentOptions;
+use App\Services\VerifiedPayment;
 use App\Models\Wallet;
 use Auth;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Session;
 
@@ -37,21 +40,23 @@ class WalletController extends Controller
         }
     }
 
-    public function wallet_payment_done($payment_data, $payment_details)
+    /**
+     * Where a gateway's callback finishes a wallet top-up, once its server has
+     * confirmed it. The amount is what the gateway confirmed it took, not the
+     * amount the session asked for, and a repeated callback adds nothing
+     * (GatewayPaymentService).
+     */
+    public function wallet_payment_done(VerifiedPayment $payment): RedirectResponse
     {
-        $user = Auth::user();
-        $user->balance = $user->balance + $payment_data['amount'];
-        $user->save();
-
-        $wallet = new Wallet;
-        $wallet->user_id = $user->id;
-        $wallet->amount = $payment_data['amount'];
-        $wallet->payment_method = $payment_data['payment_method'];
-        $wallet->payment_details = $payment_details;
-        $wallet->save();
+        $payerId = Auth::id();
 
         Session::forget('payment_data');
         Session::forget('payment_type');
+
+        if ($payerId === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $payerId, GatewayPaymentService::WALLET)) {
+            flash(translate('Payment could not be verified'))->error();
+            return redirect()->route('wallet.index');
+        }
 
         flash(translate('Recharge completed'))->success();
         return redirect()->route('wallet.index');

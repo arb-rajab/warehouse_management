@@ -6,12 +6,14 @@ use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
@@ -19,6 +21,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,6 +44,15 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('viewPulse', User::isAdminGate());
 
+        // spatie/laravel-backup silently skips encryption when no password is
+        // set. A production backup holds the whole shared store database, so
+        // refuse to write one unencrypted.
+        Event::listen(function (CommandStarting $event): void {
+            if ($event->command === 'backup:run' && app()->isProduction() && blank(config('backup.backup.password'))) {
+                throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD must be set to run backups in production.');
+            }
+        });
+
         RateLimiter::for('login', function (Request $request): array {
             $email = Str::lower((string) $request->input('email'));
 
@@ -53,6 +65,11 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(20)->by($email),
             ];
         });
+
+        // The admin panel's own password change: it asks for the current
+        // password, so without a limit a stolen session could guess it. Keyed on
+        // the signed-in user, falling back to the IP.
+        RateLimiter::for('password-change', fn (Request $request): Limit => Limit::perMinute(5)->by('password-change|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         // The legacy store's login, and its emailed and texted codes (password
         // reset, verification): 6 digits is 900,000 guesses, and none of these
@@ -76,6 +93,13 @@ class AppServiceProvider extends ServiceProvider
             return $limits;
         });
 
+        // The store's sign-up: the sole job of the `rate.limit` middleware this
+        // replaces, which counted attempts with a get-then-increment on the
+        // cache (two simultaneous requests both read the same count) and
+        // was keyed on IP and path with a hand-rolled 429 body. Same budget, 5
+        // sign-ups per IP per 15 minutes, on the framework's atomic limiter.
+        RateLimiter::for('store-signup', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by('store-signup|'.$request->ip()));
+
         // `user('sanctum')`, never a bare `user()`: with no guard argument the
         // resolver uses auth.defaults.guard (`web`, session driver), and the api
         // middleware group has no StartSession, so that guard resolves null on
@@ -91,6 +115,10 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($user ? $user::class.':'.$user->getKey() : $request->ip());
         });
+
+        // The warehouse client is one server calling in with a static token, so the
+        // bucket is per IP and sized for a sync that pages through every list.
+        RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
     }
 
     /**

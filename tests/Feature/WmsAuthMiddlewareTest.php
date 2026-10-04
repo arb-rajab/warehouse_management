@@ -143,7 +143,6 @@ test('an unauthenticated customer update request does not change the customer', 
     $customer = StoreUser::create([
         'name' => 'Original Name',
         'email' => 'customer@example.com',
-        'user_type' => 'customer',
         'phone' => '0000000000',
     ]);
 

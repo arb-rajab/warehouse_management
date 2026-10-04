@@ -15,6 +15,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('attribute_translations')) {
+            return;
+        }
+
         Schema::create('attribute_translations', function (Blueprint $table) {
             $table->bigInteger('id')->autoIncrement();
             $table->bigInteger('attribute_id');
@@ -27,6 +31,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('attribute_translations');
     }
 };

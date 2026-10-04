@@ -45,7 +45,7 @@ test('a customer can register and is signed in on the store guard', function () 
         'phone' => '612345678',
         'country' => 'Netherlands',
     ])
-        ->and($customer->registration_completed)->toBe(0)
+        ->and($customer->registration_completed)->toBeFalse()
         ->and($customer->email_verified_at)->not->toBeNull()
         ->and(Auth::guard('store')->id())->toBe($customer->id)
         ->and(DB::table('addresses')->where('user_id', $customer->id)->get(['country_id', 'state_id', 'phone', 'set_default'])->map(fn ($address) => (array) $address)->all())->toBe([

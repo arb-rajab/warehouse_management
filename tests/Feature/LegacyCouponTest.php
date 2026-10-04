@@ -1,8 +1,5 @@
 <?php
 
-use App\Models\Cart;
-use App\Models\Coupon;
-use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -12,23 +9,6 @@ use Illuminate\Support\Facades\DB;
  * the customer's carts from other shops, crashed on a code that does not exist,
  * and ignored quantities. CouponService is the one calculation now.
  */
-function couponFor(StoreUser $owner, array $attributes = []): Coupon
-{
-    return Coupon::forceCreate([
-        'user_id' => $owner->id, 'type' => 'cart_base', 'code' => 'SAVE'.random_int(1000, 9999),
-        'details' => json_encode(['min_buy' => 1, 'max_discount' => 1000]), 'discount' => 50, 'discount_type' => 'amount',
-        'start_date' => strtotime('-1 day'), 'end_date' => strtotime('+1 day'),
-        ...$attributes,
-    ]);
-}
-
-function cartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, array $productAttributes = []): Cart
-{
-    $product = createStoreProduct(['user_id' => $shopOwner->id, ...$productAttributes]);
-
-    return Cart::create(['user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity, 'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0]);
-}
-
 test('a coupon larger than the cart takes off no more than the cart costs', function () {
     $seller = createStoreUser('seller');
     $customer = createStoreUser('customer');

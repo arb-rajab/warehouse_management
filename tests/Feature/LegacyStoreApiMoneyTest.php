@@ -79,12 +79,7 @@ test('another account\'s club points cannot be converted into your wallet', func
 });
 
 test('an offline payment is submitted for your own unpaid order only', function () {
-    // The store's own orders table has these columns; this app's stand-in does not yet.
-    foreach (['manual_payment' => fn (Blueprint $table) => $table->boolean('manual_payment')->default(false), 'manual_payment_data' => fn (Blueprint $table) => $table->text('manual_payment_data')->nullable()] as $column => $define) {
-        if (! Schema::hasColumn('orders', $column)) {
-            Schema::table('orders', $define);
-        }
-    }
+    addManualPaymentColumnsToOrders();
 
     $owner = createStoreUser('customer');
     $stranger = createStoreUser('customer');
@@ -153,4 +148,33 @@ test('adding to the cart refuses a quantity below one', function () {
         ->assertJsonPath('result', false);
 
     expect(Cart::where('user_id', $customer->id)->count())->toBe(0);
+});
+
+test('an offline payment needs an amount, a transaction id and clean proof, and is accepted once', function () {
+    addManualPaymentColumnsToOrders();
+    $owner = createStoreUser('customer');
+    $order = createStoreOrder($owner, ['payment_status' => 'unpaid']);
+    $noise = createStoreOrder($owner, ['payment_status' => 'unpaid']);
+    $valid = ['order_id' => $order->id, 'name' => 'A', 'amount' => 5, 'trx_id' => 'T1', 'payment_option' => 'manual_payment_1'];
+    $token = storeApiToken($owner);
+
+    foreach ([
+        ['amount' => -5], ['amount' => 0], ['amount' => 'lots'], ['trx_id' => null], ['name' => null],
+        ['photo' => '<img src=x>'], ['payment_option' => null], ['order_id' => 'abc'],
+    ] as $forged) {
+        app('auth')->forgetGuards();
+        $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, ...$forged])->assertUnprocessable();
+    }
+    expect($order->fresh()->payment_status)->toBe('unpaid');
+
+    app('auth')->forgetGuards();
+    $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, 'photo' => '42'])->assertJsonPath('result', true);
+    expect(json_decode($order->fresh()->manual_payment_data, true))->toBe(['name' => 'A', 'amount' => 5, 'trx_id' => 'T1', 'photo' => '42']);
+
+    // A second submission would overwrite the first one's proof.
+    app('auth')->forgetGuards();
+    $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, 'trx_id' => 'T2'])->assertJsonPath('result', false);
+
+    expect(json_decode($order->fresh()->manual_payment_data, true)['trx_id'])->toBe('T1')
+        ->and($noise->fresh()->payment_status)->toBe('unpaid');
 });

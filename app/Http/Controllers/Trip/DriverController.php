@@ -42,20 +42,18 @@ class DriverController extends Controller
         $user = StoreUser::create([
             'name' => $request->name,
             // 'company_name' => $request->company_name,
-            'user_type' => 'driver',
             'email' => $request->email,
             'password' => Hash::make($request->password),
             // 'company_address' => $request->company_address,
             // 'shipping_address' => $request->shipping_address,
             // 'tax_number' => $request->tax_number,
-            'email_verified_at' => now(),
             // 'bank_account_number' => $request->bank_account_number,
             'phone' => $request->phone,
             'country' => $request->country,
             'registration_completed' => 1,
         ]);
 
-        $user->save();
+        $user->forceFill(['user_type' => 'driver', 'email_verified_at' => now()])->save();
 
         flash('Driver Created Successfully')->success();
         return redirect()->route('drivers.index');
@@ -63,7 +61,7 @@ class DriverController extends Controller
 
     public function edit($id)
     {
-        $driver = StoreUser::find($id);
+        $driver = StoreUser::drivers()->findOrFail($id);
 
         $countries = Country::where('status', 1)->orderBy('priority')->get();
 
@@ -72,13 +70,21 @@ class DriverController extends Controller
 
     public function update(Request $request)
     {
-        $driver = StoreUser::findOrFail($request->id);
+        $request->validate([
+            'id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string',
+            'country' => 'required|string',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $driver = StoreUser::drivers()->findOrFail($request->id);
 
         $driver->name = $request->name;
 
         $driver->phone = $request->phone;
         $driver->country = $request->country;
-        if (isset($request->password)) {
+        if ($request->filled('password')) {
             $driver->password = Hash::make($request->password);
         }
 
@@ -91,19 +97,16 @@ class DriverController extends Controller
 
     public function delete($id)
     {
-        $driver = StoreUser::find($id);
-        if ($driver) {
+        $driver = StoreUser::drivers()->findOrFail($id);
 
-            $driver->trips()->each(function ($trip) {
-                $trip->driver_id = null;
-                $trip->save();
-            });
+        $driver->trips()->each(function ($trip) {
+            $trip->driver_id = null;
+            $trip->save();
+        });
 
-            $driver->delete();
-            flash('Driver Deleted Successfully')->success();
-        } else {
-            flash('Error: Driver Not Found')->error();
-        }
+        $driver->delete();
+        flash('Driver Deleted Successfully')->success();
+
         return redirect()->route('drivers.index');
     }
 }

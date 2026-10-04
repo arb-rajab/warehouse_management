@@ -12,6 +12,7 @@ use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+use League\Csv\Reader;
 
 test('an authenticated admin can view the cell verification rounds list with every property the table renders', function () {
     $admin = actingAsAdmin();
@@ -410,6 +411,45 @@ test('exporting a rounds reports csv only includes that rounds filtered rows', f
     expect($csv)->toContain('Included row');
     expect($csv)->not->toContain('Excluded row');
     expect($csv)->toContain((string) $report->id);
+});
+
+test('exporting a rounds reports csv escapes cells a spreadsheet would run as a formula', function (string $value) {
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->create();
+    CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'expected_product_id' => Product::factory()->create(['name' => $value]),
+        'note' => $value,
+    ]);
+
+    $csv = $this->get("/admin/cell-verification-rounds/{$round->id}/export")->streamedContent();
+
+    $rows = iterator_to_array(Reader::createFromString($csv)->setHeaderOffset(0)->getRecords(), false);
+
+    // EscapeFormula prefixes a single quote, so no cell begins with the trigger.
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['note'])->toBe("'{$value}")
+        ->and($rows[0]['expected_product'])->toBe("'{$value}");
+})->with([
+    'equals' => ['=HYPERLINK("http://evil")'],
+    'plus' => ['+1+1'],
+    'minus' => ['-2+3'],
+    'at' => ['@SUM(A1)'],
+]);
+
+test('exporting a rounds reports csv leaves ordinary text untouched', function () {
+    actingAsAdmin();
+
+    $round = CellVerificationRound::factory()->create();
+    CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'note' => 'Plain note',
+    ]);
+
+    expect($this->get("/admin/cell-verification-rounds/{$round->id}/export")->streamedContent())
+        ->toContain('Plain note')
+        ->not->toContain("'Plain note");
 });
 
 test('exporting a rounds reports csv eager loads report details instead of an N+1 per report', function () {

@@ -1632,6 +1632,30 @@ describe('Cells Index (warehouse map)', () => {
         ).not.toContain('fixed');
     });
 
+    it('exposes the full screen map as a modal dialog only while in full screen', async () => {
+        const wrapper = mountPage([row()], []);
+        const section = () => wrapper.get('[data-testid="map-section"]');
+
+        expect(section().attributes('role')).toBeUndefined();
+        expect(section().attributes('aria-modal')).toBeUndefined();
+
+        await wrapper
+            .get(`[title="${t('cells.map.fullscreen')}"]`)
+            .trigger('click');
+
+        expect(section().attributes('role')).toBe('dialog');
+        expect(section().attributes('aria-modal')).toBe('true');
+        expect(section().attributes('aria-label')).toBe(
+            t('cells.map.fullscreen'),
+        );
+
+        await wrapper
+            .get(`[title="${t('cells.map.exitFullscreen')}"]`)
+            .trigger('click');
+
+        expect(section().attributes('role')).toBeUndefined();
+    });
+
     it('exits full screen mode when Escape is pressed', async () => {
         const wrapper = mountPage([row()], []);
 

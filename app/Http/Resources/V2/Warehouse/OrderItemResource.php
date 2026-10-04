@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\V2\Warehouse;
 
-use App\Models\Order;
 use App\Models\ProductVariation;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
@@ -24,7 +23,8 @@ class OrderItemResource extends JsonResource
         }
 
 
-        $order = Order::findOrFail($this->order_id);
+        // Loaded by the controller together with the order's lines.
+        $order = $this->order;
 
 
         $cartResults = [];

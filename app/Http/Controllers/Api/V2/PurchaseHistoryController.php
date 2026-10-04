@@ -21,7 +21,7 @@ class PurchaseHistoryController extends Controller
 
     $user_id = auth()->user()->id;
 
-        $order_query = Order::query();
+        $order_query = Order::with('user');
         if ($request->payment_status != "" || $request->payment_status != null) {
             $order_query->where('payment_status', $request->payment_status);
         }

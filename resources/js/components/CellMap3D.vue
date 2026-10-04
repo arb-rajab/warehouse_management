@@ -277,6 +277,7 @@ interface ProductImagePlacement {
 const productImageMaterialsByUrl = new Map<string, THREE.MeshBasicMaterial>();
 let productImageGeometry: THREE.PlaneGeometry | null = null;
 let productImageLoader: THREE.TextureLoader | null = null;
+let isDisposed = false;
 /**
  * One instanced mesh per distinct product image (its instances being every
  * face panel of every pallet carrying it), rebuilt wholesale on every cell
@@ -597,6 +598,14 @@ function productImageMaterialFor(url: string): THREE.MeshBasicMaterial {
 
     productImageLoader ??= new THREE.TextureLoader();
     productImageLoader.load(url, (texture) => {
+        // A load that finishes after unmount would otherwise push into the
+        // already-drained `sceneDisposables`, leaking the GPU texture.
+        if (isDisposed) {
+            texture.dispose();
+
+            return;
+        }
+
         texture.colorSpace = THREE.SRGBColorSpace;
         cropTextureToSquare(texture);
         sceneDisposables.push(texture);
@@ -2087,6 +2096,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    isDisposed = true;
+
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
     }

@@ -10,6 +10,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -41,8 +42,27 @@ class PalletActionService
      */
     public function lockCell(int $cellId): Cell
     {
-        $cell = Cell::query()->lockForUpdate()->findOrFail($cellId);
+        $cell = $this->lockCellRow($cellId);
 
+        $this->assertCellAcceptsPalletActions($cell);
+
+        return $cell;
+    }
+
+    /**
+     * Take the row lock on a cell without lockCell()'s guards, for callers that
+     * still have to check something more specific first (see lockPalletInCell()).
+     */
+    private function lockCellRow(int $cellId): Cell
+    {
+        return Cell::query()->lockForUpdate()->findOrFail($cellId);
+    }
+
+    /**
+     * The inactive-cell and active-round guards described on lockCell().
+     */
+    private function assertCellAcceptsPalletActions(Cell $cell): void
+    {
         if (! $cell->is_active) {
             throw new InvalidSlotStateException('slot_inactive', __('messages.slot_inactive'));
         }
@@ -50,8 +70,6 @@ class PalletActionService
         if (Row::query()->whereKey($cell->row_id)->underActiveVerification()->exists()) {
             throw new InvalidSlotStateException('cell_in_active_round', __('messages.cell_in_active_round'));
         }
-
-        return $cell;
     }
 
     /**
@@ -61,6 +79,40 @@ class PalletActionService
     private function lockPallet(int $palletId): Pallet
     {
         return Pallet::query()->lockForUpdate()->findOrFail($palletId);
+    }
+
+    /**
+     * Lock an existing pallet together with the cell it sits in.
+     *
+     * Every lock in this service — and in CellVerificationService, which reaches
+     * a pallet only through its cell — is taken cell first, pallet second, so two
+     * transactions never wait on each other in opposite orders. The price is that
+     * the cell is resolved from the caller's `$pallet->cell_id`, read before any
+     * lock was held: a concurrent transfer can have moved the pallet since. So
+     * once both locks are held, the locked pallet's own cell_id is checked
+     * against the cell locked for it, and a pallet that moved is refused with
+     * `pallet_moved` instead of acting on — and logging against — the cell it
+     * used to be in. That check runs before the cell's own guards, so the error
+     * names the real problem rather than the state of a cell the pallet left.
+     *
+     * @return array{0: Cell, 1: Pallet}
+     */
+    private function lockPalletInCell(Pallet $pallet): array
+    {
+        $cell = $this->lockCellRow($pallet->cell_id);
+        $lockedPallet = $this->lockPallet($pallet->id);
+
+        $this->assertPalletStillInCell($lockedPallet, $cell);
+        $this->assertCellAcceptsPalletActions($cell);
+
+        return [$cell, $lockedPallet];
+    }
+
+    private function assertPalletStillInCell(Pallet $lockedPallet, Cell $cell): void
+    {
+        if ($lockedPallet->cell_id !== $cell->id) {
+            throw new InvalidSlotStateException('pallet_moved', __('messages.pallet_moved'));
+        }
     }
 
     /**
@@ -160,10 +212,21 @@ class PalletActionService
      * as a pallet lands in it — store() and transfer() both route their target state
      * through here instead of assuming Full. `$default` is what the state would be
      * without this rule (Full for store(), the carried-over source state for transfer()).
+     *
+     * The auto-open is still an opening, so it only happens while the first level is
+     * one of the settings' allowed open levels; otherwise the pallet lands in `$default`
+     * like on any other level (and, being Full, cannot be opened there later either).
      */
     private function targetStateForCell(Cell $cell, CellState $default): CellState
     {
-        return $cell->flat_number === 1 ? CellState::Opened : $default;
+        return $cell->flat_number === 1 && Setting::allowsOpeningAtLevel(1) ? CellState::Opened : $default;
+    }
+
+    private function assertOpeningAllowedAtLevel(Cell $cell): void
+    {
+        if (! Setting::allowsOpeningAtLevel($cell->flat_number)) {
+            throw new InvalidSlotStateException('open_level_not_allowed', __('messages.open_level_not_allowed'));
+        }
     }
 
     /**
@@ -247,18 +310,27 @@ class PalletActionService
      * transaction. A null $boxesCount just transitions the cell to Opened and
      * leaves remaining_boxes untouched — see .ai/rules/v1.md.
      *
+     * A pallet on a level outside the settings' allowed open levels is refused
+     * (`open_level_not_allowed`). `$enforceAllowedLevels` is false only for
+     * CellVerificationService, which replays what a worker physically found on
+     * the shelf: an accepted report of an opened pallet must be able to record
+     * it whatever the policy for opening new ones is.
+     *
      * @return array{pallet: ?Pallet, emptied: bool}
      */
-    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note): array
+    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note, bool $enforceAllowedLevels = true): array
     {
         $emptied = false;
 
-        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, &$emptied) {
-            $cell = $this->lockCell($pallet->cell_id);
-            $lockedPallet = $this->lockPallet($pallet->id);
+        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, $enforceAllowedLevels, &$emptied) {
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
 
             if ($cell->state !== CellState::Full) {
                 throw new InvalidSlotStateException('pallet_not_full', __('messages.pallet_not_full'));
+            }
+
+            if ($enforceAllowedLevels) {
+                $this->assertOpeningAllowedAtLevel($cell);
             }
 
             if ($boxesCount !== null
@@ -296,8 +368,7 @@ class PalletActionService
         $emptied = false;
 
         DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, &$emptied) {
-            $cell = $this->lockCell($pallet->cell_id);
-            $lockedPallet = $this->lockPallet($pallet->id);
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
 
             if ($cell->state !== CellState::Opened) {
                 throw new InvalidSlotStateException('pallet_not_opened', __('messages.pallet_not_opened'));
@@ -331,8 +402,7 @@ class PalletActionService
     public function emptyPallet(Pallet $pallet, int $userId, ?string $note): void
     {
         DB::transaction(function () use ($pallet, $userId, $note) {
-            $cell = $this->lockCell($pallet->cell_id);
-            $lockedPallet = $this->lockPallet($pallet->id);
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
 
             $this->emptyLockedPallet($cell, $lockedPallet, $userId, $note);
         });
@@ -343,12 +413,38 @@ class PalletActionService
      * destination inherits the source's prior state, unless the destination is on
      * the first level, in which case it's opened automatically regardless of the
      * source's state (see targetStateForCell()).
+     *
+     * Both cells are locked in ascending id order, then the pallet (see
+     * lockPalletInCell() for why cells come first): locking source-then-
+     * destination would let an A→B transfer and a concurrent B→A one each hold
+     * their first cell while waiting on the other's. Every write and log below
+     * goes through the locked pallet, never the caller's possibly-stale copy.
      */
     public function transfer(Pallet $pallet, int $destinationCellId, int $userId, ?string $note): Pallet
     {
         DB::transaction(function () use ($pallet, $destinationCellId, $userId, $note) {
-            $sourceCell = $this->lockCell($pallet->cell_id);
-            $destinationCell = $this->lockCell($destinationCellId);
+            $cellIds = array_unique([$pallet->cell_id, $destinationCellId]);
+            sort($cellIds);
+
+            $lockedCells = [];
+
+            foreach ($cellIds as $cellId) {
+                $lockedCells[$cellId] = $this->lockCellRow($cellId);
+            }
+
+            $sourceCell = $lockedCells[$pallet->cell_id];
+            $lockedPallet = $this->lockPallet($pallet->id);
+
+            $this->assertPalletStillInCell($lockedPallet, $sourceCell);
+
+            if ($destinationCellId === $sourceCell->id) {
+                throw new InvalidSlotStateException('pallet_already_at_location', __('messages.pallet_already_at_location'));
+            }
+
+            $destinationCell = $lockedCells[$destinationCellId];
+
+            $this->assertCellAcceptsPalletActions($sourceCell);
+            $this->assertCellAcceptsPalletActions($destinationCell);
 
             if ($destinationCell->state !== CellState::Empty) {
                 throw new InvalidSlotStateException('destination_not_empty', __('messages.destination_not_empty'));
@@ -359,19 +455,19 @@ class PalletActionService
 
             $sourceCell->update(['state' => CellState::Empty]);
             $destinationCell->update(['state' => $destinationState]);
-            $pallet->update(['cell_id' => $destinationCell->id]);
+            $lockedPallet->update(['cell_id' => $destinationCell->id]);
 
             $this->logCellStatus(
                 $sourceCell,
                 CellLogAction::TransferredOut,
                 $sourceState,
                 CellState::Empty,
-                $pallet->product_id,
-                $pallet->id,
+                $lockedPallet->product_id,
+                $lockedPallet->id,
                 $userId,
                 $note,
                 relatedCellId: $destinationCell->id,
-                boxesCount: $pallet->remaining_boxes,
+                boxesCount: $lockedPallet->remaining_boxes,
             );
 
             $this->logCellStatus(
@@ -379,12 +475,12 @@ class PalletActionService
                 CellLogAction::TransferredIn,
                 CellState::Empty,
                 $destinationState,
-                $pallet->product_id,
-                $pallet->id,
+                $lockedPallet->product_id,
+                $lockedPallet->id,
                 $userId,
                 $note,
                 relatedCellId: $sourceCell->id,
-                boxesCount: $pallet->remaining_boxes,
+                boxesCount: $lockedPallet->remaining_boxes,
             );
         });
 
@@ -393,13 +489,19 @@ class PalletActionService
 
     /**
      * Edit an already-stored pallet's product, expiration date, and/or remaining
-     * boxes, without moving it or changing its cell's state. Unlike the other
-     * actions here, a field-only correction (product/expiration/a positive
-     * remaining_boxes) doesn't write a CellStatusLog row — but it still locks
-     * the cell/pallet the same way and updates through the model, so
-     * PalletObserver's wasChanged(['expiration_date', 'product_id', ...,
-     * 'remaining_boxes']) guard still catches the change and flushes the
+     * boxes, without moving it or changing its cell's state. It locks the
+     * cell/pallet the same way as every other action and updates through the
+     * model, so PalletObserver's wasChanged(['expiration_date', 'product_id',
+     * ..., 'remaining_boxes']) guard still catches the change and flushes the
      * dashboard stats cache.
+     *
+     * A product change is logged as a `product_changed` CellStatusLog row
+     * carrying the new product, so the cell's history shows when (and by whom)
+     * the pallet stopped being what it was stored as — the previous product is
+     * on the pallet's earlier log rows. An expiration date or a positive
+     * remaining_boxes correction on its own still writes no log row. The
+     * product is looked up here too, like store() does, rather than trusting
+     * the caller's validation to have run against the same database state.
      *
      * $remainingBoxes sets the column directly (an admin correction), unlike
      * open()/removeBoxes()'s boxes_count, which is an amount to subtract.
@@ -411,8 +513,7 @@ class PalletActionService
     public function update(Pallet $pallet, int $productId, ?string $expirationDate, int $remainingBoxes, int $userId, bool $confirmEmpty, ?string $note = null): void
     {
         DB::transaction(function () use ($pallet, $productId, $expirationDate, $remainingBoxes, $userId, $confirmEmpty, $note) {
-            $cell = $this->lockCell($pallet->cell_id);
-            $lockedPallet = $this->lockPallet($pallet->id);
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
 
             if ($remainingBoxes === 0) {
                 if (! $confirmEmpty) {
@@ -424,11 +525,27 @@ class PalletActionService
                 return;
             }
 
+            $product = Product::query()->select(['id'])->findOrFail($productId);
+
             $lockedPallet->update([
-                'product_id' => $productId,
+                'product_id' => $product->id,
                 'expiration_date' => $this->normalizeExpirationDate($expirationDate),
                 'remaining_boxes' => $remainingBoxes,
             ]);
+
+            if ($lockedPallet->wasChanged('product_id')) {
+                $this->logCellStatus(
+                    $cell,
+                    CellLogAction::ProductChanged,
+                    $cell->state,
+                    $cell->state,
+                    $lockedPallet->product_id,
+                    $lockedPallet->id,
+                    $userId,
+                    $note,
+                    boxesCount: $lockedPallet->remaining_boxes,
+                );
+            }
         });
     }
 }

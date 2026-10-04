@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class fetchMemebers extends Command
 {
@@ -39,7 +41,7 @@ class fetchMemebers extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         try {
             $start_time = Carbon::now();
@@ -49,7 +51,7 @@ class fetchMemebers extends Command
 
 
             $endpoint = config('services.otajer.url') . '/api/rest/loadmembers/' . config('services.otajer.token');
-            $response = file_get_contents($endpoint);
+            $response = Http::timeout(30)->throw()->get($endpoint)->body();
             $allMembers = json_decode($response, true);
             $members_count += count($allMembers['Members']);
 
@@ -61,21 +63,23 @@ class fetchMemebers extends Command
                     if (! $selectedUser) {
                         if(! StoreUser::where('AccSysID', $user['AccSystemID'])->exists())
                         {
-                            $newUser = StoreUser::create([
+                            $newUser = new StoreUser([
                                 'name' => $user['FirstName'] . " " . $user['LastName'],
-                                'user_type' => 'customer',
                                 'company_name' => $user['CompanyName'] ? $user['CompanyName'] : 'none',
                                 'email' => $user['Email'],
                                 'tax_number' => $user['TaxNumber'],
                                 'country' => $country_name,
                                 'from_api'  => true,
                                 'member_serial' => $user['Serial'],
-                                'email_verified_at' => date('Y-m-d H:m:s'),
                                 'AccSysID' => intval($user['AccSystemID']),
-                                'password' => Hash::make("123456"),
+                                'password' => Hash::make(Str::random(40)),
                                 'registration_completed' => false,
                                 'synched_with_otajer' => true
                             ]);
+                            $newUser->forceFill([
+                                'user_type' => 'customer',
+                                'email_verified_at' => now(),
+                            ])->save();
                             if ($newUser) {
                                 $created_accounts++;
                             }
@@ -96,8 +100,12 @@ class fetchMemebers extends Command
             $end_time = Carbon::now();
             $time = (int) $end_time->diffInSeconds($start_time, true);
             $this->info($created_accounts . " members created " . $updated_accounts . " members updated successfully from " . $members_count . " fetched.  Process took " . $time . ' seconds');
+
+            return self::SUCCESS;
         } catch (Exception $e) {
-            $this->info('Command failed ' . $e);
+            $this->error('Command failed '.$e->getMessage());
+
+            return self::FAILURE;
         }
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Resources\V2\WalletCollection;
 use App\Models\StoreUser;
-use App\Services\WalletPaymentService;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 
@@ -25,27 +24,21 @@ class WalletController extends Controller
         return new WalletCollection(Wallet::where('user_id', auth()->user()->id)->latest()->paginate(10));
     }
 
-    public function processPayment(Request $request, WalletPaymentService $wallet)
+    public function processPayment(Request $request)
     {
         $user = auth()->user();
-        $insufficient = [
-            'result' => false,
-            'combined_order_id' => 0,
-            'message' => translate('Insufficient wallet balance')
-        ];
 
         if ($user->balance <= 0) {
-            return response()->json($insufficient);
+            return response()->json([
+                'result' => false,
+                'combined_order_id' => 0,
+                'message' => translate('Insufficient wallet balance')
+            ]);
         }
 
-        $response = (new OrderController)->store($request, true);
-        $decoded_response = $response->original;
-
-        // The order is priced from the cart; its own total is what the wallet pays.
-        if ($decoded_response['result'] == true && ! $wallet->charge($user, $decoded_response['combined_order_id'])) {
-            return response()->json([...$insufficient, 'combined_order_id' => $decoded_response['combined_order_id']]);
-        }
-
-        return $response;
+        // The order is priced from the cart, and its own total is what the wallet
+        // pays: charged in the order's transaction, before the cart is emptied,
+        // so a balance that falls short places no order and keeps the cart.
+        return (new OrderController)->store($request, true);
     }
 }

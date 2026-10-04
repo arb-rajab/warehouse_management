@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Api\V2;
 use App\Http\Resources\V2\UploadedFileCollection;
 use App\Models\Upload;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use App\Services\Base64ImageUploadService;
 use InvalidArgumentException;
 class FileController extends Controller
 {
     public function index(){
-        $all_uploads = (auth()->user()->user_type == 'seller') ? Upload::where('user_id',auth()->user()->id) : Upload::query();
+        $all_uploads = Gate::allows('viewAny', Upload::class) ? Upload::query() : Upload::where('user_id', auth()->user()->id);
 
 
         $all_uploads = $all_uploads->paginate(20)->appends(request()->query());

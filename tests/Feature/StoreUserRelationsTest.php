@@ -53,10 +53,9 @@ test('a store user is persisted in the legacy users table with its mass-assignab
     $user = StoreUser::create([
         'name' => 'Rep Tester',
         'email' => 'rep@example.com',
-        'user_type' => 'customer',
         'phone' => '+31600000000',
-        'is_rep' => true,
     ]);
+    $user->forceFill(['is_rep' => true])->save();
 
     $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'rep@example.com']);
     expect($user->fresh()->user_type)->toBe('customer')

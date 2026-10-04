@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use App\Services\WalletPaymentService;
+use Illuminate\Support\Facades\DB;
 use Auth;
 use Session;
 
@@ -18,10 +20,18 @@ class WalletController extends Controller
             if(Session::get('payment_type') == 'cart_payment'){
                 $user = Auth::user();
                 $combined_order = CombinedOrder::findOrFail(Session::get('combined_order_id'));
-                // The balance is read and deducted under a row lock, for the account's own order only.
-                if (app(WalletPaymentService::class)->charge($user, $combined_order->id)) {
-                    return (new CheckoutController)->checkout_done($combined_order->id, null);
+                // The balance is read and deducted under a row lock, for the account's own order only,
+                // and the deduction is undone unless the order is marked paid in the same transaction
+                // (an order that is already paid is not paid, or charged, twice).
+                DB::beginTransaction();
+                $payment = new VerifiedPayment('wallet', 'combined-order-'.$combined_order->id, (float) $combined_order->grand_total);
+                if (app(WalletPaymentService::class)->charge($user, $combined_order->id)
+                    && app(GatewayPaymentService::class)->complete($payment, $user->id, GatewayPaymentService::CART, $combined_order->id)) {
+                    DB::commit();
+                    Session::put('combined_order_id', $combined_order->id);
+                    return redirect()->route('order_confirmed');
                 }
+                DB::rollBack();
 
                 flash(translate('Insufficient wallet balance'))->warning();
                 return redirect()->route('checkout.payment_info');

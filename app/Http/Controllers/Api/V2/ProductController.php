@@ -23,9 +23,14 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    /**
+     * What ProductMiniCollection reads off each product of a list.
+     */
+    private const LIST_RELATIONS = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
+
     public function index()
     {
-        return new ProductMiniCollection(Product::latest()->orderBy('published', 'desc')->paginate(10));
+        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)->latest()->paginate(10));
     }
 
 
@@ -38,7 +43,10 @@ class ProductController extends Controller
             $order = 'name';
         }
 
-        return new ProductMiniCollection(Product::where('isNewProduct', true)->orWhere('isOfferProduct', true)
+        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)
+            ->where(function ($products) {
+                $products->where('isNewProduct', true)->orWhere('isOfferProduct', true);
+            })
             ->orderByRaw("CASE
             WHEN name LIKE ' %' THEN 2
             WHEN name LIKE '.%' THEN 0
@@ -51,8 +59,11 @@ class ProductController extends Controller
 
     public function show($id)
     {
+        $products = Product::where('id', $id)->where('published', 1)->where('approved', 1)->get();
+        abort_if($products->isEmpty(), 404);
+
         logProductView($id);
-        return new ProductDetailCollection(Product::where('id', $id)->get());
+        return new ProductDetailCollection($products);
         // if (Product::findOrFail($id)->digital==0) {
         //     return new ProductDetailCollection(Product::where('id', $id)->get());
         // }elseif (Product::findOrFail($id)->digital==1) {

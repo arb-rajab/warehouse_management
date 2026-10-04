@@ -1,18 +1,16 @@
 <?php
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\SSLCommerz;
-use App\Http\Controllers\WalletController;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
-use App\Models\StoreUser;
+use App\Services\SessionGatewayPayment;
+use App\Services\VerifiedPayment;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Session;
 
 session_start();
@@ -25,12 +23,18 @@ class SslcommerzController extends Controller
         # Lets your oder trnsaction informations are saving in a table called "orders"
         # In orders table order uniq identity is "order_id","order_status" field contain status of the transaction, "grand_total" is the order amount to be paid and "currency" is for storing Site Currency which will be checked with paid currency.
         if(Session::has('payment_type')){
+            // One transaction id per payment, kept in the session for success() to
+            // check: the old ids were md5s of the order or user id, the same for
+            // every top-up a customer made.
+            $tran_id = Str::random(20);
+            $request->session()->put('sslcommerz_tran_id', $tran_id);
+
             if(Session::get('payment_type') == 'cart_payment'){
                 $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
                 $post_data = [];
                 $post_data['total_amount'] = $combined_order->grand_total; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
-                $post_data['tran_id'] = substr(md5($request->session()->get('combined_order_id')), 0, 10); // tran_id must be unique
+                $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
                 $post_data['value_b'] = $request->session()->get('combined_order_id');
@@ -56,7 +60,7 @@ class SslcommerzController extends Controller
                 $post_data = [];
                 $post_data['total_amount'] = $request->session()->get('payment_data')['amount']; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
-                $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
+                $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
                 $post_data['value_b'] = $request->session()->get('payment_data')['amount'];
@@ -75,7 +79,7 @@ class SslcommerzController extends Controller
                 $post_data = [];
                 $post_data['total_amount'] = $customer_package->amount; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
-                $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
+                $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
                 $post_data['value_b'] = $request->session()->get('payment_data')['customer_package_id'];
@@ -93,7 +97,7 @@ class SslcommerzController extends Controller
                 $post_data = [];
                 $post_data['total_amount'] = $seller_package->amount; # You cant not pay less than 10
                 $post_data['currency'] = "BDT";
-                $post_data['tran_id'] = substr(md5(Auth::user()->id), 0, 10); // tran_id must be unique
+                $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
                 $post_data['value_b'] = $request->session()->get('payment_data')['seller_package_id'];
@@ -150,42 +154,32 @@ class SslcommerzController extends Controller
 
     }
 
+    /**
+     * SSLCommerz posts the customer back here. The post itself proves nothing:
+     * it named the order, the amount and (for a top-up or a package) the account
+     * to sign in as, and was trusted, so anyone could post one. The transaction
+     * must be the one this session started, and SSLCommerz's validation server
+     * must confirm it for the amount due (orderValidate); what it confirms is
+     * credited to the signed-in customer, once.
+     */
     public function success(Request $request)
     {
-        //echo "Transaction is Successful";
+        $tran_id = (string) Session::get('sslcommerz_tran_id');
+        $amountDue = app(SessionGatewayPayment::class)->amountDue();
+
+        if ($tran_id === '' || $amountDue === null || ! hash_equals($tran_id, (string) $request->input('tran_id'))) {
+            return app(SessionGatewayPayment::class)->notVerified();
+        }
 
         $sslc = new SSLCommerz();
-        #Start to received these value from session. which was saved in index function.
-        $tran_id = $request->value_a;
-        #End to received these value from session. which was saved in index function.
-        $payment = json_encode($request->all());
-
-        if(isset($request->value_c)){
-            if($request->value_c == 'cart_payment'){
-                return (new CheckoutController)->checkout_done($request->value_b, $payment);
-            }
-            elseif ($request->value_c == 'wallet_payment') {
-                $data['amount'] = $request->value_b;
-                $data['payment_method'] = 'sslcommerz';
-                Auth::login(StoreUser::find($request->value_d));
-
-                return (new WalletController)->wallet_payment_done($data, $payment);
-            }
-            elseif ($request->value_c == 'customer_package_payment') {
-                $data['customer_package_id'] = $request->value_b;
-                $data['payment_method'] = 'sslcommerz';
-                Auth::login(StoreUser::find($request->value_d));
-
-                return (new CustomerPackageController)->purchase_payment_done($data, $payment);
-            }
-            elseif ($request->value_c == 'seller_package_payment') {
-                $data['seller_package_id'] = $request->value_b;
-                $data['payment_method'] = 'sslcommerz';
-                Auth::login(StoreUser::find($request->value_d));
-
-                return (new SellerPackageController)->purchase_payment_done(json_decode($request->value_b), $payment);
-            }
+        if ($sslc->orderValidate($tran_id, $amountDue, 'BDT', $request->all()) !== true) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
+
+        Session::forget('sslcommerz_tran_id');
+        $result = $sslc->getResultData();
+
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('sslcommerz', $tran_id, (float) ($result->amount ?? 0), json_encode($result)));
     }
 
     public function fail(Request $request)
@@ -202,47 +196,5 @@ class SslcommerzController extends Controller
         $request->session()->forget('payment_data');
         flash(translate('Payment cancelled'))->error();
     	return redirect()->route('home');
-    }
-
-     public function ipn(Request $request)
-    {
-        #Received all the payement information from the gateway
-      if($request->input('tran_id')) #Check transation id is posted or not.
-      {
-
-          $tran_id = $request->input('tran_id');
-
-          #Check order status in order tabel against the transaction id or order id.
-          $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
-
-                if($order->payment_status =='Pending')
-                {
-                    $sslc = new SSLCommerz();
-                    $validation = $sslc->orderValidate($tran_id, $order->grand_total, 'BDT', $request->all());
-                    if($validation == TRUE)
-                    {
-                        /*
-                        That means IPN worked. Here you need to update order status
-                        in order table as Processing or Complete.
-                        Here you can also sent sms or email for successfull transaction to customer
-                        */
-                        echo "Transaction is successfully Complete";
-                    }
-                    else
-                    {
-                        /*
-                        That means IPN worked, but Transation validation failed.
-                        Here you need to update order status as Failed in order table.
-                        */
-
-                        echo "validation Fail";
-                    }
-
-                }
-        }
-        else
-        {
-            echo "Inavalid Data";
-        }
     }
 }

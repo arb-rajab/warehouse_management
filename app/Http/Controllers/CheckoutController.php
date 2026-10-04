@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\PaymentOptions;
 use App\Services\CouponService;
+use App\Services\GatewayPaymentService;
+use App\Services\VerifiedPayment;
 use App\Models\Address;
 use App\Models\Carrier;
 use App\Models\Cart;
@@ -22,7 +24,9 @@ use App\Utility\PayfastUtility;
 use App\Utility\PayhereUtility;
 use Auth;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Session;
 
 class CheckoutController extends Controller
@@ -70,7 +74,19 @@ class CheckoutController extends Controller
                 return back();
             }
 
-            (new OrderController)->store($request);
+            // A manual payment (no gateway controller) carries its own proof, checked
+            // before the order exists so a bad submission leaves no order behind.
+            $decorator = __NAMESPACE__ . '\\Payment\\' . str_replace(' ', '', ucwords(str_replace('_', ' ', $request->payment_option))) . "Controller";
+            if (! class_exists($decorator)) {
+                $request->validate(app(PaymentOptions::class)->proofRules());
+            }
+
+            // A refused order (empty cart, out of stock, a coupon that cannot be used)
+            // comes back as a redirect, with nothing placed.
+            $refusal = (new OrderController)->store($request);
+            if ($refusal instanceof RedirectResponse) {
+                return $refusal;
+            }
 
             $request->session()->put('payment_type', 'cart_payment');
 
@@ -80,7 +96,6 @@ class CheckoutController extends Controller
             if ($request->session()->get('combined_order_id') != null) {
 
                 // If block for Online payment, wallet and cash on delivery. Else block for Offline payment
-                $decorator = __NAMESPACE__ . '\\Payment\\' . str_replace(' ', '', ucwords(str_replace('_', ' ', $request->payment_option))) . "Controller";
                 if (class_exists($decorator)) {
                     return (new $decorator)->pay($request);
                 } else {
@@ -106,19 +121,21 @@ class CheckoutController extends Controller
         }
     }
 
-    //redirects to this method after a successful checkout
-    public function checkout_done($combined_order_id, $payment)
+    /**
+     * Where a gateway's callback finishes a cart payment, once its server has
+     * confirmed it. The signed-in customer must own the order and the amount must
+     * pay its total (GatewayPaymentService); a forged, short or repeated callback
+     * leaves the order as it was.
+     */
+    public function checkout_done(int $combined_order_id, VerifiedPayment $payment): RedirectResponse
     {
-        $combined_order = CombinedOrder::findOrFail($combined_order_id);
+        $payerId = Auth::id();
 
-        foreach ($combined_order->orders as $key => $order) {
-            $order = Order::findOrFail($order->id);
-            $order->payment_status = 'paid';
-            $order->payment_details = $payment;
-            $order->save();
-
-            calculateCommissionAffilationClubPoint($order);
+        if ($payerId === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $payerId, GatewayPaymentService::CART, $combined_order_id)) {
+            flash(translate('Payment could not be verified'))->error();
+            return redirect()->route('cart');
         }
+
         Session::put('combined_order_id', $combined_order_id);
         return redirect()->route('order_confirmed');
     }
@@ -166,6 +183,8 @@ class CheckoutController extends Controller
             flash(translate('Your cart is empty'))->warning();
             return redirect()->route('home');
         }
+
+        Gate::authorize('manage', Address::findOrFail($request->address_id));
 
         foreach ($carts as $key => $cartItem) {
             $cartItem->address_id = $request->address_id;
@@ -220,8 +239,17 @@ class CheckoutController extends Controller
 
     public function apply_coupon_code(Request $request)
     {
+        $request->validate(['code' => ['required', 'string', 'max:191']]);
+
         $coupon = Coupon::where('code', $request->code)->first();
         $response_message = [];
+
+        if (! Cart::where('user_id', Auth::user()->id)->exists()) {
+            return response()->json([
+                'response_message' => ['response' => 'warning', 'message' => translate('Your cart is empty')],
+                'html' => '',
+            ]);
+        }
 
         if ($coupon != null) {
             if (strtotime(date('d-m-Y')) >= $coupon->start_date && strtotime(date('d-m-Y')) <= $coupon->end_date) {
@@ -234,7 +262,7 @@ class CheckoutController extends Controller
 
                     $coupon_discount = app(CouponService::class)->discountFor($coupon, $carts);
 
-                    if ($coupon_discount > 0) {
+                    if ($carts->isNotEmpty() && $coupon_discount > 0) {
                         Cart::where('user_id', Auth::user()->id)
                             ->where('owner_id', $coupon->user_id)
                             ->update(
@@ -265,7 +293,7 @@ class CheckoutController extends Controller
 
         $carts = Cart::where('user_id', Auth::user()->id)
             ->get();
-        $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
+        $shipping_info = Address::where('id', $carts->first()?->address_id)->first();
 
         $returnHTML = view('shop.frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'))->render();
         return response()->json(['response_message' => $response_message, 'html' => $returnHTML]);
@@ -286,7 +314,7 @@ class CheckoutController extends Controller
         $carts = Cart::where('user_id', Auth::user()->id)
             ->get();
 
-        $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
+        $shipping_info = Address::where('id', $carts->first()?->address_id)->first();
 
         return view('shop.frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'));
     }
@@ -295,7 +323,7 @@ class CheckoutController extends Controller
     {
         if (addon_is_activated('club_point')) {
 
-            $point = $request->point;
+            $point = $request->validate(['point' => ['required', 'integer', 'min:1']])['point'];
 
             if (Auth::user()->point_balance >= $point) {
                 $request->session()->put('club_point', $point);
@@ -343,13 +371,25 @@ class CheckoutController extends Controller
     public function choose_customer(Request $request)
     {
         $user = Auth::user();
-        $customer = StoreUser::find($request->id);
         if (!$user->is_rep) {
             return response()->json([
                 'error' => 'You cannot do this action, you are not representative',
                 'result' => 0
             ], 403);
         }
+
+        $request->validate([
+            'id' => ['required', 'integer'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        // The same accounts get_customers_to_choose() offers: never the rep,
+        // another representative, or a seller or admin.
+        $customer = StoreUser::where('id', '!=', $user->id)
+            ->where('is_rep', false)
+            ->where('user_type', 'customer')
+            ->findOrFail($request->id);
 
         $open_visit = [];
         $open_visit['has_open_visit'] = false;

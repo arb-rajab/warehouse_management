@@ -15,6 +15,7 @@ use App\Models\Upload;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class AllProductsCommand extends Command
@@ -73,14 +74,14 @@ class AllProductsCommand extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         try {
             $start_time = Carbon::now();
             $products_count = 0;
 
             $endpoint = config('services.otajer.url') . '/api/rest/listfullproducts/' . config('services.otajer.token') . '/-1';
-            $response = file_get_contents($endpoint);
+            $response = Http::timeout(30)->throw()->get($endpoint)->body();
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
             $admin_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
@@ -255,7 +256,7 @@ class AllProductsCommand extends Command
 
                 else { // if the product does not exist
                         $endpoint = config('services.otajer.url') . '/api/rest/productdetails/'.$product['Serial'].'/'.config('services.otajer.token');
-                        $response = file_get_contents($endpoint);
+                        $response = Http::timeout(30)->throw()->get($endpoint)->body();
                         $productDetails = json_decode($response, true);
                         $productDetails = $productDetails['ProductDetails'];
 
@@ -442,12 +443,11 @@ class AllProductsCommand extends Command
             $time = (int) $end_time->diffInSeconds($start_time, true);
             $this->info($products_count." product fetched/updated successfully. Process took " . $time . ' seconds');
 
+            return self::SUCCESS;
+        } catch (Exception $e) {
+            $this->error('Command failed '.$e->getMessage());
 
-    }
-
-        catch(Exception $e)
-        {
-            $this->info('Command failed ' . $e);
+            return self::FAILURE;
         }
     }
 }

@@ -13,6 +13,10 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property bool $is_rep
+ * @property-read StoreUser|null $current_customer
+ */
 class StoreUser extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
@@ -73,7 +77,6 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'user_type',
         'device_token',
         'address',
         'city',
@@ -83,21 +86,16 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         'phone',
         'country',
         'provider_id',
-        'email_verified_at',
-        'verification_code',
         'shipping_address',
         'company_address',
         'tax_number',
         'trade_license',
-        'is_rep',
         'from_api',
         'member_serial',
         'synched_with_otajer',
         'AccSysID',
         'registration_completed',
         'rep_serial',
-        'rep_id',
-        'admin_verified',
         'admin_notes',
         'activity_status',
         'device_key',
@@ -111,7 +109,35 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'verification_code',
+        'device_token',
+        'device_key',
+        'bank_account_number',
+        'provider_id',
+        'tax_number',
     ];
+
+    /**
+     * `user_type`, `is_rep`, `admin_verified`, `email_verified_at`,
+     * `verification_code` and `rep_id` are deliberately not in $fillable: they
+     * decide privilege and verification, so they are only ever set by code
+     * that means to (forceFill() or a property assignment), never from a
+     * request's input.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+            'email_verified_at' => 'datetime',
+            'is_rep' => 'boolean',
+            'admin_verified' => 'boolean',
+            'from_api' => 'boolean',
+            'synched_with_otajer' => 'boolean',
+            'registration_completed' => 'boolean',
+        ];
+    }
 
     public function wishlists()
     {

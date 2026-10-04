@@ -121,6 +121,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Force HTTPS
+    |--------------------------------------------------------------------------
+    |
+    | The legacy store's HttpsProtocol middleware redirects insecure requests
+    | when FORCE_HTTPS is `On`. Behind a proxy that does not report https it
+    | would redirect forever, so it stays an explicit opt-in.
+    |
+    */
+
+    'force_https' => env('FORCE_HTTPS') === 'On',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

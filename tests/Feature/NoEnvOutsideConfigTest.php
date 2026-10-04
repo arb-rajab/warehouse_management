@@ -12,9 +12,7 @@ use Illuminate\Support\Arr;
  * Still read through env(), and not listed: the payment gateways other than
  * PayHere (their routes answer 404 until a gateway is enabled in
  * config/store.php, and its credentials move to config first), DEMO_MODE (null
- * means off, which is the safe reading), FORCE_HTTPS (turning it on is a
- * decision, not a fix: behind a proxy that does not report https it redirects
- * forever) and the admin settings screens under
+ * means off, which is the safe reading) and the admin settings screens under
  * resources/views/shop/backend/setup_configurations, which print credentials
  * and write nothing now that the .env writer refuses.
  *
@@ -48,6 +46,7 @@ const ENV_KEYS_WITH_A_CONFIG_EQUIVALENT = [
     'SIGN_IN_WITH_APPLE_REDIRECT' => "config('services.apple.redirect')",
     'IP_GEO_LOCATION_KEY' => "config('services.ip_geolocation.key')",
     'IP_GEO_LOCATION_TIMEOUT_SECONDS' => "config('services.ip_geolocation.timeout')",
+    'FORCE_HTTPS' => "config('app.force_https')",
     'AWS_URL' => "config('filesystems.disks.s3.url')",
 ];
 

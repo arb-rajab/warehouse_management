@@ -12,8 +12,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Second layer of defense on top of a tool's own authorization gate: blocks
  * requests to an internal-tool route (Telescope, Pulse, ...) from IPs not in
  * the allowlist stored at the given config key. An empty list disables this
- * check (falls back to the gate alone) so an empty/unset env var can't lock
- * everyone out by accident.
+ * check outside production (falls back to the gate alone) so local and test
+ * environments need no setup, but fails closed in production: an unset env
+ * var must not leave the tool reachable from anywhere.
  *
  * Entries may be a literal IP, a CIDR range (10.0.0.0/8, works for IPv6 too)
  * or a glob (10.0.0.*). The IP compared is $request->ip(), which reads
@@ -27,6 +28,8 @@ class RestrictToAllowedIps
         $allowedIps = array_filter(explode(',', (string) config($configKey)));
 
         if ($allowedIps === []) {
+            abort_if(app()->isProduction(), 403);
+
             return $next($request);
         }
 

@@ -34,7 +34,7 @@ class ReviewController extends Controller implements HasMiddleware
      */
     public function index(Request $request)
     {
-        $reviews = Review::query();
+        $reviews = Review::with(['product', 'user']);
         if($request->rating){
             $reviews->orderBy('rating', explode(",",$request->rating)[1]);
         }

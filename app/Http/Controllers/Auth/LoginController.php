@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Customer;
 use App\Models\StoreUser;
+use App\Services\SocialAccounts;
 use App\Services\SocialRevoke;
 use Auth;
 use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
@@ -80,67 +81,16 @@ class LoginController extends Controller implements HasMiddleware
 
     public function handleAppleCallback(Request $request)
     {
-        try {
-            $user = Socialite::driver("sign-in-with-apple")->user();
-        } catch (\Exception $e) {
-            flash(translate("Something Went wrong. Please try again."))->error();
-            return redirect()->route('user.login');
-        }
-        //check if provider_id exist
-        $existingUserByProviderId = StoreUser::where('provider_id', $user->id)->first();
-
-        if ($existingUserByProviderId) {
-            $existingUserByProviderId->access_token = $user->token;
-            $existingUserByProviderId->refresh_token = $user->refreshToken;
-            if (!isset($user->user['is_private_email'])) {
-                $existingUserByProviderId->email = $user->email;
-            }
-            $existingUserByProviderId->save();
-            //proceed to login
-            auth()->login($existingUserByProviderId, true);
-        } else {
-            //check if email exist
-            $existing_or_new_user = StoreUser::firstOrNew([
-                'email' => $user->email
-            ]);
-            $existing_or_new_user->provider_id = $user->id;
-            $existing_or_new_user->access_token = $user->token;
-            $existing_or_new_user->refresh_token = $user->refreshToken;
-            $existing_or_new_user->provider = 'apple';
-            if (!$existing_or_new_user->exists) {
-                $existing_or_new_user->name = 'Apple User';
-                if ($user->name) {
-                    $existing_or_new_user->name = $user->name;
-                }
-                $existing_or_new_user->email = $user->email;
-                $existing_or_new_user->email_verified_at = date('Y-m-d H:m:s');
-            }
-            $existing_or_new_user->save();
-
-            auth()->login($existing_or_new_user, true);
-        }
-
-        if (session('temp_user_id') != null) {
-            Cart::where('temp_user_id', session('temp_user_id'))
-                ->update([
-                    'user_id' => auth()->user()->id,
-                    'temp_user_id' => null
-                ]);
-
-            Session::forget('temp_user_id');
-        }
-
-        if (session('link') != null) {
-            return redirect(session('link'));
-        } else {
-            if (auth()->user()->user_type == 'seller') {
-                return redirect()->route('seller.dashboard');
-            }
-            return redirect()->route('dashboard');
-        }
+        return $this->signInWithProvider($request, 'sign-in-with-apple', 'apple');
     }
+
     /**
-     * Obtain the user information from Google.
+     * Obtain the user information from the provider.
+     *
+     * The provider's `state` is checked: the callback used to read the profile
+     * through `stateless()`, which skips that check, so a login callback
+     * forged by another site could sign a victim in as the attacker's
+     * provider account.
      *
      * @return Response
      */
@@ -149,58 +99,39 @@ class LoginController extends Controller implements HasMiddleware
         if (session('login_from') == 'mobile_app') {
             return $this->mobileHandleProviderCallback($request, $provider);
         }
+
+        return $this->signInWithProvider($request, $provider, $provider);
+    }
+
+    /**
+     * Signs in (or registers) the store account the provider's profile names
+     * and sends it where its type belongs.
+     *
+     * @param  string  $driver  The Socialite driver, which for Apple differs from the stored provider name.
+     */
+    private function signInWithProvider(Request $request, string $driver, string $provider)
+    {
         try {
-            if ($provider == 'twitter') {
-                $user = Socialite::driver('twitter')->user();
-            } else {
-                $user = Socialite::driver($provider)->stateless()->user();
-            }
+            $social = Socialite::driver($driver)->user();
         } catch (\Exception $e) {
             flash(translate("Something Went wrong. Please try again."))->error();
             return redirect()->route('user.login');
         }
 
-        //check if provider_id exist
-        $existingUserByProviderId = StoreUser::where('provider_id', $user->id)->first();
+        $user = app(SocialAccounts::class)->resolve($provider, $social);
 
-        if ($existingUserByProviderId) {
-            $existingUserByProviderId->access_token = $user->token;
-            $existingUserByProviderId->save();
-            //proceed to login
-            auth()->login($existingUserByProviderId, true);
-        } else {
-            //check if email exist
-            $existingUser = StoreUser::where('email', '!=', null)->where('email', $user->email)->first();
-
-            if ($existingUser) {
-                //update provider_id
-                $existing_User = $existingUser;
-                $existing_User->provider_id = $user->id;
-                $existing_User->provider = $provider;
-                $existing_User->access_token = $user->token;
-                $existing_User->save();
-
-                //proceed to login
-                auth()->login($existing_User, true);
-            } else {
-                //create a new user
-                $newUser = new StoreUser;
-                $newUser->name = $user->name;
-                $newUser->email = $user->email;
-                $newUser->email_verified_at = date('Y-m-d Hms');
-                $newUser->provider_id = $user->id;
-                $newUser->provider = $provider;
-                $newUser->access_token = $user->token;
-                $newUser->save();
-                //proceed to login
-                auth()->login($newUser, true);
-            }
+        if ($user === null) {
+            flash(translate('An account with this email already exists. Sign in with your password instead.'))->error();
+            return redirect()->route('user.login');
         }
+
+        auth()->login($user, true);
+        $request->session()->regenerate();
 
         if (session('temp_user_id') != null) {
             Cart::where('temp_user_id', session('temp_user_id'))
                 ->update([
-                    'user_id' => auth()->user()->id,
+                    'user_id' => $user->id,
                     'temp_user_id' => null
                 ]);
 
@@ -209,12 +140,13 @@ class LoginController extends Controller implements HasMiddleware
 
         if (session('link') != null) {
             return redirect(session('link'));
-        } else {
-            if (auth()->user()->user_type == 'seller') {
-                return redirect()->route('seller.dashboard');
-            }
-            return redirect()->route('dashboard');
         }
+
+        if ($user->user_type == 'seller') {
+            return redirect()->route('seller.dashboard');
+        }
+
+        return redirect()->route('dashboard');
     }
 
     public function mobileHandleProviderCallback($request, $provider)

@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManagerStatic as Image;
+use Throwable;
 
 class FetchExternalImages extends Command
 {
@@ -26,162 +27,76 @@ class FetchExternalImages extends Command
     protected $description = 'Fetch images from external links and store them locally';
 
     /**
-     * Create a new command instance.
-     *
-     * @return void
+     * Execute the console command.
      */
-    public function __construct()
+    public function handle(): int
     {
-        parent::__construct();
-    }
+        $failedCount = 0;
 
-    public function handle()
-    {
+        Upload::query()
+            ->select(['id', 'file_name', 'external_link'])
+            ->whereNull('file_name')
+            ->whereNotNull('external_link')
+            ->chunkById(100, function ($uploads) use (&$failedCount): void {
+                foreach ($uploads as $upload) {
+                    $this->info("Upload ID {$upload->id} processing...");
 
-        $uploads = Upload::where('file_name', null)->where('external_link', '!=', null)->get();
+                    $isUsedByProduct = Product::whereJsonContains('photos', $upload->id)
+                        ->orWhereJsonContains('old_photo', $upload->id)
+                        ->orWhereJsonContains('thumbnail_img', $upload->id)
+                        ->exists();
 
-        echo $uploads->count();
+                    if (! $isUsedByProduct) {
+                        $upload->delete();
+                        $this->info("Upload ID {$upload->id} does not exist in any product, record deleted.");
 
-        foreach ($uploads as $upload) {
-            $this->info("Upload ID {$upload->id} processing...");
-            $exists = Product::whereJsonContains('photos', $upload->id)
-                ->orWhereJsonContains('old_photo', $upload->id)
-                ->orWhereJsonContains('thumbnail_img', $upload->id)
-                ->exists();
+                        continue;
+                    }
 
-            if ($exists) {
-                $this->info("Upload ID {$upload->id} exists in a product.");
-                if ($upload->external_link) {
-                    try {
+                    $this->info("Upload ID {$upload->id} exists in a product.");
 
-                        $response = Http::get($upload->external_link);
-
-                        if ($response->successful()) {
-                            $imageContent = $response->body();
-                            $imageName = basename($upload->external_link);
-                            $storagePath = 'uploads/otajer/' . $imageName;
-
-                            // Decrease the quality of the image to less than 50%
-                            $image = Image::make($imageContent)->encode('jpg', 50);
-
-                            Storage::put($storagePath, $image);
-
-                            // Update the file_name with the new storage path
-                            if (!$upload->file_name) {
-                                $upload->file_name = $storagePath;
-                                $upload->external_link = null;
-                                $upload->save();
-                            }
-
-                            $this->info("Successfully fetched and stored: {$upload->external_link}");
-                        } else {
-                            $this->error("Failed to fetch image from: {$upload->external_link}");
-                        }
-                    } catch (\Exception $e) {
-                        $this->error("Error fetching image from: {$upload->external_link} - {$e->getMessage()}");
+                    if (! $this->storeExternalImage($upload)) {
+                        $failedCount++;
                     }
                 }
-                $this->info("Upload ID {$upload->id} does not exist in any product.");
-            } else{
-                $upload->delete();
-                $this->info("Upload record deleted.");
+            });
 
+        return $failedCount === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * Downloads the upload's external image, stores a reduced-quality copy and
+     * points the upload at it.
+     */
+    private function storeExternalImage(Upload $upload): bool
+    {
+        $externalLink = $upload->external_link;
+
+        try {
+            $response = Http::timeout(30)->get($externalLink);
+
+            if (! $response->successful()) {
+                $this->error("Failed to fetch image from: {$externalLink}");
+
+                return false;
             }
+
+            $storagePath = 'uploads/otajer/'.basename($externalLink);
+
+            // Decrease the quality of the image to less than 50%
+            Storage::put($storagePath, Image::make($response->body())->encode('jpg', 50));
+
+            $upload->file_name = $storagePath;
+            $upload->external_link = null;
+            $upload->save();
+
+            $this->info("Successfully fetched and stored: {$externalLink}");
+
+            return true;
+        } catch (Throwable $e) {
+            $this->error("Error fetching image from: {$externalLink} - {$e->getMessage()}");
+
+            return false;
         }
-
-
-
-
-        // ====================================================
-        // $batchSize = 1000;
-
-        // // Process Uploads in batches
-        // Upload::chunk($batchSize, function ($uploads) {
-        //     // Collect all upload IDs
-        //     $uploadIds = $uploads->pluck('id')->toArray();
-
-        //     // Find products that contain any of the upload IDs in JSON fields
-        //     $products = Product::where(function ($query) use ($uploadIds) {
-        //         $query->where(function ($query) use ($uploadIds) {
-        //             foreach ($uploadIds as $id) {
-        //                 $query->orWhereJsonContains('photos', $id);
-        //             }
-        //         })
-        //             ->orWhere(function ($query) use ($uploadIds) {
-        //                 foreach ($uploadIds as $id) {
-        //                     $query->orWhereJsonContains('old_photo', $id);
-        //                 }
-        //             })
-        //             ->orWhere(function ($query) use ($uploadIds) {
-        //                 foreach ($uploadIds as $id) {
-        //                     $query->orWhereJsonContains('thumbnail_img', $id);
-        //                 }
-        //             });
-        //     })->get();
-
-        //     // Extract the found upload IDs from the products
-        //     $foundUploadIds = [];
-        //     foreach ($products as $product) {
-        //         foreach ($uploadIds as $id) {
-        //             if (
-        //                 in_array($id, json_decode($product->photos, true)) ||
-        //                 in_array($id, json_decode($product->old_photo, true)) ||
-        //                 in_array($id, json_decode($product->thumbnail_img, true))
-        //             ) {
-        //                 $foundUploadIds[] = $id;
-        //             }
-        //         }
-        //     }
-
-        //     // Update the uploads based on found IDs
-        //     foreach ($uploads as $upload) {
-        //         if (in_array($upload->id, $foundUploadIds)) {
-        //             // Perform necessary action, e.g., update Upload model
-        //             echo "Upload ID {$upload->id} exists in a product.\n";
-        //             $uploads = Upload::all();
-
-        //             foreach ($uploads as $upload) {
-        //                 $exists = Product::whereJsonContains('photos', $upload->id)
-        //                     ->orWhereJsonContains('old_photo', $upload->id)
-        //                     ->orWhereJsonContains('thumbnail_img', $upload->id)
-        //                     ->exists();
-
-        //                 if ($exists) {
-        //                     $this->info('Exists');
-        //                     if ($upload->external_link) {
-        //                         try {
-
-        //                             $response = Http::get($upload->external_link);
-
-        //                             if ($response->successful()) {
-        //                                 $imageContent = $response->body();
-        //                                 $imageName = basename($upload->external_link);
-        //                                 $storagePath = 'uploads/otajer/' . $imageName;
-
-        //                                 Storage::put($storagePath, $imageContent);
-
-        //                                 // Update the file_name with the new storage path
-        //                                 if (!$upload->file_name) {
-        //                                     $upload->file_name = $storagePath;
-        //                                     $upload->save();
-        //                                 }
-
-        //                                 $this->info("Successfully fetched and stored: {$upload->external_link}");
-        //                             } else {
-        //                                 $this->error("Failed to fetch image from: {$upload->external_link}");
-        //                             }
-        //                         } catch (\Exception $e) {
-        //                             $this->error("Error fetching image from: {$upload->external_link} - {$e->getMessage()}");
-        //                         }
-        //                     }
-        //                 }
-        //             }
-
-        //             $this->info('Completed fetching external images.');
-        //         } else {
-        //             echo "Upload ID {$upload->id} does not exist in any product.\n";
-        //         }
-        //     }
-        // });
     }
 }

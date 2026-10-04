@@ -29,14 +29,21 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 function mountPage(
-    overrides: Partial<{ qr_code_width: number; qr_code_height: number }> = {},
+    overrides: Partial<{
+        qr_code_width: number;
+        qr_code_height: number;
+        allowed_open_levels: number[];
+    }> = {},
+    highestLevel = 3,
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/settings',
         props: defaultAuthProps(),
     });
 
-    return mount(Edit, { props: { setting: setting(overrides) } });
+    return mount(Edit, {
+        props: { setting: setting(overrides), highestLevel },
+    });
 }
 
 describe('Settings Edit', () => {
@@ -69,6 +76,34 @@ describe('Settings Edit', () => {
             qrCodeWidth: 300,
             qrCodeHeight: 350,
         });
+    });
+
+    it('offers one level per level of the tallest row and passes the allowed ones', () => {
+        const wrapper = mountPage({ allowed_open_levels: [1, 4] }, 4);
+
+        expect(wrapper.findComponent(SettingFormFields).props()).toMatchObject({
+            levels: [1, 2, 3, 4],
+            allowedOpenLevels: [1, 4],
+        });
+        expect(
+            wrapper.findAll('input[name="allowed_open_levels[]"]'),
+        ).toHaveLength(4);
+    });
+
+    it('keeps the allowed open levels when converting the entered cm values', () => {
+        const wrapper = mountPage();
+
+        const transform = wrapper.findComponent(Form).props('transform') as (
+            data: Record<string, unknown>,
+        ) => Record<string, unknown>;
+
+        expect(
+            transform({
+                qr_code_width: '10',
+                qr_code_height: '12.5',
+                allowed_open_levels: ['1', '2'],
+            }),
+        ).toMatchObject({ allowed_open_levels: ['1', '2'] });
     });
 
     it('converts the entered cm values to pixel integers before submitting', () => {

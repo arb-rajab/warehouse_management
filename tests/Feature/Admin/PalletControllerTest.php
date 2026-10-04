@@ -6,6 +6,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -403,7 +404,7 @@ test('storing a pallet into a non-existent cell returns a 404', function () {
 test('an authenticated admin can open a full pallet, removing boxes at the same time', function () {
     $admin = actingAsAdmin();
     $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
 
@@ -422,7 +423,7 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
 test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
     $admin = actingAsAdmin();
     $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open");
 
@@ -441,7 +442,7 @@ test('opening a pallet without a boxes_count just opens it, leaving remaining_bo
 test('opening a pallet with more boxes than remain, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", [
@@ -457,7 +458,7 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
 test('opening a pallet with a boxes_count equal to what remains, with confirm_empty, empties the pallet instead', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", [
@@ -473,7 +474,7 @@ test('opening a pallet with a boxes_count equal to what remains, with confirm_em
 test('opening a pallet with a boxes_count equal to what remains, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 5]);
 
@@ -485,7 +486,7 @@ test('opening a pallet with a boxes_count equal to what remains, without confirm
 test('opening a pallet with more boxes than remain, without confirm_empty, is rejected and nothing changes', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 6]);
 
@@ -521,7 +522,7 @@ test('opening an already-opened pallet is rejected with a non-field action error
 test('opening a pallet in a row under an unfinished verification round is rejected with a non-field action error', function () {
     actingAsAdmin();
     $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
     CellVerificationRound::factory()->covering($pallet->cell->row)->create();
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
@@ -925,7 +926,7 @@ test('transferring a non-existent pallet returns a 404', function () {
 });
 
 test('an authenticated admin can update a pallet\'s product, expiration date, and remaining boxes', function () {
-    actingAsAdmin();
+    $admin = actingAsAdmin();
     $originalProduct = Product::factory()->create();
     $newProduct = Product::factory()->create();
     $pallet = Pallet::factory()->create(['product_id' => $originalProduct->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 6]);
@@ -942,6 +943,20 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
     expect($pallet->product_id)->toBe($newProduct->id);
     expect($pallet->expiration_date->toDateString())->toBe('2026-12-25');
     expect($pallet->remaining_boxes)->toBe(3);
+
+    $this->assertDatabaseCount('cell_status_logs', 1);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $pallet->cell_id,
+        'related_cell_id' => null,
+        'action' => CellLogAction::ProductChanged->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Full->value,
+        'product_id' => $newProduct->id,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 3,
+        'user_id' => $admin->id,
+        'note' => null,
+    ]);
 });
 
 test('an admin can update an already-expired pallet without changing its expiration date', function () {
@@ -1132,4 +1147,42 @@ test('updating a non-existent pallet returns a 404', function () {
     ]);
 
     $response->assertNotFound();
+});
+
+test('opening a pallet on a level that is not allowed is rejected with a non-field action error and nothing changes', function () {
+    actingAsAdmin();
+    $pallet = Pallet::factory()->onLevel(2)->create();
+    Pallet::factory()->onLevel(1)->create();
+
+    $response = $this->post("/admin/pallets/{$pallet->id}/open");
+
+    $response->assertSessionHasErrors(['action' => __('messages.open_level_not_allowed')]);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('an admin can open a pallet on a level the settings allow', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['allowed_open_levels' => [3]]);
+    $pallet = Pallet::factory()->onLevel(3)->create();
+
+    $this->post("/admin/pallets/{$pallet->id}/open")->assertRedirect(route('admin.cells.index'));
+
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+});
+
+test('storing a pallet into a first-level cell leaves it full when level 1 is not allowed', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['allowed_open_levels' => [2]]);
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $this->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ])->assertRedirect(route('admin.cells.index'));
+
+    expect($cell->refresh()->state)->toBe(CellState::Full);
 });

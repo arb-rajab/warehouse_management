@@ -10,6 +10,42 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
+    /**
+     * The only request fields a seller's product form may set. Everything the
+     * service decides itself (`user_id`, `approved`, `published` on update,
+     * `featured`, `todays_deal`, `added_by`, ...) is left out, so a forged
+     * field never reaches the model, whatever the model's own mass-assignment
+     * rules turn out to allow.
+     *
+     * @var list<string>
+     */
+    private const SELLER_FIELDS = [
+        'name', 'slug', 'category_id', 'brand_id', 'unit', 'weight', 'min_qty', 'tags', 'barcode', 'refundable',
+        'photos', 'thumbnail_img', 'video_provider', 'video_link', 'external_link', 'external_link_btn',
+        'unit_price', 'discount', 'discount_type', 'date_range', 'current_stock', 'description', 'shipping_type',
+        'flat_shipping_cost', 'est_shipping_days', 'low_stock_quantity', 'stock_visibility_state',
+        'cash_on_delivery', 'is_quantity_multiplied', 'meta_title', 'meta_description', 'meta_img', 'pdf',
+        'colors_active', 'colors', 'choice_no', 'button', 'lang',
+    ];
+
+    /**
+     * `$input` cut down to what a seller may set: the fields above plus the
+     * per-attribute and per-variant keys the form generates (`choice_options_3`,
+     * `price_Red-M`, `sku_...`, `qty_...`, `img_...`).
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public function sellerAttributes(array $input): array
+    {
+        return array_filter(
+            $input,
+            fn (string $key): bool => in_array($key, self::SELLER_FIELDS, true)
+                || preg_match('/^(choice_options_\d+|(price|sku|qty|img)_.+)$/', $key) === 1,
+            ARRAY_FILTER_USE_KEY,
+        );
+    }
+
     public function store(array $data)
     {
         $collection = collect($data);

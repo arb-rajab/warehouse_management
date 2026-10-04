@@ -12,10 +12,10 @@ use App\Models\Upload;
  */
 test('user() resolves the upload\'s own owner, not another upload\'s', function () {
     $owner = StoreUser::create([
-        'name' => 'Owner', 'email' => 'owner@example.com', 'user_type' => 'customer', 'phone' => '1111111111',
+        'name' => 'Owner', 'email' => 'owner@example.com', 'phone' => '1111111111',
     ]);
     $noiseOwner = StoreUser::create([
-        'name' => 'Noise Owner', 'email' => 'noise-owner@example.com', 'user_type' => 'customer', 'phone' => '2222222222',
+        'name' => 'Noise Owner', 'email' => 'noise-owner@example.com', 'phone' => '2222222222',
     ]);
 
     $upload = Upload::forceCreate(['file_name' => 'mine.jpg', 'user_id' => $owner->id]);

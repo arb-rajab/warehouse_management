@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('customer_package_payments')) {
+            return;
+        }
+
         Schema::create('customer_package_payments', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->integer('user_id');
@@ -29,9 +33,16 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Guarded on the environment rather than on `hasTable()`, which cannot
+     * tell the store's table from a local stand-in.
      */
     public function down(): void
     {
+        if (app()->isProduction()) {
+            return;
+        }
+
         Schema::dropIfExists('customer_package_payments');
     }
 };

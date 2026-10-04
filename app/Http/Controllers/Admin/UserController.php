@@ -13,8 +13,10 @@ use App\Models\CellVerificationReport;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -73,8 +75,7 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $user = User::create($request->safe()->only(['name', 'email', 'password']));
-
+        $user = new User($request->safe()->only(['name', 'email', 'password']));
         $user->must_change_password = true;
         $user->save();
 
@@ -94,30 +95,69 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $user->fill($request->safe()->only(['name', 'email']));
+        return DB::transaction(function () use ($request, $user) {
+            $isAdmin = $request->boolean('is_admin');
 
-        if ($request->filled('password')) {
-            $user->password = $request->validated('password');
-            $user->must_change_password = true;
-        }
+            if (! $isAdmin && $this->isLastAdmin($user)) {
+                return redirect()->route('admin.users.edit', $user)->withErrors(['is_admin' => __('messages.cannot_remove_last_admin')]);
+            }
 
-        $user->save();
+            $user->fill($request->safe()->only(['name', 'email']));
 
-        $user->syncRoles($request->boolean('is_admin') ? ['admin'] : []);
+            if ($request->filled('password')) {
+                $user->password = $request->validated('password');
+                $user->must_change_password = true;
+            }
 
-        return redirect()->route('admin.users.index');
+            $user->save();
+
+            $user->syncRoles($isAdmin ? ['admin'] : []);
+
+            return redirect()->route('admin.users.index');
+        });
     }
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
         abort_if($request->user()->is($user), 403, __('messages.cannot_delete_own_account'));
 
-        if ($user->hasHistory()) {
-            return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.user_cannot_delete_has_history')]);
+        return DB::transaction(function () use ($request, $user) {
+            if ($this->isLastAdmin($user)) {
+                return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.cannot_remove_last_admin')]);
+            }
+
+            if ($user->hasHistory()) {
+                return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.user_cannot_delete_has_history')]);
+            }
+
+            $user->delete();
+
+            return $this->redirectPreservingQuery('admin.users.index', $request);
+        });
+    }
+
+    /**
+     * Whether demoting or deleting $user would leave the admin panel with no
+     * admin at all. The self-demotion and self-deletion guards can't catch
+     * this on their own: two admins revoking each other at the same moment
+     * each pass the role middleware and each still count the other as the
+     * admin who remains. So the admin role's row is locked first, as a mutex
+     * every such request queues behind, and both $user's role and the admin
+     * count are read fresh after it — call this inside the transaction that
+     * then makes the change.
+     */
+    private function isLastAdmin(User $user): bool
+    {
+        $adminRole = Role::query()
+            ->where('name', 'admin')
+            ->where('guard_name', 'web')
+            ->lockForUpdate()
+            ->first();
+
+        if ($adminRole === null || ! $user->roles()->whereKey($adminRole->id)->exists()) {
+            return false;
         }
 
-        $user->delete();
-
-        return $this->redirectPreservingQuery('admin.users.index', $request);
+        return User::query()->role($adminRole)->count() <= 1;
     }
 }

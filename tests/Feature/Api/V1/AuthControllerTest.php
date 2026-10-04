@@ -213,3 +213,25 @@ test('the mobile api deliberately does not enforce must_change_password', functi
 
     expect($user->refresh()->must_change_password)->toBeTrue();
 });
+
+test('a login issues a token scoped to the mobile abilities, not the wildcard', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+    // Noise: another user's token, which must not be the one inspected.
+    User::factory()->mobileUser()->create()->createToken('noise', ['*']);
+
+    $this->postJson('/api/v1/login', ['email' => $user->email, 'password' => 'correct-password'])->assertOk();
+
+    $token = $user->tokens()->sole();
+
+    expect($token->abilities)->toBe(['warehouse:use'])
+        ->and($token->can('*'))->toBeFalse()
+        ->and($token->can('warehouse:use'))->toBeTrue();
+});
+
+test('the token a login issues still opens the mobile api routes', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+
+    $token = $this->postJson('/api/v1/login', ['email' => $user->email, 'password' => 'correct-password'])->json('token');
+
+    $this->withToken($token)->getJson('/api/v1/user')->assertOk()->assertJsonPath('id', $user->id);
+});

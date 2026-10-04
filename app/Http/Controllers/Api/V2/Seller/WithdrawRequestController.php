@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Api\V2\Seller;
 
 use App\Http\Resources\V2\Seller\SellerWithdrawResource;
 use App\Models\SellerWithdrawRequest;
-use Auth;
+use App\Services\SellerWithdrawService;
+use DomainException;
 use Illuminate\Http\Request;
 use Response;
 
@@ -28,26 +29,19 @@ class WithdrawRequestController extends Controller
      * @param  Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request, SellerWithdrawService $withdrawals)
     {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
 
-        if (auth()->user()->shop->admin_to_pay > 5) {
-            if ($request->amount >= get_setting('minimum_seller_amount_withdraw') && $request->amount <= Auth::user()->shop->admin_to_pay) {
-                $seller_withdraw_request = new SellerWithdrawRequest;
-                $seller_withdraw_request->user_id = auth()->user()->id;
-                $seller_withdraw_request->amount = $request->amount;
-                $seller_withdraw_request->message = $request->message;
-                $seller_withdraw_request->status = '0';
-                $seller_withdraw_request->viewed = '0';
-
-                $seller_withdraw_request->save();
-
-                return $this->success(translate('Request has been sent successfully'));
-            } else {
-                return $this->failed(translate('Invalid amount'));
-            }
-        } else {
-            return $this->failed(translate('You do not have enough balance to send withdraw request'));
+        try {
+            $withdrawals->request(auth()->user(), (float) $validated['amount'], $validated['message'] ?? null);
+        } catch (DomainException $exception) {
+            return $this->failed($exception->getMessage());
         }
+
+        return $this->success(translate('Request has been sent successfully'));
     }
 }

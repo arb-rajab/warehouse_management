@@ -127,3 +127,38 @@ test('a ticket is replied to by the account that owns it, as that account', func
 
     expect(DB::table('ticket_replies')->pluck('user_id')->all())->toEqual([$owner->id]);
 });
+
+test('a status outside the delivery statuses is rejected and the order is unchanged', function () {
+    $seller = createStoreUser('seller');
+    $customer = createStoreUser('customer');
+    $product = createStoreProduct(['user_id' => $seller->id, 'current_stock' => 10]);
+    $order = walletOrderOf($seller, $customer, $product);
+    $noise = walletOrderOf($seller, $customer, $product);
+
+    $this->withToken(storeApiToken($seller))
+        ->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'shipped-to-mars'])
+        ->assertUnprocessable();
+
+    expect($order->fresh()->delivery_status)->toBe('pending')
+        ->and($noise->fresh()->delivery_status)->toBe('pending')
+        ->and((float) $customer->fresh()->balance)->toBe(0.0)
+        ->and(stockOf($product))->toBe(10);
+});
+
+test('a customer\'s token cannot cancel or mark paid an order through the seller API', function (string $endpoint, string $status) {
+    $seller = createStoreUser('seller');
+    $customer = createStoreUser('customer');
+    $product = createStoreProduct(['user_id' => $seller->id, 'current_stock' => 10]);
+    $order = walletOrderOf($seller, $customer, $product);
+
+    $this->withToken(storeApiToken($customer))
+        ->postJson("/temp/api/v2/seller/orders/{$endpoint}", ['order_id' => $order->id, 'status' => $status])
+        ->assertNotFound();
+
+    expect($order->fresh()->only(['delivery_status', 'payment_status']))->toBe(['delivery_status' => 'pending', 'payment_status' => 'paid'])
+        ->and((float) $customer->fresh()->balance)->toBe(0.0)
+        ->and(stockOf($product))->toBe(10);
+})->with([
+    'delivery status' => ['update-delivery-status', 'cancelled'],
+    'payment status' => ['update-payment-status', 'unpaid'],
+]);

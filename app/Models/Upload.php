@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\UploadFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,23 @@ class Upload extends Model
     protected $fillable = [
         'file_original_name', 'file_name', 'user_id', 'extension', 'type', 'file_size',
     ];
+
+    /**
+     * Uploads whose original name contains `$term`.
+     *
+     * A `%`, `_` or `\` in the term is escaped so it matches itself rather than
+     * acting as a wildcard. Both drivers need the explicit `ESCAPE` clause for
+     * that (sqlite has no escape character without one), so this is a raw
+     * `like` instead of `where(..., 'like', ...)`, whose fourth argument is the
+     * boolean, not an escape character.
+     *
+     * @param  Builder<Upload>  $query
+     * @return Builder<Upload>
+     */
+    public function scopeOriginalNameContains(Builder $query, string $term): Builder
+    {
+        return $query->whereRaw('file_original_name like ? escape ?', ['%'.addcslashes($term, '\\%_').'%', '\\']);
+    }
 
     /**
      * The absolute URL for this upload.

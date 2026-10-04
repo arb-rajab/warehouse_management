@@ -43,6 +43,18 @@ class PalletFactory extends Factory
         );
     }
 
+    /**
+     * Put the pallet in a fresh cell on the given level (`cells.flat_number`).
+     * The cell factory picks a random level, which matters to anything that
+     * depends on it — e.g. opening is only allowed on the settings' allowed levels.
+     */
+    public function onLevel(int $level = 1): static
+    {
+        return $this->state(fn (): array => [
+            'cell_id' => Cell::factory()->state(['flat_number' => $level]),
+        ]);
+    }
+
     public function opened(): static
     {
         return $this->afterCreating(

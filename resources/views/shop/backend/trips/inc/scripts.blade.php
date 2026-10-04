@@ -93,7 +93,7 @@
         // Function to fetch available drivers and trucks
         function fetchAvailableVehicles(date, excluded_trip_id = 0) {
             $.ajax({
-                url: '{{ route("getAvailableVehicles") }}',  // Your route to get available vehicles
+                url: '{{ route("trips.available-vehicles") }}',  // Your route to get available vehicles
                 method: 'GET',
                 data: {
                     date: date,

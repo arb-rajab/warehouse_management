@@ -18,7 +18,6 @@ test('the store guard resolves a StoreUser through its own provider', function (
     $storeUser = StoreUser::create([
         'name' => 'Store Customer',
         'email' => 'store-customer@example.com',
-        'user_type' => 'customer',
         'phone' => '5555555555',
     ]);
 
@@ -33,7 +32,6 @@ test('logging into the store guard does not also authenticate the default web gu
     $storeUser = StoreUser::create([
         'name' => 'Store Customer',
         'email' => 'store-customer-2@example.com',
-        'user_type' => 'customer',
         'phone' => '5555555555',
     ]);
 

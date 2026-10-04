@@ -27,7 +27,7 @@ test('the migration is a no-op on sqlite rather than throwing', function () {
 
     expect(Schema::hasIndex('products', 'products_name_ar_name_fulltext'))->toBeFalse();
     expect(Schema::hasTable('products'))->toBeTrue();
-});
+})->skip(fn () => DB::connection()->getDriverName() !== 'sqlite', 'Asserts sqlite behaviour; the MySQL behaviour is covered by the tests around it.');
 
 test('the migration is idempotent and leaves existing rows searchable', function () {
     $migration = loadAddFulltextIndexToProductsTableMigration();

@@ -17,6 +17,21 @@ class PaymentOptions
 {
     private const CONTROLLER_NAMESPACE = 'App\\Http\\Controllers\\Payment\\';
 
+    /**
+     * The proof a customer attaches to a manual payment: the transaction id
+     * and the uploaded receipt. Receipts are stored upload ids or file names,
+     * never markup.
+     *
+     * @return array<string, list<string>>
+     */
+    public function proofRules(): array
+    {
+        return [
+            'trx_id' => ['required', 'string', 'max:100'],
+            'photo' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_,.\/-]+$/'],
+        ];
+    }
+
     public function isAllowed(string $option): bool
     {
         if (! preg_match('/^[A-Za-z0-9_]+$/', $option)) {

@@ -12,9 +12,18 @@ use App\Models\City;
 use App\Models\Country;
 use App\Models\State;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class AddressController extends Controller
 {
+    private function manageableAddress(mixed $id): Address
+    {
+        $address = Address::findOrFail($id);
+        Gate::authorize('manage', $address);
+
+        return $address;
+    }
+
     public function addresses()
     {
         if(auth()->user()->is_rep){
@@ -56,7 +65,7 @@ class AddressController extends Controller
 
     public function updateShippingAddress(Request $request)
     {
-        $address = Address::find($request->id);
+        $address = $this->manageableAddress($request->id);
         $address->address = $request->address;
         $address->country_id = $request->country_id;
         $address->state_id = $request->state_id;
@@ -73,7 +82,7 @@ class AddressController extends Controller
 
     public function updateShippingAddressLocation(Request $request)
     {
-        $address = Address::find($request->id);
+        $address = $this->manageableAddress($request->id);
         $address->latitude = $request->latitude;
         $address->longitude = $request->longitude;
         $address->save();
@@ -87,8 +96,8 @@ class AddressController extends Controller
 
     public function deleteShippingAddress($id)
     {
-        $address = Address::where('id',$id)->where('user_id',auth()->user()->id)->first();
-        if($address == null) {
+        $address = Address::find($id);
+        if($address == null || Gate::denies('manage', $address)) {
             return response()->json([
                 'result' => false,
                 'message' => translate('Address not found')
@@ -103,9 +112,10 @@ class AddressController extends Controller
 
     public function makeShippingAddressDefault(Request $request)
     {
-        Address::where('user_id', auth()->user()->id)->update(['set_default' => 0]); //make all user addressed non default first
+        $address = $this->manageableAddress($request->id);
+        Address::where('user_id', $address->user_id)->update(['set_default' => 0]); //make all the owner's addresses non default first
+        $address->refresh();
 
-        $address = Address::find($request->id);
         $address->set_default = 1;
         $address->save();
         return response()->json([
@@ -116,6 +126,8 @@ class AddressController extends Controller
 
     public function updateAddressInCart(Request $request)
     {
+        $this->manageableAddress($request->address_id);
+
         try {
             Cart::where('user_id', auth()->user()->id)->update(['address_id' => $request->address_id]);
 

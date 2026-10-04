@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use Auth;
+use App\Http\Middleware\Concerns\RequiresUnbannedStoreUser;
 use Closure;
 use Illuminate\Http\Request;
 
 class IsSeller
 {
+    use RequiresUnbannedStoreUser;
+
     /**
      * Handle an incoming request.
      *
@@ -17,11 +19,10 @@ class IsSeller
      */
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->user_type == 'seller'  && !Auth::user()->banned) {
+        if ($this->isUnbannedStoreUserOfType($request, 'seller')) {
             return $next($request);
         }
-        else{
-            abort(404);
-        }
+
+        abort(404);
     }
 }

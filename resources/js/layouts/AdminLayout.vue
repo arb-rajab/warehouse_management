@@ -97,6 +97,12 @@ function navLinkStateClass(href: string): string[] {
     <div
         class="min-h-screen bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
     >
+        <a
+            href="#main"
+            class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-neutral-900 dark:focus:text-white"
+        >
+            {{ t('nav.skipToContent') }}
+        </a>
         <nav
             class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
         >
@@ -197,7 +203,7 @@ function navLinkStateClass(href: string): string[] {
                 </div>
             </div>
         </nav>
-        <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <main id="main" class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
             <slot />
         </main>
     </div>

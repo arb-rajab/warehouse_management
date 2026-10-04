@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SecondEmailVerifyMailManager;
+use App\Services\StoreVerificationCodes;
 use App\Services\TradeLicenseStorage;
 use App\Models\AffiliateConfig;
 use App\Models\Brand;
@@ -255,7 +256,7 @@ class HomeController extends Controller
         } else {
             $variations = null;
         }
-        if ($detailedProduct != null /*&& $detailedProduct->published*/) {
+        if ($detailedProduct != null && $detailedProduct->published) {
 
             $product_queries = ProductQuery::where('product_id', $detailedProduct->id)->where('customer_id', '!=', Auth::id())->latest('id')->paginate(3);
             $total_query = ProductQuery::where('product_id', $detailedProduct->id)->count();
@@ -662,30 +663,34 @@ class HomeController extends Controller
 
     public function reset_password_with_code(Request $request)
     {
+        if ($request->password != $request->password_confirmation) {
+            flash(translate("Password and confirm password didn't match"))->warning();
 
-        if (($user = StoreUser::where('email', $request->email)->where('verification_code', $request->code)->first()) != null) {
-            if ($request->password == $request->password_confirmation) {
-                $user->password = Hash::make($request->password);
-                $user->email_verified_at = date('Y-m-d h:m:s');
-                $user->verification_code = null;
-                $user->save();
-                event(new PasswordReset($user));
-                auth()->login($user, true);
-
-                flash(translate('Password updated successfully'))->success();
-
-                if (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff') {
-                    return redirect()->route('shop.admin.dashboard');
-                }
-                return redirect()->route('home');
-            } else {
-                flash(translate("Password and confirm password didn't match"))->warning();
-                return view('shop.auth.passwords.reset');
-            }
-        } else {
-            flash(translate("Verification code mismatch"))->error();
             return view('shop.auth.passwords.reset');
         }
+
+        $user = StoreUser::where('email', $request->email)->first();
+
+        if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, (string) $request->code)) {
+            flash(translate("Verification code mismatch"))->error();
+
+            return view('shop.auth.passwords.reset');
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->email_verified_at = now();
+        $user->save();
+        event(new PasswordReset($user));
+        auth()->login($user, true);
+        $request->session()->regenerate();
+
+        flash(translate('Password updated successfully'))->success();
+
+        if ($user->user_type == 'admin' || $user->user_type == 'staff') {
+            return redirect()->route('shop.admin.dashboard');
+        }
+
+        return redirect()->route('home');
     }
 
 

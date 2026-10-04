@@ -2,8 +2,10 @@
 
 use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Cart;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Pallet;
@@ -11,11 +13,13 @@ use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -37,6 +41,12 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+// A test that freezes the clock must not leak it into the next test, including
+// when one of its assertions fails before it gets to reset it itself.
+afterEach(function () {
+    Carbon::setTestNow();
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -118,12 +128,10 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
     $user = StoreUser::create([
         'name' => ucfirst($userType).' Tester',
         'email' => $email ?? $userType.'-'.Str::random(8).'@example.com',
-        'user_type' => $userType,
         'phone' => (string) random_int(1000000000, 9999999999),
     ]);
-    $user->password = Hash::make($password);
-    $user->email_verified_at = now();
-    $user->save();
+    $user->password = $password;
+    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now()])->save();
 
     return $user->fresh();
 }
@@ -194,7 +202,8 @@ function createStoreProduct(array $attributes = []): Product
  */
 function addStoreAddress(int $userId): int
 {
-    $countryId = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
+    $countryId = DB::table('countries')->where('code', 'NL')->value('id')
+        ?? DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
 
     return DB::table('addresses')->insertGetId([
         'user_id' => $userId, 'address' => 'Damrak 1', 'country_id' => $countryId, 'phone' => '612345678', 'set_default' => 1,
@@ -207,6 +216,14 @@ function addStoreAddress(int $userId): int
 function storeApiToken(StoreUser $user): string
 {
     return $user->createToken('API Token')->plainTextToken;
+}
+
+/**
+ * A six-digit code that is not `$code`.
+ */
+function wrongCode(string $code): string
+{
+    return $code === '100000' ? '100001' : '100000';
 }
 
 /**
@@ -259,6 +276,108 @@ function orderStoreProduct(StoreUser $customer, Product $product, string $paymen
         'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
         'price' => 5, 'tax' => 0, 'quantity' => 1, 'payment_status' => $paymentStatus,
     ]);
+}
+
+/**
+ * A shop for seller `$seller`, owed `$balance` by the admin (`admin_to_pay`).
+ */
+function createShopFor(StoreUser $seller, float $balance): int
+{
+    return DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop of '.$seller->id, 'admin_to_pay' => $balance]);
+}
+
+/**
+ * A withdraw request of `$amount` from `$seller` (status 0 pending, 1 paid).
+ */
+function createWithdrawRequestFor(StoreUser $seller, float $amount, ?int $status = 0): int
+{
+    return DB::table('seller_withdraw_requests')->insertGetId(['user_id' => $seller->id, 'amount' => $amount, 'status' => $status, 'viewed' => 0]);
+}
+
+/**
+ * The `admin_to_pay` balance of shop `$shopId`, read straight from the table.
+ */
+function shopBalance(int $shopId): float
+{
+    return (float) DB::table('shops')->where('id', $shopId)->value('admin_to_pay');
+}
+
+/**
+ * The store's own orders table has `manual_payment` and `manual_payment_data`;
+ * this app's stand-in does not carry them yet, so tests of a manual payment
+ * add them first.
+ */
+function addManualPaymentColumnsToOrders(): void
+{
+    foreach (['manual_payment' => fn (Blueprint $table) => $table->boolean('manual_payment')->default(false), 'manual_payment_data' => fn (Blueprint $table) => $table->text('manual_payment_data')->nullable()] as $column => $define) {
+        if (! Schema::hasColumn('orders', $column)) {
+            Schema::table('orders', $define);
+        }
+    }
+}
+
+/**
+ * A cart-base coupon of `$owner`'s shop, valid today.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function couponFor(StoreUser $owner, array $attributes = []): Coupon
+{
+    return Coupon::forceCreate([
+        'user_id' => $owner->id, 'type' => 'cart_base', 'code' => 'SAVE'.random_int(1000, 9999),
+        'details' => json_encode(['min_buy' => 1, 'max_discount' => 1000]), 'discount' => 50, 'discount_type' => 'amount',
+        'start_date' => strtotime('-1 day'), 'end_date' => strtotime('+1 day'),
+        ...$attributes,
+    ]);
+}
+
+/**
+ * A cart line of `$customer` for a new product of `$shopOwner`'s shop.
+ *
+ * @param  array<string, mixed>  $productAttributes
+ */
+function cartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, array $productAttributes = []): Cart
+{
+    $product = createStoreProduct(['user_id' => $shopOwner->id, ...$productAttributes]);
+
+    return Cart::create(['user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity, 'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0]);
+}
+
+/**
+ * A cart line of `$customer` that checks out: a new product of `$shopOwner`'s
+ * shop with `$stock` units, a home-delivery cart row with an address.
+ *
+ * @param  array<string, mixed>  $cartAttributes
+ */
+function orderableCartLine(StoreUser $customer, StoreUser $shopOwner, int $quantity, int $stock = 50, array $cartAttributes = []): Cart
+{
+    $product = createStoreProduct(['user_id' => $shopOwner->id, 'current_stock' => $stock]);
+    $addressId = DB::table('addresses')->where('user_id', $customer->id)->value('id') ?? addStoreAddress($customer->id);
+
+    return Cart::create([
+        'user_id' => $customer->id, 'owner_id' => $shopOwner->id, 'product_id' => $product->id, 'quantity' => $quantity,
+        'variation' => '', 'price' => 2.5, 'tax' => 0, 'shipping_cost' => 0, 'shipping_type' => 'home_delivery',
+        'address_id' => $addressId, ...$cartAttributes,
+    ]);
+}
+
+/**
+ * The units of stock left for `$productId`, read straight from the table.
+ */
+function stockLeft(int $productId): int
+{
+    return (int) DB::table('product_stocks')->where('product_id', $productId)->value('qty');
+}
+
+/**
+ * A store customer whose wallet holds `$balance`.
+ */
+function fundedCustomer(float $balance): StoreUser
+{
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['balance' => $balance])->save();
+
+    return $customer;
 }
 
 /**
@@ -392,6 +511,34 @@ function assertInertiaPaginates(
     );
 
     expect($response->inertiaProps("{$prop}.meta.links"))->not->toBeEmpty();
+}
+
+/**
+ * Assert that a listing pages instead of returning every row: page 1 holds
+ * `$perPage` of the `$total` rows, page 2 holds the rest (so `$total` is more
+ * than one page and at most two) and repeats none of page 1, and none of
+ * `$excluded` -- the keys of rows that belong to someone else -- shows on
+ * either page.
+ *
+ * @param  Closure(int): TestResponse  $fetchPage  Requests the given page.
+ * @param  Closure(TestResponse): list<int|string>  $keysOf  Identifies each row of a response.
+ * @param  list<int|string>  $excluded
+ */
+function assertPagesWithoutOverlap(Closure $fetchPage, Closure $keysOf, int $total, int $perPage, array $excluded = []): void
+{
+    $first = $fetchPage(1);
+    $second = $fetchPage(2);
+
+    $first->assertOk();
+    $second->assertOk();
+
+    $firstKeys = $keysOf($first);
+    $secondKeys = $keysOf($second);
+
+    expect($firstKeys)->toHaveCount($perPage)
+        ->and($secondKeys)->toHaveCount($total - $perPage)
+        ->and(array_intersect($firstKeys, $secondKeys))->toBe([])
+        ->and(array_intersect($excluded, [...$firstKeys, ...$secondKeys]))->toBe([]);
 }
 
 /**

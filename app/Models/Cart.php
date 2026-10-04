@@ -12,7 +12,6 @@ class Cart extends Model
 
     use SoftDeletes;
 
-    protected $guarded = [];
     protected $fillable = ['address_id', 'price', 'tax', 'shipping_cost', 'shipping_type', 'discount', 'product_referral_code', 'coupon_code', 'by_rep', 'for_customer', 'coupon_applied', 'quantity', 'user_id', 'temp_user_id', 'owner_id', 'product_id', 'variation', 'variation_qty', 'item_notes', 'rep_price','is_price_changed', 'is_admin_notified'];
 
 
@@ -34,9 +33,5 @@ class Cart extends Model
     public function address()
     {
         return $this->belongsTo(Address::class);
-    }
-    public function carts_offer()
-    {
-        return $this->hasOne(CartOffered::class, 'product_id', 'product_id')->whereColumn('user_id', 'user_id');
     }
 }

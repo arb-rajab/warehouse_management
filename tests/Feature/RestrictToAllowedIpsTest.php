@@ -115,3 +115,24 @@ test('RestrictToAllowedIps cannot be bypassed with a forged X-Forwarded-For head
 
     (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips');
 })->throws(HttpException::class);
+
+test('RestrictToAllowedIps fails closed in production when the allowlist is empty', function () {
+    config(['telescope.allowed_ips' => '']);
+    app()->instance('env', 'production');
+
+    $request = Request::create('/telescope', 'GET', server: ['REMOTE_ADDR' => '203.0.113.1']);
+
+    expect(fn () => (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips'))
+        ->toThrow(HttpException::class);
+});
+
+test('RestrictToAllowedIps still lets a listed IP through in production', function () {
+    config(['telescope.allowed_ips' => '10.0.0.5']);
+    app()->instance('env', 'production');
+
+    $request = Request::create('/telescope', 'GET', server: ['REMOTE_ADDR' => '10.0.0.5']);
+
+    $response = (new RestrictToAllowedIps)->handle($request, fn ($req) => new Response('ok'), 'telescope.allowed_ips');
+
+    expect($response->getContent())->toBe('ok');
+});

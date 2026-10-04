@@ -29,7 +29,7 @@
              v_merchant_id: document.getElementById("merchant_id").value,
              total: '{{\App\Models\CombinedOrder::findOrFail(Session::get('combined_order_id'))->grand_total}}',
              cur: '{{\App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code}}',
-             merchant_ref: 'ref123',
+             merchant_ref: '{{ Session::get('voguepay_merchant_ref') }}',
              memo: 'Payment for shirt',
              developer_code: '5a61be72ab323',
              store_id: 1,

@@ -29,4 +29,9 @@ return [
     'verification_report_accepted_note' => 'تم الاعتماد من تقرير الجرد رقم :id',
     'qr_label_product_id' => 'المعرف: :id',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
+    'pallet_moved' => 'تم نقل هذه المنصة النقالة منذ تحميلها. يرجى التحديث والمحاولة مرة أخرى.',
+    'verification_round_scope_empty' => 'لا توجد ممرات لتغطيها جولة الجرد هذه.',
+    'verification_round_rows_not_found' => 'واحد أو أكثر من الممرات المطلوبة لم يعد موجودًا.',
+    'cannot_remove_last_admin' => 'هذا هو آخر حساب مسؤول، لذا لا يمكن إزالة صلاحياته أو حذفه.',
+    'open_level_not_allowed' => 'مستوى هذه المنصة ليس من المستويات المسموح فيها بفتح المنصات.',
 ];

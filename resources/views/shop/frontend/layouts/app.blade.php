@@ -336,7 +336,7 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
             <div class="modal-dialog modal-dialog-centered modal-dialog-zoom modal-md mx-4 mx-md-auto">
                 <div class="modal-content position-relative border-0 rounded-0">
                     <div class="aiz-editor-data">
-                        {!! get_setting('website_popup_content') !!}
+                        {!! clean_html(get_setting('website_popup_content')) !!}
                     </div>
                     @if (get_setting('show_subscribe_form') == 'on')
                         <div class="pb-5 pt-4 px-3 px-md-5">

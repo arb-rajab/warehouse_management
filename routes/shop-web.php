@@ -92,7 +92,7 @@ Route::controller(LoginController::class)->group(function () {
 
 Route::controller(RegisterController::class)->group(function () {
     Route::get('/register', 'showRegistrationForm')->name('register');
-    Route::post('/register', 'register');
+    Route::post('/register', 'register')->middleware('throttle:store-auth');
 });
 
 Route::controller(ForgotPasswordController::class)->group(function () {
@@ -111,7 +111,7 @@ Route::controller(VerificationController::class)->group(function () {
     Route::get('/email/verify', 'show')->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', 'verify')->name('verification.verify');
     Route::match(['get', 'post'], '/email/resend', 'resend')->name('verification.resend');
-    Route::get('/verification-confirmation/{code}', 'verification_confirmation')->name('email.verification.confirmation');
+    Route::get('/verification-confirmation/{id}', 'verification_confirmation')->name('email.verification.confirmation')->whereNumber('id')->middleware('throttle:store-auth');
 });
 
 
@@ -208,7 +208,7 @@ Route::controller(CustomerProductController::class)->group(function () {
 Route::controller(SearchController::class)->group(function () {
     Route::get('/search', 'index')->name('search');
     Route::get('/search?keyword={search}', 'index')->name('suggestion.search');
-    Route::get('/search-users', 'search_users')->name('search.users');
+    Route::get('/search-users', 'search_users')->name('search.users')->middleware(['auth', 'rep_or_admin']);
     Route::post('/ajax-search', 'ajax_search')->name('search.ajax');
     Route::get('/category/{category_slug}', 'listingByCategory')->name('products.category');
     Route::get('/brand/{brand_slug}', 'listingByBrand')->name('products.brand');
@@ -231,7 +231,6 @@ Route::controller(SslcommerzController::class)->group(function () {
     Route::POST('/sslcommerz/success', 'success');
     Route::POST('/sslcommerz/fail', 'fail');
     Route::POST('/sslcommerz/cancel', 'cancel');
-    Route::POST('/sslcommerz/ipn', 'ipn');
 });
 //SSLCOMMERZ END
 

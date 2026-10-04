@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Payment;
 
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CustomerPackageController;
-use App\Http\Controllers\SellerPackageController;
-use App\Http\Controllers\WalletController;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
+use App\Services\GatewayPaymentService;
+use App\Services\SessionGatewayPayment;
+use App\Services\VerifiedPayment;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Session;
 
 class AamarpayController extends Controller
@@ -55,12 +56,16 @@ class AamarpayController extends Controller
             }
         }
 
+        // The transaction id success() checks against aamarpay's search API.
+        $tran_id = Str::random(20);
+        Session::put('aamarpay_tran_id', $tran_id);
+
         $fields = [
             'store_id' => env('AAMARPAY_STORE_ID'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
             'amount' => $amount, //transaction amount
             'payment_type' => 'VISA', //no need to change
             'currency' => 'BDT',  //currenct will be USD/BDT
-            'tran_id' => rand(1111111,9999999), //transaction id must be unique from your end
+            'tran_id' => $tran_id, //transaction id must be unique from your end
             'cus_name' => Auth::user()->name,  //customer name
             'cus_email' => $email, //customer email address
             'cus_add1' => '',  //customer address
@@ -127,23 +132,53 @@ class AamarpayController extends Controller
     }
 
 
+    /**
+     * aamarpay posts the customer back here, and the post used to be trusted for
+     * everything: the payment type, the order (`opt_b`) and the top-up amount
+     * (`opt_c`). The transaction must be the one this session started, and
+     * aamarpay's search API (by `mer_txnid`) must report it paid for at least the
+     * amount due; what it reports is credited to the signed-in customer, once.
+     */
     public function success(Request $request){
-        $payment_type = $request->opt_a;
+        $tran_id = (string) Session::get('aamarpay_tran_id');
+        $amountDue = app(SessionGatewayPayment::class)->amountDue();
 
-        if ($payment_type == 'cart_payment') {
-            return (new CheckoutController)->checkout_done($request->opt_b, json_encode($request->all()));
-        }
-
-        if ($payment_type == 'wallet_payment') {
-            return (new WalletController)->wallet_payment_done(json_decode($request->opt_c), json_encode($request->all()));
+        if ($tran_id === '' || $amountDue === null || ! hash_equals($tran_id, (string) $request->input('mer_txnid'))) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
 
-        if ($payment_type == 'customer_package_payment') {
-            return (new CustomerPackageController)->purchase_payment_done(json_decode($request->opt_c), json_encode($request->all()));
+        $transaction = $this->searchTransaction($tran_id);
+        $isPaid = is_array($transaction)
+            && ($transaction['pay_status'] ?? null) === 'Successful'
+            && hash_equals($tran_id, (string) ($transaction['mer_txnid'] ?? ''))
+            && GatewayPaymentService::covers((float) ($transaction['amount'] ?? 0), $amountDue);
+
+        if (! $isPaid) {
+            return app(SessionGatewayPayment::class)->notVerified();
         }
-        if($payment_type == 'seller_package_payment') {
-            return (new SellerPackageController)->purchase_payment_done(json_decode($request->opt_c), json_encode($request->all()));
-        }
+
+        Session::forget('aamarpay_tran_id');
+
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('aamarpay', $tran_id, (float) $transaction['amount'], json_encode($transaction)));
+    }
+
+    /**
+     * The transaction as aamarpay's own server reports it.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function searchTransaction(string $tran_id): ?array
+    {
+        $base_url = get_setting('aamarpay_sandbox') == 1 ? 'https://sandbox.aamarpay.com/' : 'https://secure.aamarpay.com/';
+
+        $response = Http::timeout(30)->get($base_url.'api/v1/trxcheck/request.php', [
+            'request_id' => $tran_id,
+            'store_id' => env('AAMARPAY_STORE_ID'),
+            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+            'type' => 'json',
+        ]);
+
+        return $response->successful() && is_array($response->json()) ? $response->json() : null;
     }
 
     public function fail(Request $request){

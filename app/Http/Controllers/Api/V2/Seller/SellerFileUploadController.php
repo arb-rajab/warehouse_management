@@ -7,6 +7,7 @@ use App\Models\Upload;
 use App\Services\MultipartUploadService;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Response;
 use Storage;
 
@@ -17,8 +18,8 @@ class SellerFileUploadController extends Controller
         if (auth()->user()->user_type == 'seller') {
             $all_uploads = Upload::where('user_id', auth()->user()->id);
 
-            if ($request->search != null) {
-                $all_uploads->where('file_original_name', 'like', '%' . $request->search . '%');
+            if (is_string($request->search) && $request->search !== '') {
+                $all_uploads->originalNameContains($request->search);
             }
             if ($request->type != null) {
                 $all_uploads->where('type', $request->type);
@@ -67,7 +68,11 @@ class SellerFileUploadController extends Controller
                     return $this->failed(translate('File has been inserted successfully'));
                 }
 
-                $uploads->store($request->file('aiz_file'), Auth::user()->id);
+                $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
+
+                if ($upload === null) {
+                    return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+                }
 
                 return $this->success(translate('File has been inserted successfully'));
             } else {
@@ -82,7 +87,7 @@ class SellerFileUploadController extends Controller
     {
         $upload = Upload::findOrFail($id);
 
-        if (auth()->user()->user_type == 'seller' && $upload->user_id != auth()->user()->id) {
+        if (Gate::denies('delete', $upload)) {
             return $this->failed(translate("You don't have permission for deleting this!"));
         }
         try {
@@ -132,36 +137,10 @@ class SellerFileUploadController extends Controller
         // return $files;
     }
 
-    public function all_file()
-    {
-        $uploads = Upload::all();
-        foreach ($uploads as $upload) {
-            try {
-                if (config('filesystems.default') == 's3') {
-                    Storage::disk('s3')->delete($upload->file_name);
-                    if (file_exists(public_path() . '/' . $upload->file_name)) {
-                        unlink(public_path() . '/' . $upload->file_name);
-                    }
-                } else {
-                    unlink(public_path() . '/' . $upload->file_name);
-                }
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            } catch (\Exception $e) {
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            }
-        }
-
-        Upload::query()->truncate();
-
-        return back();
-    }
-
     //Download project attachment
     public function attachment_download($id)
     {
-        $project_attachment = Upload::find($id);
+        $project_attachment = Upload::findOrFail($id);
         try {
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);

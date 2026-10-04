@@ -56,6 +56,7 @@ export function setting(overrides: Partial<Setting> = {}): Setting {
     return {
         qr_code_width: 240,
         qr_code_height: 240,
+        allowed_open_levels: [1],
         ...overrides,
     };
 }

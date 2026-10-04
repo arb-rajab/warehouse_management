@@ -61,6 +61,16 @@ class Row extends Model
     }
 
     /**
+     * The highest level any row has — the number of level checkboxes the
+     * settings page offers. 1 when there are no rows yet, so the default
+     * level is always selectable.
+     */
+    public static function highestFlatsCount(): int
+    {
+        return max(1, (int) self::query()->max('flats_count'));
+    }
+
+    /**
      * @return HasMany<Cell, $this>
      */
     public function cells(): HasMany

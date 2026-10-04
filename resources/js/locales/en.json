@@ -13,7 +13,8 @@
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
-        "account": "Account"
+        "account": "Account",
+        "skipToContent": "Skip to main content"
     },
     "language": {
         "label": "Language",
@@ -147,13 +148,16 @@
     },
     "settings": {
         "edit": {
-            "title": "QR code size",
+            "title": "Settings",
             "submit": "Save changes",
             "submitting": "Saving..."
         },
         "fields": {
             "qrCodeWidth": "QR code width (cm)",
-            "qrCodeHeight": "QR code height (cm)"
+            "qrCodeHeight": "QR code height (cm)",
+            "allowedOpenLevels": "Levels where opening pallets is allowed",
+            "allowedOpenLevelsHint": "A pallet can only be opened when its level is checked. At least one level must stay checked.",
+            "level": "Level {level}"
         }
     },
     "cellLog": {
@@ -220,7 +224,8 @@
             "transferred_in": "Transferred in",
             "transferred": "Transferred",
             "deactivated": "Deactivated",
-            "reactivated": "Reactivated"
+            "reactivated": "Reactivated",
+            "product_changed": "Product changed"
         },
         "states": {
             "empty": "Empty",
@@ -503,6 +508,8 @@
             "placeholder": "Find a product…"
         },
         "filters": {
+            "title": "Filters",
+            "close": "Close filters",
             "sections": {
                 "occupancy": "Occupancy"
             },
@@ -529,7 +536,10 @@
         "removeBarcode": "Remove barcode {barcode}",
         "noBarcodes": "No barcodes added yet.",
         "exportQrLabel": "Export barcode for {product}",
-        "empty": "No products yet."
+        "empty": "No products yet.",
+        "saving": "Saving…",
+        "invalidCount": "Enter a whole number of 1 or more.",
+        "saveFailed": "Could not save. Please try again."
     },
     "pallets": {
         "title": "Matching pallets",
@@ -582,7 +592,7 @@
                 },
                 "settings": {
                     "title": "Settings",
-                    "description": "How to change the size of every QR code label this app generates."
+                    "description": "How to change the size of every QR code label this app generates and which levels pallets may be opened on."
                 }
             }
         },
@@ -679,7 +689,8 @@
                 "emptied": "Emptied — the last boxes were taken and the cell is now empty again.",
                 "transferred": "Transferred — a pallet was moved from one cell to another; the log shows both where it left and where it landed.",
                 "deactivated": "Deactivated — a cell was marked unusable (for example, damaged shelving) and can't hold pallets until it's reactivated.",
-                "reactivated": "Reactivated — a previously deactivated cell was marked usable again."
+                "reactivated": "Reactivated — a previously deactivated cell was marked usable again.",
+                "productChanged": "Product changed — an admin corrected which product a stored pallet holds; the entry shows the new product, and the pallet's earlier entries show the old one."
             },
             "legend": {
                 "heading": "Cell colors",
@@ -710,6 +721,10 @@
             "qrSize": {
                 "heading": "QR code size",
                 "body": "Set the width and height (in pixels) of the whole printed label — the QR code square plus its name text underneath, not just the QR square by itself. The QR square always uses the full configured width; if the name doesn't fit in the remaining height, it's shortened with \"…\" rather than making the label taller than what you set. Enter a value between 100 and 1000 pixels and save; every QR label exported afterward, until you change it again, uses this size. This applies to the single cell/product QR downloads; the printed row sheet's QR sharpness follows it too, though its page layout doesn't change."
+            },
+            "openLevels": {
+                "heading": "Levels where opening pallets is allowed",
+                "body": "Check the levels on which pallets may be opened. A pallet on a level that is not checked cannot be opened — in the mobile app or here in the admin panel — and a pallet stored on level 1 is only opened automatically while level 1 is checked. Level 1 is checked by default, and at least one level must stay checked. The list offers every level up to the tallest row's level count."
             }
         }
     }

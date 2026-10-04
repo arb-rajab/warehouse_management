@@ -3,23 +3,26 @@
 namespace App\Http\Controllers\Api\V2\Warehouse;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Warehouse\UpdateWarehouseOrderCustomerRequest;
+use App\Http\Requests\Warehouse\UpdateWarehouseOrderStatusRequest;
+use App\Http\Requests\Warehouse\WarehouseListRequest;
 use App\Http\Resources\V2\Warehouse\OrderCollection;
 use App\Http\Resources\V2\Warehouse\OrderDetailResource;
 use App\Http\Resources\V2\Warehouse\OrderItemResource;
-
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\StoreUser;
-use Illuminate\Http\Request;
-
-
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
-    public function getOrdersList()
+    public function getOrdersList(WarehouseListRequest $request)
     {
-     $orders = Order::where('grand_total', '!=', 0)->get();
-    return new OrderCollection($orders);
+        $orders = Order::where('grand_total', '!=', 0)
+            ->orderBy('id')
+            ->paginate($request->perPage());
+
+        return new OrderCollection($orders);
     }
 
     public function getOrderDetails($id)
@@ -45,48 +48,39 @@ class OrderController extends Controller
                 'status' => 404
             ]);
         }
-        $order_detail = OrderDetail::where('order_id', $order->id)->get();
-        return  OrderItemResource::collection($order_detail);
+
+        // OrderItemResource reads the order, its sibling lines and each line's
+        // product; handing it all three loaded keeps it to two queries however
+        // many lines the order has.
+        $order_detail = OrderDetail::where('order_id', $order->id)
+            ->with('product:id,serial,name,unit_equal,api_unitId')
+            ->get();
+        $order->setRelation('orderDetails', $order_detail);
+        $order_detail->each(fn (OrderDetail $line) => $line->setRelation('order', $order));
+
+        return OrderItemResource::collection($order_detail);
     }
 
-    public function updateOrderStatus(Request $request)
+    public function updateOrderStatus(UpdateWarehouseOrderStatusRequest $request)
     {
-        $id = $request->id;
-        $status = $request->status;
-        $otajerOrderID = $request->otajerOrderID;
-        $order = Order::find($id);
-        if ($order != null) {
-            if ($status == 'fetched') {
-                $order->delivery_status = 'confirmed';
-                $order->wms_status = 'Sent to WMS';
-                $order->save();
-            } elseif ($status == 'sent') {
-                if ($otajerOrderID) {
-                    $order->delivery_status = 'ready_for_delivery';
-                    $order->wms_status = 'Sent to Otajer';
-                    $order->otajerOrderID = $otajerOrderID;
-                    $order->save();
-                } else {
-                    return response()->json([
-                        'result' => false,
-                        'message' => 'otajerOrderID is missing in the request body',
-                        'status' => 200
-                    ]);
-                }
-            } else {
-                return response()->json([
-                    'result' => false,
-                    'message' => 'status must be `fetched` or `sent` ',
-                    'status' => 200
-                ]);
-            }
-        } else {
+        $order = Order::find($request->input('id'));
+        if ($order == null) {
             return response()->json([
                 'result' => false,
                 'message' => 'Order not found',
                 'status' => 404
             ]);
         }
+
+        if ($request->input('status') === 'fetched') {
+            $order->delivery_status = 'confirmed';
+            $order->wms_status = 'Sent to WMS';
+        } else {
+            $order->delivery_status = 'ready_for_delivery';
+            $order->wms_status = 'Sent to Otajer';
+            $order->otajerOrderID = $request->input('otajerOrderID');
+        }
+        $order->save();
 
         return response()->json([
             'result' => true,
@@ -95,19 +89,41 @@ class OrderController extends Controller
         ]);
     }
 
-    public function customer_update(Request $request)
+    public function customer_update(UpdateWarehouseOrderCustomerRequest $request)
     {
-        $order = Order::findOrFail($request->order_id);
-        $customer = StoreUser::findOrFail($request->customer_id);
+        $order = Order::findOrFail($request->integer('order_id'));
+        $customer = StoreUser::findOrFail($request->integer('customer_id'));
 
-        if (isset($order)) {
-            if ($order->by_rep) {
-                $order->for_customer = $request->customer_id;
-                $order->member_serial = $customer->member_serial;
-            } else {
-                $order->user_id = $request->customer_id;
-            }
-            $order->save();
+        if ($customer->user_type !== 'customer') {
+            return response()->json([
+                'result' => false,
+                'message' => 'The user is not a customer',
+                'status' => 422
+            ], 422);
         }
+
+        $previous = ['user_id' => $order->user_id, 'for_customer' => $order->for_customer];
+
+        if ($order->by_rep) {
+            $order->for_customer = $customer->id;
+            $order->member_serial = $customer->member_serial;
+        } else {
+            $order->user_id = $customer->id;
+        }
+        $order->save();
+
+        Log::info('warehouse.order.customer_updated', [
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'by_rep' => $order->by_rep,
+            'previous' => $previous,
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'result' => true,
+            'message' => 'Order customer updated successfully',
+            'status' => 200
+        ]);
     }
 }

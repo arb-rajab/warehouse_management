@@ -278,6 +278,7 @@ class StagingRealisticDataSeeder extends Seeder
         }
 
         $this->seedCellDeactivations(array_slice($placed, 30, 10), $deactivatedEmptyCells, $reactivatedCells);
+        $this->seedProductCorrections(array_slice($placed, 40, 3));
         $this->seedLowStockThresholds();
         $this->seedVerificationRounds();
     }
@@ -481,6 +482,23 @@ class StagingRealisticDataSeeder extends Seeder
 
             $this->saveLog($cell, CellLogAction::Deactivated, CellState::Empty, CellState::Empty, null, null, null, $this->admin, $deactivatedAt);
             $this->saveLog($cell, CellLogAction::Reactivated, CellState::Empty, CellState::Empty, null, null, null, $this->admin, $this->timeAfter($deactivatedAt));
+        }
+    }
+
+    /**
+     * Record an admin's product correction on a few stored pallets (the
+     * `product_changed` log action). The pallets already hold the product the
+     * log names, so this only adds the history entry PalletActionService::update()
+     * would have written, without changing what is on the shelf.
+     *
+     * @param  list<array{cell: Cell, pallet: Pallet, product: Product, last_at: CarbonInterface}>  $occupied
+     */
+    private function seedProductCorrections(array $occupied): void
+    {
+        foreach ($occupied as $placed) {
+            $cell = Cell::query()->select(['id', 'state'])->findOrFail($placed['cell']->id);
+
+            $this->saveLog($cell, CellLogAction::ProductChanged, $cell->state, $cell->state, $placed['product'], $placed['pallet'], $placed['pallet']->remaining_boxes, $this->admin, $this->timeAfter($placed['last_at']));
         }
     }
 
