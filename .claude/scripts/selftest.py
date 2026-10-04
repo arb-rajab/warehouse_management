@@ -243,6 +243,31 @@ def main() -> int:
         ])
         check('files Pint skips are not held to its style', kept == ['app/Services/HtmlSanitizer.php'], str(kept))
 
+        print('install_dev_tools.py')
+        import install_dev_tools
+
+        lock = {
+            'packages-dev': [
+                {'name': 'laravel/pint', 'source': {'type': 'git'}, 'dist': {'type': 'zip', 'reference': 'aaa'}},
+                {'name': 'phpstan/phpstan', 'source': {'type': 'git'}, 'dist': {'type': 'zip', 'reference': 'bbb'}},
+            ],
+        }
+        patched = install_dev_tools.patch_lock(lock, '/tmp/phpstan-src')
+        phpstan, pint = patched['packages-dev'][1], patched['packages-dev'][0]
+        check(
+            'phpstan dist becomes a path to the clone at the locked reference',
+            phpstan['dist'] == {'type': 'path', 'url': '/tmp/phpstan-src', 'reference': 'bbb'},
+            str(phpstan),
+        )
+        check('phpstan source is dropped', 'source' not in phpstan, str(phpstan))
+        check('other packages keep their git source and zip dist', pint['source'] == {'type': 'git'} and pint['dist']['type'] == 'zip', str(pint))
+
+        try:
+            install_dev_tools.patch_lock({'packages-dev': [pint]}, '/tmp/phpstan-src')
+            check('lock without phpstan is refused', False)
+        except SystemExit as error:
+            check('lock without phpstan is refused', 'not in composer.lock' in str(error), str(error))
+
     print()
     if failures:
         print(f'{len(failures)} case(s) failed: {", ".join(failures)}')
