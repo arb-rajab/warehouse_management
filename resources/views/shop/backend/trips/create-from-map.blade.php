@@ -38,7 +38,7 @@
                             <img src="{{ get_images_path($truck->photos)[0] ?? static_asset("assets/img/default_truck.png") }}" class="card-img-top" alt="{{ $truck->name }}" width="150" height="150">
                             <div class="card-body">
                                 <h5 class="card-title">{{ $truck->name }}</h5>
-                                <p class="card-body">{{ __('Max Pallets Number') . ':' . $truck->max_pallets_number }}</p>
+                                <p class="card-body">{{ translate('Max Pallets Number') . ':' . $truck->max_pallets_number }}</p>
                                 {{-- <p class="card-text">{{ $truck->description }}</p> --}}
                                 <div class="row justify-content-center align-items-center mt-3">
                                     <div class="col-auto">
@@ -65,7 +65,7 @@
                 </div>
 
                 {{-- <div class="mt-2 row">
-                    <h6>{{ __("Unavailable trucks") }}:</h6>
+                    <h6>{{ translate("Unavailable trucks") }}:</h6>
             </div> --}}
             <div class="mt-2 row">
                 @forelse ($unavailable_trucks as $truck)
@@ -74,7 +74,7 @@
                         <img
                             src="{{ get_images_path($truck->photos)[0] ?? static_asset('assets/img/default_truck.png') }}"
                             class="card-img-top img-fluid aspect-ratio-1x1"
-                            alt="{{ __('Truck image of') }} {{ $truck->name }}"
+                            alt="{{ translate('Truck image of') }} {{ $truck->name }}"
                             loading="lazy">
                         <div class="card-body d-flex flex-column">
                             <a href="{{ route('trips.show', $truck->lastTrip()->id) }}">
@@ -94,7 +94,7 @@
                                     @endphp
 
                                     <li class="mb-2">
-                                        <div class="text-secondary small">{{ __('Next Stop') }}</div>
+                                        <div class="text-secondary small">{{ translate('Next Stop') }}</div>
                                         <strong class="d-block">
                                             @if($customer)
                                                 <a href="{{ route('customers.edit', $customer->id) }}">
@@ -108,7 +108,7 @@
                                 @endforeach
 
                                 <div class="text-secondary small fs-2">
-                                    {{ __('Checkpoints Count') }} : {{ $trip->checkpoints->count() }}
+                                    {{ translate('Checkpoints Count') }} : {{ $trip->checkpoints->count() }}
                                 </div>
                             @endforeach
 
@@ -116,7 +116,7 @@
                             </ul>
                             @else
                             <div class="text-muted small">
-                                {{ __('No current trip information') }}
+                                {{ translate('No current trip information') }}
                             </div>
                             @endif
                             <div class="row justify-content-center align-items-center mt-3">
@@ -150,7 +150,7 @@
                 @endforelse
             </div>
 
-            {{-- <button type="button" id="add-markers-to-truck" class="btn btn-success">{{ __("Add Selected Markers to Truck") }}</button> --}}
+            {{-- <button type="button" id="add-markers-to-truck" class="btn btn-success">{{ translate("Add Selected Markers to Truck") }}</button> --}}
         </div>
     </div>
 </div>

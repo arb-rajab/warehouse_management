@@ -54,7 +54,7 @@
                         @include('shop.frontend.product_details.description')
                         @if ($detailedProduct->barcodes->count() > 0)
                             <div class="bg-white mb-4 border p-3 p-sm-4">
-                                <p class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('Barcodes') }}</p>
+                                <p class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Barcodes') }}</p>
                                     @foreach ($detailedProduct->barcodes as $barcode)
                                         @php
                                             $englishBarcode = ar_barcode_to_en($barcode->barcode);

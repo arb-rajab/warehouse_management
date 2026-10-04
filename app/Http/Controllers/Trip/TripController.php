@@ -664,7 +664,7 @@ class TripController extends Controller
             "id" => "0",
             "checkpoint_type" => "other",
             "checkpoint_related_id" => 9,
-            "checkpoint_notes" => __('Default starting checkpoint'),
+            "checkpoint_notes" => translate('Default starting checkpoint'),
         ];
 
         $default_starting_checkpoint_user = StoreUser::find(9);

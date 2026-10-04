@@ -43,6 +43,22 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     protected string $guard_name = 'store';
 
     /**
+     * The `user_type` values that are the store's back-office staff: the admin
+     * panel's gate (IsAdmin) and the isAdmin() helper both read this list.
+     *
+     * @var list<string>
+     */
+    public const ADMIN_USER_TYPES = ['admin', 'staff', 'accountant'];
+
+    /**
+     * Whether this account is back-office staff (admin, staff or accountant).
+     */
+    public function hasAdminAccess(): bool
+    {
+        return in_array($this->user_type, self::ADMIN_USER_TYPES, true);
+    }
+
+    /**
      * Get the default foreign key name for the model.
      *
      * Eloquent derives it from the class name, so the same rename turned

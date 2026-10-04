@@ -1101,7 +1101,11 @@ if (!function_exists('getFileBaseURL')) {
         if (config('filesystems.default') == 's3') {
             return config('filesystems.disks.s3.url') . '/';
         } else {
-            return getBaseURL() . 'public/';
+            // No 'public/' suffix, for the same reason as my_asset(): public/
+            // is the document root. aiz-core.js appends the relative
+            // `uploads/...` file_name that all_file() returns, so it must land
+            // on the same URL my_asset() builds.
+            return my_asset('');
         }
     }
 }
@@ -1201,10 +1205,9 @@ function hex2rgba($color, $opacity = false)
 if (!function_exists('isAdmin')) {
     function isAdmin()
     {
-        if (Auth::check() && (Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff' || Auth::user()->user_type == 'accountant')) {
-            return true;
-        }
-        return false;
+        $user = Auth::user();
+
+        return $user instanceof StoreUser && $user->hasAdminAccess();
     }
 }
 

@@ -101,3 +101,22 @@ test('the legacy login page loads its bundles from public/assets and none of the
     $response->assertDontSee('/build/assets/', false);
     expect($response->headers->has('X-Inertia'))->toBeFalse();
 });
+
+test('getFileBaseURL() serves uploads from the document root, without public/', function () {
+    config(['filesystems.default' => 'local']);
+
+    $url = getFileBaseURL();
+
+    // aiz-core.js appends the relative file_name that all_file() returns, so
+    // the result must be the same URL my_asset() gives the uploaded file.
+    expect($url)
+        ->not->toContain('public')
+        ->toEndWith('/')
+        ->and($url.'uploads/all/a.png')->toBe(my_asset('uploads/all/a.png'));
+});
+
+test('getFileBaseURL() uses the S3 bucket url on the s3 disk', function () {
+    config(['filesystems.default' => 's3', 'filesystems.disks.s3.url' => 'https://bucket.example.com']);
+
+    expect(getFileBaseURL())->toBe('https://bucket.example.com/');
+});
