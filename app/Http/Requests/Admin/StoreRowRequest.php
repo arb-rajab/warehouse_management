@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\NormalizesRowLetter;
 use App\Models\Row;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateRowRequest extends FormRequest
+class StoreRowRequest extends FormRequest
 {
     use NormalizesRowLetter;
 
@@ -18,11 +18,8 @@ class UpdateRowRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var Row $row */
-        $row = $this->route('row');
-
         return [
-            'letter' => ['required', 'string', 'max:2', 'unique:rows,letter,'.$row->id],
+            'letter' => ['required', 'string', 'max:2', 'unique:rows,letter'],
             'cells_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
             'flats_count' => ['required', 'integer', 'min:1', 'max:'.Row::MAX_DIMENSION],
         ];

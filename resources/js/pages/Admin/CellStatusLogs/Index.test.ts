@@ -71,7 +71,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) => button.text().includes(t('cellLog.filters.title')));
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -132,7 +132,7 @@ describe('CellStatusLogs Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellLog.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-product').exists()).toBe(true);
     });
@@ -157,7 +157,7 @@ describe('CellStatusLogs Index', () => {
         const applyButton = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -172,7 +172,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -187,7 +187,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -663,7 +663,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('1');
     });
@@ -969,7 +969,7 @@ describe('CellStatusLogs Index', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 

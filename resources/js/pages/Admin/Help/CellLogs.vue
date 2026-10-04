@@ -154,12 +154,12 @@ const previewLogs = [
                     :class="filterTriggerButtonClass"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellLog.filters.title') }}
+                    {{ t('common.filters.title') }}
                 </button>
             </HelpUiPreview>
             <HelpUiPreview inert class="mt-2 block">
                 <p class="mb-3 text-lg font-semibold">
-                    {{ t('cellLog.filters.title') }}
+                    {{ t('common.filters.title') }}
                 </p>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FilterProductSelect

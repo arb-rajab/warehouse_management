@@ -24,6 +24,13 @@
     "common": {
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
         "cancel": "إلغاء",
+        "close": "إغلاق",
+        "filters": {
+            "title": "الفلاتر",
+            "apply": "تطبيق الفلاتر",
+            "clear": "مسح",
+            "close": "إغلاق الفلاتر"
+        },
         "filteredColumn": "متأثر بفلتر نشط",
         "pagination": {
             "perPage": "لكل صفحة"
@@ -163,8 +170,6 @@
     "cellLog": {
         "title": "سجل الخلايا",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "location": "الموقع",
                 "activity": "النشاط",
@@ -184,8 +189,6 @@
             "expirationTo": "تاريخ الانتهاء إلى",
             "expiresWithinDays": "تنتهي خلال (أيام)",
             "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح",
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
@@ -237,8 +240,6 @@
     "cellVerificationRound": {
         "title": "جولات التحقق من الخلايا",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "user": "العامل",
             "completed": "الحالة",
             "completedAll": "الكل",
@@ -248,9 +249,7 @@
             "from": "من",
             "to": "إلى",
             "withinDays": "خلال آخر (أيام)",
-            "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح"
+            "all": "الكل"
         },
         "columns": {
             "id": "الجولة",
@@ -266,6 +265,7 @@
         },
         "empty": "لا توجد جولات تحقق بعد.",
         "show": {
+            "title": "جولة التحقق #{id}",
             "backToList": "العودة إلى الجولات",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
@@ -277,8 +277,6 @@
         "title": "التقارير",
         "export": "تصدير CSV",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "location": "الموقع",
                 "activity": "النشاط",
@@ -296,8 +294,6 @@
             "to": "إلى",
             "withinDays": "خلال آخر (أيام)",
             "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح",
             "searchPlaceholder": "ابحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات."
@@ -508,8 +504,6 @@
             "placeholder": "ابحث عن منتج…"
         },
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "occupancy": "الإشغال"
             },

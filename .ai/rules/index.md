@@ -5,7 +5,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Applies to | Rule file |
 | --- | --- |
 | app/Http/Requests/Concerns/FiltersCellStatusLogs.php,app/Models/CellStatusLog.php,resources/js/pages/Admin/CellStatusLogs/Index.vue | .ai/rules/admin-cell-status-logs.md |
-| app/Http/Controllers/Admin/RowController.php,app/Http/Requests/UpdateRowRequest.php | .ai/rules/admin-http-requests.md |
+| app/Http/Controllers/Admin/RowController.php,app/Http/Requests/Admin/UpdateRowRequest.php | .ai/rules/admin-http-requests.md |
 | resources/js/pages/Admin/Products/Index.vue | .ai/rules/admin-products.md |
 | resources/js/pages/Admin/** | .ai/rules/admin.md |
 | app/Providers/TelescopeServiceProvider.php, app/Providers/AppServiceProvider.php,bootstrap/app.php,routes/web.php,routes/api.php | .ai/rules/app-providers.md |
@@ -31,7 +31,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | composer.json,composer.lock,package.json,package-lock.json,.github/dependabot.yml | .ai/rules/dependencies.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php,app/Http/Controllers/Admin/ProductController.php | .ai/rules/http-controllers-admin.md |
-| app/Http/Requests/StoreRowRequest.php,app/Http/Requests/UpdateRowRequest.php | .ai/rules/http-requests.md |
+| app/Http/Requests/Admin/StoreRowRequest.php,app/Http/Requests/Admin/UpdateRowRequest.php | .ai/rules/http-requests.md |
 | resources/js/components/CellMap3D.vue,resources/js/lib/mapWalker.ts | .ai/rules/js-components-js-lib.md |
 | resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue, resources/js/components/CellMap3D.test.ts, resources/js/components/CellMap3D.vue, resources/js/components/DataTable.vue | .ai/rules/js-components.md |
 | resources/js/pages/Admin/Cells/Index.vue,resources/js/lib/mapViewport.ts | .ai/rules/js-lib.md |
@@ -56,7 +56,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Concerns/NormalizesBooleanFilters.php, app/Http/Requests/Concerns/NormalizesExpiredFilter.php, app/Http/Requests/Concerns/FiltersCellStatusLogs.php | .ai/rules/requests-concerns.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/**, app/Http/Resources/RowResource.php | .ai/rules/resources.md |
-| routes/web.php, routes/api.php, routes/console.php | .ai/rules/routes.md |
+| routes/web.php, routes/api.php, routes/console.php, routes/shop-*.php | .ai/rules/routes.md |
 | app/Http/Controllers/Admin/RowController.php,resources/js/pages/Admin/Rows/Index.vue,resources/js/components/ActionErrorBanner.vue | .ai/rules/rows-js-components.md |
 | database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |

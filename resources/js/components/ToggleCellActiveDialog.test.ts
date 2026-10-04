@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import FilterDialog from '@/components/FilterDialog.vue';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
 import SubmitButton from './SubmitButton.vue';
@@ -56,6 +57,15 @@ async function mountDialog(
 describe('ToggleCellActiveDialog', () => {
     beforeEach(() => {
         routerPostMock.mockReset();
+    });
+
+    it('labels its close button with the shared action-dialog close text', async () => {
+        const wrapper = await mountDialog();
+
+        expect(t('common.close')).toBe('Close');
+        expect(wrapper.findComponent(FilterDialog).props('closeLabel')).toBe(
+            t('common.close'),
+        );
     });
 
     it('shows the deactivate title/confirm/submit text for an active cell', async () => {

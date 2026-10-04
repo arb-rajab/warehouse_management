@@ -112,7 +112,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) => button.text().includes(t('products.filters.title')));
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -324,7 +324,7 @@ describe('Products Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('products.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-product').exists()).toBe(true);
     });
@@ -347,7 +347,7 @@ describe('Products Index', () => {
         const applyButton = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -362,7 +362,7 @@ describe('Products Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('products.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -377,7 +377,7 @@ describe('Products Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('products.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -1007,7 +1007,7 @@ describe('Products Index', () => {
             expect(wrapper.find('[role="alert"]').exists()).toBe(true);
 
             await wrapper
-                .get(`[aria-label="${t('cellLog.filters.close')}"]`)
+                .get(`[aria-label="${t('common.close')}"]`)
                 .trigger('click');
             await rowCells(wrapper)[1].get('button').trigger('click');
 
@@ -1020,11 +1020,11 @@ describe('Products Index', () => {
 
         await openFilters(wrapper);
 
-        expect(t('products.filters.title')).toBe('Filters');
-        expect(wrapper.text()).toContain(t('products.filters.title'));
+        expect(t('common.filters.title')).toBe('Filters');
+        expect(wrapper.text()).toContain(t('common.filters.title'));
         expect(
             wrapper
-                .find(`[aria-label="${t('products.filters.close')}"]`)
+                .find(`[aria-label="${t('common.filters.close')}"]`)
                 .exists(),
         ).toBe(true);
     });
@@ -1428,7 +1428,7 @@ describe('Products Index', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 

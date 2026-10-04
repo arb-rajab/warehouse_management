@@ -66,7 +66,7 @@ test('a warehouse-wide round claims every row, leaving none for a second round',
     $this->postJson('/api/v1/cell-verification-rounds')->assertCreated();
 
     $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$rowB->id]])
-        ->assertStatus(409)
+        ->assertConflict()
         ->assertJsonPath('error_code', 'rows_already_in_active_round');
 
     $this->assertDatabaseCount('cell_verification_rounds', 1);
@@ -82,7 +82,7 @@ test('a warehouse-wide round is refused while any single row is already claimed'
 
     $response = $this->postJson('/api/v1/cell-verification-rounds');
 
-    $response->assertStatus(409);
+    $response->assertConflict();
     expect($response->json('message'))->toContain('B');
     $this->assertDatabaseCount('cell_verification_rounds', 1);
 });
@@ -115,7 +115,7 @@ test('starting a round is refused when an unfinished round already covers one of
         'row_ids' => [$shared->id, $free->id],
     ]);
 
-    $response->assertStatus(409);
+    $response->assertConflict();
     expect($response->json('error_code'))->toBe('rows_already_in_active_round');
     expect($response->json('message'))->toContain('A');
 

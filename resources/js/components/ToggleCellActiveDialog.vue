@@ -83,7 +83,7 @@ function submit(): void {
     <FilterDialog
         v-model:open="open"
         :title="title"
-        :close-label="t('cellLog.filters.close')"
+        :close-label="t('common.close')"
     >
         <form class="space-y-4" @submit.prevent="submit">
             <p class="text-sm text-gray-600 dark:text-neutral-300">

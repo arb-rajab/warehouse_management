@@ -1,4 +1,4 @@
-import { i18n } from './i18n';
+import { i18n } from '@/lib/i18n';
 
 /**
  * The product label to render for the app's current locale: the store's

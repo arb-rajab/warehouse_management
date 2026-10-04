@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
+import PageHeader from '@/components/PageHeader.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { t } from '@/lib/i18n';
-import SubmitButton from './SubmitButton.vue';
 
 withDefaults(
     defineProps<{
@@ -32,10 +33,9 @@ withDefaults(
     <Head :title="title" />
 
     <AdminLayout>
-        <div class="mb-6 flex items-center justify-between">
-            <h1 class="text-xl font-semibold">{{ title }}</h1>
+        <PageHeader :title="title">
             <slot name="header-actions" />
-        </div>
+        </PageHeader>
 
         <div class="max-w-sm">
             <Form

@@ -24,6 +24,13 @@
     "common": {
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
+        "close": "Close",
+        "filters": {
+            "title": "Filters",
+            "apply": "Apply filters",
+            "clear": "Clear",
+            "close": "Close filters"
+        },
         "filteredColumn": "Affected by an active filter",
         "pagination": {
             "perPage": "Per page"
@@ -163,8 +170,6 @@
     "cellLog": {
         "title": "Cell Log",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "location": "Location",
                 "activity": "Activity",
@@ -184,8 +189,6 @@
             "expirationTo": "Expires to",
             "expiresWithinDays": "Expires within (days)",
             "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear",
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found.",
@@ -237,8 +240,6 @@
     "cellVerificationRound": {
         "title": "Cell Verification Rounds",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "user": "Worker",
             "completed": "Status",
             "completedAll": "All",
@@ -248,9 +249,7 @@
             "from": "From",
             "to": "To",
             "withinDays": "Within last (days)",
-            "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear"
+            "all": "All"
         },
         "columns": {
             "id": "Round",
@@ -266,6 +265,7 @@
         },
         "empty": "No verification rounds yet.",
         "show": {
+            "title": "Verification round #{id}",
             "backToList": "Back to rounds",
             "startedAt": "Started",
             "completedAt": "Completed",
@@ -277,8 +277,6 @@
         "title": "Reports",
         "export": "Export CSV",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "location": "Location",
                 "activity": "Activity",
@@ -296,8 +294,6 @@
             "to": "To",
             "withinDays": "Within last (days)",
             "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear",
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found."
@@ -508,8 +504,6 @@
             "placeholder": "Find a product…"
         },
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "occupancy": "Occupancy"
             },

@@ -2,6 +2,7 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import PageHeader from '@/components/PageHeader.vue';
 import ResourceFormPage from './ResourceFormPage.vue';
 import SubmitButton from './SubmitButton.vue';
 
@@ -52,6 +53,9 @@ describe('ResourceFormPage', () => {
     it('renders the title as the page heading', () => {
         const wrapper = mountPage();
 
+        expect(wrapper.findComponent(PageHeader).props('title')).toBe(
+            'Add row',
+        );
         expect(wrapper.get('h1').text()).toBe('Add row');
     });
 

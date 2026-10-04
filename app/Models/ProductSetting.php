@@ -6,6 +6,7 @@ use App\Observers\ProductSettingObserver;
 use Database\Factories\ProductSettingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,16 +23,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable(['product_id', 'boxes_count', 'minimum_pallets'])]
 #[ObservedBy(ProductSettingObserver::class)]
+#[Table('wms_product_settings', key: 'product_id', incrementing: false)]
 class ProductSetting extends Model
 {
     /** @use HasFactory<ProductSettingFactory> */
     use HasFactory;
-
-    protected $table = 'wms_product_settings';
-
-    protected $primaryKey = 'product_id';
-
-    public $incrementing = false;
 
     /**
      * @return BelongsTo<Product, $this>

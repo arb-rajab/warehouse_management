@@ -231,7 +231,7 @@ const submitLabel = computed(() => {
     <FilterDialog
         v-model:open="open"
         :title="t('cells.palletActions.title', { location: label })"
-        :close-label="t('cellLog.filters.close')"
+        :close-label="t('common.close')"
     >
         <div
             v-if="cell?.pallet"

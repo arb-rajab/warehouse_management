@@ -121,7 +121,7 @@ describe('CellHighlightFilters', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 

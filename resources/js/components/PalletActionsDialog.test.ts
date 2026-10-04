@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import FilterDialog from '@/components/FilterDialog.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
+import { t } from '@/lib/i18n';
 import type { CellMapRow, CellWithLocation } from '@/types/admin';
 import PalletActionsDialog from './PalletActionsDialog.vue';
 import SubmitButton from './SubmitButton.vue';
@@ -119,6 +121,15 @@ describe('PalletActionsDialog', () => {
     beforeEach(() => {
         routerPostMock.mockReset();
         routerPutMock.mockReset();
+    });
+
+    it('labels its close button with the shared action-dialog close text', async () => {
+        const wrapper = await mountDialog(openedCell(6));
+
+        expect(t('common.close')).toBe('Close');
+        expect(wrapper.findComponent(FilterDialog).props('closeLabel')).toBe(
+            t('common.close'),
+        );
     });
 
     it('does not offer the confirm-empty checkbox while boxes_count is below remaining_boxes', async () => {

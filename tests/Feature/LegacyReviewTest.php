@@ -36,7 +36,7 @@ test('the app accepts a review from a customer who received the product, once, w
 
     foreach ([0, 6, 100000, 'five', null] as $bad) {
         app('auth')->forgetGuards();
-        $submit(['rating' => $bad])->assertStatus(422);
+        $submit(['rating' => $bad])->assertUnprocessable();
     }
     expect(Review::count())->toBe(0);
 

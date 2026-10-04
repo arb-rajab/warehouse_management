@@ -1741,3 +1741,13 @@ and 5). Each item says where its answer comes from.
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
   `api/v2/delivery-boy/*` routes instead of keeping them guarded.
+
+## 8. One name for the merged half: "store"
+
+The merged code currently goes by three names: "shop" (the `routes/shop-*.php` files, `resources/views/shop/`, the `shop.*` route names), "store" (the `store`/`store_api` guards, `config/store.php`, `StoreUser`, `UseStoreAuthGuard`, `Store*Test`) and "Legacy" (the `Legacy*Test` files). **New code says "store"**, the term this file, the guards and the config already use. Don't introduce a new `shop`/`Shop` or `Legacy` name for store code. The existing `shop` paths are renamed with the route and view move in phase 6 (§5 and §6.4: `routes/store/*.php`, `resources/views/store/`). The `Legacy*Test` files are regrouped in phase 8. Neither is renamed piecemeal before then. `shop.` as the seller-shop route prefix (`shop.visit`, `shop.index`) is a domain word, not the app's name, and stays.
+
+The other seams between the two halves stay as they are until their phase:
+- the inline `validate()` calls in store controllers and the Blade storefront (owner decision, §5);
+- the `Setting`/`BusinessSetting` and `ProductBarcode`/`StoreProductBarcode` duplicates (phase 5);
+- the three image pipelines and `uploaded_asset()` vs `Upload::url` (phases 2 and 6);
+- the generic middleware aliases `admin`/`seller`/`customer` in `bootstrap/app.php` (phase 6).

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ShowRowRequest;
-use App\Http\Requests\StoreRowRequest;
-use App\Http\Requests\UpdateRowRequest;
+use App\Http\Requests\Admin\ShowRowRequest;
+use App\Http\Requests\Admin\StoreRowRequest;
+use App\Http\Requests\Admin\UpdateRowRequest;
 use App\Http\Resources\CellResource;
 use App\Http\Resources\RowResource;
 use App\Models\Cell;

@@ -179,17 +179,17 @@ const palletActionError = computed(
 </script>
 
 <template>
-    <Head :title="t('rows.show.title', { letter: props.row.letter })" />
+    <Head :title="t('rows.show.title', { letter: row.letter })" />
 
     <AdminLayout>
-        <PageHeader :title="t('rows.show.title', { letter: props.row.letter })">
+        <PageHeader :title="t('rows.show.title', { letter: row.letter })">
             <div class="flex items-center gap-4">
                 <CellHighlightFilters
                     :model-value="highlightFilters"
                     :products="filterOptions.products"
                 />
                 <Link
-                    :href="edit(props.row)"
+                    :href="edit(row)"
                     class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
                 >
                     <Pencil class="h-3.5 w-3.5" />

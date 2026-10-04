@@ -149,7 +149,7 @@ test('the signed-in account is held to the resend cooldown too', function () {
     $token = storeApiToken($user);
 
     $this->withToken($token)->getJson('/temp/api/v2/auth/resend_code')->assertOk()->assertJsonPath('result', true);
-    $this->withToken($token)->getJson('/temp/api/v2/auth/resend_code')->assertStatus(429)->assertJsonPath('result', false);
+    $this->withToken($token)->getJson('/temp/api/v2/auth/resend_code')->assertTooManyRequests()->assertJsonPath('result', false);
 
     Notification::assertSentTimes(AppEmailVerificationNotification::class, 1);
 

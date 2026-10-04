@@ -6,7 +6,7 @@ test('an api request with an Arabic Accept-Language header gets an Arabic valida
     $response = $this->withHeaders(['Accept-Language' => 'ar'])
         ->postJson('/api/v1/pallets', []);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     expect($response->json('errors.product_id.0'))->toContain('مطلوب');
 });
 
@@ -19,7 +19,7 @@ test('an api request with an unsupported Accept-Language header falls back to th
     $response = $this->withHeaders(['Accept-Language' => 'fr'])
         ->postJson('/api/v1/pallets', []);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     expect($response->json('errors.product_id.0'))->toBe('The product id field is required.');
 });
 
@@ -28,6 +28,6 @@ test('an api request without an Arabic Accept-Language header gets the english v
 
     $response = $this->postJson('/api/v1/pallets', []);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     expect($response->json('errors.product_id.0'))->toBe('The product id field is required.');
 });

@@ -382,7 +382,7 @@ class ProductController extends Controller
     private function occupancyFiltersActive(Request $request): bool
     {
         return $request->filled('state')
-            || $request->filled('expired')
+            || $request->boolean('expired')
             || $request->filled('expires_within_days');
     }
 
@@ -404,7 +404,7 @@ class ProductController extends Controller
         return Pallet::query()
             ->selectRaw('1')
             ->whereColumn('pallets.product_id', 'products.id')
-            ->when($request->filled('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
+            ->when($request->boolean('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
             ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
             ->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $this->applyOccupancyCellFilters($cellQuery, $request);
@@ -448,7 +448,7 @@ class ProductController extends Controller
         return Pallet::query()
             ->selectRaw('count(*)')
             ->whereColumn('pallets.product_id', 'products.id')
-            ->when($request->filled('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
+            ->when($request->boolean('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
             ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
             ->when($extraPalletConstraint !== null, fn (Builder $query) => $extraPalletConstraint($query))
             ->whereHas('cell', function (Builder $cellQuery) use ($request, $forcedState) {

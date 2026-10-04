@@ -205,7 +205,7 @@ test('a worker cannot report against an already-completed round', function () {
         'is_correct' => true,
     ]);
 
-    $response->assertStatus(409);
+    $response->assertConflict();
     $response->assertJson(['error_code' => 'verification_round_completed']);
     $this->assertDatabaseCount('cell_verification_reports', 0);
 });
@@ -224,7 +224,7 @@ test('a worker cannot report a cell in a row their round does not cover', functi
         'is_correct' => true,
     ]);
 
-    $response->assertStatus(409);
+    $response->assertConflict();
     $response->assertJson(['error_code' => 'cell_outside_round_rows']);
     $this->assertDatabaseCount('cell_verification_reports', 0);
 

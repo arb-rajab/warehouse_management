@@ -96,3 +96,15 @@ An explicit `role="X"` attribute replaces an element's implicit role entirely �
 
 ## filterApplyButtonClass is the shared Apply-button class
 lib/filters.ts's filterApplyButtonClass (bg-gray-900/white pill with a Check icon) is the single definition for a filter-dialog's submit/Apply button — shared by CellStatusLogs/Index.vue and Dashboard/Index.vue's custom-expiring-days dialog (extracted once the second call site appeared). Don't retype the class string. Also: filterTriggerButtonClass and FilterNumberField (previously shared only by CellHighlightFilters.vue/CellStatusLogs/Index.vue) now have a third user — Dashboard/Index.vue's custom-expiring-days field moved from a bare `@change`-wired number input into a FilterDialog + FilterNumberField + Apply-button flow, so a spinner click no longer fires a request that a subsequent click immediately cancels; see dashboard.md for the full rationale.
+
+## Shared dialog and filter labels live under `common`
+- A filter dialog's title/apply/clear/close text is `common.filters.title|apply|clear|close`.
+- An action dialog (toggle-active, pallet actions, the products page's box-count/minimum-pallets/barcode dialogs) closes with `common.close`.
+- Don't add a per-page `x.filters.close`/`apply`/`clear`/`title` copy, and don't borrow another page's key (`cellLog.filters.close` used to label every dialog in the app, filters or not).
+- Build a title with a parameterised key (`t('cellVerificationRound.show.title', { id })`), not by concatenating a translation with other text.
+
+## One way to write the small things
+- Import app code through the `@/` alias, siblings included (`@/components/FormField.vue`, `@/lib/i18n`), never `./`. Test files importing the component under test are the exception.
+- Emit through `const emit = defineEmits<…>()` and call `emit()` in the template, not `$emit`.
+- Templates use bare prop names, not `props.x`. Keep `const props =` only when the script reads it.
+- Reuse the `lib/filters.ts` class constants (`plainFieldInputClass`, `filterTriggerButtonClass`, …) and `PageHeader.vue` rather than retyping their markup.

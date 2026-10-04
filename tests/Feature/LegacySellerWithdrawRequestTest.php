@@ -114,7 +114,7 @@ test('a customer cannot use the seller panel withdraw form', function () {
 test('the admin panel has no endpoint that creates a withdraw request', function () {
     actingAsStoreUser(createStoreAdmin());
 
-    $this->post('/temp/admin/withdraw_requests', ['amount' => 10])->assertStatus(405);
+    $this->post('/temp/admin/withdraw_requests', ['amount' => 10])->assertMethodNotAllowed();
 
     expect(withdrawRequestCount())->toBe(0);
 });

@@ -61,7 +61,7 @@ function clear(): void {
         <FilterDialog
             v-model:open="open"
             :title="t('rows.show.highlight.button')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.filters.close')"
         >
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FilterMultiSelect
@@ -124,7 +124,7 @@ function clear(): void {
                         @click="clear"
                     >
                         <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.clear') }}
+                        {{ t('common.filters.clear') }}
                     </button>
                 </div>
             </template>
