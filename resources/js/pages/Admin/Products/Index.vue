@@ -6,10 +6,10 @@ import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
-    addBarcode,
+    destroyBarcode,
     exportQr,
     index as productsIndex,
-    removeBarcode,
+    storeBarcode,
     updateBoxCount,
     updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -291,7 +291,7 @@ function submitBoxCount(): void {
         return;
     }
 
-    router.patch(
+    router.put(
         updateBoxCount(product.id, { mergeQuery: {} }).url,
         { boxes_count: boxesCount },
         mutationOptions(() => {
@@ -351,7 +351,7 @@ function submitMinimumPallets(): void {
         return;
     }
 
-    router.patch(
+    router.put(
         updateMinimumPallets(product.id, { mergeQuery: {} }).url,
         { minimum_pallets: minimumPallets },
         mutationOptions(() => {
@@ -409,7 +409,7 @@ function submitNewBarcode(): void {
     }
 
     router.post(
-        addBarcode(product.id, { mergeQuery: {} }).url,
+        storeBarcode(product.id, { mergeQuery: {} }).url,
         { barcode },
         mutationOptions(() => {
             newBarcodeDraft.value = '';
@@ -426,7 +426,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
     }
 
     router.delete(
-        removeBarcode.url(
+        destroyBarcode.url(
             { product: product.id, barcode: barcode.id },
             { mergeQuery: {} },
         ),

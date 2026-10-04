@@ -93,7 +93,7 @@ class CellController extends Controller
         ]);
     }
 
-    public function exportQr(Cell $cell): HttpResponse
+    public function exportQrCode(Cell $cell): HttpResponse
     {
         $cell->loadMissing('row:id,letter,flats_count');
         $setting = Setting::current();

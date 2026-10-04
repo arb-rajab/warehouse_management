@@ -224,6 +224,13 @@ test('the cell log listing paginates instead of returning everything at once', f
     assertJsonListingPaginates($response, total: 25);
 });
 
+test('the cell log listing keeps the caller\'s query string on its pagination links', function () {
+    actingAsMobileUser();
+    $this->seedPaginationOverflowFixture(perPage: 20);
+
+    assertNextLinkKeepsQuery($this->getJson('/api/v1/cell-logs?client=mobile'), 'client=mobile');
+});
+
 test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {
     actingAsMobileUser();
     $pallet = Pallet::factory()->create();

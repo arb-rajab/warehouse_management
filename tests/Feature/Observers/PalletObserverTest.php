@@ -99,7 +99,7 @@ test('updating a pallet via the real admin edit endpoint invalidates the dashboa
         fn (Assert $page) => $page->where('stats.expiring.windows.0.count', 0)
     );
 
-    $this->put("/admin/pallets/{$pallet->id}/update", [
+    $this->put("/admin/pallets/{$pallet->id}", [
         'product_id' => $product->id,
         'expiration_date' => '2026-08-20',
         'remaining_boxes' => 5,

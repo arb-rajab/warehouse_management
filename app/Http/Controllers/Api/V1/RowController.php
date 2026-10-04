@@ -19,6 +19,7 @@ class RowController extends Controller
                 ->select(Row::SELECT_COLUMNS)
                 ->withHasPallets()
                 ->paginate(20)
+                ->withQueryString()
         );
     }
 

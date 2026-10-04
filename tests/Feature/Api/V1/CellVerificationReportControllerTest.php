@@ -65,6 +65,7 @@ test('a worker can report a cell as correct against their own round', function (
         'accepted_at' => null,
         'accepted_by' => null,
         'created_at' => $report->created_at->toIso8601String(),
+        'round_completed' => false,
     ]);
 });
 

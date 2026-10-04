@@ -34,19 +34,16 @@ class CellController extends Controller
                 )
                 ->orderedByCoordinates()
                 ->paginate(20)
+                ->withQueryString()
         );
     }
 
-    public function show(ShowCellRequest $request, Row $row, string $cellNumber, string $flatNumber): CellResource
+    /**
+     * `{cell:cell_number}` is resolved together with the URI's `{flatNumber}`
+     * by `Row::resolveChildRouteBinding()` — see there.
+     */
+    public function show(ShowCellRequest $request, Row $row, Cell $cell): CellResource
     {
-        $cell = Cell::query()
-            ->select(Cell::SELECT_COLUMNS)
-            ->atCoordinates($row, (int) $cellNumber, (int) $flatNumber)
-            ->with(Cell::WITH_ROW_AND_CONTENTS)
-            ->first();
-
-        abort_if($cell === null, 404);
-
-        return new CellResource($cell);
+        return new CellResource($cell->load(Cell::WITH_ROW_AND_CONTENTS));
     }
 }

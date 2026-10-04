@@ -86,7 +86,7 @@ test('the dashboard cache is invalidated the moment a minimum pallets threshold 
         fn (Assert $page) => $page->where('stats.low_stock.count', 0)
     );
 
-    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 5]);
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 5]);
 
     $this->get('/admin')->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.low_stock.count', 1)

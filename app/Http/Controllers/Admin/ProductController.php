@@ -156,7 +156,7 @@ class ProductController extends Controller
      * Redirects to `admin.products.index` rather than `back()` — see
      * `updateBoxCount()`'s docblock.
      */
-    public function addBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
     {
         $product->barcodes()->create([
             'barcode' => $request->validated('barcode'),
@@ -171,7 +171,7 @@ class ProductController extends Controller
      * an admin could delete any product's barcode by guessing its id while
      * looking at a different product's row.
      */
-    public function removeBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
+    public function destroyBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
     {
         $barcode->delete();
 
@@ -190,6 +190,7 @@ class ProductController extends Controller
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')
                 ->paginate(20)
+                ->withQueryString()
         ));
     }
 

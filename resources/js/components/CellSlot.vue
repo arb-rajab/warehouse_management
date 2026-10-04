@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Ban, CalendarPlus, CalendarX, QrCode } from '@lucide/vue';
 import { computed } from 'vue';
-import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { exportQrCode } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -138,7 +138,7 @@ function onManagePallet(): void {
 
         <a
             v-if="cell"
-            :href="exportQr.url(cell.id)"
+            :href="exportQrCode.url(cell.id)"
             :title="t('rows.show.reprintQr')"
             class="absolute end-1 top-1"
             @click.stop
