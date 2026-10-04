@@ -55,6 +55,7 @@ class PalletController extends Controller
     }
 
     #[DocumentedResponse(409, description: 'Only a full pallet can be opened (`error_code`: `pallet_not_full`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet\'s level is not one of the levels where opening is allowed (`error_code`: `open_level_not_allowed`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]

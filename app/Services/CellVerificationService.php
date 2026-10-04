@@ -279,7 +279,7 @@ class CellVerificationService
         $pallet ??= $this->palletActions->store($cellId, $productId, $expirationDate, $userId, $note);
 
         if ($reportedState === CellState::Opened && $pallet->state === CellState::Full) {
-            $pallet = $this->palletActions->open($pallet, null, false, $userId, $note)['pallet'] ?? $pallet;
+            $pallet = $this->palletActions->open($pallet, null, false, $userId, $note, enforceAllowedLevels: false)['pallet'] ?? $pallet;
         }
 
         $this->palletActions->update(

@@ -95,4 +95,103 @@ describe('SettingFormFields', () => {
         expect(wrapper.find('#preview-qr_code_height').exists()).toBe(true);
         expect(wrapper.find('#qr_code_width').exists()).toBe(false);
     });
+
+    describe('allowed open levels', () => {
+        function levelBoxes(wrapper: ReturnType<typeof mount>) {
+            return wrapper.findAll<HTMLInputElement>(
+                'input[name="allowed_open_levels[]"]',
+            );
+        }
+
+        it('renders its labels and one checkbox per level, checking the allowed ones', () => {
+            const wrapper = mount(SettingFormFields, {
+                props: {
+                    errors: {},
+                    levels: [1, 2, 3],
+                    allowedOpenLevels: [1, 3],
+                },
+            });
+
+            expect(wrapper.text()).toContain(
+                'Levels where opening pallets is allowed',
+            );
+            expect(wrapper.text()).toContain(
+                'A pallet can only be opened when its level is checked.',
+            );
+            expect(wrapper.text()).toContain('Level 1');
+            expect(wrapper.text()).toContain('Level 3');
+            expect(levelBoxes(wrapper).map((box) => box.element.value)).toEqual(
+                ['1', '2', '3'],
+            );
+            expect(
+                levelBoxes(wrapper).map((box) => box.element.checked),
+            ).toEqual([true, false, true]);
+        });
+
+        it('renders no level checkboxes when no levels are given', () => {
+            const wrapper = mount(SettingFormFields, {
+                props: { errors: {} },
+            });
+
+            expect(levelBoxes(wrapper)).toHaveLength(0);
+            expect(wrapper.text()).not.toContain(
+                'Levels where opening pallets is allowed',
+            );
+        });
+
+        it('only marks the checkboxes as required while no level is checked', async () => {
+            const wrapper = mount(SettingFormFields, {
+                props: {
+                    errors: {},
+                    levels: [1, 2],
+                    allowedOpenLevels: [1],
+                },
+            });
+
+            expect(
+                levelBoxes(wrapper).map((box) => box.element.required),
+            ).toEqual([false, false]);
+
+            await levelBoxes(wrapper)[0].setValue(false);
+
+            expect(
+                levelBoxes(wrapper).map((box) => box.element.required),
+            ).toEqual([true, true]);
+
+            await levelBoxes(wrapper)[1].setValue(true);
+
+            expect(
+                levelBoxes(wrapper).map((box) => box.element.required),
+            ).toEqual([false, false]);
+        });
+
+        it('shows the allowed-levels validation error', () => {
+            const wrapper = mount(SettingFormFields, {
+                props: {
+                    errors: {
+                        allowed_open_levels: 'Pick at least one level.',
+                    },
+                    levels: [1],
+                    allowedOpenLevels: [1],
+                },
+            });
+
+            expect(wrapper.text()).toContain('Pick at least one level.');
+        });
+
+        it('prefixes the level checkbox ids with idPrefix', () => {
+            const wrapper = mount(SettingFormFields, {
+                props: {
+                    errors: {},
+                    idPrefix: 'preview-',
+                    levels: [1],
+                    allowedOpenLevels: [1],
+                },
+            });
+
+            expect(
+                wrapper.find('#preview-allowed_open_levels_1').exists(),
+            ).toBe(true);
+        });
+    });
 });

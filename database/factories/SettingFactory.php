@@ -20,6 +20,7 @@ class SettingFactory extends Factory
         return [
             'qr_code_width' => Setting::DEFAULT_QR_CODE_WIDTH,
             'qr_code_height' => Setting::DEFAULT_QR_CODE_HEIGHT,
+            'allowed_open_levels' => Setting::DEFAULT_ALLOWED_OPEN_LEVELS,
         ];
     }
 }

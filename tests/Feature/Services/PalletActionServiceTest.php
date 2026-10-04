@@ -221,3 +221,17 @@ test('updating a pallet to a product that does not exist is rejected and nothing
         ->and($fresh->expiration_date->toDateString())->toBe('2027-01-01')
         ->and(CellStatusLog::query()->count())->toBe(0);
 });
+
+test('open skips the allowed-levels rule only when told to, as a verification report replay does', function () {
+    [$cell] = secondLevelCells(1);
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+    $user = User::factory()->create();
+
+    expect(fn () => palletActionsUnderTest()->open($pallet, null, false, $user->id, null))
+        ->toThrow(InvalidSlotStateException::class, __('messages.open_level_not_allowed'));
+    expect($cell->refresh()->state)->toBe(CellState::Full);
+
+    palletActionsUnderTest()->open($pallet, null, false, $user->id, null, enforceAllowedLevels: false);
+
+    expect($cell->refresh()->state)->toBe(CellState::Opened);
+});
