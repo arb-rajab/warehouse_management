@@ -45,6 +45,24 @@ fi
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 
+# This hook runs asynchronously (.claude/settings.json): the session starts at
+# once and the setup below takes ~10 minutes on a fresh container. Record where
+# it stands so a session can wait for it with .claude/scripts/wait_for_setup.py.
+# The EXIT trap marks a run that dies for any other reason (a TERM from the
+# hook's timeout included) as failed; a SIGKILL skips it, which is why the
+# waiter also checks that the recorded pid is still alive.
+stateDir="${CLAUDE_SETUP_STATE_DIR:-/tmp/claude-session-setup}"
+mkdir -p "$stateDir"
+
+recordState() {
+    printf '%s\n' "$1" > "$stateDir/state.tmp" && mv "$stateDir/state.tmp" "$stateDir/state"
+}
+
+rm -f "$stateDir/summary.txt"
+printf '%s\n' "$$" > "$stateDir/pid"
+recordState running
+trap '[ "$(cat "$stateDir/state" 2>/dev/null)" = running ] && recordState failed' EXIT
+
 # Everything below needs PHP 8.5 and its extensions, which this container may
 # not have (and whose absence leaves vendor/ missing, so artisan, Wayfinder and
 # the Vite build are all unavailable). A no-op when they are already present;
@@ -102,11 +120,14 @@ if [ "$backend" = 'ready' ]; then
     fi
 fi
 
-# SessionStart stdout becomes session context. Keep it to the two facts that
-# change how the session works, since every session pays to read them.
-cat <<SUMMARY
-Local tooling — frontend (vitest, vue-tsc, prettier, eslint): ${frontend}. App (artisan, migrations): ${backend}. Vite build (needed by Pest feature tests): ${build}.
-Pint, Pest, PHPStan and Larastan ${phpTools}.
-SUMMARY
+# The two facts that change how the session works. Written to the state dir for
+# wait_for_setup.py (an asynchronous hook's stdout never reaches the session) and
+# printed for a manual run.
+summary="Local tooling — frontend (vitest, vue-tsc, prettier, eslint): ${frontend}. App (artisan, migrations): ${backend}. Vite build (needed by Pest feature tests): ${build}.
+Pint, Pest, PHPStan and Larastan ${phpTools}."
+
+printf '%s\n' "$summary" > "$stateDir/summary.txt"
+recordState done
+printf '%s\n' "$summary"
 
 exit 0

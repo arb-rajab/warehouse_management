@@ -240,8 +240,9 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   command at the end. Catching an issue on the file you just touched is
   cheaper than finding a pile of unrelated fallout later.
 - In a Claude Code web session the SessionStart hook installs the PHP tools
-  from git sources and builds the Vite assets — see the next section, and read
-  the session's startup message for whether that worked.
+  from git sources and builds the Vite assets in the background — see the next
+  section, and wait for it (`python3 .claude/scripts/wait_for_setup.py`) before
+  relying on them.
 - Same discipline for `vitest`: while iterating on a fix, run only the
   specific `*.test.ts` file(s) the change touches (`npx vitest run
   path/to/File.test.ts`), not the whole suite. Reserve one full `npx vitest
@@ -273,9 +274,20 @@ platform check, `vendor/` never appears, and artisan, Wayfinder and the Vite
 build are all unavailable. Never answer that platform error with
 `--ignore-platform-reqs`: run the script. It targets Debian/Ubuntu containers
 and needs root; `--check` reports whether PHP is satisfied without changing
-anything. Read the session's startup
-message: it says whether the PHP tools are installed and whether the Vite build
-exists.
+anything.
+
+**The hook runs asynchronously** (`"async": true` in `.claude/settings.json`), so
+a session starts at once while the whole setup takes about 10 minutes on a fresh
+container; blocking on it made every fresh session wait that long before its
+first action. A short notice in the session's context says setup is running.
+Work that does not need it (reading code, editing docs) can start immediately.
+Before composer, artisan, Pint, PHPStan, Pest, the Wayfinder files or the built
+assets, run `python3 .claude/scripts/wait_for_setup.py` once, in the background,
+and let its completion notice arrive rather than polling. It exits 0 when setup
+is done and prints its summary (whether the PHP tools are installed and the Vite
+build exists), and 1 if setup failed, was interrupted (killed or timed out), or
+the wait timed out. `pre_push_check.py` waits on its own. Do not start your own
+`npm`/`composer` work while setup is still running: it would collide with it.
 
 When they are installed, run the checks locally instead of waiting for CI:
 
@@ -287,9 +299,9 @@ When they are installed, run the checks locally instead of waiting for CI:
 - **Pest needs `.env` with an `APP_KEY`.** `phpunit.xml` sets none, so in a
   container with no `.env` every test that boots the app errors with "No
   application encryption key has been specified" (925 errors in one run). The
-  hook copies `.env.example` and runs `php artisan key:generate` when `.env` is
-  missing; if you see that error, do the same by hand rather than reading it as
-  a code defect.
+  hook copies `.env.example` and generates the key (with `php`, not `artisan`, so
+  it works before `vendor/` exists) when `.env` is missing; if you see that
+  error, do the same by hand rather than reading it as a code defect.
 - **Pest needs `public/build/manifest.json`.** Every Inertia feature test renders
   the root view, which reads the Vite manifest, so without it ~200 tests fail
   with `ViteManifestNotFoundException` — a missing build, not a defect in the
@@ -334,7 +346,8 @@ The scripts in `.claude/scripts/`:
 | --- | --- |
 | `install_php.sh` | installs PHP 8.5 and its extensions from the ondrej PPA (key pinned by fingerprint); run first by the SessionStart hook |
 | `install_dev_tools.py` | the dev-tools installer described above, run by the SessionStart hook |
-| `pre_push_check.py` | the one command to run before every push: ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest in CI's order |
+| `wait_for_setup.py` | blocks until the background SessionStart setup has finished and prints its summary; exit 0 ready, 1 failed/interrupted/timed out |
+| `pre_push_check.py` | the one command to run before every push: waits for setup, then ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest in CI's order |
 | `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |
 | `selftest.py` | verifies the scripts above and the install guard hook |
 

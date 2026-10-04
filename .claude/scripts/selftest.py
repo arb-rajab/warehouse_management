@@ -258,6 +258,124 @@ def main() -> int:
         install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
         check('a clean lock is left alone', repo_lock.read_bytes() == pristine_lock)
 
+        print('wait_for_setup.py')
+        import wait_for_setup
+
+        def write_state(directory: Path, state: str, pid: int | None = None, summary: str | None = None) -> Path:
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / 'state').write_text(state + '\n')
+            if pid is not None:
+                (directory / 'pid').write_text(f'{pid}\n')
+            if summary is not None:
+                (directory / 'summary.txt').write_text(summary + '\n')
+
+            return directory
+
+        finished = subprocess.Popen(['true'])
+        finished.wait()
+
+        code, message = wait_for_setup.wait(root / 'no-state-here', 5)
+        check('no recorded setup is not a failure', code == 0 and 'No session setup' in message, message)
+
+        code, message = wait_for_setup.wait(write_state(root / 's-done', 'done', summary='tools ready'), 5)
+        check('a finished setup exits 0 and prints the summary', code == 0 and message == 'tools ready', message)
+
+        code, message = wait_for_setup.wait(write_state(root / 's-failed', 'failed'), 5)
+        check('a failed setup exits 1', code == 1 and 'failed' in message, message)
+
+        code, message = wait_for_setup.wait(write_state(root / 's-dead', 'running', pid=finished.pid), 5)
+        check('a running marker with a dead pid is reported as interrupted', code == 1 and 'interrupted' in message, message)
+
+        running_dir = write_state(root / 's-live', 'running', pid=os.getpid())
+        polls: list[float] = []
+
+        def finish_after_two_polls(seconds: float) -> None:
+            polls.append(seconds)
+            if len(polls) == 2:
+                write_state(running_dir, 'done', summary='finished while waiting')
+
+        code, message = wait_for_setup.wait(running_dir, 600, sleep=finish_after_two_polls)
+        check('it waits while the setup is alive, then reports the result', code == 0 and message == 'finished while waiting' and len(polls) == 2, f'{code} {message} {polls}')
+
+        ticks = iter(range(0, 10_000, 5))
+        code, message = wait_for_setup.wait(write_state(root / 's-stuck', 'running', pid=os.getpid()), 20, sleep=lambda _: None, clock=lambda: float(next(ticks)))
+        check('it gives up at its own timeout', code == 1 and 'Timed out' in message, message)
+
+        cli = subprocess.run(
+            [sys.executable, str(SCRIPTS / 'wait_for_setup.py'), '5'],
+            capture_output=True,
+            text=True,
+            env={**os.environ, 'CLAUDE_SETUP_STATE_DIR': str(root / 's-done')},
+        )
+        check('the command line exits 0 with the summary for a finished setup', cli.returncode == 0 and cli.stdout.strip() == 'tools ready', cli.stdout + cli.stderr)
+
+        print('session-setup-notice.sh')
+        notice_script = SCRIPTS.parent / 'hooks' / 'session-setup-notice.sh'
+
+        def notice(state_dir: Path, remote: bool = True) -> str:
+            environment = {**os.environ, 'CLAUDE_SETUP_STATE_DIR': str(state_dir)}
+            environment.pop('CLAUDE_CODE_REMOTE', None)
+            if remote:
+                environment['CLAUDE_CODE_REMOTE'] = 'true'
+
+            return subprocess.run(['bash', str(notice_script)], capture_output=True, text=True, env=environment).stdout
+
+        check('a local checkout gets no notice', notice(root / 's-done', remote=False) == '')
+        started = notice(root / 'never-started')
+        check('a setup that has not started yet gets the wait instructions', 'wait_for_setup.py' in started and '10 minutes' in started, started)
+        check('a finished setup gets its summary instead', notice(root / 's-done').strip() == 'tools ready')
+        check('a failed setup is called out', 'FAILED' in notice(root / 's-failed'))
+
+        print('session-start.sh (state recording)')
+        hook = SCRIPTS.parent / 'hooks' / 'session-start.sh'
+        project = root / 'fake-project'
+        stub_bin = root / 'stub-bin'
+        project.mkdir()
+        stub_bin.mkdir()
+        (project / '.env.example').write_text('APP_KEY=\n')
+        for stub in ('php', 'composer'):
+            (stub_bin / stub).write_text('#!/bin/sh\nexit 0\n')
+            (stub_bin / stub).chmod(0o755)
+        (stub_bin / 'npm').write_text('#!/bin/sh\n[ -n "$STUB_NPM_SLEEP" ] && sleep "$STUB_NPM_SLEEP"\nexit 0\n')
+        (stub_bin / 'npm').chmod(0o755)
+
+        def hook_environment(state_dir: Path, **extra: str) -> dict[str, str]:
+            return {
+                **os.environ,
+                'PATH': f'{stub_bin}:{os.environ["PATH"]}',
+                'CLAUDE_CODE_REMOTE': 'true',
+                'CLAUDE_PROJECT_DIR': str(project),
+                'CLAUDE_SETUP_STATE_DIR': str(state_dir),
+                **extra,
+            }
+
+        done_dir = root / 'hook-done'
+        subprocess.run(['bash', str(hook)], capture_output=True, text=True, env=hook_environment(done_dir))
+        check('a completed run records done', (done_dir / 'state').read_text().strip() == 'done')
+        check('a completed run records the summary the waiter prints', 'Vite build' in (done_dir / 'summary.txt').read_text())
+        check('a completed run records its pid', (done_dir / 'pid').read_text().strip().isdigit())
+
+        killed_dir = root / 'hook-killed'
+        process = subprocess.Popen(
+            ['bash', str(hook)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=hook_environment(killed_dir, STUB_NPM_SLEEP='30'),
+            start_new_session=True,
+        )
+        for _ in range(100):
+            if (killed_dir / 'state').exists() and (killed_dir / 'state').read_text().strip() == 'running':
+                break
+            subprocess.run(['sleep', '0.1'])
+        check('a run in progress records running', (killed_dir / 'state').read_text().strip() == 'running')
+        process.terminate()
+        process.wait(timeout=60)
+        check('a run sent SIGTERM records failed, not running', (killed_dir / 'state').read_text().strip() == 'failed', (killed_dir / 'state').read_text())
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
     print()
     if failures:
         print(f'{len(failures)} case(s) failed: {", ".join(failures)}')

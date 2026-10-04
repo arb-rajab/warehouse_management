@@ -19,6 +19,9 @@ and `public/build/manifest.json`; the same hook provides both.
 Usage:
     python3 .claude/scripts/pre_push_check.py
 
+It first waits for the background SessionStart setup (wait_for_setup.py) so the
+PHP steps are chosen from a finished install, not a half-installed one.
+
 Exits non-zero, and stops at the first failing step, if any check fails.
 """
 
@@ -26,6 +29,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+import wait_for_setup
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -65,11 +70,17 @@ def build_steps() -> list[tuple[str, list[str], dict[str, str] | None]]:
         ('Pint', ['composer', 'lint:check'], PHP_ENV),
         ('PHPStan', ['composer', 'types:check'], PHP_ENV),
         ('Clear config cache', ['php', 'artisan', 'config:clear'], PHP_ENV),
-        ('Pest',['php', 'artisan', 'test', '--parallel', '--compact'], PHP_ENV),
+        ('Pest', ['php', 'artisan', 'test', '--parallel', '--compact'], PHP_ENV),
     ]
 
 
 def main() -> int:
+    # The SessionStart setup runs in the background: steps are chosen from what
+    # is installed, so wait for it first. A failed or interrupted setup is not
+    # fatal here; the steps simply reflect whatever did get installed.
+    print('\n=== Session setup ===')
+    print(wait_for_setup.wait(wait_for_setup.state_dir(), wait_for_setup.DEFAULT_TIMEOUT_SECONDS)[1])
+
     for label, command, env in build_steps():
         if not run_step(label, command, env=env):
             print(f'\nStopping: "{label}" failed. Fix it and re-run '
