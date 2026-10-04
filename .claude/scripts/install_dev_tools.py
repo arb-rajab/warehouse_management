@@ -13,8 +13,12 @@ git clones of public repositories are served, though, so:
     exceeds composer's process timeout. So this script shallow-clones the
     locked tag and points that one lock entry at the clone as a path dist.
 
-composer.lock is edited in memory for the install and restored byte for byte
-afterwards, whatever the outcome, so nothing here can reach a commit. Usage:
+composer.lock is patched on disk for the install and restored byte for byte
+afterwards, whatever the outcome (including SIGTERM/SIGHUP), so nothing here can
+reach a commit. The pristine copy is also kept in the system temp directory
+while the install runs: a SIGKILL, such as a hook timeout, skips every cleanup,
+and the next run uses that copy (or, failing that, `git show HEAD:composer.lock`)
+to undo the leftover patch instead of mistaking it for the original. Usage:
 
     python3 .claude/scripts/install_dev_tools.py [clone-dir]
 
@@ -22,8 +26,10 @@ The clone directory defaults to <system temp>/phpstan-src and is reused when it
 already holds the locked commit. Exits with composer's own exit code.
 """
 
+import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -82,24 +88,89 @@ def clone_locked_commit(version: str, reference: str, clone_dir: Path) -> None:
         raise SystemExit(f'Tag {version} is at {cloned}, but composer.lock pins {reference}.')
 
 
+def is_patched(lock: dict) -> bool:
+    """Whether the lock still carries this script's path dist for PACKAGE."""
+    return locked_package(lock)['dist']['type'] == 'path'
+
+
+def backup_path_for(lock_path: Path) -> Path:
+    """Where the pristine lock is kept while a run is in flight, outside the repo."""
+    digest = hashlib.sha1(str(lock_path.resolve()).encode()).hexdigest()[:12]
+
+    return Path(tempfile.gettempdir()) / f'composer.lock.original.{digest}'
+
+
+def recover_original(lock_path: Path, backup: Path) -> None:
+    """Undo what an earlier run left behind when it was killed before restoring.
+
+    A SIGKILL (a hook timeout, a reclaimed container) skips every `finally`, so
+    the lock can be left patched. Without this, the next run would take that
+    patched file for the original and faithfully restore it.
+    """
+    if backup.exists():
+        lock_path.write_bytes(backup.read_bytes())
+        backup.unlink()
+
+        return
+
+    if not is_patched(json.loads(lock_path.read_bytes())):
+        return
+
+    committed = subprocess.run(
+        ['git', 'show', 'HEAD:composer.lock'],
+        capture_output=True,
+        cwd=lock_path.parent,
+    )
+    if committed.returncode != 0 or is_patched(json.loads(committed.stdout)):
+        raise SystemExit('composer.lock is left patched by an interrupted run and HEAD has no clean copy; restore it by hand.')
+
+    lock_path.write_bytes(committed.stdout)
+
+
+def install_with_patched_lock(lock_path: Path, backup: Path, clone_dir: Path, run_install) -> int:
+    """Patch the lock, run `run_install()`, and put the original bytes back.
+
+    The original is saved to `backup` first, so a run killed past saving can be
+    recovered by the next one; SIGTERM and SIGHUP are turned into a normal exit
+    so the `finally` below still runs for them.
+    """
+    original = lock_path.read_bytes()
+    lock = json.loads(original)
+
+    backup.write_bytes(original)
+
+    previous = {signum: signal.signal(signum, lambda *_: sys.exit(128 + signum)) for signum in (signal.SIGTERM, signal.SIGHUP)}
+    try:
+        lock_path.write_text(json.dumps(patch_lock(lock, str(clone_dir)), indent=4, ensure_ascii=False))
+
+        return run_install()
+    finally:
+        lock_path.write_bytes(original)
+        backup.unlink(missing_ok=True)
+
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
 def main() -> int:
     lock_path = Path('composer.lock')
     clone_dir = Path(sys.argv[1] if len(sys.argv) > 1 else Path(tempfile.gettempdir()) / 'phpstan-src')
+    backup = backup_path_for(lock_path)
 
-    original = lock_path.read_bytes()
-    lock = json.loads(original)
-    package = locked_package(lock)
+    recover_original(lock_path, backup)
 
+    package = locked_package(json.loads(lock_path.read_bytes()))
     clone_locked_commit(package['version'], package['dist']['reference'], clone_dir)
 
-    lock_path.write_text(json.dumps(patch_lock(lock, str(clone_dir)), indent=4))
-    try:
-        return subprocess.run(
+    return install_with_patched_lock(
+        lock_path,
+        backup,
+        clone_dir,
+        lambda: subprocess.run(
             ['composer', 'install', '--prefer-source', '--no-interaction', '--no-progress'],
             env={**os.environ, 'COMPOSER_ALLOW_SUPERUSER': '1', 'COMPOSER_PROCESS_TIMEOUT': '0'},
-        ).returncode
-    finally:
-        lock_path.write_bytes(original)
+        ).returncode,
+    )
 
 
 if __name__ == '__main__':

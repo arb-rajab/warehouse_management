@@ -12,6 +12,7 @@ Exits non-zero if any case failed.
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -172,6 +173,90 @@ def main() -> int:
             check('lock without phpstan is refused', False)
         except SystemExit as error:
             check('lock without phpstan is refused', 'not in composer.lock' in str(error), str(error))
+
+        # The lock-restore guarantees, exercised against a real file with a
+        # non-ASCII author (the escaping a re-serialised lock would change).
+        pristine_lock = json.dumps(
+            {
+                'packages-dev': [
+                    {
+                        'name': 'phpstan/phpstan',
+                        'version': '2.2.8',
+                        'authors': [{'name': 'Márk Sági-Kazár'}],
+                        'dist': {'type': 'zip', 'reference': 'bbb'},
+                    },
+                ],
+            },
+            indent=4,
+            ensure_ascii=False,
+        ).encode() + b'\n'
+        lock_file = root / 'composer.lock'
+        backup_file = root / 'composer.lock.original'
+        clone = root / 'phpstan-src'
+
+        def fresh_lock() -> None:
+            lock_file.write_bytes(pristine_lock)
+            backup_file.unlink(missing_ok=True)
+
+        seen: dict[str, bool] = {}
+
+        def peek_then_return() -> int:
+            seen['patched'] = install_dev_tools.is_patched(json.loads(lock_file.read_bytes()))
+
+            return 7
+
+        fresh_lock()
+        code = install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, peek_then_return)
+        check('the install runs against the patched lock', seen.get('patched') is True)
+        check('the install exit code is returned', code == 7)
+        check('the lock is restored byte for byte afterwards', lock_file.read_bytes() == pristine_lock)
+        check('the backup is removed after a clean run', not backup_file.exists())
+
+        def explode() -> int:
+            raise RuntimeError('composer blew up')
+
+        fresh_lock()
+        try:
+            install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, explode)
+        except RuntimeError:
+            pass
+        check('the lock is restored when the install raises', lock_file.read_bytes() == pristine_lock)
+        check('the backup is removed when the install raises', not backup_file.exists())
+
+        def terminated() -> int:
+            os.kill(os.getpid(), signal.SIGTERM)
+
+            return 0
+
+        fresh_lock()
+        try:
+            install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, terminated)
+        except SystemExit:
+            pass
+        check('the lock is restored when the run is sent SIGTERM', lock_file.read_bytes() == pristine_lock)
+
+        # A run killed with SIGKILL leaves the patched lock and the backup.
+        lock_file.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        backup_file.write_bytes(pristine_lock)
+        install_dev_tools.recover_original(lock_file, backup_file)
+        check('a stale backup restores the lock a killed run left patched', lock_file.read_bytes() == pristine_lock)
+        check('the stale backup is consumed', not backup_file.exists())
+
+        # No backup (e.g. the temp directory was wiped): fall back to HEAD.
+        repo = root / 'repo'
+        repo.mkdir()
+        repo_lock = repo / 'composer.lock'
+        repo_lock.write_bytes(pristine_lock)
+        git_env = {**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 't', 'GIT_COMMITTER_EMAIL': 't@t'}
+        for command in (['init', '-q'], ['add', 'composer.lock'], ['commit', '-q', '-m', 'lock']):
+            subprocess.run(['git', *command], cwd=repo, env=git_env, check=True, capture_output=True)
+
+        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
+        check('a patched lock with no backup is restored from HEAD', repo_lock.read_bytes() == pristine_lock)
+
+        install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
+        check('a clean lock is left alone', repo_lock.read_bytes() == pristine_lock)
 
     print()
     if failures:
