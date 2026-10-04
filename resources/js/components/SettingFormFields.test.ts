@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { t } from '@/lib/i18n';
 import { pxToCm } from '@/lib/qrCodeSize';
 import SettingFormFields from './SettingFormFields.vue';
 
@@ -7,8 +8,13 @@ describe('SettingFormFields', () => {
     it('renders its labels', () => {
         const wrapper = mount(SettingFormFields, { props: { errors: {} } });
 
-        expect(wrapper.text()).toContain('QR code width (cm)');
-        expect(wrapper.text()).toContain('QR code height (cm)');
+        expect(wrapper.text()).toContain(t('settings.fields.qrCodeWidth'));
+        expect(wrapper.text()).toContain(t('settings.fields.qrCodeHeight'));
+    });
+
+    it('resolves its label keys to the English copy', () => {
+        expect(t('settings.fields.qrCodeWidth')).toBe('QR code width (cm)');
+        expect(t('settings.fields.qrCodeHeight')).toBe('QR code height (cm)');
     });
 
     it('pre-fills the current values converted from pixels to centimeters', () => {

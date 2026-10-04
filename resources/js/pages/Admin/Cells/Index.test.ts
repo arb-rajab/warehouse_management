@@ -1,11 +1,13 @@
 import { Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellMap3D from '@/components/CellMap3D.vue';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
     Cell,
     CellHighlightSample,
@@ -146,7 +148,7 @@ function mountPage(
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cells',
+        url: cellsIndex.url(),
         props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
@@ -192,10 +194,12 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 
 describe('Cells Index (warehouse map)', () => {
     beforeEach(() => {
-        routerGetMock.mockClear();
-        cellMap3DFocusCell.mockClear();
-        cellMap3DResetView.mockClear();
-        cellMap3DSetCameraMode.mockClear();
+        resetMocks({
+            routerGetMock,
+            cellMap3DFocusCell,
+            cellMap3DResetView,
+            cellMap3DSetCameraMode,
+        });
     });
 
     it('renders the page title in the Head and the PageHeader', () => {
@@ -219,7 +223,9 @@ describe('Cells Index (warehouse map)', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/cells');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'cells' }),
+        );
     });
 
     it('does not show an action error banner absent an action error', () => {
@@ -705,7 +711,7 @@ describe('Cells Index (warehouse map)', () => {
         await next();
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A1·2', state: 'full' },
             { preserveState: true, replace: true },
         );
@@ -720,7 +726,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2 },
             { preserveState: true, replace: true },
         );
@@ -902,7 +908,7 @@ describe('Cells Index (warehouse map)', () => {
         });
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A1·2', expired: true },
             { preserveState: true, replace: true },
         );
@@ -965,7 +971,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 2,
                 product_id: ['1', '2'],
@@ -990,7 +996,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 2,
                 stale_after_days: 30,
@@ -1015,7 +1021,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 1,
                 search: 'A1',
@@ -1196,7 +1202,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A12·3' },
             { preserveState: true, replace: true },
         );

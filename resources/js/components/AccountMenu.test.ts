@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import AccountMenu from './AccountMenu.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -70,7 +71,7 @@ describe('AccountMenu', () => {
 
         const settingsLink = wrapper
             .findAll('a')
-            .find((el) => el.attributes('href') === '/admin/settings');
+            .find((el) => el.attributes('href') === settingsEdit.url());
 
         expect(settingsLink).toBeTruthy();
     });
@@ -81,10 +82,10 @@ describe('AccountMenu', () => {
 
         const settingsLink = wrapper
             .findAllComponents(Link)
-            .find((link) => link.attributes('href') === '/admin/settings');
+            .find((link) => link.attributes('href') === settingsEdit.url());
 
         expect(settingsLink?.props('href')).toEqual({
-            url: '/admin/settings',
+            url: settingsEdit.url(),
             method: 'get',
         });
     });

@@ -1,6 +1,11 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    show as helpShow,
+    index as helpIndex,
+} from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import HelpTopicPage from './HelpTopicPage.vue';
@@ -21,14 +26,14 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/help/rows',
+        url: helpShow.url({ topic: 'rows' }),
         props: defaultAuthProps(),
     });
 
     return mount(HelpTopicPage, {
         props: {
             title: 'Rows help',
-            featureHref: '/admin/rows',
+            featureHref: rowsIndex.url(),
             featureLabel: 'Rows',
         },
         slots: { default: '<section><h2>A topic section</h2></section>' },
@@ -60,7 +65,7 @@ describe('HelpTopicPage', () => {
         const backLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('help.backToHelp'));
-        expect(backLink?.attributes('href')).toBe('/admin/help');
+        expect(backLink?.attributes('href')).toBe(helpIndex.url());
         expect(backLink?.classes()).toContain('mb-6');
     });
 
@@ -71,7 +76,7 @@ describe('HelpTopicPage', () => {
             .get('.max-w-2xl')
             .findAll('a')
             .find((a) => a.text() === 'Rows');
-        expect(featureLink?.attributes('href')).toBe('/admin/rows');
+        expect(featureLink?.attributes('href')).toBe(rowsIndex.url());
         expect(featureLink?.classes()).not.toContain('mb-6');
     });
 });

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
 import TableLink from '@/components/TableLink.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -31,7 +32,7 @@ describe('CellVerificationAcceptedNote', () => {
 
         const link = wrapper.getComponent(TableLink);
         expect(link.props('href')).toEqual({
-            url: '/admin/users/4',
+            url: userShow.url({ user: 4 }),
             method: 'get',
         });
         expect(link.text()).toBe('Zoe Admin');

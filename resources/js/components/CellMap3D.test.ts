@@ -1751,8 +1751,8 @@ describe('CellMap3D', () => {
 
             // Same-origin route, not the store's (CORS-less) image host.
             expect(registry().textureLoads.map((load) => load.url)).toEqual([
-                '/admin/products/1/image',
-                '/admin/products/2/image',
+                productImage.url({ product: 1 }),
+                productImage.url({ product: 2 }),
             ]);
             expect(liveProductImageMeshes()).toHaveLength(2);
 

@@ -1,8 +1,10 @@
 import { Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { store as loginStore } from '@/actions/App/Http/Controllers/LoginController';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Login from './Login.vue';
 
 const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -30,17 +32,15 @@ const honeypotProp = {
 };
 
 function mountPage(honeypot = honeypotProp) {
-    usePageMock.mockReturnValue({ props: { locale: 'en' } });
+    usePageMock.mockReturnValue({ props: defaultAuthProps() });
 
     return mount(Login, { props: { honeypot } });
 }
 
 describe('Login', () => {
     beforeEach(() => {
-        formSlotPropsMock.mockReset();
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
     });
 
     it('renders the brand title with a brand icon', () => {
@@ -54,7 +54,7 @@ describe('Login', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/login',
+            loginStore.url(),
         );
     });
 

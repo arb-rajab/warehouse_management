@@ -1,6 +1,8 @@
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import SettingFormFields from '@/components/SettingFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
@@ -37,7 +39,7 @@ function mountPage(
     highestLevel = 3,
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/settings',
+        url: settingsEdit.url(),
         props: defaultAuthProps(),
     });
 
@@ -62,7 +64,7 @@ describe('Settings Edit', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/settings',
+            settingsEdit.url(),
         );
     });
 
@@ -163,7 +165,11 @@ describe('Settings Edit', () => {
 
         const helpLink = wrapper
             .findAll('a')
-            .find((a) => a.attributes('href') === '/admin/help/settings');
+            .find(
+                (a) =>
+                    a.attributes('href') ===
+                    helpShow.url({ topic: 'settings' }),
+            );
         expect(helpLink).toBeTruthy();
     });
 });

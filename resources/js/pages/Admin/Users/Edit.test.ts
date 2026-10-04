@@ -1,5 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    edit as userEdit,
+    show as userShow,
+    index as usersIndex,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import SubmitButton from '@/components/SubmitButton.vue';
 import UserFormFields from '@/components/UserFormFields.vue';
 import { t } from '@/lib/i18n';
@@ -38,7 +43,7 @@ function user(overrides: Partial<User> = {}): User {
 
 function mountPage(userOverrides: Partial<User> = {}, currentUserId = 7) {
     usePageMock.mockReturnValue({
-        url: '/admin/users/5/edit',
+        url: userEdit.url({ user: 5 }),
         props: defaultAuthProps({
             auth: { user: { name: 'Current User', id: currentUserId } },
         }),
@@ -65,7 +70,7 @@ describe('Users Edit', () => {
         const wrapper = mountPage({ id: 9 });
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/users/9',
+            userShow.url({ user: 9 }),
         );
     });
 
@@ -143,6 +148,6 @@ describe('Users Edit', () => {
     it('links the cancel action back to the user list', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.get('form a').attributes('href')).toBe('/admin/users');
+        expect(wrapper.get('form a').attributes('href')).toBe(usersIndex.url());
     });
 });

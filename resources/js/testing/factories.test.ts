@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
     cell,
+    cellPallet,
     cellLog,
     cellVerificationReport,
     cellVerificationRound,
+    cellWithLocation,
     paginated,
     row,
     user,
@@ -164,5 +166,29 @@ describe('paginated', () => {
             from: null,
             to: 0,
         });
+    });
+});
+
+describe('paginated page overrides', () => {
+    it('sets the current and last page', () => {
+        const result = paginated(['a'], 20, { currentPage: 1, lastPage: 3 });
+
+        expect(result.meta).toMatchObject({ current_page: 1, last_page: 3 });
+    });
+});
+
+describe('cellWithLocation', () => {
+    it('adds a row letter to the base cell and applies overrides', () => {
+        expect(cellWithLocation()).toEqual({ ...cell(), row_letter: 'A' });
+        expect(
+            cellWithLocation({ row_letter: 'B', cell_number: 4 }),
+        ).toMatchObject({ row_letter: 'B', cell_number: 4 });
+    });
+});
+
+describe('cellPallet', () => {
+    it('builds a pallet and applies overrides', () => {
+        expect(cellPallet()).toMatchObject({ id: 42, remaining_boxes: 10 });
+        expect(cellPallet({ remaining_boxes: 3 }).remaining_boxes).toBe(3);
     });
 });
