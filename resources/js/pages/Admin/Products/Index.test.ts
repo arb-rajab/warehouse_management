@@ -16,13 +16,13 @@ import Index from './Index.vue';
 const {
     usePageMock,
     routerGetMock,
-    routerPatchMock,
+    routerPutMock,
     routerPostMock,
     routerDeleteMock,
 } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
-    routerPatchMock: vi.fn(),
+    routerPutMock: vi.fn(),
     routerPostMock: vi.fn(),
     routerDeleteMock: vi.fn(),
 }));
@@ -36,7 +36,7 @@ vi.mock('@inertiajs/vue3', async () => {
         usePage: usePageMock,
         router: {
             get: routerGetMock,
-            patch: routerPatchMock,
+            put: routerPutMock,
             post: routerPostMock,
             delete: routerDeleteMock,
         },
@@ -121,7 +121,7 @@ describe('Products Index', () => {
         resetMocks({
             usePageMock,
             routerGetMock,
-            routerPatchMock,
+            routerPutMock,
             routerPostMock,
             routerDeleteMock,
         });
@@ -531,7 +531,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-box-count').setValue('30');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).toHaveBeenCalledWith(
+        expect(routerPutMock).toHaveBeenCalledWith(
             '/admin/products/42/box-count?state=full&per_page=20',
             { boxes_count: 30 },
             expect.objectContaining({
@@ -550,7 +550,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-box-count').setValue('0');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).not.toHaveBeenCalled();
+        expect(routerPutMock).not.toHaveBeenCalled();
     });
 
     it('rejects a cleared box count on dialog submit without a round trip', async () => {
@@ -560,7 +560,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-box-count').setValue('');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).not.toHaveBeenCalled();
+        expect(routerPutMock).not.toHaveBeenCalled();
     });
 
     it("renders the product's stored minimum-pallets threshold as a clickable trigger button, or a dash when unconfigured", () => {
@@ -613,7 +613,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-minimum-pallets').setValue('10');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).toHaveBeenCalledWith(
+        expect(routerPutMock).toHaveBeenCalledWith(
             '/admin/products/42/minimum-pallets?state=full&per_page=20',
             { minimum_pallets: 10 },
             expect.objectContaining({
@@ -632,7 +632,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-minimum-pallets').setValue('');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).toHaveBeenCalledWith(
+        expect(routerPutMock).toHaveBeenCalledWith(
             '/admin/products/42/minimum-pallets',
             { minimum_pallets: null },
             expect.objectContaining({
@@ -649,7 +649,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-minimum-pallets').setValue('0');
         await wrapper.get('form').trigger('submit');
 
-        expect(routerPatchMock).not.toHaveBeenCalled();
+        expect(routerPutMock).not.toHaveBeenCalled();
     });
 
     it('renders the barcode count as a clickable trigger button', () => {
@@ -786,16 +786,16 @@ describe('Products Index', () => {
     });
 
     describe('save feedback', () => {
-        type PatchOptions = {
+        type PutOptions = {
             onStart?: () => void;
             onSuccess?: () => void;
             onError?: (errors: Record<string, string>) => void;
             onFinish?: () => void;
         };
 
-        function failPatchWith(errors: Record<string, string>): void {
-            routerPatchMock.mockImplementation(
-                (_url: string, _data: unknown, options: PatchOptions) => {
+        function failPutWith(errors: Record<string, string>): void {
+            routerPutMock.mockImplementation(
+                (_url: string, _data: unknown, options: PutOptions) => {
                     options.onStart?.();
                     options.onError?.(errors);
                     options.onFinish?.();
@@ -804,7 +804,7 @@ describe('Products Index', () => {
         }
 
         it('keeps the box-count dialog open with the server error when the save fails', async () => {
-            failPatchWith({ boxes_count: 'The boxes count is too large.' });
+            failPutWith({ boxes_count: 'The boxes count is too large.' });
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
             await rowCells(wrapper)[1].get('button').trigger('click');
@@ -822,9 +822,9 @@ describe('Products Index', () => {
         });
 
         it('closes the box-count dialog only once the save succeeds', async () => {
-            let options: PatchOptions = {};
-            routerPatchMock.mockImplementation(
-                (_url: string, _data: unknown, given: PatchOptions) => {
+            let options: PutOptions = {};
+            routerPutMock.mockImplementation(
+                (_url: string, _data: unknown, given: PutOptions) => {
                     options = given;
                     given.onStart?.();
                 },
@@ -845,8 +845,8 @@ describe('Products Index', () => {
         });
 
         it('disables the box-count submit button while the save is in flight', async () => {
-            routerPatchMock.mockImplementation(
-                (_url: string, _data: unknown, options: PatchOptions) =>
+            routerPutMock.mockImplementation(
+                (_url: string, _data: unknown, options: PutOptions) =>
                     options.onStart?.(),
             );
             const wrapper = mountPage([product({ boxes_count: 12 })]);
@@ -869,14 +869,14 @@ describe('Products Index', () => {
             await wrapper.get('#products-box-count').setValue('0');
             await wrapper.get('form').trigger('submit');
 
-            expect(routerPatchMock).not.toHaveBeenCalled();
+            expect(routerPutMock).not.toHaveBeenCalled();
             expect(wrapper.get('[role="alert"]').text()).toContain(
                 t('products.invalidCount'),
             );
         });
 
         it('keeps the minimum-pallets dialog open with the server error when the save fails', async () => {
-            failPatchWith({ minimum_pallets: 'Must be at most 500.' });
+            failPutWith({ minimum_pallets: 'Must be at most 500.' });
             const wrapper = mountPage([product({ minimum_pallets: 5 })]);
 
             await rowCells(wrapper)[2].get('button').trigger('click');
@@ -892,7 +892,7 @@ describe('Products Index', () => {
         });
 
         it('keeps the minimum-pallets dialog open when clearing the threshold fails', async () => {
-            failPatchWith({ minimum_pallets: 'Could not clear.' });
+            failPutWith({ minimum_pallets: 'Could not clear.' });
             const wrapper = mountPage([product({ minimum_pallets: 5 })]);
 
             await rowCells(wrapper)[2].get('button').trigger('click');
@@ -914,7 +914,7 @@ describe('Products Index', () => {
             await wrapper.get('#products-minimum-pallets').setValue('0');
             await wrapper.get('form').trigger('submit');
 
-            expect(routerPatchMock).not.toHaveBeenCalled();
+            expect(routerPutMock).not.toHaveBeenCalled();
             expect(wrapper.get('[role="alert"]').text()).toContain(
                 t('products.invalidCount'),
             );
@@ -922,7 +922,7 @@ describe('Products Index', () => {
 
         it('keeps the typed barcode and shows the server error when adding fails', async () => {
             routerPostMock.mockImplementation(
-                (_url: string, _data: unknown, options: PatchOptions) => {
+                (_url: string, _data: unknown, options: PutOptions) => {
                     options.onStart?.();
                     options.onError?.({ barcode: 'Barcode already taken.' });
                     options.onFinish?.();
@@ -949,7 +949,7 @@ describe('Products Index', () => {
 
         it('clears the typed barcode only after adding succeeds', async () => {
             routerPostMock.mockImplementation(
-                (_url: string, _data: unknown, options: PatchOptions) => {
+                (_url: string, _data: unknown, options: PutOptions) => {
                     options.onStart?.();
                     options.onSuccess?.();
                     options.onFinish?.();
@@ -973,7 +973,7 @@ describe('Products Index', () => {
 
         it('shows the server error when removing a barcode fails', async () => {
             routerDeleteMock.mockImplementation(
-                (_url: string, options: PatchOptions) => {
+                (_url: string, options: PutOptions) => {
                     options.onStart?.();
                     options.onError?.({ barcode: 'Could not remove.' });
                     options.onFinish?.();
@@ -999,7 +999,7 @@ describe('Products Index', () => {
         });
 
         it('clears a previous error when a dialog is reopened', async () => {
-            failPatchWith({ boxes_count: 'Nope.' });
+            failPutWith({ boxes_count: 'Nope.' });
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
             await rowCells(wrapper)[1].get('button').trigger('click');

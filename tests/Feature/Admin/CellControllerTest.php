@@ -641,7 +641,7 @@ test('an authenticated user can export a QR code image for a single cell', funct
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $response->assertHeader('content-type', 'image/svg+xml');
@@ -679,7 +679,7 @@ test('a single-cell QR export draws a same-height downward arrow beside the labe
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 1)->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -693,7 +693,7 @@ test('a single-cell QR export draws a same-height upward arrow beside the label 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 3)->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -708,7 +708,7 @@ test('a single-cell QR export draws a horizontal arrow beside the label for a mi
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 2)->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -724,7 +724,7 @@ test('a single-cell QR export draws a horizontal arrow beside the label when the
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -737,7 +737,7 @@ test('a single-cell QR export uses the configured QR code size instead of the de
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -754,7 +754,7 @@ test('a single-cell QR export keeps the full slot label visible for large cell/f
     $row = Row::factory()->create(['letter' => 'Z']);
     $cell = Cell::factory()->for($row)->create(['cell_number' => 123, 'flat_number' => 456]);
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -772,7 +772,7 @@ test('a single-cell QR export shrinks the QR slightly to keep the label visible 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertOk();
     $svg = $response->getContent();
@@ -793,7 +793,7 @@ test('a mobile app user cannot export a single cells QR code', function () {
     $row = Row::factory()->create();
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertForbidden();
 });
@@ -802,7 +802,7 @@ test('an unauthenticated caller is redirected to login when exporting a single c
     $row = Row::factory()->create();
     $cell = $row->cells()->first();
 
-    $response = $this->get("/admin/cells/{$cell->id}/export-qr");
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code");
 
     $response->assertRedirect(route('login'));
 });
@@ -810,7 +810,7 @@ test('an unauthenticated caller is redirected to login when exporting a single c
 test('exporting a QR code for a non-existent cell returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->get('/admin/cells/999999/export-qr');
+    $response = $this->get('/admin/cells/999999/export-qr-code');
 
     $response->assertNotFound();
 });

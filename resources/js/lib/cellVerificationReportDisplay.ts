@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3';
-import { acceptReport as acceptReportAction } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { accept as acceptReportAction } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
 import { confirmAcceptVerificationReport } from '@/lib/confirm';
 import { formatSlot } from '@/lib/location';
 import { productName } from '@/lib/productName';

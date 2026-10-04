@@ -512,7 +512,7 @@ test('an authenticated admin can set a minimum pallets threshold for a product',
     $product = Product::factory()->create();
     $otherProduct = Product::factory()->minimumPallets(9)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
@@ -527,7 +527,7 @@ test('an authenticated admin can clear a product\'s minimum pallets threshold by
 
     $product = Product::factory()->minimumPallets(10)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
 
     $response->assertRedirect(route('admin.products.index'));
     expect($product->fresh()->minimum_pallets)->toBeNull();
@@ -538,7 +538,7 @@ test('setting a minimum pallets threshold redirects back with the current page a
 
     $product = Product::factory()->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
 });
@@ -550,7 +550,7 @@ test('setting a minimum pallets threshold creates the settings row for a product
     $product = Product::factory()->unconfigured()->create();
     expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
-    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
 
     // Regression: wms_product_settings.boxes_count has its own DB-level
     // default of 1, divorced from Product::DEFAULT_BOXES_COUNT (50) — an
@@ -567,7 +567,7 @@ test('setting a minimum pallets threshold on a product with an already-configure
 
     $product = Product::factory()->boxesCount(24)->create();
 
-    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
 
     expect($product->fresh())
         ->minimum_pallets->toBe(15)
@@ -580,7 +580,7 @@ test('the minimum pallets threshold, when sent, must be a whole number of at lea
     $product = Product::factory()->minimumPallets(6)->create();
 
     foreach ([0, -3, 'many'] as $invalid) {
-        $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
+        $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
 
         $response->assertSessionHasErrors('minimum_pallets');
     }
@@ -593,7 +593,7 @@ test('omitting the minimum_pallets field entirely is rejected, unlike sending an
 
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", []);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", []);
 
     $response->assertSessionHasErrors('minimum_pallets');
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -604,7 +604,7 @@ test('a mobile app user cannot set a minimum pallets threshold', function () {
 
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertForbidden();
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -613,7 +613,7 @@ test('a mobile app user cannot set a minimum pallets threshold', function () {
 test('an unauthenticated caller cannot set a minimum pallets threshold', function () {
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('login'));
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -622,7 +622,7 @@ test('an unauthenticated caller cannot set a minimum pallets threshold', functio
 test('setting a minimum pallets threshold for a non-existent product returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->patch('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
+    $response = $this->put('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
 
     $response->assertNotFound();
 });
@@ -875,6 +875,16 @@ test('the product search paginates instead of returning every product at once', 
     expect($response->json('meta.total'))->toBe(25);
 });
 
+test('the product search keeps the caller\'s query string on its pagination links', function () {
+    actingAsAdmin();
+
+    Product::factory()->count(25)->sequence(fn ($sequence) => ['name' => "Widget {$sequence->index}"])->create();
+    // Noise: a product the search excludes must not count towards the second page.
+    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+
+    assertNextLinkKeepsQuery($this->getJson('/admin/products/search?q=Widget'), 'q=Widget');
+});
+
 test('the product search filters by name, excluding a non-matching product', function () {
     actingAsAdmin();
 
@@ -962,7 +972,7 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     $product = Product::factory()->boxesCount(6)->create();
     $otherProduct = Product::factory()->boxesCount(9)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
@@ -977,7 +987,7 @@ test('setting a box count redirects back with the current page and filters prese
 
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
 });
@@ -989,7 +999,7 @@ test('setting a box count creates the settings row for a product that has never 
     $product = Product::factory()->unconfigured()->create();
     expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
-    $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
+    $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
 
     expect($product->fresh()->boxes_count)->toBe(15);
     $this->assertDatabaseCount('wms_product_settings', 1);
@@ -1001,12 +1011,12 @@ test('the box count must be a whole number of at least one', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
     foreach ([0, -3, 'many'] as $invalid) {
-        $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
+        $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
 
         $response->assertSessionHasErrors('boxes_count');
     }
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", []);
+    $response = $this->put("/admin/products/{$product->id}/box-count", []);
     $response->assertSessionHasErrors('boxes_count');
 
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1017,7 +1027,7 @@ test('a mobile app user cannot set a box count', function () {
 
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertForbidden();
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1026,7 +1036,7 @@ test('a mobile app user cannot set a box count', function () {
 test('an unauthenticated caller cannot set a box count', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('login'));
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1035,7 +1045,7 @@ test('an unauthenticated caller cannot set a box count', function () {
 test('setting a box count for a non-existent product returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+    $response = $this->put('/admin/products/999999/box-count', ['boxes_count' => 30]);
 
     $response->assertNotFound();
 });

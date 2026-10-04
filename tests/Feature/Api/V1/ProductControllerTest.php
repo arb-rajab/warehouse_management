@@ -112,6 +112,16 @@ test('the product listing paginates instead of returning everything at once', fu
     assertJsonListingPaginates($response, total: 25);
 });
 
+test('the product listing keeps the caller\'s query string on its pagination links', function () {
+    actingAsMobileUser();
+
+    Product::factory()->count(25)->sequence(fn ($sequence) => ['name' => "Widget {$sequence->index}"])->create();
+    // Noise: a product the search excludes must not count towards the second page.
+    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+
+    assertNextLinkKeepsQuery($this->getJson('/api/v1/products?q=Widget'), 'q=Widget');
+});
+
 test('the product listing filters by name, excluding a non-matching product', function () {
     actingAsMobileUser();
 
