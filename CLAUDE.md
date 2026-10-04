@@ -263,8 +263,14 @@ SessionStart hook (`.claude/hooks/session-start.sh`) runs
 `python3 .claude/scripts/install_dev_tools.py`: it installs everything,
 including Pint, Pest, PHPStan, Larastan and faker, with `--prefer-source`,
 shallow-clones the locked `phpstan/phpstan` tag (it is dist-only), and restores
-`composer.lock` byte for byte afterwards. Read the session's startup message: it
-says whether the PHP tools are installed and whether the Vite build exists.
+`composer.lock` byte for byte afterwards. The hook first apt-installs
+`php<version>-gd`, because `composer.lock` requires `ext-gd` and a fresh
+container's PHP lacks it; without the extension the install fails its platform
+check, `vendor/` never appears, and artisan, Wayfinder and the Vite build are
+all unavailable. Never answer that platform error with
+`--ignore-platform-reqs`: install the extension. Read the session's startup
+message: it says whether the PHP tools are installed and whether the Vite build
+exists.
 
 When they are installed, run the checks locally instead of waiting for CI:
 

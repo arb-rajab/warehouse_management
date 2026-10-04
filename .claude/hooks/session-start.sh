@@ -5,6 +5,9 @@
 #
 # What is and isn't reachable here was measured, not assumed:
 #
+#   php<ver>-gd (apt)         ~10s   ext-gd, required by composer.lock; without it
+#                                    the dependency install fails the platform
+#                                    check and vendor/ never appears.
 #   npm ci                    ~15s   vitest, vue-tsc, prettier, eslint
 #   composer install --no-dev ~4m    a bootable app: artisan, migrations, tinker
 #   dev dependencies, dist    never  every dev package's dist URL
@@ -32,6 +35,19 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+
+# composer.lock requires ext-gd (mpdf, phpspreadsheet, simple-qrcode) and a
+# fresh container's PHP does not ship it, so the dependency install fails the
+# platform check and leaves vendor/ absent — which in turn makes artisan, the
+# Wayfinder generation and the Vite build unavailable. Install the extension
+# for the running PHP version first; failure is non-fatal, the install below
+# then reports the platform error as it always did.
+if ! php -m 2>/dev/null | grep -qix 'gd'; then
+    gdPackage="php$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;' 2>/dev/null)-gd"
+    apt-get install -y -qq "$gdPackage" >/dev/null 2>&1 \
+        || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq "$gdPackage" >/dev/null 2>&1; } \
+        || true
+fi
 
 frontend='unavailable'
 backend='unavailable'
