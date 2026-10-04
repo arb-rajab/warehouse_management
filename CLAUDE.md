@@ -307,7 +307,8 @@ itself fails, the proxy policy has changed: report the error, fall back to
 normal, and read Pint/PHPStan/Pest from CI (`composer ci:check`).
 
 **While a long-running command like `composer install --no-dev` or the dev-tools
-script (~4 minutes cold) is in flight in the background:** wait for exactly one
+script (~9 minutes cold, ~7 GB of disk: the hook's timeout is 1800s) is in flight
+in the background:** wait for exactly one
 completion notification — don't spawn a second or third background loop polling
 the same PID/condition, and don't fill the intervening turns with no-op
 `Bash`/`ReadNotifications` calls just to "do something while waiting". The

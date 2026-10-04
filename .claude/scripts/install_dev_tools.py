@@ -7,7 +7,12 @@ returns 403 for any repository the session does not have attached. Anonymous
 git clones of public repositories are served, though, so:
 
   * `--prefer-source` makes composer `git clone` the packages that carry a git
-    `source` in composer.lock (Pint, Pest, Larastan and the rest).
+    `source` in composer.lock (Pint, Pest, Larastan and the rest). It covers
+    every package, not just the dev ones: a cold run's 150 failed downloads were
+    149 dist attempts, so a runtime-only dist pass first saves nothing and
+    composer silently falls back to cloning anyway. Cost on a cold container:
+    ~9 minutes and ~7 GB (about 4.6 GB of full-history clones in composer's cache
+    plus ~2.8 GB in vendor/), so the SessionStart hook's timeout must allow for it.
   * `phpstan/phpstan` is the exception: it is locked dist-only, and a full
     mirror clone of its repository (which keeps every release phar in history)
     exceeds composer's process timeout. So this script shallow-clones the
