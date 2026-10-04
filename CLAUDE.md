@@ -249,9 +249,10 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   exists for it) for right before each commit, as the final confirmation
   that nothing else regressed — not after every intermediate edit. Before
   every push, run `python3 .claude/scripts/pre_push_check.py` once: it runs
-  ESLint, Prettier, vue-tsc and the full Vitest suite plus `php -l` and the
-  `.claude/scripts/*.py` stand-ins below, in CI's order, as the single
-  command instead of assembling this sequence by hand each time.
+  ESLint, Prettier, vue-tsc, the full Vitest suite, Pint, PHPStan and Pest in
+  CI's order as the single command instead of assembling this sequence by hand
+  each time. It skips the three PHP steps, with a note, when the dev tools are
+  not installed.
 
 ## Sandbox: dev tools install from git, and Pest needs the Vite build
 
@@ -322,35 +323,29 @@ problem, not the connection). A local smoke check that needs rows must build
 them with plain `Model::create()`; anything genuinely factory- or seeder-shaped
 can only be verified in CI.
 
-When the PHP tools are not installed, the stand-ins for them are committed in
-`.claude/scripts/`, so no session has to rebuild them:
+The scripts in `.claude/scripts/`:
 
-| Script | Stands in for |
+| Script | Purpose |
 | --- | --- |
-| `php_import_order.py` | Pint's `ordered_imports`. Sorts case-INSENSITIVELY — a plain `sort` false-positives on pairs like `Date`/`DB` |
-| `js_balance.py` | a syntax smoke check for `.ts`/`.js`/`.vue` — catches the unclosed brace a `sed` edit leaves behind |
-| `vue_unused_imports.py` | eslint's `no-unused-vars` for a `<script setup>` block, template usage included |
-| `vue_prettier_hints.py` | Prettier's print width and its element-opening collapse |
-| `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs |
-| `php_pint_style.py` | other Pint `laravel`-preset fixers — `array_syntax`, `no_trailing_whitespace`, `single_blank_line_at_eof`, `no_closing_tag`, and `trailing_comma_in_multiline` for array literals |
-| `install_dev_tools.py` | not a stand-in either — the dev-tools installer described above; it needs no self-test run beyond `selftest.py` unless its lock-patching logic changes |
-| `pre_push_check.py` | not a stand-in itself — runs every check above plus `npm run lint:check`/`format:check`/`types:check`/`test:unit` and `php -l`, in CI's order, as the one command to run before every push |
+| `install_dev_tools.py` | the dev-tools installer described above, run by the SessionStart hook |
+| `pre_push_check.py` | the one command to run before every push: ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest in CI's order |
+| `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |
+| `selftest.py` | verifies the scripts above and the install guard hook |
 
 Each script's docstring carries its usage and its limitations; read it before
 trusting a result. Run `python3 .claude/scripts/selftest.py` after changing any
-of them — nothing else verifies these, and a checker that has quietly stopped
-working is worse than none, because it is trusted.
-
-If you need a check they don't cover, add it there with a case in the self-test
-rather than writing another one to the scratchpad. Either way, never re-embed a
-script in a new Bash heredoc per invocation: the repeated inline text costs
-tool-input tokens on every call for no benefit over one reusable file.
+script there or the guard hook — nothing else verifies them, and a checker that
+has quietly stopped working is worse than none, because it is trusted. Add a
+case to it for any new script rather than writing a one-off check in the
+scratchpad, and never re-embed a script in a new Bash heredoc per invocation:
+the repeated inline text costs tool-input tokens on every call for no benefit
+over one reusable file.
 
 ### Enumerate before editing; ask for filenames before error bodies
 
 Two habits that pay for themselves whenever a change ripples across many files
-— which is most changes here, because Pest cannot run locally to find the
-ripple for you.
+— which is most changes here, and Pest, though it can run locally, takes a
+parallel run to surface the ripple, so sweep first.
 
 **Enumerate the sites in one sweep, keyed on a stable sibling.** Adding a key to
 a Resource, a `toArray()` or a map-summary breaks every test asserting that
@@ -376,10 +371,11 @@ letting the type-checker find it.
 
 ### Read the framework source before theorising about framework behaviour
 
-`composer install --no-dev` succeeds here, so every non-dev package's source is
-already on disk — read `vendor/laravel/framework/src/Illuminate/...` directly
-rather than curling it. Only a dev-only package (Pint, Pest, PHPStan, Larastan)
-needs the tagged source over the network: `curl
+Every package's source is already on disk once the SessionStart install has run
+— read `vendor/laravel/framework/src/Illuminate/...` directly rather than
+curling it. Only in the fallback `--no-dev` state is a dev-only package (Pint,
+Pest, PHPStan, Larastan) missing; then fetch the tagged source over the
+network: `curl
 https://raw.githubusercontent.com/<vendor>/<package>/v<version>/src/...`, with
 `<version>` from `composer.lock`. When an installed package behaves in a way its
 public API appears to rule out, one read settles it, while a guess costs a CI
