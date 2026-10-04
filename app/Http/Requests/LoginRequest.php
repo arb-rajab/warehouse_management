@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Controllers\Concerns\FailsAuthenticationUniformly;
 use App\Http\Requests\Concerns\ValidatesLoginCredentials;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -11,6 +12,16 @@ class LoginRequest extends FormRequest
 {
     use FailsAuthenticationUniformly;
     use ValidatesLoginCredentials;
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return $this->loginCredentialRules();
+    }
 
     /**
      * Attempt to authenticate the request's credentials against the web guard.

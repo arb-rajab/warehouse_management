@@ -76,7 +76,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
         Route::patch('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
         Route::post('products/{product}/barcodes', [ProductController::class, 'addBarcode'])->name('products.barcodes.store');
-        Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'removeBarcode'])->name('products.barcodes.destroy');
+        Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'removeBarcode'])->scopeBindings()->name('products.barcodes.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');
