@@ -129,3 +129,13 @@ test('the underActiveVerification scope returns only rows claimed by an unfinish
     expect($results)->toHaveCount(1);
     expect($results->first()->id)->toBe($claimed->id);
 });
+
+test('highestFlatsCount is the tallest row\'s level count, and 1 when there are no rows', function () {
+    expect(Row::highestFlatsCount())->toBe(1);
+
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 5]);
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 3]);
+
+    expect(Row::highestFlatsCount())->toBe(5);
+});

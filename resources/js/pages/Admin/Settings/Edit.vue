@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
+import { computed } from 'vue';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { update } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import HelpLink from '@/components/HelpLink.vue';
@@ -11,7 +12,12 @@ import type { Setting } from '@/types/admin';
 
 const props = defineProps<{
     setting: Setting;
+    highestLevel: number;
 }>();
+
+const levels = computed(() =>
+    Array.from({ length: props.highestLevel }, (_, index) => index + 1),
+);
 
 /**
  * SettingFormFields.vue is cm-facing, but its native inputs keep the
@@ -46,6 +52,8 @@ function transformToPixels(
             <SettingFormFields
                 :qr-code-width="props.setting.qr_code_width"
                 :qr-code-height="props.setting.qr_code_height"
+                :levels="levels"
+                :allowed-open-levels="props.setting.allowed_open_levels"
                 :errors="errors"
             />
         </template>

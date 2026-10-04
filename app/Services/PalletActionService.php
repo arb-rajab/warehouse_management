@@ -10,6 +10,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -211,10 +212,21 @@ class PalletActionService
      * as a pallet lands in it — store() and transfer() both route their target state
      * through here instead of assuming Full. `$default` is what the state would be
      * without this rule (Full for store(), the carried-over source state for transfer()).
+     *
+     * The auto-open is still an opening, so it only happens while the first level is
+     * one of the settings' allowed open levels; otherwise the pallet lands in `$default`
+     * like on any other level (and, being Full, cannot be opened there later either).
      */
     private function targetStateForCell(Cell $cell, CellState $default): CellState
     {
-        return $cell->flat_number === 1 ? CellState::Opened : $default;
+        return $cell->flat_number === 1 && Setting::allowsOpeningAtLevel(1) ? CellState::Opened : $default;
+    }
+
+    private function assertOpeningAllowedAtLevel(Cell $cell): void
+    {
+        if (! Setting::allowsOpeningAtLevel($cell->flat_number)) {
+            throw new InvalidSlotStateException('open_level_not_allowed', __('messages.open_level_not_allowed'));
+        }
     }
 
     /**
@@ -298,17 +310,27 @@ class PalletActionService
      * transaction. A null $boxesCount just transitions the cell to Opened and
      * leaves remaining_boxes untouched — see .ai/rules/v1.md.
      *
+     * A pallet on a level outside the settings' allowed open levels is refused
+     * (`open_level_not_allowed`). `$enforceAllowedLevels` is false only for
+     * CellVerificationService, which replays what a worker physically found on
+     * the shelf: an accepted report of an opened pallet must be able to record
+     * it whatever the policy for opening new ones is.
+     *
      * @return array{pallet: ?Pallet, emptied: bool}
      */
-    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note): array
+    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note, bool $enforceAllowedLevels = true): array
     {
         $emptied = false;
 
-        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, &$emptied) {
+        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, $enforceAllowedLevels, &$emptied) {
             [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
 
             if ($cell->state !== CellState::Full) {
                 throw new InvalidSlotStateException('pallet_not_full', __('messages.pallet_not_full'));
+            }
+
+            if ($enforceAllowedLevels) {
+                $this->assertOpeningAllowedAtLevel($cell);
             }
 
             if ($boxesCount !== null

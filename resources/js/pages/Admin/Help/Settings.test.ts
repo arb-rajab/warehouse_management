@@ -49,6 +49,13 @@ describe('Help Settings', () => {
         expect(wrapper.text()).toContain(t('help.settings.qrSize.body'));
     });
 
+    it('explains the allowed open levels setting', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.settings.openLevels.heading'));
+        expect(wrapper.text()).toContain(t('help.settings.openLevels.body'));
+    });
+
     it('renders a preview of the QR code width/height form fields', () => {
         const wrapper = mountPage();
 

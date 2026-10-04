@@ -19,8 +19,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $qr_code_width
  * @property int $qr_code_height
+ * @property list<int> $allowed_open_levels
  */
-#[Fillable(['qr_code_width', 'qr_code_height'])]
+#[Fillable(['qr_code_width', 'qr_code_height', 'allowed_open_levels'])]
 class Setting extends Model
 {
     /** @use HasFactory<SettingFactory> */
@@ -69,6 +70,15 @@ class Setting extends Model
     public const int MAX_QR_CODE_SIZE = 1000;
 
     /**
+     * The cell levels (`cells.flat_number`) pallets may be opened on until an
+     * admin says otherwise: only the ground level, which is also the one
+     * level PalletActionService opens automatically.
+     *
+     * @var list<int>
+     */
+    public const array DEFAULT_ALLOWED_OPEN_LEVELS = [1];
+
+    /**
      * The single settings row, created with today's QR-size defaults the
      * first time anything reads it. Every export/admin read/update goes
      * through this rather than querying wms_settings directly, so there is
@@ -81,10 +91,23 @@ class Setting extends Model
         if (! $setting->exists) {
             $setting->qr_code_width = self::DEFAULT_QR_CODE_WIDTH;
             $setting->qr_code_height = self::DEFAULT_QR_CODE_HEIGHT;
+            $setting->allowed_open_levels = self::DEFAULT_ALLOWED_OPEN_LEVELS;
             $setting->save();
         }
 
         return $setting;
+    }
+
+    /**
+     * Whether pallets sitting on the given level may be opened. A read-only
+     * lookup (unlike current(), it never creates the settings row), used from
+     * inside PalletActionService's transactions.
+     */
+    public static function allowsOpeningAtLevel(int $level): bool
+    {
+        $setting = static::query()->first(['id', 'allowed_open_levels']);
+
+        return in_array($level, $setting?->allowed_open_levels ?? self::DEFAULT_ALLOWED_OPEN_LEVELS, true);
     }
 
     /**
@@ -109,6 +132,28 @@ class Setting extends Model
     {
         return Attribute::make(
             get: fn (int $value): int => max(self::MIN_QR_CODE_SIZE, min(self::MAX_QR_CODE_SIZE, $value)),
+        );
+    }
+
+    /**
+     * Stored as a JSON list; written sorted and de-duplicated as ints, so
+     * whatever a caller submits is normalized before it is persisted. A NULL
+     * column reads back as the default.
+     *
+     * @return Attribute<list<int>, list<int|string>>
+     */
+    protected function allowedOpenLevels(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): array => $value === null
+                ? self::DEFAULT_ALLOWED_OPEN_LEVELS
+                : array_values(array_map(intval(...), json_decode($value, true, 512, JSON_THROW_ON_ERROR))),
+            set: function (array $levels): string {
+                $normalized = array_values(array_unique(array_map(intval(...), $levels)));
+                sort($normalized);
+
+                return json_encode($normalized, JSON_THROW_ON_ERROR);
+            },
         );
     }
 }
