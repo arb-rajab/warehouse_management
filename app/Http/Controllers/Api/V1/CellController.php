@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\FilterCellsRequest;
 use App\Http\Requests\Api\V1\ShowCellRequest;
-use App\Http\Requests\Api\V1\ShowCellsRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\Product;
@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CellController extends Controller
 {
-    public function index(ShowCellsRequest $request, Row $row): AnonymousResourceCollection
+    public function index(FilterCellsRequest $request, Row $row): AnonymousResourceCollection
     {
         return CellResource::collection(
             $row->cells()

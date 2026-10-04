@@ -9,7 +9,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class RemovePalletBoxesRequest extends FormRequest
 {
-    use ValidatesBoxesCount, ValidatesOptionalNote;
+    use ValidatesBoxesCount;
+    use ValidatesOptionalNote;
 
     /**
      * Get the validation rules that apply to the request.

@@ -1199,7 +1199,7 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
-    it('caps the search input length, mirroring the backend ShowCellMapRequest max:100 rule', () => {
+    it('caps the search input length, mirroring the backend FilterCellMapRequest max:100 rule', () => {
         const wrapper = mountPage([row()], []);
 
         expect(wrapper.get('input[type="text"]').attributes('maxlength')).toBe(

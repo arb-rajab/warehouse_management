@@ -50,13 +50,13 @@ test('the user list respects a per_page query parameter', function () {
     $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
 });
 
-test('an out-of-range per_page value falls back to the default page size for the user list', function () {
+test('the user list rejects a per_page value outside the allowed options', function () {
     actingAsAdmin();
     User::factory()->count(25)->mobileUser()->create();
 
     $response = $this->get('/admin/users?per_page=999');
 
-    assertInertiaPaginates($response, 'users', 20, 26, 'Admin/Users/Index');
+    $response->assertSessionHasErrors('per_page');
 });
 
 test('a mobile app user cannot view the user list', function () {
@@ -157,15 +157,27 @@ test('a users action history respects a per_page query parameter', function () {
     $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
 });
 
-test('an out-of-range per_page value falls back to the default page size for a users action history', function () {
+test('a users action history rejects a per_page value outside the allowed options', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create();
     CellStatusLog::factory()->count(30)->create(['user_id' => $target->id]);
 
     $response = $this->get("/admin/users/{$target->id}?per_page=999");
 
-    assertInertiaPaginates($response, 'logs', 20, 30);
+    $response->assertSessionHasErrors('per_page');
 });
+
+test('a users action history rejects an unknown sort_by or sort_direction', function (string $param, string $value) {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+
+    $response = $this->get("/admin/users/{$target->id}?{$param}={$value}");
+
+    $response->assertSessionHasErrors($param);
+})->with([
+    'sort_by' => ['sort_by', 'bogus'],
+    'sort_direction' => ['sort_direction', 'sideways'],
+]);
 
 test('a users action history defaults to newest-first', function () {
     actingAsAdmin();
@@ -269,7 +281,7 @@ test('a users verification reports respect a reports_per_page query parameter in
         ->where('filters.reports_per_page', 25));
 });
 
-test('an out-of-range reports_per_page value falls back to the default page size for a users verification reports', function () {
+test('a users verification reports reject a reports_per_page value outside the allowed options', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create();
     $cell = Cell::factory()->create();
@@ -277,7 +289,7 @@ test('an out-of-range reports_per_page value falls back to the default page size
 
     $response = $this->get("/admin/users/{$target->id}?reports_per_page=999");
 
-    assertInertiaPaginates($response, 'reports', 20, 30);
+    $response->assertSessionHasErrors('reports_per_page');
 });
 
 test('a users verification reports default to newest-first', function () {

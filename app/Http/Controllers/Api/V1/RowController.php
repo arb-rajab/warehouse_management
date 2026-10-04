@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\ShowRowsFullRequest;
+use App\Http\Requests\Api\V1\FilterRowsFullRequest;
 use App\Http\Resources\RowResource;
 use App\Http\Resources\RowSummaryResource;
 use App\Models\Cell;
@@ -28,7 +28,7 @@ class RowController extends Controller
      * matching product, dropping empty cells and non-matching pallets from
      * the returned grid.
      */
-    public function full(ShowRowsFullRequest $request): AnonymousResourceCollection
+    public function full(FilterRowsFullRequest $request): AnonymousResourceCollection
     {
         $productPublished = $request->productPublished();
 

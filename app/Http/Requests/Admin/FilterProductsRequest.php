@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CellState;
 use App\Http\Requests\Concerns\FiltersByDateRange;
 use App\Http\Requests\Concerns\FiltersByLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
@@ -12,6 +13,7 @@ use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use App\Http\Requests\Concerns\SortsByDirection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FilterProductsRequest extends FormRequest
 {
@@ -42,7 +44,7 @@ class FilterProductsRequest extends FormRequest
             // No `empty` option here (unlike the cells map) — an empty cell
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
-            'state' => ['nullable', 'string', 'in:full,opened'],
+            'state' => ['nullable', 'string', Rule::enum(CellState::class)->only([CellState::Full, CellState::Opened])],
             'expired' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'inactive' => ['nullable', 'boolean'],

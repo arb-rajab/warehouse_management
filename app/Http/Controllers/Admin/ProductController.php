@@ -166,16 +166,13 @@ class ProductController extends Controller
     }
 
     /**
-     * Detaches a barcode from a product. `$barcode` is route-model-bound
-     * without scoping it to `$product` (Laravel has no built-in nested
-     * scoping for a manually declared route), so the ownership check is
-     * explicit here — without it, an admin could delete any product's
-     * barcode by guessing its id while looking at a different product's row.
+     * Detaches a barcode from a product. The route uses `scopeBindings()`, so
+     * `$barcode` only resolves when it belongs to `$product` — without that,
+     * an admin could delete any product's barcode by guessing its id while
+     * looking at a different product's row.
      */
     public function removeBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
     {
-        abort_if($barcode->product_id !== $product->id, 404);
-
         $barcode->delete();
 
         return $this->redirectPreservingQuery('admin.products.index', $request);

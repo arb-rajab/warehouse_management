@@ -2,18 +2,15 @@
 
 namespace App\Http\Requests\Api\V1;
 
-use App\Http\Requests\Concerns\NormalizesBooleanFilters;
+use App\Http\Requests\Concerns\FiltersByProductStatus;
+use App\Http\Requests\Concerns\FiltersByStaleAfterDays;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class IndexCellVerificationRoundsRequest extends FormRequest
+class FilterRowsFullRequest extends FormRequest
 {
-    use NormalizesBooleanFilters;
-
-    protected function prepareForValidation(): void
-    {
-        $this->normalizeBooleanFilter('only_unfinished');
-    }
+    use FiltersByProductStatus;
+    use FiltersByStaleAfterDays;
 
     /**
      * Get the validation rules that apply to the request.
@@ -23,7 +20,8 @@ class IndexCellVerificationRoundsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'only_unfinished' => ['nullable', 'boolean'],
+            ...$this->staleAfterDaysFilterRules(),
+            ...$this->productStatusFilterRules(),
         ];
     }
 }

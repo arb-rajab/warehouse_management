@@ -11,7 +11,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class TransferPalletRequest extends FormRequest
 {
-    use ResolvesSlotFromCoordinates, ValidatesOptionalNote, ValidatesReturnTo;
+    use ResolvesSlotFromCoordinates;
+    use ValidatesOptionalNote;
+    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.

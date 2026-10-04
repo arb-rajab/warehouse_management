@@ -6,7 +6,7 @@ use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ShowCellMapRequest;
+use App\Http\Requests\Admin\FilterCellMapRequest;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
@@ -25,7 +25,7 @@ class CellController extends Controller
 {
     use BuildsCellQrLabels, RedirectsAfterCellAction;
 
-    public function index(ShowCellMapRequest $request): Response
+    public function index(FilterCellMapRequest $request): Response
     {
         $rows = Row::mapOptions();
         $maxFlatNumber = (int) (Row::query()->max('flats_count') ?? 0);
@@ -212,7 +212,7 @@ class CellController extends Controller
      * applied to the cell directly, since those can match a cell with no
      * pallet at all (e.g. an empty or deactivated cell).
      */
-    private function firstHighlightMatch(ShowCellMapRequest $request): ?Cell
+    private function firstHighlightMatch(FilterCellMapRequest $request): ?Cell
     {
         $query = Cell::query()->with('row:id,letter');
 
