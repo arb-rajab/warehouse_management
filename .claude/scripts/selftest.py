@@ -258,6 +258,37 @@ def main() -> int:
         install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
         check('a clean lock is left alone', repo_lock.read_bytes() == pristine_lock)
 
+        # While the lock is patched, git must see a clean tree: the install runs
+        # for ~10 minutes in the background and a "commit uncommitted changes"
+        # Stop hook would otherwise commit the patched lock.
+        def git_output(*arguments: str) -> str:
+            return subprocess.run(['git', *arguments], cwd=repo, capture_output=True, text=True).stdout
+
+        during: dict[str, str] = {}
+
+        def inspect_tree_mid_install() -> int:
+            during['patched'] = str(install_dev_tools.is_patched(json.loads(repo_lock.read_bytes())))
+            during['status'] = git_output('status', '--porcelain')
+            during['diff'] = git_output('diff', '--stat')
+
+            return 0
+
+        install_dev_tools.install_with_patched_lock(repo_lock, root / 'repo-backup', clone, inspect_tree_mid_install)
+        check('the lock really is patched mid-install', during.get('patched') == 'True', str(during))
+        check('git reports a clean tree while the lock is patched', during.get('status') == '' and during.get('diff') == '', str(during))
+        check('the lock is back to HEAD afterwards', git_output('status', '--porcelain') == '' and repo_lock.read_bytes() == pristine_lock)
+        check('the skip-worktree flag is cleared afterwards', git_output('ls-files', '-v', 'composer.lock').startswith('H'), git_output('ls-files', '-v', 'composer.lock'))
+
+        # A run killed with SIGKILL leaves the flag set and the lock patched.
+        subprocess.run(['git', 'update-index', '--skip-worktree', 'composer.lock'], cwd=repo, check=True)
+        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
+        check(
+            'recovery clears a stale skip-worktree flag and restores the lock',
+            git_output('ls-files', '-v', 'composer.lock').startswith('H') and repo_lock.read_bytes() == pristine_lock,
+            git_output('ls-files', '-v', 'composer.lock'),
+        )
+
         print('wait_for_setup.py')
         import wait_for_setup
 

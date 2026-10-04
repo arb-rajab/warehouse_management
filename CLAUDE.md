@@ -265,7 +265,11 @@ SessionStart hook (`.claude/hooks/session-start.sh`) runs
 `python3 .claude/scripts/install_dev_tools.py`: it installs everything,
 including Pint, Pest, PHPStan, Larastan and faker, with `--prefer-source`,
 shallow-clones the locked `phpstan/phpstan` tag (it is dist-only), and restores
-`composer.lock` byte for byte afterwards. The hook first runs
+`composer.lock` byte for byte afterwards. While it patches the lock for the
+install, git is told to ignore the file (`--skip-worktree`), so a tree that looks
+dirty never invites a commit of the patched lock; if `composer.lock` ever does
+show as modified, setup is still running or was killed (check
+`python3 .claude/scripts/wait_for_setup.py`), so never commit it. The hook first runs
 `bash .claude/scripts/install_php.sh`, which installs PHP 8.5 and every
 extension the app needs (including `gd`) from the ondrej PPA when they are
 missing, and does nothing when they are present. `composer.json` requires

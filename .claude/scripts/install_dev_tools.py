@@ -20,7 +20,10 @@ git clones of public repositories are served, though, so:
 
 composer.lock is patched on disk for the install and restored byte for byte
 afterwards, whatever the outcome (including SIGTERM/SIGHUP), so nothing here can
-reach a commit. The pristine copy is also kept in the system temp directory
+reach a commit; git is told to ignore the lock's working-tree changes
+(`--skip-worktree`) for as long as the patch is on disk, so the ~10 minute
+install never shows a dirty tree that something might commit. The pristine copy
+is also kept in the system temp directory
 while the install runs: a SIGKILL, such as a hook timeout, skips every cleanup,
 and the next run uses that copy (or, failing that, `git show HEAD:composer.lock`)
 to undo the leftover patch instead of mistaking it for the original. Usage:
@@ -105,13 +108,33 @@ def backup_path_for(lock_path: Path) -> Path:
     return Path(tempfile.gettempdir()) / f'composer.lock.original.{digest}'
 
 
+def set_skip_worktree(lock_path: Path, enabled: bool) -> None:
+    """Hide (or stop hiding) the lock's working-tree changes from git.
+
+    The patch lives on disk for the whole install, ~10 minutes and in the
+    background, so `git status` would show a modified composer.lock the entire
+    time and anything that commits "uncommitted changes" (the Stop hook does)
+    would commit the patched lock, a path into /tmp, and break CI. With the flag
+    set, git treats the file as unchanged. Failures are ignored: outside a git
+    repository there is nothing to hide.
+    """
+    subprocess.run(
+        ['git', 'update-index', '--skip-worktree' if enabled else '--no-skip-worktree', lock_path.name],
+        cwd=lock_path.parent,
+        capture_output=True,
+    )
+
+
 def recover_original(lock_path: Path, backup: Path) -> None:
     """Undo what an earlier run left behind when it was killed before restoring.
 
     A SIGKILL (a hook timeout, a reclaimed container) skips every `finally`, so
     the lock can be left patched. Without this, the next run would take that
-    patched file for the original and faithfully restore it.
+    patched file for the original and faithfully restore it. It also clears the
+    skip-worktree flag such a run leaves set, so git sees the restored lock.
     """
+    set_skip_worktree(lock_path, False)
+
     if backup.exists():
         lock_path.write_bytes(backup.read_bytes())
         backup.unlink()
@@ -146,11 +169,13 @@ def install_with_patched_lock(lock_path: Path, backup: Path, clone_dir: Path, ru
 
     previous = {signum: signal.signal(signum, lambda *_: sys.exit(128 + signum)) for signum in (signal.SIGTERM, signal.SIGHUP)}
     try:
+        set_skip_worktree(lock_path, True)
         lock_path.write_text(json.dumps(patch_lock(lock, str(clone_dir)), indent=4, ensure_ascii=False))
 
         return run_install()
     finally:
         lock_path.write_bytes(original)
+        set_skip_worktree(lock_path, False)
         backup.unlink(missing_ok=True)
 
         for signum, handler in previous.items():
