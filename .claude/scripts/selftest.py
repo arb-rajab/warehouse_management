@@ -11,6 +11,7 @@ Exits non-zero if any case failed.
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -124,6 +125,28 @@ def main() -> int:
         )
         check('composer install --no-dev is allowed', guard_verdict('composer install --no-dev') == '')
         check('running install_dev_tools.py itself is allowed', guard_verdict('python3 .claude/scripts/install_dev_tools.py') == '')
+
+        print('install_php.sh')
+        php_script = SCRIPTS / 'install_php.sh'
+        syntax = subprocess.run(['bash', '-n', str(php_script)], capture_output=True, text=True)
+        check('script parses', syntax.returncode == 0, syntax.stderr)
+
+        fingerprint = re.search(r"^PPA_KEY_FINGERPRINT='([^']*)'", php_script.read_text(), re.MULTILINE)
+        check(
+            'PPA key is pinned by a full 40-hex fingerprint',
+            fingerprint is not None and re.fullmatch(r'[0-9A-F]{40}', fingerprint.group(1)) is not None,
+            str(fingerprint and fingerprint.group(1)),
+        )
+
+        # With no php on PATH the check must report "not satisfied" (exit 1) and
+        # must not try to install anything: it runs --check, which never does.
+        no_php = subprocess.run(
+            ['/bin/bash', str(php_script), '--check'],
+            capture_output=True,
+            text=True,
+            env={'PATH': '/nonexistent'},
+        )
+        check('--check without php is unsatisfied and silent', no_php.returncode == 1 and no_php.stdout == '', no_php.stdout + no_php.stderr)
 
         print('install_dev_tools.py')
         import install_dev_tools

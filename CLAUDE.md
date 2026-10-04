@@ -264,12 +264,16 @@ SessionStart hook (`.claude/hooks/session-start.sh`) runs
 `python3 .claude/scripts/install_dev_tools.py`: it installs everything,
 including Pint, Pest, PHPStan, Larastan and faker, with `--prefer-source`,
 shallow-clones the locked `phpstan/phpstan` tag (it is dist-only), and restores
-`composer.lock` byte for byte afterwards. The hook first apt-installs
-`php<version>-gd`, because `composer.lock` requires `ext-gd` and a fresh
-container's PHP lacks it; without the extension the install fails its platform
-check, `vendor/` never appears, and artisan, Wayfinder and the Vite build are
-all unavailable. Never answer that platform error with
-`--ignore-platform-reqs`: install the extension. Read the session's startup
+`composer.lock` byte for byte afterwards. The hook first runs
+`bash .claude/scripts/install_php.sh`, which installs PHP 8.5 and every
+extension the app needs (including `gd`) from the ondrej PPA when they are
+missing, and does nothing when they are present. `composer.json` requires
+`^8.5` and `composer.lock` requires `ext-gd`; without them the install fails its
+platform check, `vendor/` never appears, and artisan, Wayfinder and the Vite
+build are all unavailable. Never answer that platform error with
+`--ignore-platform-reqs`: run the script. It targets Debian/Ubuntu containers
+and needs root; `--check` reports whether PHP is satisfied without changing
+anything. Read the session's startup
 message: it says whether the PHP tools are installed and whether the Vite build
 exists.
 
@@ -327,6 +331,7 @@ The scripts in `.claude/scripts/`:
 
 | Script | Purpose |
 | --- | --- |
+| `install_php.sh` | installs PHP 8.5 and its extensions from the ondrej PPA (key pinned by fingerprint); run first by the SessionStart hook |
 | `install_dev_tools.py` | the dev-tools installer described above, run by the SessionStart hook |
 | `pre_push_check.py` | the one command to run before every push: ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest in CI's order |
 | `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |
