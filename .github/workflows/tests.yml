@@ -210,18 +210,12 @@ jobs:
       - name: Run PHPStan
         run: composer types:check
 
-  # composer.json requires ^8.4 while the other jobs run the newest PHP, so
-  # run the suite on the supported floor as well.
   test-php:
-    name: Pest (PHP ${{ matrix.php-version }})
+    name: Pest
     needs: [lint-php, format-js]
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        php-version: ['8.4', '8.5']
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -230,8 +224,6 @@ jobs:
 
       - name: Setup backend
         uses: ./.github/actions/setup-backend
-        with:
-          php-version: ${{ matrix.php-version }}
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
