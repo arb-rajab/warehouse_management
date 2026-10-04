@@ -10,6 +10,8 @@ changing any script here:
 Exits non-zero on the first failed case.
 """
 
+import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -242,6 +244,29 @@ def main() -> int:
             'app/Services/HtmlSanitizer.php',
         ])
         check('files Pint skips are not held to its style', kept == ['app/Services/HtmlSanitizer.php'], str(kept))
+
+        print('install-retry-guard.sh')
+        guard = SCRIPTS.parent / 'hooks' / 'install-retry-guard.sh'
+
+        def guard_verdict(command: str) -> str:
+            result = subprocess.run(
+                ['bash', str(guard), 'check'],
+                input=json.dumps({'tool_input': {'command': command}, 'session_id': 'selftest-guard'}),
+                capture_output=True,
+                text=True,
+                env={**os.environ, 'CLAUDE_CODE_REMOTE': 'true'},
+            )
+
+            return result.stdout
+
+        verdict = guard_verdict('composer install')
+        check(
+            'bare composer install is denied and points at install_dev_tools.py',
+            '"deny"' in verdict and 'install_dev_tools.py' in verdict,
+            verdict,
+        )
+        check('composer install --no-dev is allowed', guard_verdict('composer install --no-dev') == '')
+        check('running install_dev_tools.py itself is allowed', guard_verdict('python3 .claude/scripts/install_dev_tools.py') == '')
 
         print('install_dev_tools.py')
         import install_dev_tools
