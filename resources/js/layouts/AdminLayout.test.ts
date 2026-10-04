@@ -2,7 +2,18 @@ import { Link } from '@inertiajs/vue3';
 import { CircleUser, Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import {
+    index as rowsIndex,
+    edit as rowEdit,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
+import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { t } from '@/lib/i18n';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import AdminLayout from './AdminLayout.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -23,10 +34,7 @@ vi.mock('@inertiajs/vue3', async () => {
 function mountLayout(url: string) {
     usePageMock.mockReturnValue({
         url,
-        props: {
-            locale: 'en',
-            auth: { user: { name: 'Jane Doe' } },
-        },
+        props: defaultAuthProps(),
     });
 
     return mount(AdminLayout, { slots: { default: '<p>Page content</p>' } });
@@ -34,27 +42,26 @@ function mountLayout(url: string) {
 
 describe('AdminLayout', () => {
     beforeEach(() => {
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
+        resetMocks({ usePageMock, routerPostMock });
     });
 
     it('renders a nav link for every top-level section', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         const links = wrapper.findAll('nav a');
         expect(links.map((link) => link.attributes('href'))).toEqual([
             '/admin',
-            '/admin/rows',
-            '/admin/cells',
-            '/admin/cell-logs',
-            '/admin/cell-verification-rounds',
-            '/admin/products',
-            '/admin/users',
+            rowsIndex.url(),
+            cellsIndex.url(),
+            cellLogsIndex.url(),
+            cellVerificationRoundsIndex.url(),
+            productsIndex.url(),
+            usersIndex.url(),
         ]);
     });
 
     it('gives every nav link a Wayfinder route object, not a bare url string', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         const navLinks = wrapper
             .findAllComponents(Link)
@@ -66,20 +73,20 @@ describe('AdminLayout', () => {
         }
 
         expect(navLinks[1].props('href')).toEqual({
-            url: '/admin/rows',
+            url: rowsIndex.url(),
             method: 'get',
         });
     });
 
     it('marks the exact current section as active', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         const links = wrapper.findAll('nav a');
         const rowsLink = links.find(
-            (link) => link.attributes('href') === '/admin/rows',
+            (link) => link.attributes('href') === rowsIndex.url(),
         );
         const usersLink = links.find(
-            (link) => link.attributes('href') === '/admin/users',
+            (link) => link.attributes('href') === usersIndex.url(),
         );
 
         expect(rowsLink?.attributes('aria-current')).toBe('page');
@@ -89,14 +96,14 @@ describe('AdminLayout', () => {
     });
 
     it('uses a logical border-inline-start utility on the mobile nav link so RTL locales flip the active indicator', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
         await toggle.trigger('click');
 
         const rowsLink = wrapper
             .get('#admin-mobile-menu')
             .findAll('a')
-            .find((link) => link.attributes('href') === '/admin/rows');
+            .find((link) => link.attributes('href') === rowsIndex.url());
 
         expect(rowsLink?.classes()).toContain('border-s-4');
     });
@@ -109,7 +116,7 @@ describe('AdminLayout', () => {
             (link) => link.attributes('href') === '/admin',
         );
         const rowsLink = links.find(
-            (link) => link.attributes('href') === '/admin/rows',
+            (link) => link.attributes('href') === rowsIndex.url(),
         );
 
         expect(dashboardLink?.attributes('aria-current')).toBe('page');
@@ -117,7 +124,7 @@ describe('AdminLayout', () => {
     });
 
     it('does not mark the dashboard link active while a more specific section is open', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         const dashboardLink = wrapper
             .findAll('nav a')
@@ -127,11 +134,11 @@ describe('AdminLayout', () => {
     });
 
     it('marks a nested section path as active too', () => {
-        const wrapper = mountLayout('/admin/rows/A/edit');
+        const wrapper = mountLayout(rowEdit.url({ row: 'A' }));
 
         const rowsLink = wrapper
             .findAll('nav a')
-            .find((link) => link.attributes('href') === '/admin/rows');
+            .find((link) => link.attributes('href') === rowsIndex.url());
 
         expect(rowsLink?.attributes('aria-current')).toBe('page');
     });
@@ -141,17 +148,19 @@ describe('AdminLayout', () => {
 
         const rowsLink = wrapper
             .findAll('nav a')
-            .find((link) => link.attributes('href') === '/admin/rows');
+            .find((link) => link.attributes('href') === rowsIndex.url());
 
         expect(rowsLink?.attributes('aria-current')).toBeUndefined();
     });
 
     it('marks the map section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout('/admin/cells?state=empty');
+        const wrapper = mountLayout(
+            cellsIndex.url({ query: { state: 'empty' } }),
+        );
 
         const links = wrapper.findAll('nav a');
         const mapLink = links.find(
-            (link) => link.attributes('href') === '/admin/cells',
+            (link) => link.attributes('href') === cellsIndex.url(),
         );
         const dashboardLink = links.find(
             (link) => link.attributes('href') === '/admin',
@@ -162,11 +171,13 @@ describe('AdminLayout', () => {
     });
 
     it('marks the cell log section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout('/admin/cell-logs?action=inbound');
+        const wrapper = mountLayout(
+            cellLogsIndex.url({ query: { action: 'inbound' } }),
+        );
 
         const links = wrapper.findAll('nav a');
         const cellLogLink = links.find(
-            (link) => link.attributes('href') === '/admin/cell-logs',
+            (link) => link.attributes('href') === cellLogsIndex.url(),
         );
         const dashboardLink = links.find(
             (link) => link.attributes('href') === '/admin',
@@ -177,11 +188,13 @@ describe('AdminLayout', () => {
     });
 
     it('marks the products section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout('/admin/products?row_id=1');
+        const wrapper = mountLayout(
+            productsIndex.url({ query: { row_id: '1' } }),
+        );
 
         const links = wrapper.findAll('nav a');
         const productsLink = links.find(
-            (link) => link.attributes('href') === '/admin/products',
+            (link) => link.attributes('href') === productsIndex.url(),
         );
         const dashboardLink = links.find(
             (link) => link.attributes('href') === '/admin',
@@ -192,30 +205,30 @@ describe('AdminLayout', () => {
     });
 
     it('links the map nav item straight to the warehouse map with no filters applied', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         const mapLink = wrapper
             .findAll('nav a')
-            .find((link) => link.attributes('href') === '/admin/cells');
+            .find((link) => link.attributes('href') === cellsIndex.url());
 
-        expect(mapLink?.attributes('href')).toBe('/admin/cells');
+        expect(mapLink?.attributes('href')).toBe(cellsIndex.url());
     });
 
     it("renders the signed-in user's name with a user icon", () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         expect(wrapper.text()).toContain('Jane Doe');
         expect(wrapper.findComponent(CircleUser).exists()).toBe(true);
     });
 
     it('renders a brand icon next to the app name', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
     });
 
     it('links the logout action to the /logout route from the account menu', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         await wrapper.get('button[aria-label="Account"]').trigger('click');
 
         const logoutLink = wrapper
@@ -226,7 +239,7 @@ describe('AdminLayout', () => {
     });
 
     it('hides the account menu panel by default and expands it via the toggle button', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-label="Account"]');
 
         expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
@@ -239,7 +252,7 @@ describe('AdminLayout', () => {
     });
 
     it('renders the language switcher inside the account menu', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         await wrapper.get('button[aria-label="Account"]').trigger('click');
 
         expect(wrapper.text()).toContain('English');
@@ -247,7 +260,7 @@ describe('AdminLayout', () => {
     });
 
     it('renders a skip link that targets the main landmark', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const skipLink = wrapper.get('a[href="#main"]');
 
         expect(skipLink.text()).toBe(t('nav.skipToContent'));
@@ -255,13 +268,13 @@ describe('AdminLayout', () => {
     });
 
     it('renders the default slot content inside main', () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
 
         expect(wrapper.get('main').text()).toContain('Page content');
     });
 
     it('hides the mobile menu panel by default and expands it via the toggle button', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
 
         expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
@@ -278,16 +291,16 @@ describe('AdminLayout', () => {
                 .slice(0, 7),
         ).toEqual([
             '/admin',
-            '/admin/rows',
-            '/admin/cells',
-            '/admin/cell-logs',
-            '/admin/cell-verification-rounds',
-            '/admin/products',
-            '/admin/users',
+            rowsIndex.url(),
+            cellsIndex.url(),
+            cellLogsIndex.url(),
+            cellVerificationRoundsIndex.url(),
+            productsIndex.url(),
+            usersIndex.url(),
         ]);
         expect(
             panel.findAll('a').map((link) => link.attributes('href')),
-        ).toContain('/admin/settings');
+        ).toContain(settingsEdit.url());
 
         await toggle.trigger('click');
 
@@ -296,17 +309,17 @@ describe('AdminLayout', () => {
     });
 
     it('keeps every mobile nav link active/icon behavior in sync with the desktop nav', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
         await toggle.trigger('click');
 
         const panel = wrapper.get('#admin-mobile-menu');
         const rowsLink = panel
             .findAll('a')
-            .find((link) => link.attributes('href') === '/admin/rows');
+            .find((link) => link.attributes('href') === rowsIndex.url());
         const usersLink = panel
             .findAll('a')
-            .find((link) => link.attributes('href') === '/admin/users');
+            .find((link) => link.attributes('href') === usersIndex.url());
 
         expect(rowsLink?.attributes('aria-current')).toBe('page');
         expect(rowsLink?.classes()).toContain('border-gray-900');
@@ -315,21 +328,21 @@ describe('AdminLayout', () => {
     });
 
     it('closes the mobile menu when a nav link is clicked', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
         await toggle.trigger('click');
 
         const rowsLink = wrapper
             .get('#admin-mobile-menu')
             .findAll('a')
-            .find((link) => link.attributes('href') === '/admin/rows');
+            .find((link) => link.attributes('href') === rowsIndex.url());
         await rowsLink?.trigger('click');
 
         expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
     });
 
     it('closes the mobile menu when logout is clicked', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
         await toggle.trigger('click');
 
@@ -343,7 +356,7 @@ describe('AdminLayout', () => {
     });
 
     it('renders the language switcher and signed-in user inside the mobile menu', async () => {
-        const wrapper = mountLayout('/admin/rows');
+        const wrapper = mountLayout(rowsIndex.url());
         const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
         await toggle.trigger('click');
 

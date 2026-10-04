@@ -1,17 +1,26 @@
 import { CircleAlert, TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { t } from '@/lib/i18n';
 import UserFormFields from './UserFormFields.vue';
 
 describe('UserFormFields', () => {
     it('renders its labels', () => {
         const wrapper = mount(UserFormFields, { props: { errors: {} } });
 
-        expect(wrapper.text()).toContain('Name');
-        expect(wrapper.text()).toContain('Email');
-        expect(wrapper.text()).toContain('New password');
-        expect(wrapper.text()).toContain('Confirm password');
-        expect(wrapper.text()).toContain('Admin access');
+        expect(wrapper.text()).toContain(t('users.fields.name'));
+        expect(wrapper.text()).toContain(t('users.fields.email'));
+        expect(wrapper.text()).toContain(t('users.fields.newPassword'));
+        expect(wrapper.text()).toContain(t('users.fields.confirmPassword'));
+        expect(wrapper.text()).toContain(t('users.fields.adminAccess'));
+    });
+
+    it('resolves its label keys to the English copy', () => {
+        expect(t('users.fields.name')).toBe('Name');
+        expect(t('users.fields.email')).toBe('Email');
+        expect(t('users.fields.newPassword')).toBe('New password');
+        expect(t('users.fields.confirmPassword')).toBe('Confirm password');
+        expect(t('users.fields.adminAccess')).toBe('Admin access');
     });
 
     it('shows "Password" instead of "New password" when passwordRequired is true', () => {
@@ -19,8 +28,9 @@ describe('UserFormFields', () => {
             props: { errors: {}, passwordRequired: true },
         });
 
-        expect(wrapper.text()).toContain('Password');
-        expect(wrapper.text()).not.toContain('New password');
+        expect(wrapper.text()).toContain(t('users.fields.password'));
+        expect(wrapper.text()).not.toContain(t('users.fields.newPassword'));
+        expect(t('users.fields.password')).toBe('Password');
     });
 
     it('shows validation error messages', () => {

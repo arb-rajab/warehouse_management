@@ -2,6 +2,16 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { Barcode, Check, Filter, X } from '@lucide/vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import {
+    index as productsIndex,
+    updateBoxCount,
+    updateMinimumPallets,
+    storeBarcode,
+    destroyBarcode,
+    exportQr as productExportQr,
+} from '@/actions/App/Http/Controllers/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -87,7 +97,7 @@ function mountPage(
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/products',
+        url: productsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -158,7 +168,9 @@ describe('Products Index', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/products');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'products' }),
+        );
     });
 
     it('renders the quick product search in the toolbar, without opening the filter dialog', () => {
@@ -205,7 +217,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-quick-inactive').setValue(true);
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ inactive: true }),
             { preserveState: true, replace: true },
         );
@@ -253,7 +265,7 @@ describe('Products Index', () => {
         await wrapper.get('#products-quick-low-stock').setValue(true);
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ low_stock: true }),
             { preserveState: true, replace: true },
         );
@@ -279,7 +291,7 @@ describe('Products Index', () => {
             .trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ product_id: ['10'] }),
             { preserveState: true, replace: true },
         );
@@ -511,7 +523,7 @@ describe('Products Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/products?state=full&per_page=20',
+            productsIndex.url({ query: { state: 'full', per_page: '20' } }),
         );
 
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
@@ -520,7 +532,10 @@ describe('Products Index', () => {
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
-            url: '/admin/products/42/box-count?state=full&per_page=20',
+            url: updateBoxCount.url(
+                { product: 42 },
+                { query: { state: 'full', per_page: '20' } },
+            ),
             method: 'put',
         });
         expect(form.props('options')).toEqual({
@@ -584,7 +599,7 @@ describe('Products Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/products?state=full&per_page=20',
+            productsIndex.url({ query: { state: 'full', per_page: '20' } }),
         );
 
         const wrapper = mountPage([product({ id: 42, minimum_pallets: 5 })]);
@@ -593,7 +608,10 @@ describe('Products Index', () => {
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
-            url: '/admin/products/42/minimum-pallets?state=full&per_page=20',
+            url: updateMinimumPallets.url(
+                { product: 42 },
+                { query: { state: 'full', per_page: '20' } },
+            ),
             method: 'put',
         });
         expect(form.props('options')).toEqual({
@@ -669,7 +687,7 @@ describe('Products Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/products?state=full&per_page=20',
+            productsIndex.url({ query: { state: 'full', per_page: '20' } }),
         );
 
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
@@ -678,7 +696,10 @@ describe('Products Index', () => {
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
-            url: '/admin/products/42/barcodes?state=full&per_page=20',
+            url: storeBarcode.url(
+                { product: 42 },
+                { query: { state: 'full', per_page: '20' } },
+            ),
             method: 'post',
         });
         expect(form.props('options')).toEqual({
@@ -750,7 +771,7 @@ describe('Products Index', () => {
             window.history.pushState(
                 {},
                 '',
-                '/admin/products?state=full&per_page=20',
+                productsIndex.url({ query: { state: 'full', per_page: '20' } }),
             );
             const wrapper = mountWithBarcode();
 
@@ -758,7 +779,10 @@ describe('Products Index', () => {
 
             const link = removeLink(wrapper);
             expect(link.props('href')).toEqual({
-                url: '/admin/products/42/barcodes/7?state=full&per_page=20',
+                url: destroyBarcode.url(
+                    { product: 42, barcode: 7 },
+                    { query: { state: 'full', per_page: '20' } },
+                ),
                 method: 'delete',
             });
             expect(link.props('as')).toBe('button');
@@ -932,7 +956,7 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[4];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cells');
+        expect(href).toContain(cellsIndex.url());
         expect(href).toContain('product_id%5B%5D=42');
         expect(href).toContain('state=full');
     });
@@ -943,7 +967,7 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cells');
+        expect(href).toContain(cellsIndex.url());
         expect(href).toContain('state=opened');
     });
 
@@ -955,7 +979,7 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cells');
+        expect(href).toContain(cellsIndex.url());
         expect(href).toContain('expired=1');
     });
 
@@ -969,7 +993,7 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain('/admin/cells');
+        expect(href).toContain(cellsIndex.url());
         expect(href).toContain('expires_within_days=30');
     });
 
@@ -978,7 +1002,9 @@ describe('Products Index', () => {
 
         const cell = rowCells(wrapper)[8];
         const link = cell.get('a');
-        expect(link.attributes('href')).toBe('/admin/products/42/export-qr');
+        expect(link.attributes('href')).toBe(
+            productExportQr.url({ product: 42 }),
+        );
         expect(link.attributes('aria-label')).toBe(
             t('products.exportQrLabel', { product: 'Widgets' }),
         );
@@ -995,7 +1021,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({
                 state: 'full',
                 expires_within_days: 7,
@@ -1012,7 +1038,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ expired: true }),
             { preserveState: true, replace: true },
         );
@@ -1036,7 +1062,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ inactive: true }),
             { preserveState: true, replace: true },
         );
@@ -1244,7 +1270,7 @@ describe('Products Index', () => {
         vi.advanceTimersByTime(400);
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ state: 'opened' }),
             { preserveState: true, replace: true },
         );
@@ -1275,7 +1301,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ product_id: ['10'] }),
             { preserveState: true, replace: true },
         );
@@ -1293,7 +1319,7 @@ describe('Products Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ user_id: ['7'] }),
             { preserveState: true, replace: true },
         );
@@ -1318,7 +1344,7 @@ describe('Products Index', () => {
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
@@ -1386,7 +1412,7 @@ describe('Products Index', () => {
         await header?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({
                 sort_by: 'full_cells_count',
                 sort_direction: 'asc',
@@ -1407,7 +1433,7 @@ describe('Products Index', () => {
         await header?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({
                 sort_by: 'full_cells_count',
                 sort_direction: 'desc',
@@ -1430,7 +1456,7 @@ describe('Products Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/products',
+            productsIndex.url(),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );

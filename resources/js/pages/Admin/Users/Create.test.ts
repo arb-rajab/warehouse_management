@@ -1,5 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    create as usersCreate,
+    index as usersIndex,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import SubmitButton from '@/components/SubmitButton.vue';
 import UserFormFields from '@/components/UserFormFields.vue';
 import { t } from '@/lib/i18n';
@@ -27,7 +31,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/users/create',
+        url: usersCreate.url(),
         props: defaultAuthProps(),
     });
 
@@ -50,7 +54,7 @@ describe('Users Create', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/users',
+            usersIndex.url(),
         );
     });
 
@@ -100,6 +104,6 @@ describe('Users Create', () => {
     it('links the cancel action back to the user list', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.get('form a').attributes('href')).toBe('/admin/users');
+        expect(wrapper.get('form a').attributes('href')).toBe(usersIndex.url());
     });
 });

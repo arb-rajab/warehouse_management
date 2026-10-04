@@ -1,6 +1,12 @@
 import { Form } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { open as openPallet } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import {
+    show as rowShow,
+    edit as rowEdit,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
@@ -69,7 +75,7 @@ function mountPage(
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/rows/A',
+        url: rowShow.url({ row: 'A' }),
         props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
@@ -146,7 +152,7 @@ describe('Rows Show', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.show.editRow')));
-        expect(editLink?.attributes('href')).toBe('/admin/rows/B/edit');
+        expect(editLink?.attributes('href')).toBe(rowEdit.url({ row: 'B' }));
     });
 
     it('renders a column header for every cell number, ascending', () => {
@@ -332,13 +338,16 @@ describe('Rows Show', () => {
     });
 
     it('scrolls the first matching cell into view and pulses it when a highlight filter is applied', async () => {
-        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
-            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
-            cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
-        ]);
         // document.querySelector only finds the matched slot once the
         // rendered tree is actually attached to the document.
-        document.body.appendChild(wrapper.element);
+        const wrapper = mountPage(
+            { cells_count: 2, flats_count: 1 },
+            [
+                cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+                cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+            ],
+            { attachTo: document.body },
+        );
 
         try {
             await openHighlightFilters(wrapper);
@@ -350,31 +359,28 @@ describe('Rows Show', () => {
             );
             expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
         } finally {
-            document.body.removeChild(wrapper.element);
+            wrapper.unmount();
         }
     });
 
     it('scrolls the linked cell into view and pulses it on load, without pulsing other cells', async () => {
-        const container = document.body.appendChild(
-            document.createElement('div'),
+        const wrapper = mountPage(
+            { cells_count: 2, flats_count: 1 },
+            [
+                cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+                cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+            ],
+            {
+                attachTo: document.body,
+                linkedCell: {
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                },
+            },
         );
 
         try {
-            const wrapper = mountPage(
-                { cells_count: 2, flats_count: 1 },
-                [
-                    cell({ cell_number: 1, flat_number: 1, state: 'full' }),
-                    cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
-                ],
-                {
-                    attachTo: container,
-                    linkedCell: {
-                        row_letter: 'A',
-                        cell_number: 2,
-                        flat_number: 1,
-                    },
-                },
-            );
             await flushPromises();
 
             expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
@@ -385,7 +391,7 @@ describe('Rows Show', () => {
             ).not.toContain('ring-emerald-500');
             expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
         } finally {
-            document.body.removeChild(container);
+            wrapper.unmount();
         }
     });
 
@@ -557,7 +563,7 @@ describe('Rows Show', () => {
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
-            url: '/admin/cells/42/toggle-active',
+            url: toggleActive.url({ cell: 42 }),
             method: 'post',
         });
         expect(form.props('options')).toEqual({ preserveScroll: true });
@@ -601,7 +607,7 @@ describe('Rows Show', () => {
         await dialog.get('form').trigger('submit');
 
         expect(formSubmitMock).toHaveBeenCalledWith(
-            { url: '/admin/pallets/9/open', method: 'post' },
+            { url: openPallet.url({ pallet: 9 }), method: 'post' },
             expect.objectContaining({ boxes_count: 3, return_to: 'row' }),
             expect.objectContaining({ preserveScroll: true }),
         );

@@ -1,15 +1,22 @@
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { t } from '@/lib/i18n';
 import RowFormFields from './RowFormFields.vue';
 
 describe('RowFormFields', () => {
     it('renders its labels', () => {
         const wrapper = mount(RowFormFields, { props: { errors: {} } });
 
-        expect(wrapper.text()).toContain('Letter');
-        expect(wrapper.text()).toContain('Cells per level');
-        expect(wrapper.text()).toContain('Levels');
+        expect(wrapper.text()).toContain(t('rows.fields.letter'));
+        expect(wrapper.text()).toContain(t('rows.fields.cellsPerFlat'));
+        expect(wrapper.text()).toContain(t('rows.fields.flats'));
+    });
+
+    it('resolves its label keys to the English copy', () => {
+        expect(t('rows.fields.letter')).toBe('Letter');
+        expect(t('rows.fields.cellsPerFlat')).toBe('Cells per level');
+        expect(t('rows.fields.flats')).toBe('Levels');
     });
 
     it('shows validation error messages', () => {

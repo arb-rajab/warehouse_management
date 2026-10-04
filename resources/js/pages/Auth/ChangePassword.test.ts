@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
+import { resetMocks } from '@/testing/inertiaPageMocks';
 import ChangePassword from './ChangePassword.vue';
 
 const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -33,10 +34,8 @@ function mountPage() {
 
 describe('ChangePassword', () => {
     beforeEach(() => {
-        formSlotPropsMock.mockReset();
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
-        usePageMock.mockReset();
-        routerPostMock.mockReset();
     });
 
     it('renders the brand title with a brand icon', () => {

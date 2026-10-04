@@ -1,12 +1,16 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    index as cellLogsIndex,
+    acknowledgeFlags,
+} from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { cellLogActionLabel } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cellLog } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { CellStatusLog } from '@/types/admin';
 import CellLogFlagBadges from './CellLogFlagBadges.vue';
 import CellStatusLogRowCells from './CellStatusLogRowCells.vue';
@@ -32,7 +36,7 @@ function mountCells(
     props: { showUserColumn?: boolean; returnTo?: 'user' } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cell-logs',
+        url: cellLogsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -45,7 +49,7 @@ function noteText(note: string | null): string {
 
 describe('CellStatusLogRowCells', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        resetMocks({ usePageMock, routerPostMock });
     });
 
     afterEach(() => {
@@ -122,7 +126,7 @@ describe('CellStatusLogRowCells', () => {
         await wrapper.findAll('td')[1].get('button').trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-logs/42/acknowledge-flags',
+            acknowledgeFlags.url({ cellStatusLog: 42 }),
             { return_to: null },
             { preserveScroll: true },
         );
@@ -140,7 +144,7 @@ describe('CellStatusLogRowCells', () => {
         await wrapper.findAll('td')[1].get('button').trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-logs/42/acknowledge-flags',
+            acknowledgeFlags.url({ cellStatusLog: 42 }),
             { return_to: 'user' },
             { preserveScroll: true },
         );

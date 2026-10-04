@@ -9,6 +9,7 @@ import {
     update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { formatDate, formatDateTime } from '@/lib/date';
+import { cellPallet, cellWithLocation } from '@/testing/factories';
 import type { CellMapRow, CellWithLocation } from '@/types/admin';
 import ActionErrorBanner from './ActionErrorBanner.vue';
 import PalletActionsDialog from './PalletActionsDialog.vue';
@@ -24,6 +25,7 @@ const { submitMock, formState } = vi.hoisted(() => ({
 
 vi.mock('@inertiajs/vue3', async () => {
     const { createUseFormStub } = await import('@/testing/inertiaStubs');
+    const { paginated } = await import('@/testing/factories');
 
     return {
         useForm: createUseFormStub(submitMock, () => formState),
@@ -31,19 +33,7 @@ vi.mock('@inertiajs/vue3', async () => {
             get: (
                 _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.({
-                    data: [],
-                    meta: {
-                        current_page: 1,
-                        last_page: 1,
-                        per_page: 20,
-                        total: 0,
-                        from: null,
-                        to: 0,
-                        links: [],
-                    },
-                }),
+            ) => options?.onSuccess?.(paginated([])),
         }),
     };
 });
@@ -53,59 +43,25 @@ const rows: CellMapRow[] = [
 ];
 
 function openedCell(remainingBoxes: number): CellWithLocation {
-    return {
+    return cellWithLocation({
         id: 7,
-        row_letter: 'A',
         cell_number: 2,
-        flat_number: 1,
         state: 'opened',
-        is_active: true,
-        pallet: {
-            id: 42,
-            product_id: 1,
-            product_name: 'Widgets',
-            product_ar_name: 'ودجات',
-            product_image_url: null,
-            expiration_date: '2026-12-01',
-            added_at: '2026-01-01',
-            is_stale: false,
-            remaining_boxes: remainingBoxes,
-        },
-    };
+        pallet: cellPallet({ remaining_boxes: remainingBoxes }),
+    });
 }
 
 function emptyCell(): CellWithLocation {
-    return {
-        id: 8,
-        row_letter: 'A',
-        cell_number: 3,
-        flat_number: 1,
-        state: 'empty',
-        is_active: true,
-        pallet: null,
-    };
+    return cellWithLocation({ id: 8, cell_number: 3 });
 }
 
 function fullCell(remainingBoxes: number): CellWithLocation {
-    return {
+    return cellWithLocation({
         id: 9,
-        row_letter: 'A',
         cell_number: 4,
-        flat_number: 1,
         state: 'full',
-        is_active: true,
-        pallet: {
-            id: 43,
-            product_id: 1,
-            product_name: 'Widgets',
-            product_ar_name: 'ودجات',
-            product_image_url: null,
-            expiration_date: '2026-12-01',
-            added_at: '2026-01-01',
-            is_stale: false,
-            remaining_boxes: remainingBoxes,
-        },
-    };
+        pallet: cellPallet({ id: 43, remaining_boxes: remainingBoxes }),
+    });
 }
 
 /**

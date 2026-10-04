@@ -1,12 +1,13 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { selectedToggleClass } from '@/lib/filters';
 import type { PaginationLink } from '@/types/admin';
 import Pagination from './Pagination.vue';
 
 function link(overrides: Partial<PaginationLink> = {}): PaginationLink {
     return {
-        url: '/admin/rows?page=2',
+        url: rowsIndex.url({ query: { page: '2' } }),
         label: '2',
         active: false,
         ...overrides,
@@ -72,16 +73,30 @@ describe('Pagination', () => {
         const wrapper = mount(Pagination, {
             props: {
                 links: [
-                    link({ url: '/admin/rows?page=1', label: '1' }),
-                    link({ url: '/admin/rows?page=2', label: '2' }),
-                    link({ url: '/admin/rows?page=3', label: '3' }),
-                    link({ url: '/admin/rows?page=4', label: '4' }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '1' } }),
+                        label: '1',
+                    }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '2' } }),
+                        label: '2',
+                    }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '3' } }),
+                        label: '3',
+                    }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '4' } }),
+                        label: '4',
+                    }),
                 ],
             },
         });
 
         const firstLink = wrapper.findAll('a').find((a) => a.text() === '1');
-        expect(firstLink?.attributes('href')).toBe('/admin/rows?page=1');
+        expect(firstLink?.attributes('href')).toBe(
+            rowsIndex.url({ query: { page: '1' } }),
+        );
     });
 
     it('renders no per-page selector when perPage is not given, even with more than 3 links', () => {
@@ -126,8 +141,14 @@ describe('Pagination', () => {
             props: {
                 links: [
                     link({ url: null, label: '&laquo; Previous' }),
-                    link({ url: '/admin/rows?page=1', label: '1' }),
-                    link({ url: '/admin/rows?page=2', label: '2' }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '1' } }),
+                        label: '1',
+                    }),
+                    link({
+                        url: rowsIndex.url({ query: { page: '2' } }),
+                        label: '2',
+                    }),
                     link({ url: null, label: 'Next &raquo;' }),
                 ],
             },

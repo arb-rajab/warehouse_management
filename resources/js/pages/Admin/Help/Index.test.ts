@@ -1,6 +1,10 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    index as helpIndex,
+    show as helpShow,
+} from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Index from './Index.vue';
@@ -21,7 +25,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/help',
+        url: helpIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -49,14 +53,16 @@ describe('Help Index', () => {
     });
 
     const topicHrefs: Record<string, string> = {
-        dashboard: '/admin/help/dashboard',
-        rows: '/admin/help/rows',
-        cells: '/admin/help/cells',
-        cellLogs: '/admin/help/cell-logs',
-        cellVerificationRounds: '/admin/help/cell-verification-rounds',
-        products: '/admin/help/products',
-        users: '/admin/help/users',
-        settings: '/admin/help/settings',
+        dashboard: helpShow.url({ topic: 'dashboard' }),
+        rows: helpShow.url({ topic: 'rows' }),
+        cells: helpShow.url({ topic: 'cells' }),
+        cellLogs: helpShow.url({ topic: 'cell-logs' }),
+        cellVerificationRounds: helpShow.url({
+            topic: 'cell-verification-rounds',
+        }),
+        products: helpShow.url({ topic: 'products' }),
+        users: helpShow.url({ topic: 'users' }),
+        settings: helpShow.url({ topic: 'settings' }),
     };
 
     it('links each topic to its help page', () => {

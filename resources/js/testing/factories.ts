@@ -1,5 +1,7 @@
 import type {
     Cell,
+    CellPallet,
+    CellWithLocation,
     CellStatusLog,
     CellVerificationReport,
     CellVerificationRound,
@@ -14,12 +16,16 @@ import type {
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
  * table built this `meta` shape independently before this existed.
  */
-export function paginated<T>(data: T[], perPage = 20): Paginated<T> {
+export function paginated<T>(
+    data: T[],
+    perPage = 20,
+    { currentPage = 1, lastPage = 1 } = {},
+): Paginated<T> {
     return {
         data,
         meta: {
-            current_page: 1,
-            last_page: 1,
+            current_page: currentPage,
+            last_page: lastPage,
             per_page: perPage,
             total: data.length,
             from: data.length ? 1 : null,
@@ -48,6 +54,27 @@ export function cell(overrides: Partial<Cell> = {}): Cell {
         state: 'empty',
         is_active: true,
         pallet: null,
+        ...overrides,
+    };
+}
+
+export function cellWithLocation(
+    overrides: Partial<CellWithLocation> = {},
+): CellWithLocation {
+    return { ...cell(), row_letter: 'A', ...overrides };
+}
+
+export function cellPallet(overrides: Partial<CellPallet> = {}): CellPallet {
+    return {
+        id: 42,
+        product_id: 1,
+        product_name: 'Widgets',
+        product_ar_name: 'ودجات',
+        product_image_url: null,
+        expiration_date: '2026-12-01',
+        added_at: '2026-01-01',
+        is_stale: false,
+        remaining_boxes: 10,
         ...overrides,
     };
 }

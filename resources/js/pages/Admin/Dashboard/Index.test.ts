@@ -12,6 +12,7 @@ import {
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
@@ -141,7 +142,9 @@ describe('Dashboard Index', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/dashboard');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'dashboard' }),
+        );
     });
 
     it('renders every occupancy tile with its count, linking to the matching-pallets list with a matching highlight filter', () => {
@@ -168,7 +171,7 @@ describe('Dashboard Index', () => {
             (tile) =>
                 tile.props('label') === t('dashboard.occupancy.opened') &&
                 (tile.props('href') as UrlMethodPair).url.startsWith(
-                    '/admin/pallets',
+                    palletsIndex.url(),
                 ),
         );
         expect(opened?.props('value')).toBe(1);

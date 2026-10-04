@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
+import { paginated } from '@/testing/factories';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import { i18n } from './i18n';
 import { useProductSearch } from './useProductSearch';
@@ -17,24 +18,6 @@ const { getMock } = vi.hoisted(() => ({
 vi.mock('@inertiajs/vue3', () => ({
     useHttp: () => ({ get: getMock }),
 }));
-
-function page(
-    data: ProductFilterOption[],
-    { currentPage = 1, lastPage = 1 } = {},
-): Paginated<ProductFilterOption> {
-    return {
-        data,
-        meta: {
-            current_page: currentPage,
-            last_page: lastPage,
-            per_page: 20,
-            total: data.length,
-            from: data.length ? 1 : null,
-            to: data.length,
-            links: [],
-        },
-    };
-}
 
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
     // A real request always calls onFinish after onSuccess (or after
@@ -103,7 +86,10 @@ describe('useProductSearch', () => {
         const wrapper = mountSearch();
 
         wrapper.vm.fetchFirstPageIfEmpty();
-        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
+        resolveCall(
+            0,
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]),
+        );
         await wrapper.vm.$nextTick();
 
         wrapper.vm.fetchFirstPageIfEmpty();
@@ -136,7 +122,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([
+            paginated([
                 { id: 1, name: 'Widgets', ar_name: 'ودجات' },
                 { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
             ]),
@@ -193,11 +179,11 @@ describe('useProductSearch', () => {
         // Resolve the newer ("new") request first, then the stale ("old") one.
         resolveCall(
             1,
-            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+            paginated([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
         );
         resolveCall(
             0,
-            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+            paginated([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
         );
 
         expect(wrapper.vm.results).toEqual([
@@ -211,7 +197,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
                 currentPage: 1,
                 lastPage: 2,
             }),
@@ -230,7 +216,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
                 currentPage: 1,
                 lastPage: 2,
             }),
@@ -240,7 +226,7 @@ describe('useProductSearch', () => {
         wrapper.vm.onOptionsScroll(scrollElement());
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
+            paginated([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], 20, {
                 currentPage: 2,
                 lastPage: 2,
             }),
@@ -259,7 +245,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
                 currentPage: 1,
                 lastPage: 1,
             }),
@@ -277,7 +263,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
                 currentPage: 1,
                 lastPage: 2,
             }),
@@ -301,7 +287,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
+            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
                 currentPage: 1,
                 lastPage: 2,
             }),
@@ -324,7 +310,7 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([
+            paginated([
                 { id: 1, name: 'Widgets', ar_name: 'ودجات' },
                 { id: 2, name: 'Gadgets', ar_name: '' },
             ]),

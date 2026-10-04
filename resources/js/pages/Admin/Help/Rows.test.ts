@@ -1,6 +1,11 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    show as helpShow,
+    index as helpIndex,
+} from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Rows from './Rows.vue';
@@ -21,7 +26,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/help/rows',
+        url: helpShow.url({ topic: 'rows' }),
         props: defaultAuthProps(),
     });
 
@@ -125,7 +130,7 @@ describe('Help Rows', () => {
         const rowsLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('rows.index.title'));
-        expect(rowsLink?.attributes('href')).toBe('/admin/rows');
+        expect(rowsLink?.attributes('href')).toBe(rowsIndex.url());
     });
 
     it('links back to the help landing page', () => {
@@ -134,6 +139,6 @@ describe('Help Rows', () => {
         const backLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('help.backToHelp'));
-        expect(backLink?.attributes('href')).toBe('/admin/help');
+        expect(backLink?.attributes('href')).toBe(helpIndex.url());
     });
 });
