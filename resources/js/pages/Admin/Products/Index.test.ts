@@ -1,7 +1,9 @@
-import { Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import { Barcode, Check, Filter, X } from '@lucide/vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import { i18n, t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated } from '@/testing/factories';
@@ -13,33 +15,25 @@ import type {
 } from '@/types/admin';
 import Index from './Index.vue';
 
-const {
-    usePageMock,
-    routerGetMock,
-    routerPutMock,
-    routerPostMock,
-    routerDeleteMock,
-} = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, formSlotPropsMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
-    routerPutMock: vi.fn(),
-    routerPostMock: vi.fn(),
-    routerDeleteMock: vi.fn(),
+    formSlotPropsMock: vi.fn(() => ({
+        errors: {} as Record<string, string>,
+        processing: false,
+    })),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(formSlotPropsMock),
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: {
-            get: routerGetMock,
-            put: routerPutMock,
-            post: routerPostMock,
-            delete: routerDeleteMock,
-        },
+        router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -118,13 +112,8 @@ async function openFilters(
 
 describe('Products Index', () => {
     beforeEach(() => {
-        resetMocks({
-            usePageMock,
-            routerGetMock,
-            routerPutMock,
-            routerPostMock,
-            routerDeleteMock,
-        });
+        resetMocks({ usePageMock, routerGetMock, formSlotPropsMock });
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     });
 
     afterEach(() => {
@@ -518,7 +507,7 @@ describe('Products Index', () => {
         ).toBe('24');
     });
 
-    it('preserves the current page and filters when saving a changed box count', async () => {
+    it('posts the box count to the product’s route, preserving the current page and filters', async () => {
         window.history.pushState(
             {},
             '',
@@ -528,39 +517,30 @@ describe('Products Index', () => {
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
 
         await rowCells(wrapper)[1].get('button').trigger('click');
-        await wrapper.get('#products-box-count').setValue('30');
-        await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledWith(
-            '/admin/products/42/box-count?state=full&per_page=20',
-            { boxes_count: 30 },
-            expect.objectContaining({
-                preserveScroll: true,
-                preserveState: true,
-            }),
-        );
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual({
+            url: '/admin/products/42/box-count?state=full&per_page=20',
+            method: 'put',
+        });
+        expect(form.props('options')).toEqual({
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         window.history.pushState({}, '', '/');
     });
 
-    it('rejects a box count below one on dialog submit without a round trip', async () => {
+    it('names and constrains the box-count field so the form submits and validates it', async () => {
         const wrapper = mountPage([product({ boxes_count: 12 })]);
 
         await rowCells(wrapper)[1].get('button').trigger('click');
-        await wrapper.get('#products-box-count').setValue('0');
-        await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).not.toHaveBeenCalled();
-    });
-
-    it('rejects a cleared box count on dialog submit without a round trip', async () => {
-        const wrapper = mountPage([product({ boxes_count: 12 })]);
-
-        await rowCells(wrapper)[1].get('button').trigger('click');
-        await wrapper.get('#products-box-count').setValue('');
-        await wrapper.get('form').trigger('submit');
-
-        expect(routerPutMock).not.toHaveBeenCalled();
+        const input = wrapper.get('#products-box-count');
+        expect(input.attributes('name')).toBe('boxes_count');
+        expect(input.attributes('required')).toBeDefined();
+        expect(input.attributes('min')).toBe('1');
+        expect(input.attributes('step')).toBe('1');
     });
 
     it("renders the product's stored minimum-pallets threshold as a clickable trigger button, or a dash when unconfigured", () => {
@@ -600,7 +580,7 @@ describe('Products Index', () => {
         ).toBe('10');
     });
 
-    it('preserves the current page and filters when saving a changed minimum-pallets threshold', async () => {
+    it('posts the minimum-pallets threshold to the product’s route, preserving the current page and filters', async () => {
         window.history.pushState(
             {},
             '',
@@ -610,46 +590,29 @@ describe('Products Index', () => {
         const wrapper = mountPage([product({ id: 42, minimum_pallets: 5 })]);
 
         await rowCells(wrapper)[2].get('button').trigger('click');
-        await wrapper.get('#products-minimum-pallets').setValue('10');
-        await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledWith(
-            '/admin/products/42/minimum-pallets?state=full&per_page=20',
-            { minimum_pallets: 10 },
-            expect.objectContaining({
-                preserveScroll: true,
-                preserveState: true,
-            }),
-        );
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual({
+            url: '/admin/products/42/minimum-pallets?state=full&per_page=20',
+            method: 'put',
+        });
+        expect(form.props('options')).toEqual({
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         window.history.pushState({}, '', '/');
     });
 
-    it('submits null to clear the minimum-pallets threshold when the field is emptied', async () => {
-        const wrapper = mountPage([product({ id: 42, minimum_pallets: 10 })]);
+    it('names the minimum-pallets field, and leaves it optional so an emptied field clears the threshold', async () => {
+        const wrapper = mountPage([product({ minimum_pallets: 10 })]);
 
         await rowCells(wrapper)[2].get('button').trigger('click');
-        await wrapper.get('#products-minimum-pallets').setValue('');
-        await wrapper.get('form').trigger('submit');
 
-        expect(routerPutMock).toHaveBeenCalledWith(
-            '/admin/products/42/minimum-pallets',
-            { minimum_pallets: null },
-            expect.objectContaining({
-                preserveScroll: true,
-                preserveState: true,
-            }),
-        );
-    });
-
-    it('rejects a minimum-pallets threshold below one on dialog submit without a round trip', async () => {
-        const wrapper = mountPage([product({ minimum_pallets: 5 })]);
-
-        await rowCells(wrapper)[2].get('button').trigger('click');
-        await wrapper.get('#products-minimum-pallets').setValue('0');
-        await wrapper.get('form').trigger('submit');
-
-        expect(routerPutMock).not.toHaveBeenCalled();
+        const input = wrapper.get('#products-minimum-pallets');
+        expect(input.attributes('name')).toBe('minimum_pallets');
+        expect(input.attributes('required')).toBeUndefined();
+        expect(input.attributes('min')).toBe('1');
     });
 
     it('renders the barcode count as a clickable trigger button', () => {
@@ -702,7 +665,7 @@ describe('Products Index', () => {
         expect(wrapper.text()).toContain(t('products.noBarcodes'));
     });
 
-    it('adds a new barcode, preserving the current page and filters', async () => {
+    it('posts a new barcode to the product’s route, preserving the current page and filters', async () => {
         window.history.pushState(
             {},
             '',
@@ -712,306 +675,228 @@ describe('Products Index', () => {
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
         await rowCells(wrapper)[3].get('button').trigger('click');
-        await wrapper.get('#products-new-barcode').setValue('1234567890123');
-        await wrapper.get('#products-add-barcode-form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/products/42/barcodes?state=full&per_page=20',
-            { barcode: '1234567890123' },
-            expect.objectContaining({
-                preserveScroll: true,
-                preserveState: true,
-            }),
-        );
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual({
+            url: '/admin/products/42/barcodes?state=full&per_page=20',
+            method: 'post',
+        });
+        expect(form.props('options')).toEqual({
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         window.history.pushState({}, '', '/');
     });
 
-    it('trims whitespace from a new barcode before submitting', async () => {
+    it('names and requires the barcode field, and clears it once the barcode is added', async () => {
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
         await rowCells(wrapper)[3].get('button').trigger('click');
-        await wrapper
-            .get('#products-new-barcode')
-            .setValue('  1234567890123  ');
-        await wrapper.get('#products-add-barcode-form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/products/42/barcodes',
-            { barcode: '1234567890123' },
-            expect.anything(),
-        );
+        const input = wrapper.get('#products-new-barcode');
+        expect(input.attributes('name')).toBe('barcode');
+        expect(input.attributes('required')).toBeDefined();
+        expect(wrapper.getComponent(Form).props('resetOnSuccess')).toBe(true);
     });
 
-    it('rejects a blank barcode on dialog submit without a round trip', async () => {
-        const wrapper = mountPage([product({ barcodes: [] })]);
+    it('re-points the barcodes dialog at the updated product once adding succeeds', async () => {
+        const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
         await rowCells(wrapper)[3].get('button').trigger('click');
-        await wrapper.get('#products-new-barcode').setValue('   ');
-        await wrapper.get('#products-add-barcode-form').trigger('submit');
+        expect(wrapper.text()).toContain(t('products.noBarcodes'));
 
-        expect(routerPostMock).not.toHaveBeenCalled();
+        await wrapper.setProps({
+            products: paginated([
+                product({
+                    id: 42,
+                    barcodes: [{ id: 9, barcode: '9999999999999' }],
+                }),
+            ]),
+        });
+        wrapper.getComponent(Form).vm.$emit('success');
+        await flushPromises();
+
+        const items = wrapper.findAll('li');
+        expect(items).toHaveLength(1);
+        expect(items[0].text()).toContain('9999999999999');
     });
 
-    it('removes a barcode, preserving the current page and filters', async () => {
-        window.history.pushState(
-            {},
-            '',
-            '/admin/products?state=full&per_page=20',
-        );
-
-        const wrapper = mountPage([
-            product({
-                id: 42,
-                barcodes: [{ id: 7, barcode: '1234567890123' }],
-            }),
-        ]);
-
-        await rowCells(wrapper)[3].get('button').trigger('click');
-        await wrapper
-            .get(
-                `[aria-label="${t('products.removeBarcode', { barcode: '1234567890123' })}"]`,
-            )
-            .trigger('click');
-
-        expect(routerDeleteMock).toHaveBeenCalledWith(
-            '/admin/products/42/barcodes/7?state=full&per_page=20',
-            expect.objectContaining({
-                preserveScroll: true,
-                preserveState: true,
-            }),
-        );
-
-        window.history.pushState({}, '', '/');
-    });
-
-    describe('save feedback', () => {
-        type PutOptions = {
-            onStart?: () => void;
-            onSuccess?: () => void;
-            onError?: (errors: Record<string, string>) => void;
-            onFinish?: () => void;
-        };
-
-        function failPutWith(errors: Record<string, string>): void {
-            routerPutMock.mockImplementation(
-                (_url: string, _data: unknown, options: PutOptions) => {
-                    options.onStart?.();
-                    options.onError?.(errors);
-                    options.onFinish?.();
-                },
-            );
-        }
-
-        it('keeps the box-count dialog open with the server error when the save fails', async () => {
-            failPutWith({ boxes_count: 'The boxes count is too large.' });
-            const wrapper = mountPage([product({ boxes_count: 12 })]);
-
-            await rowCells(wrapper)[1].get('button').trigger('click');
-            await wrapper.get('#products-box-count').setValue('99999');
-            await wrapper.get('form').trigger('submit');
-
-            expect(wrapper.find('#products-box-count').exists()).toBe(true);
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                'The boxes count is too large.',
-            );
-            expect(
-                (wrapper.get('#products-box-count').element as HTMLInputElement)
-                    .value,
-            ).toBe('99999');
+    describe('removing a barcode', () => {
+        const removeLabel = t('products.removeBarcode', {
+            barcode: '1234567890123',
         });
 
-        it('closes the box-count dialog only once the save succeeds', async () => {
-            let options: PutOptions = {};
-            routerPutMock.mockImplementation(
-                (_url: string, _data: unknown, given: PutOptions) => {
-                    options = given;
-                    given.onStart?.();
-                },
-            );
-            const wrapper = mountPage([product({ boxes_count: 12 })]);
-
-            await rowCells(wrapper)[1].get('button').trigger('click');
-            await wrapper.get('#products-box-count').setValue('30');
-            await wrapper.get('form').trigger('submit');
-
-            expect(wrapper.find('#products-box-count').exists()).toBe(true);
-
-            options.onSuccess?.();
-            options.onFinish?.();
-            await flushPromises();
-
-            expect(wrapper.find('#products-box-count').exists()).toBe(false);
-        });
-
-        it('disables the box-count submit button while the save is in flight', async () => {
-            routerPutMock.mockImplementation(
-                (_url: string, _data: unknown, options: PutOptions) =>
-                    options.onStart?.(),
-            );
-            const wrapper = mountPage([product({ boxes_count: 12 })]);
-
-            await rowCells(wrapper)[1].get('button').trigger('click');
-            await wrapper.get('#products-box-count').setValue('30');
-            await wrapper.get('form').trigger('submit');
-
-            const submit = wrapper.get(
-                'button[form="products-box-count-form"]',
-            );
-            expect(submit.attributes('disabled')).toBeDefined();
-            expect(submit.text()).toBe(t('products.saving'));
-        });
-
-        it('shows an inline message for an invalid box count instead of failing silently', async () => {
-            const wrapper = mountPage([product({ boxes_count: 12 })]);
-
-            await rowCells(wrapper)[1].get('button').trigger('click');
-            await wrapper.get('#products-box-count').setValue('0');
-            await wrapper.get('form').trigger('submit');
-
-            expect(routerPutMock).not.toHaveBeenCalled();
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                t('products.invalidCount'),
-            );
-        });
-
-        it('keeps the minimum-pallets dialog open with the server error when the save fails', async () => {
-            failPutWith({ minimum_pallets: 'Must be at most 500.' });
-            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
-
-            await rowCells(wrapper)[2].get('button').trigger('click');
-            await wrapper.get('#products-minimum-pallets').setValue('900');
-            await wrapper.get('form').trigger('submit');
-
-            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
-                true,
-            );
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                'Must be at most 500.',
-            );
-        });
-
-        it('keeps the minimum-pallets dialog open when clearing the threshold fails', async () => {
-            failPutWith({ minimum_pallets: 'Could not clear.' });
-            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
-
-            await rowCells(wrapper)[2].get('button').trigger('click');
-            await wrapper.get('#products-minimum-pallets').setValue('');
-            await wrapper.get('form').trigger('submit');
-
-            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
-                true,
-            );
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                'Could not clear.',
-            );
-        });
-
-        it('shows an inline message for an invalid minimum-pallets threshold', async () => {
-            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
-
-            await rowCells(wrapper)[2].get('button').trigger('click');
-            await wrapper.get('#products-minimum-pallets').setValue('0');
-            await wrapper.get('form').trigger('submit');
-
-            expect(routerPutMock).not.toHaveBeenCalled();
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                t('products.invalidCount'),
-            );
-        });
-
-        it('keeps the typed barcode and shows the server error when adding fails', async () => {
-            routerPostMock.mockImplementation(
-                (_url: string, _data: unknown, options: PutOptions) => {
-                    options.onStart?.();
-                    options.onError?.({ barcode: 'Barcode already taken.' });
-                    options.onFinish?.();
-                },
-            );
-            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
-
-            await rowCells(wrapper)[3].get('button').trigger('click');
-            await wrapper
-                .get('#products-new-barcode')
-                .setValue('1234567890123');
-            await wrapper.get('#products-add-barcode-form').trigger('submit');
-
-            expect(
-                (
-                    wrapper.get('#products-new-barcode')
-                        .element as HTMLInputElement
-                ).value,
-            ).toBe('1234567890123');
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                'Barcode already taken.',
-            );
-        });
-
-        it('clears the typed barcode only after adding succeeds', async () => {
-            routerPostMock.mockImplementation(
-                (_url: string, _data: unknown, options: PutOptions) => {
-                    options.onStart?.();
-                    options.onSuccess?.();
-                    options.onFinish?.();
-                },
-            );
-            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
-
-            await rowCells(wrapper)[3].get('button').trigger('click');
-            await wrapper
-                .get('#products-new-barcode')
-                .setValue('1234567890123');
-            await wrapper.get('#products-add-barcode-form').trigger('submit');
-
-            expect(
-                (
-                    wrapper.get('#products-new-barcode')
-                        .element as HTMLInputElement
-                ).value,
-            ).toBe('');
-        });
-
-        it('shows the server error when removing a barcode fails', async () => {
-            routerDeleteMock.mockImplementation(
-                (_url: string, options: PutOptions) => {
-                    options.onStart?.();
-                    options.onError?.({ barcode: 'Could not remove.' });
-                    options.onFinish?.();
-                },
-            );
-            const wrapper = mountPage([
+        function mountWithBarcode() {
+            return mountPage([
                 product({
                     id: 42,
                     barcodes: [{ id: 7, barcode: '1234567890123' }],
                 }),
             ]);
+        }
 
-            await rowCells(wrapper)[3].get('button').trigger('click');
-            await wrapper
-                .get(
-                    `[aria-label="${t('products.removeBarcode', { barcode: '1234567890123' })}"]`,
-                )
-                .trigger('click');
+        function removeLink(wrapper: ReturnType<typeof mountPage>) {
+            return wrapper
+                .findAllComponents(Link)
+                .find((link) => link.attributes('aria-label') === removeLabel)!;
+        }
 
-            expect(wrapper.get('[role="alert"]').text()).toContain(
-                'Could not remove.',
-            );
+        afterEach(() => {
+            vi.unstubAllGlobals();
         });
 
-        it('clears a previous error when a dialog is reopened', async () => {
-            failPutWith({ boxes_count: 'Nope.' });
+        it('deletes through the barcode’s route as a button, preserving the current page and filters', async () => {
+            window.history.pushState(
+                {},
+                '',
+                '/admin/products?state=full&per_page=20',
+            );
+            const wrapper = mountWithBarcode();
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            const link = removeLink(wrapper);
+            expect(link.props('href')).toEqual({
+                url: '/admin/products/42/barcodes/7?state=full&per_page=20',
+                method: 'delete',
+            });
+            expect(link.props('as')).toBe('button');
+            expect(link.props('preserveScroll')).toBe(true);
+            expect(link.props('preserveState')).toBe(true);
+
+            window.history.pushState({}, '', '/');
+        });
+
+        it('asks for the shared delete confirmation before removing', async () => {
+            const confirmMock = vi.fn(() => false);
+            vi.stubGlobal('confirm', confirmMock);
+            const wrapper = mountWithBarcode();
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            const onBefore = removeLink(wrapper).props(
+                'onBefore',
+            ) as () => boolean;
+            expect(onBefore()).toBe(false);
+            expect(confirmMock).toHaveBeenCalledWith(
+                t('common.confirmDelete', { label: '1234567890123' }),
+            );
+
+            confirmMock.mockReturnValue(true);
+            expect(onBefore()).toBe(true);
+        });
+
+        it('re-points the dialog at the updated product once removal succeeds', async () => {
+            const wrapper = mountWithBarcode();
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+            await wrapper.setProps({
+                products: paginated([product({ id: 42, barcodes: [] })]),
+            });
+            (removeLink(wrapper).props('onSuccess') as () => void)();
+            await flushPromises();
+
+            expect(wrapper.findAll('li')).toHaveLength(0);
+            expect(wrapper.text()).toContain(t('products.noBarcodes'));
+        });
+    });
+
+    describe('save feedback', () => {
+        it('closes the box-count dialog only once the form succeeds', async () => {
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
             await rowCells(wrapper)[1].get('button').trigger('click');
-            await wrapper.get('form').trigger('submit');
-            expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+            expect(wrapper.find('#products-box-count').exists()).toBe(true);
 
-            await wrapper
-                .get(`[aria-label="${t('cellLog.filters.close')}"]`)
-                .trigger('click');
+            wrapper.getComponent(Form).vm.$emit('success');
+            await flushPromises();
+
+            expect(wrapper.find('#products-box-count').exists()).toBe(false);
+        });
+
+        it('closes the minimum-pallets dialog only once the form succeeds', async () => {
+            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+            await rowCells(wrapper)[2].get('button').trigger('click');
+            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
+                true,
+            );
+
+            wrapper.getComponent(Form).vm.$emit('success');
+            await flushPromises();
+
+            expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
+                false,
+            );
+        });
+
+        it('passes the form’s processing state to the box-count submit button', async () => {
+            formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
             await rowCells(wrapper)[1].get('button').trigger('click');
 
-            expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+            const submit = wrapper.getComponent(SubmitButton);
+            expect(submit.props('processing')).toBe(true);
+            expect(submit.props('processingLabel')).toBe(t('products.saving'));
+        });
+
+        it('passes the form’s processing state to the minimum-pallets submit button', async () => {
+            formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+            const wrapper = mountPage([product({ minimum_pallets: 5 })]);
+
+            await rowCells(wrapper)[2].get('button').trigger('click');
+
+            expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
+                true,
+            );
+        });
+
+        it('disables the add-barcode button while the form is processing', async () => {
+            formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            expect(
+                wrapper
+                    .get('#products-new-barcode')
+                    .element.closest('form')!
+                    .querySelector('button[type="submit"]')!
+                    .hasAttribute('disabled'),
+            ).toBe(true);
+        });
+
+        it.each([
+            ['box-count', 1, { boxes_count: 'The boxes count is too large.' }],
+            ['minimum-pallets', 2, { minimum_pallets: 'Must be at most 500.' }],
+            ['barcodes', 3, { barcode: 'Barcode already taken.' }],
+        ])(
+            'shows the %s form’s server error in a banner',
+            async (_dialog, column, errors) => {
+                formSlotPropsMock.mockReturnValue({
+                    errors,
+                    processing: false,
+                });
+                const wrapper = mountPage([product({ barcodes: [] })]);
+
+                await rowCells(wrapper)[column].get('button').trigger('click');
+
+                expect(
+                    wrapper.getComponent(ActionErrorBanner).props('message'),
+                ).toBe(Object.values(errors)[0]);
+            },
+        );
+
+        it('shows no error banner message when the form has none', async () => {
+            const wrapper = mountPage([product({ boxes_count: 12 })]);
+
+            await rowCells(wrapper)[1].get('button').trigger('click');
+
+            expect(
+                wrapper.getComponent(ActionErrorBanner).props('message'),
+            ).toBeUndefined();
         });
     });
 

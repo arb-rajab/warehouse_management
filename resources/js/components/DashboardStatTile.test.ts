@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/vue3';
 import { CircleDashed } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import DashboardStatTile from './DashboardStatTile.vue';
 
 describe('DashboardStatTile', () => {
@@ -14,20 +15,27 @@ describe('DashboardStatTile', () => {
         expect(wrapper.text()).toContain('Empty');
     });
 
-    it('links to the given href with the given query as data', () => {
+    it('passes a string href straight to the link', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: {
-                label: 'Empty',
-                value: 12,
-                href: '/admin/cells',
-                query: { state: 'empty' },
-            },
+            props: { label: 'Empty', value: 12, href: '/admin/cells' },
+        });
+
+        expect(wrapper.getComponent(Link).props('href')).toBe('/admin/cells');
+    });
+
+    it('passes a Wayfinder route object, with its query, straight to the link', () => {
+        const href = cellsIndex({ query: { state: 'empty' } });
+        const wrapper = mount(DashboardStatTile, {
+            props: { label: 'Empty', value: 12, href },
         });
 
         const link = wrapper.getComponent(Link);
-        expect(link.props('href')).toBe('/admin/cells');
-        expect(link.props('data')).toEqual({ state: 'empty' });
-        expect(link.props('method')).toBe('get');
+        expect(link.props('href')).toEqual({
+            url: '/admin/cells?state=empty',
+            method: 'get',
+        });
+        // The query rides in the route object, not a separate data payload.
+        expect(link.props('data')).toEqual({});
     });
 
     it('defaults to the default tone', () => {

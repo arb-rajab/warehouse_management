@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/vue3';
 import { CircleUser, Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +51,24 @@ describe('AdminLayout', () => {
             '/admin/products',
             '/admin/users',
         ]);
+    });
+
+    it('gives every nav link a Wayfinder route object, not a bare url string', () => {
+        const wrapper = mountLayout('/admin/rows');
+
+        const navLinks = wrapper
+            .findAllComponents(Link)
+            .filter((link) => link.element.closest('nav') !== null);
+        expect(navLinks).toHaveLength(7);
+
+        for (const link of navLinks) {
+            expect(link.props('href')).toMatchObject({ method: 'get' });
+        }
+
+        expect(navLinks[1].props('href')).toEqual({
+            url: '/admin/rows',
+            method: 'get',
+        });
     });
 
     it('marks the exact current section as active', () => {

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Map } from '@lucide/vue';
 import { computed } from 'vue';
@@ -22,6 +21,7 @@ import type {
     Paginated,
     ProductFilterOptions,
 } from '@/types/admin';
+import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     pallets: Paginated<MatchingPallet>;
@@ -34,8 +34,8 @@ const props = defineProps<{
  * doesn't understand) — reused both for the "view on map" button's query and
  * for the human-readable chips above the table.
  */
-const filterQuery = computed<Record<string, FormDataConvertible>>(() => {
-    const query: Record<string, FormDataConvertible> = { ...props.filters };
+const filterQuery = computed<QueryParams>(() => {
+    const query: QueryParams = { ...props.filters };
     delete query.per_page;
 
     return query;
@@ -92,9 +92,7 @@ function onPerPageChange(perPage: number): void {
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
             <Link
-                :href="cellsIndex().url"
-                :data="filterQuery"
-                method="get"
+                :href="cellsIndex({ query: filterQuery })"
                 class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
             >
                 <Map class="h-4 w-4" />

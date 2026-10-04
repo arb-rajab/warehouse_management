@@ -57,11 +57,14 @@ vi.mock('@/components/CellMap3D.vue', async () => {
 });
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
         Link: createLinkStub(),
+        useForm: createUseFormStub(vi.fn()),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({

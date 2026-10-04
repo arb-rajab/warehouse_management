@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { UrlMethodPair } from '@inertiajs/core';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
@@ -35,23 +36,23 @@ const isMobileMenuOpen = ref(false);
 const navItems = computed(() => [
     {
         labelKey: 'nav.dashboard',
-        href: dashboardIndex().url,
+        href: dashboardIndex(),
         icon: LayoutDashboard,
     },
-    { labelKey: 'nav.rows', href: rowsIndex().url, icon: Rows3 },
-    { labelKey: 'nav.map', href: cellsIndex().url, icon: Map },
+    { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
+    { labelKey: 'nav.map', href: cellsIndex(), icon: Map },
     {
         labelKey: 'nav.cellLog',
-        href: cellLogsIndex().url,
+        href: cellLogsIndex(),
         icon: ArrowLeftRight,
     },
     {
         labelKey: 'nav.cellVerificationRounds',
-        href: cellVerificationRoundsIndex().url,
+        href: cellVerificationRoundsIndex(),
         icon: ClipboardCheck,
     },
-    { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
-    { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
+    { labelKey: 'nav.products', href: productsIndex(), icon: Package },
+    { labelKey: 'nav.users', href: usersIndex(), icon: Users },
 ]);
 
 /**
@@ -60,21 +61,21 @@ const navItems = computed(() => [
  * plain prefix check would mark it active alongside whichever section is
  * actually open. Only the longest matching href wins.
  */
-function isActive(href: string): boolean {
+function isActive({ url }: UrlMethodPair): boolean {
     const currentPath = page.url.split('?')[0];
     const matches = (candidate: string) =>
         currentPath === candidate || currentPath.startsWith(`${candidate}/`);
 
-    if (!matches(href)) {
+    if (!matches(url)) {
         return false;
     }
 
     return !navItems.value.some(
-        (item) => item.href.length > href.length && matches(item.href),
+        (item) => item.href.url.length > url.length && matches(item.href.url),
     );
 }
 
-function navLinkStateClass(href: string): string[] {
+function navLinkStateClass(href: UrlMethodPair): string[] {
     return isActive(href)
         ? [
               'border-gray-900',
@@ -174,7 +175,7 @@ function navLinkStateClass(href: string): string[] {
                     class="border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
                 >
                     <Link
-                        :href="settingsEdit().url"
+                        :href="settingsEdit()"
                         class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
                         @click="isMobileMenuOpen = false"
                     >

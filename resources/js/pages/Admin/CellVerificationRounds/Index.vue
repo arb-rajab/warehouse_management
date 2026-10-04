@@ -251,21 +251,12 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink
-                        :href="
-                            showCellVerificationRound({
-                                cellVerificationRound: row.id,
-                            }).url
-                        "
-                    >
+                    <TableLink :href="showCellVerificationRound(row)">
                         #{{ row.id }}
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">
-                    <TableLink
-                        v-if="row.user"
-                        :href="showUser({ id: row.user.id })"
-                    >
+                    <TableLink v-if="row.user" :href="showUser(row.user)">
                         {{ row.user.name }}
                     </TableLink>
                     <template v-else>—</template>

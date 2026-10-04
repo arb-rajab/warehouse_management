@@ -1,17 +1,25 @@
+import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
+import ActionErrorBanner from './ActionErrorBanner.vue';
 import SubmitButton from './SubmitButton.vue';
 import ToggleCellActiveDialog from './ToggleCellActiveDialog.vue';
 
-const { routerPostMock } = vi.hoisted(() => ({
-    routerPostMock: vi.fn(),
+const { formSlotPropsMock } = vi.hoisted(() => ({
+    formSlotPropsMock: vi.fn(() => ({
+        errors: {} as Record<string, string>,
+        processing: false,
+    })),
 }));
 
-vi.mock('@inertiajs/vue3', () => ({
-    router: { post: routerPostMock },
-}));
+vi.mock('@inertiajs/vue3', async () => {
+    const { createFormStub } = await import('@/testing/inertiaStubs');
+
+    return { Form: createFormStub(formSlotPropsMock) };
+});
 
 function cell(isActive: boolean): Cell {
     return {
@@ -24,42 +32,32 @@ function cell(isActive: boolean): Cell {
     };
 }
 
-/**
- * Mounts closed and transitions to open, matching how the dialog is always
- * used in the real app (Rows/Show.vue starts it at `open: false` and flips
- * it to `true` later) — the note field is only reset by the `watch(open,
- * ...)` handler, which needs a false→true transition to fire (see
- * PalletActionsDialog.test.ts for the same pattern).
- */
-async function mountDialog(
+function mountDialog(
     props: Partial<{
         cell: Cell | null;
-        label: string;
         returnTo: 'row';
+        'onUpdate:open': (open: boolean) => void;
     }> = {},
 ) {
-    const wrapper = mount(ToggleCellActiveDialog, {
+    return mount(ToggleCellActiveDialog, {
         props: {
             cell: 'cell' in props ? (props.cell as Cell | null) : cell(true),
-            label: props.label ?? 'A2·1',
+            label: 'A2·1',
             returnTo: props.returnTo,
-            open: false,
-            'onUpdate:open': () => {},
+            open: true,
+            'onUpdate:open': props['onUpdate:open'] ?? (() => {}),
         },
     });
-
-    await wrapper.setProps({ open: true });
-
-    return wrapper;
 }
 
 describe('ToggleCellActiveDialog', () => {
     beforeEach(() => {
-        routerPostMock.mockReset();
+        formSlotPropsMock.mockReset();
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     });
 
-    it('shows the deactivate title/confirm/submit text for an active cell', async () => {
-        const wrapper = await mountDialog({ cell: cell(true) });
+    it('shows the deactivate title/confirm/submit text for an active cell', () => {
+        const wrapper = mountDialog({ cell: cell(true) });
 
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.deactivateTitle', { location: 'A2·1' }),
@@ -67,13 +65,13 @@ describe('ToggleCellActiveDialog', () => {
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.deactivateConfirm', { location: 'A2·1' }),
         );
-        expect(wrapper.text()).toContain(
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
             t('cells.toggleActive.submitDeactivate'),
         );
     });
 
-    it('shows the reactivate title/confirm/submit text for an inactive cell', async () => {
-        const wrapper = await mountDialog({ cell: cell(false) });
+    it('shows the reactivate title/confirm/submit text for an inactive cell', () => {
+        const wrapper = mountDialog({ cell: cell(false) });
 
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.reactivateTitle', { location: 'A2·1' }),
@@ -81,127 +79,99 @@ describe('ToggleCellActiveDialog', () => {
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.reactivateConfirm', { location: 'A2·1' }),
         );
-        expect(wrapper.text()).toContain(
+        expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
             t('cells.toggleActive.submitReactivate'),
         );
     });
 
-    it('resets the note field whenever the dialog is reopened', async () => {
-        const wrapper = mount(ToggleCellActiveDialog, {
-            props: {
-                cell: cell(true),
-                label: 'A2·1',
-                open: false,
-                'onUpdate:open': () => {},
-            },
-        });
+    it('renders the note label', () => {
+        const wrapper = mountDialog();
 
-        await wrapper.setProps({ open: true });
-        await wrapper.get('textarea').setValue('Damaged shelf');
-        expect(
-            (wrapper.get('textarea').element as HTMLTextAreaElement).value,
-        ).toBe('Damaged shelf');
-
-        await wrapper.setProps({ open: false });
-        await wrapper.setProps({ open: true });
-
-        expect(
-            (wrapper.get('textarea').element as HTMLTextAreaElement).value,
-        ).toBe('');
+        expect(wrapper.text()).toContain(t('cells.toggleActive.noteLabel'));
     });
 
-    it('posts note null and return_to null by default', async () => {
-        const wrapper = await mountDialog({ cell: cell(true) });
+    it('posts to the cell’s toggle-active route, preserving scroll', () => {
+        const wrapper = mountDialog();
 
-        await wrapper.get('form').trigger('submit');
-
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][0]).toContain(
-            'cells/7/toggle-active',
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual(
+            toggleActive(7, { mergeQuery: {} }),
         );
-        expect(routerPostMock.mock.calls[0][1]).toEqual({
-            note: null,
-            return_to: null,
-        });
+        expect(form.props('action')).toMatchObject({ method: 'post' });
+        expect(form.props('options')).toEqual({ preserveScroll: true });
     });
 
-    it('posts the typed note and return_to when provided', async () => {
-        const wrapper = await mountDialog({
-            cell: cell(true),
-            returnTo: 'row',
-        });
+    it('names the note field so the form submits it', () => {
+        const wrapper = mountDialog();
 
-        await wrapper.get('textarea').setValue('Damaged shelf');
-        await wrapper.get('form').trigger('submit');
-
-        expect(routerPostMock).toHaveBeenCalledTimes(1);
-        expect(routerPostMock.mock.calls[0][1]).toEqual({
-            note: 'Damaged shelf',
-            return_to: 'row',
-        });
+        const note = wrapper.get('textarea');
+        expect(note.attributes('name')).toBe('note');
+        expect(note.attributes('maxlength')).toBe('1000');
     });
 
-    it('does not submit when there is no cell', async () => {
-        const wrapper = await mountDialog({ cell: null });
+    it('sends no return_to field by default', () => {
+        const wrapper = mountDialog();
 
-        await wrapper.get('form').trigger('submit');
-
-        expect(routerPostMock).not.toHaveBeenCalled();
+        expect(wrapper.find('input[name="return_to"]').exists()).toBe(false);
     });
 
-    it('closes the dialog on success, and stops processing regardless once the request finishes', async () => {
+    it('sends return_to as a hidden field when given', () => {
+        const wrapper = mountDialog({ returnTo: 'row' });
+
+        expect(wrapper.get('input[name="return_to"]').attributes('value')).toBe(
+            'row',
+        );
+    });
+
+    it('renders no form when there is no cell', () => {
+        const wrapper = mountDialog({ cell: null });
+
+        expect(wrapper.findComponent(Form).exists()).toBe(false);
+    });
+
+    it('closes the dialog when the form succeeds', async () => {
         const updateOpen = vi.fn();
-        const wrapper = mount(ToggleCellActiveDialog, {
-            props: {
-                cell: cell(true),
-                label: 'A2·1',
-                open: false,
-                'onUpdate:open': updateOpen,
-            },
-        });
-        await wrapper.setProps({ open: true });
+        const wrapper = mountDialog({ 'onUpdate:open': updateOpen });
 
-        await wrapper.get('form').trigger('submit');
-
-        const options = routerPostMock.mock.calls[0][2] as {
-            onSuccess: () => void;
-            onFinish: () => void;
-        };
-        options.onSuccess();
+        wrapper.getComponent(Form).vm.$emit('success');
         await wrapper.vm.$nextTick();
 
         expect(updateOpen).toHaveBeenCalledWith(false);
+    });
 
-        options.onFinish();
-        await wrapper.vm.$nextTick();
+    it('does not close the dialog until the form succeeds', () => {
+        const updateOpen = vi.fn();
+        mountDialog({ 'onUpdate:open': updateOpen });
+
+        expect(updateOpen).not.toHaveBeenCalled();
+    });
+
+    it('passes the form’s processing state to the submit button', () => {
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+        const wrapper = mountDialog();
 
         expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
-            false,
+            true,
         );
     });
 
-    it('keeps the dialog open when the request finishes without succeeding', async () => {
-        const updateOpen = vi.fn();
-        const wrapper = mount(ToggleCellActiveDialog, {
-            props: {
-                cell: cell(true),
-                label: 'A2·1',
-                open: false,
-                'onUpdate:open': updateOpen,
-            },
+    it('shows the form’s first server error in a banner', () => {
+        formSlotPropsMock.mockReturnValue({
+            errors: { note: 'Too long' },
+            processing: false,
         });
-        await wrapper.setProps({ open: true });
+        const wrapper = mountDialog();
 
-        await wrapper.get('form').trigger('submit');
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'Too long',
+        );
+    });
 
-        // A failed request (e.g. a 419 after session expiry) calls onFinish
-        // without ever calling onSuccess — the dialog must not close as if
-        // the action had actually gone through.
-        const options = routerPostMock.mock.calls[0][2] as {
-            onFinish: () => void;
-        };
-        options.onFinish();
+    it('shows no error message when the form has none', () => {
+        const wrapper = mountDialog();
 
-        expect(updateOpen).not.toHaveBeenCalledWith(false);
+        expect(
+            wrapper.getComponent(ActionErrorBanner).props('message'),
+        ).toBeUndefined();
     });
 });

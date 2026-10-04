@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
@@ -30,6 +30,7 @@ import { formatDateTime } from '@/lib/date';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
 import type {
     CellStatusLog,
     CellVerificationReport,
@@ -52,11 +53,7 @@ const currentReportsPerPage = computed(
     () => props.filters.reports_per_page ?? 20,
 );
 
-const page = usePage();
-
-const actionError = computed(
-    () => (page.props.errors as Partial<Record<'action', string>>)?.action,
-);
+const actionError = usePageError('action');
 
 function viewPalletHistory(palletId: number): void {
     router.get(cellLogsIndex().url, { pallet_id: palletId });
@@ -64,7 +61,7 @@ function viewPalletHistory(palletId: number): void {
 
 function onPerPageChange(perPage: number): void {
     router.get(
-        showUser({ id: props.user.id }).url,
+        showUser(props.user).url,
         { ...props.filters, per_page: perPage },
         { preserveState: true, replace: true },
     );
@@ -72,7 +69,7 @@ function onPerPageChange(perPage: number): void {
 
 function onReportsPerPageChange(perPage: number): void {
     router.get(
-        showUser({ id: props.user.id }).url,
+        showUser(props.user).url,
         { ...props.filters, reports_per_page: perPage },
         { preserveState: true, replace: true },
     );
@@ -150,10 +147,9 @@ function onReportsPerPageChange(perPage: number): void {
                     <td class="px-4 py-2">
                         <TableLink
                             :href="
-                                showCellVerificationRound({
-                                    cellVerificationRound:
-                                        report.cell_verification_round_id,
-                                })
+                                showCellVerificationRound(
+                                    report.cell_verification_round_id,
+                                )
                             "
                         >
                             #{{ report.cell_verification_round_id }}

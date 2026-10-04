@@ -21,6 +21,7 @@ import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
+import { usePageError } from '@/lib/pageErrors';
 import type { Paginated, PerPageFilters, User } from '@/types/admin';
 
 const props = defineProps<{
@@ -30,9 +31,7 @@ const props = defineProps<{
 
 const page = usePage();
 
-const deleteError = computed(
-    () => (page.props.errors as Partial<Record<'user', string>>)?.user,
-);
+const deleteError = usePageError('user');
 
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 

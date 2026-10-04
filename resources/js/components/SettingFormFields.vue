@@ -35,8 +35,6 @@ const props = withDefaults(
     }>(),
     {
         idPrefix: '',
-        qrCodeWidth: undefined,
-        qrCodeHeight: undefined,
         levels: () => [],
         allowedOpenLevels: () => [],
     },

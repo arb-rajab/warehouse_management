@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Ban,
     Box,
@@ -61,6 +61,7 @@ import {
     viewportTransform,
     zoomToFit,
 } from '@/lib/mapViewport';
+import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
@@ -495,9 +496,7 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>

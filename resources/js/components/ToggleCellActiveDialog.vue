@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { Form } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { firstError } from '@/lib/pageErrors';
 import type { Cell } from '@/types/admin';
 
 const props = defineProps<{
@@ -15,15 +17,6 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
-
-const note = ref('');
-const processing = ref(false);
-
-watch(open, (isOpen) => {
-    if (isOpen) {
-        note.value = '';
-    }
-});
 
 const deactivating = computed(() => props.cell?.is_active ?? false);
 
@@ -52,31 +45,6 @@ const submitLabel = computed(() =>
             : 'cells.toggleActive.submitReactivate',
     ),
 );
-
-function submit(): void {
-    if (!props.cell) {
-        return;
-    }
-
-    processing.value = true;
-
-    router.post(
-        toggleActive({ cell: props.cell.id }, { mergeQuery: {} }).url,
-        {
-            note: note.value === '' ? null : note.value,
-            return_to: props.returnTo ?? null,
-        },
-        {
-            preserveScroll: true,
-            onFinish: () => {
-                processing.value = false;
-            },
-            onSuccess: () => {
-                open.value = false;
-            },
-        },
-    );
-}
 </script>
 
 <template>
@@ -85,10 +53,26 @@ function submit(): void {
         :title="title"
         :close-label="t('cellLog.filters.close')"
     >
-        <form class="space-y-4" @submit.prevent="submit">
+        <Form
+            v-if="cell"
+            :action="toggleActive(cell, { mergeQuery: {} })"
+            :options="{ preserveScroll: true }"
+            class="space-y-4"
+            #default="{ errors, processing }"
+            @success="open = false"
+        >
+            <ActionErrorBanner :message="firstError(errors)" />
+
             <p class="text-sm text-gray-600 dark:text-neutral-300">
                 {{ confirmText }}
             </p>
+
+            <input
+                v-if="returnTo"
+                type="hidden"
+                name="return_to"
+                :value="returnTo"
+            />
 
             <div>
                 <label :for="'toggle-active-note'" :class="fieldLabelClass">
@@ -96,7 +80,7 @@ function submit(): void {
                 </label>
                 <textarea
                     id="toggle-active-note"
-                    v-model="note"
+                    name="note"
                     rows="3"
                     maxlength="1000"
                     :placeholder="t('cells.toggleActive.notePlaceholder')"
@@ -109,6 +93,6 @@ function submit(): void {
                 :processing-label="t('cells.toggleActive.submitting')"
                 :processing="processing"
             />
-        </form>
+        </Form>
     </FilterDialog>
 </template>

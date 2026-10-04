@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AccountMenu from './AccountMenu.vue';
@@ -72,6 +73,20 @@ describe('AccountMenu', () => {
             .find((el) => el.attributes('href') === '/admin/settings');
 
         expect(settingsLink).toBeTruthy();
+    });
+
+    it('gives the settings link a Wayfinder route object', async () => {
+        const wrapper = mountMenu();
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
+
+        const settingsLink = wrapper
+            .findAllComponents(Link)
+            .find((link) => link.attributes('href') === '/admin/settings');
+
+        expect(settingsLink?.props('href')).toEqual({
+            url: '/admin/settings',
+            method: 'get',
+        });
     });
 
     it('links the logout action to the /logout route and closes the menu on click', async () => {

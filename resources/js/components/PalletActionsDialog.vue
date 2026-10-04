@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
+import { useForm } from '@inertiajs/vue3';
 import { CalendarPlus, CalendarX } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import {
@@ -10,6 +11,7 @@ import {
     transfer,
     update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -20,6 +22,7 @@ import {
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { firstError } from '@/lib/pageErrors';
 import { productName } from '@/lib/productName';
 import type { Cell, CellMapRow, ProductFilterOption } from '@/types/admin';
 
@@ -53,25 +56,20 @@ const availableActions = computed<PalletActionTab[]>(() => {
 
 const selectedAction = ref<PalletActionTab>('store');
 
-const product = ref<ProductFilterOption | null>(null);
-const expirationDate = ref('');
-const boxesCount = ref('');
-const confirmEmpty = ref(false);
-const destinationRowLetter = ref('');
-const destinationCellNumber = ref('');
-const destinationFlatNumber = ref('');
-const note = ref('');
-const processing = ref(false);
+const form = useForm({
+    product: null as ProductFilterOption | null,
+    expiration_date: '',
+    boxes_count: '',
+    confirm_empty: false,
+    row_letter: '',
+    cell_number: '',
+    flat_number: '',
+    note: '',
+});
 
 function resetFields(): void {
-    product.value = null;
-    expirationDate.value = '';
-    boxesCount.value = '';
-    confirmEmpty.value = false;
-    destinationRowLetter.value = '';
-    destinationCellNumber.value = '';
-    destinationFlatNumber.value = '';
-    note.value = '';
+    form.reset();
+    form.clearErrors();
 }
 
 watch(open, (isOpen) => {
@@ -85,126 +83,133 @@ watch(selectedAction, (action) => {
     resetFields();
 
     if (action === 'edit' && props.cell?.pallet) {
-        product.value = {
+        form.product = {
             id: props.cell.pallet.product_id,
             name: props.cell.pallet.product_name,
             ar_name: props.cell.pallet.product_ar_name,
         };
-        expirationDate.value = props.cell.pallet.expiration_date ?? '';
-        boxesCount.value = String(props.cell.pallet.remaining_boxes);
+        form.expiration_date = props.cell.pallet.expiration_date ?? '';
+        form.boxes_count = String(props.cell.pallet.remaining_boxes);
     }
 });
 
 const remainingBoxes = computed(() => props.cell?.pallet?.remaining_boxes ?? 0);
 
 const boxesWouldEmptyPallet = computed(() => {
-    const count = Number(boxesCount.value);
+    const count = Number(form.boxes_count);
 
     return count > 0 && count >= remainingBoxes.value;
 });
 
-const editWouldEmptyPallet = computed(() => Number(boxesCount.value) === 0);
+const editWouldEmptyPallet = computed(() => Number(form.boxes_count) === 0);
 
 function noteOrNull(): string | null {
-    return note.value === '' ? null : note.value;
+    return form.note === '' ? null : form.note;
 }
 
 function boxesCountOrNull(): string | null {
-    return boxesCount.value === '' ? null : boxesCount.value;
+    return form.boxes_count === '' ? null : form.boxes_count;
+}
+
+interface PalletActionRequest {
+    action: UrlMethodPair;
+    data: Record<string, FormDataConvertible>;
+}
+
+function buildRequest(): PalletActionRequest | null {
+    const { cell } = props;
+
+    if (!cell) {
+        return null;
+    }
+
+    const returnTo = props.returnTo ?? null;
+    const query = { mergeQuery: {} };
+
+    if (selectedAction.value === 'store') {
+        return {
+            action: store(cell, query),
+            data: {
+                product_id: form.product?.id ?? null,
+                expiration_date: form.expiration_date,
+                note: noteOrNull(),
+                return_to: returnTo,
+            },
+        };
+    }
+
+    const { pallet } = cell;
+
+    if (!pallet) {
+        return null;
+    }
+
+    switch (selectedAction.value) {
+        case 'open':
+            return {
+                action: openPallet(pallet, query),
+                data: {
+                    boxes_count: boxesCountOrNull(),
+                    confirm_empty: form.confirm_empty,
+                    note: noteOrNull(),
+                    return_to: returnTo,
+                },
+            };
+        case 'remove-boxes':
+            return {
+                action: removeBoxes(pallet, query),
+                data: {
+                    boxes_count: form.boxes_count,
+                    confirm_empty: form.confirm_empty,
+                    note: noteOrNull(),
+                    return_to: returnTo,
+                },
+            };
+        case 'empty':
+            return {
+                action: emptyPallet(pallet, query),
+                data: { note: noteOrNull(), return_to: returnTo },
+            };
+        case 'transfer':
+            return {
+                action: transfer(pallet, query),
+                data: {
+                    row_letter: form.row_letter,
+                    cell_number: form.cell_number,
+                    flat_number: form.flat_number,
+                    note: noteOrNull(),
+                    return_to: returnTo,
+                },
+            };
+        case 'edit':
+            return {
+                action: updatePallet(pallet, query),
+                data: {
+                    product_id: form.product?.id ?? null,
+                    expiration_date: form.expiration_date,
+                    remaining_boxes: form.boxes_count,
+                    confirm_empty: form.confirm_empty,
+                    return_to: returnTo,
+                },
+            };
+        default:
+            return null;
+    }
 }
 
 function submit(): void {
-    if (!props.cell) {
+    const request = buildRequest();
+
+    if (!request) {
         return;
     }
 
-    const pallet = props.cell.pallet;
-    processing.value = true;
-
-    const options = {
+    form.transform(() => request.data).submit(request.action, {
         preserveScroll: true,
-        onFinish: () => {
-            processing.value = false;
-        },
         onSuccess: () => {
             open.value = false;
         },
-    };
-
-    if (selectedAction.value === 'store') {
-        router.post(
-            store({ cell: props.cell.id }, { mergeQuery: {} }).url,
-            {
-                product_id: product.value?.id ?? null,
-                expiration_date: expirationDate.value,
-                note: noteOrNull(),
-                return_to: props.returnTo ?? null,
-            },
-            options,
-        );
-
-        return;
-    }
-
-    if (!pallet) {
-        processing.value = false;
-
-        return;
-    }
-
-    if (selectedAction.value === 'open') {
-        router.post(
-            openPallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            {
-                boxes_count: boxesCountOrNull(),
-                confirm_empty: confirmEmpty.value,
-                note: noteOrNull(),
-                return_to: props.returnTo ?? null,
-            },
-            options,
-        );
-    } else if (selectedAction.value === 'remove-boxes') {
-        router.post(
-            removeBoxes({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            {
-                boxes_count: boxesCount.value,
-                confirm_empty: confirmEmpty.value,
-                note: noteOrNull(),
-                return_to: props.returnTo ?? null,
-            },
-            options,
-        );
-    } else if (selectedAction.value === 'empty') {
-        router.post(
-            emptyPallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            { note: noteOrNull(), return_to: props.returnTo ?? null },
-            options,
-        );
-    } else if (selectedAction.value === 'transfer') {
-        router.post(
-            transfer({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            {
-                row_letter: destinationRowLetter.value,
-                cell_number: destinationCellNumber.value,
-                flat_number: destinationFlatNumber.value,
-                note: noteOrNull(),
-                return_to: props.returnTo ?? null,
-            },
-            options,
-        );
-    } else if (selectedAction.value === 'edit') {
-        router.put(
-            updatePallet({ pallet: pallet.id }, { mergeQuery: {} }).url,
-            {
-                product_id: product.value?.id ?? null,
-                expiration_date: expirationDate.value,
-                remaining_boxes: boxesCount.value,
-                confirm_empty: confirmEmpty.value,
-                return_to: props.returnTo ?? null,
-            },
-            options,
-        );
-    }
+    });
 }
 
 const submitLabel = computed(() => {
@@ -315,6 +320,8 @@ const submitLabel = computed(() => {
             class="space-y-4"
             @submit.prevent="submit"
         >
+            <ActionErrorBanner :message="firstError(form.errors)" />
+
             <template
                 v-if="selectedAction === 'store' || selectedAction === 'edit'"
             >
@@ -324,7 +331,7 @@ const submitLabel = computed(() => {
                             ? 'pallet-action-edit-product'
                             : 'pallet-action-product'
                     "
-                    v-model="product"
+                    v-model="form.product"
                     required
                     :label="
                         t(`cells.palletActions.${selectedAction}.productLabel`)
@@ -356,7 +363,7 @@ const submitLabel = computed(() => {
                                 ? 'pallet-action-edit-expiration'
                                 : 'pallet-action-expiration'
                         "
-                        v-model="expirationDate"
+                        v-model="form.expiration_date"
                         type="date"
                         :class="plainFieldInputClass"
                     />
@@ -370,7 +377,7 @@ const submitLabel = computed(() => {
                     </label>
                     <input
                         id="pallet-action-edit-boxes"
-                        v-model="boxesCount"
+                        v-model="form.boxes_count"
                         type="number"
                         min="0"
                         required
@@ -382,7 +389,7 @@ const submitLabel = computed(() => {
                     class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
                 >
                     <input
-                        v-model="confirmEmpty"
+                        v-model="form.confirm_empty"
                         type="checkbox"
                         class="mt-0.5"
                     />
@@ -417,7 +424,7 @@ const submitLabel = computed(() => {
                     </label>
                     <input
                         id="pallet-action-boxes-count"
-                        v-model="boxesCount"
+                        v-model="form.boxes_count"
                         type="number"
                         min="1"
                         :required="selectedAction === 'remove-boxes'"
@@ -429,7 +436,7 @@ const submitLabel = computed(() => {
                     class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
                 >
                     <input
-                        v-model="confirmEmpty"
+                        v-model="form.confirm_empty"
                         type="checkbox"
                         class="mt-0.5"
                     />
@@ -458,7 +465,7 @@ const submitLabel = computed(() => {
                     </label>
                     <select
                         id="pallet-action-to-row"
-                        v-model="destinationRowLetter"
+                        v-model="form.row_letter"
                         required
                         :class="plainFieldInputClass"
                     >
@@ -478,7 +485,7 @@ const submitLabel = computed(() => {
                     </label>
                     <input
                         id="pallet-action-to-cell"
-                        v-model="destinationCellNumber"
+                        v-model="form.cell_number"
                         type="number"
                         min="1"
                         required
@@ -491,7 +498,7 @@ const submitLabel = computed(() => {
                     </label>
                     <input
                         id="pallet-action-to-flat"
-                        v-model="destinationFlatNumber"
+                        v-model="form.flat_number"
                         type="number"
                         min="1"
                         required
@@ -506,7 +513,7 @@ const submitLabel = computed(() => {
                 </label>
                 <textarea
                     id="pallet-action-note"
-                    v-model="note"
+                    v-model="form.note"
                     rows="3"
                     maxlength="1000"
                     :placeholder="t('cells.palletActions.notePlaceholder')"
@@ -520,7 +527,7 @@ const submitLabel = computed(() => {
                 form="pallet-action-form"
                 :label="submitLabel"
                 :processing-label="t('cells.palletActions.submitting')"
-                :processing="processing"
+                :processing="form.processing"
             />
         </template>
     </FilterDialog>

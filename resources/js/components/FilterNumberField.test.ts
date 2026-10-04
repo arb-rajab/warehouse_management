@@ -43,6 +43,26 @@ describe('FilterNumberField', () => {
         expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([3]);
     });
 
+    it('names and requires the input only when asked, so a surrounding form can submit and validate it', () => {
+        const plain = mount(FilterNumberField, {
+            props: { id: 'a', label: 'A', modelValue: '' },
+        });
+        expect(plain.get('input').attributes('name')).toBeUndefined();
+        expect(plain.get('input').attributes('required')).toBeUndefined();
+
+        const named = mount(FilterNumberField, {
+            props: {
+                id: 'a',
+                label: 'A',
+                modelValue: '',
+                name: 'boxes_count',
+                required: true,
+            },
+        });
+        expect(named.get('input').attributes('name')).toBe('boxes_count');
+        expect(named.get('input').attributes('required')).toBeDefined();
+    });
+
     it('disables the input when disabled is true', () => {
         const wrapper = mount(FilterNumberField, {
             props: {

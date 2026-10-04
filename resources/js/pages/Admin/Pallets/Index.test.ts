@@ -1,6 +1,7 @@
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { matchingPallet, paginated } from '@/testing/factories';
@@ -130,31 +131,31 @@ describe('Pallets Index', () => {
         expect(cells[4].text()).toBe('—');
     });
 
+    function mapLink(wrapper: ReturnType<typeof mountPage>) {
+        return wrapper
+            .findAllComponents(Link)
+            .find((link) => link.text().includes(t('pallets.viewOnMap')));
+    }
+
     it('links the "view on map" button to the cell map, carrying the active filter as its query', () => {
         const wrapper = mountPage([], {
             state: 'full',
             expires_within_days: 5,
         });
 
-        const mapLink = wrapper
-            .findAll('a')
-            .find((a) => a.text().includes(t('pallets.viewOnMap')));
-
-        expect(mapLink?.attributes('href')).toBe('/admin/cells');
-        expect(mapLink?.attributes('data-query')).toBe(
-            JSON.stringify({ state: 'full', expires_within_days: 5 }),
+        expect(mapLink(wrapper)?.props('href')).toEqual(
+            cellsIndex({ query: { state: 'full', expires_within_days: 5 } }),
+        );
+        expect(mapLink(wrapper)?.attributes('href')).toBe(
+            '/admin/cells?state=full&expires_within_days=5',
         );
     });
 
     it('excludes per_page from the "view on map" query, since the map has no page size', () => {
         const wrapper = mountPage([], { state: 'full', per_page: 50 });
 
-        const mapLink = wrapper
-            .findAll('a')
-            .find((a) => a.text().includes(t('pallets.viewOnMap')));
-
-        expect(mapLink?.attributes('data-query')).toBe(
-            JSON.stringify({ state: 'full' }),
+        expect(mapLink(wrapper)?.props('href')).toEqual(
+            cellsIndex({ query: { state: 'full' } }),
         );
     });
 
