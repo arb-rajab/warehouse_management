@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { accept as acceptReportRoute } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
 import { cellVerificationReport } from '@/testing/factories';
 import type { CellVerificationSnapshot } from '@/types/admin';
 import {
@@ -156,7 +157,7 @@ describe('acceptReport', () => {
             t('cellVerificationReport.acceptConfirm', { slot: 'B4·1' }),
         );
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-reports/5/accept',
+            acceptReportRoute.url({ cellVerificationReport: 5 }),
             { return_to: null },
             { preserveScroll: true },
         );
@@ -168,7 +169,7 @@ describe('acceptReport', () => {
         acceptReport(report, 'user');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-reports/5/accept',
+            acceptReportRoute.url({ cellVerificationReport: 5 }),
             { return_to: 'user' },
             { preserveScroll: true },
         );

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FilterRowsRequest;
 use App\Http\Requests\Admin\ShowRowRequest;
 use App\Http\Requests\Admin\StoreRowRequest;
 use App\Http\Requests\Admin\UpdateRowRequest;
@@ -25,7 +26,7 @@ class RowController extends Controller
 {
     use BuildsCellQrLabels;
 
-    public function index(Request $request): Response
+    public function index(FilterRowsRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
 

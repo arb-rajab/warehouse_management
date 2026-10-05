@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * @property int $id
@@ -76,6 +77,29 @@ class Row extends Model
     public function cells(): HasMany
     {
         return $this->hasMany(Cell::class);
+    }
+
+    /**
+     * A cell is only identified by its row, `cell_number` *and* flat: the mobile
+     * API's `rows/{row}/cells/{cell:cell_number}/flats/{flatNumber}` binds
+     * `{cell}` by `cell_number`, which alone matches one cell per flat, so the
+     * URI's `{flatNumber}` narrows it to the single cell. Route parameters are
+     * the only place the flat is available to a child binding.
+     *
+     * @param  string  $childType
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return Relation<Model, $this, *>
+     */
+    protected function resolveChildRouteBindingQuery($childType, $value, $field)
+    {
+        $query = parent::resolveChildRouteBindingQuery($childType, $value, $field);
+
+        if ($childType === 'cell' && $field === 'cell_number') {
+            $query->select(Cell::SELECT_COLUMNS)->where('flat_number', request()->route('flatNumber'));
+        }
+
+        return $query;
     }
 
     /**

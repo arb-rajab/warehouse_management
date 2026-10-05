@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\CellState;
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
 use App\Http\Controllers\Concerns\BuildsProductQrLabels;
 use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
@@ -14,15 +13,12 @@ use App\Http\Requests\Admin\UpdateProductBoxCountRequest;
 use App\Http\Requests\Admin\UpdateProductMinimumPalletsRequest;
 use App\Http\Resources\ProductOptionResource;
 use App\Http\Resources\ProductSummaryResource;
-use App\Models\Cell;
-use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,16 +49,9 @@ class ProductController extends Controller
 
     public function index(FilterProductsRequest $request): Response
     {
-        $today = today();
         $expiringSoonDays = $request->filled('expires_within_days')
             ? $request->integer('expires_within_days')
             : ExpiringSoonDefaults::CUSTOM_WINDOW_DAYS;
-
-        $historyFiltersActive = $request->filled('user_id')
-            || $request->filled('action')
-            || $request->filled('date_from')
-            || $request->filled('date_to')
-            || $request->filled('created_within_days');
 
         $direction = $request->string('sort_direction')->value() === 'desc' ? 'desc' : 'asc';
         $sortBy = in_array($request->string('sort_by')->value(), self::SORTABLE_COLUMNS, true)
@@ -74,34 +63,15 @@ class ProductController extends Controller
             ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->with('barcodes:id,product_id,barcode')
-            ->addSelect(['full_cells_count' => $this->occupancyCountSubquery($request, CellState::Full)])
-            ->addSelect(['opened_cells_count' => $this->occupancyCountSubquery($request, CellState::Opened)])
-            ->addSelect(['expired_cells_count' => $this->occupancyCountSubquery(
-                $request,
-                null,
-                fn (Builder $query) => $query->where('expiration_date', '<', $today),
-            )])
-            ->addSelect(['expiring_soon_count' => $this->occupancyCountSubquery(
-                $request,
-                null,
-                fn (Builder $query) => $query->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
-            )])
+            ->withOccupancyCounts($request, $expiringSoonDays)
             ->addSelect(['pallets_count' => Pallet::query()
                 ->selectRaw('count(*)')
                 ->whereColumn('pallets.product_id', 'products.id')])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
             ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false)->inWarehouse())
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
-            ->when(
-                $this->occupancyFiltersActive($request),
-                fn (Builder $query) => $query->whereExists($this->occupancyExistsSubquery($request)),
-            )
-            ->when($historyFiltersActive, function (Builder $query) use ($request) {
-                $existsSubquery = CellStatusLog::query()->whereColumn('cell_status_logs.product_id', 'products.id');
-                $this->applyHistoryLogFilters($existsSubquery, $request);
-
-                $query->whereExists($existsSubquery);
-            })
+            ->matchingOccupancyFilters($request)
+            ->matchingHistoryFilters($request)
             ->orderBy($sortBy, $direction)
             ->orderBy('id', $direction)
             ->paginate($perPage)
@@ -186,7 +156,7 @@ class ProductController extends Controller
      * Redirects to `admin.products.index` rather than `back()` — see
      * `updateBoxCount()`'s docblock.
      */
-    public function addBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
     {
         $product->barcodes()->create([
             'barcode' => $request->validated('barcode'),
@@ -196,16 +166,13 @@ class ProductController extends Controller
     }
 
     /**
-     * Detaches a barcode from a product. `$barcode` is route-model-bound
-     * without scoping it to `$product` (Laravel has no built-in nested
-     * scoping for a manually declared route), so the ownership check is
-     * explicit here — without it, an admin could delete any product's
-     * barcode by guessing its id while looking at a different product's row.
+     * Detaches a barcode from a product. The route uses `scopeBindings()`, so
+     * `$barcode` only resolves when it belongs to `$product` — without that,
+     * an admin could delete any product's barcode by guessing its id while
+     * looking at a different product's row.
      */
-    public function removeBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
+    public function destroyBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
     {
-        abort_if($barcode->product_id !== $product->id, 404);
-
         $barcode->delete();
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
@@ -223,6 +190,7 @@ class ProductController extends Controller
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')
                 ->paginate(20)
+                ->withQueryString()
         ));
     }
 
@@ -374,44 +342,6 @@ class ProductController extends Controller
     }
 
     /**
-     * Whether any occupancy filter (state/expired/expiring) is active — used
-     * to gate both {@see occupancyExistsSubquery()}, which restricts which
-     * products appear at all, and the frontend's shared `occupancy`
-     * column-filter indicator.
-     */
-    private function occupancyFiltersActive(Request $request): bool
-    {
-        return $request->filled('state')
-            || $request->boolean('expired')
-            || $request->filled('expires_within_days');
-    }
-
-    /**
-     * A correlated existence check for whether the product on each outer row
-     * has at least one pallet matching the active occupancy filters
-     * (state/expired/expiring). Applied to the base product query so that,
-     * e.g., filtering by `state=full` only returns products that actually
-     * have a full pallet — unlike {@see occupancyCountSubquery()}, which
-     * only feeds the displayed per-column counts and never restricts which
-     * products appear. Deliberately does not force a specific `CellState`
-     * the way that method does per column: this check means "matches
-     * everything the user filtered by," not "matches one column."
-     *
-     * @return Builder<Pallet>
-     */
-    private function occupancyExistsSubquery(Request $request): Builder
-    {
-        return Pallet::query()
-            ->selectRaw('1')
-            ->whereColumn('pallets.product_id', 'products.id')
-            ->when($request->boolean('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
-            ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
-            ->whereHas('cell', function (Builder $cellQuery) use ($request) {
-                $this->applyOccupancyCellFilters($cellQuery, $request);
-            });
-    }
-
-    /**
      * A correlated existence check for whether the product on each outer row
      * has a configured minimum-pallets threshold that its current pallet
      * count (across every state, not just full/opened — this is a stock
@@ -428,70 +358,5 @@ class ProductController extends Controller
             ->whereColumn('wms_product_settings.product_id', 'products.id')
             ->whereNotNull('minimum_pallets')
             ->whereRaw('minimum_pallets > (select count(*) from pallets where pallets.product_id = products.id)');
-    }
-
-    /**
-     * A correlated count of the currently-occupied cells matching the
-     * occupancy filters (state/expiration) for the product on each outer
-     * row — added as a scalar subquery select, the same idiom
-     * `CellStatusLog::sorted()` uses to sort by a related pallet's column.
-     *
-     * `$forcedState` fixes the cell state a particular column counts
-     * (full/opened); `$extraPalletConstraint`, when given, adds a further
-     * condition on the pallet itself (used for the expired/expiring-soon
-     * columns, which aren't tied to one cell state).
-     *
-     * @return Builder<Pallet>
-     */
-    private function occupancyCountSubquery(Request $request, ?CellState $forcedState, ?callable $extraPalletConstraint = null): Builder
-    {
-        return Pallet::query()
-            ->selectRaw('count(*)')
-            ->whereColumn('pallets.product_id', 'products.id')
-            ->when($request->boolean('expired'), fn (Builder $query) => $query->where('expiration_date', '<', today()))
-            ->when($request->filled('expires_within_days'), fn (Builder $query) => $query->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
-            ->when($extraPalletConstraint !== null, fn (Builder $query) => $extraPalletConstraint($query))
-            ->whereHas('cell', function (Builder $cellQuery) use ($request, $forcedState) {
-                $this->applyOccupancyCellFilters($cellQuery, $request);
-
-                if ($forcedState !== null) {
-                    $cellQuery->where('state', $forcedState->value);
-                }
-            });
-    }
-
-    /**
-     * Filters a cells-table query by state. Deliberately typed as
-     * `Builder<Model>` rather than `Builder<Cell>`: both call sites reach
-     * this via a `whereHas('cell', ...)` relation closure, and Larastan
-     * cannot trace the relation's target model through a query builder that
-     * arrives as a function parameter rather than a direct `Model::query()`
-     * call, so it always narrows that closure's builder to the bare `Model`
-     * generic.
-     *
-     * @param  Builder<Model>  $query
-     */
-    private function applyOccupancyCellFilters(Builder $query, Request $request): void
-    {
-        $query->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->string('state')->value()));
-    }
-
-    /**
-     * @param  Builder<CellStatusLog>  $query
-     */
-    private function applyHistoryLogFilters(Builder $query, Request $request): void
-    {
-        $query
-            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
-            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', CellStatusLog::actionValuesFromRequest($request)))
-            ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
-            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
-            ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
-            ->when(
-                $request->filled('state'),
-                fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
-                    $this->applyOccupancyCellFilters($cellQuery, $request);
-                }),
-            );
     }
 }

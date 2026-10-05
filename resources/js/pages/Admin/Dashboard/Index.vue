@@ -209,22 +209,31 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.empty')"
                     :value="stats.occupancy.empty"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'empty', ...productQuery }"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'empty', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.empty.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
                     :value="stats.occupancy.full"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'full', ...productQuery }"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'full', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.full.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
                     :value="stats.occupancy.opened"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'opened', ...productQuery }"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'opened', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.opened.icon"
                 />
             </div>
@@ -238,11 +247,14 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
                     :value="stats.expiring.expired"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expired: true,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expired: true,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="danger"
                     :icon="CalendarX"
                 />
@@ -255,11 +267,14 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="window.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expires_within_days: window.days,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: window.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="CalendarX"
                 />
@@ -270,11 +285,14 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="stats.expiring.custom.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expires_within_days: stats.expiring.custom.days,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: stats.expiring.custom.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="CalendarX"
                 >
@@ -338,11 +356,14 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="stats.stale.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        stale_after_days: stats.stale.days,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                stale_after_days: stats.stale.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="Clock"
                 >
@@ -400,8 +421,11 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.lowStock.count')"
                     :value="stats.low_stock.count"
-                    :href="productsIndex().url"
-                    :query="{ low_stock: true, ...productQuery }"
+                    :href="
+                        productsIndex({
+                            query: { low_stock: true, ...productQuery },
+                        })
+                    "
                     tone="danger"
                     :icon="TriangleAlert"
                 />
@@ -416,8 +440,11 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="t('dashboard.inactiveInWarehouse.count')"
                     :value="stats.inactive_in_warehouse.count"
-                    :href="productsIndex().url"
-                    :query="{ inactive: true, ...productQuery }"
+                    :href="
+                        productsIndex({
+                            query: { inactive: true, ...productQuery },
+                        })
+                    "
                     tone="warning"
                     :icon="PackageX"
                 />
@@ -434,13 +461,16 @@ function onProductIdsChange(ids: string[]): void {
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
                     :value="stats.activity_today[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: today,
-                        date_to: today,
-                        ...productQuery,
-                    }"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: today,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>
@@ -456,13 +486,16 @@ function onProductIdsChange(ids: string[]): void {
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
                     :value="stats.activity_week[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: weekStart,
-                        date_to: today,
-                        ...productQuery,
-                    }"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: weekStart,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>

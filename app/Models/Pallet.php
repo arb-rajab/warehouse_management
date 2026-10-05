@@ -116,14 +116,15 @@ class Pallet extends Model
     }
 
     /**
-     * Scope a query by the same highlight-filter query params the cell map's
-     * `CellController::firstHighlightMatch()` matches cells against — kept in
-     * lockstep with that method (and `matchesCellHighlight()`/`isCellExpired()`/
-     * `isCellExpiringWithin()`/`isCellStale()` on the frontend) so the "matching
-     * pallets" list and the map never disagree about which pallets match a
-     * given filter. `state`/`is_active` live on the pallet's `Cell`, not on the
-     * pallet itself, so those two go through `whereHas('cell', ...)`; the rest
-     * are plain columns on this table.
+     * Scope a query by the cell map's highlight-filter query params. This is
+     * the one server-side definition of them: the "matching pallets" list
+     * uses it directly and `CellController::firstHighlightMatch()` reuses it
+     * through a correlated `whereExists`, so the two can never disagree about
+     * which pallets match. It must stay in lockstep with the frontend's
+     * `matchesCellHighlight()`/`isCellExpired()`/`isCellExpiringWithin()`/
+     * `isCellStale()`. `state`/`is_active` live on the pallet's `Cell`, not on
+     * the pallet itself, so those two go through `whereHas('cell', ...)`; the
+     * rest are plain columns on this table.
      *
      * @param  Builder<Pallet>  $query
      */
@@ -139,6 +140,35 @@ class Pallet extends Model
             ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereBetween('expiration_date', [$today, $today->copy()->addDays($request->integer('expires_within_days'))]))
             ->when($request->filled('stale_after_days'), fn (Builder $q) => $q->where('created_at', '<=', $today->copy()->subDays($request->integer('stale_after_days'))))
             ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))));
+    }
+
+    /**
+     * Scope a query by the admin products index's occupancy filters
+     * (state/expired/expires_within_days), optionally pinned to one cell
+     * state. Shared by `Product::matchingOccupancyFilters()` (which products
+     * appear at all) and `Product::withOccupancyCounts()` (the per-column
+     * counts, which pass `$cellState` for the Full/Opened columns).
+     *
+     * Note `expires_within_days` here is `expiration_date <= now + N`, which
+     * also matches already-expired pallets — unlike
+     * {@see matchingHighlightFilters()}, which only matches today through
+     * today + N. That divergence predates this scope and is kept as-is.
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function matchingOccupancyFilters(Builder $query, Request $request, ?CellState $cellState = null): void
+    {
+        $query
+            ->when($request->boolean('expired'), fn (Builder $q) => $q->where('expiration_date', '<', today()))
+            ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
+            ->whereHas('cell', function (Builder $cellQuery) use ($request, $cellState): void {
+                $cellQuery->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->string('state')->value()));
+
+                if ($cellState !== null) {
+                    $cellQuery->where('state', $cellState->value);
+                }
+            });
     }
 
     /**

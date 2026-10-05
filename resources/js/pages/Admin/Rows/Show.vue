@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -17,6 +17,7 @@ import {
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
@@ -173,9 +174,7 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 </script>
 
 <template>

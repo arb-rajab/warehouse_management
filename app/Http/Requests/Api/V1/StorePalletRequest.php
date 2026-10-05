@@ -11,7 +11,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StorePalletRequest extends FormRequest
 {
-    use ResolvesSlotFromCoordinates, ValidatesOptionalNote, ValidatesPalletContents;
+    use ResolvesSlotFromCoordinates;
+    use ValidatesOptionalNote;
+    use ValidatesPalletContents;
 
     /**
      * Get the validation rules that apply to the request.

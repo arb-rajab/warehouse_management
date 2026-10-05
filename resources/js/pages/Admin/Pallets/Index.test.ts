@@ -1,6 +1,9 @@
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { matchingPallet, paginated } from '@/testing/factories';
@@ -30,7 +33,7 @@ function mountPage(
     selectedProducts: { id: number; name: string; ar_name: string }[] = [],
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/pallets',
+        url: palletsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -116,7 +119,10 @@ describe('Pallets Index', () => {
 
         const locationLink = rowCells(wrapper)[2].find('a');
         expect(locationLink.attributes('href')).toBe(
-            '/admin/rows/A?cell_number=3&flat_number=2',
+            rowShow.url(
+                { row: 'A' },
+                { query: { cell_number: '3', flat_number: '2' } },
+            ),
         );
     });
 
@@ -130,31 +136,33 @@ describe('Pallets Index', () => {
         expect(cells[4].text()).toBe('—');
     });
 
+    function mapLink(wrapper: ReturnType<typeof mountPage>) {
+        return wrapper
+            .findAllComponents(Link)
+            .find((link) => link.text().includes(t('pallets.viewOnMap')));
+    }
+
     it('links the "view on map" button to the cell map, carrying the active filter as its query', () => {
         const wrapper = mountPage([], {
             state: 'full',
             expires_within_days: 5,
         });
 
-        const mapLink = wrapper
-            .findAll('a')
-            .find((a) => a.text().includes(t('pallets.viewOnMap')));
-
-        expect(mapLink?.attributes('href')).toBe('/admin/cells');
-        expect(mapLink?.attributes('data-query')).toBe(
-            JSON.stringify({ state: 'full', expires_within_days: 5 }),
+        expect(mapLink(wrapper)?.props('href')).toEqual(
+            cellsIndex({ query: { state: 'full', expires_within_days: 5 } }),
+        );
+        expect(mapLink(wrapper)?.attributes('href')).toBe(
+            cellsIndex.url({
+                query: { state: 'full', expires_within_days: '5' },
+            }),
         );
     });
 
     it('excludes per_page from the "view on map" query, since the map has no page size', () => {
         const wrapper = mountPage([], { state: 'full', per_page: 50 });
 
-        const mapLink = wrapper
-            .findAll('a')
-            .find((a) => a.text().includes(t('pallets.viewOnMap')));
-
-        expect(mapLink?.attributes('data-query')).toBe(
-            JSON.stringify({ state: 'full' }),
+        expect(mapLink(wrapper)?.props('href')).toEqual(
+            cellsIndex({ query: { state: 'full' } }),
         );
     });
 
@@ -191,7 +199,7 @@ describe('Pallets Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/pallets',
+            palletsIndex.url(),
             { state: 'full', per_page: 50 },
             { preserveState: true, replace: true },
         );

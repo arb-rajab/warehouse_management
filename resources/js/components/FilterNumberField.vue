@@ -5,11 +5,12 @@ withDefaults(
     defineProps<{
         id: string;
         label: string;
+        name?: string;
         placeholder?: string;
+        required?: boolean;
         disabled?: boolean;
     }>(),
     {
-        placeholder: undefined,
         disabled: false,
     },
 );
@@ -23,6 +24,8 @@ const model = defineModel<string>({ required: true });
         <input
             :id="id"
             v-model="model"
+            :name="name"
+            :required="required"
             type="number"
             min="1"
             step="1"

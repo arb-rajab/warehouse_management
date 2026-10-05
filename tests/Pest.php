@@ -488,6 +488,17 @@ function assertJsonListingPaginates(TestResponse $response, int $total, int $per
 }
 
 /**
+ * Assert that a first page's `links.next` carries the request's query string —
+ * a paginated listing must call `->withQueryString()`, or following the link
+ * silently drops the caller's filters.
+ */
+function assertNextLinkKeepsQuery(TestResponse $response, string $query): void
+{
+    $response->assertOk();
+    expect($response->json('links.next'))->toContain($query)->toContain('page=2');
+}
+
+/**
  * Assert that an admin Inertia index response paginates a prop instead of
  * returning every row at once — the `{$prop}.data` count matches the page
  * size and `{$prop}.meta.total` matches the full row count. Pass `$component`

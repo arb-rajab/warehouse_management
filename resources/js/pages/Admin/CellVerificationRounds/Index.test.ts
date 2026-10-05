@@ -2,6 +2,12 @@ import { Head } from '@inertiajs/vue3';
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    index as cellVerificationRoundsIndex,
+    show as cellVerificationRoundShow,
+} from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -40,7 +46,7 @@ function mountPage(
     filters: CellVerificationRoundFilters = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cell-verification-rounds',
+        url: cellVerificationRoundsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -93,7 +99,7 @@ describe('CellVerificationRounds Index', () => {
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
-            '/admin/help/cell-verification-rounds',
+            helpShow.url({ topic: 'cell-verification-rounds' }),
         );
     });
 
@@ -200,7 +206,7 @@ describe('CellVerificationRounds Index', () => {
 
         const link = rowCells(wrapper)[0].get('a');
         expect(link.attributes('href')).toBe(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
         );
         expect(link.text()).toContain('42');
     });
@@ -211,7 +217,7 @@ describe('CellVerificationRounds Index', () => {
         ]);
 
         const link = rowCells(wrapper)[1].get('a');
-        expect(link.attributes('href')).toBe('/admin/users/7');
+        expect(link.attributes('href')).toBe(userShow.url({ user: 7 }));
         expect(link.text()).toBe('Jane Doe');
     });
 
@@ -298,7 +304,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({
                 user_id: ['7'],
                 completed: true,
@@ -317,7 +323,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ created_within_days: 7 }),
             { preserveState: true, replace: true },
         );
@@ -364,7 +370,7 @@ describe('CellVerificationRounds Index', () => {
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
@@ -394,7 +400,7 @@ describe('CellVerificationRounds Index', () => {
         await startedHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ sort_direction: 'asc' }),
             { preserveState: true, replace: true },
         );
@@ -413,7 +419,7 @@ describe('CellVerificationRounds Index', () => {
         await startedHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ sort_direction: 'desc' }),
             { preserveState: true, replace: true },
         );
@@ -433,7 +439,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );

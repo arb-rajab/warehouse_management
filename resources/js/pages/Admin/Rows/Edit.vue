@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-    index,
+    index as rowsIndex,
     update,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
@@ -19,7 +19,7 @@ defineProps<{
         :action="update(row)"
         :submit-label="t('rows.edit.submit')"
         :submitting-label="t('rows.edit.submitting')"
-        :cancel-href="index()"
+        :cancel-href="rowsIndex()"
         #default="{ errors }"
     >
         <RowFormFields

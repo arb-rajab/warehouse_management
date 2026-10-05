@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FilterUsersRequest;
+use App\Http\Requests\Admin\ShowUserRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Http\Resources\CellStatusLogResource;
@@ -20,7 +22,7 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(FilterUsersRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
 
@@ -42,7 +44,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Create');
     }
 
-    public function show(Request $request, User $user): Response
+    public function show(ShowUserRequest $request, User $user): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
         $reportsPerPage = $this->resolvePerPage($request, 20, 'reports_per_page');

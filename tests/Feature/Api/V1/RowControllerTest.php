@@ -54,6 +54,14 @@ test('the row listing paginates instead of returning everything at once', functi
     assertJsonListingPaginates($response, total: 25);
 });
 
+test('the row listing keeps the caller\'s query string on its pagination links', function () {
+    actingAsMobileUser();
+
+    Row::factory()->count(25)->create();
+
+    assertNextLinkKeepsQuery($this->getJson('/api/v1/rows?client=mobile'), 'client=mobile');
+});
+
 test('an unauthenticated caller cannot list rows', function () {
     $response = $this->getJson('/api/v1/rows');
 

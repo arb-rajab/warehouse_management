@@ -10,7 +10,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class OpenPalletRequest extends FormRequest
 {
-    use ValidatesBoxesCount, ValidatesOptionalNote, ValidatesReturnTo;
+    use ValidatesBoxesCount;
+    use ValidatesOptionalNote;
+    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.

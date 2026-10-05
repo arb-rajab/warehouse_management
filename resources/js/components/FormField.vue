@@ -21,9 +21,6 @@ withDefaults(
     }>(),
     {
         type: 'text',
-        value: undefined,
-        error: undefined,
-        inputClass: undefined,
     },
 );
 </script>

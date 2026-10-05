@@ -1,11 +1,12 @@
 ---
 paths:
-  - 'resources/js/**'
+    - 'resources/js/**'
 ---
 
 # Js
 
 ## Build admin UI from the shared FormField / SubmitButton / DataTable components
+
 Do not hand-write input, submit-button, or table markup in a page — the Tailwind class strings were duplicated 9x/5x/3x before being extracted.
 
 - `components/FormField.vue` — label + input + error `<p>`. Props: id, label, type, value, error, inputClass. Extra attrs (min, maxlength, required, readonly, placeholder, autocomplete) pass through `$attrs` to the input.
@@ -17,6 +18,7 @@ FormField binds `:value.attr` (not `:value`) on purpose: the input stays uncontr
 Pagination.vue carries its own `mt-4`; do not wrap it in a spacing div.
 
 ## Shared table actions, slot labels, and delete confirmation
+
 Alongside FormField / SubmitButton / DataTable, these are the single definitions for their concern — do not re-type the class strings or wording:
 
 - `components/TableActionLink.vue` — pill link inside a table cell. `variant="primary"` (blue, default) or `"danger"` (red). Extra attrs (`method`, `as`, `:on-before`) fall through to the Inertia Link.
@@ -25,11 +27,13 @@ Alongside FormField / SubmitButton / DataTable, these are the single definitions
 - `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
 
 ## lib/date.ts formats dates/durations locale-aware, not with the browser default
+
 `formatDate`/`formatDateTime` pass `currentLocaleTag()` (not `undefined`) to `toLocaleDateString`/`toLocaleString` — Arabic (`ar`) resolves to `ar-u-nu-latn` specifically so numbers render as Western digits (the plain `ar` tag's default numbering system is Arabic-Indic digits, which the rest of this app's UI doesn't use). Don't revert to `undefined`/the bare locale without re-checking that.
 
 `formatDuration(seconds)` renders the two largest non-zero units ("2d 3h", "45m", "30s" — see date.test.ts), dropping to one unit once it's the smallest; unit suffixes come from `common.duration.*` in both locale files, not hardcoded, so a new locale needs those keys.
 
 ## Every component/lib file needs a co-located *.test.ts
+
 Every `.vue` file in `components/` and `layouts/`, and every `.ts` file in `lib/`, must have a co-located `<Name>.test.ts` covering it (see the existing pairs, e.g. `DataTable.vue`/`DataTable.test.ts`). When adding a new file here or editing an existing one, add or update its test in the same change and run it (`npx vitest run <path>`) before finishing — don't rely on the file merely compiling/type-checking.
 
 For components that call `usePage()` or `router.*` from `@inertiajs/vue3` (no Inertia app is booted in unit tests), mock the whole module:
@@ -45,15 +49,18 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 ```
 
-`<Link>` itself mounts fine unmocked when the test never triggers a visit; only stub it (via a `defineComponent`/`h` built *inside* the `vi.mock` factory — `vi.hoisted` can't close over other imports) when the component also needs `usePage`/`router` mocked, since mocking the module removes the real `Link` too.
+`<Link>` itself mounts fine unmocked when the test never triggers a visit; only stub it (via a `defineComponent`/`h` built _inside_ the `vi.mock` factory — `vi.hoisted` can't close over other imports) when the component also needs `usePage`/`router` mocked, since mocking the module removes the real `Link` too.
 
 `t()` from `@/lib/i18n` works unmocked in tests (documented in i18n.ts) — don't stub it.
 
 ## Every form field mirrors its backend rule client-side via HTML5 attributes
+
 To keep invalid submissions from reaching the backend, every field bound to a FormRequest rule must carry the matching native HTML5 constraint, passed through FormField's `$attrs` (see js.md): `required` for `required`, `maxlength`/`minlength` for `max:`/`min:` on strings, `min`/`max`/`step="1"` for integer rules, `type="email"` for `email`. Only mirror rules that don't require a round trip (skip `unique`, `confirmed`-style cross-field checks stay client-side too when cheap — see UserFormFields.vue's `password`/`password_confirmation` `setCustomValidity` mismatch check). The backend rule stays authoritative; the frontend copy is just a flood guard. When adding/editing a form field, check its FormRequest's `rules()` and add the missing attribute in the same change, with a test asserting it (see UserFormFields.test.ts, RowFormFields.test.ts, Login.test.ts).
 
 ## Add a Playwright e2e spec for browser-only behavior
+
 tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise — don't use it to re-test things unit/component tests already cover. Add or extend a spec (one concern per file, see existing tests/e2e/*.spec.ts for the pattern) whenever a change introduces:
+
 - a native `<input type="date">` (or other native picker) styled with `dark:[color-scheme:dark]` — assert `toHaveCSS('color-scheme', 'dark')` (see admin-cell-log-date-filter-dark-mode.spec.ts)
 - an icon/arrow flipped with `rtl:rotate-*` — assert the computed `rotate` CSS in both LTR and RTL (see admin-cell-log-*-arrow-rtl.spec.ts)
 - a table cell linking to another admin page (TableLink) — assert the href and that clicking actually navigates (see admin-cell-log-table-links.spec.ts)
@@ -62,11 +69,13 @@ tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise —
 - new text/input color pairs in dark mode that could fail contrast (see login-dark-mode.spec.ts)
 
 ## FilterNumberField and filterTriggerButtonClass are the shared number-filter/trigger-button pieces
+
 `components/FilterNumberField.vue` (mirrors `FilterDateField.vue`'s shape: props `id`, `label`, `placeholder?`, `disabled?`; `defineModel<string>()`) is the single definition for a labelled `type="number" min="1" step="1"` filter field — don't hand-roll this markup again (it was duplicated 4x across CellHighlightFilters.vue and CellStatusLogs/Index.vue before extraction). Note: because the input's `type="number"` is static, Vue auto-casts the emitted `update:modelValue` to a `number` even though the model/prop type is declared `string` — this matches the pre-existing app convention (e.g. `CellHighlightFiltersValue.expiresWithinDays: string` already held a runtime number the same way), so don't "fix" the type mismatch.
 
 `lib/filters.ts`'s `filterTriggerButtonClass` is the single definition for the "open filter dialog" trigger button's class string (border/gray-700/hover), shared by `CellHighlightFilters.vue` and `CellStatusLogs/Index.vue` — alongside the already-documented `filterSectionHeadingClass`/`countBadgeClass`. Don't retype it.
 
 ## Always pair common UI affordances with an established @lucide/vue icon
+
 When adding or touching a page/component, give common affordances an icon instead of leaving them as plain text/color — warnings, errors, loading/processing states, empty states, status/role badges, clear/apply actions, and duration/time tags all get one. Reuse the icon already established for that concept elsewhere rather than picking a new one:
 
 - Add=Plus, Edit=Pencil, Delete=Trash2, View=Eye, external/related-record link=ArrowUpRight
@@ -78,9 +87,11 @@ When adding or touching a page/component, give common affordances an icon instea
 Before inventing an icon for a concept, grep the codebase for how that concept is already iconified (CellSlot.vue, AdminLayout.vue, DataTable.vue, TableActionLink usages) and reuse it. A directional/flow arrow (transfer, state-change) gets `rtl:rotate-180` and needs a Playwright e2e spec asserting the flip (see admin-cell-log-*-arrow-rtl.spec.ts) — a plain glyph icon (warning, error, role, loader) does not.
 
 ## Interactive elements need explicit cursor-pointer / disabled:cursor-not-allowed
+
 Native `<button>` elements do not get a pointer cursor from the browser by default (only `<a>`/`<Link>` and checkbox/radio inputs do) — every clickable `<button>` must add `cursor-pointer` explicitly, and any `disabled:opacity-50` state on a button/input must be paired with `disabled:cursor-not-allowed` (see the existing pattern in UserFormFields.vue's admin-toggle checkbox). This was swept once (SubmitButton.vue, DataTable.vue's sort header, FilterMultiSelect.vue's trigger + option labels, FilterDialog.vue's close button, LanguageSwitcher.vue, lib/filters.ts's filterTriggerButtonClass/filterClearButtonClass/filterApplyButtonClass, FilterDateField.vue, FilterNumberField.vue, Cells/Index.vue, CellStatusLogs/Index.vue) — when adding a new `<button>` or a new disabled form control, add these classes at the same time instead of relying on the browser default.
 
 ## Run Prettier immediately after every Edit to a .ts/.vue file
+
 After every Edit or Write to a `.ts`, `.vue`, or `.js` file, run Prettier on that file before any subsequent step:
 
 ```bash
@@ -90,20 +101,44 @@ npx prettier --write <path/to/file>
 Do not defer this to a final gate — Prettier failures in CI cost a full round trip, and the diff is invisible until then. This applies to test files too (`.test.ts`).
 
 ## An explicit ARIA role must not override the implicit role a test relies on
+
 An explicit `role="X"` attribute replaces an element's implicit role entirely — it does not add to it. Putting `role="menuitem"` on a `<button>`/Inertia `Link as="button"` means `getByRole('button', ...)` (Playwright) or `wrapper.get('[role="button"]')` no longer matches it, even though it still looks and behaves like a button; the click target itself still works, so this fails silently until a test that queries by the old implicit role times out. This bit `AccountMenu.vue`'s logout button: `role="menuitem"` was added without also implementing the ARIA menu pattern's required arrow-key roving-focus behavior, so `admin-logout-confirmation.spec.ts`'s `getByRole('button', { name: 'Log out' })` could never find it (see layouts.md).
+
 - Before adding `role="menu"`/`"menuitem"`/`"listbox"`/`"option"` etc. to an element, confirm you are implementing the full interaction pattern that role commits to (keyboard nav, focus management) — see `lib/useDismissibleListbox.ts`'s users (FilterMultiSelect.vue, FilterProductSelect.vue) for what a real one looks like. If you aren't, don't add the role; identify the element some other way (`id`, a data attribute, or its accessible name/label) instead.
 - When adding any `role`/`aria-*` attribute to an element that existing tests already query (by role, label, or text), grep for that element's current selector across both `*.test.ts` and `tests/e2e/*.spec.ts` before pushing — not after CI fails.
 
 ## filterApplyButtonClass is the shared Apply-button class
+
 lib/filters.ts's filterApplyButtonClass (bg-gray-900/white pill with a Check icon) is the single definition for a filter-dialog's submit/Apply button — shared by CellStatusLogs/Index.vue and Dashboard/Index.vue's custom-expiring-days dialog (extracted once the second call site appeared). Don't retype the class string. Also: filterTriggerButtonClass and FilterNumberField (previously shared only by CellHighlightFilters.vue/CellStatusLogs/Index.vue) now have a third user — Dashboard/Index.vue's custom-expiring-days field moved from a bare `@change`-wired number input into a FilterDialog + FilterNumberField + Apply-button flow, so a spinner click no longer fires a request that a subsequent click immediately cancels; see dashboard.md for the full rationale.
 
+## Mutations use Inertia's <Form> or useForm — no router.post/put/delete plus a hand-rolled `processing` ref
+
+A submit that mutates (ToggleCellActiveDialog, PalletActionsDialog, Products/Index.vue dialogs) goes through `<Form :action="route(model, { mergeQuery: {} })" :options="{ preserveScroll: true }" @success="...">`, with inputs given a `name` (hidden `<input name="return_to">` for non-visible fields). Use `useForm` + `form.transform(...).submit(routeObject, options)` only when the submit button sits outside the form (e.g. a FilterDialog `#footer`), since `<Form>`'s `processing` slot prop isn't reachable there. `processing` always comes from the form, never a local ref. A destructive non-form action (Products barcode removal) is a `<Link method="delete" as="button" :on-before="() => confirmDelete(label)">` using lib/confirm.ts, like Users/Rows. Don't re-add client-side "invalid count" messages: mirror the backend rule with native `required`/`min`/`step` attrs (FilterNumberField takes `name`/`required` for this).
+
+## Read server errors from one of two places: the form's own `errors`, or usePageError(key)
+
+Errors from a submitted `<Form>`/`useForm` are read from that form's `errors` (slot prop / `form.errors`); dialogs show `firstError(errors)` in an ActionErrorBanner. A banner for an action with no form (a delete/toggle link) uses `usePageError('action')` from lib/pageErrors.ts, which wraps `usePage().props.errors`. Never cast `usePage().props.errors` inline in a page, and never read errors from a router `onError` callback.
+
+## Wayfinder URLs: route objects to Link/Form, model objects as params, aliased index imports
+
+- Pass the route object, not `.url`, to `<Link :href>`, `<Form :action>` and components typed `string | UrlMethodPair` (TableLink, DashboardStatTile, TableActionLink, ResourceFormPage). `.url` is only for a native `<a>` download (QR/CSV exports) and `router.get`.
+- One param style per route: the model object (`showUser(row.user)`, `toggleActive(cell)`, `destroyBarcode({ product, barcode })`); a bare id only when no object exists (`showCellVerificationRound(report.cell_verification_round_id)`, `productImage.url(item.pallet.product_id)`). Never `{ id: x.id }` or `{ cell: x.id }`.
+- Always alias `index` (`index as rowsIndex`).
+- Query strings use Wayfinder `{ query }` (`palletsIndex({ query: { state: 'empty' } })`), never `<Link :data method="get">` or a separate `query` prop. Booleans serialize as `1`, which the filter requests accept.
+
+## Optional props are bare `?:`; withDefaults only for real defaults; shared Inertia test stubs
+
+Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo: undefined` entry is noise (and `x: T | undefined` becomes `x?: T`). withDefaults is only for a non-undefined default (`tone: 'default'`, `disabled: false`). In tests, mock `@inertiajs/vue3` with testing/inertiaStubs.ts: `createLinkStub()`, `createFormStub(getSlotProps)`, `createUseFormStub(submitMock)`; assert child props (`getComponent(Form).props('action')`, `getComponent(Link).props('href')`) and emit `success` via `getComponent(Form).vm.$emit('success')`, not text alone.
+
 ## Shared dialog and filter labels live under `common`
+
 - A filter dialog's title/apply/clear/close text is `common.filters.title|apply|clear|close`.
 - An action dialog (toggle-active, pallet actions, the products page's box-count/minimum-pallets/barcode dialogs) closes with `common.close`.
 - Don't add a per-page `x.filters.close`/`apply`/`clear`/`title` copy, and don't borrow another page's key (`cellLog.filters.close` used to label every dialog in the app, filters or not).
 - Build a title with a parameterised key (`t('cellVerificationRound.show.title', { id })`), not by concatenating a translation with other text.
 
 ## One way to write the small things
+
 - Import app code through the `@/` alias, siblings included (`@/components/FormField.vue`, `@/lib/i18n`), never `./`. Test files importing the component under test are the exception.
 - Emit through `const emit = defineEmits<…>()` and call `emit()` in the template, not `$emit`.
 - Templates use bare prop names, not `props.x`. Keep `const props =` only when the script reads it.

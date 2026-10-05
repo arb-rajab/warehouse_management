@@ -11,16 +11,6 @@ use Illuminate\Contracts\Validation\ValidationRule;
 trait FiltersByStaleAfterDays
 {
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
-    {
-        return $this->staleAfterDaysFilterRules();
-    }
-
-    /**
      * The stale_after_days field's rules, for requests that merge it with other rules.
      *
      * @return array<string, ValidationRule|array<mixed>|string>

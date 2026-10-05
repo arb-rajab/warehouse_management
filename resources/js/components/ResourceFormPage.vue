@@ -23,7 +23,6 @@ withDefaults(
         ) => Record<string, FormDataConvertible>;
     }>(),
     {
-        cancelHref: undefined,
         transform: (data: Record<string, FormDataConvertible>) => data,
     },
 );

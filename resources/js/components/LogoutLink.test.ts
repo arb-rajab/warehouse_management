@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { t } from '@/lib/i18n';
 import LogoutLink from './LogoutLink.vue';
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -18,7 +19,8 @@ describe('LogoutLink', () => {
     it('renders the logout label', () => {
         const wrapper = mount(LogoutLink);
 
-        expect(wrapper.text()).toContain('Log out');
+        expect(wrapper.text()).toContain(t('nav.logout'));
+        expect(t('nav.logout')).toBe('Log out');
     });
 
     it('applies a class attribute to the root element via fallthrough', () => {

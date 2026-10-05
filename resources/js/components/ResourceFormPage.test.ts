@@ -2,6 +2,7 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import PageHeader from '@/components/PageHeader.vue';
 import ResourceFormPage from './ResourceFormPage.vue';
 import SubmitButton from './SubmitButton.vue';
@@ -27,14 +28,14 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/rows',
+        url: rowsIndex.url(),
         props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
     });
 
     return mount(ResourceFormPage, {
         props: {
             title: 'Add row',
-            action: '/admin/rows',
+            action: rowsIndex.url(),
             submitLabel: 'Create',
             submittingLabel: 'Creating...',
         },
@@ -63,7 +64,7 @@ describe('ResourceFormPage', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/rows',
+            rowsIndex.url(),
         );
     });
 
@@ -93,7 +94,7 @@ describe('ResourceFormPage', () => {
 
     it('renders the header-actions slot next to the title', () => {
         usePageMock.mockReturnValue({
-            url: '/admin/rows',
+            url: rowsIndex.url(),
             props: {
                 locale: 'en',
                 auth: { user: { name: 'Jane Doe', id: 7 } },
@@ -103,7 +104,7 @@ describe('ResourceFormPage', () => {
         const wrapper = mount(ResourceFormPage, {
             props: {
                 title: 'Add row',
-                action: '/admin/rows',
+                action: rowsIndex.url(),
                 submitLabel: 'Create',
                 submittingLabel: 'Creating...',
             },
@@ -120,7 +121,7 @@ describe('ResourceFormPage', () => {
 
     it('forwards a given transform function to the underlying Form component', () => {
         usePageMock.mockReturnValue({
-            url: '/admin/rows',
+            url: rowsIndex.url(),
             props: {
                 locale: 'en',
                 auth: { user: { name: 'Jane Doe', id: 7 } },
@@ -131,7 +132,7 @@ describe('ResourceFormPage', () => {
         const wrapper = mount(ResourceFormPage, {
             props: {
                 title: 'Add row',
-                action: '/admin/rows',
+                action: rowsIndex.url(),
                 submitLabel: 'Create',
                 submittingLabel: 'Creating...',
                 transform,
@@ -150,7 +151,7 @@ describe('ResourceFormPage', () => {
 
     it('renders a cancel link to the given href when provided', () => {
         usePageMock.mockReturnValue({
-            url: '/admin/rows',
+            url: rowsIndex.url(),
             props: {
                 locale: 'en',
                 auth: { user: { name: 'Jane Doe', id: 7 } },
@@ -160,16 +161,16 @@ describe('ResourceFormPage', () => {
         const wrapper = mount(ResourceFormPage, {
             props: {
                 title: 'Add row',
-                action: '/admin/rows',
+                action: rowsIndex.url(),
                 submitLabel: 'Create',
                 submittingLabel: 'Creating...',
-                cancelHref: '/admin/rows',
+                cancelHref: rowsIndex.url(),
             },
             slots: { default: '<p>form fields go here</p>' },
         });
 
         const cancelLink = wrapper.get('form a');
-        expect(cancelLink.attributes('href')).toBe('/admin/rows');
+        expect(cancelLink.attributes('href')).toBe(rowsIndex.url());
         expect(cancelLink.text()).toBe('Cancel');
     });
 });

@@ -6,16 +6,15 @@ use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ShowCellMapRequest;
+use App\Http\Requests\Admin\FilterCellMapRequest;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
-use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +25,7 @@ class CellController extends Controller
 {
     use BuildsCellQrLabels, RedirectsAfterCellAction;
 
-    public function index(ShowCellMapRequest $request): Response
+    public function index(FilterCellMapRequest $request): Response
     {
         $rows = Row::mapOptions();
         $maxFlatNumber = (int) (Row::query()->max('flats_count') ?? 0);
@@ -52,7 +51,7 @@ class CellController extends Controller
         // sends flat_number, see .ai/rules/lib.md) is left exactly where the
         // admin put it, even if the active filter matches nothing there.
         if ($matchedCell === null && ! $request->filled('flat_number') && $hasHighlightFilter) {
-            $firstMatch = $this->firstHighlightMatch($request, $today);
+            $firstMatch = $this->firstHighlightMatch($request);
 
             if ($firstMatch !== null) {
                 $matchedCell = $firstMatch;
@@ -94,7 +93,7 @@ class CellController extends Controller
         ]);
     }
 
-    public function exportQr(Cell $cell): HttpResponse
+    public function exportQrCode(Cell $cell): HttpResponse
     {
         $cell->loadMissing('row:id,letter,flats_count');
         $setting = Setting::current();
@@ -206,12 +205,14 @@ class CellController extends Controller
      * highlighting, per-flat match-count badges, and dashboard counts still
      * only ever come from the client's `matchesCellHighlight()`/
      * `cellStatus.ts`. This method exists solely to resolve the *initial*
-     * `flat_number` in one request, and its conditions must stay in lockstep
-     * with `matchesCellHighlight()`/`isCellExpired()`/
-     * `isCellExpiringWithin()`/`isCellStale()` if either side's semantics
-     * change.
+     * `flat_number` in one request. Its pallet conditions come from
+     * `Pallet::matchingHighlightFilters()` (which in turn must stay in
+     * lockstep with `matchesCellHighlight()`/`isCellExpired()`/
+     * `isCellExpiringWithin()`/`isCellStale()`); only `state`/`is_active` are
+     * applied to the cell directly, since those can match a cell with no
+     * pallet at all (e.g. an empty or deactivated cell).
      */
-    private function firstHighlightMatch(ShowCellMapRequest $request, CarbonImmutable $today): ?Cell
+    private function firstHighlightMatch(FilterCellMapRequest $request): ?Cell
     {
         $query = Cell::query()->with('row:id,letter');
 
@@ -223,34 +224,18 @@ class CellController extends Controller
             $query->where('is_active', false);
         }
 
-        $productIds = $request->productIds();
-
         if (
             $request->boolean('expired')
             || $request->filled('expires_within_days')
             || $request->filled('stale_after_days')
-            || $productIds !== null
+            || $request->productIds() !== null
         ) {
-            $query->whereHas('pallet', function (Builder $pallet) use ($request, $today, $productIds): void {
-                if ($request->boolean('expired')) {
-                    $pallet->where('expiration_date', '<', $today);
-                }
-
-                if ($request->filled('expires_within_days')) {
-                    $pallet->whereBetween('expiration_date', [
-                        $today,
-                        $today->copy()->addDays($request->integer('expires_within_days')),
-                    ]);
-                }
-
-                if ($request->filled('stale_after_days')) {
-                    $pallet->where('created_at', '<=', $today->copy()->subDays($request->integer('stale_after_days')));
-                }
-
-                if ($productIds !== null) {
-                    $pallet->whereIn('product_id', $productIds);
-                }
-            });
+            $query->whereExists(
+                Pallet::query()
+                    ->selectRaw('1')
+                    ->whereColumn('pallets.cell_id', 'cells.id')
+                    ->matchingHighlightFilters($request),
+            );
         }
 
         return $query->get()

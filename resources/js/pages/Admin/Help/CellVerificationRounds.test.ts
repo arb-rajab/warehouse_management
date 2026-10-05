@@ -2,6 +2,11 @@ import { Head } from '@inertiajs/vue3';
 import { Download } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import {
+    show as helpShow,
+    index as helpIndex,
+} from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
 import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
@@ -28,7 +33,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/help/cell-verification-rounds',
+        url: helpShow.url({ topic: 'cell-verification-rounds' }),
         props: defaultAuthProps(),
     });
 
@@ -157,7 +162,7 @@ describe('Help CellVerificationRounds', () => {
             .findAll('a')
             .find((a) => a.text() === t('cellVerificationRound.title'));
         expect(roundsLink?.attributes('href')).toBe(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
         );
     });
 
@@ -167,6 +172,6 @@ describe('Help CellVerificationRounds', () => {
         const backLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('help.backToHelp'));
-        expect(backLink?.attributes('href')).toBe('/admin/help');
+        expect(backLink?.attributes('href')).toBe(helpIndex.url());
     });
 });

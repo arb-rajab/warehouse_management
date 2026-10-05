@@ -1,6 +1,17 @@
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    acknowledgeFlags,
+    index as cellLogsIndex,
+} from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { accept as acceptReport } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
+import { show as cellVerificationRoundShow } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
+import {
+    show as userShow,
+    edit as userEdit,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
@@ -47,7 +58,7 @@ function mountPage(
     reportsPerPage = 20,
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/users/7',
+        url: userShow.url({ user: 7 }),
         props: defaultAuthProps({ auth: { user: { name: 'Admin', id: 1 } } }),
     });
 
@@ -81,7 +92,7 @@ describe('Users Show', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('users.show.editUser')));
-        expect(editLink?.attributes('href')).toBe('/admin/users/9/edit');
+        expect(editLink?.attributes('href')).toBe(userEdit.url({ user: 9 }));
     });
 
     it('renders every action column header, excluding Done By', () => {
@@ -228,7 +239,7 @@ describe('Users Show', () => {
         await acknowledgeButton?.trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-logs/42/acknowledge-flags',
+            acknowledgeFlags.url({ cellStatusLog: 42 }),
             { return_to: 'user' },
             { preserveScroll: true },
         );
@@ -268,7 +279,7 @@ describe('Users Show', () => {
 
         await rowCells(wrapper)[3].get('button').trigger('click');
 
-        expect(routerGetMock).toHaveBeenCalledWith('/admin/cell-logs', {
+        expect(routerGetMock).toHaveBeenCalledWith(cellLogsIndex.url(), {
             pallet_id: 55,
         });
     });
@@ -301,7 +312,7 @@ describe('Users Show', () => {
         await wrapper.findAll('select')[0].setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/users/7',
+            userShow.url({ user: 7 }),
             { per_page: 50, reports_per_page: 15 },
             { preserveState: true, replace: true },
         );
@@ -348,13 +359,16 @@ describe('Users Show', () => {
 
         const roundLink = cells[0].get('a');
         expect(roundLink.attributes('href')).toBe(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
         );
         expect(roundLink.text()).toContain('#42');
 
         const cellLink = cells[1].get('a');
         expect(cellLink.attributes('href')).toBe(
-            '/admin/rows/C?cell_number=4&flat_number=1',
+            rowShow.url(
+                { row: 'C' },
+                { query: { cell_number: '4', flat_number: '1' } },
+            ),
         );
         expect(cellLink.text()).toContain('C4·1');
 
@@ -444,7 +458,7 @@ describe('Users Show', () => {
             t('cellVerificationReport.acceptConfirm', { slot: 'B4·1' }),
         );
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-reports/5/accept',
+            acceptReport.url({ cellVerificationReport: 5 }),
             { return_to: 'user' },
             { preserveScroll: true },
         );
@@ -465,7 +479,7 @@ describe('Users Show', () => {
 
     it('shows why an accept was refused in the action error banner', () => {
         usePageMock.mockReturnValue({
-            url: '/admin/users/7',
+            url: userShow.url({ user: 7 }),
             props: defaultAuthProps({
                 errors: {
                     action: 'This slot has changed since it was verified.',
@@ -506,7 +520,7 @@ describe('Users Show', () => {
         await wrapper.findAll('select')[1].setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/users/7',
+            userShow.url({ user: 7 }),
             { per_page: 25, reports_per_page: 50 },
             { preserveState: true, replace: true },
         );

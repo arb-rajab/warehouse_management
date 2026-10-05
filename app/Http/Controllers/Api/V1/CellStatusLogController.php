@@ -32,7 +32,7 @@ class CellStatusLogController extends Controller
             $query->withCount('flags');
         }
 
-        $logs = $query->paginate(20);
+        $logs = $query->paginate(20)->withQueryString();
 
         CellStatusLog::attachNextLogs($logs->getCollection());
 

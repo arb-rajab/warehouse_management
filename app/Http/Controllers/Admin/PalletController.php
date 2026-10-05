@@ -6,9 +6,9 @@ use App\Exceptions\InvalidSlotStateException;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\EmptyPalletRequest;
+use App\Http\Requests\Admin\FilterMatchingPalletsRequest;
 use App\Http\Requests\Admin\OpenPalletRequest;
 use App\Http\Requests\Admin\RemovePalletBoxesRequest;
-use App\Http\Requests\Admin\ShowMatchingPalletsRequest;
 use App\Http\Requests\Admin\StorePalletRequest;
 use App\Http\Requests\Admin\TransferPalletRequest;
 use App\Http\Requests\Admin\UpdatePalletRequest;
@@ -32,12 +32,12 @@ class PalletController extends Controller
     /**
      * The "matching pallets" list a dashboard stat tile now links to instead
      * of jumping straight to the cell map — same highlight-filter query
-     * params the map understands (see ShowMatchingPalletsRequest), ordered
+     * params the map understands (see FilterMatchingPalletsRequest), ordered
      * by expiration date then add date so the most urgent pallets lead. The
      * page itself offers a button that hands this same query to the cell
      * map, so switching between "list" and "map" never loses the filter.
      */
-    public function index(ShowMatchingPalletsRequest $request): Response
+    public function index(FilterMatchingPalletsRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
 

@@ -28,8 +28,6 @@ withDefaults(
     {
         idPrefix: '',
         letter: '',
-        cellsCount: undefined,
-        flatsCount: undefined,
         disableDimensions: false,
     },
 );

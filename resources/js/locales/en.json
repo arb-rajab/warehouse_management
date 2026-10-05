@@ -531,9 +531,7 @@
         "noBarcodes": "No barcodes added yet.",
         "exportQrLabel": "Export barcode for {product}",
         "empty": "No products yet.",
-        "saving": "Saving…",
-        "invalidCount": "Enter a whole number of 1 or more.",
-        "saveFailed": "Could not save. Please try again."
+        "saving": "Saving…"
     },
     "pallets": {
         "title": "Matching pallets",

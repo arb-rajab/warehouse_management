@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\FilterCellsRequest;
 use App\Http\Requests\Api\V1\ShowCellRequest;
-use App\Http\Requests\Api\V1\ShowCellsRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\Product;
@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CellController extends Controller
 {
-    public function index(ShowCellsRequest $request, Row $row): AnonymousResourceCollection
+    public function index(FilterCellsRequest $request, Row $row): AnonymousResourceCollection
     {
         return CellResource::collection(
             $row->cells()
@@ -34,19 +34,16 @@ class CellController extends Controller
                 )
                 ->orderedByCoordinates()
                 ->paginate(20)
+                ->withQueryString()
         );
     }
 
-    public function show(ShowCellRequest $request, Row $row, string $cellNumber, string $flatNumber): CellResource
+    /**
+     * `{cell:cell_number}` is resolved together with the URI's `{flatNumber}`
+     * by `Row::resolveChildRouteBinding()` — see there.
+     */
+    public function show(ShowCellRequest $request, Row $row, Cell $cell): CellResource
     {
-        $cell = Cell::query()
-            ->select(Cell::SELECT_COLUMNS)
-            ->atCoordinates($row, (int) $cellNumber, (int) $flatNumber)
-            ->with(Cell::WITH_ROW_AND_CONTENTS)
-            ->first();
-
-        abort_if($cell === null, 404);
-
-        return new CellResource($cell);
+        return new CellResource($cell->load(Cell::WITH_ROW_AND_CONTENTS));
     }
 }
