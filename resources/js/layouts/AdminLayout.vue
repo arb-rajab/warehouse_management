@@ -27,7 +27,9 @@ import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserCo
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
+import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import { t } from '@/lib/i18n';
+import { isActiveNavUrl } from '@/lib/navigation';
 
 const page = usePage();
 
@@ -56,22 +58,14 @@ const navItems = computed(() => [
 ]);
 
 /**
- * A nav item matches on exact URL or as a path prefix, but the dashboard's
- * href ('/admin') is itself a prefix of every other nav item's href, so a
- * plain prefix check would mark it active alongside whichever section is
- * actually open. Only the longest matching href wins.
+ * The dashboard's href ('/admin') is itself a prefix of every other nav
+ * item's href, so only the longest matching href wins (lib/navigation.ts).
  */
 function isActive({ url }: UrlMethodPair): boolean {
-    const currentPath = page.url.split('?')[0];
-    const matches = (candidate: string) =>
-        currentPath === candidate || currentPath.startsWith(`${candidate}/`);
-
-    if (!matches(url)) {
-        return false;
-    }
-
-    return !navItems.value.some(
-        (item) => item.href.url.length > url.length && matches(item.href.url),
+    return isActiveNavUrl(
+        page.url,
+        url,
+        navItems.value.map((item) => item.href.url),
     );
 }
 
@@ -98,12 +92,7 @@ function navLinkStateClass(href: UrlMethodPair): string[] {
     <div
         class="min-h-screen bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
     >
-        <a
-            href="#main"
-            class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-neutral-900 dark:focus:text-white"
-        >
-            {{ t('nav.skipToContent') }}
-        </a>
+        <SkipToContentLink />
         <nav
             class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
         >

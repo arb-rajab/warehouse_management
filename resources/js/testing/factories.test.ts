@@ -7,7 +7,11 @@ import {
     cellVerificationRound,
     cellWithLocation,
     paginated,
+    permissionGroup,
     row,
+    staffMember,
+    storeRole,
+    storeSharedProps,
     user,
 } from './factories';
 
@@ -190,5 +194,85 @@ describe('cellPallet', () => {
     it('builds a pallet and applies overrides', () => {
         expect(cellPallet()).toMatchObject({ id: 42, remaining_boxes: 10 });
         expect(cellPallet({ remaining_boxes: 3 }).remaining_boxes).toBe(3);
+    });
+});
+
+describe('storeSharedProps', () => {
+    it('applies default fields', () => {
+        expect(storeSharedProps()).toEqual({
+            rtl: false,
+            permissions: [],
+            isSuperAdmin: false,
+            isRaizerAdmin: false,
+            settings: {},
+        });
+    });
+
+    it('merges overrides on top of the defaults, without dropping untouched fields', () => {
+        expect(storeSharedProps({ permissions: ['add_staff'] })).toEqual({
+            rtl: false,
+            permissions: ['add_staff'],
+            isSuperAdmin: false,
+            isRaizerAdmin: false,
+            settings: {},
+        });
+    });
+});
+
+describe('storeRole', () => {
+    it('applies default fields', () => {
+        expect(storeRole()).toEqual({ id: 3, name: 'Clerk' });
+    });
+
+    it('merges overrides on top of the defaults, without dropping untouched fields', () => {
+        expect(storeRole({ name: 'Manager' })).toEqual({
+            id: 3,
+            name: 'Manager',
+        });
+    });
+});
+
+describe('staffMember', () => {
+    it('applies default fields', () => {
+        expect(staffMember()).toEqual({
+            id: 11,
+            user_id: 21,
+            name: 'Sam Staff',
+            email: 'sam@example.com',
+            phone: '0612345678',
+            role: { id: 3, name: 'Clerk' },
+            is_super_admin: false,
+        });
+    });
+
+    it('merges overrides on top of the defaults, without dropping untouched fields', () => {
+        expect(staffMember({ role: null, is_super_admin: true })).toMatchObject(
+            {
+                id: 11,
+                name: 'Sam Staff',
+                role: null,
+                is_super_admin: true,
+            },
+        );
+    });
+});
+
+describe('permissionGroup', () => {
+    it('applies default fields', () => {
+        expect(permissionGroup()).toEqual({
+            section: 'staff',
+            label: 'Staff',
+            permissions: [
+                { id: 1, label: 'View All Staffs' },
+                { id: 2, label: 'Add Staff' },
+            ],
+        });
+    });
+
+    it('merges overrides on top of the defaults, without dropping untouched fields', () => {
+        expect(permissionGroup({ label: 'Orders' })).toMatchObject({
+            section: 'staff',
+            label: 'Orders',
+        });
     });
 });

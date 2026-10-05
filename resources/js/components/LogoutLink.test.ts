@@ -16,6 +16,14 @@ describe('LogoutLink', () => {
         expect(wrapper.get('a,button').attributes('href')).toBe('/logout');
     });
 
+    it('links to the given logout route instead', () => {
+        const wrapper = mount(LogoutLink, {
+            props: { href: { url: '/temp/logout', method: 'post' } },
+        });
+
+        expect(wrapper.get('a,button').attributes('href')).toBe('/temp/logout');
+    });
+
     it('renders the logout label', () => {
         const wrapper = mount(LogoutLink);
 

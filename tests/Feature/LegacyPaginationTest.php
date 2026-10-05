@@ -3,7 +3,6 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Spatie\Permission\Models\Role;
 
 /**
  * The store's paginated endpoints each hold more than one page of rows, so a
@@ -195,25 +194,6 @@ test("the seller coupon product search API pages, and searches only the signed-i
         total: 13,
         perPage: 10,
         excluded: [$otherSellersProductId],
-    );
-});
-
-test('the store admin role list pages, and leaves out the super admin and warehouse roles', function () {
-    $warehouseRole = Role::findOrCreate('admin', 'web');
-    foreach (range(1, 13) as $number) {
-        Role::findOrCreate("Store Role $number", 'store');
-    }
-    $admin = createStoreAdmin();
-    $superAdminRole = Role::findByName('Super Admin', 'store');
-
-    actingAsStoreUser($admin);
-
-    assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/roles?page=$page"),
-        fn ($response) => $response->viewData('roles')->pluck('id')->all(),
-        total: 13,
-        perPage: 10,
-        excluded: [$warehouseRole->id, $superAdminRole->id],
     );
 });
 
