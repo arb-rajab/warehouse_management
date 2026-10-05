@@ -305,7 +305,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/dynamic-popups-update-status', 'update_status')->name('dynamic-popups.update-status');
     });
 
-    Route::resource('profile', ProfileController::class);
+    Route::resource('profile', ProfileController::class)->only(['index', 'update']);
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {

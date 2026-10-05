@@ -64,6 +64,12 @@ return [
     'products_sync_url' => env('STORE_PRODUCTS_SYNC_URL'),
 
     /*
+    | The legacy back office's demo switch (`DEMO_MODE=On`): the own-profile
+    | update refuses to write while it is on.
+    */
+    'demo_mode' => env('DEMO_MODE') === 'On',
+
+    /*
     |--------------------------------------------------------------------------
     | Enabled Payment Gateways
     |--------------------------------------------------------------------------

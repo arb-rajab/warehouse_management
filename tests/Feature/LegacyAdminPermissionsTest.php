@@ -60,8 +60,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'AizUploadController@file_info',
     'AizUploadController@store',
     'AizUploadController@update',
-    'ProfileController@destroy',
-    'ProfileController@store',
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
@@ -113,10 +111,7 @@ const ADMIN_READS_STILL_UNGATED = [
     'AizUploadController@edit',
     'AizUploadController@index',
     'AizUploadController@show',
-    'ProfileController@create',
-    'ProfileController@edit',
     'ProfileController@index',
-    'ProfileController@show',
 
     // Read-only AJAX helpers the product forms use.
     'BusinessSettingsController@search',
