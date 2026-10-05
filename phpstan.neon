@@ -199,7 +199,6 @@ parameters:
         - app/Http/Controllers/RepresentativePaymentAdminController.php
         - app/Http/Controllers/RepresentativePaymentController.php
         - app/Http/Controllers/ReviewController.php
-        - app/Http/Controllers/RoleController.php
         - app/Http/Controllers/SSLCommerz.php
         - app/Http/Controllers/SearchController.php
         - app/Http/Controllers/Seller/AddressController.php
@@ -224,7 +223,6 @@ parameters:
         - app/Http/Controllers/SellerController.php
         - app/Http/Controllers/SellerWithdrawRequestController.php
         - app/Http/Controllers/ShopController.php
-        - app/Http/Controllers/StaffController.php
         - app/Http/Controllers/StateController.php
         - app/Http/Controllers/SubscriberController.php
         - app/Http/Controllers/SupportTicketController.php
@@ -453,7 +451,6 @@ parameters:
         - app/Models/SellerWithdrawRequest.php
         - app/Models/Shop.php
         - app/Models/SmsTemplate.php
-        - app/Models/Staff.php
         - app/Models/State.php
         - app/Models/StoreProductBarcode.php
         - app/Models/StoreUser.php

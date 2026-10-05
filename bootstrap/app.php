@@ -18,12 +18,12 @@ use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
 use App\Http\Middleware\LogRequestTime;
 use App\Http\Middleware\RaizerSuperAdmin;
+use App\Http\Middleware\SendSecureHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\StoreInertiaPreviousUrl;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WmsAuthMiddleware;
-use Bepsvpt\SecureHeaders\SecureHeadersMiddleware;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -47,7 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // SecureHeaders wraps the WAF, not the other way around: BlockMaliciousRequests
         // aborts with a 403 from inside the pipeline, so anything appended after it
         // never runs on a blocked request and those responses would ship bare.
-        $middleware->append(SecureHeadersMiddleware::class);
+        $middleware->append(SendSecureHeaders::class);
         $middleware->append(BlockMaliciousRequests::class);
 
         $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));

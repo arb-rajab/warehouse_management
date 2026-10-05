@@ -11,9 +11,10 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * Refuses to run in production: this chain creates a known-password admin
-     * account (test@example.com / password) and demo pallet/warehouse data,
-     * neither of which belongs in live warehouse data.
+     * Refuses to run in production: this chain creates known-password admin
+     * accounts (test@example.com / password for the warehouse panel,
+     * store-admin@example.com / password for the store back office) and demo
+     * pallet/warehouse data, none of which belongs in live data.
      */
     public function run(): void
     {
@@ -36,6 +37,8 @@ class DatabaseSeeder extends Seeder
             CellVerificationRoundSeeder::class,
             CellVerificationReportSeeder::class,
             PageSeeder::class,
+            StoreRoleSeeder::class,
+            StoreUserSeeder::class,
         ]);
     }
 }

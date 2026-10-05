@@ -12,6 +12,8 @@ paths:
 
 The TS counterpart is `AuthUser` in `resources/js/types/auth.ts` (consumed via `Auth` in `types/global.d.ts`). Widen both sides together or not at all. `tests/Feature/SharedAuthPropTest.php` asserts the prop has exactly 3 keys and is null for guests, so it fails loudly if the model is shared again.
 
+A store route (one carrying `UseStoreAuthGuard`) gets the same narrow `auth.user`, from the `store` guard, plus a `store` prop holding the permissions and menu settings. WMS routes never get it (store-backoffice-migration.md §2.1, tests/Feature/Store/StoreInertiaSharedPropsTest.php). Keep the two branches of `share()` apart. A WMS prop added to the store branch, or the reverse, must be a deliberate decision.
+
 Note there are two distinct user types on the frontend on purpose: `AuthUser` (types/auth.ts, the shared signed-in user) and `User` (types/admin.ts, the UserResource shape with `is_admin`). Do not merge them.
 
 ## Application-level WAF: BlockMaliciousRequests

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\HandleStoreBladePages;
 use App\Http\Middleware\HttpsProtocol;
 use App\Http\Middleware\Language;
 use App\Http\Middleware\UseStoreAuthGuard;
@@ -58,10 +59,12 @@ class RouteServiceProvider extends ServiceProvider
             // UseStoreAuthGuard first, before Language/HttpsProtocol or any
             // route-level auth/role middleware runs — see that class's own
             // docblock for why every one of these three route files needs it.
-            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
+            // HandleStoreBladePages last: it inspects the page each route
+            // answers with, so Blade and Inertia pages can share /temp.
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-admin.php'));
 
-            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-seller.php'));
 
             // No outer `api` group, matching the legacy app's own
@@ -73,7 +76,7 @@ class RouteServiceProvider extends ServiceProvider
             Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_warehouse.php'));
             Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_trip.php'));
 
-            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class])
+            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-web.php'));
         });
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
+import type { Component } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -21,9 +22,21 @@ withDefaults(
         transform?: (
             data: Record<string, FormDataConvertible>,
         ) => Record<string, FormDataConvertible>;
+        /**
+         * The page shell: WMS's AdminLayout, or StoreAdminLayout for the
+         * store back office's forms.
+         */
+        layout?: Component;
+        /**
+         * Let the form use the page's full width, for a form that lays its
+         * fields out in a grid (the store role form's permission checkboxes).
+         */
+        wide?: boolean;
     }>(),
     {
         transform: (data: Record<string, FormDataConvertible>) => data,
+        layout: () => AdminLayout,
+        wide: false,
     },
 );
 </script>
@@ -31,12 +44,12 @@ withDefaults(
 <template>
     <Head :title="title" />
 
-    <AdminLayout>
+    <component :is="layout">
         <PageHeader :title="title">
             <slot name="header-actions" />
         </PageHeader>
 
-        <div class="max-w-sm">
+        <div :class="wide ? 'max-w-none' : 'max-w-sm'">
             <Form
                 :action="action"
                 :transform="transform"
@@ -62,5 +75,5 @@ withDefaults(
                 </div>
             </Form>
         </div>
-    </AdminLayout>
+    </component>
 </template>

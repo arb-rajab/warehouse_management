@@ -11,6 +11,12 @@ import type {
     Setting,
     User,
 } from '@/types/admin';
+import type {
+    PermissionGroup,
+    StaffMember,
+    StoreRole,
+    StoreSharedProps,
+} from '@/types/store';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -202,6 +208,51 @@ export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         duration_seconds: 3600,
         flagged: false,
         flags: [],
+        ...overrides,
+    };
+}
+
+/** The store back office's shared `store` prop, for its layout and pages. */
+export function storeSharedProps(
+    overrides: Partial<StoreSharedProps> = {},
+): StoreSharedProps {
+    return {
+        rtl: false,
+        permissions: [],
+        isSuperAdmin: false,
+        isRaizerAdmin: false,
+        settings: {},
+        ...overrides,
+    };
+}
+
+export function storeRole(overrides: Partial<StoreRole> = {}): StoreRole {
+    return { id: 3, name: 'Clerk', ...overrides };
+}
+
+export function staffMember(overrides: Partial<StaffMember> = {}): StaffMember {
+    return {
+        id: 11,
+        user_id: 21,
+        name: 'Sam Staff',
+        email: 'sam@example.com',
+        phone: '0612345678',
+        role: storeRole(),
+        is_super_admin: false,
+        ...overrides,
+    };
+}
+
+export function permissionGroup(
+    overrides: Partial<PermissionGroup> = {},
+): PermissionGroup {
+    return {
+        section: 'staff',
+        label: 'Staff',
+        permissions: [
+            { id: 1, label: 'View All Staffs' },
+            { id: 2, label: 'Add Staff' },
+        ],
         ...overrides,
     };
 }

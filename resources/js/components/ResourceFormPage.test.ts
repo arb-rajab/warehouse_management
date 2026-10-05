@@ -2,8 +2,10 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { defineComponent, h } from 'vue';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import PageHeader from '@/components/PageHeader.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
 import ResourceFormPage from './ResourceFormPage.vue';
 import SubmitButton from './SubmitButton.vue';
 
@@ -26,7 +28,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function mountPage() {
+function mountPage(extraProps: Record<string, unknown> = {}) {
     usePageMock.mockReturnValue({
         url: rowsIndex.url(),
         props: { locale: 'en', auth: { user: { name: 'Jane Doe', id: 7 } } },
@@ -38,6 +40,7 @@ function mountPage() {
             action: rowsIndex.url(),
             submitLabel: 'Create',
             submittingLabel: 'Creating...',
+            ...extraProps,
         },
         slots: { default: '<p>form fields go here</p>' },
     });
@@ -49,6 +52,39 @@ describe('ResourceFormPage', () => {
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
         usePageMock.mockReset();
         routerPostMock.mockReset();
+    });
+
+    it('renders inside AdminLayout by default', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(AdminLayout).exists()).toBe(true);
+    });
+
+    it('renders inside the given layout instead', () => {
+        const OtherLayout = defineComponent({
+            name: 'OtherLayout',
+            setup:
+                (_, { slots }) =>
+                () =>
+                    h('div', { class: 'other-layout' }, slots.default?.()),
+        });
+
+        const wrapper = mountPage({ layout: OtherLayout });
+
+        expect(wrapper.findComponent(AdminLayout).exists()).toBe(false);
+        expect(wrapper.get('.other-layout').text()).toContain(
+            'form fields go here',
+        );
+    });
+
+    it('keeps the form narrow unless told to use the full width', () => {
+        expect(mountPage().find('.max-w-sm').exists()).toBe(true);
+        expect(mountPage({ wide: true }).find('.max-w-sm').exists()).toBe(
+            false,
+        );
+        expect(mountPage({ wide: true }).find('.max-w-none').exists()).toBe(
+            true,
+        );
     });
 
     it('renders the title as the page heading', () => {

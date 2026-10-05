@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { CircleAlert, TriangleAlert } from '@lucide/vue';
+import { TriangleAlert } from '@lucide/vue';
+import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import { t } from '@/lib/i18n';
 import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
@@ -94,13 +95,7 @@ const { confirmationMismatchError, syncConfirmationValidity } =
                 />
                 {{ t('users.fields.adminAccess') }}
             </label>
-            <p
-                v-if="errors.is_admin"
-                class="mt-1 flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
-            >
-                <CircleAlert class="h-3.5 w-3.5 shrink-0" />
-                {{ errors.is_admin }}
-            </p>
+            <FieldError v-if="errors.is_admin" :message="errors.is_admin" />
             <p
                 v-else-if="disableAdminToggle"
                 class="mt-1 flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400"

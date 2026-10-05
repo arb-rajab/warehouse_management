@@ -188,33 +188,35 @@ test('the store role screens list only store roles, and cannot edit, rename or d
 
     $this->get('/temp/admin/roles')
         ->assertOk()
-        ->assertViewHas('roles', fn ($roles) => $roles->total() === 11
-            && $roles->count() === 10
-            && $roles->pluck('guard_name')->unique()->all() === ['store']);
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('roles.meta.total', 11)
+            ->has('roles.data', 11)
+            ->where('roles.data', fn ($roles) => collect($roles)->pluck('name')->every(fn (string $name) => str_starts_with($name, 'Store Role'))));
 
-    $this->get("/temp/admin/roles/edit/{$warehouseAdminRole->id}")->assertNotFound();
+    $this->get("/temp/admin/roles/{$warehouseAdminRole->id}/edit")->assertNotFound();
     $this->put("/temp/admin/roles/{$warehouseAdminRole->id}", ['name' => 'hijacked', 'lang' => 'en'])->assertNotFound();
-    $this->post("/temp/admin/roles/destroy/{$warehouseAdminRole->id}")->assertNotFound();
+    $this->delete("/temp/admin/roles/{$warehouseAdminRole->id}")->assertNotFound();
 
     $this->assertDatabaseHas('wms_roles', ['id' => $warehouseAdminRole->id, 'name' => 'admin', 'guard_name' => 'web']);
 });
 
 test('the store staff screens offer only store roles', function () {
     SpatieRole::findOrCreate('admin', 'web');
-    SpatieRole::findOrCreate('Store Clerk', 'store');
+    $storeClerk = SpatieRole::findOrCreate('Store Clerk', 'store');
     actingAsStoreUser(createStoreAdmin());
 
     $this->get('/temp/admin/staffs/create')
         ->assertOk()
-        ->assertViewHas('roles', fn ($roles) => $roles->pluck('name')->all() === ['Store Clerk']);
+        ->assertInertia(fn (Assert $page) => $page->where('roles', [['id' => $storeClerk->id, 'name' => 'Store Clerk']]));
 
     $this->post('/temp/admin/staffs', [
         'name' => 'New Staff',
         'email' => 'new-staff@example.com',
         'mobile' => '5551234567',
         'password' => 'correct-password',
+        'password_confirmation' => 'correct-password',
         'role_id' => SpatieRole::findByName('admin', 'web')->id,
-    ])->assertNotFound();
+    ])->assertSessionHasErrors('role_id');
 
     $this->assertDatabaseMissing('users', ['email' => 'new-staff@example.com']);
 });
