@@ -51,7 +51,7 @@ const submitLabel = computed(() =>
     <FilterDialog
         v-model:open="open"
         :title="title"
-        :close-label="t('cellLog.filters.close')"
+        :close-label="t('common.close')"
     >
         <Form
             v-if="cell"

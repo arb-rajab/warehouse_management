@@ -122,7 +122,9 @@ test('clicking a cell in the 3D map opens its manage actions (toggle-active, exp
     await expect(manageDialog).toContainText('Manage pallet');
 
     // Export-QR is a plain download link — verify it triggers a real download.
-    await manageDialog.getByRole('button', { name: 'Close filters' }).click();
+    await manageDialog
+        .getByRole('button', { name: 'Close', exact: true })
+        .click();
     await expect(manageDialog).not.toBeVisible();
     const [download] = await Promise.all([
         page.waitForEvent('download'),

@@ -208,7 +208,7 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.empty')"
-                    :value="props.stats.occupancy.empty"
+                    :value="stats.occupancy.empty"
                     :href="
                         palletsIndex({
                             query: { state: 'empty', ...productQuery },
@@ -218,7 +218,7 @@ function onProductIdsChange(ids: string[]): void {
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
-                    :value="props.stats.occupancy.full"
+                    :value="stats.occupancy.full"
                     :href="
                         palletsIndex({
                             query: { state: 'full', ...productQuery },
@@ -228,7 +228,7 @@ function onProductIdsChange(ids: string[]): void {
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
-                    :value="props.stats.occupancy.opened"
+                    :value="stats.occupancy.opened"
                     :href="
                         palletsIndex({
                             query: { state: 'opened', ...productQuery },
@@ -246,7 +246,7 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
-                    :value="props.stats.expiring.expired"
+                    :value="stats.expiring.expired"
                     :href="
                         palletsIndex({
                             query: {
@@ -259,7 +259,7 @@ function onProductIdsChange(ids: string[]): void {
                     :icon="CalendarX"
                 />
                 <DashboardStatTile
-                    v-for="window in props.stats.expiring.windows"
+                    v-for="window in stats.expiring.windows"
                     :key="window.months"
                     :label="
                         t('dashboard.expiring.soonMonths', {
@@ -281,15 +281,14 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="
                         t('dashboard.expiring.soon', {
-                            days: props.stats.expiring.custom.days,
+                            days: stats.expiring.custom.days,
                         })
                     "
-                    :value="props.stats.expiring.custom.count"
+                    :value="stats.expiring.custom.count"
                     :href="
                         palletsIndex({
                             query: {
-                                expires_within_days:
-                                    props.stats.expiring.custom.days,
+                                expires_within_days: stats.expiring.custom.days,
                                 ...productQuery,
                             },
                         })
@@ -310,7 +309,7 @@ function onProductIdsChange(ids: string[]): void {
                         <FilterDialog
                             v-model:open="customExpiringDaysDialogOpen"
                             :title="t('expiringWindow.label')"
-                            :close-label="t('cellLog.filters.close')"
+                            :close-label="t('common.filters.close')"
                         >
                             <form
                                 id="dashboard-custom-expiring-days-form"
@@ -353,14 +352,14 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="
                         t('dashboard.stale.soon', {
-                            days: props.stats.stale.days,
+                            days: stats.stale.days,
                         })
                     "
-                    :value="props.stats.stale.count"
+                    :value="stats.stale.count"
                     :href="
                         palletsIndex({
                             query: {
-                                stale_after_days: props.stats.stale.days,
+                                stale_after_days: stats.stale.days,
                                 ...productQuery,
                             },
                         })
@@ -381,7 +380,7 @@ function onProductIdsChange(ids: string[]): void {
                         <FilterDialog
                             v-model:open="customStaleDaysDialogOpen"
                             :title="t('staleWindow.label')"
-                            :close-label="t('cellLog.filters.close')"
+                            :close-label="t('common.filters.close')"
                         >
                             <form
                                 id="dashboard-custom-stale-days-form"
@@ -421,7 +420,7 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.lowStock.count')"
-                    :value="props.stats.low_stock.count"
+                    :value="stats.low_stock.count"
                     :href="
                         productsIndex({
                             query: { low_stock: true, ...productQuery },
@@ -440,7 +439,7 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.inactiveInWarehouse.count')"
-                    :value="props.stats.inactive_in_warehouse.count"
+                    :value="stats.inactive_in_warehouse.count"
                     :href="
                         productsIndex({
                             query: { inactive: true, ...productQuery },
@@ -461,13 +460,13 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_today[action.key]"
+                    :value="stats.activity_today[action.key]"
                     :href="
                         cellLogsIndex({
                             query: {
                                 action: action.filterAction,
-                                date_from: props.today,
-                                date_to: props.today,
+                                date_from: today,
+                                date_to: today,
                                 ...productQuery,
                             },
                         })
@@ -486,13 +485,13 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_week[action.key]"
+                    :value="stats.activity_week[action.key]"
                     :href="
                         cellLogsIndex({
                             query: {
                                 action: action.filterAction,
-                                date_from: props.weekStart,
-                                date_to: props.today,
+                                date_from: weekStart,
+                                date_to: today,
                                 ...productQuery,
                             },
                         })

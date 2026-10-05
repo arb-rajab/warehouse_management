@@ -196,7 +196,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellLog.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -206,8 +206,8 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellLog.filters.title')"
-            :close-label="t('cellLog.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="cell-status-logs-filter-form"
@@ -307,8 +307,8 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             <template #footer>
                 <FilterDialogFooter
                     form-id="cell-status-logs-filter-form"
-                    :apply-label="t('cellLog.filters.apply')"
-                    :clear-label="t('cellLog.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>
@@ -327,7 +327,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                 @click="clearFilters"
             >
                 <X class="h-3.5 w-3.5 shrink-0" />
-                {{ t('cellLog.filters.clear') }}
+                {{ t('common.filters.clear') }}
             </button>
         </div>
 

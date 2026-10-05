@@ -329,7 +329,7 @@ class Product extends Model
     #[Scope]
     protected function matchingOccupancyFilters(EloquentBuilder $query, Request $request): void
     {
-        if (! $request->filled('state') && ! $request->filled('expired') && ! $request->filled('expires_within_days')) {
+        if (! $request->filled('state') && ! $request->boolean('expired') && ! $request->filled('expires_within_days')) {
             return;
         }
 

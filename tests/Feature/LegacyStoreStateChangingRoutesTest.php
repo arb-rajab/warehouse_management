@@ -150,7 +150,7 @@ test('a GET to a state-changing route is refused and changes nothing', function 
     $brandId = DB::table('brands')->insertGetId(['name' => 'Acme', 'slug' => 'acme']);
     actingAsStoreUser($admin);
 
-    $this->get("/temp/admin/brands/destroy/$brandId")->assertStatus(405);
+    $this->get("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 
     $this->post("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));

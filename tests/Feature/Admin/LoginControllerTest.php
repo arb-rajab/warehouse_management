@@ -107,7 +107,7 @@ test('login attempts are throttled after too many failures', function () {
         'password' => 'wrong-password',
     ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertGuest();
 });
 
@@ -128,7 +128,7 @@ test('login attempts against one email are throttled even when spread across man
             'password' => 'wrong-password',
         ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertGuest();
 });
 

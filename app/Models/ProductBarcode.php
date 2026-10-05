@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\ProductBarcodeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,12 +19,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $barcode
  */
 #[Fillable(['product_id', 'barcode'])]
+#[Table('wms_product_barcodes')]
 class ProductBarcode extends Model
 {
     /** @use HasFactory<ProductBarcodeFactory> */
     use HasFactory;
-
-    protected $table = 'wms_product_barcodes';
 
     /**
      * @return BelongsTo<Product, $this>

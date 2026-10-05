@@ -290,6 +290,29 @@ test('the expired filter excludes a product with no expired pallet', function ()
     Carbon::setTestNow();
 });
 
+test('expired=false applies no expired filter, the same as the cells map', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $expired = Product::factory()->create(['name' => 'A expired']);
+    Pallet::factory()->create(['product_id' => $expired->id, 'expiration_date' => '2026-08-01']);
+
+    $notExpired = Product::factory()->create(['name' => 'B not expired']);
+    Pallet::factory()->create(['product_id' => $notExpired->id, 'expiration_date' => '2026-09-01']);
+
+    $response = $this->get('/admin/products?expired=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $expired->id)
+            ->where('products.data.0.full_cells_count', 1)
+            ->where('products.data.1.id', $notExpired->id)
+            ->where('products.data.1.full_cells_count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
 test('the expires_within_days filter excludes a product with no pallet expiring within that window', function () {
     Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();

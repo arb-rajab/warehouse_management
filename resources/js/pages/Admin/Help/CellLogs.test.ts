@@ -91,7 +91,7 @@ describe('Help CellLogs', () => {
 
         expect(wrapper.findComponent(CalendarPlus).exists()).toBe(true);
         expect(wrapper.findComponent(ArrowLeftRight).exists()).toBe(true);
-        expect(wrapper.text()).toContain(t('cellLog.filters.title'));
+        expect(wrapper.text()).toContain(t('common.filters.title'));
     });
 
     it('renders the cell-state legend from the real cell state colors, not hardcoded labels', () => {

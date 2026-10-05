@@ -558,7 +558,7 @@ function assertPagesWithoutOverlap(Closure $fetchPage, Closure $keysOf, int $tot
  */
 function assertCellInActiveRoundRejection(TestResponse $response): void
 {
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    $response->assertConflict()->assertJsonPath('error_code', 'cell_in_active_round');
 }
 
 /**

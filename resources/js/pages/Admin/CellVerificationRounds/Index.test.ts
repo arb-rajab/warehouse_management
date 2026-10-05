@@ -60,9 +60,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) =>
-            button.text().includes(t('cellVerificationRound.filters.title')),
-        );
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -124,7 +122,7 @@ describe('CellVerificationRounds Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellVerificationRound.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-user').exists()).toBe(true);
         expect(wrapper.find('#filter-completed').exists()).toBe(true);
@@ -140,9 +138,7 @@ describe('CellVerificationRounds Index', () => {
         const applyButton = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -157,9 +153,7 @@ describe('CellVerificationRounds Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -174,9 +168,7 @@ describe('CellVerificationRounds Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -373,10 +365,7 @@ describe('CellVerificationRounds Index', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find(
-                (button) =>
-                    button.text() === t('cellVerificationRound.filters.clear'),
-            );
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 

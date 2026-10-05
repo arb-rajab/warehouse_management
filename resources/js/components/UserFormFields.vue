@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { CircleAlert, TriangleAlert } from '@lucide/vue';
+import FormField from '@/components/FormField.vue';
 import { t } from '@/lib/i18n';
 import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
-import FormField from './FormField.vue';
 
 withDefaults(
     defineProps<{

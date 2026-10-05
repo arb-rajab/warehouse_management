@@ -382,7 +382,7 @@ describe('app API refund requests', function () {
         $uri = '/temp/api/v2/refund-request/send';
 
         $api->postJson($uri, ['id' => $detail->id, 'reason' => 'broken'])->assertOk()->assertJsonPath('success', true);
-        $api->postJson($uri, ['id' => $detail->id, 'reason' => 'again'])->assertStatus(422)->assertJsonPath('success', false);
+        $api->postJson($uri, ['id' => $detail->id, 'reason' => 'again'])->assertUnprocessable()->assertJsonPath('success', false);
 
         expect(DB::table('refund_requests')->where('order_detail_id', $detail->id)->count())->toBe(1)
             ->and((float) DB::table('refund_requests')->where('order_detail_id', $detail->id)->value('refund_amount'))->toBe(6.0)

@@ -12,6 +12,7 @@ import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDate } from '@/lib/date';
+import { filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { productName } from '@/lib/productName';
@@ -93,7 +94,7 @@ function onPerPageChange(perPage: number): void {
         <PageHeader :title="t('pallets.title')">
             <Link
                 :href="cellsIndex({ query: filterQuery })"
-                class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                :class="filterTriggerButtonClass"
             >
                 <Map class="h-4 w-4" />
                 {{ t('pallets.viewOnMap') }}

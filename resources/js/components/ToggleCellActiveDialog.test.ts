@@ -2,6 +2,7 @@ import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
+import FilterDialog from '@/components/FilterDialog.vue';
 import { t } from '@/lib/i18n';
 import type { Cell } from '@/types/admin';
 import ActionErrorBanner from './ActionErrorBanner.vue';
@@ -54,6 +55,15 @@ describe('ToggleCellActiveDialog', () => {
     beforeEach(() => {
         formSlotPropsMock.mockReset();
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
+    });
+
+    it('labels its close button with the shared action-dialog close text', () => {
+        const wrapper = mountDialog();
+
+        expect(t('common.close')).toBe('Close');
+        expect(wrapper.findComponent(FilterDialog).props('closeLabel')).toBe(
+            t('common.close'),
+        );
     });
 
     it('shows the deactivate title/confirm/submit text for an active cell', () => {

@@ -1,4 +1,4 @@
-import { i18n, t } from './i18n';
+import { i18n, t } from '@/lib/i18n';
 
 const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
     year: 'numeric',

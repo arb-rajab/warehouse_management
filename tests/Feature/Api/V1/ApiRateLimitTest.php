@@ -12,7 +12,7 @@ test('a mobile user is throttled after 60 requests to an authenticated api endpo
         $this->getJson('/api/v1/products')->assertOk();
     }
 
-    $this->getJson('/api/v1/products')->assertStatus(429);
+    $this->getJson('/api/v1/products')->assertTooManyRequests();
 });
 
 test('two different mobile users each get their own 60-per-minute api rate limit budget', function () {
@@ -23,7 +23,7 @@ test('two different mobile users each get their own 60-per-minute api rate limit
     foreach (range(1, 60) as $_) {
         $this->getJson('/api/v1/products')->assertOk();
     }
-    $this->getJson('/api/v1/products')->assertStatus(429);
+    $this->getJson('/api/v1/products')->assertTooManyRequests();
 
     actingAsMobileUser($userB);
     $this->getJson('/api/v1/products')->assertOk();
@@ -44,7 +44,7 @@ test('two mobile clients sharing one IP get independent api rate limit buckets',
         $this->withToken($tokenA)->getJson('/api/v1/products')->assertOk();
     }
 
-    $this->withToken($tokenA)->getJson('/api/v1/products')->assertStatus(429);
+    $this->withToken($tokenA)->getJson('/api/v1/products')->assertTooManyRequests();
 
     // Sanctum's guard is a RequestGuard, which caches the user it resolved for
     // the life of the guard instance — and one app instance serves every request
@@ -76,6 +76,6 @@ test('a throttled mobile client cannot store a pallet and nothing is written', f
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertDatabaseCount('pallets', 0);
 });

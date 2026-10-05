@@ -152,10 +152,12 @@ const actionError = usePageError('action');
 </script>
 
 <template>
-    <Head :title="`${t('cellVerificationRound.title')} #${round.id}`" />
+    <Head :title="t('cellVerificationRound.show.title', { id: round.id })" />
 
     <AdminLayout>
-        <PageHeader :title="`${t('cellVerificationRound.title')} #${round.id}`">
+        <PageHeader
+            :title="t('cellVerificationRound.show.title', { id: round.id })"
+        >
             <div class="flex items-center gap-2">
                 <a
                     :href="exportReports.url(round, { query: filterQuery() })"
@@ -170,7 +172,7 @@ const actionError = usePageError('action');
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellVerificationReport.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -234,8 +236,8 @@ const actionError = usePageError('action');
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellVerificationReport.filters.title')"
-            :close-label="t('cellVerificationReport.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="cell-verification-report-filter-form"
@@ -336,8 +338,8 @@ const actionError = usePageError('action');
             <template #footer>
                 <FilterDialogFooter
                     form-id="cell-verification-report-filter-form"
-                    :apply-label="t('cellVerificationReport.filters.apply')"
-                    :clear-label="t('cellVerificationReport.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>

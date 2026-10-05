@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue';
+import FormField from '@/components/FormField.vue';
 import { t } from '@/lib/i18n';
-import FormField from './FormField.vue';
 
 /**
  * Mirrors Row::MAX_DIMENSION (app/Models/Row.php) — the backend rule stays
@@ -9,7 +9,7 @@ import FormField from './FormField.vue';
  */
 const MAX_DIMENSION = 500;
 
-const props = withDefaults(
+withDefaults(
     defineProps<{
         /**
          * Prefixes every id this renders (`${idPrefix}letter`/etc.) so a page
@@ -36,7 +36,7 @@ const props = withDefaults(
 <template>
     <div class="space-y-4">
         <FormField
-            :id="`${props.idPrefix}letter`"
+            :id="`${idPrefix}letter`"
             :label="t('rows.fields.letter')"
             :value="letter"
             :error="errors.letter"
@@ -46,7 +46,7 @@ const props = withDefaults(
         />
 
         <FormField
-            :id="`${props.idPrefix}cells_count`"
+            :id="`${idPrefix}cells_count`"
             :label="t('rows.fields.cellsPerFlat')"
             type="number"
             :value="cellsCount"
@@ -59,7 +59,7 @@ const props = withDefaults(
         />
 
         <FormField
-            :id="`${props.idPrefix}flats_count`"
+            :id="`${idPrefix}flats_count`"
             :label="t('rows.fields.flats')"
             type="number"
             :value="flatsCount"

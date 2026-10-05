@@ -528,7 +528,7 @@ describe('Rows Show', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         await clearButton?.trigger('click');
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(

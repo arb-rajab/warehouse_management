@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { CircleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import FormField from '@/components/FormField.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { pxToCm } from '@/lib/qrCodeSize';
-import FormField from './FormField.vue';
 
 /**
  * Mirrors Setting::MIN_QR_CODE_SIZE / MAX_QR_CODE_SIZE

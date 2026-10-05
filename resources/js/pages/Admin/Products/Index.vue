@@ -41,6 +41,7 @@ import {
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
+    plainFieldInputClass,
     selectedCountLabel,
     toggleSort,
     useColumnFilterPopover,
@@ -339,7 +340,7 @@ function refreshBarcodesDialogProduct(): void {
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('products.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -349,8 +350,8 @@ function refreshBarcodesDialogProduct(): void {
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('products.filters.title')"
-            :close-label="t('products.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="products-filter-form"
@@ -417,8 +418,8 @@ function refreshBarcodesDialogProduct(): void {
             <template #footer>
                 <FilterDialogFooter
                     form-id="products-filter-form"
-                    :apply-label="t('cellLog.filters.apply')"
-                    :clear-label="t('cellLog.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>
@@ -427,7 +428,7 @@ function refreshBarcodesDialogProduct(): void {
         <FilterDialog
             v-model:open="boxCountDialogOpen"
             :title="t('products.columns.boxesPerPallet')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
             <Form
                 v-if="boxCountDialogProduct"
@@ -465,7 +466,7 @@ function refreshBarcodesDialogProduct(): void {
         <FilterDialog
             v-model:open="minimumPalletsDialogOpen"
             :title="t('products.columns.minimumPallets')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
             <Form
                 v-if="minimumPalletsDialogProduct"
@@ -505,7 +506,7 @@ function refreshBarcodesDialogProduct(): void {
         <FilterDialog
             v-model:open="barcodesDialogOpen"
             :title="t('products.columns.barcodes')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
             <template v-if="barcodesDialogProduct">
                 <Form
@@ -541,7 +542,7 @@ function refreshBarcodesDialogProduct(): void {
                                 :placeholder="
                                     t('products.newBarcodePlaceholder')
                                 "
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                                :class="plainFieldInputClass"
                             />
                         </div>
                         <button

@@ -160,7 +160,7 @@ class Pallet extends Model
     protected function matchingOccupancyFilters(Builder $query, Request $request, ?CellState $cellState = null): void
     {
         $query
-            ->when($request->filled('expired'), fn (Builder $q) => $q->where('expiration_date', '<', today()))
+            ->when($request->boolean('expired'), fn (Builder $q) => $q->where('expiration_date', '<', today()))
             ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))))
             ->whereHas('cell', function (Builder $cellQuery) use ($request, $cellState): void {
                 $cellQuery->when($request->filled('state'), fn (Builder $q) => $q->where('state', $request->string('state')->value()));

@@ -190,7 +190,7 @@ test('the categories list returns the first page only', function () {
 
 test('a list refuses a page size over the maximum', function (string $path) {
     warehouse()->getJson(WAREHOUSE_URL.$path.'?per_page=100000')
-        ->assertStatus(422)
+        ->assertUnprocessable()
         ->assertJsonPath('result', false);
 })->with(['/customers', '/reps', '/orders', '/products', '/categories']);
 
@@ -306,7 +306,7 @@ test('update-customer refuses a user who is not a customer and changes nothing',
     $notCustomer = createStoreUser($userType);
 
     warehouse()->postJson(WAREHOUSE_URL.'/order/update-customer', ['order_id' => $order->id, 'customer_id' => $notCustomer->id])
-        ->assertStatus(422)
+        ->assertUnprocessable()
         ->assertJson(['result' => false, 'status' => 422]);
 
     expect($order->fresh()->user_id)->toBe($original->id);
@@ -316,7 +316,7 @@ test('update-customer refuses a user who is not a customer and changes nothing',
 test('update-customer validates its ids and answers 404 for unknown ones', function () {
     $order = createStoreOrder(createStoreUser('customer'));
 
-    warehouse()->postJson(WAREHOUSE_URL.'/order/update-customer', ['order_id' => $order->id])->assertStatus(422)->assertJsonPath('result', false);
+    warehouse()->postJson(WAREHOUSE_URL.'/order/update-customer', ['order_id' => $order->id])->assertUnprocessable()->assertJsonPath('result', false);
     warehouse()->postJson(WAREHOUSE_URL.'/order/update-customer', ['order_id' => 999999, 'customer_id' => 1])->assertNotFound();
     warehouse()->postJson(WAREHOUSE_URL.'/order/update-customer', ['order_id' => $order->id, 'customer_id' => 999999])->assertNotFound();
 });
@@ -337,5 +337,5 @@ test('the warehouse routes stop answering past the throttle limit, even with a b
         test()->getJson(WAREHOUSE_URL.'/categories');
     }
 
-    test()->getJson(WAREHOUSE_URL.'/categories')->assertStatus(429);
+    test()->getJson(WAREHOUSE_URL.'/categories')->assertTooManyRequests();
 });
