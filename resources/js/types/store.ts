@@ -45,3 +45,32 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+/** The kinds of file the store's uploader accepts (MultipartUploadService::KINDS). */
+export type StoreUploadKind =
+    'image' | 'video' | 'audio' | 'archive' | 'document';
+
+/** FilterUploadsRequest::SORTS. */
+export type StoreUploadSort = 'newest' | 'oldest' | 'smallest' | 'largest';
+
+/** UploadResource: a file in the store's uploads library. */
+export interface StoreUpload {
+    id: number;
+    /** The client's filename without its extension, when it had one. */
+    name: string | null;
+    extension: string | null;
+    type: StoreUploadKind | null;
+    /** In bytes. */
+    size: number | null;
+    url: string | null;
+    created_at: string | null;
+    /** Only on the library page, which loads the uploader's account. */
+    uploaded_by?: string | null;
+}
+
+/** The uploaded-files library's filters, as the controller echoes them. */
+export interface StoreUploadFilters {
+    search: string | null;
+    sort: StoreUploadSort;
+    per_page: number;
+}

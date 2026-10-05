@@ -46,6 +46,7 @@ use App\Http\Controllers\SellerWithdrawRequestController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TaxController;
@@ -649,14 +650,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
-    // uploaded files
-    Route::resource('/uploaded-files', AizUploadController::class);
-    Route::controller(AizUploadController::class)->group(function () {
-        Route::any('/uploaded-files/file-info', 'file_info')->name('uploaded-files.info');
-        Route::post('/uploaded-files/destroy/{id}', 'destroy')->name('uploaded-files.destroy');
-        Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
-        Route::post('/all-file', 'all_file')->name('all-file')->middleware('permission:delete_all_uploads');
+    // Uploaded files: Inertia pages (resources/js/pages/Store/Admin/UploadedFiles)
+    // and the JSON endpoints of the shared file manager dialog.
+    Route::controller(UploadController::class)->group(function () {
+        Route::get('/uploaded-files', 'index')->name('uploaded-files.index');
+        Route::get('/uploaded-files/create', 'create')->name('uploaded-files.create');
+        Route::get('/uploaded-files/browse', 'browse')->name('uploaded-files.browse');
+        Route::get('/uploaded-files/previews', 'previews')->name('uploaded-files.previews');
+        Route::post('/uploaded-files', 'store')->name('uploaded-files.store');
+        Route::delete('/uploaded-files/{upload}', 'destroy')->name('uploaded-files.destroy');
+        Route::post('/bulk-uploaded-files-delete', 'bulkDestroy')->name('bulk-uploaded-files-delete');
     });
+    Route::post('/all-file', [AizUploadController::class, 'all_file'])->name('all-file')->middleware('permission:delete_all_uploads');
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 

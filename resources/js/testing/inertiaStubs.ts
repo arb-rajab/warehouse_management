@@ -51,6 +51,7 @@ export function createFormStub(
             transform: { type: Function, default: undefined },
             options: { type: Object, default: undefined },
             resetOnSuccess: Boolean,
+            onBefore: { type: Function, default: undefined },
         },
         setup(props, { slots }) {
             return () =>

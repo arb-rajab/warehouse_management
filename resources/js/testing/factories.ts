@@ -16,6 +16,7 @@ import type {
     StaffMember,
     StoreRole,
     StoreSharedProps,
+    StoreUpload,
 } from '@/types/store';
 
 /**
@@ -253,6 +254,21 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+/** UploadResource: a stored PNG, as the uploads library lists it. */
+export function storeUpload(overrides: Partial<StoreUpload> = {}): StoreUpload {
+    return {
+        id: 31,
+        name: 'shop front',
+        extension: 'png',
+        type: 'image',
+        size: 2048,
+        url: 'http://localhost/uploads/all/shop-front.png',
+        created_at: '2026-10-01T09:30:00+00:00',
+        uploaded_by: 'Sam Staff',
         ...overrides,
     };
 }

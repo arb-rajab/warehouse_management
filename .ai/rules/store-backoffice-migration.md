@@ -5,6 +5,7 @@ paths:
   - 'resources/js/layouts/StoreAdminLayout.vue'
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
+  - 'resources/js/components/StoreUploadField.vue,resources/js/components/StoreFileManagerDialog.vue,resources/js/components/StoreFileUploader.vue,resources/js/components/StoreFileGrid.vue,resources/js/components/StoreFileFilterBar.vue,resources/js/lib/storeUploads.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -89,7 +90,8 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles and uploaded files are
+Inertia so far.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -163,9 +165,9 @@ What it means for the translation admin:
   - The layout reuses WMS's `LanguageSwitcher`. It writes the same `locale`
     session key that the store's `Language` middleware reads.
 
-### 2.4 Uploads: replacing the aiz file manager (design; built in batch 4)
+### 2.4 Uploads: replacing the aiz file manager (built with uploaded_files)
 
-**Today** (audit §6, product and uploaded_files):
+**Before** (audit §6, product and uploaded_files):
 
 - A form field is a `data-toggle="aizuploader"` group around a hidden input
   that holds comma-separated upload ids.
@@ -182,47 +184,82 @@ What it means for the translation admin:
 - Markup is refused, and SVG is sanitised.
 - Images are re-encoded with Intervention v2.
 
-Two gaps remain against CLAUDE.md's "re-encode to a fixed format":
+**What is built.** Every later form uses these; don't write another uploader.
 
-- the `disable_image_optimization` setting, and any image over 40 MP, skip the
-  re-encode;
-- the re-encode keeps each image's own format.
+- **Backend:** `Store\Admin\UploadController`, under `/temp/admin/uploaded-files`
+  (route names `uploaded-files.*`, kept from the Blade module). Writes and
+  deletes go through `MultipartUploadService` (`store()`, and `delete()`,
+  which the seller-side `AizUploadController` now shares).
+  - `GET /uploaded-files` (`index`): the library page, every account's
+    files, 20 a page with the per-page selector; `search`, `sort`
+    (`FilterUploadsRequest::SORTS`).
+  - `GET /uploaded-files/create`: the upload page.
+  - `GET /uploaded-files/browse` (JSON): the dialog's grid, **own files only**
+    as the Blade modal listed them, 60 a page, `search`, `sort` and `type`
+    (one of `MultipartUploadService::KINDS`' kinds) on the server.
+  - `GET /uploaded-files/previews?ids[]=` (JSON): an upload field's files, in
+    the order asked, minus any `UploadPolicy::view` refuses.
+  - `POST /uploaded-files` (JSON): one file as `file`; 201 with the
+    resource, or 422 `errors.file` (`messages.upload_refused`) when the
+    service refuses it. The demo shop refuses archives, as before.
+  - `DELETE /uploaded-files/{upload}` and `POST /bulk-uploaded-files-delete`
+    (`ids[]`, at most 100): `UploadPolicy::delete` per file; the bulk delete
+    skips a file the account may not delete, as the Blade one did.
+  - `UploadResource`: `id, name, extension, type, size, url, created_at`,
+    plus `uploaded_by` when `user` is loaded (the library only). `url` is
+    `external_link` or `my_asset(file_name)`, what the Blade library showed.
+    JSON resources are unwrapped app-wide, so `previews` and `store` answer a
+    bare array/object; `browse` keeps the paginator's `data`/`meta`.
+  - **Permissions: none, deliberately.** The Blade module was ungated and
+    the batch request said to keep access as it was, so the routes stay in
+    `LegacyAdminPermissionsTest`'s ratchet lists as `UploadController@*`
+    (self-service section). Gating them needs new permission names and role
+    grants, which is legacy §7.1's owner question (§5.1 below).
+- **Vue** (`resources/js/components`, each with its test):
+  - `StoreUploadField.vue`: the form field. Hidden input `name` with the
+    comma-separated ids (the aizuploader contract, so product and category
+    forms post what they post today); `v-model` for `useForm` callers;
+    `multiple` and `type` (`image` limits the dialog and the file input);
+    thumbnails with a remove button; "Choose" opens the dialog; previews
+    fetched once on mount.
+  - `StoreFileManagerDialog.vue`: `FilterDialog` shell, a browse tab (filter
+    bar, grid, "Load more") over `useHttp`, an upload tab, and a confirm that
+    emits `select` with the chosen files.
+  - `StoreFileUploader.vue`: `<input type="file" multiple>`, each file posted
+    on its own in turn via `useHttp`, a native `<progress>`, the server's
+    refusal message per file. No Uppy.
+  - `StoreFileGrid.vue` (tiles + checkbox + `actions` slot) and
+    `StoreFileFilterBar.vue` (search + sort), shared by the library page and
+    the dialog. `lib/storeUploads.ts`: `formatFileSize()` (Intl units,
+    1024-based like `formatBytes()`) and `uploadDisplayName()`.
+  - **The library page** (`Store/Admin/UploadedFiles/Index`) is the grid with
+    per-file Details, Download, Copy link and Delete, "Select all" and a
+    confirmed "Delete selection" `<Form>`. The info modal became a side panel
+    fed by the list's own JSON (no `uploaded-files.info` request).
+- **Still to do:**
+  - The image normalising this design planned is not done, because it
+    changes the seller and API uploads too (the service is shared): re-encode
+    every image to WebP, drop the `disable_image_optimization` opt-out,
+    refuse an image over 40 MP instead of storing it raw, and fix the
+    1500 → 800 resize typo (`MultipartUploadService::optimised()`).
+  - **Retire** `/temp/aiz-uploader*` with the last Blade view that uses
+    aizuploader (35 back-office views still do). The seller area keeps its
+    Blade uploader and `AizUploadController` (index, create, file_info,
+    destroy, bulk delete, all_file) until the seller UI moves, which is out
+    of scope, so that controller stays in pint.json/phpstan.neon.
+  - No form uses `StoreUploadField` yet: admin_profile (batch 4's other
+    module) is its first call site.
 
-**Design:**
+**What the uploaded_files move changed in behaviour, on purpose:**
 
-- **Backend.** JSON endpoints under `/temp/admin/uploads`, in
-  `Store\Admin\UploadController`. All writes go through
-  `MultipartUploadService`.
-  - **Endpoints:**
-    - `GET` list: paginated, with server-side search, sort and type filter
-      (today the type filter runs client-side on one page only);
-    - `POST` upload, multipart;
-    - `GET ?ids=`: the chosen files' previews;
-    - `DELETE`.
-  - **Response:** an `UploadResource` of `id, name, type, size, url`.
-  - **Permissions:** gate the endpoints with new permission names, and empty
-    the `AizUploadController` entries of the ratchet lists.
-  - **Normalising images:**
-    - re-encode every image to WebP;
-    - drop the opt-out;
-    - refuse an image over 40 MP instead of storing it raw;
-    - fix the 1500 → 800 resize typo (`MultipartUploadService.php:162-166`).
-- **Vue.**
-  - `components/StoreUploadField.vue`: a form field.
-    - It keeps the backend contract, a hidden input `name` with
-      comma-separated ids, so product and category forms post what they post
-      today.
-    - It shows thumbnails, a remove button, and a "Choose" button that opens
-      the file manager.
-  - `components/StoreFileManagerDialog.vue`:
-    - a grid, search, sort, type filter and pagination, over `useHttp`;
-    - an upload tab with `<input type="file" multiple>` and a progress bar;
-    - no Uppy dependency.
-  - **The library page.** `uploaded_files/index` becomes a page around the
-    dialog's grid component. The info modal becomes a side panel fed by JSON.
-- **Retire** `/temp/aiz-uploader*` with the last Blade view that uses
-  aizuploader. The seller area keeps its Blade uploader until the seller UI
-  moves, which is out of scope.
+- The library pages 20 at a time with the per-page selector; it was 60.
+- A delete is `DELETE /uploaded-files/{upload}` (was `POST …/destroy/{id}`)
+  and answers 403 for a file the account may not delete (was a flash).
+- The bulk delete ignores an id that does not exist; the Blade one 404'd
+  part-way, after deleting the ids before it.
+- An upload refused in the demo shop is a 422; it was a silent `{}`.
+- Sorts tie-break on `id`, so paging never repeats or skips a file.
+- No success flash.
 
 Two upload paths are not aiz and stay as they are: the offers catalogue and
 bulk import.
@@ -432,7 +469,7 @@ Batches are ordered by what they need first:
 | 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
 | 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
-| 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
+| 4 | Uploads | 4 | uploaded_files (3): **converted**; admin_profile (1): to do | §2.4: built with uploaded_files |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
 | 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
@@ -514,7 +551,19 @@ Most severe first:
 7. **Route names that went to storefront routes:** `reviews.index` and
    `subscribers.index`. Give the admin routes their own names when their
    batch converts. The new sidebar already links to the admin URIs.
-8. **N+1 and strict mode.** `Model::shouldBeStrict()` throws on a lazy load
+8. **Uploads stay ungated** (batch 4, uploaded_files). Every back-office
+   account, an accountant included, may open the library, list every
+   account's files there (the Blade library did too; `UploadPolicy` only
+   guards preview and delete), and upload. §2.4 planned new permission names;
+   the batch kept access as it was. Owner call: name the permissions (legacy
+   §7.1) and decide whether an accountant should see others' files.
+9. **Inertia pages' CSP blocks off-origin thumbnails.** `img-src` in
+   config/secure-headers.php is `'self' data: blob:`, so on the Inertia
+   library and in `StoreUploadField` an upload served from S3
+   (`my_asset()` on the s3 disk) or an `external_link` CDN shows a broken
+   image, where the Blade CSP allowed `https:`. Add the asset host(s) to
+   `img-src` before the S3 disk or external links are used in production.
+10. **N+1 and strict mode.** `Model::shouldBeStrict()` throws on a lazy load
    once a list has two or more rows, and no list view in sales, reports,
    customer or sellers has a render test. Each port eager-loads what its
    Resource reads.
@@ -679,9 +728,9 @@ URIs are under `/temp/admin` unless shown. SCR = `LegacyStoreStateChangingRoutes
 | product/products/sku_combinations | `products.sku_combination` · POST (:117); also the seller's | ProductController@sku_combination (:749) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as a client-side variant grid; retire the endpoint |
 | product/products/sku_combinations_edit | `products.sku_combination_edit` · POST (:118) | ProductController@sku_combination_edit (:781) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as above |
 | product/reviews/index | admin GET …/reviews (:551) is unnamed; `reviews.index` went to the storefront GET /temp/reviews (shop-web:358) | ReviewController@index (:42) | `view_product_reviews` | list | `$.post reviews.published` | **LegacyPaginationTest:238 (renders)** | port; give the admin route its own name |
-| uploaded_files/create | `uploaded-files.create` (:646) | AizUploadController@create (:57) | ungated | form (Uppy dashboard) | `AIZ.plugins.aizUppy` → `/aiz-uploader/upload` | none | port into the uploads replacement (§2.4) |
-| uploaded_files/index | `uploaded-files.index` (:646) | AizUploadController@index (:50) | ungated | list (60-per-page grid, search/sort) | `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | SCR | port into §2.4 |
-| uploaded_files/info | `uploaded-files.info` · ANY …/uploaded-files/file-info (:648) | AizUploadController@file_info (:217) | ungated + UploadPolicy | modal partial (AJAX HTML) | none | none | port-trim: a client-side panel from JSON; the GET is shadowed by the resource `show` route |
+| uploaded_files/create | `uploaded-files.create` · GET …/uploaded-files/create; `uploaded-files.store` · POST …/uploaded-files (JSON) | Store\Admin\UploadController@create, @store → `Store/Admin/UploadedFiles/Create` | ungated (kept) | form (StoreFileUploader) | was `AIZ.plugins.aizUppy` | tests/Feature/Store/Admin/UploadControllerTest.php; Create.test.ts; e2e store-uploaded-files.spec.ts | converted, Blade deleted |
+| uploaded_files/index | `uploaded-files.index` · GET …/uploaded-files; `uploaded-files.destroy` · DELETE …/uploaded-files/{upload}; `bulk-uploaded-files-delete` · POST; `uploaded-files.browse`, `uploaded-files.previews` (JSON) | @index, @destroy, @bulkDestroy, @browse, @previews → `Store/Admin/UploadedFiles/Index` | ungated (kept) + UploadPolicy | list (grid, 20 a page, search/sort) | was `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | same; Index.test.ts; e2e | converted |
+| uploaded_files/info | `uploaded-files.info` (removed) | — | — | — | — | — | converted into the Index page's side panel (no request) |
 
 Notes:
 1. HTML over AJAX: `products.sku_combination[_edit]`, `uploaded-files.info`, `/temp/aiz-uploader` (the modal); `products.add-more-choice-option` returns unescaped `<option>` strings.

@@ -901,6 +901,86 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "uploads": {
+            "unknownName": "Unknown",
+            "selectFile": "Select {name}",
+            "empty": "No files found.",
+            "kind": {
+                "image": "Image",
+                "video": "Video",
+                "audio": "Audio",
+                "archive": "Archive",
+                "document": "Document"
+            },
+            "sort": {
+                "newest": "Newest first",
+                "oldest": "Oldest first",
+                "smallest": "Smallest first",
+                "largest": "Largest first"
+            },
+            "filters": {
+                "search": "Search files",
+                "searchPlaceholder": "Search your files",
+                "sort": "Sort files",
+                "submit": "Search"
+            },
+            "uploader": {
+                "choose": "Choose files to upload",
+                "hint": "Up to 512 MB each: images, videos, audio, archives and documents.",
+                "tooLarge": "This file is larger than 512 MB.",
+                "failed": "The upload failed. Try again.",
+                "status": {
+                    "waiting": "Waiting",
+                    "uploading": "Uploading",
+                    "done": "Uploaded",
+                    "failed": "Not uploaded"
+                }
+            },
+            "dialog": {
+                "title": "File manager",
+                "browseTab": "Select files",
+                "uploadTab": "Upload new",
+                "loading": "Loading files...",
+                "loadMore": "Load more",
+                "confirm": "Add selected",
+                "clear": "Clear selection",
+                "selectedCount": "Selected: {count}"
+            },
+            "field": {
+                "browse": "Choose a file",
+                "browseMany": "Choose files",
+                "remove": "Remove",
+                "removeFile": "Remove {name}"
+            },
+            "index": {
+                "title": "All uploaded files",
+                "uploadNew": "Upload new file",
+                "selectAll": "Select all",
+                "deleteSelection": "Delete selection",
+                "selection": "{count} selected files",
+                "details": "Details",
+                "detailsFor": "Details of {name}",
+                "download": "Download",
+                "copyLink": "Copy link",
+                "delete": "Delete",
+                "linkCopied": "Link copied to the clipboard.",
+                "linkNotCopied": "The link could not be copied."
+            },
+            "info": {
+                "title": "File info",
+                "name": "File name",
+                "type": "File type",
+                "size": "File size",
+                "uploadedBy": "Uploaded by",
+                "uploadedAt": "Uploaded at",
+                "download": "Download"
+            },
+            "create": {
+                "title": "Upload new files",
+                "back": "Back to uploaded files",
+                "heading": "Choose your files"
+            }
         }
     }
 }
