@@ -432,7 +432,7 @@ Batches are ordered by what they need first:
 | 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
 | 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
-| 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4. Fix ProfileController's ownership hole first (§5.1) |
+| 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
 | 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
@@ -469,10 +469,16 @@ the storefront's seller login, not the back office.
 
 Most severe first:
 
-1. **ProfileController@update** (admin_profile) takes the id from the URL
-   with no ownership check, so any staff member can rewrite any account's
-   name, email, password or avatar. Fix it before batch 4: make it self-only
-   and validated.
+1. **ProfileController@update** (admin_profile) took the id from the URL
+   with no ownership check, so any staff member could rewrite any account's
+   name, email, password or avatar. **Fixed**: `AdminProfileRequest`
+   (`authorize()` compares the `profile` route parameter with the signed-in
+   store user, so a foreign id is a 403 before validation) validates name,
+   a unique email, an optional strong `new_password` (`same:confirm_password`)
+   and an existing single-id `avatar` (the uploader has no `data-multiple`);
+   the controller updates `$request->user('store')`. The five empty resource
+   stubs are gone (`->only(['index', 'update'])`). Tests:
+   `LegacyAdminProfileTest`.
 2. **`business_settings.update`** accepts any one of eight permissions and
    upserts any key with no allowlist. A user holding only `currency_setup` can
    write `header_script`/`footer_script`, which the storefront prints raw
@@ -731,7 +737,7 @@ URIs are under `/temp/admin` unless shown. No view here is rendered by any test;
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| admin_profile/index | `profile.index` (:308) | ProfileController@index (:19) | ungated (READS list; `update` on WRITES) | form → PATCH `profile.update` | aizuploader | none | port, and fix first: `update($id)` takes the id from the URL with no ownership check, so any staff user can rewrite any account's name, email, password and avatar |
+| admin_profile/index | `profile.index`, `profile.update` (:308, 2 routes) | ProfileController@index, @update | ungated by design: self-service, `update` is self-only (`AdminProfileRequest`) | form → PATCH `profile.update` | aizuploader (single id) | LegacyAdminProfileTest | port |
 | customer/classified_products/index | `classified_products` (:611) | CustomerProductController@customer_product_index (:52) | `view_classified_products` | list | `$.post classified_products.published`, confirm-delete | SCR | port (behind `classified_product`); destroy `data-href` ends in `}}}}` |
 | customer/customer_packages/create | `customer_packages.create` (:603) | CustomerPackageController@create (:52) | `edit_classified_package` | form | aizuploader | none | port |
 | customer/customer_packages/edit | `customer_packages.edit` · GET …/edit/{id}?lang= (:605) | @edit (:101) | `edit_classified_package` | form (language tabs) | aizuploader | none | port |

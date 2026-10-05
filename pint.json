@@ -160,7 +160,6 @@
         "app/Http/Controllers/ProductBulkUploadController.php",
         "app/Http/Controllers/ProductController.php",
         "app/Http/Controllers/ProductQueryController.php",
-        "app/Http/Controllers/ProfileController.php",
         "app/Http/Controllers/PurchaseHistoryController.php",
         "app/Http/Controllers/ReportController.php",
         "app/Http/Controllers/RepresentativePackageController.php",
