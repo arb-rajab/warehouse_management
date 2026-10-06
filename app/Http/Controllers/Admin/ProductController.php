@@ -68,6 +68,7 @@ class ProductController extends Controller
                 ->selectRaw('count(*)')
                 ->whereColumn('pallets.product_id', 'products.id')])
             ->when($request->filled('product_id'), fn (Builder $query) => $query->whereIn('id', $request->productIds()))
+            ->when($request->boolean('hide_inactive'), fn (Builder $query) => $query->where('published', true))
             ->when($request->boolean('inactive'), fn (Builder $query) => $query->where('published', false)->inWarehouse())
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->matchingOccupancyFilters($request)
@@ -82,7 +83,7 @@ class ProductController extends Controller
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
-                    'state', 'expired', 'expires_within_days', 'inactive', 'low_stock', 'product_id',
+                    'state', 'expired', 'expires_within_days', 'inactive', 'hide_inactive', 'low_stock', 'product_id',
                     'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                     'sort_by', 'sort_direction',
                 ]),
@@ -185,8 +186,7 @@ class ProductController extends Controller
     {
         return $this->paginated(ProductOptionResource::collection(
             Product::query()
-                ->select(['id', 'name', 'ar_name'])
-                ->where('published', true)
+                ->select(['id', 'name', 'ar_name', 'published'])
                 ->searchByName($request->string('q')->value())
                 ->orderBy('name')
                 ->paginate(20)

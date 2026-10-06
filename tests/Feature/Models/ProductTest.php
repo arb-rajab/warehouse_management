@@ -77,8 +77,8 @@ test('filterOptions emits both store name columns raw, in the order the frontend
     $bravo = Product::factory()->create(['name' => 'Bravo', 'ar_name' => '']);
 
     expect(Product::filterOptions()->all())->toBe([
-        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
-        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => ''],
+        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
+        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => '', 'active' => true],
     ]);
 });
 
@@ -91,9 +91,18 @@ test('filterOptions emits the same raw columns under the Arabic locale', functio
     app()->setLocale('ar');
 
     expect(Product::filterOptions()->all())->toBe([
-        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
-        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => 'برافو'],
+        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
+        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => 'برافو', 'active' => true],
     ]);
+});
+
+test('selectedOptions flags an inactive product as not active, alongside an active one', function () {
+    $active = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Bravo', 'ar_name' => 'برافو']);
+    Product::factory()->create(['name' => 'Unselected']);
+
+    expect(Product::selectedOptions([$active->id, $inactive->id])->pluck('active', 'id')->all())
+        ->toBe([$active->id => true, $inactive->id => false]);
 });
 
 test('selectedOptions emits both raw name columns, excluding an unselected product', function () {
@@ -103,7 +112,7 @@ test('selectedOptions emits both raw name columns, excluding an unselected produ
     app()->setLocale('ar');
 
     expect(Product::selectedOptions([$selected->id])->all())->toBe([
-        ['id' => $selected->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
+        ['id' => $selected->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
     ]);
 });
 

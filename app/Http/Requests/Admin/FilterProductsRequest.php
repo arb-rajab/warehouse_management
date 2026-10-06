@@ -31,6 +31,7 @@ class FilterProductsRequest extends FormRequest
         $this->normalizeExpiredFilter();
         $this->normalizeBooleanFilter('inactive');
         $this->normalizeBooleanFilter('low_stock');
+        $this->normalizeBooleanFilter('hide_inactive');
     }
 
     /**
@@ -49,6 +50,7 @@ class FilterProductsRequest extends FormRequest
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'inactive' => ['nullable', 'boolean'],
             'low_stock' => ['nullable', 'boolean'],
+            'hide_inactive' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),
             ...$this->userIdsFilterRules(),
             ...$this->logActionFilterRules(),

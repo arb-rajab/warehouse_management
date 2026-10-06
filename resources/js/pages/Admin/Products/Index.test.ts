@@ -58,8 +58,8 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
         id: 10,
         name: 'Widgets',
         ar_name: 'ودجات',
-        image_url: null,
         active: true,
+        image_url: null,
         boxes_count: 12,
         minimum_pallets: null,
         pallets_count: 3,
@@ -78,7 +78,7 @@ const filterOptions: ProductIndexFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات', active: true }],
     users: [{ id: 7, name: 'Jane Doe' }],
     actions: [
         'stored',
@@ -231,6 +231,50 @@ describe('Products Index', () => {
 
         const [, sentFilters] = routerGetMock.mock.calls[0];
         expect(sentFilters).not.toHaveProperty('inactive');
+    });
+
+    it('renders the quick hide-inactive checkbox in the toolbar, unchecked by default', () => {
+        const wrapper = mountPage([]);
+
+        expect(
+            wrapper.get('label[for="products-quick-hide-inactive"]').text(),
+        ).toBe(t('products.filters.hideInactive'));
+        expect(
+            (
+                wrapper.get('#products-quick-hide-inactive')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(false);
+    });
+
+    it('requests hiding inactive products only when the checkbox is checked', async () => {
+        const wrapper = mountPage([]);
+
+        await wrapper.get('#products-quick-hide-inactive').setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            productsIndex.url(),
+            expect.objectContaining({ hide_inactive: true }),
+            { preserveState: true, replace: true },
+        );
+
+        await wrapper.get('#products-quick-hide-inactive').setValue(false);
+
+        const [, sentFilters] = routerGetMock.mock.calls[1];
+        expect(sentFilters).not.toHaveProperty('hide_inactive');
+    });
+
+    it('shows an active-state badge on every product row', () => {
+        const wrapper = mountPage([
+            product({ id: 1, active: true }),
+            product({ id: 2, active: false }),
+        ]);
+
+        expect(
+            wrapper
+                .findAll('[data-testid="product-active-badge"]')
+                .map((badge) => badge.text()),
+        ).toEqual([t('products.status.active'), t('products.status.inactive')]);
     });
 
     it('renders the quick low-stock checkbox in the toolbar, without opening the filter dialog', () => {
@@ -461,6 +505,7 @@ describe('Products Index', () => {
             product({
                 name: 'Widgets',
                 ar_name: 'ودجات',
+                active: true,
                 image_url: '/img/widgets.png',
             }),
         ]);
@@ -480,7 +525,12 @@ describe('Products Index', () => {
 
     it("renders the product's stored box count as a clickable trigger button", () => {
         const wrapper = mountPage([
-            product({ name: 'Widgets', ar_name: 'ودجات', boxes_count: 24 }),
+            product({
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                active: true,
+                boxes_count: 24,
+            }),
         ]);
 
         const button = rowCells(wrapper)[1].get('button');
@@ -638,6 +688,7 @@ describe('Products Index', () => {
             product({
                 name: 'Widgets',
                 ar_name: 'ودجات',
+                active: true,
                 barcodes: [{ id: 1, barcode: '1234567890123' }],
             }),
         ]);
@@ -1469,6 +1520,7 @@ describe('Products Index', () => {
             product({
                 name: 'Widgets',
                 ar_name: 'ودجات',
+                active: true,
                 image_url: '/img/widgets.png',
             }),
         ]);
@@ -1489,6 +1541,7 @@ describe('Products Index', () => {
             product({
                 name: 'Widgets',
                 ar_name: '',
+                active: true,
                 image_url: '/img/widgets.png',
             }),
         ]);

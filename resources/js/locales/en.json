@@ -504,6 +504,10 @@
         }
     },
     "products": {
+        "status": {
+            "active": "Active",
+            "inactive": "Inactive"
+        },
         "title": "Products",
         "quickSearch": {
             "label": "Quick product search",
@@ -514,6 +518,7 @@
                 "occupancy": "Occupancy"
             },
             "inactive": "Inactive",
+            "hideInactive": "Hide inactive",
             "lowStock": "Low stock"
         },
         "columns": {

@@ -206,7 +206,7 @@ class Product extends Model
     /**
      * The id/name list used to populate the mobile app's product filter dropdown.
      *
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     public static function filterOptions(): Collection
     {
@@ -220,7 +220,7 @@ class Product extends Model
      * see Admin\ProductController::search()).
      *
      * @param  list<int>  $ids
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     public static function selectedOptions(array $ids = []): Collection
     {
@@ -245,12 +245,12 @@ class Product extends Model
      * see .ai/rules/shared-database.md.
      *
      * @param  EloquentBuilder<Product>  $query
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     private static function optionLabels(EloquentBuilder $query): Collection
     {
         return $query
-            ->select(['id', 'name', 'ar_name'])
+            ->select(['id', 'name', 'ar_name', 'published'])
             ->orderBy('name')
             ->get()
             // toBase() before map(): Eloquent's map() is declared as returning
@@ -261,6 +261,7 @@ class Product extends Model
                 'id' => $product->id,
                 'name' => $product->name,
                 'ar_name' => $product->ar_name,
+                'active' => $product->published,
             ]);
     }
 

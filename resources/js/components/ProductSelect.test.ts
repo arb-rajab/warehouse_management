@@ -98,7 +98,12 @@ describe('ProductSelect', () => {
     it('keeps the required guard input in sync with the selected product', () => {
         const wrapper = mountSelect({
             required: true,
-            modelValue: { id: 5, name: 'Widgets', ar_name: 'ودجات' },
+            modelValue: {
+                id: 5,
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                active: true,
+            },
         });
 
         const guard = wrapper.get('#pallet-action-product-guard')
@@ -150,7 +155,12 @@ describe('ProductSelect', () => {
     it('passes native form validation when required and a product is already selected', () => {
         const wrapper = mountSelectInForm({
             required: true,
-            modelValue: { id: 5, name: 'Widgets', ar_name: 'ودجات' },
+            modelValue: {
+                id: 5,
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                active: true,
+            },
         });
 
         const form = wrapper.get('form').element as HTMLFormElement;
@@ -159,7 +169,12 @@ describe('ProductSelect', () => {
 
     it("resolves the selected product's label from the model without fetching", () => {
         const wrapper = mountSelect({
-            modelValue: { id: 99, name: 'Widget', ar_name: 'ودجة' },
+            modelValue: {
+                id: 99,
+                name: 'Widget',
+                ar_name: 'ودجة',
+                active: true,
+            },
         });
 
         expect(wrapper.get('button').text()).toBe('Widget');
@@ -192,8 +207,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             paginated([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -204,7 +219,7 @@ describe('ProductSelect', () => {
         await options[1].trigger('click');
 
         expect(wrapper.emitted('update:modelValue')).toEqual([
-            [{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }],
+            [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
         ]);
     });
 
@@ -215,8 +230,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             paginated([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -233,7 +248,9 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]),
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ]),
         );
         await wrapper.vm.$nextTick();
 
@@ -277,10 +294,14 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -305,10 +326,14 @@ describe('ProductSelect', () => {
 
         resolveCall(
             1,
-            paginated([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], 20, {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -321,10 +346,14 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -351,10 +380,14 @@ describe('ProductSelect', () => {
 
         resolveCall(
             1,
-            paginated([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], 20, {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -367,10 +400,14 @@ describe('ProductSelect', () => {
 
         resolveCall(
             0,
-            paginated([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], 20, {
-                currentPage: 1,
-                lastPage: 1,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 1,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -410,12 +447,26 @@ describe('ProductSelect', () => {
         // Resolve the newer ("new") request first, then the stale ("old") one.
         resolveCall(
             2,
-            paginated([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+            paginated([
+                {
+                    id: 2,
+                    name: 'New product',
+                    ar_name: 'منتج جديد',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
         resolveCall(
             1,
-            paginated([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+            paginated([
+                {
+                    id: 1,
+                    name: 'Old product',
+                    ar_name: 'منتج قديم',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
 
@@ -427,7 +478,12 @@ describe('ProductSelect', () => {
 
     it('keeps resolving the selected product label once learned from a search page', async () => {
         const wrapper = mountSelect({
-            modelValue: { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+            modelValue: {
+                id: 1,
+                name: 'Widgets',
+                ar_name: 'ودجات',
+                active: true,
+            },
         });
 
         expect(wrapper.get('button').text()).toBe('Widgets');
@@ -440,6 +496,7 @@ describe('ProductSelect', () => {
                     id: 1,
                     name: 'Widgets (renamed)',
                     ar_name: 'ودجات (معاد تسميتها)',
+                    active: true,
                 },
             ]),
         );
@@ -467,8 +524,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             paginated([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -502,8 +559,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             paginated([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -523,10 +580,15 @@ describe('ProductSelect', () => {
         i18n.global.locale.value = 'ar';
 
         const translated = mountSelect({
-            modelValue: { id: 99, name: 'Widget', ar_name: 'ودجة' },
+            modelValue: {
+                id: 99,
+                name: 'Widget',
+                ar_name: 'ودجة',
+                active: true,
+            },
         });
         const untranslated = mountSelect({
-            modelValue: { id: 98, name: 'Gadget', ar_name: '' },
+            modelValue: { id: 98, name: 'Gadget', ar_name: '', active: true },
         });
 
         expect(translated.get('button').text()).toBe('ودجة');
@@ -540,8 +602,8 @@ describe('ProductSelect', () => {
         resolveCall(
             0,
             paginated([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -551,8 +613,8 @@ describe('ProductSelect', () => {
                 .findAllComponents(ProductOptionLabel)
                 .map((label) => label.props('product')),
         ).toEqual([
-            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-            { id: 2, name: 'Gadgets', ar_name: '' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            { id: 2, name: 'Gadgets', ar_name: '', active: true },
         ]);
     });
 });

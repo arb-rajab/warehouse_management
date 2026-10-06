@@ -165,7 +165,7 @@ test('the products index hydrates the product filter chips with both raw name co
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true])
     );
 });
 
@@ -462,6 +462,44 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 2)
     );
+});
+
+test('the products index includes inactive products by default, flagging each row\'s active state', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Alpha Widgets']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Zulu Widgets']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $active->id)
+            ->where('products.data.0.active', true)
+            ->where('products.data.1.id', $inactive->id)
+            ->where('products.data.1.active', false)
+    );
+});
+
+test('the hide_inactive filter excludes inactive products, keeping active ones, and is echoed back in the filters', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create();
+    Product::factory()->inactive()->count(2)->create();
+
+    $response = $this->get('/admin/products?hide_inactive=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $active->id)
+            ->where('filters.hide_inactive', true)
+    );
+});
+
+test('the hide_inactive filter rejects a non-boolean value', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/products?hide_inactive=maybe')->assertSessionHasErrors('hide_inactive');
 });
 
 test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
@@ -834,24 +872,28 @@ test('an authenticated admin can search products with every property the filter 
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the product search excludes deactivated products', function () {
+test('the product search includes deactivated products and flags their active state', function () {
     actingAsAdmin();
 
     $active = Product::factory()->create(['name' => 'Widget Blue']);
-    // Noise: a deactivated product matching the same search term must not be returned.
     $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    // Noise: a product that doesn't match the search term must not be returned.
+    $unrelated = Product::factory()->inactive()->create(['name' => 'Gadget']);
 
     $response = $this->getJson('/admin/products/search?q=Widget');
 
     $response->assertOk();
-    expect(collect($response->json('data'))->pluck('id'))
-        ->toContain($active->id)
-        ->not->toContain($inactive->id);
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())->toEqualCanonicalizing([$active->id, $inactive->id]);
+    expect($rows->firstWhere('id', $active->id)['active'])->toBeTrue();
+    expect($rows->firstWhere('id', $inactive->id)['active'])->toBeFalse();
+    expect($rows->pluck('id'))->not->toContain($unrelated->id);
 });
 
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
@@ -868,6 +910,7 @@ test('the product search options carry both raw name columns under the Arabic pa
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
 });
 
@@ -883,6 +926,7 @@ test('a searched product the store never translated carries an empty ar_name, no
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => '',
+        'active' => true,
     ]);
 });
 
@@ -933,7 +977,7 @@ test('the product search filters by the store\'s Arabic name, excluding a non-ma
     expect($response->json('data'))->toHaveCount(1);
     // Searching matches either column, and the option carries both raw — the
     // locale only decides which of them the frontend renders.
-    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true]);
 });
 
 test('the product search matches a multi-word term split across the two name columns', function () {

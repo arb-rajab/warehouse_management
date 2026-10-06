@@ -504,6 +504,10 @@
         }
     },
     "products": {
+        "status": {
+            "active": "نشط",
+            "inactive": "غير نشط"
+        },
         "title": "المنتجات",
         "quickSearch": {
             "label": "بحث سريع عن منتج",
@@ -514,6 +518,7 @@
                 "occupancy": "الإشغال"
             },
             "inactive": "غير نشط",
+            "hideInactive": "إخفاء غير النشطة",
             "lowStock": "مخزون منخفض"
         },
         "columns": {
