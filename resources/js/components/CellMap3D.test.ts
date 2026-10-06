@@ -1063,6 +1063,92 @@ describe('CellMap3D', () => {
         expect(lastCamera().position).toEqual({ x: 0, y: EYE_HEIGHT, z: 0 });
     });
 
+    describe('orbit mode focus', () => {
+        type OrbitVm = {
+            focusCell: (r: string, c: number, f: number) => void;
+            resetView: () => void;
+            setCameraMode: (mode: 'walk' | 'orbit') => void;
+        };
+
+        function mountOrbiting() {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            const vm = wrapper.vm as unknown as OrbitVm;
+            vm.setCameraMode('orbit');
+            rafCallback?.(0);
+
+            return { wrapper, vm };
+        }
+
+        it('re-aims the orbit camera at the focused cell instead of moving the walk position', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            rafCallback?.(16);
+
+            const focusedLookAt = lastCamera().lookAt.mock.calls.at(-1);
+            expect(focusedLookAt).not.toEqual(overviewLookAt);
+            expect(focusedLookAt).toEqual([
+                rowWorldX(2),
+                flatWorldY(1),
+                cellWorldZ(3),
+            ]);
+
+            vm.focusCell('A', 1, 1);
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual([
+                rowWorldX(0),
+                flatWorldY(1),
+                cellWorldZ(1),
+            ]);
+        });
+
+        it('returns to the whole-warehouse overview on resetView and on re-entering orbit', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            vm.resetView();
+            rafCallback?.(16);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            vm.setCameraMode('orbit');
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+        });
+
+        it('does not move the walk camera while orbiting, and keeps its position when returning to walk', () => {
+            const { vm } = mountOrbiting();
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            rafCallback?.(16);
+
+            expect(lastCamera().position).toEqual({
+                x: 0,
+                y: EYE_HEIGHT,
+                z: 0,
+            });
+        });
+    });
+
     /** Cell boxes are one `THREE.InstancedMesh` per state (see CellMap3D.vue), not one mesh per cell. */
     function cellBoxInstancedMeshes() {
         return registry().instancedMeshes.filter(
