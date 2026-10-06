@@ -1070,6 +1070,7 @@ watch(
                     @pointerup="viewport.onPointerUp"
                     @pointercancel="viewport.onPointerUp"
                     @pointerleave="viewport.onPointerUp"
+                    @click.capture="viewport.onClickCapture"
                 >
                     <div
                         ref="mapContentEl"

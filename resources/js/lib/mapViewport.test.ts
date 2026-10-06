@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     clampPanAxis,
     panKeepingAnchor,
@@ -504,5 +504,84 @@ describe('panKeepingAnchor', () => {
 
     it('is a no-op when the zoom does not change', () => {
         expect(panKeepingAnchor(-120, 1000, 1.2, 1.2, 300)).toBeCloseTo(-120);
+    });
+});
+
+describe('useMapViewport click suppression after a drag', () => {
+    function clickEvent() {
+        return {
+            stopPropagation: vi.fn(),
+            preventDefault: vi.fn(),
+        } as unknown as Event;
+    }
+
+    it('swallows the click that follows a drag beyond the threshold', () => {
+        const viewport = useMapViewport();
+        const click = clickEvent();
+
+        viewport.onPointerDown(pointerEvent(1, 100, 100));
+        viewport.onPointerMove(pointerEvent(1, 140, 100));
+        viewport.onPointerUp(pointerEvent(1, 140, 100));
+        viewport.onClickCapture(click);
+
+        expect(click.stopPropagation).toHaveBeenCalledOnce();
+        expect(click.preventDefault).toHaveBeenCalledOnce();
+    });
+
+    it('lets a tap with only slight movement through', () => {
+        const viewport = useMapViewport();
+        const click = clickEvent();
+
+        viewport.onPointerDown(pointerEvent(1, 100, 100));
+        viewport.onPointerMove(pointerEvent(1, 103, 102));
+        viewport.onPointerUp(pointerEvent(1, 103, 102));
+        viewport.onClickCapture(click);
+
+        expect(click.stopPropagation).not.toHaveBeenCalled();
+        expect(click.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('lets a tap through after an earlier drag was swallowed', () => {
+        const viewport = useMapViewport();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerMove(pointerEvent(1, 50, 0));
+        viewport.onPointerUp(pointerEvent(1, 50, 0));
+        viewport.onClickCapture(clickEvent());
+
+        const tap = clickEvent();
+        viewport.onPointerDown(pointerEvent(1, 10, 10));
+        viewport.onPointerUp(pointerEvent(1, 10, 10));
+        viewport.onClickCapture(tap);
+
+        expect(tap.stopPropagation).not.toHaveBeenCalled();
+    });
+
+    it('resets the drag flag on the next press when no click followed the drag', () => {
+        const viewport = useMapViewport();
+        const tap = clickEvent();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerMove(pointerEvent(1, 50, 0));
+        viewport.onPointerUp(pointerEvent(1, 50, 0));
+
+        viewport.onPointerDown(pointerEvent(1, 10, 10));
+        viewport.onPointerUp(pointerEvent(1, 10, 10));
+        viewport.onClickCapture(tap);
+
+        expect(tap.stopPropagation).not.toHaveBeenCalled();
+    });
+
+    it('treats a pinch as a drag so lifting fingers over a pallet does not open it', () => {
+        const viewport = useMapViewport();
+        const click = clickEvent();
+
+        viewport.onPointerDown(pointerEvent(1, 0, 0));
+        viewport.onPointerDown(pointerEvent(2, 100, 0));
+        viewport.onPointerUp(pointerEvent(2, 100, 0));
+        viewport.onPointerUp(pointerEvent(1, 0, 0));
+        viewport.onClickCapture(click);
+
+        expect(click.stopPropagation).toHaveBeenCalledOnce();
     });
 });
