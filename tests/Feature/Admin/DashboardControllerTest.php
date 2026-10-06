@@ -369,7 +369,8 @@ test('selecting a product lists its pallets in exactly the pallets page order, e
 test('the selected-product pallet list is capped at the limit instead of returning every pallet', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
-    Pallet::factory()->for($product)->count(DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT + 1)->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT + 1]);
+    $row->cells->each(fn ($cell) => Pallet::factory()->for($product)->create(['cell_id' => $cell->id]));
 
     $response = $this->get("/admin?product_id[]={$product->id}");
 
