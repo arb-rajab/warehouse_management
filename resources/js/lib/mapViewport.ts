@@ -162,6 +162,9 @@ export function mapOrientation(rotationDegrees: number): MapOrientation {
     return MAP_ORIENTATIONS[normalizeRotation(rotationDegrees) / 90];
 }
 
+/** Pointer travel (px) beyond which a press counts as a drag, not a tap. */
+const DRAG_CLICK_THRESHOLD_PX = 8;
+
 /**
  * Pan/zoom/rotate state for the warehouse map, driven by mouse wheel (zoom), pointer drag
  * (pan), two-pointer pinch (zoom), and explicit button calls (zoom/rotate/reset/panBy).
@@ -171,6 +174,8 @@ export function useMapViewport() {
 
     const pointers = new Map<number, Point>();
     let panAnchor: Point | null = null;
+    let gestureOrigin: Point | null = null;
+    let gestureMoved = false;
     let pinchStartDistance: number | null = null;
     let zoomAtPinchStart = 1;
     let bounds: { container: Size; content: Size } | null = null;
@@ -307,7 +312,10 @@ export function useMapViewport() {
 
         if (pointers.size === 1) {
             panAnchor = { x: event.clientX, y: event.clientY };
+            gestureOrigin = { x: event.clientX, y: event.clientY };
+            gestureMoved = false;
         } else if (pointers.size === 2) {
+            gestureMoved = true;
             panAnchor = null;
             const [a, b] = [...pointers.values()];
             pinchStartDistance = distanceBetween(a, b);
@@ -321,6 +329,17 @@ export function useMapViewport() {
         }
 
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (
+            gestureOrigin &&
+            !gestureMoved &&
+            distanceBetween(gestureOrigin, {
+                x: event.clientX,
+                y: event.clientY,
+            }) > DRAG_CLICK_THRESHOLD_PX
+        ) {
+            gestureMoved = true;
+        }
 
         if (pointers.size === 1 && panAnchor) {
             panBy(event.clientX - panAnchor.x, event.clientY - panAnchor.y);
@@ -353,9 +372,25 @@ export function useMapViewport() {
         }
     }
 
+    /**
+     * Capture-phase click handler for the viewport element: swallows the click
+     * that follows a pan/pinch gesture so releasing a drag over a pallet never
+     * opens it, while a plain tap (movement within the threshold) passes through.
+     */
+    function onClickCapture(event: Event): void {
+        if (!gestureMoved) {
+            return;
+        }
+
+        gestureMoved = false;
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
     return {
         state: readonly(state),
         setBounds,
+        onClickCapture,
         zoomIn,
         zoomOut,
         setZoom,

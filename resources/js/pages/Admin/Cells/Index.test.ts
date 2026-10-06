@@ -313,6 +313,51 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    async function firePointer(
+        element: Element,
+        type: string,
+        clientX: number,
+        clientY: number,
+    ): Promise<void> {
+        // jsdom has no PointerEvent; a MouseEvent carries the same coordinates.
+        element.dispatchEvent(
+            new MouseEvent(type, { clientX, clientY, bubbles: true }),
+        );
+        await flushPromises();
+    }
+
+    it('does not open the pallet-actions dialog when the click follows a map drag, but does for a plain tap', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ id: 9 }),
+                }),
+            ],
+        );
+        const viewport = wrapper.get('[data-testid="map-viewport"]');
+        const manageButton = wrapper.get(
+            `[title="${t('cells.palletActions.triggerLabel')}"]`,
+        );
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointermove', 180, 100);
+        await firePointer(viewport.element, 'pointerup', 180, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointerup', 100, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    });
+
     it('opens the toggle-active dialog when a 2D cell slot emits toggle-active', async () => {
         const wrapper = mountPage(
             [row({ letter: 'A', cells_count: 1 })],
