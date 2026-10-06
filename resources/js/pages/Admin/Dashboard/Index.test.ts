@@ -1,5 +1,5 @@
 import type { UrlMethodPair } from '@inertiajs/core';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -484,7 +484,7 @@ describe('Dashboard Index', () => {
             t('dashboard.productPallets.empty'),
         );
         const viewAll = wrapper
-            .findAllComponents({ name: 'Link' })
+            .findAllComponents(Link)
             .find((link) =>
                 link.text().includes(t('dashboard.productPallets.viewAll')),
             );
