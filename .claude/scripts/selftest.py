@@ -84,6 +84,22 @@ def main() -> int:
         code, out = run('php_duplicate_blocks.py', str(alone))
         check('single-file repetition not reported', '0 block(s)' in out, out)
 
+        print('build_without_fonts.py')
+        import build_without_fonts
+
+        stripped = build_without_fonts.fontless_config(build_without_fonts.CONFIG.read_text())
+        check(
+            'the real vite.config.ts loses the font plugin and keeps the rest',
+            'bunny' not in stripped and 'fonts' not in stripped and 'laravel({' in stripped and 'input:' in stripped,
+            stripped,
+        )
+
+        try:
+            build_without_fonts.fontless_config('export default {};\n')
+            check('a config without the font plugin is rejected, not built', False)
+        except ValueError:
+            check('a config without the font plugin is rejected, not built', True)
+
         print('pre_push_check.py')
         sys.path.insert(0, str(SCRIPTS))
         import pre_push_check

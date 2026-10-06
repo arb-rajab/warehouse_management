@@ -27,6 +27,9 @@
 #   npm run build             ~1m    public/build/manifest.json, which every
 #                                    Inertia feature test needs: without it ~200
 #                                    Pest tests fail with ViteManifestNotFound.
+#                                    fonts.bunny.net is blocked here (403), which
+#                                    fails the build, so it falls back to
+#                                    .claude/scripts/build_without_fonts.py.
 #
 # All of these are idempotent and the container is cached once the hook
 # finishes, so the composer cost is paid on a cold container, not every session.
@@ -115,8 +118,16 @@ if [ "$backend" = 'ready' ]; then
     # Feature tests render the Inertia root view, which reads the Vite manifest.
     # The build needs the Wayfinder files above, and a missing manifest fails
     # ~200 tests for a reason that has nothing to do with the code under test.
-    if [ "$frontend" = 'ready' ] && npm run build >/dev/null 2>&1; then
-        build='built'
+    #
+    # The build fetches Instrument Sans from fonts.bunny.net, which a sandbox
+    # proxy may block (403). Then fall back to a font-less build from a temporary
+    # config copy (vite.config.ts itself is untouched) rather than leave no manifest.
+    if [ "$frontend" = 'ready' ]; then
+        if npm run build >/dev/null 2>&1; then
+            build='built'
+        elif python3 .claude/scripts/build_without_fonts.py >/dev/null 2>&1; then
+            build='built (without the remote font: fonts.bunny.net is unreachable)'
+        fi
     fi
 fi
 

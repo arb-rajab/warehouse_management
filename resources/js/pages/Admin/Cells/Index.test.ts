@@ -1511,7 +1511,7 @@ describe('Cells Index (warehouse map)', () => {
         getBoundingClientRectSpy.mockRestore();
     });
 
-    it('resets pan to (0,0) and fitting re-pans to keep cell A1 flush at the top-left, unlike rotation which centers A1', async () => {
+    it('resets pan to (0,0), fitting re-pans to keep the map flush at the top-left, and rotation leaves pan untouched', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
         // centerLabelInViewport() looks up its target via `document.querySelector`,
         // so the mounted tree needs to be attached to the document for that to
@@ -1578,16 +1578,25 @@ describe('Cells Index (warehouse map)', () => {
         expect(transform()).toContain('translate(-150px, -120px)');
         expect(transform()).toContain('scale(0.7)');
 
-        // Rotation still recenters on A1, so it remains free to pan away from
-        // translate(0px, 0px) given the mismatched container/target rects above.
+        // Rotation no longer re-centers on A1 or resets pan: the map stays put.
         await wrapper
             .get(`[title="${t('cells.map.rotateRight')}"]`)
             .trigger('click');
         await flushPromises();
-        expect(transform()).not.toContain('translate(0px, 0px)');
+        expect(transform()).toContain('translate(-150px, -120px)');
+        expect(transform()).toContain('scale(0.7)');
 
         getBoundingClientRectSpy.mockRestore();
         wrapper.element.remove();
+    });
+
+    it('wraps the map content with no padding around the cells', () => {
+        const wrapper = mountPage([row()], []);
+        const classes = wrapper
+            .get('[data-testid="map-viewport"] > div')
+            .classes();
+
+        expect(classes.filter((c) => /^p[xytrbl]?-/.test(c))).toEqual([]);
     });
 
     it('zooms via a wheel event on the map viewport', async () => {
