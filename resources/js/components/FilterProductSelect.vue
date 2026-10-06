@@ -145,6 +145,10 @@ watch(open, (isOpen) => {
 
 onBeforeUnmount(stopTrackingViewport);
 
+function deselectAll(): void {
+    model.value = [];
+}
+
 function buttonLabel(): string {
     if (model.value.length === 0) {
         return props.allLabel;
@@ -202,11 +206,21 @@ function buttonLabel(): string {
                 @scroll="onOptionsScroll(optionsListRef)"
             >
                 <template v-if="pinnedProducts.length > 0">
-                    <p
-                        class="px-2 py-1 text-xs font-medium text-gray-400 dark:text-neutral-500"
-                    >
-                        {{ t('cellLog.filters.selected') }}
-                    </p>
+                    <div class="flex items-center justify-between px-2 py-1">
+                        <p
+                            class="text-xs font-medium text-gray-400 dark:text-neutral-500"
+                        >
+                            {{ t('cellLog.filters.selected') }}
+                        </p>
+                        <button
+                            type="button"
+                            data-testid="deselect-all-products"
+                            class="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            @click="deselectAll"
+                        >
+                            {{ t('cellLog.filters.deselectAll') }}
+                        </button>
+                    </div>
                     <div
                         class="divide-y divide-gray-100 dark:divide-neutral-700"
                     >

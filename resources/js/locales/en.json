@@ -193,6 +193,7 @@
             "searching": "Searching…",
             "noProductsFound": "No products found.",
             "selected": "Selected",
+            "deselectAll": "Deselect all",
             "palletHistory": "Showing history for pallet #{id}",
             "flaggedOnly": "Flagged only"
         },
