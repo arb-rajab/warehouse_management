@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import { productAlternateName, productName } from '@/lib/productName';
 import type { ProductFilterOption } from '@/types/admin';
 
@@ -38,6 +39,7 @@ const alternateLabel = computed(() =>
                 data-testid="product-option-id"
                 >#{{ product.id }}</span
             >
+            <ProductActiveBadge :active="product.active" />
         </span>
         <span
             v-if="alternateLabel"

@@ -8,7 +8,11 @@ import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { matchingPallet, paginated } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { MatchingPallet, MatchingPalletFilters } from '@/types/admin';
+import type {
+    MatchingPallet,
+    MatchingPalletFilters,
+    ProductFilterOption,
+} from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -30,7 +34,7 @@ vi.mock('@inertiajs/vue3', async () => {
 function mountPage(
     pallets: MatchingPallet[],
     filters: MatchingPalletFilters = {},
-    selectedProducts: { id: number; name: string; ar_name: string }[] = [],
+    selectedProducts: ProductFilterOption[] = [],
 ) {
     usePageMock.mockReturnValue({
         url: palletsIndex.url(),
@@ -175,7 +179,7 @@ describe('Pallets Index', () => {
                 expires_within_days: 5,
                 stale_after_days: 30,
             },
-            [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
         );
 
         const text = wrapper.text();

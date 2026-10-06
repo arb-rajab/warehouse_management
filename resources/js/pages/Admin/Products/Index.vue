@@ -25,6 +25,7 @@ import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -70,6 +71,7 @@ const filters = reactive({
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     inactive: props.filters.inactive ?? false,
+    hide_inactive: props.filters.hide_inactive ?? false,
     low_stock: props.filters.low_stock ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
@@ -93,6 +95,7 @@ const activeFilterCount = computed(() =>
         filters.expired,
         filters.expires_within_days !== '',
         filters.inactive,
+        filters.hide_inactive,
         filters.low_stock,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
@@ -110,7 +113,10 @@ const activeFilterCount = computed(() =>
  */
 const productColumnFiltered = computed(
     () =>
-        filters.product_id.length > 0 || filters.inactive || filters.low_stock,
+        filters.product_id.length > 0 ||
+        filters.inactive ||
+        filters.hide_inactive ||
+        filters.low_stock,
 );
 
 /**
@@ -134,12 +140,13 @@ const occupancyColumnsFiltered = computed(
  * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, inactive, low_stock, ...rest } = filters;
+    const { expired, inactive, hide_inactive, low_stock, ...rest } = filters;
 
     return {
         ...rest,
         ...(expired ? { expired: true } : {}),
         ...(inactive ? { inactive: true } : {}),
+        ...(hide_inactive ? { hide_inactive: true } : {}),
         ...(low_stock ? { low_stock: true } : {}),
     };
 }
@@ -182,6 +189,7 @@ function clearFilters(): void {
     filters.expired = false;
     filters.expires_within_days = '';
     filters.inactive = false;
+    filters.hide_inactive = false;
     filters.low_stock = false;
     filters.product_id = [];
     filters.user_id = [];
@@ -325,6 +333,12 @@ function refreshBarcodesDialogProduct(): void {
                     id="products-quick-inactive"
                     v-model="filters.inactive"
                     :label="t('products.filters.inactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
+                    id="products-quick-hide-inactive"
+                    v-model="filters.hide_inactive"
+                    :label="t('products.filters.hideInactive')"
                     @update:model-value="applyFilters"
                 />
                 <FilterCheckbox
@@ -702,6 +716,7 @@ function refreshBarcodesDialogProduct(): void {
                             class="h-8 w-8 shrink-0 rounded object-cover"
                         />
                         {{ productName(product.name, product.ar_name) }}
+                        <ProductActiveBadge :active="product.active" />
                     </div>
                 </td>
                 <td class="px-4 py-2">

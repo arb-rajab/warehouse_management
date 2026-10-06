@@ -87,6 +87,7 @@ watch(selectedAction, (action) => {
             id: props.cell.pallet.product_id,
             name: props.cell.pallet.product_name,
             ar_name: props.cell.pallet.product_ar_name,
+            active: true,
         };
         form.expiration_date = props.cell.pallet.expiration_date ?? '';
         form.boxes_count = String(props.cell.pallet.remaining_boxes);

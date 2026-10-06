@@ -61,7 +61,7 @@ const filterOptions: CellVerificationReportFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات', active: true }],
 };
 
 function mountPage(
