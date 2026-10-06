@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -24,6 +24,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -34,7 +35,7 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { ProductFilterOptions } from '@/types/admin';
+import type { MatchingPallet, ProductFilterOptions } from '@/types/admin';
 
 interface ExpiringMonthWindow {
     months: number;
@@ -88,6 +89,7 @@ const props = defineProps<{
     };
     today: string;
     weekStart: string;
+    productPallets: MatchingPallet[];
     filters: { product_id: number[] | null };
     filterOptions: ProductFilterOptions;
 }>();
@@ -200,6 +202,26 @@ function onProductIdsChange(ids: string[]): void {
                 />
             </div>
         </PageHeader>
+
+        <section
+            v-if="filters.product_id"
+            id="dashboard-product-pallets"
+            class="mb-8"
+        >
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.productPallets.title') }}
+            </h2>
+            <MatchingPalletsTable
+                :pallets="productPallets"
+                :empty-message="t('dashboard.productPallets.empty')"
+            />
+            <Link
+                :href="palletsIndex({ query: productQuery })"
+                :class="['mt-3', filterTriggerButtonClass]"
+            >
+                {{ t('dashboard.productPallets.viewAll') }}
+            </Link>
+        </section>
 
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">

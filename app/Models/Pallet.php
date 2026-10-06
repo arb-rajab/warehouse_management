@@ -172,6 +172,30 @@ class Pallet extends Model
     }
 
     /**
+     * The "matching pallets" list's row query: the columns and relations
+     * `MatchingPalletResource` reads, in the list's canonical order (see
+     * `orderedByExpirationThenAdded()`). Shared by the admin pallets page and
+     * the dashboard's selected-product pallet list so both always show the
+     * same rows in the same order.
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function listedForAdmin(Builder $query): void
+    {
+        $query
+            ->select(['id', 'product_id', 'cell_id', 'expiration_date', 'remaining_boxes', 'created_at'])
+            ->with([
+                'product:id,name,ar_name,thumbnail_img,published',
+                'product.thumbnailUpload:id,file_name,external_link',
+                'product.setting:product_id,boxes_count',
+                'cell:id,row_id,cell_number,flat_number,state,is_active',
+                'cell.row:id,letter',
+            ])
+            ->orderedByExpirationThenAdded();
+    }
+
+    /**
      * Order a query of pallets by `expiration_date` ascending (a null
      * expiration sorts last, not first — the database default for ASC —
      * since "no expiration date" isn't the most urgent case), then

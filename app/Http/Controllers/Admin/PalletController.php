@@ -42,16 +42,8 @@ class PalletController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $pallets = Pallet::query()
-            ->select(['id', 'product_id', 'cell_id', 'expiration_date', 'remaining_boxes', 'created_at'])
-            ->with([
-                'product:id,name,ar_name,thumbnail_img,published',
-                'product.thumbnailUpload:id,file_name,external_link',
-                'product.setting:product_id,boxes_count',
-                'cell:id,row_id,cell_number,flat_number,state,is_active',
-                'cell.row:id,letter',
-            ])
+            ->listedForAdmin()
             ->matchingHighlightFilters($request)
-            ->orderedByExpirationThenAdded()
             ->paginate($perPage)
             ->withQueryString();
 

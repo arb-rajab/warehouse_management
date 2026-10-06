@@ -466,6 +466,11 @@
     },
     "dashboard": {
         "title": "Dashboard",
+        "productPallets": {
+            "title": "Selected products' pallets",
+            "viewAll": "View all on the pallets page",
+            "empty": "The selected products have no pallets."
+        },
         "occupancy": {
             "title": "Cell occupancy",
             "empty": "Empty",

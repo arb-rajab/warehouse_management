@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -317,6 +319,64 @@ test('a product filter narrows occupancy (empty forced to zero), expiring, and a
     expect($matchingPallet->product_id)->toBe($matchingProduct->id);
 
     Carbon::setTestNow();
+});
+
+test('the dashboard lists no pallets when no product is selected', function () {
+    actingAsAdmin();
+    Pallet::factory()->create();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('productPallets', 0)
+    );
+});
+
+test('selecting a product lists its pallets in exactly the pallets page order, excluding other products', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 5]);
+    $cell = fn (int $flat) => $row->cells()->where('flat_number', $flat)->first()->id;
+
+    $noExpiration = Pallet::factory()->for($product)->create(['cell_id' => $cell(1), 'expiration_date' => null, 'created_at' => '2026-08-03 00:00:00']);
+    $createdLater = Pallet::factory()->for($product)->create(['cell_id' => $cell(2), 'expiration_date' => '2026-09-05', 'created_at' => '2026-08-02 00:00:00']);
+    $createdEarlier = Pallet::factory()->for($product)->create(['cell_id' => $cell(3), 'expiration_date' => '2026-09-05', 'created_at' => '2026-08-01 00:00:00']);
+    $earliest = Pallet::factory()->for($product)->create(['cell_id' => $cell(4), 'expiration_date' => '2026-09-01', 'created_at' => '2026-08-05 00:00:00']);
+    $otherProductPallet = Pallet::factory()->create(['cell_id' => $cell(5), 'expiration_date' => '2026-08-01']);
+
+    $expectedOrder = [$earliest->id, $createdEarlier->id, $createdLater->id, $noExpiration->id];
+
+    $dashboardIds = null;
+    $this->get("/admin?product_id[]={$product->id}")->assertOk()->assertInertia(
+        function (Assert $page) use (&$dashboardIds) {
+            $page->has('productPallets', 4);
+            $dashboardIds = array_column($page->toArray()['props']['productPallets'], 'id');
+        }
+    );
+
+    $palletsPageIds = null;
+    $this->get("/admin/pallets?product_id[]={$product->id}")->assertOk()->assertInertia(
+        function (Assert $page) use (&$palletsPageIds) {
+            $palletsPageIds = array_column($page->toArray()['props']['pallets']['data'], 'id');
+        }
+    );
+
+    expect($dashboardIds)->toBe($expectedOrder)
+        ->and($dashboardIds)->toBe($palletsPageIds)
+        ->and($dashboardIds)->not->toContain($otherProductPallet->id);
+});
+
+test('the selected-product pallet list is capped at the limit instead of returning every pallet', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT + 1]);
+    $row->cells->each(fn ($cell) => Pallet::factory()->for($product)->create(['cell_id' => $cell->id]));
+
+    $response = $this->get("/admin?product_id[]={$product->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('productPallets', DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT)
+    );
 });
 
 test('the dashboard has no pre-selected products for the product filter when nothing is selected', function () {

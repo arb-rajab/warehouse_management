@@ -1,5 +1,5 @@
 import type { UrlMethodPair } from '@inertiajs/core';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -16,9 +16,11 @@ import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpContr
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import { t } from '@/lib/i18n';
-import { paginated } from '@/testing/factories';
+import { matchingPallet, paginated } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import type { MatchingPallet } from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -70,6 +72,7 @@ const products = [
 function mountPage(
     overrides: {
         filters?: { product_id: number[] | null };
+        productPallets?: MatchingPallet[];
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -82,6 +85,7 @@ function mountPage(
             stats,
             today: '2026-08-13',
             weekStart: '2026-08-10',
+            productPallets: overrides.productPallets ?? [],
             filters: overrides.filters ?? { product_id: null },
             filterOptions: { products },
         },
@@ -453,6 +457,46 @@ describe('Dashboard Index', () => {
             }),
         );
         expect(stale?.exists()).toBe(true);
+    });
+
+    it('hides the selected-product pallets section when no product is selected', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.find('#dashboard-product-pallets').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain(
+            t('dashboard.productPallets.title'),
+        );
+    });
+
+    it('shows the selected products pallets in the order given, with a link to the pallets page for the same products', () => {
+        const first = matchingPallet({ id: 1 });
+        const second = matchingPallet({ id: 2 });
+        const wrapper = mountPage({
+            filters: { product_id: [1] },
+            productPallets: [first, second],
+        });
+
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.title'));
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.viewAll'));
+        const table = wrapper.getComponent(MatchingPalletsTable);
+        expect(table.props('pallets')).toEqual([first, second]);
+        expect(table.props('emptyMessage')).toBe(
+            t('dashboard.productPallets.empty'),
+        );
+        const viewAll = wrapper
+            .findAllComponents(Link)
+            .find((link) =>
+                link.text().includes(t('dashboard.productPallets.viewAll')),
+            );
+        expect(viewAll?.props('href')).toEqual(
+            palletsIndex({ query: { product_id: [1] } }),
+        );
+    });
+
+    it('shows the empty message when the selected product has no pallets', () => {
+        const wrapper = mountPage({ filters: { product_id: [1] } });
+
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.empty'));
     });
 
     it('renders exactly seven sections, including the stale, low-stock and inactive-in-warehouse sections', () => {
