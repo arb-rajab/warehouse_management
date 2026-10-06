@@ -47,6 +47,7 @@ import {
     stepPitch,
     stepPosition,
     stepYaw,
+    orbitWorldPointToScreenPercent,
     worldPointToScreenPercent,
 } from './mapWalker';
 
@@ -1114,5 +1115,48 @@ describe('miniMapHeadingDegrees', () => {
         expect(strafedRightLeftPercent).toBeGreaterThan(centerLeftPercent);
         expect(miniMapHeadingDegrees(10)).toBeGreaterThan(0);
         expect(miniMapHeadingDegrees(10)).toBeLessThan(90);
+    });
+});
+
+describe('orbitWorldPointToScreenPercent', () => {
+    it('centers the target the camera looks at', () => {
+        const result = orbitWorldPointToScreenPercent(
+            { x: 0, y: 40, z: 10 },
+            { x: 0, y: 0, z: 0 },
+            1,
+            { x: 0, y: 0, z: 0 },
+        );
+
+        expect(result.leftPercent).toBeCloseTo(50);
+        expect(result.topPercent).toBeCloseTo(50);
+        expect(result.visible).toBe(true);
+    });
+
+    it('places a point further along +Z lower on screen when looking down from the +Z side', () => {
+        const target = { x: 0, y: 0, z: 0 };
+        const camera = { x: 0, y: 40, z: 10 };
+        const near = orbitWorldPointToScreenPercent(camera, target, 1, {
+            x: 0,
+            y: 0,
+            z: 5,
+        });
+        const far = orbitWorldPointToScreenPercent(camera, target, 1, {
+            x: 0,
+            y: 0,
+            z: -5,
+        });
+
+        expect(near.topPercent).toBeGreaterThan(far.topPercent);
+    });
+
+    it('hides a point behind the camera', () => {
+        expect(
+            orbitWorldPointToScreenPercent(
+                { x: 0, y: 40, z: 10 },
+                { x: 0, y: 0, z: 0 },
+                1,
+                { x: 0, y: 80, z: 20 },
+            ).visible,
+        ).toBe(false);
     });
 });

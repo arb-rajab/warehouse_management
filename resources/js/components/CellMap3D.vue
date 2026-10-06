@@ -33,6 +33,7 @@ import {
     BOX_SIZE,
     boundsForWarehouse,
     CAMERA_FOV_DEGREES,
+    CELL_SPACING,
     cellWorldZ,
     clamp,
     defaultOrbitState,
@@ -53,7 +54,9 @@ import {
     orbitCameraPosition,
     orbitDistanceFromPinch,
     orbitRangeForBounds,
+    orbitWorldPointToScreenPercent,
     pitchToLookAt,
+    ROW_SPACING,
     rowWorldX,
     SPRINT_MULTIPLIER,
     stepOrbitDistance,
@@ -140,6 +143,20 @@ const ROW_LABEL_HEIGHT_ABOVE_SHELVES = 1;
  * the default standing-at-the-entrance view.
  */
 const ROW_LABEL_DEPTH_IN_CELLS = 2;
+/**
+ * Orbit-mode row labels sit on the floor just before a row's first cell
+ * (cell 1 is at one `CELL_SPACING`, `bounds` start at Z=0), so from straight
+ * above each letter reads at the head of its own row.
+ */
+const ORBIT_ROW_LABEL_DEPTH_IN_CELLS = 0.3;
+const ORBIT_ROW_LABEL_HEIGHT = 0.05;
+/** Aisle floor markers: how far they sit above the floor, so the two don't z-fight. */
+const AISLE_MARKER_HEIGHT = 0.01;
+/** The marker spans the clear gap between two neighboring rows' corner posts. */
+/** Canvas pixels per world unit, capped so a long aisle is split into several textures instead of one oversized one. */
+const AISLE_MARKER_PIXELS_PER_UNIT = 64;
+const AISLE_MARKER_MAX_TEXTURE_PIXELS = 4096;
+const AISLE_MARKER_TEXT_COLOR = '#1f2937';
 const SKY_COLOR = 0xe5e7eb;
 const SHELF_COLOR = 0x64748b;
 const SHELF_THICKNESS = 0.15;
@@ -150,6 +167,8 @@ const SHELF_MARGIN = BOX_SIZE * 0.3;
 const POST_SIZE = 0.15;
 /** How far a row's corner posts stand out from its boxes, in X (beside the aisle). */
 const POST_OFFSET = BOX_SIZE / 2 + SHELF_MARGIN;
+/** The aisle floor marker spans the clear gap between two neighboring rows' corner posts. */
+const AISLE_MARKER_WIDTH = ROW_SPACING - POST_OFFSET * 2;
 
 /** Share of each box face a product image covers — the border left around it keeps the box's state color readable. */
 const PRODUCT_IMAGE_FACE_FRACTION = 0.7;
@@ -372,11 +391,11 @@ const miniMap = reactive({ x: 0, y: 0, z: 0, yawDegrees: 0 });
  * Floor-aisle-sign labels — floating row-letter signage over the 3D scene
  * itself (not just the walk-mode mini-map), so a row is identifiable at a
  * glance while walking without flying up to a cell and reading the faced-
- * cell panel or checking the mini-map. Only rendered/updated in walk mode,
- * like the mini-map and location indicator (`updateMiniMap`,
- * `updateCurrentLocation`) — an orbit overview already sees every row at
- * once. Each entry is a live projection (`worldPointToScreenPercent`) of the
- * row's anchor point (`rowLabelWorldPosition`) onto the walk camera's
+ * cell panel or checking the mini-map. Also drawn in orbit mode (so the top
+ * view names every row), anchored on the floor at the row's head instead of
+ * floating above its shelves. Each entry is a live projection
+ * (`worldPointToScreenPercent`/`orbitWorldPointToScreenPercent`) of the
+ * row's anchor point (`rowLabelWorldPosition`) onto the active camera's
  * screen, refreshed every frame but only written past
  * ROW_LABEL_UPDATE_EPSILON_PERCENT to avoid a reactive write every frame.
  */
@@ -400,6 +419,14 @@ function rowLabelWorldPosition(
     rowIndex: number,
     band: CellMap3DBand,
 ): { x: number; y: number; z: number } {
+    if (cameraMode.value === 'orbit') {
+        return {
+            x: rowWorldX(rowIndex),
+            y: ORBIT_ROW_LABEL_HEIGHT,
+            z: cellWorldZ(ORBIT_ROW_LABEL_DEPTH_IN_CELLS),
+        };
+    }
+
     const topFlat = maxOf(
         band.items.map((item) => item.flatNumber),
         1,
@@ -421,14 +448,25 @@ function updateRowLabels(): void {
 
     const aspect = container.clientWidth / (container.clientHeight || 1);
 
+    const orbitPosition = orbitCameraPosition(orbitRange, orbitState);
+
     props.bands.forEach((band, rowIndex) => {
-        const projected = worldPointToScreenPercent(
-            position,
-            pitchDegrees,
-            yawDegrees,
-            aspect,
-            rowLabelWorldPosition(rowIndex, band),
-        );
+        const anchor = rowLabelWorldPosition(rowIndex, band);
+        const projected =
+            cameraMode.value === 'orbit'
+                ? orbitWorldPointToScreenPercent(
+                      orbitPosition,
+                      orbitRange.center,
+                      aspect,
+                      anchor,
+                  )
+                : worldPointToScreenPercent(
+                      position,
+                      pitchDegrees,
+                      yawDegrees,
+                      aspect,
+                      anchor,
+                  );
         const existing: RowLabel | undefined = rowLabels[rowIndex];
 
         if (
@@ -920,8 +958,112 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
     addProductImages(group, imagePlacements);
     addShelves(group, bands);
     addPosts(group, bands);
+    addAisleFloorMarkers(group, bands);
 
     return group;
+}
+
+/**
+ * Floor markers down every aisle — the gap between two neighboring rows (plus
+ * one outside each end) — printing the adjacent rows' letters on either side
+ * of each column number, so from the top view you can read which row/column
+ * you are beside. The text is drawn onto canvas textures laid flat on the
+ * floor (readable with +Z toward the viewer); a long aisle is split into
+ * several textures so none exceeds AISLE_MARKER_MAX_TEXTURE_PIXELS.
+ */
+function addAisleFloorMarkers(
+    group: THREE.Group,
+    bands: CellMap3DBand[],
+): void {
+    const maxCell = maxOf(
+        bands.flatMap((band) => band.items.map((item) => item.cellNumber)),
+        0,
+    );
+
+    if (maxCell < 1) {
+        return;
+    }
+
+    const firstZ = cellWorldZ(1) - CELL_SPACING / 2;
+    const lastZ = cellWorldZ(maxCell) + CELL_SPACING / 2;
+    const pixelsPerUnit = AISLE_MARKER_PIXELS_PER_UNIT;
+    const segmentCells = Math.max(
+        1,
+        Math.floor(
+            AISLE_MARKER_MAX_TEXTURE_PIXELS / pixelsPerUnit / CELL_SPACING,
+        ),
+    );
+    const planeGeometries = new Map<number, THREE.PlaneGeometry>();
+
+    for (let aisle = 0; aisle <= bands.length; aisle++) {
+        const lowerLetter = bands[aisle - 1]?.letter ?? '';
+        const upperLetter = bands[aisle]?.letter ?? '';
+
+        for (
+            let firstCell = 1;
+            firstCell <= maxCell;
+            firstCell += segmentCells
+        ) {
+            const lastCell = Math.min(firstCell + segmentCells - 1, maxCell);
+            const startZ = Math.max(
+                firstZ,
+                cellWorldZ(firstCell) - CELL_SPACING / 2,
+            );
+            const endZ = Math.min(
+                lastZ,
+                cellWorldZ(lastCell) + CELL_SPACING / 2,
+            );
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(AISLE_MARKER_WIDTH * pixelsPerUnit);
+            canvas.height = Math.round((endZ - startZ) * pixelsPerUnit);
+            const context = canvas.getContext('2d');
+
+            if (!context) {
+                return;
+            }
+
+            context.fillStyle = AISLE_MARKER_TEXT_COLOR;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            for (let cell = firstCell; cell <= lastCell; cell++) {
+                const y = (cellWorldZ(cell) - startZ) * pixelsPerUnit;
+                context.font = `600 ${pixelsPerUnit * 0.5}px sans-serif`;
+                context.fillText(String(cell), canvas.width / 2, y);
+                context.font = `700 ${pixelsPerUnit * 0.3}px sans-serif`;
+                context.fillText(lowerLetter, canvas.width * 0.12, y);
+                context.fillText(upperLetter, canvas.width * 0.88, y);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+            });
+            const length = endZ - startZ;
+            const geometry =
+                planeGeometries.get(length) ??
+                new THREE.PlaneGeometry(AISLE_MARKER_WIDTH, length);
+
+            if (!planeGeometries.has(length)) {
+                planeGeometries.set(length, geometry);
+                cellDisposables.push(geometry);
+            }
+
+            cellDisposables.push(texture, material);
+
+            const marker = new THREE.Mesh(geometry, material);
+            marker.name = 'aisle-marker';
+            marker.rotation.x = -Math.PI / 2;
+            marker.position.set(
+                rowWorldX(aisle) - ROW_SPACING / 2,
+                AISLE_MARKER_HEIGHT,
+                (startZ + endZ) / 2,
+            );
+            group.add(marker);
+        }
+    }
 }
 
 /**
@@ -1780,8 +1922,9 @@ function animate(timeMs: number): void {
         updateFacedItem();
         updateCurrentLocation();
         updateMiniMap();
-        updateRowLabels();
     }
+
+    updateRowLabels();
 
     renderer.render(scene, camera);
     animationFrameId = requestAnimationFrame(animate);
@@ -2200,7 +2343,6 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-            v-if="cameraMode === 'walk'"
             aria-hidden="true"
             class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
         >
