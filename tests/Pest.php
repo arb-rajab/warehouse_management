@@ -9,7 +9,10 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Pallet;
+use App\Models\Permission as StorePermission;
 use App\Models\Product;
+use App\Models\Role as StoreRole;
+use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -239,6 +242,66 @@ function createStoreAdmin(bool $raizerAdmin = false): StoreUser
     $admin->assignRole('Super Admin');
 
     return $admin;
+}
+
+/**
+ * A store staff account holding exactly `$permissions` (store guard), with
+ * no staff row: what the back office's permission checks see.
+ */
+function createStoreStaff(string ...$permissions): StoreUser
+{
+    $user = createStoreUser('staff');
+
+    foreach ($permissions as $permission) {
+        StorePermission::findOrCreate($permission, 'store');
+        $user->givePermissionTo($permission);
+    }
+
+    return $user;
+}
+
+/**
+ * The `staff` row and store role the staff screens give `$user`.
+ */
+function createStaffRow(StoreUser $user, string $roleName = 'Clerk'): Staff
+{
+    $role = StoreRole::findOrCreate($roleName, 'store');
+    $user->assignRole($role);
+
+    return Staff::forceCreate(['user_id' => $user->id, 'role_id' => $role->id]);
+}
+
+/**
+ * The callers a permission-gated store back-office route turns away, for
+ * each converted module's "unauthorized caller is rejected" tests: a guest,
+ * a customer (IsAdmin admits only admins, staff and accountants) and a staff
+ * member without the route's permission.
+ */
+dataset('refused store admin callers', ['guest', 'customer', 'staff without the permission']);
+
+/**
+ * Sign in as one of the 'refused store admin callers'.
+ */
+function actingAsRefusedStoreCaller(string $caller): void
+{
+    match ($caller) {
+        'guest' => null,
+        'customer' => actingAsStoreUser(createStoreUser('customer')),
+        'staff without the permission' => actingAsStoreUser(createStoreStaff()),
+    };
+}
+
+/**
+ * How the store back office turns `$caller` away: a guest to the store's
+ * login page, a customer with a 404 (IsAdmin), a staff member with a 403.
+ */
+function assertStoreCallerRefused(TestResponse $response, string $caller): void
+{
+    match ($caller) {
+        'guest' => $response->assertRedirect(route('shop.login')),
+        'customer' => $response->assertNotFound(),
+        'staff without the permission' => $response->assertForbidden(),
+    };
 }
 
 /**
@@ -488,6 +551,17 @@ function assertJsonListingPaginates(TestResponse $response, int $total, int $per
 }
 
 /**
+ * Assert that a first page's `links.next` carries the request's query string —
+ * a paginated listing must call `->withQueryString()`, or following the link
+ * silently drops the caller's filters.
+ */
+function assertNextLinkKeepsQuery(TestResponse $response, string $query): void
+{
+    $response->assertOk();
+    expect($response->json('links.next'))->toContain($query)->toContain('page=2');
+}
+
+/**
  * Assert that an admin Inertia index response paginates a prop instead of
  * returning every row at once — the `{$prop}.data` count matches the page
  * size and `{$prop}.meta.total` matches the full row count. Pass `$component`
@@ -547,7 +621,7 @@ function assertPagesWithoutOverlap(Closure $fetchPage, Closure $keysOf, int $tot
  */
 function assertCellInActiveRoundRejection(TestResponse $response): void
 {
-    $response->assertStatus(409)->assertJsonPath('error_code', 'cell_in_active_round');
+    $response->assertConflict()->assertJsonPath('error_code', 'cell_in_active_round');
 }
 
 /**

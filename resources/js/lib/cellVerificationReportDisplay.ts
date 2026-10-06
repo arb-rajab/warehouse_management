@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3';
-import { acceptReport as acceptReportAction } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { accept as acceptReportAction } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
 import { confirmAcceptVerificationReport } from '@/lib/confirm';
 import { formatSlot } from '@/lib/location';
 import { productName } from '@/lib/productName';
@@ -49,10 +49,7 @@ export function acceptReport(
     }
 
     router.post(
-        acceptReportAction(
-            { cellVerificationReport: report.id },
-            { mergeQuery: {} },
-        ).url,
+        acceptReportAction(report, { mergeQuery: {} }).url,
         { return_to: returnTo ?? null },
         { preserveScroll: true },
     );

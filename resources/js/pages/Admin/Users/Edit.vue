@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import {
-    index,
+    index as usersIndex,
     update,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
@@ -19,17 +19,17 @@ const isEditingSelf = page.props.auth.user?.id === props.user.id;
 
 <template>
     <ResourceFormPage
-        :title="t('users.edit.title', { name: props.user.name })"
-        :action="update(props.user)"
+        :title="t('users.edit.title', { name: user.name })"
+        :action="update(user)"
         :submit-label="t('users.edit.submit')"
         :submitting-label="t('users.edit.submitting')"
-        :cancel-href="index()"
+        :cancel-href="usersIndex()"
         #default="{ errors }"
     >
         <UserFormFields
-            :name="props.user.name"
-            :email="props.user.email"
-            :is-admin="props.user.is_admin"
+            :name="user.name"
+            :email="user.email"
+            :is-admin="user.is_admin"
             :disable-admin-toggle="isEditingSelf"
             :errors="errors"
         />

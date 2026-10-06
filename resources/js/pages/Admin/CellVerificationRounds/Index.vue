@@ -135,7 +135,7 @@ function onPerPageChange(perPage: number): void {
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellVerificationRound.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -145,8 +145,8 @@ function onPerPageChange(perPage: number): void {
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellVerificationRound.filters.title')"
-            :close-label="t('cellVerificationRound.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="cell-verification-rounds-filter-form"
@@ -155,7 +155,7 @@ function onPerPageChange(perPage: number): void {
             >
                 <div>
                     <h3 :class="sectionHeadingClass">
-                        {{ t('cellVerificationRound.filters.title') }}
+                        {{ t('common.filters.title') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <FilterMultiSelect
@@ -222,8 +222,8 @@ function onPerPageChange(perPage: number): void {
             <template #footer>
                 <FilterDialogFooter
                     form-id="cell-verification-rounds-filter-form"
-                    :apply-label="t('cellVerificationRound.filters.apply')"
-                    :clear-label="t('cellVerificationRound.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>
@@ -251,21 +251,12 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink
-                        :href="
-                            showCellVerificationRound({
-                                cellVerificationRound: row.id,
-                            }).url
-                        "
-                    >
+                    <TableLink :href="showCellVerificationRound(row)">
                         #{{ row.id }}
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">
-                    <TableLink
-                        v-if="row.user"
-                        :href="showUser({ id: row.user.id })"
-                    >
+                    <TableLink v-if="row.user" :href="showUser(row.user)">
                         {{ row.user.name }}
                     </TableLink>
                     <template v-else>—</template>

@@ -467,7 +467,47 @@ export function worldPointToScreenPercent(
     point: WalkerPosition,
     fovYDegrees: number = CAMERA_FOV_DEGREES,
 ): ScreenPercentPosition {
-    const forward = lookDirection(pitchDegrees, yawDegrees);
+    return projectToScreenPercent(
+        position,
+        lookDirection(pitchDegrees, yawDegrees),
+        aspect,
+        point,
+        fovYDegrees,
+    );
+}
+
+/**
+ * Same projection as `worldPointToScreenPercent`, for the orbit camera: it
+ * looks from `position` at `target` (the warehouse center) rather than along
+ * a pitch/yaw direction.
+ */
+export function orbitWorldPointToScreenPercent(
+    position: WalkerPosition,
+    target: WalkerPosition,
+    aspect: number,
+    point: WalkerPosition,
+    fovYDegrees: number = CAMERA_FOV_DEGREES,
+): ScreenPercentPosition {
+    return projectToScreenPercent(
+        position,
+        normalize({
+            x: target.x - position.x,
+            y: target.y - position.y,
+            z: target.z - position.z,
+        }),
+        aspect,
+        point,
+        fovYDegrees,
+    );
+}
+
+function projectToScreenPercent(
+    position: WalkerPosition,
+    forward: LookDirection,
+    aspect: number,
+    point: WalkerPosition,
+    fovYDegrees: number,
+): ScreenPercentPosition {
     const back = { x: -forward.x, y: -forward.y, z: -forward.z };
     const worldUp = { x: 0, y: 1, z: 0 };
     const right = normalize(cross(worldUp, back));

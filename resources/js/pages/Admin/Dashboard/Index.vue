@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -24,6 +24,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -34,7 +35,7 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { ProductFilterOptions } from '@/types/admin';
+import type { MatchingPallet, ProductFilterOptions } from '@/types/admin';
 
 interface ExpiringMonthWindow {
     months: number;
@@ -88,6 +89,7 @@ const props = defineProps<{
     };
     today: string;
     weekStart: string;
+    productPallets: MatchingPallet[];
     filters: { product_id: number[] | null };
     filterOptions: ProductFilterOptions;
 }>();
@@ -201,6 +203,26 @@ function onProductIdsChange(ids: string[]): void {
             </div>
         </PageHeader>
 
+        <section
+            v-if="filters.product_id"
+            id="dashboard-product-pallets"
+            class="mb-8"
+        >
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.productPallets.title') }}
+            </h2>
+            <MatchingPalletsTable
+                :pallets="productPallets"
+                :empty-message="t('dashboard.productPallets.empty')"
+            />
+            <Link
+                :href="palletsIndex({ query: productQuery })"
+                :class="['mt-3', filterTriggerButtonClass]"
+            >
+                {{ t('dashboard.productPallets.viewAll') }}
+            </Link>
+        </section>
+
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">
                 {{ t('dashboard.occupancy.title') }}
@@ -208,23 +230,32 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.empty')"
-                    :value="props.stats.occupancy.empty"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'empty', ...productQuery }"
+                    :value="stats.occupancy.empty"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'empty', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.empty.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
-                    :value="props.stats.occupancy.full"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'full', ...productQuery }"
+                    :value="stats.occupancy.full"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'full', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.full.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
-                    :value="props.stats.occupancy.opened"
-                    :href="palletsIndex().url"
-                    :query="{ state: 'opened', ...productQuery }"
+                    :value="stats.occupancy.opened"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'opened', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.opened.icon"
                 />
             </div>
@@ -237,17 +268,20 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
-                    :value="props.stats.expiring.expired"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expired: true,
-                        ...productQuery,
-                    }"
+                    :value="stats.expiring.expired"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expired: true,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="danger"
                     :icon="CalendarX"
                 />
                 <DashboardStatTile
-                    v-for="window in props.stats.expiring.windows"
+                    v-for="window in stats.expiring.windows"
                     :key="window.months"
                     :label="
                         t('dashboard.expiring.soonMonths', {
@@ -255,26 +289,32 @@ function onProductIdsChange(ids: string[]): void {
                         })
                     "
                     :value="window.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expires_within_days: window.days,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: window.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="CalendarX"
                 />
                 <DashboardStatTile
                     :label="
                         t('dashboard.expiring.soon', {
-                            days: props.stats.expiring.custom.days,
+                            days: stats.expiring.custom.days,
                         })
                     "
-                    :value="props.stats.expiring.custom.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        expires_within_days: props.stats.expiring.custom.days,
-                        ...productQuery,
-                    }"
+                    :value="stats.expiring.custom.count"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: stats.expiring.custom.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="CalendarX"
                 >
@@ -291,7 +331,7 @@ function onProductIdsChange(ids: string[]): void {
                         <FilterDialog
                             v-model:open="customExpiringDaysDialogOpen"
                             :title="t('expiringWindow.label')"
-                            :close-label="t('cellLog.filters.close')"
+                            :close-label="t('common.filters.close')"
                         >
                             <form
                                 id="dashboard-custom-expiring-days-form"
@@ -334,15 +374,18 @@ function onProductIdsChange(ids: string[]): void {
                 <DashboardStatTile
                     :label="
                         t('dashboard.stale.soon', {
-                            days: props.stats.stale.days,
+                            days: stats.stale.days,
                         })
                     "
-                    :value="props.stats.stale.count"
-                    :href="palletsIndex().url"
-                    :query="{
-                        stale_after_days: props.stats.stale.days,
-                        ...productQuery,
-                    }"
+                    :value="stats.stale.count"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                stale_after_days: stats.stale.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="Clock"
                 >
@@ -359,7 +402,7 @@ function onProductIdsChange(ids: string[]): void {
                         <FilterDialog
                             v-model:open="customStaleDaysDialogOpen"
                             :title="t('staleWindow.label')"
-                            :close-label="t('cellLog.filters.close')"
+                            :close-label="t('common.filters.close')"
                         >
                             <form
                                 id="dashboard-custom-stale-days-form"
@@ -399,9 +442,12 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.lowStock.count')"
-                    :value="props.stats.low_stock.count"
-                    :href="productsIndex().url"
-                    :query="{ low_stock: true, ...productQuery }"
+                    :value="stats.low_stock.count"
+                    :href="
+                        productsIndex({
+                            query: { low_stock: true, ...productQuery },
+                        })
+                    "
                     tone="danger"
                     :icon="TriangleAlert"
                 />
@@ -415,9 +461,12 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.inactiveInWarehouse.count')"
-                    :value="props.stats.inactive_in_warehouse.count"
-                    :href="productsIndex().url"
-                    :query="{ inactive: true, ...productQuery }"
+                    :value="stats.inactive_in_warehouse.count"
+                    :href="
+                        productsIndex({
+                            query: { inactive: true, ...productQuery },
+                        })
+                    "
                     tone="warning"
                     :icon="PackageX"
                 />
@@ -433,14 +482,17 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_today[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: props.today,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
+                    :value="stats.activity_today[action.key]"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: today,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>
@@ -455,14 +507,17 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_week[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: props.weekStart,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
+                    :value="stats.activity_week[action.key]"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: weekStart,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>

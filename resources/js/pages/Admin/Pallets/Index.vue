@@ -1,20 +1,16 @@
 <script setup lang="ts">
-import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Map } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
-import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
-import DataTable from '@/components/DataTable.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import { formatDate } from '@/lib/date';
+import { filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
 import { productName } from '@/lib/productName';
 import type {
     MatchingPallet,
@@ -22,6 +18,7 @@ import type {
     Paginated,
     ProductFilterOptions,
 } from '@/types/admin';
+import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     pallets: Paginated<MatchingPallet>;
@@ -34,8 +31,8 @@ const props = defineProps<{
  * doesn't understand) — reused both for the "view on map" button's query and
  * for the human-readable chips above the table.
  */
-const filterQuery = computed<Record<string, FormDataConvertible>>(() => {
-    const query: Record<string, FormDataConvertible> = { ...props.filters };
+const filterQuery = computed<QueryParams>(() => {
+    const query: QueryParams = { ...props.filters };
     delete query.per_page;
 
     return query;
@@ -92,10 +89,8 @@ function onPerPageChange(perPage: number): void {
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
             <Link
-                :href="cellsIndex().url"
-                :data="filterQuery"
-                method="get"
-                class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                :href="cellsIndex({ query: filterQuery })"
+                :class="filterTriggerButtonClass"
             >
                 <Map class="h-4 w-4" />
                 {{ t('pallets.viewOnMap') }}
@@ -116,89 +111,10 @@ function onPerPageChange(perPage: number): void {
             </span>
         </div>
 
-        <DataTable
-            :columns="[
-                t('pallets.columns.product'),
-                t('pallets.columns.state'),
-                t('pallets.columns.location'),
-                t('pallets.columns.expiration'),
-                t('pallets.columns.added'),
-                t('pallets.columns.remainingBoxes'),
-            ]"
-            :rows="pallets.data"
+        <MatchingPalletsTable
+            :pallets="pallets.data"
             :empty-message="t('pallets.empty')"
-        >
-            <template #row="{ row: pallet }">
-                <td class="px-4 py-2">
-                    <div
-                        class="flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
-                    >
-                        <img
-                            v-if="pallet.product.image_url"
-                            :src="pallet.product.image_url"
-                            :alt="
-                                productName(
-                                    pallet.product.name,
-                                    pallet.product.ar_name,
-                                )
-                            "
-                            class="h-8 w-8 shrink-0 rounded object-cover"
-                        />
-                        {{
-                            productName(
-                                pallet.product.name,
-                                pallet.product.ar_name,
-                            )
-                        }}
-                    </div>
-                </td>
-                <td class="px-4 py-2">
-                    {{ cellStateLabel(pallet.state) }}
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink
-                        :href="
-                            showRow(
-                                { letter: pallet.location.row_letter },
-                                {
-                                    query: {
-                                        cell_number:
-                                            pallet.location.cell_number,
-                                        flat_number:
-                                            pallet.location.flat_number,
-                                    },
-                                },
-                            )
-                        "
-                    >
-                        {{
-                            formatSlot(
-                                pallet.location.row_letter,
-                                pallet.location.cell_number,
-                                pallet.location.flat_number,
-                            )
-                        }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <span v-if="pallet.expiration_date">
-                        {{ formatDate(pallet.expiration_date) }}
-                    </span>
-                    <span v-else class="text-gray-400 dark:text-neutral-600"
-                        >—</span
-                    >
-                </td>
-                <td class="px-4 py-2">
-                    <span v-if="pallet.added_at">
-                        {{ formatDate(pallet.added_at) }}
-                    </span>
-                    <span v-else class="text-gray-400 dark:text-neutral-600"
-                        >—</span
-                    >
-                </td>
-                <td class="px-4 py-2">{{ pallet.remaining_boxes }}</td>
-            </template>
-        </DataTable>
+        />
 
         <Pagination
             :links="pallets.meta.links"

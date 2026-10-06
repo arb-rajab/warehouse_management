@@ -1,4 +1,5 @@
-import { Head } from '@inertiajs/vue3';
+import type { UrlMethodPair } from '@inertiajs/core';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     CalendarPlus,
@@ -10,10 +11,16 @@ import {
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import { t } from '@/lib/i18n';
-import { paginated } from '@/testing/factories';
+import { matchingPallet, paginated } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import type { MatchingPallet } from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -58,13 +65,14 @@ const stats = {
 };
 
 const products = [
-    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
 ];
 
 function mountPage(
     overrides: {
         filters?: { product_id: number[] | null };
+        productPallets?: MatchingPallet[];
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -77,25 +85,26 @@ function mountPage(
             stats,
             today: '2026-08-13',
             weekStart: '2026-08-10',
+            productPallets: overrides.productPallets ?? [],
             filters: overrides.filters ?? { product_id: null },
             filterOptions: { products },
         },
     });
 }
 
-// `label` alone is ambiguous across sections. Disambiguate by href + query.
-function tileByLabelAndQuery(
+// `label` alone is ambiguous across sections. Disambiguate by the tile's
+// route object (path + query), built with the same Wayfinder helpers.
+function tileByLabelAndHref(
     wrapper: ReturnType<typeof mountPage>,
     label: string,
-    query: Record<string, unknown>,
+    href: UrlMethodPair,
 ) {
     return wrapper
         .findAllComponents(DashboardStatTile)
         .find(
             (tile) =>
                 tile.props('label') === label &&
-                JSON.stringify(tile.props('query') ?? {}) ===
-                    JSON.stringify(query),
+                JSON.stringify(tile.props('href')) === JSON.stringify(href),
         );
 }
 
@@ -137,7 +146,9 @@ describe('Dashboard Index', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/dashboard');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'dashboard' }),
+        );
     });
 
     it('renders every occupancy tile with its count, linking to the matching-pallets list with a matching highlight filter', () => {
@@ -148,22 +159,29 @@ describe('Dashboard Index', () => {
             (tile) => tile.props('label') === t('dashboard.occupancy.empty'),
         );
         expect(empty?.props('value')).toBe(3);
-        expect(empty?.props('href')).toBe('/admin/pallets');
-        expect(empty?.props('query')).toEqual({ state: 'empty' });
+        expect(empty?.props('href')).toEqual(
+            palletsIndex({ query: { state: 'empty' } }),
+        );
 
         const full = tiles.find(
             (tile) => tile.props('label') === t('dashboard.occupancy.full'),
         );
         expect(full?.props('value')).toBe(5);
-        expect(full?.props('query')).toEqual({ state: 'full' });
+        expect(full?.props('href')).toEqual(
+            palletsIndex({ query: { state: 'full' } }),
+        );
 
         const opened = tiles.find(
             (tile) =>
                 tile.props('label') === t('dashboard.occupancy.opened') &&
-                tile.props('href') === '/admin/pallets',
+                (tile.props('href') as UrlMethodPair).url.startsWith(
+                    palletsIndex.url(),
+                ),
         );
         expect(opened?.props('value')).toBe(1);
-        expect(opened?.props('query')).toEqual({ state: 'opened' });
+        expect(opened?.props('href')).toEqual(
+            palletsIndex({ query: { state: 'opened' } }),
+        );
 
         expect(empty?.props('icon')).toBe(CircleDashed);
         expect(full?.props('icon')).toBe(Inbox);
@@ -179,22 +197,20 @@ describe('Dashboard Index', () => {
                 (tile) => tile.props('label') === t('dashboard.occupancy.full'),
             );
 
-        expect(full?.props('query')).toEqual({
-            state: 'full',
-            product_id: [1, 2],
-        });
+        expect(full?.props('href')).toEqual(
+            palletsIndex({ query: { state: 'full', product_id: [1, 2] } }),
+        );
     });
 
     it('renders the expired tile linking to the matching-pallets list with an expires-within-days highlight', () => {
         const wrapper = mountPage();
 
-        const expired = tileByLabelAndQuery(
+        const expired = tileByLabelAndHref(
             wrapper,
             t('dashboard.expiring.expired'),
-            { expired: true },
+            palletsIndex({ query: { expired: true } }),
         );
         expect(expired?.props('value')).toBe(2);
-        expect(expired?.props('href')).toBe('/admin/pallets');
         expect(expired?.props('icon')).toBe(CalendarX);
     });
 
@@ -202,13 +218,12 @@ describe('Dashboard Index', () => {
         const wrapper = mountPage();
 
         for (const window of stats.expiring.windows) {
-            const tile = tileByLabelAndQuery(
+            const tile = tileByLabelAndHref(
                 wrapper,
                 t('dashboard.expiring.soonMonths', { months: window.months }),
-                { expires_within_days: window.days },
+                palletsIndex({ query: { expires_within_days: window.days } }),
             );
             expect(tile?.props('value')).toBe(window.count);
-            expect(tile?.props('href')).toBe('/admin/pallets');
             expect(tile?.props('icon')).toBe(CalendarX);
         }
     });
@@ -229,10 +244,10 @@ describe('Dashboard Index', () => {
             .findAll('a')
             .find(
                 (link) =>
-                    link.attributes('data-query') ===
-                    JSON.stringify({ expires_within_days: 45 }),
+                    link.attributes('href') ===
+                    palletsIndex({ query: { expires_within_days: 45 } }).url,
             );
-        expect(customLink?.attributes('href')).toBe('/admin/pallets');
+        expect(customLink?.exists()).toBe(true);
         expect(customLink?.find('svg.lucide-calendar-x').exists()).toBe(true);
         expect(wrapper.text()).toContain('8');
         expect(wrapper.text()).toContain(
@@ -292,20 +307,20 @@ describe('Dashboard Index', () => {
             .findAll('a')
             .find(
                 (link) =>
-                    link.attributes('data-query') ===
-                    JSON.stringify({ stale_after_days: 30 }),
+                    link.attributes('href') ===
+                    palletsIndex({ query: { stale_after_days: 30 } }).url,
             );
-        expect(customLink?.attributes('href')).toBe('/admin/pallets');
+        expect(customLink?.exists()).toBe(true);
         expect(customLink?.find('svg.lucide-clock').exists()).toBe(true);
         expect(wrapper.text()).toContain('5');
         expect(wrapper.text()).toContain(
             t('dashboard.stale.soon', { days: 30 }),
         );
 
-        const staleTile = tileByLabelAndQuery(
+        const staleTile = tileByLabelAndHref(
             wrapper,
             t('dashboard.stale.soon', { days: 30 }),
-            { stale_after_days: 30 },
+            palletsIndex({ query: { stale_after_days: 30 } }),
         );
         expect(staleTile?.props('icon')).toBe(Clock);
     });
@@ -349,27 +364,30 @@ describe('Dashboard Index', () => {
     it("renders today's activity tiles linking to the cell log filtered to today", () => {
         const wrapper = mountPage();
 
-        const stored = tileByLabelAndQuery(
+        const stored = tileByLabelAndHref(
             wrapper,
             t('cellLog.actions.stored'),
-            {
-                action: ['stored'],
-                date_from: '2026-08-13',
-                date_to: '2026-08-13',
-            },
+            cellLogsIndex({
+                query: {
+                    action: ['stored'],
+                    date_from: '2026-08-13',
+                    date_to: '2026-08-13',
+                },
+            }),
         );
         expect(stored?.props('value')).toBe(6);
-        expect(stored?.props('href')).toBe('/admin/cell-logs');
         expect(stored?.props('icon')).toBe(CalendarPlus);
 
-        const transferred = tileByLabelAndQuery(
+        const transferred = tileByLabelAndHref(
             wrapper,
             t('cellLog.actions.transferred'),
-            {
-                action: ['transferred_out', 'transferred_in'],
-                date_from: '2026-08-13',
-                date_to: '2026-08-13',
-            },
+            cellLogsIndex({
+                query: {
+                    action: ['transferred_out', 'transferred_in'],
+                    date_from: '2026-08-13',
+                    date_to: '2026-08-13',
+                },
+            }),
         );
         expect(transferred?.props('value')).toBe(3);
         expect(transferred?.props('icon')).toBe(ArrowLeftRight);
@@ -378,26 +396,30 @@ describe('Dashboard Index', () => {
     it("renders this week's activity tiles linking to the cell log filtered to the week", () => {
         const wrapper = mountPage();
 
-        const stored = tileByLabelAndQuery(
+        const stored = tileByLabelAndHref(
             wrapper,
             t('cellLog.actions.stored'),
-            {
-                action: ['stored'],
-                date_from: '2026-08-10',
-                date_to: '2026-08-13',
-            },
+            cellLogsIndex({
+                query: {
+                    action: ['stored'],
+                    date_from: '2026-08-10',
+                    date_to: '2026-08-13',
+                },
+            }),
         );
         expect(stored?.props('value')).toBe(20);
         expect(stored?.props('icon')).toBe(CalendarPlus);
 
-        const emptied = tileByLabelAndQuery(
+        const emptied = tileByLabelAndHref(
             wrapper,
             t('cellLog.actions.emptied'),
-            {
-                action: ['emptied'],
-                date_from: '2026-08-10',
-                date_to: '2026-08-13',
-            },
+            cellLogsIndex({
+                query: {
+                    action: ['emptied'],
+                    date_from: '2026-08-10',
+                    date_to: '2026-08-13',
+                },
+            }),
         );
         expect(emptied?.props('value')).toBe(4);
         expect(emptied?.props('icon')).toBe(CircleDashed);
@@ -406,31 +428,75 @@ describe('Dashboard Index', () => {
     it('includes the active product filter in every activity/expiring/stale tile link', () => {
         const wrapper = mountPage({ filters: { product_id: [1, 2] } });
 
-        const stored = tileByLabelAndQuery(
+        const stored = tileByLabelAndHref(
             wrapper,
             t('cellLog.actions.stored'),
-            {
-                action: ['stored'],
-                date_from: '2026-08-13',
-                date_to: '2026-08-13',
-                product_id: [1, 2],
-            },
+            cellLogsIndex({
+                query: {
+                    action: ['stored'],
+                    date_from: '2026-08-13',
+                    date_to: '2026-08-13',
+                    product_id: [1, 2],
+                },
+            }),
         );
         expect(stored?.exists()).toBe(true);
 
-        const expired = tileByLabelAndQuery(
+        const expired = tileByLabelAndHref(
             wrapper,
             t('dashboard.expiring.expired'),
-            { expired: true, product_id: [1, 2] },
+            palletsIndex({ query: { expired: true, product_id: [1, 2] } }),
         );
         expect(expired?.exists()).toBe(true);
 
-        const stale = tileByLabelAndQuery(
+        const stale = tileByLabelAndHref(
             wrapper,
             t('dashboard.stale.soon', { days: 30 }),
-            { stale_after_days: 30, product_id: [1, 2] },
+            palletsIndex({
+                query: { stale_after_days: 30, product_id: [1, 2] },
+            }),
         );
         expect(stale?.exists()).toBe(true);
+    });
+
+    it('hides the selected-product pallets section when no product is selected', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.find('#dashboard-product-pallets').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain(
+            t('dashboard.productPallets.title'),
+        );
+    });
+
+    it('shows the selected products pallets in the order given, with a link to the pallets page for the same products', () => {
+        const first = matchingPallet({ id: 1 });
+        const second = matchingPallet({ id: 2 });
+        const wrapper = mountPage({
+            filters: { product_id: [1] },
+            productPallets: [first, second],
+        });
+
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.title'));
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.viewAll'));
+        const table = wrapper.getComponent(MatchingPalletsTable);
+        expect(table.props('pallets')).toEqual([first, second]);
+        expect(table.props('emptyMessage')).toBe(
+            t('dashboard.productPallets.empty'),
+        );
+        const viewAll = wrapper
+            .findAllComponents(Link)
+            .find((link) =>
+                link.text().includes(t('dashboard.productPallets.viewAll')),
+            );
+        expect(viewAll?.props('href')).toEqual(
+            palletsIndex({ query: { product_id: [1] } }),
+        );
+    });
+
+    it('shows the empty message when the selected product has no pallets', () => {
+        const wrapper = mountPage({ filters: { product_id: [1] } });
+
+        expect(wrapper.text()).toContain(t('dashboard.productPallets.empty'));
     });
 
     it('renders exactly seven sections, including the stale, low-stock and inactive-in-warehouse sections', () => {
@@ -456,23 +522,22 @@ describe('Dashboard Index', () => {
     it('renders the inactive-in-warehouse tile linking to the products page filtered to inactive=true', () => {
         const wrapper = mountPage();
 
-        const tile = tileByLabelAndQuery(
+        const tile = tileByLabelAndHref(
             wrapper,
             t('dashboard.inactiveInWarehouse.count'),
-            { inactive: true },
+            productsIndex({ query: { inactive: true } }),
         );
         expect(tile?.props('value')).toBe(2);
-        expect(tile?.props('href')).toBe('/admin/products');
         expect(tile?.props('tone')).toBe('warning');
     });
 
     it('includes the active product filter in the inactive-in-warehouse tile link', () => {
         const wrapper = mountPage({ filters: { product_id: [1, 2] } });
 
-        const tile = tileByLabelAndQuery(
+        const tile = tileByLabelAndHref(
             wrapper,
             t('dashboard.inactiveInWarehouse.count'),
-            { inactive: true, product_id: [1, 2] },
+            productsIndex({ query: { inactive: true, product_id: [1, 2] } }),
         );
         expect(tile?.exists()).toBe(true);
     });
@@ -480,26 +545,27 @@ describe('Dashboard Index', () => {
     it('renders the low-stock tile linking to the products page filtered to low_stock=true', () => {
         const wrapper = mountPage();
 
-        const tile = tileByLabelAndQuery(
+        const tile = tileByLabelAndHref(
             wrapper,
             t('dashboard.lowStock.count'),
-            { low_stock: true },
+            productsIndex({ query: { low_stock: true } }),
         );
         expect(tile?.props('value')).toBe(4);
-        expect(tile?.props('href')).toBe('/admin/products');
         expect(tile?.props('tone')).toBe('danger');
     });
 
     it('includes the active product filter in the low-stock tile link', () => {
         const wrapper = mountPage({ filters: { product_id: [1, 2] } });
 
-        const tile = tileByLabelAndQuery(
+        const tile = tileByLabelAndHref(
             wrapper,
             t('dashboard.lowStock.count'),
-            {
-                low_stock: true,
-                product_id: [1, 2],
-            },
+            productsIndex({
+                query: {
+                    low_stock: true,
+                    product_id: [1, 2],
+                },
+            }),
         );
         expect(tile?.exists()).toBe(true);
     });

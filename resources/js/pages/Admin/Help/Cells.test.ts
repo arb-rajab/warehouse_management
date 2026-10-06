@@ -2,6 +2,11 @@ import { Head } from '@inertiajs/vue3';
 import { Ban, Box, LayoutGrid, Search } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import {
+    show as helpShow,
+    index as helpIndex,
+} from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
@@ -24,7 +29,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/help/cells',
+        url: helpShow.url({ topic: 'cells' }),
         props: defaultAuthProps(),
     });
 
@@ -198,7 +203,7 @@ describe('Help Cells', () => {
         const cellsLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('cells.title'));
-        expect(cellsLink?.attributes('href')).toBe('/admin/cells');
+        expect(cellsLink?.attributes('href')).toBe(cellsIndex.url());
     });
 
     it('links back to the help landing page', () => {
@@ -207,6 +212,6 @@ describe('Help Cells', () => {
         const backLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('help.backToHelp'));
-        expect(backLink?.attributes('href')).toBe('/admin/help');
+        expect(backLink?.attributes('href')).toBe(helpIndex.url());
     });
 });

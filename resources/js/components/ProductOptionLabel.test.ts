@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
-import { i18n } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import type { ProductFilterOption } from '@/types/admin';
 import ProductOptionLabel from './ProductOptionLabel.vue';
 
@@ -30,6 +30,7 @@ describe('ProductOptionLabel', () => {
             id: 1,
             name: 'Widgets',
             ar_name: 'ودجات',
+            active: true,
         });
 
         expect(primary(wrapper).text()).toBe('Widgets');
@@ -43,6 +44,7 @@ describe('ProductOptionLabel', () => {
             id: 1,
             name: 'Widgets',
             ar_name: 'ودجات',
+            active: true,
         });
 
         expect(primary(wrapper).text()).toBe('ودجات');
@@ -50,13 +52,23 @@ describe('ProductOptionLabel', () => {
     });
 
     it('shows no second line for a product the store never translated, in either locale', () => {
-        const english = mountLabel({ id: 1, name: 'Widgets', ar_name: '' });
+        const english = mountLabel({
+            id: 1,
+            name: 'Widgets',
+            ar_name: '',
+            active: true,
+        });
 
         expect(primary(english).text()).toBe('Widgets');
         expect(alternate(english).exists()).toBe(false);
 
         i18n.global.locale.value = 'ar';
-        const arabic = mountLabel({ id: 1, name: 'Widgets', ar_name: '' });
+        const arabic = mountLabel({
+            id: 1,
+            name: 'Widgets',
+            ar_name: '',
+            active: true,
+        });
 
         expect(primary(arabic).text()).toBe('Widgets');
         expect(alternate(arabic).exists()).toBe(false);
@@ -67,6 +79,7 @@ describe('ProductOptionLabel', () => {
             id: 1,
             name: 'Widgets',
             ar_name: 'Widgets',
+            active: true,
         });
 
         expect(primary(wrapper).text()).toBe('Widgets');
@@ -82,6 +95,7 @@ describe('ProductOptionLabel', () => {
             id: 1,
             name: 'Widgets',
             ar_name: 'ودجات',
+            active: true,
         });
 
         expect(primary(wrapper).attributes('dir')).toBe('auto');
@@ -93,6 +107,7 @@ describe('ProductOptionLabel', () => {
             id: 42,
             name: 'Widgets',
             ar_name: 'ودجات',
+            active: true,
         });
 
         expect(idBadge(wrapper).text()).toBe('#42');
@@ -103,6 +118,7 @@ describe('ProductOptionLabel', () => {
             id: 1,
             name: 'Widgets',
             ar_name: 'ودجات',
+            active: true,
         });
 
         i18n.global.locale.value = 'ar';
@@ -110,5 +126,20 @@ describe('ProductOptionLabel', () => {
 
         expect(primary(wrapper).text()).toBe('ودجات');
         expect(alternate(wrapper).text()).toBe('Widgets');
+    });
+
+    it('shows an active indicator for an active product and an inactive one otherwise', () => {
+        const base = { id: 1, name: 'Widgets', ar_name: 'ودجات' };
+
+        expect(
+            mountLabel({ ...base, active: true })
+                .get('[data-testid="product-active-badge"]')
+                .text(),
+        ).toBe(t('products.status.active'));
+        expect(
+            mountLabel({ ...base, active: false })
+                .get('[data-testid="product-active-badge"]')
+                .text(),
+        ).toBe(t('products.status.inactive'));
     });
 });

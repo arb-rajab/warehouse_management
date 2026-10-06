@@ -39,7 +39,7 @@ const props = defineProps<{
     returnTo?: 'user';
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     'view-pallet-history': [palletId: number];
 }>();
 
@@ -151,7 +151,7 @@ const pair = computed(() => transferPair(props.log));
                 type="button"
                 class="inline-flex cursor-pointer items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
                 :title="t('cellLog.columns.viewPalletHistory')"
-                @click="$emit('view-pallet-history', log.pallet.id)"
+                @click="emit('view-pallet-history', log.pallet.id)"
             >
                 #{{ log.pallet.id }}
                 <History class="h-3 w-3 shrink-0" />
@@ -179,7 +179,7 @@ const pair = computed(() => transferPair(props.log));
         {{ log.note ?? '—' }}
     </td>
     <td v-if="showUserColumn" class="px-4 py-2">
-        <TableLink :href="showUser({ id: log.user.id })">
+        <TableLink :href="showUser(log.user)">
             {{ log.user.name }}
         </TableLink>
     </td>

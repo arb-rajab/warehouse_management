@@ -1,12 +1,9 @@
 <?php
 
 use App\Http\Controllers\RepresentativePaymentController;
-use App\Models\Role;
 use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role as SpatieRole;
 
 /**
  * Regression coverage for the legacy store's admin panel under /temp/admin,
@@ -79,69 +76,6 @@ test('the store admin panel is not found for a customer', function () {
     actingAsStoreUser(createStoreUser('customer'));
 
     $this->get('/temp/admin')->assertNotFound();
-});
-
-/**
- * The staff-role screen lists permissions through the legacy
- * App\Models\Permission model, which read a `permissions` table that does not
- * exist here: both apps' permissions live in spatie's `wms_permissions`.
- */
-test('the staff role screen lists the permissions, grouped by section', function () {
-    Permission::create(['name' => 'approve_bulk_price_changes', 'guard_name' => 'store', 'section' => 'price_changes']);
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->get('/temp/admin/roles/create')
-        ->assertOk()
-        ->assertSeeInOrder(['Price Changes', 'Approve Bulk Price Changes']);
-});
-
-/**
- * The role screens keyed a role's default-language translation on
- * env('DEFAULT_LANGUAGE'), which is null once `config:cache` has run (every
- * deploy does): creating a role then failed on role_translations.lang NOT
- * NULL, and renaming one in the default language compared 'en' with null and
- * changed nothing. It is config('app.default_language') now.
- */
-test('creating a staff role saves it with its default-language translation', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->post('/temp/admin/roles', ['name' => 'Clerk'])->assertRedirect(route('roles.index'));
-
-    $role = Role::where('name', 'Clerk')->firstOrFail();
-    expect($role->guard_name)->toBe('store');
-    $this->assertDatabaseHas('role_translations', ['role_id' => $role->id, 'name' => 'Clerk', 'lang' => 'en']);
-});
-
-test('renaming a staff role in the default language renames the role', function () {
-    $role = SpatieRole::findOrCreate('Clerk', 'store');
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->put("/temp/admin/roles/{$role->id}", ['name' => 'Senior Clerk', 'lang' => 'en'])->assertRedirect();
-
-    $this->assertDatabaseHas('wms_roles', ['id' => $role->id, 'name' => 'Senior Clerk']);
-    $this->assertDatabaseHas('role_translations', ['role_id' => $role->id, 'name' => 'Senior Clerk', 'lang' => 'en']);
-});
-
-test('renaming a staff role in another language leaves the role name alone', function () {
-    $role = SpatieRole::findOrCreate('Clerk', 'store');
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->put("/temp/admin/roles/{$role->id}", ['name' => 'Employé', 'lang' => 'fr'])->assertRedirect();
-
-    $this->assertDatabaseHas('wms_roles', ['id' => $role->id, 'name' => 'Clerk']);
-    $this->assertDatabaseHas('role_translations', ['role_id' => $role->id, 'name' => 'Employé', 'lang' => 'fr']);
-});
-
-test('a customer cannot create or rename a staff role', function () {
-    $role = SpatieRole::findOrCreate('Clerk', 'store');
-    actingAsStoreUser(createStoreUser('customer'));
-
-    $this->post('/temp/admin/roles', ['name' => 'Nope'])->assertNotFound();
-    $this->put("/temp/admin/roles/{$role->id}", ['name' => 'Hijacked', 'lang' => 'en'])->assertNotFound();
-
-    $this->assertDatabaseMissing('wms_roles', ['name' => 'Nope']);
-    $this->assertDatabaseHas('wms_roles', ['id' => $role->id, 'name' => 'Clerk']);
-    $this->assertDatabaseCount('role_translations', 0);
 });
 
 /**

@@ -24,6 +24,13 @@
     "common": {
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
         "cancel": "إلغاء",
+        "close": "إغلاق",
+        "filters": {
+            "title": "الفلاتر",
+            "apply": "تطبيق الفلاتر",
+            "clear": "مسح",
+            "close": "إغلاق الفلاتر"
+        },
         "filteredColumn": "متأثر بفلتر نشط",
         "pagination": {
             "perPage": "لكل صفحة"
@@ -163,8 +170,6 @@
     "cellLog": {
         "title": "سجل الخلايا",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "location": "الموقع",
                 "activity": "النشاط",
@@ -184,12 +189,11 @@
             "expirationTo": "تاريخ الانتهاء إلى",
             "expiresWithinDays": "تنتهي خلال (أيام)",
             "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح",
             "searchPlaceholder": "بحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
             "selected": "المحدد",
+            "deselectAll": "إلغاء تحديد الكل",
             "palletHistory": "عرض سجل المنصة رقم #{id}",
             "flaggedOnly": "المُعلَّمة فقط"
         },
@@ -237,8 +241,6 @@
     "cellVerificationRound": {
         "title": "جولات التحقق من الخلايا",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "user": "العامل",
             "completed": "الحالة",
             "completedAll": "الكل",
@@ -248,9 +250,7 @@
             "from": "من",
             "to": "إلى",
             "withinDays": "خلال آخر (أيام)",
-            "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح"
+            "all": "الكل"
         },
         "columns": {
             "id": "الجولة",
@@ -266,6 +266,7 @@
         },
         "empty": "لا توجد جولات تحقق بعد.",
         "show": {
+            "title": "جولة التحقق #{id}",
             "backToList": "العودة إلى الجولات",
             "startedAt": "بدأت",
             "completedAt": "اكتملت",
@@ -277,8 +278,6 @@
         "title": "التقارير",
         "export": "تصدير CSV",
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "location": "الموقع",
                 "activity": "النشاط",
@@ -296,8 +295,6 @@
             "to": "إلى",
             "withinDays": "خلال آخر (أيام)",
             "all": "الكل",
-            "apply": "تطبيق الفلاتر",
-            "clear": "مسح",
             "searchPlaceholder": "ابحث عن منتجات…",
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات."
@@ -470,6 +467,11 @@
     },
     "dashboard": {
         "title": "لوحة التحكم",
+        "productPallets": {
+            "title": "منصات المنتجات المحددة",
+            "viewAll": "عرض الكل في صفحة المنصات",
+            "empty": "لا توجد منصات للمنتجات المحددة."
+        },
         "occupancy": {
             "title": "إشغال الخلايا",
             "empty": "فارغة",
@@ -502,18 +504,21 @@
         }
     },
     "products": {
+        "status": {
+            "active": "نشط",
+            "inactive": "غير نشط"
+        },
         "title": "المنتجات",
         "quickSearch": {
             "label": "بحث سريع عن منتج",
             "placeholder": "ابحث عن منتج…"
         },
         "filters": {
-            "title": "الفلاتر",
-            "close": "إغلاق الفلاتر",
             "sections": {
                 "occupancy": "الإشغال"
             },
             "inactive": "غير نشط",
+            "hideInactive": "إخفاء غير النشطة",
             "lowStock": "مخزون منخفض"
         },
         "columns": {
@@ -537,9 +542,7 @@
         "noBarcodes": "لم تتم إضافة أي باركود بعد.",
         "exportQrLabel": "تصدير الباركود لـ {product}",
         "empty": "لا توجد منتجات بعد.",
-        "saving": "جارٍ الحفظ…",
-        "invalidCount": "أدخل عددًا صحيحًا لا يقل عن 1.",
-        "saveFailed": "تعذّر الحفظ. حاول مرة أخرى."
+        "saving": "جارٍ الحفظ…"
     },
     "pallets": {
         "title": "المنصات المطابقة",
@@ -725,6 +728,189 @@
             "openLevels": {
                 "heading": "المستويات المسموح فيها بفتح المنصات",
                 "body": "حدد المستويات التي يمكن فتح المنصات فيها. لا يمكن فتح منصة موجودة في مستوى غير محدد — لا في تطبيق الجوال ولا هنا في لوحة الإدارة — ولا تُفتح المنصة المخزنة في المستوى 1 تلقائيًا إلا ما دام المستوى 1 محددًا. المستوى 1 محدد افتراضيًا، ويجب أن يبقى مستوى واحد على الأقل محددًا. تعرض القائمة كل المستويات حتى عدد مستويات أطول ممر."
+            }
+        }
+    },
+    "store": {
+        "nav": {
+            "brand": "إدارة المتجر",
+            "menuLabel": "قائمة إدارة المتجر",
+            "browseWebsite": "تصفح الموقع",
+            "profile": "الملف الشخصي",
+            "dashboard": "لوحة التحكم",
+            "products": "المنتجات",
+            "addProduct": "إضافة منتج جديد",
+            "allProducts": "جميع المنتجات",
+            "inHouseProducts": "المنتجات الداخلية",
+            "sellerProducts": "منتجات البائعين",
+            "digitalProducts": "المنتجات الرقمية",
+            "bulkImport": "استيراد جماعي",
+            "bulkExport": "تصدير جماعي",
+            "categories": "الفئات",
+            "brands": "العلامات التجارية",
+            "brandDiscount": "خصم حسب العلامة التجارية",
+            "attributes": "الخصائص",
+            "colors": "الألوان",
+            "productReviews": "تقييمات المنتجات",
+            "sales": "المبيعات",
+            "allOrders": "جميع الطلبات",
+            "createOrder": "إنشاء طلب",
+            "sellerOrders": "طلبات البائعين",
+            "pickupPointOrders": "طلبات نقاط الاستلام",
+            "customers": "العملاء",
+            "customerList": "قائمة العملاء",
+            "customerCreate": "إضافة عميل",
+            "customerArchive": "أرشيف العملاء",
+            "notifications": "الإشعارات",
+            "classifiedProducts": "المنتجات المبوبة",
+            "classifiedPackages": "باقات الإعلانات المبوبة",
+            "representatives": "المندوبون",
+            "representativeList": "قائمة المندوبين",
+            "representativePackages": "باقات المندوبين",
+            "representativePayments": "مدفوعات المندوبين",
+            "representativeVisits": "زيارات المندوبين",
+            "sellers": "البائعون",
+            "allSellers": "جميع البائعين",
+            "payouts": "المدفوعات",
+            "payoutRequests": "طلبات السحب",
+            "sellerCommission": "عمولة البائعين",
+            "sellerVerificationForm": "نموذج التحقق من البائع",
+            "trips": "الرحلات",
+            "trucks": "الشاحنات",
+            "allTrucks": "جميع الشاحنات",
+            "createTruck": "إضافة شاحنة",
+            "tripsGroup": "الرحلات",
+            "allTrips": "جميع الرحلات",
+            "todayTrips": "رحلات اليوم",
+            "createTrip": "إنشاء رحلة",
+            "createTripFromMap": "إنشاء رحلة من الخريطة",
+            "tripOrders": "الطلبات",
+            "drivers": "السائقون",
+            "allDrivers": "جميع السائقين",
+            "createDriver": "إضافة سائق",
+            "uploadedFiles": "الملفات المرفوعة",
+            "homeBanners": "لافتات الصفحة الرئيسية",
+            "orderConfiguration": "إعدادات الطلبات",
+            "offersCatalog": "كتالوج العروض",
+            "reports": "التقارير",
+            "inHouseSaleReport": "مبيعات المنتجات الداخلية",
+            "sellerSaleReport": "مبيعات منتجات البائعين",
+            "stockReport": "مخزون المنتجات",
+            "wishlistReport": "قوائم رغبات المنتجات",
+            "userSearchReport": "عمليات بحث المستخدمين",
+            "commissionHistory": "سجل العمولات",
+            "walletHistory": "سجل شحن المحفظة",
+            "blog": "المدونة",
+            "allPosts": "جميع المقالات",
+            "blogCategories": "التصنيفات",
+            "marketing": "التسويق",
+            "flashDeals": "العروض السريعة",
+            "offerDeals": "صفقات العروض",
+            "dynamicPopups": "النوافذ المنبثقة",
+            "newsletters": "النشرات البريدية",
+            "subscribers": "المشتركون",
+            "coupons": "القسائم",
+            "support": "الدعم",
+            "tickets": "التذاكر",
+            "productConversations": "محادثات المنتجات",
+            "productQueries": "استفسارات المنتجات",
+            "websiteSetup": "إعداد الموقع",
+            "header": "الترويسة",
+            "footer": "التذييل",
+            "pages": "الصفحات",
+            "appearance": "المظهر",
+            "setup": "الإعدادات والتهيئة",
+            "generalSettings": "الإعدادات العامة",
+            "featuresActivation": "تفعيل الميزات",
+            "languages": "اللغات",
+            "currency": "العملة",
+            "vatTax": "ضريبة القيمة المضافة والضرائب",
+            "pickupPoints": "نقاط الاستلام",
+            "smtpSettings": "إعدادات SMTP",
+            "paymentMethods": "طرق الدفع",
+            "fileSystem": "نظام الملفات والذاكرة المؤقتة",
+            "socialLogins": "تسجيل الدخول عبر وسائل التواصل",
+            "facebook": "فيسبوك",
+            "facebookChat": "دردشة فيسبوك",
+            "facebookComment": "تعليقات فيسبوك",
+            "google": "جوجل",
+            "analyticsTools": "أدوات التحليلات",
+            "googleRecaptcha": "Google reCAPTCHA",
+            "googleMap": "خرائط جوجل",
+            "googleFirebase": "Google Firebase",
+            "shipping": "الشحن",
+            "shippingConfiguration": "إعدادات الشحن",
+            "shippingCountries": "دول الشحن",
+            "shippingStates": "مناطق الشحن",
+            "shippingCities": "مدن الشحن",
+            "shippingZones": "نطاقات الشحن",
+            "shippingCarriers": "شركات الشحن",
+            "staff": "الموظفون",
+            "allStaff": "جميع الموظفين",
+            "staffRoles": "صلاحيات الموظفين"
+        },
+        "staff": {
+            "index": {
+                "title": "الموظفون",
+                "addStaff": "إضافة موظف",
+                "columnName": "الاسم",
+                "columnEmail": "البريد الإلكتروني",
+                "columnPhone": "الهاتف",
+                "columnRole": "الدور",
+                "columnActions": "الإجراءات",
+                "empty": "لا يوجد موظفون بعد.",
+                "edit": "تعديل",
+                "delete": "حذف",
+                "superAdmin": "مدير عام",
+                "noRole": "بدون دور"
+            },
+            "create": {
+                "title": "إضافة موظف",
+                "submit": "إنشاء الموظف",
+                "submitting": "جارٍ الإنشاء..."
+            },
+            "edit": {
+                "title": "تعديل {name}",
+                "submit": "حفظ التغييرات",
+                "submitting": "جارٍ الحفظ..."
+            },
+            "fields": {
+                "name": "الاسم",
+                "email": "البريد الإلكتروني",
+                "phone": "الهاتف",
+                "role": "الدور",
+                "rolePlaceholder": "اختر دورًا",
+                "password": "كلمة المرور",
+                "newPassword": "كلمة المرور الجديدة",
+                "confirmPassword": "تأكيد كلمة المرور",
+                "passwordPlaceholder": "اتركه فارغًا للإبقاء على كلمة المرور الحالية"
+            }
+        },
+        "roles": {
+            "index": {
+                "title": "الأدوار",
+                "addRole": "إضافة دور",
+                "columnName": "الاسم",
+                "columnActions": "الإجراءات",
+                "empty": "لا توجد أدوار بعد.",
+                "edit": "تعديل",
+                "delete": "حذف"
+            },
+            "create": {
+                "title": "إضافة دور",
+                "submit": "إنشاء الدور",
+                "submitting": "جارٍ الإنشاء..."
+            },
+            "edit": {
+                "title": "تعديل {name}",
+                "submit": "حفظ التغييرات",
+                "submitting": "جارٍ الحفظ...",
+                "languages": "لغات الاسم"
+            },
+            "fields": {
+                "name": "الاسم",
+                "nameTranslationHint": "الاسم باللغة الافتراضية هو اسم الدور نفسه، وأي لغة أخرى تترجمه فقط.",
+                "permissions": "الصلاحيات"
             }
         }
     }

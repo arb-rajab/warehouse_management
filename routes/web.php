@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CellController;
 use App\Http\Controllers\Admin\CellStatusLogController;
+use App\Http\Controllers\Admin\CellVerificationReportController;
 use App\Http\Controllers\Admin\CellVerificationRoundController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HelpController;
@@ -50,12 +51,12 @@ Route::middleware('auth')->group(function () {
         Route::get('rows/{row}/export-qr-codes', [RowController::class, 'exportQrCodes'])->name('rows.export-qr-codes');
 
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
-        Route::get('cells/{cell}/export-qr', [CellController::class, 'exportQr'])->name('cells.export-qr');
+        Route::get('cells/{cell}/export-qr-code', [CellController::class, 'exportQrCode'])->name('cells.export-qr-code');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
 
         Route::get('pallets', [PalletController::class, 'index'])->name('pallets.index');
         Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
-        Route::put('pallets/{pallet}/update', [PalletController::class, 'update'])->name('pallets.update');
+        Route::put('pallets/{pallet}', [PalletController::class, 'update'])->name('pallets.update');
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('pallets.open');
         Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('pallets.remove-boxes');
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('pallets.empty');
@@ -66,17 +67,17 @@ Route::middleware('auth')->group(function () {
 
         Route::get('cell-verification-rounds', [CellVerificationRoundController::class, 'index'])->name('cell-verification-rounds.index');
         Route::get('cell-verification-rounds/{cellVerificationRound}', [CellVerificationRoundController::class, 'show'])->name('cell-verification-rounds.show');
-        Route::get('cell-verification-rounds/{cellVerificationRound}/export', [CellVerificationRoundController::class, 'exportReports'])->name('cell-verification-rounds.export');
-        Route::post('cell-verification-reports/{cellVerificationReport}/accept', [CellVerificationRoundController::class, 'acceptReport'])->name('cell-verification-reports.accept');
+        Route::get('cell-verification-rounds/{cellVerificationRound}/export', [CellVerificationRoundController::class, 'exportReports'])->name('cell-verification-rounds.export-reports');
+        Route::post('cell-verification-reports/{cellVerificationReport}/accept', [CellVerificationReportController::class, 'accept'])->name('cell-verification-reports.accept');
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
         Route::get('products/{product}/image', [ProductController::class, 'image'])->name('products.image');
-        Route::patch('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
-        Route::patch('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
-        Route::post('products/{product}/barcodes', [ProductController::class, 'addBarcode'])->name('products.barcodes.store');
-        Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'removeBarcode'])->name('products.barcodes.destroy');
+        Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
+        Route::put('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
+        Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->name('products.barcodes.store');
+        Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'destroyBarcode'])->scopeBindings()->name('products.barcodes.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');

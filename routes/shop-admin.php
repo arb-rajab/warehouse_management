@@ -41,11 +41,11 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepresentativePackageController;
 use App\Http\Controllers\RepresentativePaymentAdminController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
-use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StateController;
+use App\Http\Controllers\Store\Admin\RoleController;
+use App\Http\Controllers\Store\Admin\StaffController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TaxController;
@@ -305,7 +305,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/dynamic-popups-update-status', 'update_status')->name('dynamic-popups.update-status');
     });
 
-    Route::resource('profile', ProfileController::class);
+    Route::resource('profile', ProfileController::class)->only(['index', 'update']);
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
@@ -404,19 +404,26 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         });
     });
 
-    // Staff Roles
-    Route::resource('roles', RoleController::class);
+    // Staff roles and staff: Inertia pages (resources/js/pages/Store/Admin/Staff),
+    // so explicit routes on bound models rather than the resource-plus-override
+    // pairs the Blade modules still use (.ai/rules/store-backoffice-migration.md §3).
     Route::controller(RoleController::class)->group(function () {
-        Route::get('/roles/edit/{id}', 'edit')->name('roles.edit');
-        Route::post('/roles/destroy/{id}', 'destroy')->name('roles.destroy');
-
-        // Add Permissiom
-        Route::post('/roles/add_permission', 'add_permission')->name('roles.permission');
+        Route::get('/roles', 'index')->name('roles.index');
+        Route::get('/roles/create', 'create')->name('roles.create');
+        Route::post('/roles', 'store')->name('roles.store');
+        Route::get('/roles/{role}/edit', 'edit')->name('roles.edit');
+        Route::put('/roles/{role}', 'update')->name('roles.update');
+        Route::delete('/roles/{role}', 'destroy')->name('roles.destroy');
     });
 
-    // Staff
-    Route::resource('staffs', StaffController::class);
-    Route::post('/staffs/destroy/{id}', [StaffController::class, 'destroy'])->name('staffs.destroy');
+    Route::controller(StaffController::class)->group(function () {
+        Route::get('/staffs', 'index')->name('staffs.index');
+        Route::get('/staffs/create', 'create')->name('staffs.create');
+        Route::post('/staffs', 'store')->name('staffs.store');
+        Route::get('/staffs/{staff}/edit', 'edit')->name('staffs.edit');
+        Route::put('/staffs/{staff}', 'update')->name('staffs.update');
+        Route::delete('/staffs/{staff}', 'destroy')->name('staffs.destroy');
+    });
 
     // Flash Deal
     Route::resource('flash_deals', FlashDealController::class);
@@ -654,8 +661,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
     Route::post('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
-
-    Route::get('/admin-permissions', [RoleController::class, 'create_admin_permissions']);
 
     Route::controller(AdminNotificationController::class)->group(function () {
         Route::get('/notifications', 'getAllNotifications')->name('admin.notifications.all');

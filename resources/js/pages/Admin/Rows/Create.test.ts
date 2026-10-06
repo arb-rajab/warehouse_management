@@ -1,5 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    create as rowsCreate,
+    index as rowsIndex,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
 import RowFormFields from '@/components/RowFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
@@ -27,7 +31,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage() {
     usePageMock.mockReturnValue({
-        url: '/admin/rows/create',
+        url: rowsCreate.url(),
         props: defaultAuthProps(),
     });
 
@@ -50,7 +54,7 @@ describe('Rows Create', () => {
         const wrapper = mountPage();
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/admin/rows',
+            rowsIndex.url(),
         );
     });
 
@@ -90,6 +94,6 @@ describe('Rows Create', () => {
     it('links the cancel action back to the row list', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.get('form a').attributes('href')).toBe('/admin/rows');
+        expect(wrapper.get('form a').attributes('href')).toBe(rowsIndex.url());
     });
 });

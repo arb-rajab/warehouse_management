@@ -26,6 +26,7 @@ class ProductController extends Controller
                 ->where('published', $productPublished)
                 ->orderBy('name')
                 ->paginate(20)
+                ->withQueryString()
         );
     }
 
@@ -35,16 +36,9 @@ class ProductController extends Controller
      * to "this product isn't sold anymore" (active: false) instead of looking
      * like an unknown/broken label. Only a genuinely nonexistent id 404s.
      */
-    public function show(int $product): ProductResource
+    public function show(Product $product): ProductResource
     {
-        $product = Product::query()
-            ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
-            ->with(Product::WITH_DERIVED_ATTRIBUTES)
-            ->find($product);
-
-        abort_if($product === null, 404);
-
-        return new ProductResource($product);
+        return new ProductResource($product->load(Product::WITH_DERIVED_ATTRIBUTES));
     }
 
     /**
@@ -54,16 +48,9 @@ class ProductController extends Controller
      * soonest), then added_at ascending, then location, so the operator always
      * drives to the oldest-expiring stock first.
      */
-    public function pallets(int $product): AnonymousResourceCollection
+    public function pallets(Product $product): AnonymousResourceCollection
     {
-        $product = Product::query()
-            ->select(['id'])
-            ->with('setting:product_id,boxes_count')
-            ->find($product);
-
-        abort_if($product === null, 404);
-
-        $productBoxesCount = $product->boxes_count;
+        $productBoxesCount = $product->load('setting:product_id,boxes_count')->boxes_count;
 
         $pallets = Pallet::query()
             ->select(['pallets.id', 'pallets.cell_id', 'pallets.expiration_date', 'pallets.remaining_boxes', 'pallets.created_at'])

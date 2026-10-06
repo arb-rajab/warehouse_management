@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { CircleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import FieldError from '@/components/FieldError.vue';
+import FormField from '@/components/FormField.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { pxToCm } from '@/lib/qrCodeSize';
-import FormField from './FormField.vue';
 
 /**
  * Mirrors Setting::MIN_QR_CODE_SIZE / MAX_QR_CODE_SIZE
@@ -35,8 +35,6 @@ const props = withDefaults(
     }>(),
     {
         idPrefix: '',
-        qrCodeWidth: undefined,
-        qrCodeHeight: undefined,
         levels: () => [],
         allowedOpenLevels: () => [],
     },
@@ -131,13 +129,7 @@ const heightCm = computed(() =>
                     </label>
                 </div>
             </div>
-            <p
-                v-if="errors.allowed_open_levels"
-                class="mt-1 flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
-            >
-                <CircleAlert class="h-3.5 w-3.5 shrink-0" />
-                {{ errors.allowed_open_levels }}
-            </p>
+            <FieldError :message="errors.allowed_open_levels" />
         </fieldset>
     </div>
 </template>

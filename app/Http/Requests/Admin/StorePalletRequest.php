@@ -10,7 +10,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StorePalletRequest extends FormRequest
 {
-    use ValidatesOptionalNote, ValidatesPalletContents, ValidatesReturnTo;
+    use ValidatesOptionalNote;
+    use ValidatesPalletContents;
+    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.

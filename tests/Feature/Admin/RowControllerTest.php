@@ -60,13 +60,13 @@ test('the row list respects a per_page query parameter', function () {
     $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
 });
 
-test('an out-of-range per_page value falls back to the default page size', function () {
+test('the row list rejects a per_page value outside the allowed options', function () {
     actingAsAdmin();
     Row::factory()->count(25)->create();
 
     $response = $this->get('/admin/rows?per_page=999');
 
-    assertInertiaPaginates($response, 'rows', 20, 25, 'Admin/Rows/Index');
+    $response->assertSessionHasErrors('per_page');
 });
 
 test('a mobile app user cannot view the row list', function () {

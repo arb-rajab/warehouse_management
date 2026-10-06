@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
+import { paginated } from '@/testing/factories';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import FilterProductSelect from './FilterProductSelect.vue';
 import ProductOptionLabel from './ProductOptionLabel.vue';
@@ -17,24 +18,6 @@ const { getMock } = vi.hoisted(() => ({
 vi.mock('@inertiajs/vue3', () => ({
     useHttp: () => ({ get: getMock }),
 }));
-
-function page(
-    data: ProductFilterOption[],
-    { currentPage = 1, lastPage = 1 } = {},
-): Paginated<ProductFilterOption> {
-    return {
-        data,
-        meta: {
-            current_page: currentPage,
-            last_page: lastPage,
-            per_page: 20,
-            total: data.length,
-            from: data.length ? 1 : null,
-            to: data.length,
-            links: [],
-        },
-    };
-}
 
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
     // A real request always calls onFinish after onSuccess (or after
@@ -90,7 +73,9 @@ describe('FilterProductSelect', () => {
 
     it("resolves a single selection's label from the `selected` prop without fetching", async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
+            selected: [
+                { id: 99, name: 'Widget', ar_name: 'ودجة', active: true },
+            ],
             modelValue: ['99'],
         });
 
@@ -101,8 +86,8 @@ describe('FilterProductSelect', () => {
     it('shows the selected count label when more than one is selected', () => {
         const wrapper = mountSelect({
             selected: [
-                { id: 1, name: 'Widget', ar_name: 'ودجة' },
-                { id: 2, name: 'Gadget', ar_name: 'أداة' },
+                { id: 1, name: 'Widget', ar_name: 'ودجة', active: true },
+                { id: 2, name: 'Gadget', ar_name: 'أداة', active: true },
             ],
             modelValue: ['1', '2'],
         });
@@ -196,9 +181,9 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -214,7 +199,7 @@ describe('FilterProductSelect', () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');
 
-        resolveCall(0, page([]));
+        resolveCall(0, paginated([]));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.text()).toContain(t('cellLog.filters.noProductsFound'));
@@ -245,10 +230,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -273,10 +262,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -289,10 +282,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -319,10 +316,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -335,10 +336,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 1,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 1,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -378,12 +383,26 @@ describe('FilterProductSelect', () => {
         // Resolve the newer ("new") request first, then the stale ("old") one.
         resolveCall(
             2,
-            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+            paginated([
+                {
+                    id: 2,
+                    name: 'New product',
+                    ar_name: 'منتج جديد',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
         resolveCall(
             1,
-            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+            paginated([
+                {
+                    id: 1,
+                    name: 'Old product',
+                    ar_name: 'منتج قديم',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
 
@@ -399,7 +418,12 @@ describe('FilterProductSelect', () => {
 
         expect(wrapper.get('button').text()).toBe('All');
 
-        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
+        resolveCall(
+            0,
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ]),
+        );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.get('button').text()).toBe('Widgets');
@@ -423,9 +447,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -458,9 +482,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -480,11 +504,13 @@ describe('FilterProductSelect', () => {
         i18n.global.locale.value = 'ar';
 
         const translated = mountSelect({
-            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
+            selected: [
+                { id: 99, name: 'Widget', ar_name: 'ودجة', active: true },
+            ],
             modelValue: ['99'],
         });
         const untranslated = mountSelect({
-            selected: [{ id: 98, name: 'Gadget', ar_name: '' }],
+            selected: [{ id: 98, name: 'Gadget', ar_name: '', active: true }],
             modelValue: ['98'],
         });
 
@@ -498,9 +524,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -510,19 +536,26 @@ describe('FilterProductSelect', () => {
                 .findAllComponents(ProductOptionLabel)
                 .map((label) => label.props('product')),
         ).toEqual([
-            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-            { id: 2, name: 'Gadgets', ar_name: '' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            { id: 2, name: 'Gadgets', ar_name: '', active: true },
         ]);
     });
 
     it('keeps a selected product pinned and checked after a new search replaces the results', async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
             modelValue: ['1'],
         });
 
         await wrapper.get('button').trigger('click');
-        resolveCall(0, page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }]));
+        resolveCall(
+            0,
+            paginated([
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ]),
+        );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.text()).toContain(t('cellLog.filters.selected'));
@@ -546,9 +579,9 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -561,16 +594,18 @@ describe('FilterProductSelect', () => {
 
     it('does not duplicate a selected product that also appears in the current search results', async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
             modelValue: ['1'],
         });
 
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -583,17 +618,51 @@ describe('FilterProductSelect', () => {
 
     it('lets an admin unselect a pinned product directly, without re-searching for it', async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 1, name: 'Widgets', ar_name: 'ودجات' }],
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
             modelValue: ['1'],
         });
 
         await wrapper.get('button').trigger('click');
-        resolveCall(0, page([]));
+        resolveCall(0, paginated([]));
         await wrapper.vm.$nextTick();
 
         const checkbox = wrapper.get('input[type="checkbox"]');
         await checkbox.setValue(false);
 
         expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
+    });
+
+    it('deselects every selected product with one click and hides the button when none are selected', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ],
+            modelValue: ['1', '2'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, paginated([]));
+        await wrapper.vm.$nextTick();
+
+        const deselectAll = wrapper.get(
+            '[data-testid="deselect-all-products"]',
+        );
+        expect(deselectAll.text()).toBe(t('cellLog.filters.deselectAll'));
+
+        await deselectAll.trigger('click');
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
+
+        const empty = mountSelect();
+        await empty.get('button').trigger('click');
+        resolveCall(1, paginated([]));
+        await empty.vm.$nextTick();
+
+        expect(
+            empty.find('[data-testid="deselect-all-products"]').exists(),
+        ).toBe(false);
     });
 });

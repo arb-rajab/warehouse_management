@@ -1,188 +1,100 @@
-"""Run every locally-available check, in the order CI runs its equivalents.
+"""Run the checks CI runs, in CI's order, as the one command before a push.
 
-This is the single command a session should run before pushing, so pre-push
-verification doesn't depend on a session remembering to assemble it from the
-sandbox section of CLAUDE.md by hand. It is NOT a substitute for CI: Pint,
-PHPStan/Larastan and Pest cannot run here (see CLAUDE.md's "Sandbox" section)
-and are read from `composer ci:check` in CI, never locally.
+What it runs (matching `.github/workflows/tests.yml`):
+  1. `npm run lint:check`      (ESLint)
+  2. `npm run format:check`    (Prettier)
+  3. `npm run types:check`     (vue-tsc)
+  4. `npm run test:unit`       (Vitest, full run)
+  5. `composer lint:check`     (Pint)
+  6. `composer types:check`    (PHPStan/Larastan)
+  7. `php artisan test --parallel` (Pest, with composer's process timeout off:
+     `composer test:pest` hits the 300s default on this suite)
 
-What it runs, in this order (matching `.github/workflows/tests.yml`):
-  1. `npm run lint:check`   (ESLint)
-  2. `npm run format:check` (Prettier)
-  3. `npm run types:check`  (vue-tsc)
-  4. `npm run test:unit`    (Vitest, full run)
-  5. `php -l` on every changed PHP file (syntax only — not Pint/PHPStan)
-  6. `.claude/scripts/php_import_order.py` on every changed PHP file Pint checks
-  7. `.claude/scripts/php_pint_style.py` on every changed PHP file Pint checks
-     (steps 6-7 skip what `pint.json` lists under `notPath`)
-  8. `.claude/scripts/js_balance.py` on every changed .ts/.js/.vue file
-  9. `.claude/scripts/vue_unused_imports.py` on every changed .vue file
-     (advisory — never fails the run)
- 10. `.claude/scripts/vue_prettier_hints.py` on every changed .vue file
-     (advisory — never fails the run)
-
-"Changed" files are those differing from the merge-base with `origin/develop`
-(the script fetches it first) plus any untracked new files, falling back to
-uncommitted changes against HEAD if that remote branch or a merge-base with
-it isn't available (e.g. a fresh clone with only the current branch fetched).
-Steps 1-4 always run against the
-whole project, matching what CI actually gates on; the changed-file list only
-scopes the per-file stand-in scripts, which are too slow/noisy to run over
-every file in the repo on each push.
-
-`php_duplicate_blocks.py` is intentionally NOT included here — its own
-docstring says it is for a deliberate cross-cutting review against the
-duplication threshold in CLAUDE.md, not a per-push gate.
+Steps 5-7 need the PHP dev tools, which the SessionStart hook installs through
+`.claude/scripts/install_dev_tools.py`. When `vendor/bin/pint` is absent (that
+install failed), they are skipped with a note rather than failed — read them
+from `composer ci:check` in CI instead. Pest also needs `.env` with an APP_KEY
+and `public/build/manifest.json`; the same hook provides both.
 
 Usage:
     python3 .claude/scripts/pre_push_check.py
 
-Exits non-zero (and stops at the first failing step) if any blocking check
-fails. Advisory steps print their output but never fail the run.
+It first waits for the background SessionStart setup (wait_for_setup.py) so the
+PHP steps are chosen from a finished install, not a half-installed one.
+
+Exits non-zero, and stops at the first failing step, if any check fails.
 """
 
-import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+import wait_for_setup
+
 ROOT = Path(__file__).resolve().parent.parent.parent
-SCRIPTS = Path(__file__).parent
+
+PHP_ENV = {**os.environ, 'COMPOSER_ALLOW_SUPERUSER': '1', 'COMPOSER_PROCESS_TIMEOUT': '0'}
 
 
-def changed_files() -> list[str]:
-    """Return paths (relative to ROOT) that differ from the develop baseline.
-
-    Includes untracked new files (excluded by .gitignore), since a brand new
-    file is exactly the kind of thing a pre-push check must not skip.
-    """
-    subprocess.run(
-        ['git', 'fetch', 'origin', 'develop'],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-
-    merge_base = subprocess.run(
-        ['git', 'merge-base', 'HEAD', 'origin/develop'],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-    diff_base = merge_base.stdout.strip() if merge_base.returncode == 0 else 'HEAD'
-
-    diff = subprocess.run(
-        ['git', 'diff', '--name-only', '--diff-filter=d', diff_base],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-
-    if diff.returncode != 0:
-        # No baseline reachable (e.g. shallow clone without develop) — fall
-        # back to whatever is uncommitted against the working tree.
-        diff = subprocess.run(
-            ['git', 'diff', '--name-only', '--diff-filter=d', 'HEAD'],
-            cwd=ROOT, capture_output=True, text=True,
-        )
-
-    tracked = [line for line in diff.stdout.splitlines() if line]
-
-    untracked = subprocess.run(
-        ['git', 'ls-files', '--others', '--exclude-standard'],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-
-    return sorted(set(tracked) | {line for line in untracked.stdout.splitlines() if line})
-
-
-def pint_checked(files: list[str]) -> list[str]:
-    """Drop the files CI's Pint never looks at: Blade templates, and what
-    `pint.json` lists under `notPath` (the legacy store's controllers among
-    them). The stand-ins must not fail a push on formatting CI would not check.
-    A `notPath` entry that is a directory excludes everything under it.
-    """
-    config = ROOT / 'pint.json'
-    excluded = json.loads(config.read_text()).get('notPath', []) if config.exists() else []
-    prefixes = tuple(entry.rstrip('/') + '/' for entry in excluded)
-
-    return [
-        f for f in files
-        if not f.endswith('.blade.php') and f not in excluded and not f.startswith(prefixes)
-    ]
-
-
-def run_step(label: str, command: list[str], *, advisory: bool = False) -> bool:
+def run_step(label: str, command: list[str], *, env: dict[str, str] | None = None) -> bool:
     """Run one command, printing a header, and return whether it passed."""
     print(f'\n=== {label} ===')
-    result = subprocess.run(command, cwd=ROOT)
+    result = subprocess.run(command, cwd=ROOT, env=env)
 
     if result.returncode == 0:
-        return True
-
-    if advisory:
-        print(f'--- {label}: advisory step reported findings above (non-blocking)')
         return True
 
     print(f'--- {label}: FAILED (exit {result.returncode})')
     return False
 
 
+def php_tools_installed() -> bool:
+    """Whether the dev tools the PHP steps need are present."""
+    return (ROOT / 'vendor' / 'bin' / 'pint').exists()
+
+
+def build_steps() -> list[tuple[str, list[str], dict[str, str] | None]]:
+    """Return (label, command, env) for every step that can run here."""
+    steps: list[tuple[str, list[str], dict[str, str] | None]] = [
+        ('ESLint', ['npm', 'run', 'lint:check'], None),
+        ('Prettier', ['npm', 'run', 'format:check'], None),
+        ('vue-tsc', ['npm', 'run', 'types:check'], None),
+        ('Vitest', ['npm', 'run', 'test:unit'], None),
+    ]
+
+    if not php_tools_installed():
+        return steps
+
+    return steps + [
+        ('Pint', ['composer', 'lint:check'], PHP_ENV),
+        ('PHPStan', ['composer', 'types:check'], PHP_ENV),
+        ('Clear config cache', ['php', 'artisan', 'config:clear'], PHP_ENV),
+        ('Pest', ['php', 'artisan', 'test', '--parallel', '--compact'], PHP_ENV),
+    ]
+
+
 def main() -> int:
-    files = changed_files()
-    php_files = [f for f in files if f.endswith('.php') and (ROOT / f).exists()]
-    js_files = [
-        f for f in files
-        if f.endswith(('.ts', '.js', '.vue')) and (ROOT / f).exists()
-    ]
-    vue_files = [f for f in js_files if f.endswith('.vue')]
+    # The SessionStart setup runs in the background: steps are chosen from what
+    # is installed, so wait for it first. A failed or interrupted setup is not
+    # fatal here; the steps simply reflect whatever did get installed.
+    print('\n=== Session setup ===')
+    print(wait_for_setup.wait(wait_for_setup.state_dir(), wait_for_setup.DEFAULT_TIMEOUT_SECONDS)[1])
 
-    steps: list[tuple[str, list[str], bool]] = [
-        ('ESLint', ['npm', 'run', 'lint:check'], False),
-        ('Prettier', ['npm', 'run', 'format:check'], False),
-        ('vue-tsc', ['npm', 'run', 'types:check'], False),
-        ('Vitest', ['npm', 'run', 'test:unit'], False),
-    ]
-
-    for php_file in php_files:
-        steps.append((f'php -l {php_file}', ['php', '-l', php_file], False))
-
-    pint_files = pint_checked(php_files)
-
-    if pint_files:
-        steps.append((
-            'Pint import order (stand-in)',
-            [sys.executable, str(SCRIPTS / 'php_import_order.py'), *pint_files],
-            False,
-        ))
-        steps.append((
-            'Pint style (stand-in)',
-            [sys.executable, str(SCRIPTS / 'php_pint_style.py'), *pint_files],
-            False,
-        ))
-
-    for js_file in js_files:
-        steps.append((
-            f'bracket balance {js_file}',
-            [sys.executable, str(SCRIPTS / 'js_balance.py'), js_file],
-            False,
-        ))
-
-    for vue_file in vue_files:
-        steps.append((
-            f'unused imports {vue_file}',
-            [sys.executable, str(SCRIPTS / 'vue_unused_imports.py'), vue_file],
-            True,
-        ))
-        steps.append((
-            f'prettier hints {vue_file}',
-            [sys.executable, str(SCRIPTS / 'vue_prettier_hints.py'), vue_file],
-            True,
-        ))
-
-    for label, command, advisory in steps:
-        if not run_step(label, command, advisory=advisory):
+    for label, command, env in build_steps():
+        if not run_step(label, command, env=env):
             print(f'\nStopping: "{label}" failed. Fix it and re-run '
                   f'`python3 .claude/scripts/pre_push_check.py` before pushing.')
             return 1
 
-    print('\nAll available local checks passed.')
-    print('Reminder: Pint, PHPStan/Larastan and Pest still only run in CI '
-          '(`composer ci:check`) — this does not guarantee CI is green.')
+    if not php_tools_installed():
+        print('\nJS checks passed. Pint, PHPStan and Pest were skipped: vendor/bin/pint is '
+              'missing, so the dev-tools install did not complete. Read them from '
+              '`composer ci:check` in CI.')
+
+        return 0
+
+    print('\nAll CI checks passed locally.')
 
     return 0
 

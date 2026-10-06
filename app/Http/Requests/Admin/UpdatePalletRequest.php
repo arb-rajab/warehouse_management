@@ -10,7 +10,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePalletRequest extends FormRequest
 {
-    use ValidatesBoxesCount, ValidatesPalletContents, ValidatesReturnTo;
+    use ValidatesBoxesCount;
+    use ValidatesPalletContents;
+    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.

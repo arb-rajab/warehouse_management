@@ -9,7 +9,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class EmptyPalletRequest extends FormRequest
 {
-    use ValidatesOptionalNote, ValidatesReturnTo;
+    use ValidatesOptionalNote;
+    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { t } from '@/lib/i18n';
 import LogoutLink from './LogoutLink.vue';
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -15,10 +16,19 @@ describe('LogoutLink', () => {
         expect(wrapper.get('a,button').attributes('href')).toBe('/logout');
     });
 
+    it('links to the given logout route instead', () => {
+        const wrapper = mount(LogoutLink, {
+            props: { href: { url: '/temp/logout', method: 'post' } },
+        });
+
+        expect(wrapper.get('a,button').attributes('href')).toBe('/temp/logout');
+    });
+
     it('renders the logout label', () => {
         const wrapper = mount(LogoutLink);
 
-        expect(wrapper.text()).toContain('Log out');
+        expect(wrapper.text()).toContain(t('nav.logout'));
+        expect(t('nav.logout')).toBe('Log out');
     });
 
     it('applies a class attribute to the root element via fallthrough', () => {

@@ -64,6 +64,12 @@ return [
     'products_sync_url' => env('STORE_PRODUCTS_SYNC_URL'),
 
     /*
+    | The legacy back office's demo switch (`DEMO_MODE=On`): the own-profile
+    | update refuses to write while it is on.
+    */
+    'demo_mode' => env('DEMO_MODE') === 'On',
+
+    /*
     |--------------------------------------------------------------------------
     | Enabled Payment Gateways
     |--------------------------------------------------------------------------
@@ -104,6 +110,50 @@ return [
         'payhere' => [PayhereController::class],
         'sslcommerz' => [SslcommerzController::class, ApiSslCommerzController::class],
         'voguepay' => [VoguepayController::class],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Content-Security-Policy for the Store's Blade Pages
+    |--------------------------------------------------------------------------
+    |
+    | The store's server-rendered pages run inline `<script>` blocks and load
+    | jQuery plugins, fonts, maps and embeds from third-party hosts, which
+    | config/secure-headers.php's strict policy blocks. HandleStoreBladePages
+    | swaps these directives in for a Blade page only; Inertia pages, store
+    | ones included, keep the strict policy. Each entry replaces that whole
+    | directive. Shrink this as the back office moves to Inertia and drop it
+    | with the last Blade page (.ai/rules/store-backoffice-migration.md §2.5).
+    |
+    */
+
+    'blade_csp' => [
+        'script-src' => [
+            'self' => true,
+            'unsafe-inline' => true,
+            'schemes' => ['https:'],
+        ],
+        'style-src' => [
+            'self' => true,
+            'unsafe-inline' => true,
+            'schemes' => ['https:'],
+        ],
+        'font-src' => [
+            'self' => true,
+            'schemes' => ['https:', 'data:'],
+        ],
+        'img-src' => [
+            'self' => true,
+            'schemes' => ['https:', 'data:', 'blob:'],
+        ],
+        'frame-src' => [
+            'self' => true,
+            'schemes' => ['https:'],
+        ],
+        'connect-src' => [
+            'self' => true,
+            'schemes' => ['https:'],
+        ],
     ],
 
 ];

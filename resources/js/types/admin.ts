@@ -151,6 +151,7 @@ export interface ProductFilterOption {
     name: string;
     /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
     ar_name: string;
+    active: boolean;
 }
 
 /**
@@ -356,6 +357,7 @@ export interface ProductFilters {
     expired?: boolean;
     expires_within_days?: number;
     inactive?: boolean;
+    hide_inactive?: boolean;
     low_stock?: boolean;
     product_id?: number[];
     user_id?: number[];

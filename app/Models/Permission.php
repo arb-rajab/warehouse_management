@@ -9,6 +9,9 @@ use Spatie\Permission\Models\Permission as SpatiePermission;
  * The legacy store's permissions: spatie's permission model, held to the
  * `store` guard, for the same reason as Role. They live in spatie's
  * configured `wms_permissions` table, next to WMS's own `web` ones.
+ *
+ * @property string|null $section the store back-office module the
+ *                                 permission belongs to (the role form groups by it)
  */
 class Permission extends SpatiePermission
 {

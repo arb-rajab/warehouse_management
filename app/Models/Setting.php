@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\SettingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,12 +23,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property list<int> $allowed_open_levels
  */
 #[Fillable(['qr_code_width', 'qr_code_height', 'allowed_open_levels'])]
+#[Table('wms_settings')]
 class Setting extends Model
 {
     /** @use HasFactory<SettingFactory> */
     use HasFactory;
-
-    protected $table = 'wms_settings';
 
     /**
      * qr_code_width/qr_code_height are the label's total box — the QR square

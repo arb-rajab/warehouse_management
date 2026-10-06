@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Eye, QrCode, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -21,6 +21,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
+import { usePageError } from '@/lib/pageErrors';
 import type { Paginated, PerPageFilters, Row } from '@/types/admin';
 
 const props = defineProps<{
@@ -28,9 +29,7 @@ const props = defineProps<{
     filters: PerPageFilters;
 }>();
 
-const deleteError = computed(
-    () => (usePage().props.errors as Partial<Record<'row', string>>)?.row,
-);
+const deleteError = usePageError('row');
 
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 

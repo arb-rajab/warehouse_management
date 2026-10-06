@@ -318,9 +318,14 @@ vi.mock('three', () => {
         needsUpdate = false;
         dispose = vi.fn();
 
-        constructor(options?: { alphaTest?: unknown; visible?: unknown }) {
+        constructor(options?: {
+            alphaTest?: unknown;
+            visible?: unknown;
+            map?: unknown;
+        }) {
             this.alphaTest = options?.alphaTest;
             this.visible = options?.visible ?? true;
+            this.map = options?.map ?? null;
         }
     }
 
@@ -329,6 +334,13 @@ vi.mock('three', () => {
         load = vi.fn((url: string, onLoad: (texture: unknown) => void) => {
             registry.textureLoads.push({ url, onLoad });
         });
+    }
+
+    class CanvasTexture {
+        colorSpace: unknown;
+        dispose = vi.fn();
+
+        constructor(public image: unknown) {}
     }
 
     class PerspectiveCamera extends Object3D {
@@ -431,6 +443,7 @@ vi.mock('three', () => {
         MeshBasicMaterial,
         LineBasicMaterial,
         TextureLoader,
+        CanvasTexture,
         SRGBColorSpace: 'srgb',
         Vector2,
         Raycaster,
@@ -451,6 +464,7 @@ type Registry = {
     meshes: Array<{
         name: string;
         position: { x: number; y: number; z: number };
+        rotation: { x: number; y: number; z: number };
         material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
         userData: Record<string, unknown>;
     }>;
@@ -708,6 +722,9 @@ beforeEach(() => {
     registry().instancedMeshes = [];
     registry().raycasters = [];
     registry().textureLoads = [];
+
+    // jsdom has no 2D canvas; the aisle floor markers skip drawing without one.
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     vi.stubGlobal('requestAnimationFrame', (cb: (time: number) => void) => {
         rafCallback = cb;
@@ -1044,6 +1061,92 @@ describe('CellMap3D', () => {
         rafCallback?.(0);
 
         expect(lastCamera().position).toEqual({ x: 0, y: EYE_HEIGHT, z: 0 });
+    });
+
+    describe('orbit mode focus', () => {
+        type OrbitVm = {
+            focusCell: (r: string, c: number, f: number) => void;
+            resetView: () => void;
+            setCameraMode: (mode: 'walk' | 'orbit') => void;
+        };
+
+        function mountOrbiting() {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            const vm = wrapper.vm as unknown as OrbitVm;
+            vm.setCameraMode('orbit');
+            rafCallback?.(0);
+
+            return { wrapper, vm };
+        }
+
+        it('re-aims the orbit camera at the focused cell instead of moving the walk position', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            rafCallback?.(16);
+
+            const focusedLookAt = lastCamera().lookAt.mock.calls.at(-1);
+            expect(focusedLookAt).not.toEqual(overviewLookAt);
+            expect(focusedLookAt).toEqual([
+                rowWorldX(2),
+                flatWorldY(1),
+                cellWorldZ(3),
+            ]);
+
+            vm.focusCell('A', 1, 1);
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual([
+                rowWorldX(0),
+                flatWorldY(1),
+                cellWorldZ(1),
+            ]);
+        });
+
+        it('returns to the whole-warehouse overview on resetView and on re-entering orbit', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            vm.resetView();
+            rafCallback?.(16);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            vm.setCameraMode('orbit');
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+        });
+
+        it('does not move the walk camera while orbiting, and keeps its position when returning to walk', () => {
+            const { vm } = mountOrbiting();
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            rafCallback?.(16);
+
+            expect(lastCamera().position).toEqual({
+                x: 0,
+                y: EYE_HEIGHT,
+                z: 0,
+            });
+        });
     });
 
     /** Cell boxes are one `THREE.InstancedMesh` per state (see CellMap3D.vue), not one mesh per cell. */
@@ -1751,8 +1854,8 @@ describe('CellMap3D', () => {
 
             // Same-origin route, not the store's (CORS-less) image host.
             expect(registry().textureLoads.map((load) => load.url)).toEqual([
-                '/admin/products/1/image',
-                '/admin/products/2/image',
+                productImage.url({ product: 1 }),
+                productImage.url({ product: 2 }),
             ]);
             expect(liveProductImageMeshes()).toHaveLength(2);
 
@@ -3017,7 +3120,7 @@ describe('CellMap3D', () => {
             });
         }
 
-        it('shows one label per row while walking, and none while orbiting', async () => {
+        it('shows one label per row while walking and while orbiting', async () => {
             const wrapper = mount(CellMap3D, {
                 props: {
                     bands: [band({ letter: 'A' }), band({ letter: 'B' })],
@@ -3042,8 +3145,48 @@ describe('CellMap3D', () => {
             await wrapper.vm.$nextTick();
 
             expect(
-                wrapper.findAll('[data-testid="map-3d-row-label"]'),
-            ).toHaveLength(0);
+                wrapper
+                    .findAll('[data-testid="map-3d-row-label"]')
+                    .map((label) => label.text())
+                    .sort(),
+            ).toEqual(['A', 'B']);
+        });
+
+        it('keeps every row label visible from the top view', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            stubViewportClientSize(wrapper);
+            const vm = wrapper.vm as unknown as {
+                setCameraMode: (mode: 'walk' | 'orbit') => void;
+            };
+            vm.setCameraMode('orbit');
+            const viewport = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+
+            // Drag the orbit pitch to its maximum — the closest to straight down.
+            viewport.dispatchEvent(
+                new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
+            );
+            viewport.dispatchEvent(
+                new MouseEvent('pointermove', { clientX: 0, clientY: -4000 }),
+            );
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper
+                    .findAll('[data-testid="map-3d-row-label"]')
+                    .map((label) => label.text())
+                    .sort(),
+            ).toEqual(['A', 'B', 'C']);
         });
 
         it('hides a row label once you turn to face away from it', async () => {
@@ -3104,6 +3247,199 @@ describe('CellMap3D', () => {
             } else {
                 expect(after.exists()).toBe(false);
             }
+        });
+    });
+
+    describe('aisle floor markers', () => {
+        interface FakeContext {
+            canvas: HTMLCanvasElement;
+            fillText: ReturnType<typeof vi.fn>;
+            clearRect: ReturnType<typeof vi.fn>;
+        }
+        let contexts: FakeContext[] = [];
+
+        beforeEach(() => {
+            contexts = [];
+            vi.spyOn(
+                HTMLCanvasElement.prototype,
+                'getContext',
+            ).mockImplementation(function (this: HTMLCanvasElement) {
+                const context = {
+                    canvas: this,
+                    fillText: vi.fn(),
+                    clearRect: vi.fn(),
+                } as FakeContext;
+                contexts.push(context);
+
+                return context as unknown as CanvasRenderingContext2D;
+            } as unknown as typeof HTMLCanvasElement.prototype.getContext);
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        function aisleMarkers() {
+            return registry().meshes.filter(
+                (mesh) => mesh.name === 'aisle-marker',
+            );
+        }
+
+        function drawnTexts(context: FakeContext): string[] {
+            return context.fillText.mock.calls.map((call) => call[0] as string);
+        }
+
+        it('lays one marker per aisle, between and outside the rows', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+
+            expect(aisleMarkers().map((marker) => marker.position.x)).toEqual([
+                rowWorldX(0) - 2,
+                rowWorldX(1) - 2,
+                rowWorldX(2) - 2,
+                rowWorldX(3) - 2,
+            ]);
+        });
+
+        it('prints each adjacent row letter beside every column number', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+
+            // Aisle 0 has only row A beside it, aisle 1 sits between A and B,
+            // aisle 2 has only row B beside it.
+            expect(contexts.map(drawnTexts)).toEqual([
+                ['1', '', 'A', '2', '', 'A'],
+                ['1', 'A', 'B', '2', 'A', 'B'],
+                ['1', 'B', '', '2', 'B', ''],
+            ]);
+        });
+
+        it("numbers columns up to the warehouse maximum, not each row's own count", () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1 })],
+                        }),
+                        band({
+                            letter: 'B',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 2 }),
+                                item({ cellNumber: 3 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            expect(
+                drawnTexts(contexts[1]).filter((text) => /^\d+$/.test(text)),
+            ).toEqual(['1', '2', '3']);
+        });
+
+        it('splits a long aisle into textures that stay under the size cap', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: Array.from({ length: 40 }, (_, index) =>
+                                item({ cellNumber: index + 1 }),
+                            ),
+                        }),
+                    ],
+                },
+            });
+
+            // Two aisles (either side of the single row), two segments each.
+            expect(aisleMarkers()).toHaveLength(4);
+            expect(
+                contexts.every((context) => context.canvas.height <= 4096),
+            ).toBe(true);
+            expect(
+                contexts
+                    .slice(0, 2)
+                    .flatMap(drawnTexts)
+                    .filter((text) => /^\d+$/.test(text)),
+            ).toHaveLength(40);
+        });
+
+        it('turns the markers and swaps their letters for the walk view, and restores both in the top view', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            const setCameraMode = (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode;
+            const letterXs = (context: FakeContext) =>
+                context.fillText.mock.calls
+                    .filter((call) => ['A', 'B'].includes(call[0] as string))
+                    .slice(0, 2)
+                    .map((call) => [call[0], call[1]]);
+            const width = contexts[1].canvas.width;
+
+            // Walk is the default: the marker is turned half a turn and the
+            // lower row's letter sits on the right, where -X appears on screen.
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
+            expect(letterXs(contexts[1])).toEqual([
+                ['A', width * 0.88],
+                ['B', width * 0.12],
+            ]);
+
+            setCameraMode('orbit');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual([
+                0, 0, 0,
+            ]);
+            const topViewCalls = contexts[1].fillText.mock.calls.slice(-6);
+            expect(topViewCalls.map((call) => [call[0], call[1]])).toEqual([
+                ['1', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+                ['2', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+            ]);
+
+            setCameraMode('walk');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
+        });
+
+        it('adds no markers when there are no cells', () => {
+            mount(CellMap3D, {
+                props: { bands: [band({ letter: 'A', items: [] })] },
+            });
+
+            expect(aisleMarkers()).toHaveLength(0);
+        });
+
+        it('adds no markers when a 2D canvas is unavailable', () => {
+            vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(
+                null,
+            );
+
+            mount(CellMap3D, { props: { bands: [band({ letter: 'A' })] } });
+
+            expect(aisleMarkers()).toHaveLength(0);
         });
     });
 

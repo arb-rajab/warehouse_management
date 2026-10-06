@@ -1378,7 +1378,10 @@ verbatim, and `static_asset()`/`my_asset()` no longer prefix `public/`.
 `/temp` routes return plain Blade (the views never call `@vite` or extend
 `app.blade.php`), so jQuery/Bootstrap never share a page with the Vue 3 app;
 `HandleInertiaRequests` is in the `web` group but only acts on Inertia
-responses. `LegacyAssetHelpersTest` fails if a view names a bundle missing
+responses. Since the back-office decision below, a converted back-office
+module's routes render Inertia pages through `app.blade.php`. A page is still
+either Blade or Vue, never both, and `HandleStoreBladePages` keeps an Inertia
+visit from receiving a Blade page (store-backoffice-migration.md §2.6). `LegacyAssetHelpersTest` fails if a view names a bundle missing
 from `public/`. `fonts/Roboto-Regular.ttf` (invoice view) was never in the
 legacy repo either.
 
@@ -1408,11 +1411,26 @@ Here is what that means for each piece:
   - Fix `static_asset()`/`my_asset()` per 0.2.
 - **Needs re-authoring only if the owner wants the storefront on Inertia/Vue 3.**
   That is a full rewrite of 420 views, and out of scope for the merge.
+- **Owner decision (2026-10-05): the back office moves to Inertia v3 + Vue 3 +
+  TypeScript.** This overrides "out of scope" for `resources/views/shop/backend/**`
+  (201 views, not 214) and for nothing else.
+  - The storefront, seller area, store auth pages, emails and PDFs stay Blade.
+  - The back office moves one module at a time, in the batches, with the
+    per-module checklist, in `.ai/rules/store-backoffice-migration.md`.
+  - The staff module was the pilot.
+  - That file also records how the shared props, layout, translations,
+    uploads, CSP and Blade/Inertia coexistence work.
 - **Will break under WMS's global middleware:**
   - `SecureHeadersMiddleware` is appended globally with CSP on and
     `script-src 'unsafe-inline' => false`. Every legacy view uses inline
     `<script>` and third-party CDNs.
   - Scope CSP per route group, or give store routes their own policy.
+  - **Done for the back-office move:**
+    - `SendSecureHeaders` replaces the vendor middleware and takes a
+      per-request override;
+    - `HandleStoreBladePages` gives every store Blade page
+      `config('store.blade_csp')`;
+    - Inertia pages keep the strict policy (store-backoffice-migration.md §2.5).
 - **Translations:**
   - Legacy UI text comes mostly from the DB (`translations` table via the
     `translate()` helper), plus `resources/lang/en/{auth,pagination,passwords,validation}.php`.
@@ -1741,3 +1759,17 @@ and 5). Each item says where its answer comes from.
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
   `api/v2/delivery-boy/*` routes instead of keeping them guarded.
+
+## 8. One name for the merged half: "store"
+
+The merged code currently goes by three names: "shop" (the `routes/shop-*.php` files, `resources/views/shop/`, the `shop.*` route names), "store" (the `store`/`store_api` guards, `config/store.php`, `StoreUser`, `UseStoreAuthGuard`, `Store*Test`) and "Legacy" (the `Legacy*Test` files). **New code says "store"**, the term this file, the guards and the config already use. Don't introduce a new `shop`/`Shop` or `Legacy` name for store code. The existing `shop` paths are renamed with the route and view move in phase 6 (§5 and §6.4: `routes/store/*.php`, `resources/views/store/`). The `Legacy*Test` files are regrouped in phase 8. Neither is renamed piecemeal before then. `shop.` as the seller-shop route prefix (`shop.visit`, `shop.index`) is a domain word, not the app's name, and stays.
+
+The other seams between the two halves stay as they are until their phase:
+- the inline `validate()` calls in store controllers and the Blade storefront (owner decision, §5). **Exception, owner decision of 2026-10-05:** the back office moves to Inertia module by module (§5, store-backoffice-migration.md).
+  - Each converted module drops its inline `validate()` for FormRequests in `App\Http\Requests\Store\Admin`.
+  - Its controller moves to `App\Http\Controllers\Store\Admin`, its Resources go in `App\Http\Resources\Store`, and its pages in `resources/js/pages/Store/Admin/`. This is new code, so it says "store".
+  - Its Blade views are deleted, not moved, and its block of `routes/shop-admin.php` is rewritten in place with the same route names. That is not the piecemeal rename this section rules out: the file stays where it is until phase 6.
+  - The storefront and seller area keep their inline `validate()`.
+- the `Setting`/`BusinessSetting` and `ProductBarcode`/`StoreProductBarcode` duplicates (phase 5);
+- the three image pipelines and `uploaded_asset()` vs `Upload::url` (phases 2 and 6);
+- the generic middleware aliases `admin`/`seller`/`customer` in `bootstrap/app.php` (phase 6).

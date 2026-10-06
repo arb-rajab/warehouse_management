@@ -103,7 +103,7 @@ test('a delivery boy changes the status of their own assigned orders only', func
         ->and((float) DB::table('delivery_boys')->where('user_id', $boy->id)->value('total_earning'))->toBe(0.0);
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'shipped-to-mars'])->assertStatus(422);
+    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'shipped-to-mars'])->assertUnprocessable();
 
     app('auth')->forgetGuards();
     $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'delivered', 'delivery_boy_id' => $rival->id])->assertOk();

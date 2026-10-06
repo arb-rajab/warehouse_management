@@ -23,7 +23,7 @@ INPUT="$(cat)"
 INSTALL_RE='composer (install|update)|npm (install|ci)|yarn install|pnpm install'
 NETFAIL_RE='could not authenticate against github|curl error [0-9]+|proxy CONNECT aborted|connection reset by peer|could not resolve host|operation timed out|failed to download|407 Proxy Authentication Required|ECONNRESET|ETIMEDOUT'
 
-REASON='A package install already failed in this session with a network/auth error, and it cannot succeed in this sandbox: phpstan/phpstan is dist-only and its download host is 403 through the egress proxy. Do not retry composer/npm/yarn/pnpm install, and do not route around the block by seeding caches or rewriting package sources - a 403 from the proxy is an egress-policy denial to report, not to work around. Write the tests, push, and read Pint/PHPStan/Pest results from CI instead, or ask the user how to proceed.'
+REASON='A package install already failed in this session with a network/auth error. Dist downloads of dev packages return 403 through the egress proxy, so do not retry composer/npm/yarn/pnpm install by hand and do not seed caches or rewrite package sources yourself. The supported route is `python3 .claude/scripts/install_dev_tools.py`, which installs the dev tools from git sources and restores composer.lock afterwards; the SessionStart hook already runs it. If that script itself fails, report the error, push, and read Pint/PHPStan/Pest results from CI, or ask the user how to proceed.'
 
 # In a Claude Code web/remote session, this container's own SessionStart hook
 # (.claude/hooks/session-start.sh) already measured — not guessed — that every
@@ -34,7 +34,7 @@ REASON='A package install already failed in this session with a network/auth err
 # not something worth confirming empirically once. Deny it outright — the
 # retry-after-failure logic below still exists for npm/yarn/pnpm and for local
 # (non-remote) sessions, where no such upfront measurement was made.
-PREDICTABLE_DEV_INSTALL_REASON='This container'"'"'s SessionStart hook already told this session that Pint/Pest/PHPStan/Larastan cannot be installed here (a measured, permanent fact of this sandbox, not a per-session flake) - see the "Sandbox" section of CLAUDE.md. Re-running composer install/update without --no-dev to check anyway just repeats a multi-minute failure the session was already told about. Use `composer install --no-dev` (app-only, works fine) if you need a bootable app, and push + read Pint/PHPStan/Pest results from CI for anything dev-tooling-related.'
+PREDICTABLE_DEV_INSTALL_REASON='A bare composer install/update that pulls in require-dev cannot succeed in this sandbox: dev package dists are 403 through the egress proxy (a measured, permanent fact, not a per-session flake) - see the "Sandbox" section of CLAUDE.md. Run `python3 .claude/scripts/install_dev_tools.py` instead (the SessionStart hook normally already has), which installs the dev tools from git sources, or use `composer install --no-dev` for an app-only install.'
 
 CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')"
 

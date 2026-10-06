@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { UrlMethodPair } from '@inertiajs/core';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
@@ -26,7 +27,9 @@ import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserCo
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
+import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import { t } from '@/lib/i18n';
+import { isActiveNavUrl } from '@/lib/navigation';
 
 const page = usePage();
 
@@ -35,46 +38,38 @@ const isMobileMenuOpen = ref(false);
 const navItems = computed(() => [
     {
         labelKey: 'nav.dashboard',
-        href: dashboardIndex().url,
+        href: dashboardIndex(),
         icon: LayoutDashboard,
     },
-    { labelKey: 'nav.rows', href: rowsIndex().url, icon: Rows3 },
-    { labelKey: 'nav.map', href: cellsIndex().url, icon: Map },
+    { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
+    { labelKey: 'nav.map', href: cellsIndex(), icon: Map },
     {
         labelKey: 'nav.cellLog',
-        href: cellLogsIndex().url,
+        href: cellLogsIndex(),
         icon: ArrowLeftRight,
     },
     {
         labelKey: 'nav.cellVerificationRounds',
-        href: cellVerificationRoundsIndex().url,
+        href: cellVerificationRoundsIndex(),
         icon: ClipboardCheck,
     },
-    { labelKey: 'nav.products', href: productsIndex().url, icon: Package },
-    { labelKey: 'nav.users', href: usersIndex().url, icon: Users },
+    { labelKey: 'nav.products', href: productsIndex(), icon: Package },
+    { labelKey: 'nav.users', href: usersIndex(), icon: Users },
 ]);
 
 /**
- * A nav item matches on exact URL or as a path prefix, but the dashboard's
- * href ('/admin') is itself a prefix of every other nav item's href, so a
- * plain prefix check would mark it active alongside whichever section is
- * actually open. Only the longest matching href wins.
+ * The dashboard's href ('/admin') is itself a prefix of every other nav
+ * item's href, so only the longest matching href wins (lib/navigation.ts).
  */
-function isActive(href: string): boolean {
-    const currentPath = page.url.split('?')[0];
-    const matches = (candidate: string) =>
-        currentPath === candidate || currentPath.startsWith(`${candidate}/`);
-
-    if (!matches(href)) {
-        return false;
-    }
-
-    return !navItems.value.some(
-        (item) => item.href.length > href.length && matches(item.href),
+function isActive({ url }: UrlMethodPair): boolean {
+    return isActiveNavUrl(
+        page.url,
+        url,
+        navItems.value.map((item) => item.href.url),
     );
 }
 
-function navLinkStateClass(href: string): string[] {
+function navLinkStateClass(href: UrlMethodPair): string[] {
     return isActive(href)
         ? [
               'border-gray-900',
@@ -97,12 +92,7 @@ function navLinkStateClass(href: string): string[] {
     <div
         class="min-h-screen bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
     >
-        <a
-            href="#main"
-            class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-neutral-900 dark:focus:text-white"
-        >
-            {{ t('nav.skipToContent') }}
-        </a>
+        <SkipToContentLink />
         <nav
             class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
         >
@@ -174,7 +164,7 @@ function navLinkStateClass(href: string): string[] {
                     class="border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
                 >
                     <Link
-                        :href="settingsEdit().url"
+                        :href="settingsEdit()"
                         class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
                         @click="isMobileMenuOpen = false"
                     >

@@ -1,11 +1,13 @@
 import { Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellMap3D from '@/components/CellMap3D.vue';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
     Cell,
     CellHighlightSample,
@@ -57,11 +59,14 @@ vi.mock('@/components/CellMap3D.vue', async () => {
 });
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
         Link: createLinkStub(),
+        useForm: createUseFormStub(vi.fn()),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
@@ -74,8 +79,8 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 const products = [
-    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
 ];
 
 function row(overrides: Partial<CellMapRow> = {}): CellMapRow {
@@ -143,7 +148,7 @@ function mountPage(
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cells',
+        url: cellsIndex.url(),
         props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
@@ -189,10 +194,12 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 
 describe('Cells Index (warehouse map)', () => {
     beforeEach(() => {
-        routerGetMock.mockClear();
-        cellMap3DFocusCell.mockClear();
-        cellMap3DResetView.mockClear();
-        cellMap3DSetCameraMode.mockClear();
+        resetMocks({
+            routerGetMock,
+            cellMap3DFocusCell,
+            cellMap3DResetView,
+            cellMap3DSetCameraMode,
+        });
     });
 
     it('renders the page title in the Head and the PageHeader', () => {
@@ -216,7 +223,9 @@ describe('Cells Index (warehouse map)', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/cells');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'cells' }),
+        );
     });
 
     it('does not show an action error banner absent an action error', () => {
@@ -302,6 +311,51 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.get('[role="dialog"]').text()).toContain(
             formatSlot('A', 1, 1),
         );
+    });
+
+    async function firePointer(
+        element: Element,
+        type: string,
+        clientX: number,
+        clientY: number,
+    ): Promise<void> {
+        // jsdom has no PointerEvent; a MouseEvent carries the same coordinates.
+        element.dispatchEvent(
+            new MouseEvent(type, { clientX, clientY, bubbles: true }),
+        );
+        await flushPromises();
+    }
+
+    it('does not open the pallet-actions dialog when the click follows a map drag, but does for a plain tap', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ id: 9 }),
+                }),
+            ],
+        );
+        const viewport = wrapper.get('[data-testid="map-viewport"]');
+        const manageButton = wrapper.get(
+            `[title="${t('cells.palletActions.triggerLabel')}"]`,
+        );
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointermove', 180, 100);
+        await firePointer(viewport.element, 'pointerup', 180, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointerup', 100, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
     });
 
     it('opens the toggle-active dialog when a 2D cell slot emits toggle-active', async () => {
@@ -702,7 +756,7 @@ describe('Cells Index (warehouse map)', () => {
         await next();
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A1·2', state: 'full' },
             { preserveState: true, replace: true },
         );
@@ -717,7 +771,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2 },
             { preserveState: true, replace: true },
         );
@@ -899,7 +953,7 @@ describe('Cells Index (warehouse map)', () => {
         });
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A1·2', expired: true },
             { preserveState: true, replace: true },
         );
@@ -962,7 +1016,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 2,
                 product_id: ['1', '2'],
@@ -987,7 +1041,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 2,
                 stale_after_days: 30,
@@ -1012,7 +1066,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 1,
                 search: 'A1',
@@ -1193,13 +1247,13 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A12·3' },
             { preserveState: true, replace: true },
         );
     });
 
-    it('caps the search input length, mirroring the backend ShowCellMapRequest max:100 rule', () => {
+    it('caps the search input length, mirroring the backend FilterCellMapRequest max:100 rule', () => {
         const wrapper = mountPage([row()], []);
 
         expect(wrapper.get('input[type="text"]').attributes('maxlength')).toBe(
@@ -1502,7 +1556,7 @@ describe('Cells Index (warehouse map)', () => {
         getBoundingClientRectSpy.mockRestore();
     });
 
-    it('resets pan to (0,0) and fitting re-pans to keep cell A1 flush at the top-left, unlike rotation which centers A1', async () => {
+    it('resets pan to (0,0), fitting re-pans to keep the map flush at the top-left, and rotation leaves pan untouched', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
         // centerLabelInViewport() looks up its target via `document.querySelector`,
         // so the mounted tree needs to be attached to the document for that to
@@ -1569,16 +1623,25 @@ describe('Cells Index (warehouse map)', () => {
         expect(transform()).toContain('translate(-150px, -120px)');
         expect(transform()).toContain('scale(0.7)');
 
-        // Rotation still recenters on A1, so it remains free to pan away from
-        // translate(0px, 0px) given the mismatched container/target rects above.
+        // Rotation no longer re-centers on A1 or resets pan: the map stays put.
         await wrapper
             .get(`[title="${t('cells.map.rotateRight')}"]`)
             .trigger('click');
         await flushPromises();
-        expect(transform()).not.toContain('translate(0px, 0px)');
+        expect(transform()).toContain('translate(-150px, -120px)');
+        expect(transform()).toContain('scale(0.7)');
 
         getBoundingClientRectSpy.mockRestore();
         wrapper.element.remove();
+    });
+
+    it('wraps the map content with no padding around the cells', () => {
+        const wrapper = mountPage([row()], []);
+        const classes = wrapper
+            .get('[data-testid="map-viewport"] > div')
+            .classes();
+
+        expect(classes.filter((c) => /^p[xytrbl]?-/.test(c))).toEqual([]);
     });
 
     it('zooms via a wheel event on the map viewport', async () => {
@@ -1777,6 +1840,79 @@ describe('Cells Index (warehouse map)', () => {
                     .get('[data-testid="camera-mode-orbit"]')
                     .attributes('aria-pressed'),
             ).toBe('false');
+        });
+
+        it('keeps the orbit toggle pressed and working when 3D is re-selected while already orbiting', async () => {
+            const wrapper = mountPage([row()], []);
+            const toggle = () =>
+                wrapper.get('[data-testid="camera-mode-orbit"]');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await toggle().trigger('click');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            cellMap3DSetCameraMode.mockClear();
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenCalledWith('walk');
+            expect(toggle().attributes('aria-pressed')).toBe('false');
+
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenLastCalledWith('orbit');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+        });
+
+        it('steps next/previous match through only the filtered pallets while in 3D orbit mode', async () => {
+            const seed: CellHighlightSeed = {
+                state: null,
+                productIds: [7],
+                expiresWithinDays: null,
+                staleAfterDays: null,
+                expired: false,
+                inactive: false,
+            };
+            const matching = (cellNumber: number, productId: number) =>
+                highlightSample({
+                    cell_number: cellNumber,
+                    pallet: pallet({ product_id: productId }),
+                });
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 5 })],
+                [],
+                {
+                    initialHighlight: seed,
+                    cellHighlightSamples: [
+                        matching(1, 99),
+                        matching(2, 7),
+                        matching(3, 99),
+                        matching(4, 7),
+                        matching(5, 99),
+                    ],
+                },
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await wrapper
+                .get('[data-testid="camera-mode-orbit"]')
+                .trigger('click');
+            cellMap3DFocusCell.mockClear();
+
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper
+                .get('[data-testid="previous-match"]')
+                .trigger('click');
+
+            expect(cellMap3DFocusCell.mock.calls).toEqual([
+                ['A', 2, 1],
+                ['A', 4, 1],
+                ['A', 2, 1],
+            ]);
         });
 
         it("passes every flat's cells to the 3D view with highlight/pulse flags applied", async () => {

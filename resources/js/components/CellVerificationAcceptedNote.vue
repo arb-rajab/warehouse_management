@@ -24,7 +24,7 @@ defineProps<{
         }}
         <template v-if="acceptedBy">
             {{ t('cellVerificationReport.acceptedBy') }}
-            <TableLink :href="showUser({ id: acceptedBy.id })">
+            <TableLink :href="showUser(acceptedBy)">
                 {{ acceptedBy.name }}
             </TableLink>
         </template>

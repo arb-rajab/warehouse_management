@@ -12,7 +12,7 @@ defineProps<{
     clearLabel: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     clear: [];
 }>();
 </script>
@@ -26,7 +26,7 @@ defineEmits<{
         <button
             type="button"
             :class="filterClearButtonClass"
-            @click="$emit('clear')"
+            @click="emit('clear')"
         >
             <X class="h-4 w-4 shrink-0" />
             {{ clearLabel }}

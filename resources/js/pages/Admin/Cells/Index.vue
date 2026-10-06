@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Ban,
     Box,
@@ -20,7 +20,6 @@ import {
 } from '@lucide/vue';
 import {
     computed,
-    nextTick,
     onBeforeUnmount,
     onMounted,
     reactive,
@@ -61,6 +60,7 @@ import {
     viewportTransform,
     zoomToFit,
 } from '@/lib/mapViewport';
+import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
@@ -495,9 +495,7 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>
@@ -567,15 +565,18 @@ const viewMode = ref<'2d' | '3d'>('2d');
 const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
 
 function setViewMode(mode: '2d' | '3d'): void {
-    viewMode.value = mode;
-
     // A fresh CellMap3D always mounts in walk mode (it owns cameraMode
     // internally and doesn't persist across unmounts) — resetting the
-    // mirror here keeps this toggle button's pressed-state from showing a
-    // stale "orbit" left over from a previous time in the 3D view.
-    if (mode === '3d') {
+    // mirror here keeps the orbit toggle's pressed-state from showing a
+    // stale "orbit" left over from a previous time in the 3D view. Only
+    // when actually entering 3D: re-selecting 3D while already in it
+    // doesn't remount the child, so resetting then would desync the toggle
+    // from a camera that is still orbiting (and make the next tap a no-op).
+    if (mode === '3d' && viewMode.value !== '3d') {
         cameraDisplayMode.value = 'walk';
     }
+
+    viewMode.value = mode;
 }
 
 /**
@@ -685,53 +686,7 @@ function centerLabelInViewport(label: string): void {
     );
 }
 
-/**
- * Cell A1 (the first cell of the first row) is the map's fixed orientation anchor —
- * rotating always re-centers on it so it stays reachable no matter how the
- * letter/number axes have been swapped. Reset-view and fit-to-view deliberately don't
- * call this: forcing A1 to the exact center of the viewport leaves unwanted empty space
- * around the map, since A1 sits at a corner of the grid rather than its middle.
- */
-function centerFirstCellInViewport(): void {
-    const firstRow = props.rows[0];
-
-    if (!firstRow) {
-        return;
-    }
-
-    centerLabelInViewport(formatSlot(firstRow.letter, 1, props.flatNumber));
-}
-
-/**
- * Rotate/reset recenter without an in-flight CSS transition to measure against. The pan
- * transition normally animates panX/panY changes, but `centerFirstCellInViewport()` reads
- * live layout via `getBoundingClientRect()` right after the DOM patches — if that transition
- * is still interpolating from the pre-rotation pan, the measurement is of a moving target,
- * so the computed offset drifts further off with every rotation until the map is panned
- * entirely outside the viewport. Suppressing the transition for this one synchronous
- * measure-then-set makes the geometry read exact; it's restored afterwards so drag/zoom
- * keep animating normally.
- */
-const suppressPanTransition = ref(false);
-
-async function recenterInstantly(mutate: () => void): Promise<void> {
-    suppressPanTransition.value = true;
-    mutate();
-    await nextTick();
-    centerFirstCellInViewport();
-    await nextTick();
-    suppressPanTransition.value = false;
-}
-
-async function rotateLeftAndRecenter(): Promise<void> {
-    await recenterInstantly(() => viewport.rotateLeft());
-}
-
-async function rotateRightAndRecenter(): Promise<void> {
-    await recenterInstantly(() => viewport.rotateRight());
-}
-
-function resetViewAndRecenter(): void {
+function resetView(): void {
     if (viewMode.value === '3d') {
         map3DRef.value?.resetView();
 
@@ -756,11 +711,8 @@ function resetViewAndRecenter(): void {
  * the top-left corner away from (0,0) instead of leaving it in place. Any
  * leftover slack (a non-constraining axis, or `ZOOM_MIN` preventing the map
  * from shrinking enough to show every cell when it is very wide/tall) falls
- * on the trailing edges only, never splits around the content, so cell A1
- * always stays visible — anchoring flush like this is why this doesn't
- * conflict with rotate/reset deliberately not force-centering on cell A1
- * (see js-lib.md): that rule is about not pinning A1 to the viewport's exact
- * middle, which this never does.
+ * on the trailing edges only, never splits around the content, so no blank
+ * space ever surrounds the map's leading edges (see js-lib.md).
  */
 function fitMapToView(): void {
     const container = viewportEl.value;
@@ -1037,7 +989,7 @@ watch(
                             type="button"
                             :title="t('cells.map.rotateLeft')"
                             :class="mapToolbarButtonClass"
-                            @click="rotateLeftAndRecenter"
+                            @click="viewport.rotateLeft"
                         >
                             <RotateCcw class="h-4 w-4" />
                         </button>
@@ -1045,7 +997,7 @@ watch(
                             type="button"
                             :title="t('cells.map.rotateRight')"
                             :class="mapToolbarButtonClass"
-                            @click="rotateRightAndRecenter"
+                            @click="viewport.rotateRight"
                         >
                             <RotateCw class="h-4 w-4" />
                         </button>
@@ -1062,7 +1014,7 @@ watch(
                         type="button"
                         :title="t('cells.map.resetView')"
                         :class="mapToolbarButtonClass"
-                        @click="resetViewAndRecenter"
+                        @click="resetView"
                     >
                         <LocateFixed class="h-4 w-4" />
                     </button>
@@ -1121,18 +1073,14 @@ watch(
                     @pointerup="viewport.onPointerUp"
                     @pointercancel="viewport.onPointerUp"
                     @pointerleave="viewport.onPointerUp"
+                    @click.capture="viewport.onClickCapture"
                 >
                     <div
                         ref="mapContentEl"
-                        class="flex w-max gap-6 p-2 ease-out"
-                        :class="[
-                            orientation.bandsAsColumns
-                                ? 'flex-row'
-                                : 'flex-col',
-                            suppressPanTransition
-                                ? ''
-                                : 'transition-transform duration-150',
-                        ]"
+                        class="flex w-max gap-6 transition-transform duration-150 ease-out"
+                        :class="
+                            orientation.bandsAsColumns ? 'flex-row' : 'flex-col'
+                        "
                         :style="{
                             transform: viewportTransformStyle,
                             transformOrigin: 'center',

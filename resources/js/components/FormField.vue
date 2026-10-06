@@ -7,7 +7,7 @@ defineOptions({ inheritAttrs: false });
  * the form with new errors. Any extra attributes (min, maxlength, required,
  * readonly, placeholder, autocomplete) land on the input via `$attrs`.
  */
-import { CircleAlert } from '@lucide/vue';
+import FieldError from '@/components/FieldError.vue';
 import { fieldLabelClass } from '@/lib/filters';
 
 withDefaults(
@@ -21,9 +21,6 @@ withDefaults(
     }>(),
     {
         type: 'text',
-        value: undefined,
-        error: undefined,
-        inputClass: undefined,
     },
 );
 </script>
@@ -42,12 +39,6 @@ withDefaults(
                 inputClass,
             ]"
         />
-        <p
-            v-if="error"
-            class="mt-1 flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
-        >
-            <CircleAlert class="h-3.5 w-3.5 shrink-0" />
-            {{ error }}
-        </p>
+        <FieldError :message="error" />
     </div>
 </template>

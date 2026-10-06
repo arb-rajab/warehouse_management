@@ -39,7 +39,10 @@ describe('cellLogActionLabel', () => {
     });
 
     it('labels a product correction with its own translation, not the raw key', () => {
-        expect(cellLogActionLabel('product_changed')).toBe('Product changed');
+        expect(cellLogActionLabel('product_changed')).toBe(
+            t('cellLog.actions.product_changed'),
+        );
+        expect(t('cellLog.actions.product_changed')).toBe('Product changed');
     });
 });
 

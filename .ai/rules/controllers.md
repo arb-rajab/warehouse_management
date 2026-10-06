@@ -46,3 +46,10 @@ If the class carries no `@template` declaration, PHPStan's `generics.notGeneric`
 
 ## CellStatusLogController::acknowledgeFlags redirects by an explicit return_to, not Referer/back()
 Acknowledging a log's flags is triggered from two different pages — CellStatusLogs/Index.vue (the default/omitted case) and Users/Show.vue (`return_to: 'user'`) — so, like the pallet actions and toggle-active (see `Concerns\RedirectsAfterCellAction`), the target can't be inferred server-side from the Referer header (stripped by `config/secure-headers.php`) or session `back()` state. `AcknowledgeCellStatusLogFlagsRequest` validates `return_to` against `in:user` (anything else/omitted falls through to the `admin.cell-logs.index` default); `CellStatusLogController::redirectAfterAcknowledge` picks the route. The 'user' destination always resolves to `$cellStatusLog->user_id` (the log's own actor), never a request-supplied user id — Users/Show only ever lists that one user's actions, so there's nothing to look up. `resources/js/lib/cellStatusLogDisplay.ts`'s shared `acknowledgeFlags(log, returnTo?)` sends the field; don't duplicate the `hasUnacknowledgedFlags`/`acknowledgeFlags` logic locally in a third page — extend the shared helper instead.
+
+## Boolean filters are read with boolean(), never filled()
+`NormalizesBooleanFilters` merges a real `false` into the request for `?expired=false`, and `$request->filled()` is true for `false`. So `filled('expired')` applies the expired filter when the caller turned it off. `Admin\ProductController` did exactly that until its three sites were switched to `boolean('expired')`, matching `CellController` and `Pallet::matchingHighlightFilters()`. Use `boolean()` for every normalized boolean param; keep `filled()` for value params (`state`, `expires_within_days`, ids).
+
+## One spelling for each response and role check
+- An empty API response is `response()->noContent()` (return type `Illuminate\Http\Response`), not `response()->json(null, 204)`.
+- "Is this user an admin" is `User::isAdmin()`. Don't call `hasRole('admin')` directly; the role name lives in that one method.

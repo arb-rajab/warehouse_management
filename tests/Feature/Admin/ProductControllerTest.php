@@ -165,7 +165,7 @@ test('the products index hydrates the product filter chips with both raw name co
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true])
     );
 });
 
@@ -285,6 +285,29 @@ test('the expired filter excludes a product with no expired pallet', function ()
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 1)
             ->where('products.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('expired=false applies no expired filter, the same as the cells map', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $expired = Product::factory()->create(['name' => 'A expired']);
+    Pallet::factory()->create(['product_id' => $expired->id, 'expiration_date' => '2026-08-01']);
+
+    $notExpired = Product::factory()->create(['name' => 'B not expired']);
+    Pallet::factory()->create(['product_id' => $notExpired->id, 'expiration_date' => '2026-09-01']);
+
+    $response = $this->get('/admin/products?expired=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $expired->id)
+            ->where('products.data.0.full_cells_count', 1)
+            ->where('products.data.1.id', $notExpired->id)
+            ->where('products.data.1.full_cells_count', 1)
     );
 
     Carbon::setTestNow();
@@ -441,6 +464,44 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
     );
 });
 
+test('the products index includes inactive products by default, flagging each row\'s active state', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Alpha Widgets']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Zulu Widgets']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $active->id)
+            ->where('products.data.0.active', true)
+            ->where('products.data.1.id', $inactive->id)
+            ->where('products.data.1.active', false)
+    );
+});
+
+test('the hide_inactive filter excludes inactive products, keeping active ones, and is echoed back in the filters', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create();
+    Product::factory()->inactive()->count(2)->create();
+
+    $response = $this->get('/admin/products?hide_inactive=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $active->id)
+            ->where('filters.hide_inactive', true)
+    );
+});
+
+test('the hide_inactive filter rejects a non-boolean value', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/products?hide_inactive=maybe')->assertSessionHasErrors('hide_inactive');
+});
+
 test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
     actingAsAdmin();
     // Fixed names pin the default name-ascending order, so products.data.0 is
@@ -512,7 +573,7 @@ test('an authenticated admin can set a minimum pallets threshold for a product',
     $product = Product::factory()->create();
     $otherProduct = Product::factory()->minimumPallets(9)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
@@ -527,7 +588,7 @@ test('an authenticated admin can clear a product\'s minimum pallets threshold by
 
     $product = Product::factory()->minimumPallets(10)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
 
     $response->assertRedirect(route('admin.products.index'));
     expect($product->fresh()->minimum_pallets)->toBeNull();
@@ -538,7 +599,7 @@ test('setting a minimum pallets threshold redirects back with the current page a
 
     $product = Product::factory()->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
 });
@@ -550,7 +611,7 @@ test('setting a minimum pallets threshold creates the settings row for a product
     $product = Product::factory()->unconfigured()->create();
     expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
-    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
 
     // Regression: wms_product_settings.boxes_count has its own DB-level
     // default of 1, divorced from Product::DEFAULT_BOXES_COUNT (50) — an
@@ -567,7 +628,7 @@ test('setting a minimum pallets threshold on a product with an already-configure
 
     $product = Product::factory()->boxesCount(24)->create();
 
-    $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
 
     expect($product->fresh())
         ->minimum_pallets->toBe(15)
@@ -580,7 +641,7 @@ test('the minimum pallets threshold, when sent, must be a whole number of at lea
     $product = Product::factory()->minimumPallets(6)->create();
 
     foreach ([0, -3, 'many'] as $invalid) {
-        $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
+        $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
 
         $response->assertSessionHasErrors('minimum_pallets');
     }
@@ -593,7 +654,7 @@ test('omitting the minimum_pallets field entirely is rejected, unlike sending an
 
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", []);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", []);
 
     $response->assertSessionHasErrors('minimum_pallets');
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -604,7 +665,7 @@ test('a mobile app user cannot set a minimum pallets threshold', function () {
 
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertForbidden();
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -613,7 +674,7 @@ test('a mobile app user cannot set a minimum pallets threshold', function () {
 test('an unauthenticated caller cannot set a minimum pallets threshold', function () {
     $product = Product::factory()->minimumPallets(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('login'));
     expect($product->fresh()->minimum_pallets)->toBe(6);
@@ -622,7 +683,7 @@ test('an unauthenticated caller cannot set a minimum pallets threshold', functio
 test('setting a minimum pallets threshold for a non-existent product returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->patch('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
+    $response = $this->put('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
 
     $response->assertNotFound();
 });
@@ -811,24 +872,28 @@ test('an authenticated admin can search products with every property the filter 
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the product search excludes deactivated products', function () {
+test('the product search includes deactivated products and flags their active state', function () {
     actingAsAdmin();
 
     $active = Product::factory()->create(['name' => 'Widget Blue']);
-    // Noise: a deactivated product matching the same search term must not be returned.
     $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    // Noise: a product that doesn't match the search term must not be returned.
+    $unrelated = Product::factory()->inactive()->create(['name' => 'Gadget']);
 
     $response = $this->getJson('/admin/products/search?q=Widget');
 
     $response->assertOk();
-    expect(collect($response->json('data'))->pluck('id'))
-        ->toContain($active->id)
-        ->not->toContain($inactive->id);
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())->toEqualCanonicalizing([$active->id, $inactive->id]);
+    expect($rows->firstWhere('id', $active->id)['active'])->toBeTrue();
+    expect($rows->firstWhere('id', $inactive->id)['active'])->toBeFalse();
+    expect($rows->pluck('id'))->not->toContain($unrelated->id);
 });
 
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
@@ -845,6 +910,7 @@ test('the product search options carry both raw name columns under the Arabic pa
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
 });
 
@@ -860,6 +926,7 @@ test('a searched product the store never translated carries an empty ar_name, no
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => '',
+        'active' => true,
     ]);
 });
 
@@ -873,6 +940,16 @@ test('the product search paginates instead of returning every product at once', 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(20);
     expect($response->json('meta.total'))->toBe(25);
+});
+
+test('the product search keeps the caller\'s query string on its pagination links', function () {
+    actingAsAdmin();
+
+    Product::factory()->count(25)->sequence(fn ($sequence) => ['name' => "Widget {$sequence->index}"])->create();
+    // Noise: a product the search excludes must not count towards the second page.
+    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+
+    assertNextLinkKeepsQuery($this->getJson('/admin/products/search?q=Widget'), 'q=Widget');
 });
 
 test('the product search filters by name, excluding a non-matching product', function () {
@@ -900,7 +977,7 @@ test('the product search filters by the store\'s Arabic name, excluding a non-ma
     expect($response->json('data'))->toHaveCount(1);
     // Searching matches either column, and the option carries both raw — the
     // locale only decides which of them the frontend renders.
-    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true]);
 });
 
 test('the product search matches a multi-word term split across the two name columns', function () {
@@ -962,7 +1039,7 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     $product = Product::factory()->boxesCount(6)->create();
     $otherProduct = Product::factory()->boxesCount(9)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
@@ -977,7 +1054,7 @@ test('setting a box count redirects back with the current page and filters prese
 
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
 });
@@ -989,7 +1066,7 @@ test('setting a box count creates the settings row for a product that has never 
     $product = Product::factory()->unconfigured()->create();
     expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
-    $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
+    $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
 
     expect($product->fresh()->boxes_count)->toBe(15);
     $this->assertDatabaseCount('wms_product_settings', 1);
@@ -1001,12 +1078,12 @@ test('the box count must be a whole number of at least one', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
     foreach ([0, -3, 'many'] as $invalid) {
-        $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
+        $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
 
         $response->assertSessionHasErrors('boxes_count');
     }
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", []);
+    $response = $this->put("/admin/products/{$product->id}/box-count", []);
     $response->assertSessionHasErrors('boxes_count');
 
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1017,7 +1094,7 @@ test('a mobile app user cannot set a box count', function () {
 
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertForbidden();
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1026,7 +1103,7 @@ test('a mobile app user cannot set a box count', function () {
 test('an unauthenticated caller cannot set a box count', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('login'));
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -1035,7 +1112,7 @@ test('an unauthenticated caller cannot set a box count', function () {
 test('setting a box count for a non-existent product returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+    $response = $this->put('/admin/products/999999/box-count', ['boxes_count' => 30]);
 
     $response->assertNotFound();
 });

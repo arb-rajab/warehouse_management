@@ -8,14 +8,6 @@ const ZOOM_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.001;
 const ROTATION_STEP_DEGREES = 90;
 
-/**
- * The minimum number of pixels of the map content that must stay overlapping
- * the viewport container on each axis. Keeps panning finite — the map can be
- * dragged/panned far enough to reach any edge or corner, but never so far
- * that it's pushed entirely into blank space with nothing left to grab.
- */
-const MIN_PAN_OVERLAP_PX = 80;
-
 interface MapViewportState {
     panX: number;
     panY: number;
@@ -57,13 +49,13 @@ export function zoomToFit(contentSize: Size, containerSize: Size): number {
 }
 
 /**
- * Clamps a single pan axis so the (scaled) content box can't be pushed
- * further than `MIN_PAN_OVERLAP_PX` clear of the container on that axis.
- * `contentSize`/`displayedSize` are that axis's unscaled/scaled content
- * length; the content box is assumed to start centered on the container's
- * own top-left-flow position (transform-origin: center on an element that
- * otherwise sits at the container's origin), matching how `viewportTransform`
- * applies translate on top of a center-origin scale.
+ * Clamps a single pan axis so the (scaled) content never leaves blank space inside the
+ * container. `contentSize`/`displayedSize` are that axis's unscaled/scaled content length;
+ * the content box is assumed to sit at the container's origin and scale around its own
+ * center (transform-origin: center), matching how `viewportTransform` applies translate on
+ * top of that scale. When the displayed content overflows the container its edges stay
+ * flush with or beyond the container's; when it is smaller it stays flush with the leading
+ * edge instead of drifting into the middle.
  */
 export function clampPanAxis(
     pan: number,
@@ -71,13 +63,33 @@ export function clampPanAxis(
     displayedSize: number,
     containerSize: number,
 ): number {
-    const centerScreen = contentSize / 2 + pan;
-    const minCenter = MIN_PAN_OVERLAP_PX - displayedSize / 2;
-    const maxCenter = containerSize - MIN_PAN_OVERLAP_PX + displayedSize / 2;
+    const originOffset = (contentSize - displayedSize) / 2;
+    const leadingEdge = pan + originOffset;
+    const clampedEdge =
+        displayedSize <= containerSize
+            ? 0
+            : Math.min(0, Math.max(containerSize - displayedSize, leadingEdge));
 
-    return (
-        Math.min(maxCenter, Math.max(minCenter, centerScreen)) - contentSize / 2
-    );
+    return clampedEdge - originOffset;
+}
+
+/**
+ * The pan that keeps the content point currently under `anchor` (a position along the
+ * container axis) under it after the zoom changes from `oldZoom` to `newZoom`, so
+ * magnifying/minifying never drags the map.
+ */
+export function panKeepingAnchor(
+    pan: number,
+    contentSize: number,
+    oldZoom: number,
+    newZoom: number,
+    anchor: number,
+): number {
+    const leadingEdge = pan + (contentSize * (1 - oldZoom)) / 2;
+    const contentPoint = (anchor - leadingEdge) / oldZoom;
+    const newLeadingEdge = anchor - newZoom * contentPoint;
+
+    return newLeadingEdge - (contentSize * (1 - newZoom)) / 2;
 }
 
 /**
@@ -150,6 +162,9 @@ export function mapOrientation(rotationDegrees: number): MapOrientation {
     return MAP_ORIENTATIONS[normalizeRotation(rotationDegrees) / 90];
 }
 
+/** Pointer travel (px) beyond which a press counts as a drag, not a tap. */
+const DRAG_CLICK_THRESHOLD_PX = 8;
+
 /**
  * Pan/zoom/rotate state for the warehouse map, driven by mouse wheel (zoom), pointer drag
  * (pan), two-pointer pinch (zoom), and explicit button calls (zoom/rotate/reset/panBy).
@@ -159,6 +174,8 @@ export function useMapViewport() {
 
     const pointers = new Map<number, Point>();
     let panAnchor: Point | null = null;
+    let gestureOrigin: Point | null = null;
+    let gestureMoved = false;
     let pinchStartDistance: number | null = null;
     let zoomAtPinchStart = 1;
     let bounds: { container: Size; content: Size } | null = null;
@@ -203,35 +220,58 @@ export function useMapViewport() {
         clampPanToBounds();
     }
 
-    function zoomIn(): void {
-        state.zoom = clampZoom(state.zoom + ZOOM_STEP);
+    /**
+     * Applies a new zoom while keeping the point under `anchor` (container-relative pixels,
+     * defaulting to the container's center) fixed on screen, so zooming never drags the
+     * map. Without known bounds there is nothing to anchor against, so only the zoom changes.
+     */
+    function zoomAround(zoom: number, anchor?: Point): void {
+        const oldZoom = state.zoom;
+        const newZoom = clampZoom(zoom);
+
+        if (bounds) {
+            state.panX = panKeepingAnchor(
+                state.panX,
+                bounds.content.width,
+                oldZoom,
+                newZoom,
+                anchor?.x ?? bounds.container.width / 2,
+            );
+            state.panY = panKeepingAnchor(
+                state.panY,
+                bounds.content.height,
+                oldZoom,
+                newZoom,
+                anchor?.y ?? bounds.container.height / 2,
+            );
+        }
+
+        state.zoom = newZoom;
         clampPanToBounds();
+    }
+
+    function zoomIn(): void {
+        zoomAround(state.zoom + ZOOM_STEP);
     }
 
     function zoomOut(): void {
-        state.zoom = clampZoom(state.zoom - ZOOM_STEP);
-        clampPanToBounds();
+        zoomAround(state.zoom - ZOOM_STEP);
     }
 
     function setZoom(zoom: number): void {
-        state.zoom = clampZoom(zoom);
-        clampPanToBounds();
+        zoomAround(zoom);
     }
 
     function rotateLeft(): void {
         state.rotation = normalizeRotation(
             state.rotation - ROTATION_STEP_DEGREES,
         );
-        state.panX = 0;
-        state.panY = 0;
     }
 
     function rotateRight(): void {
         state.rotation = normalizeRotation(
             state.rotation + ROTATION_STEP_DEGREES,
         );
-        state.panX = 0;
-        state.panY = 0;
     }
 
     /**
@@ -252,8 +292,19 @@ export function useMapViewport() {
     }
 
     function onWheel(event: WheelEvent): void {
-        state.zoom = zoomFromWheelDelta(state.zoom, event.deltaY);
-        clampPanToBounds();
+        const container = (
+            event.currentTarget as Element | null
+        )?.getBoundingClientRect?.();
+
+        zoomAround(
+            zoomFromWheelDelta(state.zoom, event.deltaY),
+            container
+                ? {
+                      x: event.clientX - container.left,
+                      y: event.clientY - container.top,
+                  }
+                : undefined,
+        );
     }
 
     function onPointerDown(event: PointerEvent): void {
@@ -261,7 +312,10 @@ export function useMapViewport() {
 
         if (pointers.size === 1) {
             panAnchor = { x: event.clientX, y: event.clientY };
+            gestureOrigin = { x: event.clientX, y: event.clientY };
+            gestureMoved = false;
         } else if (pointers.size === 2) {
+            gestureMoved = true;
             panAnchor = null;
             const [a, b] = [...pointers.values()];
             pinchStartDistance = distanceBetween(a, b);
@@ -276,6 +330,17 @@ export function useMapViewport() {
 
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
+        if (
+            gestureOrigin &&
+            !gestureMoved &&
+            distanceBetween(gestureOrigin, {
+                x: event.clientX,
+                y: event.clientY,
+            }) > DRAG_CLICK_THRESHOLD_PX
+        ) {
+            gestureMoved = true;
+        }
+
         if (pointers.size === 1 && panAnchor) {
             panBy(event.clientX - panAnchor.x, event.clientY - panAnchor.y);
             panAnchor = { x: event.clientX, y: event.clientY };
@@ -285,12 +350,13 @@ export function useMapViewport() {
 
         if (pointers.size === 2 && pinchStartDistance !== null) {
             const [a, b] = [...pointers.values()];
-            state.zoom = zoomFromPinch(
-                zoomAtPinchStart,
-                pinchStartDistance,
-                distanceBetween(a, b),
+            zoomAround(
+                zoomFromPinch(
+                    zoomAtPinchStart,
+                    pinchStartDistance,
+                    distanceBetween(a, b),
+                ),
             );
-            clampPanToBounds();
         }
     }
 
@@ -306,9 +372,25 @@ export function useMapViewport() {
         }
     }
 
+    /**
+     * Capture-phase click handler for the viewport element: swallows the click
+     * that follows a pan/pinch gesture so releasing a drag over a pallet never
+     * opens it, while a plain tap (movement within the threshold) passes through.
+     */
+    function onClickCapture(event: Event): void {
+        if (!gestureMoved) {
+            return;
+        }
+
+        gestureMoved = false;
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
     return {
         state: readonly(state),
         setBounds,
+        onClickCapture,
         zoomIn,
         zoomOut,
         setZoom,

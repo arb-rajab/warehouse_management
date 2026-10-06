@@ -24,6 +24,13 @@
     "common": {
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
+        "close": "Close",
+        "filters": {
+            "title": "Filters",
+            "apply": "Apply filters",
+            "clear": "Clear",
+            "close": "Close filters"
+        },
         "filteredColumn": "Affected by an active filter",
         "pagination": {
             "perPage": "Per page"
@@ -163,8 +170,6 @@
     "cellLog": {
         "title": "Cell Log",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "location": "Location",
                 "activity": "Activity",
@@ -184,12 +189,11 @@
             "expirationTo": "Expires to",
             "expiresWithinDays": "Expires within (days)",
             "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear",
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found.",
             "selected": "Selected",
+            "deselectAll": "Deselect all",
             "palletHistory": "Showing history for pallet #{id}",
             "flaggedOnly": "Flagged only"
         },
@@ -237,8 +241,6 @@
     "cellVerificationRound": {
         "title": "Cell Verification Rounds",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "user": "Worker",
             "completed": "Status",
             "completedAll": "All",
@@ -248,9 +250,7 @@
             "from": "From",
             "to": "To",
             "withinDays": "Within last (days)",
-            "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear"
+            "all": "All"
         },
         "columns": {
             "id": "Round",
@@ -266,6 +266,7 @@
         },
         "empty": "No verification rounds yet.",
         "show": {
+            "title": "Verification round #{id}",
             "backToList": "Back to rounds",
             "startedAt": "Started",
             "completedAt": "Completed",
@@ -277,8 +278,6 @@
         "title": "Reports",
         "export": "Export CSV",
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "location": "Location",
                 "activity": "Activity",
@@ -296,8 +295,6 @@
             "to": "To",
             "withinDays": "Within last (days)",
             "all": "All",
-            "apply": "Apply filters",
-            "clear": "Clear",
             "searchPlaceholder": "Search products…",
             "searching": "Searching…",
             "noProductsFound": "No products found."
@@ -470,6 +467,11 @@
     },
     "dashboard": {
         "title": "Dashboard",
+        "productPallets": {
+            "title": "Selected products' pallets",
+            "viewAll": "View all on the pallets page",
+            "empty": "The selected products have no pallets."
+        },
         "occupancy": {
             "title": "Cell occupancy",
             "empty": "Empty",
@@ -502,18 +504,21 @@
         }
     },
     "products": {
+        "status": {
+            "active": "Active",
+            "inactive": "Inactive"
+        },
         "title": "Products",
         "quickSearch": {
             "label": "Quick product search",
             "placeholder": "Find a product…"
         },
         "filters": {
-            "title": "Filters",
-            "close": "Close filters",
             "sections": {
                 "occupancy": "Occupancy"
             },
             "inactive": "Inactive",
+            "hideInactive": "Hide inactive",
             "lowStock": "Low stock"
         },
         "columns": {
@@ -537,9 +542,7 @@
         "noBarcodes": "No barcodes added yet.",
         "exportQrLabel": "Export barcode for {product}",
         "empty": "No products yet.",
-        "saving": "Saving…",
-        "invalidCount": "Enter a whole number of 1 or more.",
-        "saveFailed": "Could not save. Please try again."
+        "saving": "Saving…"
     },
     "pallets": {
         "title": "Matching pallets",
@@ -725,6 +728,189 @@
             "openLevels": {
                 "heading": "Levels where opening pallets is allowed",
                 "body": "Check the levels on which pallets may be opened. A pallet on a level that is not checked cannot be opened — in the mobile app or here in the admin panel — and a pallet stored on level 1 is only opened automatically while level 1 is checked. Level 1 is checked by default, and at least one level must stay checked. The list offers every level up to the tallest row's level count."
+            }
+        }
+    },
+    "store": {
+        "nav": {
+            "brand": "Store Admin",
+            "menuLabel": "Store admin menu",
+            "browseWebsite": "Browse website",
+            "profile": "Profile",
+            "dashboard": "Dashboard",
+            "products": "Products",
+            "addProduct": "Add new product",
+            "allProducts": "All products",
+            "inHouseProducts": "In-house products",
+            "sellerProducts": "Seller products",
+            "digitalProducts": "Digital products",
+            "bulkImport": "Bulk import",
+            "bulkExport": "Bulk export",
+            "categories": "Categories",
+            "brands": "Brands",
+            "brandDiscount": "Brand-based discount",
+            "attributes": "Attributes",
+            "colors": "Colors",
+            "productReviews": "Product reviews",
+            "sales": "Sales",
+            "allOrders": "All orders",
+            "createOrder": "Create order",
+            "sellerOrders": "Seller orders",
+            "pickupPointOrders": "Pick-up point orders",
+            "customers": "Customers",
+            "customerList": "Customer list",
+            "customerCreate": "Add customer",
+            "customerArchive": "Customer archive",
+            "notifications": "Notifications",
+            "classifiedProducts": "Classified products",
+            "classifiedPackages": "Classified packages",
+            "representatives": "Representatives",
+            "representativeList": "Representative list",
+            "representativePackages": "Representative packages",
+            "representativePayments": "Representative payments",
+            "representativeVisits": "Representative visits",
+            "sellers": "Sellers",
+            "allSellers": "All sellers",
+            "payouts": "Payouts",
+            "payoutRequests": "Payout requests",
+            "sellerCommission": "Seller commission",
+            "sellerVerificationForm": "Seller verification form",
+            "trips": "Trips",
+            "trucks": "Trucks",
+            "allTrucks": "All trucks",
+            "createTruck": "Add truck",
+            "tripsGroup": "Trips",
+            "allTrips": "All trips",
+            "todayTrips": "Today's trips",
+            "createTrip": "Create trip",
+            "createTripFromMap": "Create trip from the map",
+            "tripOrders": "Orders",
+            "drivers": "Drivers",
+            "allDrivers": "All drivers",
+            "createDriver": "Add driver",
+            "uploadedFiles": "Uploaded files",
+            "homeBanners": "Home banners",
+            "orderConfiguration": "Order configuration",
+            "offersCatalog": "Offers catalog",
+            "reports": "Reports",
+            "inHouseSaleReport": "In-house product sales",
+            "sellerSaleReport": "Seller product sales",
+            "stockReport": "Product stock",
+            "wishlistReport": "Product wishlists",
+            "userSearchReport": "User searches",
+            "commissionHistory": "Commission history",
+            "walletHistory": "Wallet recharge history",
+            "blog": "Blog",
+            "allPosts": "All posts",
+            "blogCategories": "Categories",
+            "marketing": "Marketing",
+            "flashDeals": "Flash deals",
+            "offerDeals": "Offer deals",
+            "dynamicPopups": "Dynamic pop-ups",
+            "newsletters": "Newsletters",
+            "subscribers": "Subscribers",
+            "coupons": "Coupons",
+            "support": "Support",
+            "tickets": "Tickets",
+            "productConversations": "Product conversations",
+            "productQueries": "Product queries",
+            "websiteSetup": "Website setup",
+            "header": "Header",
+            "footer": "Footer",
+            "pages": "Pages",
+            "appearance": "Appearance",
+            "setup": "Setup & configurations",
+            "generalSettings": "General settings",
+            "featuresActivation": "Features activation",
+            "languages": "Languages",
+            "currency": "Currency",
+            "vatTax": "VAT & tax",
+            "pickupPoints": "Pick-up points",
+            "smtpSettings": "SMTP settings",
+            "paymentMethods": "Payment methods",
+            "fileSystem": "File system & cache",
+            "socialLogins": "Social media logins",
+            "facebook": "Facebook",
+            "facebookChat": "Facebook chat",
+            "facebookComment": "Facebook comments",
+            "google": "Google",
+            "analyticsTools": "Analytics tools",
+            "googleRecaptcha": "Google reCAPTCHA",
+            "googleMap": "Google Maps",
+            "googleFirebase": "Google Firebase",
+            "shipping": "Shipping",
+            "shippingConfiguration": "Shipping configuration",
+            "shippingCountries": "Shipping countries",
+            "shippingStates": "Shipping states",
+            "shippingCities": "Shipping cities",
+            "shippingZones": "Shipping zones",
+            "shippingCarriers": "Shipping carriers",
+            "staff": "Staff",
+            "allStaff": "All staff",
+            "staffRoles": "Staff permissions"
+        },
+        "staff": {
+            "index": {
+                "title": "Staff",
+                "addStaff": "Add staff member",
+                "columnName": "Name",
+                "columnEmail": "Email",
+                "columnPhone": "Phone",
+                "columnRole": "Role",
+                "columnActions": "Actions",
+                "empty": "No staff members yet.",
+                "edit": "Edit",
+                "delete": "Delete",
+                "superAdmin": "Super Admin",
+                "noRole": "No role"
+            },
+            "create": {
+                "title": "Add staff member",
+                "submit": "Create staff member",
+                "submitting": "Creating..."
+            },
+            "edit": {
+                "title": "Edit {name}",
+                "submit": "Save changes",
+                "submitting": "Saving..."
+            },
+            "fields": {
+                "name": "Name",
+                "email": "Email",
+                "phone": "Phone",
+                "role": "Role",
+                "rolePlaceholder": "Choose a role",
+                "password": "Password",
+                "newPassword": "New password",
+                "confirmPassword": "Confirm password",
+                "passwordPlaceholder": "Leave blank to keep current password"
+            }
+        },
+        "roles": {
+            "index": {
+                "title": "Roles",
+                "addRole": "Add role",
+                "columnName": "Name",
+                "columnActions": "Actions",
+                "empty": "No roles yet.",
+                "edit": "Edit",
+                "delete": "Delete"
+            },
+            "create": {
+                "title": "Add role",
+                "submit": "Create role",
+                "submitting": "Creating..."
+            },
+            "edit": {
+                "title": "Edit {name}",
+                "submit": "Save changes",
+                "submitting": "Saving...",
+                "languages": "Name languages"
+            },
+            "fields": {
+                "name": "Name",
+                "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
+                "permissions": "Permissions"
             }
         }
     }

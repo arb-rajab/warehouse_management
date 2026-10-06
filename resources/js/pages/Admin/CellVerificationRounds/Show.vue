@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { ArrowLeft, Download, SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
@@ -46,6 +46,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatRowLetters, formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
 import type {
     CellVerificationReport,
     CellVerificationReportFilterOptions,
@@ -102,8 +103,7 @@ function filterQuery(): QueryParams {
         : { ...rest, is_correct: is_correct === 'true' };
 }
 
-const showUrl = () =>
-    showCellVerificationRound({ cellVerificationRound: props.round.id }).url;
+const showUrl = () => showCellVerificationRound(props.round).url;
 
 function applyFilters(): void {
     router.get(showUrl(), filterQuery(), {
@@ -148,26 +148,19 @@ function onPerPageChange(perPage: number): void {
     applyFilters();
 }
 
-const page = usePage();
-
-const actionError = computed(
-    () => (page.props.errors as Partial<Record<'action', string>>)?.action,
-);
+const actionError = usePageError('action');
 </script>
 
 <template>
-    <Head :title="`${t('cellVerificationRound.title')} #${round.id}`" />
+    <Head :title="t('cellVerificationRound.show.title', { id: round.id })" />
 
     <AdminLayout>
-        <PageHeader :title="`${t('cellVerificationRound.title')} #${round.id}`">
+        <PageHeader
+            :title="t('cellVerificationRound.show.title', { id: round.id })"
+        >
             <div class="flex items-center gap-2">
                 <a
-                    :href="
-                        exportReports(
-                            { cellVerificationRound: round.id },
-                            { query: filterQuery() },
-                        ).url
-                    "
+                    :href="exportReports.url(round, { query: filterQuery() })"
                     :class="filterClearButtonClass"
                 >
                     <Download class="h-4 w-4" />
@@ -179,7 +172,7 @@ const actionError = computed(
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellVerificationReport.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -188,7 +181,7 @@ const actionError = computed(
         </PageHeader>
 
         <TableLink
-            :href="cellVerificationRoundsIndex().url"
+            :href="cellVerificationRoundsIndex()"
             class="mb-4 inline-flex"
         >
             <ArrowLeft class="h-3.5 w-3.5 shrink-0 rtl:rotate-180" />
@@ -203,10 +196,7 @@ const actionError = computed(
                     {{ t('cellVerificationRound.columns.user') }}
                 </div>
                 <div class="font-medium">
-                    <TableLink
-                        v-if="round.user"
-                        :href="showUser({ id: round.user.id })"
-                    >
+                    <TableLink v-if="round.user" :href="showUser(round.user)">
                         {{ round.user.name }}
                     </TableLink>
                     <template v-else>—</template>
@@ -246,8 +236,8 @@ const actionError = computed(
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellVerificationReport.filters.title')"
-            :close-label="t('cellVerificationReport.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="cell-verification-report-filter-form"
@@ -348,8 +338,8 @@ const actionError = computed(
             <template #footer>
                 <FilterDialogFooter
                     form-id="cell-verification-report-filter-form"
-                    :apply-label="t('cellVerificationReport.filters.apply')"
-                    :clear-label="t('cellVerificationReport.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>

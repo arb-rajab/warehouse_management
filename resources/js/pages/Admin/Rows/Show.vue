@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -17,6 +17,7 @@ import {
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
@@ -173,23 +174,21 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 </script>
 
 <template>
-    <Head :title="t('rows.show.title', { letter: props.row.letter })" />
+    <Head :title="t('rows.show.title', { letter: row.letter })" />
 
     <AdminLayout>
-        <PageHeader :title="t('rows.show.title', { letter: props.row.letter })">
+        <PageHeader :title="t('rows.show.title', { letter: row.letter })">
             <div class="flex items-center gap-4">
                 <CellHighlightFilters
                     :model-value="highlightFilters"
                     :products="filterOptions.products"
                 />
                 <Link
-                    :href="edit(props.row)"
+                    :href="edit(row)"
                     class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
                 >
                     <Pencil class="h-3.5 w-3.5" />

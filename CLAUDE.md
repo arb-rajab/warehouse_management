@@ -239,8 +239,10 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   after editing the file(s) they cover, not only via one final CI-check
   command at the end. Catching an issue on the file you just touched is
   cheaper than finding a pile of unrelated fallout later.
-- In a Claude Code web session none of these tools are installed and cannot be
-  installed — see the next section for what to do instead.
+- In a Claude Code web session the SessionStart hook installs the PHP tools
+  from git sources and builds the Vite assets in the background — see the next
+  section, and wait for it (`python3 .claude/scripts/wait_for_setup.py`) before
+  relying on them.
 - Same discipline for `vitest`: while iterating on a fix, run only the
   specific `*.test.ts` file(s) the change touches (`npx vitest run
   path/to/File.test.ts`), not the whole suite. Reserve one full `npx vitest
@@ -248,108 +250,126 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   exists for it) for right before each commit, as the final confirmation
   that nothing else regressed — not after every intermediate edit. Before
   every push, run `python3 .claude/scripts/pre_push_check.py` once: it runs
-  ESLint, Prettier, vue-tsc and the full Vitest suite plus `php -l` and the
-  `.claude/scripts/*.py` stand-ins below, in CI's order, as the single
-  command instead of assembling this sequence by hand each time.
+  ESLint, Prettier, vue-tsc, the full Vitest suite, Pint, PHPStan and Pest in
+  CI's order as the single command instead of assembling this sequence by hand
+  each time. It skips the three PHP steps, with a note, when the dev tools are
+  not installed.
 
-## Sandbox: dependencies cannot be installed, so CI is the test run
+## Sandbox: dev tools install from git, and Pest needs the Vite build
 
-`composer install` cannot succeed in a Claude Code web session. `phpstan/phpstan`
-is dist-only, and its only download host (`api.github.com/.../zipball`, which
-redirects to `codeload.github.com`) returns 403 through the egress proxy. So
-`vendor/` is absent and Pint, PHPStan, vue-tsc and Pest cannot run locally there.
+A plain `composer install` cannot succeed in a Claude Code web session: every
+dev package's dist URL (`api.github.com/repos/<vendor>/<package>/zipball/...`)
+returns 403 through the egress proxy for any repository the session does not
+have attached. Anonymous `git clone` of public repositories *is* served, so the
+SessionStart hook (`.claude/hooks/session-start.sh`) runs
+`python3 .claude/scripts/install_dev_tools.py`: it installs everything,
+including Pint, Pest, PHPStan, Larastan and faker, with `--prefer-source`,
+shallow-clones the locked `phpstan/phpstan` tag (it is dist-only), and restores
+`composer.lock` byte for byte afterwards. While it patches the lock for the
+install, git is told to ignore the file (`--skip-worktree`), so a tree that looks
+dirty never invites a commit of the patched lock; if `composer.lock` ever does
+show as modified, setup is still running or was killed (check
+`python3 .claude/scripts/wait_for_setup.py`), so never commit it. The hook first runs
+`bash .claude/scripts/install_php.sh`, which installs PHP 8.5 and every
+extension the app needs (including `gd`) from the ondrej PPA when they are
+missing, and does nothing when they are present. `composer.json` requires
+`^8.5` and `composer.lock` requires `ext-gd`; without them the install fails its
+platform check, `vendor/` never appears, and artisan, Wayfinder and the Vite
+build are all unavailable. Never answer that platform error with
+`--ignore-platform-reqs`: run the script. It targets Debian/Ubuntu containers
+and needs root; `--check` reports whether PHP is satisfied without changing
+anything.
 
-This does not relax the testing rule above — write and update the tests exactly
-as normal. It changes only where you read the result: push the branch and read
-Pint/PHPStan/Pest from CI (`composer ci:check`), which runs the whole chain.
-Note `types:check` runs *before* Pest, so a PHPStan error means the suite never
-ran at all — fix it and look again rather than assuming the tests passed.
+**The hook runs asynchronously** (`"async": true` in `.claude/settings.json`), so
+a session starts at once while the whole setup takes about 10 minutes on a fresh
+container; blocking on it made every fresh session wait that long before its
+first action. A short notice in the session's context says setup is running.
+Work that does not need it (reading code, editing docs) can start immediately.
+Before composer, artisan, Pint, PHPStan, Pest, the Wayfinder files or the built
+assets, run `python3 .claude/scripts/wait_for_setup.py` once, in the background,
+and let its completion notice arrive rather than polling. It exits 0 when setup
+is done and prints its summary (whether the PHP tools are installed and the Vite
+build exists), and 1 if setup failed, was interrupted (killed or timed out), or
+the wait timed out. `pre_push_check.py` waits on its own. Do not start your own
+`npm`/`composer` work while setup is still running: it would collide with it.
 
-Do not attempt the install "just once to see", and do not work around the block
-by seeding package caches, rebuilding archives from git, or repointing package
-sources. A 403 from the proxy is an organization egress-policy denial: per
-`/root/.ccr/README.md`, report the blocked host and move on. A guard hook
-(`.claude/hooks/install-retry-guard.sh`) denies repeat install attempts after
-the first failure, including backgrounded ones — take the denial at face value
-rather than reaching for another route around it.
+When they are installed, run the checks locally instead of waiting for CI:
 
-**In a Claude Code web/remote session specifically** (`CLAUDE_CODE_REMOTE=true`
-— i.e. exactly the kind of session reading this file in that mode), don't even
-spend the first attempt: this container's own `SessionStart` hook
-(`.claude/hooks/session-start.sh`) already *measured* — on this exact image,
-not guessed — that every `require-dev` package 403s (Pint, Pest, PHPStan and
-Larastan all named explicitly in the session's own startup message: "don't
-push to find out"). That is a permanent fact of this container, not a
-session-to-session coin flip, so there is nothing to verify empirically. A
-bare `composer install`/`composer update` (no `--no-dev`) is denied outright
-by the guard hook before it can even run — go straight to `composer install
---no-dev` for a bootable app, and to pushing + reading CI for anything
-Pint/PHPStan/Pest-shaped. This previously cost a real session several minutes
-and multiple tool calls (a full install that could only ever fail exactly as
-predicted) before this rule and the hook denial existed — don't re-litigate
-it by working around the denial or reaching for `--ignore-platform-reqs`,
-package-source rewrites, or similar.
+- `composer lint:check` (Pint) and `composer types:check` (PHPStan).
+- Pest: `COMPOSER_PROCESS_TIMEOUT=0 php artisan test --parallel`. `composer
+  test:pest` hits composer's 300s process timeout on this suite; in parallel it
+  takes about 90s. Note `types:check` runs *before* Pest in `composer ci:check`,
+  so a PHPStan error means the suite never ran at all.
+- **Pest needs `.env` with an `APP_KEY`.** `phpunit.xml` sets none, so in a
+  container with no `.env` every test that boots the app errors with "No
+  application encryption key has been specified" (925 errors in one run). The
+  hook copies `.env.example` and generates the key (with `php`, not `artisan`, so
+  it works before `vendor/` exists) when `.env` is missing; if you see that
+  error, do the same by hand rather than reading it as a code defect.
+- **Pest needs `public/build/manifest.json`.** Every Inertia feature test renders
+  the root view, which reads the Vite manifest, so without it ~200 tests fail
+  with `ViteManifestNotFoundException` — a missing build, not a defect in the
+  code under test. The hook runs `npm run build` after generating the Wayfinder
+  files; if the manifest is missing, run `php artisan wayfinder:generate && npm
+  run build` before treating any Pest failure as real.
 
-The one place a first *attempt* is still worth making is a session that is
-**not** a Claude Code web/remote session (no measured startup fact to rely
-on) — there, `composer install` still commonly times out or SSL-times-out
-partway through the `dist` downloads for a few `spatie/*` packages before
-falling back to a slow one-by-one `git clone` from source; this is normal
-proxy flakiness, not the policy block above, and one retry resolves it. To
-avoid burning a multi-minute install on `phpstan/phpstan` (a dev-only
-dependency not needed for Pest/vitest/Pint), run `composer install --no-dev`
-first there too; only add dev deps back if a task specifically needs them
-(e.g. PHPStan itself).
+Do not hand-run `composer install`/`composer update`, do not seed package
+caches, and do not reach for `--ignore-platform-reqs` or package-source rewrites
+of your own: a bare install (no `--no-dev`) is denied by the guard hook
+(`.claude/hooks/install-retry-guard.sh`), as is any retry after a network
+failure — use the script above, and take a denial at face value. If the script
+itself fails, the proxy policy has changed: report the error, fall back to
+`composer install --no-dev` for a bootable app, write and update the tests as
+normal, and read Pint/PHPStan/Pest from CI (`composer ci:check`).
 
-**While a long-running command like `composer install --no-dev` (~4 minutes
-cold) is in flight in the background:** wait for exactly one completion
-notification — don't spawn a second or third background loop polling the
-same PID/condition, and don't fill the intervening turns with no-op
+**While a long-running command like `composer install --no-dev` or the dev-tools
+script (~9 minutes cold, ~7 GB of disk: the hook's timeout is 1800s) is in flight
+in the background:** wait for exactly one
+completion notification — don't spawn a second or third background loop polling
+the same PID/condition, and don't fill the intervening turns with no-op
 `Bash`/`ReadNotifications` calls just to "do something while waiting". The
-harness delivers a notification when the backgrounded command finishes;
-ending the turn and letting that notification arrive costs nothing; a stack
-of redundant polling loops and filler turns costs real quota for zero
-additional information.
+harness delivers a notification when the backgrounded command finishes; ending
+the turn and letting that notification arrive costs nothing; a stack of
+redundant polling loops and filler turns costs real quota for zero additional
+information.
 
-`fake()` is undefined here for the same reason: `fakerphp/faker` is a dev
-dependency, so under `--no-dev` there is no faker at all. That puts every
-factory and seeder out of reach locally — not only under Pest, but through
-`php artisan tinker` and `php artisan db:seed` too, which fail with "Call to
-undefined function Database\Factories\fake()". Take the first such failure at
-face value rather than trying a second route to the same place (a file-backed
-sqlite database instead of `:memory:` does not help — the missing package is
-the problem, not the connection). A local smoke check that needs rows must
-build them with plain `Model::create()`; anything genuinely factory- or
-seeder-shaped can only be verified in CI.
+Only in the fallback `--no-dev` state is `fake()` undefined: `fakerphp/faker` is
+a dev dependency, so there is no faker at all. That puts every factory and
+seeder out of reach locally — not only under Pest, but through `php artisan
+tinker` and `php artisan db:seed` too, which fail with "Call to undefined
+function Database\Factories\fake()". Take the first such failure at face value
+rather than trying a second route to the same place (a file-backed sqlite
+database instead of `:memory:` does not help — the missing package is the
+problem, not the connection). A local smoke check that needs rows must build
+them with plain `Model::create()`; anything genuinely factory- or seeder-shaped
+can only be verified in CI.
 
-Because none of these tools run locally, the stand-ins for them are committed
-in `.claude/scripts/`, so no session has to rebuild them:
+The scripts in `.claude/scripts/`:
 
-| Script | Stands in for |
+| Script | Purpose |
 | --- | --- |
-| `php_import_order.py` | Pint's `ordered_imports`. Sorts case-INSENSITIVELY — a plain `sort` false-positives on pairs like `Date`/`DB` |
-| `js_balance.py` | a syntax smoke check for `.ts`/`.js`/`.vue` — catches the unclosed brace a `sed` edit leaves behind |
-| `vue_unused_imports.py` | eslint's `no-unused-vars` for a `<script setup>` block, template usage included |
-| `vue_prettier_hints.py` | Prettier's print width and its element-opening collapse |
-| `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs |
-| `php_pint_style.py` | other Pint `laravel`-preset fixers — `array_syntax`, `no_trailing_whitespace`, `single_blank_line_at_eof`, `no_closing_tag`, and `trailing_comma_in_multiline` for array literals |
-| `pre_push_check.py` | not a stand-in itself — runs every check above plus `npm run lint:check`/`format:check`/`types:check`/`test:unit` and `php -l`, in CI's order, as the one command to run before every push |
+| `install_php.sh` | installs PHP 8.5 and its extensions from the ondrej PPA (key pinned by fingerprint); run first by the SessionStart hook |
+| `install_dev_tools.py` | the dev-tools installer described above, run by the SessionStart hook |
+| `build_without_fonts.py` | Vite build from a temporary font-less copy of `vite.config.ts`, for sandboxes where `fonts.bunny.net` is blocked (403) and `npm run build` fails; the SessionStart hook falls back to it, `vite.config.ts` is never modified |
+| `wait_for_setup.py` | blocks until the background SessionStart setup has finished and prints its summary; exit 0 ready, 1 failed/interrupted/timed out |
+| `pre_push_check.py` | the one command to run before every push: waits for setup, then ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest in CI's order |
+| `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |
+| `selftest.py` | verifies the scripts above and the install guard hook |
 
 Each script's docstring carries its usage and its limitations; read it before
 trusting a result. Run `python3 .claude/scripts/selftest.py` after changing any
-of them — nothing else verifies these, and a checker that has quietly stopped
-working is worse than none, because it is trusted.
-
-If you need a check they don't cover, add it there with a case in the self-test
-rather than writing another one to the scratchpad. Either way, never re-embed a
-script in a new Bash heredoc per invocation: the repeated inline text costs
-tool-input tokens on every call for no benefit over one reusable file.
+script there or the guard hook — nothing else verifies them, and a checker that
+has quietly stopped working is worse than none, because it is trusted. Add a
+case to it for any new script rather than writing a one-off check in the
+scratchpad, and never re-embed a script in a new Bash heredoc per invocation:
+the repeated inline text costs tool-input tokens on every call for no benefit
+over one reusable file.
 
 ### Enumerate before editing; ask for filenames before error bodies
 
 Two habits that pay for themselves whenever a change ripples across many files
-— which is most changes here, because Pest cannot run locally to find the
-ripple for you.
+— which is most changes here, and Pest, though it can run locally, takes a
+parallel run to surface the ripple, so sweep first.
 
 **Enumerate the sites in one sweep, keyed on a stable sibling.** Adding a key to
 a Resource, a `toArray()` or a map-summary breaks every test asserting that
@@ -375,10 +395,11 @@ letting the type-checker find it.
 
 ### Read the framework source before theorising about framework behaviour
 
-`composer install --no-dev` succeeds here, so every non-dev package's source is
-already on disk — read `vendor/laravel/framework/src/Illuminate/...` directly
-rather than curling it. Only a dev-only package (Pint, Pest, PHPStan, Larastan)
-needs the tagged source over the network: `curl
+Every package's source is already on disk once the SessionStart install has run
+— read `vendor/laravel/framework/src/Illuminate/...` directly rather than
+curling it. Only in the fallback `--no-dev` state is a dev-only package (Pint,
+Pest, PHPStan, Larastan) missing; then fetch the tagged source over the
+network: `curl
 https://raw.githubusercontent.com/<vendor>/<package>/v<version>/src/...`, with
 `<version>` from `composer.lock`. When an installed package behaves in a way its
 public API appears to rule out, one read settles it, while a guess costs a CI

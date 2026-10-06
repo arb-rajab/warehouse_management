@@ -50,10 +50,10 @@ function transformToPixels(
 
         <template #default="{ errors }">
             <SettingFormFields
-                :qr-code-width="props.setting.qr_code_width"
-                :qr-code-height="props.setting.qr_code_height"
+                :qr-code-width="setting.qr_code_width"
+                :qr-code-height="setting.qr_code_height"
                 :levels="levels"
-                :allowed-open-levels="props.setting.allowed_open_levels"
+                :allowed-open-levels="setting.allowed_open_levels"
                 :errors="errors"
             />
         </template>

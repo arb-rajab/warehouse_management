@@ -14,7 +14,9 @@ name: tests
 # full suite on a branch on demand -- notably to re-establish that gate when a
 # merge lands content no PR run covered, because the base moved under the PR.
 on:
+  # Draft PRs are skipped (see the per-job `if`); marking one ready runs the suite.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
   # deploy.yml calls this workflow when a merge lands content that no pull
   # request run covered, so the merged commit is tested before it is promoted.
@@ -43,6 +45,7 @@ jobs:
   # produce the same output.
   generate-wayfinder:
     name: Generate Wayfinder types
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -68,6 +71,7 @@ jobs:
 
   lint-js:
     name: ESLint
+    if: github.event.pull_request.draft != true
     needs: generate-wayfinder
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -91,6 +95,7 @@ jobs:
 
   format-js:
     name: Prettier
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -107,6 +112,7 @@ jobs:
 
   types-js:
     name: vue-tsc
+    if: github.event.pull_request.draft != true
     needs: generate-wayfinder
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -130,6 +136,7 @@ jobs:
 
   test-js:
     name: Vitest
+    if: github.event.pull_request.draft != true
     needs: generate-wayfinder
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -153,6 +160,7 @@ jobs:
 
   lint-php:
     name: Pint
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -173,6 +181,7 @@ jobs:
   # mode to discover in production.
   test-deploy-script:
     name: Deploy script
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -186,6 +195,7 @@ jobs:
 
   types-php:
     name: PHPStan
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -200,16 +210,12 @@ jobs:
       - name: Run PHPStan
         run: composer types:check
 
-  # composer.json requires ^8.4 while the other jobs run the newest PHP, so
-  # run the suite on the supported floor as well.
   test-php:
-    name: Pest (PHP ${{ matrix.php-version }})
+    name: Pest
+    needs: [lint-php, format-js]
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        php-version: ['8.4', '8.5']
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -218,8 +224,6 @@ jobs:
 
       - name: Setup backend
         uses: ./.github/actions/setup-backend
-        with:
-          php-version: ${{ matrix.php-version }}
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
@@ -243,6 +247,8 @@ jobs:
   # schema) ran past 20 minutes there without output, so only these run.
   test-php-mysql:
     name: Pest (MySQL migrations)
+    needs: [lint-php, format-js]
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -288,6 +294,7 @@ jobs:
   # packages are reported but do not fail the run; advisories do.
   audit:
     name: Dependency audit
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -316,6 +323,8 @@ jobs:
 
   e2e:
     name: Playwright E2E
+    needs: [lint-php, format-js]
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

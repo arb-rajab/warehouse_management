@@ -2,6 +2,13 @@ import { Head } from '@inertiajs/vue3';
 import { Check, Clock, TriangleAlert, Filter, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    index as cellLogsIndex,
+    acknowledgeFlags,
+} from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
+import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -44,7 +51,7 @@ const filterOptions: CellStatusLogFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات', active: true }],
     users: [{ id: 7, name: 'Jane Doe' }],
     actions: [
         'stored',
@@ -57,7 +64,7 @@ const filterOptions: CellStatusLogFilterOptions = {
 
 function mountPage(logs: CellStatusLog[], filters: CellStatusLogFilters = {}) {
     usePageMock.mockReturnValue({
-        url: '/admin/cell-logs',
+        url: cellLogsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -71,7 +78,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) => button.text().includes(t('cellLog.filters.title')));
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -116,7 +123,9 @@ describe('CellStatusLogs Index', () => {
         const helpLink = wrapper
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
-        expect(helpLink?.attributes('href')).toBe('/admin/help/cell-logs');
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'cell-logs' }),
+        );
     });
 
     it('hides the filter fields until the Filters button is clicked', () => {
@@ -132,7 +141,7 @@ describe('CellStatusLogs Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellLog.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-product').exists()).toBe(true);
     });
@@ -157,7 +166,7 @@ describe('CellStatusLogs Index', () => {
         const applyButton = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -172,7 +181,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -187,7 +196,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -326,7 +335,7 @@ describe('CellStatusLogs Index', () => {
         vi.advanceTimersByTime(400);
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ user_id: ['7'] }),
             { preserveState: true, replace: true },
         );
@@ -440,7 +449,10 @@ describe('CellStatusLogs Index', () => {
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links).toHaveLength(1);
         expect(links[0].attributes('href')).toBe(
-            '/admin/rows/A?cell_number=3&flat_number=2',
+            rowShow.url(
+                { row: 'A' },
+                { query: { cell_number: '3', flat_number: '2' } },
+            ),
         );
         expect(links[0].text()).toContain('A3·2');
     });
@@ -460,8 +472,14 @@ describe('CellStatusLogs Index', () => {
 
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links.map((a) => a.attributes('href'))).toEqual([
-            '/admin/rows/A?cell_number=3&flat_number=2',
-            '/admin/rows/B?cell_number=1&flat_number=1',
+            rowShow.url(
+                { row: 'A' },
+                { query: { cell_number: '3', flat_number: '2' } },
+            ),
+            rowShow.url(
+                { row: 'B' },
+                { query: { cell_number: '1', flat_number: '1' } },
+            ),
         ]);
         expect(links.map((a) => a.text())).toEqual(['A3·2', 'B1·1']);
     });
@@ -481,8 +499,14 @@ describe('CellStatusLogs Index', () => {
 
         const links = rowCells(wrapper)[0].findAll('a');
         expect(links.map((a) => a.attributes('href'))).toEqual([
-            '/admin/rows/A?cell_number=3&flat_number=2',
-            '/admin/rows/B?cell_number=1&flat_number=1',
+            rowShow.url(
+                { row: 'A' },
+                { query: { cell_number: '3', flat_number: '2' } },
+            ),
+            rowShow.url(
+                { row: 'B' },
+                { query: { cell_number: '1', flat_number: '1' } },
+            ),
         ]);
         expect(links.map((a) => a.text())).toEqual(['A3·2', 'B1·1']);
     });
@@ -594,7 +618,7 @@ describe('CellStatusLogs Index', () => {
         await acknowledgeButton?.trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-logs/42/acknowledge-flags',
+            acknowledgeFlags.url({ cellStatusLog: 42 }),
             { return_to: null },
             { preserveScroll: true },
         );
@@ -604,7 +628,7 @@ describe('CellStatusLogs Index', () => {
         window.history.pushState(
             {},
             '',
-            '/admin/cell-logs?page=6&flagged=true',
+            cellLogsIndex.url({ query: { page: '6', flagged: 'true' } }),
         );
 
         const wrapper = mountPage([
@@ -625,7 +649,10 @@ describe('CellStatusLogs Index', () => {
         await acknowledgeButton?.trigger('click');
 
         expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cell-logs/42/acknowledge-flags?page=6&flagged=true',
+            acknowledgeFlags.url(
+                { cellStatusLog: 42 },
+                { query: { page: '6', flagged: 'true' } },
+            ),
             { return_to: null },
             { preserveScroll: true },
         );
@@ -641,7 +668,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ flagged: true }),
             { preserveState: true, replace: true },
         );
@@ -663,7 +690,7 @@ describe('CellStatusLogs Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button.text().includes(t('cellLog.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('1');
     });
@@ -838,7 +865,7 @@ describe('CellStatusLogs Index', () => {
         await rowCells(wrapper)[3].get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             { pallet_id: 55 },
             { preserveState: true, replace: true },
         );
@@ -862,7 +889,7 @@ describe('CellStatusLogs Index', () => {
         ]);
 
         const link = rowCells(wrapper)[5].get('a');
-        expect(link.attributes('href')).toBe('/admin/users/7');
+        expect(link.attributes('href')).toBe(userShow.url({ user: 7 }));
         expect(link.text()).toBe('Jane Doe');
     });
 
@@ -915,7 +942,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({
                 action: ['opened'],
                 date_from: '2026-08-01',
@@ -936,7 +963,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ product_id: ['10'] }),
             { preserveState: true, replace: true },
         );
@@ -951,7 +978,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ user_id: ['7'] }),
             { preserveState: true, replace: true },
         );
@@ -969,12 +996,12 @@ describe('CellStatusLogs Index', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
@@ -1019,7 +1046,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ created_within_days: 7 }),
             { preserveState: true, replace: true },
         );
@@ -1096,7 +1123,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ expires_within_days: 5 }),
             { preserveState: true, replace: true },
         );
@@ -1188,7 +1215,7 @@ describe('CellStatusLogs Index', () => {
         await whenHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({
                 sort_by: 'created_at',
                 sort_direction: 'asc',
@@ -1209,7 +1236,7 @@ describe('CellStatusLogs Index', () => {
         await whenHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({
                 sort_by: 'created_at',
                 sort_direction: 'desc',
@@ -1230,7 +1257,7 @@ describe('CellStatusLogs Index', () => {
         await palletHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({
                 sort_by: 'expiration_date',
                 sort_direction: 'asc',
@@ -1262,7 +1289,7 @@ describe('CellStatusLogs Index', () => {
         await clearButton.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
@@ -1282,7 +1309,7 @@ describe('CellStatusLogs Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-logs',
+            cellLogsIndex.url(),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );

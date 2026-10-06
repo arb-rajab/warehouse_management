@@ -284,6 +284,23 @@ test('the filtered scope can filter by multiple actions at once, excluding the r
     );
 });
 
+test('the matchingHistoryFilters scope filters by user and action only, ignoring the listing-only filters like product_id', function () {
+    $user = User::factory()->create();
+    $matching = CellStatusLog::factory()->create(['user_id' => $user->id, 'action' => CellLogAction::Opened]);
+    // Noise: the same user's log for a different action, and another user's log.
+    CellStatusLog::factory()->create(['user_id' => $user->id, 'action' => CellLogAction::Emptied]);
+    CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
+
+    $request = Request::create('/', 'GET', [
+        'user_id' => [$user->id],
+        'action' => ['opened'],
+        // A product_id that matches nothing above: filtered() would apply it, this scope must not.
+        'product_id' => [Product::factory()->create()->id],
+    ]);
+
+    expect(CellStatusLog::query()->matchingHistoryFilters($request)->pluck('id')->all())->toBe([$matching->id]);
+});
+
 test('the sorted scope defaults to created_at descending when no sort params are given', function () {
     // Created in the reverse order of their timestamps (lower id gets the later
     // timestamp), so the assertion only passes if the scope truly orders by

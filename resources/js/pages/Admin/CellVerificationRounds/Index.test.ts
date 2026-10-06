@@ -2,6 +2,12 @@ import { Head } from '@inertiajs/vue3';
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    index as cellVerificationRoundsIndex,
+    show as cellVerificationRoundShow,
+} from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -40,7 +46,7 @@ function mountPage(
     filters: CellVerificationRoundFilters = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cell-verification-rounds',
+        url: cellVerificationRoundsIndex.url(),
         props: defaultAuthProps(),
     });
 
@@ -54,9 +60,7 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) =>
-            button.text().includes(t('cellVerificationRound.filters.title')),
-        );
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
@@ -95,7 +99,7 @@ describe('CellVerificationRounds Index', () => {
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
-            '/admin/help/cell-verification-rounds',
+            helpShow.url({ topic: 'cell-verification-rounds' }),
         );
     });
 
@@ -118,7 +122,7 @@ describe('CellVerificationRounds Index', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellVerificationRound.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-user').exists()).toBe(true);
         expect(wrapper.find('#filter-completed').exists()).toBe(true);
@@ -134,9 +138,7 @@ describe('CellVerificationRounds Index', () => {
         const applyButton = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -151,9 +153,7 @@ describe('CellVerificationRounds Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
@@ -168,9 +168,7 @@ describe('CellVerificationRounds Index', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationRound.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('3');
     });
@@ -208,7 +206,7 @@ describe('CellVerificationRounds Index', () => {
 
         const link = rowCells(wrapper)[0].get('a');
         expect(link.attributes('href')).toBe(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
         );
         expect(link.text()).toContain('42');
     });
@@ -219,7 +217,7 @@ describe('CellVerificationRounds Index', () => {
         ]);
 
         const link = rowCells(wrapper)[1].get('a');
-        expect(link.attributes('href')).toBe('/admin/users/7');
+        expect(link.attributes('href')).toBe(userShow.url({ user: 7 }));
         expect(link.text()).toBe('Jane Doe');
     });
 
@@ -306,7 +304,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({
                 user_id: ['7'],
                 completed: true,
@@ -325,7 +323,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ created_within_days: 7 }),
             { preserveState: true, replace: true },
         );
@@ -367,15 +365,12 @@ describe('CellVerificationRounds Index', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find(
-                (button) =>
-                    button.text() === t('cellVerificationRound.filters.clear'),
-            );
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
@@ -405,7 +400,7 @@ describe('CellVerificationRounds Index', () => {
         await startedHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ sort_direction: 'asc' }),
             { preserveState: true, replace: true },
         );
@@ -424,7 +419,7 @@ describe('CellVerificationRounds Index', () => {
         await startedHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ sort_direction: 'desc' }),
             { preserveState: true, replace: true },
         );
@@ -444,7 +439,7 @@ describe('CellVerificationRounds Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );

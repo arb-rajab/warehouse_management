@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Barcode, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
-    addBarcode,
+    destroyBarcode,
     exportQr,
     index as productsIndex,
-    removeBarcode,
+    storeBarcode,
     updateBoxCount,
     updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -25,11 +25,13 @@ import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { confirmDelete } from '@/lib/confirm';
 import {
     countActive,
     countBadgeClass,
@@ -40,15 +42,16 @@ import {
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
+    plainFieldInputClass,
     selectedCountLabel,
     toggleSort,
     useColumnFilterPopover,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { firstError } from '@/lib/pageErrors';
 import { productName } from '@/lib/productName';
 import type {
     Paginated,
-    ProductBarcode,
     ProductFilterOption,
     ProductFilters,
     ProductIndexFilterOptions,
@@ -68,6 +71,7 @@ const filters = reactive({
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     inactive: props.filters.inactive ?? false,
+    hide_inactive: props.filters.hide_inactive ?? false,
     low_stock: props.filters.low_stock ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
@@ -91,6 +95,7 @@ const activeFilterCount = computed(() =>
         filters.expired,
         filters.expires_within_days !== '',
         filters.inactive,
+        filters.hide_inactive,
         filters.low_stock,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
@@ -108,13 +113,16 @@ const activeFilterCount = computed(() =>
  */
 const productColumnFiltered = computed(
     () =>
-        filters.product_id.length > 0 || filters.inactive || filters.low_stock,
+        filters.product_id.length > 0 ||
+        filters.inactive ||
+        filters.hide_inactive ||
+        filters.low_stock,
 );
 
 /**
  * State narrows every occupancy-derived column identically on the backend
- * (see `ProductController::occupancyCountSubquery()`/
- * `applyHistoryLogFilters()`), so the Full/Opened/Expired/Expiring-soon
+ * (see `Product::withOccupancyCounts()`/`matchingHistoryFilters()`), so
+ * the Full/Opened/Expired/Expiring-soon
  * columns are always marked filtered together.
  */
 const occupancyColumnsFiltered = computed(
@@ -132,12 +140,13 @@ const occupancyColumnsFiltered = computed(
  * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, inactive, low_stock, ...rest } = filters;
+    const { expired, inactive, hide_inactive, low_stock, ...rest } = filters;
 
     return {
         ...rest,
         ...(expired ? { expired: true } : {}),
         ...(inactive ? { inactive: true } : {}),
+        ...(hide_inactive ? { hide_inactive: true } : {}),
         ...(low_stock ? { low_stock: true } : {}),
     };
 }
@@ -180,6 +189,7 @@ function clearFilters(): void {
     filters.expired = false;
     filters.expires_within_days = '';
     filters.inactive = false;
+    filters.hide_inactive = false;
     filters.low_stock = false;
     filters.product_id = [];
     filters.user_id = [];
@@ -216,33 +226,12 @@ function occupancyHref(
 }
 
 /**
- * One in-flight mutation / error message shared by the box-count,
- * minimum-pallets and barcodes dialogs — only one of them is ever open, so a
- * single pair serves all three. Dialogs close (or clear their draft) only in
- * `onSuccess`, so a failed request leaves the input in place with the
- * server's message beside it instead of discarding the user's edit.
+ * Shared by the box-count, minimum-pallets and barcode requests: keep the row
+ * in view and the page's filter state intact across the redirect. Dialogs
+ * close (or clear their input) only on success, so a failed request leaves the
+ * input in place with the server's message beside it.
  */
-const mutationProcessing = ref(false);
-const mutationError = ref('');
-
-function mutationOptions(onSuccess: () => void) {
-    return {
-        preserveScroll: true,
-        preserveState: true,
-        onStart: () => {
-            mutationProcessing.value = true;
-            mutationError.value = '';
-        },
-        onSuccess,
-        onError: (errors: Record<string, string>) => {
-            mutationError.value =
-                Object.values(errors)[0] ?? t('products.saveFailed');
-        },
-        onFinish: () => {
-            mutationProcessing.value = false;
-        },
-    };
-}
+const mutationOptions = { preserveScroll: true, preserveState: true };
 
 const boxCountDialogProduct = ref<ProductSummary | null>(null);
 const boxCountDraft = ref('');
@@ -261,43 +250,8 @@ const boxCountDialogOpen = computed({
 });
 
 function openBoxCountDialog(product: ProductSummary): void {
-    mutationError.value = '';
     boxCountDraft.value = String(product.boxes_count);
     boxCountDialogProduct.value = product;
-}
-
-/**
- * Saves a product's pallet capacity. `preserveScroll`/`preserveState` keep
- * the row in view and the page filter state intact across the redirect.
- * Client-side validation mirrors the server rule so an invalid draft is
- * rejected without a round trip.
- */
-function submitBoxCount(): void {
-    const product = boxCountDialogProduct.value;
-
-    if (product === null) {
-        return;
-    }
-
-    const boxesCount = Number(boxCountDraft.value);
-
-    if (
-        boxCountDraft.value === '' ||
-        !Number.isInteger(boxesCount) ||
-        boxesCount < 1
-    ) {
-        mutationError.value = t('products.invalidCount');
-
-        return;
-    }
-
-    router.patch(
-        updateBoxCount(product.id, { mergeQuery: {} }).url,
-        { boxes_count: boxesCount },
-        mutationOptions(() => {
-            boxCountDialogProduct.value = null;
-        }),
-    );
 }
 
 const minimumPalletsDialogProduct = ref<ProductSummary | null>(null);
@@ -317,47 +271,9 @@ const minimumPalletsDialogOpen = computed({
 });
 
 function openMinimumPalletsDialog(product: ProductSummary): void {
-    mutationError.value = '';
     minimumPalletsDraft.value =
         product.minimum_pallets === null ? '' : String(product.minimum_pallets);
     minimumPalletsDialogProduct.value = product;
-}
-
-/**
- * Saves (or, with a cleared field, removes) a product's warehouse-stock
- * minimum. `preserveScroll`/`preserveState` keep the row in view and the
- * page filter state intact across the redirect. An empty draft submits
- * `null` rather than being rejected — clearing the threshold is a valid
- * action here, unlike the box count, which is always required.
- */
-function submitMinimumPallets(): void {
-    const product = minimumPalletsDialogProduct.value;
-
-    if (product === null) {
-        return;
-    }
-
-    const minimumPallets =
-        minimumPalletsDraft.value === ''
-            ? null
-            : Number(minimumPalletsDraft.value);
-
-    if (
-        minimumPallets !== null &&
-        (!Number.isInteger(minimumPallets) || minimumPallets < 1)
-    ) {
-        mutationError.value = t('products.invalidCount');
-
-        return;
-    }
-
-    router.patch(
-        updateMinimumPallets(product.id, { mergeQuery: {} }).url,
-        { minimum_pallets: minimumPallets },
-        mutationOptions(() => {
-            minimumPalletsDialogProduct.value = null;
-        }),
-    );
 }
 
 function isLowStock(product: ProductSummary): boolean {
@@ -368,7 +284,6 @@ function isLowStock(product: ProductSummary): boolean {
 }
 
 const barcodesDialogProduct = ref<ProductSummary | null>(null);
-const newBarcodeDraft = ref('');
 
 /**
  * Writable computed so FilterDialog's v-model:open can set it to false
@@ -384,8 +299,6 @@ const barcodesDialogOpen = computed({
 });
 
 function openBarcodesDialog(product: ProductSummary): void {
-    mutationError.value = '';
-    newBarcodeDraft.value = '';
     barcodesDialogProduct.value = product;
 }
 
@@ -395,43 +308,11 @@ function openBarcodesDialog(product: ProductSummary): void {
  * removals — so after each mutation it re-points itself at the freshest copy
  * of the product from the now-updated `products` prop, rather than closing.
  */
-function refreshBarcodesDialogProduct(productId: number): void {
+function refreshBarcodesDialogProduct(): void {
+    const productId = barcodesDialogProduct.value?.id;
+
     barcodesDialogProduct.value =
         props.products.data.find((product) => product.id === productId) ?? null;
-}
-
-function submitNewBarcode(): void {
-    const product = barcodesDialogProduct.value;
-    const barcode = newBarcodeDraft.value.trim();
-
-    if (product === null || barcode === '') {
-        return;
-    }
-
-    router.post(
-        addBarcode(product.id, { mergeQuery: {} }).url,
-        { barcode },
-        mutationOptions(() => {
-            newBarcodeDraft.value = '';
-            refreshBarcodesDialogProduct(product.id);
-        }),
-    );
-}
-
-function removeProductBarcode(barcode: ProductBarcode): void {
-    const product = barcodesDialogProduct.value;
-
-    if (product === null) {
-        return;
-    }
-
-    router.delete(
-        removeBarcode.url(
-            { product: product.id, barcode: barcode.id },
-            { mergeQuery: {} },
-        ),
-        mutationOptions(() => refreshBarcodesDialogProduct(product.id)),
-    );
 }
 </script>
 
@@ -455,6 +336,12 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                     @update:model-value="applyFilters"
                 />
                 <FilterCheckbox
+                    id="products-quick-hide-inactive"
+                    v-model="filters.hide_inactive"
+                    :label="t('products.filters.hideInactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
                     id="products-quick-low-stock"
                     v-model="filters.low_stock"
                     :label="t('products.filters.lowStock')"
@@ -467,7 +354,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('products.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -477,8 +364,8 @@ function removeProductBarcode(barcode: ProductBarcode): void {
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('products.filters.title')"
-            :close-label="t('products.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
             <form
                 id="products-filter-form"
@@ -545,8 +432,8 @@ function removeProductBarcode(barcode: ProductBarcode): void {
             <template #footer>
                 <FilterDialogFooter
                     form-id="products-filter-form"
-                    :apply-label="t('cellLog.filters.apply')"
-                    :clear-label="t('cellLog.filters.clear')"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
                     @clear="clearFilters"
                 />
             </template>
@@ -555,151 +442,177 @@ function removeProductBarcode(barcode: ProductBarcode): void {
         <FilterDialog
             v-model:open="boxCountDialogOpen"
             :title="t('products.columns.boxesPerPallet')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
-            <form
-                id="products-box-count-form"
+            <Form
+                v-if="boxCountDialogProduct"
+                :action="
+                    updateBoxCount(boxCountDialogProduct, { mergeQuery: {} })
+                "
+                :options="mutationOptions"
                 class="space-y-4"
-                @submit.prevent="submitBoxCount"
+                #default="{ errors, processing }"
+                @success="boxCountDialogProduct = null"
             >
-                <ActionErrorBanner :message="mutationError" />
+                <ActionErrorBanner :message="firstError(errors)" />
                 <FilterNumberField
                     id="products-box-count"
                     v-model="boxCountDraft"
+                    name="boxes_count"
+                    required
                     :label="
                         t('products.boxesPerPalletLabel', {
-                            product: boxCountDialogProduct
-                                ? productName(
-                                      boxCountDialogProduct.name,
-                                      boxCountDialogProduct.ar_name,
-                                  )
-                                : '',
+                            product: productName(
+                                boxCountDialogProduct.name,
+                                boxCountDialogProduct.ar_name,
+                            ),
                         })
                     "
                 />
-            </form>
-
-            <template #footer>
                 <SubmitButton
-                    form="products-box-count-form"
                     :label="t('expiringWindow.apply')"
                     :processing-label="t('products.saving')"
-                    :processing="mutationProcessing"
+                    :processing="processing"
                 />
-            </template>
+            </Form>
         </FilterDialog>
 
         <FilterDialog
             v-model:open="minimumPalletsDialogOpen"
             :title="t('products.columns.minimumPallets')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
-            <form
-                id="products-minimum-pallets-form"
+            <Form
+                v-if="minimumPalletsDialogProduct"
+                :action="
+                    updateMinimumPallets(minimumPalletsDialogProduct, {
+                        mergeQuery: {},
+                    })
+                "
+                :options="mutationOptions"
                 class="space-y-4"
-                @submit.prevent="submitMinimumPallets"
+                #default="{ errors, processing }"
+                @success="minimumPalletsDialogProduct = null"
             >
-                <ActionErrorBanner :message="mutationError" />
+                <ActionErrorBanner :message="firstError(errors)" />
                 <FilterNumberField
                     id="products-minimum-pallets"
                     v-model="minimumPalletsDraft"
+                    name="minimum_pallets"
                     :label="
                         t('products.minimumPalletsLabel', {
-                            product: minimumPalletsDialogProduct
-                                ? productName(
-                                      minimumPalletsDialogProduct.name,
-                                      minimumPalletsDialogProduct.ar_name,
-                                  )
-                                : '',
+                            product: productName(
+                                minimumPalletsDialogProduct.name,
+                                minimumPalletsDialogProduct.ar_name,
+                            ),
                         })
                     "
                     :placeholder="t('products.minimumPalletsPlaceholder')"
                 />
-            </form>
-
-            <template #footer>
                 <SubmitButton
-                    form="products-minimum-pallets-form"
                     :label="t('expiringWindow.apply')"
                     :processing-label="t('products.saving')"
-                    :processing="mutationProcessing"
+                    :processing="processing"
                 />
-            </template>
+            </Form>
         </FilterDialog>
 
         <FilterDialog
             v-model:open="barcodesDialogOpen"
             :title="t('products.columns.barcodes')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
-            <ActionErrorBanner :message="mutationError" />
-            <form
-                id="products-add-barcode-form"
-                class="flex items-end gap-2"
-                @submit.prevent="submitNewBarcode"
-            >
-                <div class="flex-1">
-                    <label for="products-new-barcode" :class="fieldLabelClass">
-                        {{
-                            t('products.barcodesLabel', {
-                                product: barcodesDialogProduct
-                                    ? productName(
-                                          barcodesDialogProduct.name,
-                                          barcodesDialogProduct.ar_name,
-                                      )
-                                    : '',
-                            })
-                        }}
-                    </label>
-                    <input
-                        id="products-new-barcode"
-                        v-model="newBarcodeDraft"
-                        type="text"
-                        :placeholder="t('products.newBarcodePlaceholder')"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                    />
-                </div>
-                <button
-                    type="submit"
-                    :disabled="mutationProcessing"
-                    :class="filterApplyButtonClass"
+            <template v-if="barcodesDialogProduct">
+                <Form
+                    :action="
+                        storeBarcode(barcodesDialogProduct, { mergeQuery: {} })
+                    "
+                    :options="mutationOptions"
+                    reset-on-success
+                    #default="{ errors, processing }"
+                    @success="refreshBarcodesDialogProduct()"
                 >
-                    <Plus class="h-4 w-4 shrink-0" />
-                    {{ t('products.addBarcode') }}
-                </button>
-            </form>
+                    <ActionErrorBanner :message="firstError(errors)" />
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <label
+                                for="products-new-barcode"
+                                :class="fieldLabelClass"
+                            >
+                                {{
+                                    t('products.barcodesLabel', {
+                                        product: productName(
+                                            barcodesDialogProduct.name,
+                                            barcodesDialogProduct.ar_name,
+                                        ),
+                                    })
+                                }}
+                            </label>
+                            <input
+                                id="products-new-barcode"
+                                type="text"
+                                name="barcode"
+                                required
+                                :placeholder="
+                                    t('products.newBarcodePlaceholder')
+                                "
+                                :class="plainFieldInputClass"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            :disabled="processing"
+                            :class="filterApplyButtonClass"
+                        >
+                            <Plus class="h-4 w-4 shrink-0" />
+                            {{ t('products.addBarcode') }}
+                        </button>
+                    </div>
+                </Form>
 
-            <p
-                v-if="(barcodesDialogProduct?.barcodes.length ?? 0) === 0"
-                class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
-            >
-                {{ t('products.noBarcodes') }}
-            </p>
-            <ul
-                v-else
-                class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
-            >
-                <li
-                    v-for="barcode in barcodesDialogProduct?.barcodes ?? []"
-                    :key="barcode.id"
-                    class="flex items-center justify-between gap-2 py-2 text-sm"
+                <p
+                    v-if="barcodesDialogProduct.barcodes.length === 0"
+                    class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
                 >
-                    {{ barcode.barcode }}
-                    <button
-                        type="button"
-                        :aria-label="
-                            t('products.removeBarcode', {
-                                barcode: barcode.barcode,
-                            })
-                        "
-                        :disabled="mutationProcessing"
-                        class="text-gray-400 hover:text-red-600 disabled:opacity-50 dark:text-neutral-500 dark:hover:text-red-400"
-                        @click="removeProductBarcode(barcode)"
+                    {{ t('products.noBarcodes') }}
+                </p>
+                <ul
+                    v-else
+                    class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
+                >
+                    <li
+                        v-for="barcode in barcodesDialogProduct.barcodes"
+                        :key="barcode.id"
+                        class="flex items-center justify-between gap-2 py-2 text-sm"
                     >
-                        <X class="h-4 w-4" />
-                    </button>
-                </li>
-            </ul>
+                        {{ barcode.barcode }}
+                        <Link
+                            :href="
+                                destroyBarcode(
+                                    {
+                                        product: barcodesDialogProduct,
+                                        barcode,
+                                    },
+                                    { mergeQuery: {} },
+                                )
+                            "
+                            as="button"
+                            preserve-scroll
+                            preserve-state
+                            :aria-label="
+                                t('products.removeBarcode', {
+                                    barcode: barcode.barcode,
+                                })
+                            "
+                            :on-before="() => confirmDelete(barcode.barcode)"
+                            :on-success="refreshBarcodesDialogProduct"
+                            class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        >
+                            <X class="h-4 w-4" />
+                        </Link>
+                    </li>
+                </ul>
+            </template>
         </FilterDialog>
 
         <DataTable
@@ -803,6 +716,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                             class="h-8 w-8 shrink-0 rounded object-cover"
                         />
                         {{ productName(product.name, product.ar_name) }}
+                        <ProductActiveBadge :active="product.active" />
                     </div>
                 </td>
                 <td class="px-4 py-2">
@@ -895,7 +809,7 @@ function removeProductBarcode(barcode: ProductBarcode): void {
                 </td>
                 <td class="px-4 py-2">
                     <a
-                        :href="exportQr.url(product.id)"
+                        :href="exportQr.url(product)"
                         :aria-label="
                             t('products.exportQrLabel', {
                                 product: productName(

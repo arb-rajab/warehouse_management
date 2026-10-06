@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
  * clicking in the store. The routes below take POST now, and the CSRF token
  * rides along: a link marked `data-method="post"` submits a form through
  * aiz-core.js, and the confirmation modals pass the mark on to their button.
+ * A module moved to Inertia deletes with DELETE instead (`roles.destroy`,
+ * `staffs.destroy`), which Inertia sends with its CSRF header.
  *
  * Left as GET on purpose: the signed email-verification link, the terms
  * activation link and the payment gateways' redirects back to the shop.
@@ -114,13 +116,13 @@ function storeRoutePath(RoutingRoute $route): string
     return '/'.preg_replace('/\{[^}]+\}/', '1', $route->uri());
 }
 
-test('every state-changing store route takes POST and no GET', function () {
+test('every state-changing store route takes POST (DELETE once on Inertia) and no GET', function () {
     $wrong = [];
 
     foreach (STATE_CHANGING_STORE_ROUTES as $name) {
         $route = Route::getRoutes()->getByName($name);
 
-        if ($route === null || $route->methods() !== ['POST']) {
+        if ($route === null || ! in_array($route->methods(), [['POST'], ['DELETE']], true)) {
             $wrong[] = $name;
         }
     }
@@ -150,7 +152,7 @@ test('a GET to a state-changing route is refused and changes nothing', function 
     $brandId = DB::table('brands')->insertGetId(['name' => 'Acme', 'slug' => 'acme']);
     actingAsStoreUser($admin);
 
-    $this->get("/temp/admin/brands/destroy/$brandId")->assertStatus(405);
+    $this->get("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 
     $this->post("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));

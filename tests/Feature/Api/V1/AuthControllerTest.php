@@ -48,7 +48,7 @@ test('logging in with the wrong password is rejected', function () {
         'password' => 'wrong-password',
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -65,8 +65,8 @@ test('logging in with an unknown email is rejected with the same message as a wr
         'password' => 'wrong-password',
     ]);
 
-    $unknownEmailResponse->assertStatus(422);
-    $wrongPasswordResponse->assertStatus(422);
+    $unknownEmailResponse->assertUnprocessable();
+    $wrongPasswordResponse->assertUnprocessable();
     expect($unknownEmailResponse->json('errors.email.0'))
         ->toBe($wrongPasswordResponse->json('errors.email.0'));
 
@@ -79,7 +79,7 @@ test('logging in with an overly long email or password is rejected', function ()
         'password' => str_repeat('a', 256),
     ]);
 
-    $response->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
+    $response->assertUnprocessable()->assertJsonValidationErrors(['email', 'password']);
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -90,7 +90,7 @@ test('login attempts are throttled after too many failures', function () {
         $this->postJson('/api/v1/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
-        ])->assertStatus(422);
+        ])->assertUnprocessable();
     }
 
     $response = $this->postJson('/api/v1/login', [
@@ -98,7 +98,7 @@ test('login attempts are throttled after too many failures', function () {
         'password' => 'wrong-password',
     ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -110,7 +110,7 @@ test('login attempts against one email are throttled even when spread across man
             ->postJson('/api/v1/login', [
                 'email' => $user->email,
                 'password' => 'wrong-password',
-            ])->assertStatus(422);
+            ])->assertUnprocessable();
     }
 
     $response = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
@@ -119,7 +119,7 @@ test('login attempts against one email are throttled even when spread across man
             'password' => 'wrong-password',
         ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
