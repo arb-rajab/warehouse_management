@@ -464,6 +464,7 @@ type Registry = {
     meshes: Array<{
         name: string;
         position: { x: number; y: number; z: number };
+        rotation: { x: number; y: number; z: number };
         material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
         userData: Record<string, unknown>;
     }>;
@@ -3167,6 +3168,7 @@ describe('CellMap3D', () => {
         interface FakeContext {
             canvas: HTMLCanvasElement;
             fillText: ReturnType<typeof vi.fn>;
+            clearRect: ReturnType<typeof vi.fn>;
         }
         let contexts: FakeContext[] = [];
 
@@ -3179,6 +3181,7 @@ describe('CellMap3D', () => {
                 const context = {
                     canvas: this,
                     fillText: vi.fn(),
+                    clearRect: vi.fn(),
                 } as FakeContext;
                 contexts.push(context);
 
@@ -3285,6 +3288,54 @@ describe('CellMap3D', () => {
                     .flatMap(drawnTexts)
                     .filter((text) => /^\d+$/.test(text)),
             ).toHaveLength(40);
+        });
+
+        it('turns the markers and swaps their letters for the walk view, and restores both in the top view', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            const setCameraMode = (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode;
+            const letterXs = (context: FakeContext) =>
+                context.fillText.mock.calls
+                    .filter((call) => ['A', 'B'].includes(call[0] as string))
+                    .slice(0, 2)
+                    .map((call) => [call[0], call[1]]);
+            const width = contexts[1].canvas.width;
+
+            // Walk is the default: the marker is turned half a turn and the
+            // lower row's letter sits on the right, where -X appears on screen.
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
+            expect(letterXs(contexts[1])).toEqual([
+                ['A', width * 0.88],
+                ['B', width * 0.12],
+            ]);
+
+            setCameraMode('orbit');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual([
+                0, 0, 0,
+            ]);
+            const topViewCalls = contexts[1].fillText.mock.calls.slice(-6);
+            expect(topViewCalls.map((call) => [call[0], call[1]])).toEqual([
+                ['1', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+                ['2', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+            ]);
+
+            setCameraMode('walk');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
         });
 
         it('adds no markers when there are no cells', () => {

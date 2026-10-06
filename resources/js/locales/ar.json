@@ -193,6 +193,7 @@
             "searching": "جارٍ البحث…",
             "noProductsFound": "لم يتم العثور على منتجات.",
             "selected": "المحدد",
+            "deselectAll": "إلغاء تحديد الكل",
             "palletHistory": "عرض سجل المنصة رقم #{id}",
             "flaggedOnly": "المُعلَّمة فقط"
         },

@@ -585,4 +585,36 @@ describe('FilterProductSelect', () => {
 
         expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
     });
+
+    it('deselects every selected product with one click and hides the button when none are selected', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            ],
+            modelValue: ['1', '2'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, paginated([]));
+        await wrapper.vm.$nextTick();
+
+        const deselectAll = wrapper.get(
+            '[data-testid="deselect-all-products"]',
+        );
+        expect(deselectAll.text()).toBe(t('cellLog.filters.deselectAll'));
+
+        await deselectAll.trigger('click');
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
+
+        const empty = mountSelect();
+        await empty.get('button').trigger('click');
+        resolveCall(1, paginated([]));
+        await empty.vm.$nextTick();
+
+        expect(
+            empty.find('[data-testid="deselect-all-products"]').exists(),
+        ).toBe(false);
+    });
 });

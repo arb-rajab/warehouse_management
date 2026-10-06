@@ -295,6 +295,8 @@ interface ProductImagePlacement {
  */
 const productImageMaterialsByUrl = new Map<string, THREE.MeshBasicMaterial>();
 let productImageGeometry: THREE.PlaneGeometry | null = null;
+/** Repaints each aisle floor marker for the active camera mode (see `addAisleFloorMarkers`). */
+let aisleMarkerPainters: Array<(walking: boolean) => void> = [];
 let productImageLoader: THREE.TextureLoader | null = null;
 let isDisposed = false;
 /**
@@ -968,13 +970,16 @@ function buildCellGroup(bands: CellMap3DBand[]): THREE.Group {
  * one outside each end) — printing the adjacent rows' letters on either side
  * of each column number, so from the top view you can read which row/column
  * you are beside. The text is drawn onto canvas textures laid flat on the
- * floor (readable with +Z toward the viewer); a long aisle is split into
+ * floor (readable with +Z toward the viewer in the top view, turned half a
+ * turn in the walk view); a long aisle is split into
  * several textures so none exceeds AISLE_MARKER_MAX_TEXTURE_PIXELS.
  */
 function addAisleFloorMarkers(
     group: THREE.Group,
     bands: CellMap3DBand[],
 ): void {
+    aisleMarkerPainters = [];
+
     const maxCell = maxOf(
         bands.flatMap((band) => band.items.map((item) => item.cellNumber)),
         0,
@@ -1022,18 +1027,27 @@ function addAisleFloorMarkers(
                 return;
             }
 
-            context.fillStyle = AISLE_MARKER_TEXT_COLOR;
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
+            const paint = (walking: boolean): void => {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.fillStyle = AISLE_MARKER_TEXT_COLOR;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
 
-            for (let cell = firstCell; cell <= lastCell; cell++) {
-                const y = (cellWorldZ(cell) - startZ) * pixelsPerUnit;
-                context.font = `600 ${pixelsPerUnit * 0.5}px sans-serif`;
-                context.fillText(String(cell), canvas.width / 2, y);
-                context.font = `700 ${pixelsPerUnit * 0.3}px sans-serif`;
-                context.fillText(lowerLetter, canvas.width * 0.12, y);
-                context.fillText(upperLetter, canvas.width * 0.88, y);
-            }
+                // The walk camera faces +Z with screen-right at -X, so the
+                // marker is turned half a turn there and the letters swap
+                // sides to stay beside the row they name.
+                const lowerX = canvas.width * (walking ? 0.88 : 0.12);
+                const upperX = canvas.width * (walking ? 0.12 : 0.88);
+
+                for (let cell = firstCell; cell <= lastCell; cell++) {
+                    const y = (cellWorldZ(cell) - startZ) * pixelsPerUnit;
+                    context.font = `600 ${pixelsPerUnit * 0.5}px sans-serif`;
+                    context.fillText(String(cell), canvas.width / 2, y);
+                    context.font = `700 ${pixelsPerUnit * 0.3}px sans-serif`;
+                    context.fillText(lowerLetter, lowerX, y);
+                    context.fillText(upperLetter, upperX, y);
+                }
+            };
 
             const texture = new THREE.CanvasTexture(canvas);
             texture.colorSpace = THREE.SRGBColorSpace;
@@ -1056,12 +1070,20 @@ function addAisleFloorMarkers(
             const marker = new THREE.Mesh(geometry, material);
             marker.name = 'aisle-marker';
             marker.rotation.x = -Math.PI / 2;
+            aisleMarkerPainters.push((walking: boolean): void => {
+                paint(walking);
+                texture.needsUpdate = true;
+                marker.rotation.z = walking ? Math.PI : 0;
+            });
             marker.position.set(
                 rowWorldX(aisle) - ROW_SPACING / 2,
                 AISLE_MARKER_HEIGHT,
                 (startZ + endZ) / 2,
             );
             group.add(marker);
+            aisleMarkerPainters[aisleMarkerPainters.length - 1](
+                cameraMode.value === 'walk',
+            );
         }
     }
 }
@@ -1383,6 +1405,11 @@ function setCameraMode(mode: 'walk' | 'orbit'): void {
     }
 
     cameraMode.value = mode;
+
+    for (const repaint of aisleMarkerPainters) {
+        repaint(mode === 'walk');
+    }
+
     clearSelection();
     clearHover();
 
