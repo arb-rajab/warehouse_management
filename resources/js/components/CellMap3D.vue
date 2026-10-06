@@ -74,6 +74,7 @@ import type {
     OrbitRange,
     OrbitState,
     WalkerBounds,
+    WalkerPosition,
 } from '@/lib/mapWalker';
 import { productName } from '@/lib/productName';
 import type { Cell, CellMap3DBand, CellMap3DItem } from '@/types/admin';
@@ -362,6 +363,14 @@ let orbitRange: OrbitRange = {
     defaultDistance: 0,
 };
 let orbitState: OrbitState = { yawDegrees: 0, pitchDegrees: 0, distance: 0 };
+/**
+ * Where `focusCell` re-aimed the orbit camera, instead of the warehouse's
+ * own center (`orbitRange.center`). Cleared whenever orbit is (re)entered
+ * or reset, so it never outlives the session it was set in.
+ */
+let orbitFocusCenter: WalkerPosition | null = null;
+/** How close the orbit camera zooms in when `focusCell` aims it at one cell. */
+const ORBIT_FOCUS_DISTANCE = CELL_SPACING * 6;
 
 /** Multi-pointer tracking for orbit's two-finger pinch-to-zoom (touch). */
 const activePointers = new Map<number, { x: number; y: number }>();
@@ -441,6 +450,13 @@ function rowLabelWorldPosition(
     };
 }
 
+/** `orbitRange` re-centered on `orbitFocusCenter` while a cell is focused — what every orbit camera/projection read must use, not `orbitRange` directly. */
+function activeOrbitRange(): OrbitRange {
+    return orbitFocusCenter
+        ? { ...orbitRange, center: orbitFocusCenter }
+        : orbitRange;
+}
+
 function updateRowLabels(): void {
     const container = containerRef.value;
 
@@ -450,7 +466,8 @@ function updateRowLabels(): void {
 
     const aspect = container.clientWidth / (container.clientHeight || 1);
 
-    const orbitPosition = orbitCameraPosition(orbitRange, orbitState);
+    const range = activeOrbitRange();
+    const orbitPosition = orbitCameraPosition(range, orbitState);
 
     props.bands.forEach((band, rowIndex) => {
         const anchor = rowLabelWorldPosition(rowIndex, band);
@@ -458,7 +475,7 @@ function updateRowLabels(): void {
             cameraMode.value === 'orbit'
                 ? orbitWorldPointToScreenPercent(
                       orbitPosition,
-                      orbitRange.center,
+                      range.center,
                       aspect,
                       anchor,
                   )
@@ -1351,7 +1368,13 @@ function rebuildCells(): void {
     rebuildCellLookup(props.bands);
 }
 
-/** Moves the camera to face the given cell and pitches to look at its flat level. */
+/**
+ * Moves the camera to face the given cell and pitches to look at its flat
+ * level. In orbit mode there is no walking position to move, so it instead
+ * re-aims the orbit camera at the cell (keeping its current angle) and
+ * zooms in on it — otherwise next/previous-match navigation would silently
+ * move the invisible walk camera while the orbit view stayed put.
+ */
 function focusCell(
     rowLetter: string,
     cellNumber: number,
@@ -1360,6 +1383,21 @@ function focusCell(
     const rowIndex = props.bands.findIndex((band) => band.letter === rowLetter);
 
     if (rowIndex === -1) {
+        return;
+    }
+
+    if (cameraMode.value === 'orbit') {
+        orbitFocusCenter = {
+            x: rowWorldX(rowIndex),
+            y: flatWorldY(flatNumber),
+            z: cellWorldZ(cellNumber),
+        };
+        orbitState.distance = clamp(
+            ORBIT_FOCUS_DISTANCE,
+            orbitRange.minDistance,
+            orbitRange.maxDistance,
+        );
+
         return;
     }
 
@@ -1374,8 +1412,15 @@ function focusCell(
     yawDegrees = 0;
 }
 
-/** Cell A1, flat 1 is the 3D view's orientation anchor, mirroring the 2D map's. */
+/** Cell A1, flat 1 is the 3D view's orientation anchor, mirroring the 2D map's. In orbit mode it returns to the default whole-warehouse overview instead. */
 function resetView(): void {
+    if (cameraMode.value === 'orbit') {
+        orbitFocusCenter = null;
+        orbitState = defaultOrbitState(orbitRange);
+
+        return;
+    }
+
     const firstBand = props.bands[0];
 
     if (firstBand) {
@@ -1406,6 +1451,12 @@ function setCameraMode(mode: 'walk' | 'orbit'): void {
 
     cameraMode.value = mode;
 
+    // Held movement belongs to the mode it was pressed in: the touch pad
+    // unmounts on switch, so its pointerup would never arrive and the key
+    // would otherwise keep driving the other mode's camera.
+    pressedDirections.clear();
+    touchSprintEnabled.value = false;
+
     for (const repaint of aisleMarkerPainters) {
         repaint(mode === 'walk');
     }
@@ -1414,6 +1465,7 @@ function setCameraMode(mode: 'walk' | 'orbit'): void {
     clearHover();
 
     if (mode === 'orbit') {
+        orbitFocusCenter = null;
         orbitState = defaultOrbitState(orbitRange);
     }
 
@@ -1887,13 +1939,10 @@ function updateCamera(): void {
     }
 
     if (cameraMode.value === 'orbit') {
-        const orbitPosition = orbitCameraPosition(orbitRange, orbitState);
+        const range = activeOrbitRange();
+        const orbitPosition = orbitCameraPosition(range, orbitState);
         camera.position.set(orbitPosition.x, orbitPosition.y, orbitPosition.z);
-        camera.lookAt(
-            orbitRange.center.x,
-            orbitRange.center.y,
-            orbitRange.center.z,
-        );
+        camera.lookAt(range.center.x, range.center.y, range.center.z);
 
         return;
     }

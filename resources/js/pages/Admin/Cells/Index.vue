@@ -565,15 +565,18 @@ const viewMode = ref<'2d' | '3d'>('2d');
 const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
 
 function setViewMode(mode: '2d' | '3d'): void {
-    viewMode.value = mode;
-
     // A fresh CellMap3D always mounts in walk mode (it owns cameraMode
     // internally and doesn't persist across unmounts) — resetting the
-    // mirror here keeps this toggle button's pressed-state from showing a
-    // stale "orbit" left over from a previous time in the 3D view.
-    if (mode === '3d') {
+    // mirror here keeps the orbit toggle's pressed-state from showing a
+    // stale "orbit" left over from a previous time in the 3D view. Only
+    // when actually entering 3D: re-selecting 3D while already in it
+    // doesn't remount the child, so resetting then would desync the toggle
+    // from a camera that is still orbiting (and make the next tap a no-op).
+    if (mode === '3d' && viewMode.value !== '3d') {
         cameraDisplayMode.value = 'walk';
     }
+
+    viewMode.value = mode;
 }
 
 /**

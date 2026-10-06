@@ -1842,6 +1842,79 @@ describe('Cells Index (warehouse map)', () => {
             ).toBe('false');
         });
 
+        it('keeps the orbit toggle pressed and working when 3D is re-selected while already orbiting', async () => {
+            const wrapper = mountPage([row()], []);
+            const toggle = () =>
+                wrapper.get('[data-testid="camera-mode-orbit"]');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await toggle().trigger('click');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            cellMap3DSetCameraMode.mockClear();
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenCalledWith('walk');
+            expect(toggle().attributes('aria-pressed')).toBe('false');
+
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenLastCalledWith('orbit');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+        });
+
+        it('steps next/previous match through only the filtered pallets while in 3D orbit mode', async () => {
+            const seed: CellHighlightSeed = {
+                state: null,
+                productIds: [7],
+                expiresWithinDays: null,
+                staleAfterDays: null,
+                expired: false,
+                inactive: false,
+            };
+            const matching = (cellNumber: number, productId: number) =>
+                highlightSample({
+                    cell_number: cellNumber,
+                    pallet: pallet({ product_id: productId }),
+                });
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 5 })],
+                [],
+                {
+                    initialHighlight: seed,
+                    cellHighlightSamples: [
+                        matching(1, 99),
+                        matching(2, 7),
+                        matching(3, 99),
+                        matching(4, 7),
+                        matching(5, 99),
+                    ],
+                },
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await wrapper
+                .get('[data-testid="camera-mode-orbit"]')
+                .trigger('click');
+            cellMap3DFocusCell.mockClear();
+
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper
+                .get('[data-testid="previous-match"]')
+                .trigger('click');
+
+            expect(cellMap3DFocusCell.mock.calls).toEqual([
+                ['A', 4, 1],
+                ['A', 2, 1],
+                ['A', 4, 1],
+            ]);
+        });
+
         it("passes every flat's cells to the 3D view with highlight/pulse flags applied", async () => {
             const seed: CellHighlightSeed = {
                 state: 'full',
