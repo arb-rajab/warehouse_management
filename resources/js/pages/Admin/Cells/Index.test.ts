@@ -1909,9 +1909,9 @@ describe('Cells Index (warehouse map)', () => {
                 .trigger('click');
 
             expect(cellMap3DFocusCell.mock.calls).toEqual([
-                ['A', 4, 1],
                 ['A', 2, 1],
                 ['A', 4, 1],
+                ['A', 2, 1],
             ]);
         });
 
