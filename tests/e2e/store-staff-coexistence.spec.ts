@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { seedStoreFixtures } from './support/storeFixtures';
 
 /**
  * The store back office's first Inertia module, staff, beside the Blade
@@ -37,6 +38,11 @@ test('dismissing the delete confirmation keeps the staff member, accepting it de
 test('the sidebar loads a Blade page in full, and an Inertia redirect to one does too', async ({
     page,
 }) => {
+    seedStoreFixtures(String.raw`
+        foreach (['Setup_configuration_section', 'Setup_Shipping_section'] as $key) {
+            Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $key], ['value' => '1']);
+        }
+    `);
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/staffs');
     await expect(page.getByRole('heading', { name: 'Staff' })).toBeVisible();
@@ -45,17 +51,18 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
         name: 'Store admin menu',
     });
     await navigation
-        .getByRole('button', { name: 'Customers', exact: true })
+        .getByRole('button', { name: 'Setup & configurations', exact: true })
         .click();
     const response = page.waitForResponse(
         (response) =>
-            new URL(response.url()).pathname === '/temp/admin/notifications',
+            new URL(response.url()).pathname === '/temp/admin/carriers' &&
+            response.request().isNavigationRequest(),
     );
     await navigation
-        .getByRole('link', { name: 'Notifications', exact: true })
+        .getByRole('link', { name: 'Shipping carriers', exact: true })
         .click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/temp\/admin\/notifications$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/carriers$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');

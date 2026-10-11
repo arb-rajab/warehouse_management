@@ -161,9 +161,12 @@ describe('Store blog categories Index', () => {
         expect(wrapper.getComponent(Form).props('action')).toEqual(
             categoriesIndex(),
         );
-        expect(wrapper.getComponent(FormField).props('label')).toBe(
-            t('store.blogCategories.index.search'),
-        );
+        expect(
+            wrapper
+                .findAllComponents(FormField)
+                .find((field) => field.props('id') === 'search')!
+                .props('label'),
+        ).toBe(t('store.blogCategories.index.search'));
         expect(wrapper.get('#search').attributes('maxlength')).toBe('255');
         expect(wrapper.getComponent(SubmitButton).props()).toMatchObject({
             label: t('store.blogCategories.index.search'),

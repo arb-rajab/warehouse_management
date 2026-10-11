@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
+import { ensureStoreRtlLanguage } from './support/storeFixtures';
 
 test('upload rejection, avatar selection, validation retention and native deletion confirmation', async ({
     page,
@@ -74,28 +75,8 @@ test('upload rejection, avatar selection, validation retention and native deleti
 test('the picker supports RTL keyboard focus and dark inputs', async ({
     page,
 }) => {
+    ensureStoreRtlLanguage();
     await loginAsStoreAdmin(page);
-    // The default demo seed has no store Language rows. Prepare an RTL
-    // language through authenticated admin endpoints in the isolated e2e DB.
-    const csrf = (await page.context().cookies()).find(
-        (cookie) => cookie.name === 'XSRF-TOKEN',
-    )!;
-    const headers = { 'X-XSRF-TOKEN': decodeURIComponent(csrf.value) };
-    const created = await page.request.post('/temp/admin/languages', {
-        headers,
-        form: { name: 'Arabic', code: 'ar', app_lang_code: 'ar' },
-    });
-    expect(created.ok()).toBe(true);
-    await page.goto('/temp/admin/languages');
-    const language = page.getByRole('row', { name: /Arabic/ });
-    const id = await language
-        .locator('input[onchange^="update_rtl_status"]')
-        .inputValue();
-    const rtl = await page.request.post(
-        '/temp/admin/languages/update_rtl_status',
-        { headers, form: { id, status: '1' } },
-    );
-    expect(rtl.ok()).toBe(true);
     await page.goto('/temp/admin/profile');
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.getByRole('button', { name: 'Arabic' }).click();

@@ -128,9 +128,12 @@ describe('Store product bulk import', () => {
             processing: true,
         });
         const wrapper = mountPage();
-        expect(wrapper.getComponent(FormField).props('error')).toBe(
-            'Invalid file',
-        );
+        expect(
+            wrapper
+                .findAllComponents(FormField)
+                .find((field) => field.props('id') === 'bulk_file')!
+                .props('error'),
+        ).toBe('Invalid file');
         expect(wrapper.text()).toContain('Invalid file');
         expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
             true,

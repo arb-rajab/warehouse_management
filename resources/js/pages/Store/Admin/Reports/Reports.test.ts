@@ -180,6 +180,7 @@ describe('Store report screens', () => {
                     .props('rows'),
             ).toEqual(rows.data);
             expect(wrapper.getComponent(Pagination).props()).toEqual({
+                async: false,
                 links: [],
                 perPage: 50,
             });

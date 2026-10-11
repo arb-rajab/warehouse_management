@@ -246,7 +246,8 @@ Converted and unconverted pages coexist through four mechanisms:
     tests/e2e/store-staff-coexistence.spec.ts drives in a browser.
   - It also covers any link wrongly marked Inertia.
   - A response counts as Blade when it renders a view other than Inertia's
-    root view, i.e. the view has no `page` data.
+    root view `app`. A `page` variable in a CMS/policy Blade view does not
+    make that response Inertia.
 
 ### 2.7 Foundation verification (historical read-only pass, 2026-10-07)
 
@@ -614,3 +615,135 @@ appearance and custom pages, seller/classified screens use retained root handler
 admin controller with their retained Blade editor. Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
+
+
+## 7. Independent reconstructed audit (2026-10-11, prompt 3)
+
+This audit starts from integration HEAD `29e5e2527bf7f9920436e5970a4413c46325ed03`.
+The unavailable `aed3feab5b6edd95fb941ee92a455e058403def5` remains excluded;
+none of its code or claimed verification was recovered. Detailed evidence,
+commands and limits are in [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#independent-reconstructed-audit--prompt-3).
+
+- `HandleStoreBladePages` distinguishes the genuine Inertia root view `app`
+  from Blade views, including CMS/policy views with `page` data. Preserve its
+  Blade CSP override and 409 `X-Inertia-Location` fallback; do not classify
+  arbitrary view variables as an Inertia response.
+- Retained backend, frontend and seller uploader layout `app-url` metadata uses
+  `url('/temp')`, preserving request scheme/port. File-base metadata uses existing
+  `my_asset('')`, avoiding obsolete `/public/` and lost-port thumbnail URLs. Do not change shared asset URL
+  helpers as a side effect. The selected Vue resource remains `id,name,type,size,url`.
+- Public CMS metadata uses the schema's nullable `keywords` and `meta_image`,
+  rather than nonexistent `tags`/`meta_img`. Preserve public content and established
+  sanitization. The VoguePay package currency expression now reads the configured
+  currency directly; verification renders templates without payment calls.
+- Representative receipt QR compilation was already fixed in selected source
+  `218f05f15693a06f748b9d20b799cad5f8a75e81`; real receipt PDF tests pass.
+- Retained representative web visit-note writes must save only the current store
+  actor's own visit. The former integration no-op is fixed with a typed validated
+  request; foreign visits retain the established `0` response. No departure,
+  tax, logout or role-grant policy changes accompany this fix.
+- Retained `/temp/product-queries` read aliases preserve the previous
+  `view_all_product_queries` gate and redirect to selected admin handlers.
+  Encrypted legacy detail identifiers are accepted, invalid identifiers return
+  404, and customer submission/seller consumers remain separate.
+- Browser fixtures use an idempotent Arabic-language setup in dedicated
+  `database/e2e.sqlite`; selectors reflect current Inertia language pages.
+  Keep single-worker/no-retry/no-server-reuse behavior. Quote fixture seeder
+  namespaces in shell commands; use graceful shutdown for Docker-backed servers.
+  HTTPS and an installed Chromium executable can be supplied through environment
+  overrides. Enforce CSP in browser tests; do not use report-only as success evidence.
+- `CellTest` must not manually reserve `Z` beside Faker-generated unique row
+  letters. Its four reproduced collision seeds are covered with generated parents;
+  lazy factory parent creation remains unchanged.
+
+255 retained/current Blade templates compile and lint as PHP. Syntax coverage
+is distinct from representative runtime rendering, PDF rendering, and browser
+workflow coverage. Public initial-response HTML was compared with an isolated
+pre-pilot `cdf719789541079ce86c5dc1b605520aa1ab7c9f` worktree. Existing SEO gaps
+remain recorded: generic homepage listing/search `og:url`, missing `/temp` in
+CMS/policy `og:url`, and indexable login. Sampled pages have no canonical tags,
+JSON-LD or itemscope structured data; do not describe absent features as migrated.
+
+Retained-module issues are separate from integration regressions: populated
+brand admin pages reference absent `brands.order_level`; the populated retained
+dashboard lacks product-translation eager loading; legacy API/seller resource
+routes still include nonexistent handlers, and legacy uploader deletion
+failure handling remains weaker than the selected admin controller. These need
+separate scoped work; do not activate core catalogue/seller migrations or change
+shared storage policy during this audit. Keep all recorded owner-decision gaps.
+Final combined verification and production MySQL/role-grant review remain pending.
+
+
+## 8. Combined verification attempt (2026-10-11, prompt 4)
+
+The integration branch remains at `29e5e2527bf7f9920436e5970a4413c46325ed03`,
+with preserved reconstructed-audit work and eleven additional frontend-test
+contract fixes. No local commit, push or deployment. Full mounts now distinguish
+page fields/forms from the integrated sidebar search/cache action; exact prop
+assertions include Pagination `async:false` and AddResourceLink `inertia:true`.
+No production permission or frontend behavior was relaxed to make tests pass.
+
+Current sandbox denies the existing Docker socket with `connect: operation not
+permitted`; host PHP/Composer are absent. User internet authorization did not
+result in granted runtime access. PHP formatting/static checks, full backend,
+Wayfinder generation, build, template compilation/render/PDF checks and isolated
+MySQL remain blocked. All-store Playwright attempt exited at PHP web-server
+startup; zero browser tests executed in this prompt. Historical focused results
+and seven-workflow browser runs are not final combined verification.
+Current full frontend run passes 2,050 tests in 227 files; TypeScript passes.
+Exact lint/format/diff outcomes are in the ledger's prompt 4 section. These
+frontend results do not satisfy the blocked backend/build/browser gate.
+
+Fresh source recount: 255 Blade templates, including 253 shop/73 backend;
+§5.1 exactly matches the 73 files. Literal layout `@extends` consumers are backend
+admin 49, backend auth/error 3, frontend 49, frontend user panel 19, seller 29.
+Counts describe source consumers, not executed endpoints; retain all protected
+shells, includes, assets, PDFs, root template and Blade CSP. Source dispositions,
+completed/partial/pending/decision-blocked scope in §§4–6 remain unchanged.
+
+Brands/dashboard defects and legacy uploader/route concerns match baseline and
+remain separately scoped inherited debt. Six additive permission migrations add
+store definitions without role pivot writes/destructive rollback; deployed role
+grants and MySQL locking/collation/signed-FK compatibility are still unverified.
+Dedicated order-entry and blog/support permission-migration tests remain a
+coverage gap. Preserve guards, narrow allowlists, denied-write invariants and
+established order tax behavior when completing the blocked checks.
+
+Baseline frontend lock differs in 14 patch package versions; installed current
+versions satisfy inspected dependency ranges, with a coherent Vue-family upgrade.
+This supports compatible substitution, not historical lock equivalence. Prior
+initial-HTML comparison was reviewed but could not be recaptured; inherited SEO
+gaps and absent canonical/JSON-LD/itemscope features remain as recorded in §7.
+Exact commands, attempted/executed results, dependency differences and next checks
+are recorded in the reconciliation ledger. Runtime recovery is required before
+claiming combined verification satisfactory or creating the authorized local commit.
+
+
+### 8.1 Runtime-access follow-up
+
+The running Docker daemon/socket and correct task group membership were confirmed;
+local AF_UNIX connect still returns `EPERM` under an active execution filter.
+Specific socket/network permission request returned no grant. Do not chmod the
+socket, restart the healthy daemon or bypass sandbox/proxy controls; restore
+supported managed-executor socket/connection access. Host PHP 8.5 is absent;
+the root Ubuntu-PPA installer is unsuitable unchanged for non-root Debian 13,
+and missing build prerequisites plus unreachable configured proxy block local
+runtime provisioning. Manifests/locks and all 31 changes are preserved.
+
+Only documentation changed; completed frontend results were not rerun.
+`git diff --check` passes. Outstanding runtime checks and deployed role grants
+remain unverified, with exact diagnostics/fallback assessment in the ledger's
+runtime-access follow-up. The local commit gate remains incomplete.
+
+
+### Authorized local checkpoint
+
+The user explicitly authorized a preservation-only checkpoint with message
+`chore: checkpoint reconciliation pending backend verification`. It contains
+exactly the 31 intended integration/audit/test/documentation files; scratch,
+cache, credentials and generated artifacts are excluded. This authorization
+supersedes the earlier decision to leave the blocked work uncommitted, without
+changing verification or publication status. Backend/PHP/build/template/PDF,
+browser and isolated MySQL checks remain outstanding; deployed grants remain
+unverified. Frontend results remain as recorded. No push or deployment.
+A verified Git bundle will preserve the integration branch's reachable history.

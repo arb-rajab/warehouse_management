@@ -219,6 +219,7 @@ describe('representative packages index', () => {
         expect(wrapper.get('tbody').text()).toContain('Gold');
         expect(wrapper.get('tbody').text()).toContain('12.5%');
         expect(wrapper.getComponent(AddResourceLink).props()).toEqual({
+            inertia: true,
             href: createPackage(),
             label: t('store.representativePackages.create'),
         });

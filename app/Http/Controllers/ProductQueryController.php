@@ -7,10 +7,39 @@ use App\Models\ProductQuery;
 use Auth;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ProductQueryController extends Controller
+class ProductQueryController extends Controller implements HasMiddleware
 {
     use ValidatesRequests;
+
+    /** @return array<int, Middleware> */
+    public static function middleware(): array
+    {
+        return [new Middleware('permission:view_all_product_queries', only: ['index', 'show'])];
+    }
+
+    // Retained /temp resource aliases point to the selected admin implementation.
+    public function index(): RedirectResponse
+    {
+        return redirect()->route('product_query.index');
+    }
+
+    public function show(string $product_query): RedirectResponse
+    {
+        try {
+            $id = decrypt($product_query);
+        } catch (DecryptException) {
+            abort(404);
+        }
+        abort_unless(is_int($id) || (is_string($id) && ctype_digit($id)), 404);
+        $query = ProductQuery::query()->findOrFail($id);
+
+        return redirect()->route('product_query.show', $query->id);
+    }
 
     /**
      * store products queries through the ProductQuery model

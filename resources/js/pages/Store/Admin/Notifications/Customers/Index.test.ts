@@ -71,6 +71,7 @@ describe('customer notification index', () => {
             emptyMessage: t('store.notifications.index.empty'),
         });
         expect(wrapper.getComponent(Pagination).props()).toEqual({
+            async: false,
             links: [],
             perPage: 20,
         });

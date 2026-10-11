@@ -63,6 +63,7 @@ describe('StoreReportPage', () => {
         expect(wrapper.get('h1').text()).toBe('Report');
         expect(wrapper.text()).toContain('Report table');
         expect(wrapper.getComponent(Pagination).props()).toEqual({
+            async: false,
             links: [],
             perPage: 50,
         });

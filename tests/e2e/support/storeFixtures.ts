@@ -12,6 +12,9 @@ export function seedStoreFixtures(php: string): void {
                 require 'vendor/autoload.php';
                 $app = require 'bootstrap/app.php';
                 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+                if (!app()->environment('testing') || !str_ends_with(config('database.connections.sqlite.database'), '/database/e2e.sqlite')) {
+                    throw new RuntimeException('Store browser fixtures require their dedicated database');
+                }
             ` + php,
         ],
         {
@@ -28,4 +31,15 @@ export function seedStoreFixtures(php: string): void {
             },
         },
     );
+}
+
+/** Repeatable RTL setup in the same isolated database as the browser harness. */
+export function ensureStoreRtlLanguage(): void {
+    seedStoreFixtures(String.raw`
+        if (!app()->environment('testing') || !str_ends_with(config('database.connections.sqlite.database'), '/database/e2e.sqlite')) {
+            throw new RuntimeException('RTL fixtures require the dedicated browser database');
+        }
+        $language = App\Models\Language::query()->firstOrNew(['code' => 'ar']);
+        $language->forceFill(['name' => 'Arabic', 'app_lang_code' => 'ar', 'rtl' => 1, 'status' => 1])->save();
+    `);
 }

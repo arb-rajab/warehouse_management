@@ -1,6 +1,7 @@
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import {
     updateActivation,
     updateFacebookChat,
@@ -177,6 +178,17 @@ function mountPage(
         },
     });
 }
+// Keep full layout mounting while distinguishing its cache action from page writes.
+function pageForms(wrapper: ReturnType<typeof mountPage>) {
+    return wrapper.findAllComponents(Form).filter((form) => {
+        const action = form.props('action');
+
+        return (
+            (typeof action === 'string' ? action : action?.url) !==
+            clearCache.url()
+        );
+    });
+}
 describe('Store settings', () => {
     it.each(Object.keys(pages) as Section[])(
         'renders %s with all English and Arabic labels and the environment notice',
@@ -215,7 +227,7 @@ describe('Store settings', () => {
             ).toEqual(pages[section].keys.map((key) => `settings[${key}]`));
 
             if (section in actions) {
-                expect(wrapper.getComponent(Form).props('action')).toEqual(
+                expect(pageForms(wrapper)[0].props('action')).toEqual(
                     actions[section as keyof typeof actions](),
                 );
                 expect(
@@ -225,28 +237,24 @@ describe('Store settings', () => {
                 expect(wrapper.findComponent(ResourceFormPage).exists()).toBe(
                     false,
                 );
-                expect(wrapper.findAllComponents(Form)).toHaveLength(0);
+                expect(pageForms(wrapper)).toHaveLength(0);
             }
         },
     );
     it.each(Object.keys(actions) as (keyof typeof actions)[])(
         'hides %s writes when the page permission is absent',
         (section) => {
-            expect(mountPage(section, []).findComponent(Form).exists()).toBe(
-                false,
-            );
+            expect(pageForms(mountPage(section, []))).toHaveLength(0);
         },
     );
     it('keeps activation vendor-only', () => {
         expect(
-            mountPage('activation', ['features_activation'], false)
-                .findComponent(Form)
-                .exists(),
-        ).toBe(false);
+            pageForms(mountPage('activation', ['features_activation'], false)),
+        ).toHaveLength(0);
     });
     it('renders SMTP testing only with both permissions and mirrors recipient validation', () => {
         const wrapper = mountPage('smtp', ['smtp_settings', 'send_newsletter']);
-        expect(wrapper.getComponent(Form).props('action')).toEqual(testSmtp());
+        expect(pageForms(wrapper)[0].props('action')).toEqual(testSmtp());
         expect(wrapper.get('#email').attributes()).toMatchObject({
             type: 'email',
             maxlength: '255',
@@ -254,9 +262,9 @@ describe('Store settings', () => {
         });
         expect(wrapper.text()).toContain(t('store.settings.testEmail'));
         expect(wrapper.text()).toContain(t('store.settings.sendTest'));
-        expect(
-            mountPage('smtp', ['send_newsletter']).findComponent(Form).exists(),
-        ).toBe(false);
+        expect(pageForms(mountPage('smtp', ['send_newsletter']))).toHaveLength(
+            0,
+        );
     });
     it('displays server validation errors for settings and SMTP', () => {
         formSlotPropsMock.mockReturnValue({

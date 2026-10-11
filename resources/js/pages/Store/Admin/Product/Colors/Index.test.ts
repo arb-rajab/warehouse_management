@@ -190,9 +190,12 @@ describe('Store Colors Index', () => {
         const wrapper = mountPage([]);
         const filter = wrapper.findAllComponents(Form)[0];
         expect(filter.props('action')).toEqual(catalogueIndex());
-        expect(wrapper.getComponent(FormField).props('label')).toBe(
-            t('store.colors.index.search'),
-        );
+        expect(
+            wrapper
+                .findAllComponents(FormField)
+                .find((field) => field.props('id') === 'search')!
+                .props('label'),
+        ).toBe(t('store.colors.index.search'));
         expect(wrapper.get('#search').attributes('maxlength')).toBe('255');
         expect(wrapper.getComponent(SubmitButton).props()).toMatchObject({
             label: t('store.colors.index.searchSubmit'),

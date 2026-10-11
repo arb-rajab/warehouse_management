@@ -220,7 +220,7 @@ it('representative index shows package dialog and its assignment contract', asyn
 });
 it('page size and search preserve list filters', async () => {
     const wrapper = indexPage();
-    await wrapper.get('input[type="search"]').setValue('Amy');
+    await wrapper.get('form input[type="search"]').setValue('Amy');
     wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
     expect(routerGetMock).toHaveBeenCalledWith(
         customersIndex().url,

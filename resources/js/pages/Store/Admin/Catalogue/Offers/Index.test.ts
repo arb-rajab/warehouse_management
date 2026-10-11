@@ -99,7 +99,12 @@ describe('Store offers catalogue', () => {
     it('uses the upload action and mirrors file validation with a required PDF picker and errors', () => {
         const wrapper = mountPage();
         expect(wrapper.getComponent(Form).props('action')).toEqual(store());
-        expect(wrapper.getComponent(FormField).props()).toMatchObject({
+        expect(
+            wrapper
+                .findAllComponents(FormField)
+                .find((field) => field.props('id') === 'catalog')!
+                .props(),
+        ).toMatchObject({
             id: 'catalog',
             type: 'file',
             label: t('store.offersCatalog.file'),

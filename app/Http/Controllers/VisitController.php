@@ -7,7 +7,7 @@ use App\Models\StoreUser;
 use App\Models\Visit;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\Request;
+use App\Http\Requests\Store\UpdateRepresentativeVisitNoteRequest;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
@@ -93,8 +93,15 @@ class VisitController extends Controller implements HasMiddleware
         return $markers;
     }
 
-    public function update_note(Request $request)
+    public function update_note(UpdateRepresentativeVisitNoteRequest $request): int
     {
-        // Compatibility for the retained public route; unchanged from develop.
+        $visit = Visit::query()->where('rep_id', $request->user('store')->id)->find($request->validated('visit_id'));
+        if ($visit === null) {
+            return 0;
+        }
+        $visit->note = $request->validated('note');
+        $visit->save();
+
+        return 1;
     }
 }

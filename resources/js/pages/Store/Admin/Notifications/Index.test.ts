@@ -50,6 +50,7 @@ describe('personal admin notification index', () => {
         );
         expect(wrapper.text()).toContain(t('store.notifications.index.empty'));
         expect(wrapper.getComponent(Pagination).props()).toEqual({
+            async: false,
             links: [],
             perPage: 20,
         });
