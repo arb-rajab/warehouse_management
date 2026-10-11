@@ -26,9 +26,11 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Original audit count:** 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
-  - the per-module counts in §6 add up to 201.
+  - the original per-module counts in §6 add up to 201;
+  - after the staff pilot (6) and batch 3 (11), 184 back-office Blade files
+    remain, verified against the current tree on 2026-10-08.
 - **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
@@ -89,7 +91,10 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, reports and customer
+notification administration are Inertia.
+The personal admin notification list also renders Inertia; its Blade top-bar
+link continues to load it in full during coexistence.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -431,7 +436,7 @@ Batches are ordered by what they need first:
 | 0 | Staff (pilot) | 6 | staff (6) | done |
 | 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
 | 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
-| 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
+| 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | converted; verified details below |
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
@@ -443,6 +448,100 @@ Batches are ordered by what they need first:
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+
+### 4.1 Verified batch 3 progress (2026-10-08)
+
+Rechecked the audit against the current routes, controllers, views and tests.
+All seven report pages and all three notification pages are converted:
+
+- `Store\Admin\ReportController` retains the seven report route names and
+  URIs. Pages are `Store/Admin/Reports/{InHouseSales,SellerSales,Stock,Wishlist,
+  Searches,CommissionHistory,WalletHistory}`. Only the admin routes used the
+  former root controller; it is deleted.
+- Reports use narrow resources, scoped relations, deterministic legacy sort
+  orders, pagination with `FiltersPerPage` (20 by default), and query retention.
+  Stock sums stock rows, wishlist uses `withCount`, inhouse ranks `num_of_sale`,
+  and seller totals sum product sales and order-detail **price**, without
+  multiplying price by quantity (the original calculation). No report export
+  action or export UI existed in these seven screens; none was added.
+  The wallet "Approval" column is trimmed as its original audit row required:
+  it displayed removed offline-payment addon data.
+- `StoreReportPage` reuses `DateRangeFilterFields` and `FilterMultiSelect`.
+  Legacy scalar category/account/status URLs and `date_range` URLs remain
+  accepted. New selections allow multiple values. Canonical history filters
+  are `date_from`, `date_to`, and mutually exclusive `created_within_days`.
+  Date ranges are validated strictly; the end date now includes the entire
+  selected day. History ids remain filterable after their account is deleted.
+- The commission partial had exactly one consumer, the admin commission page
+  (traced across routes, controllers and views). Its contents are folded into
+  Vue. All eight report Blade files and three notification Blade files are
+  deleted. Storefront/seller views and PDF/root templates remain Blade.
+- `Store\Admin\NotificationController@index` preserves reading the current
+  store user's notifications and marking **all** their unread records read.
+  Staff and accountants now receive the page instead of an empty 200. Unknown
+  notification types display a generic notice. Order/cart links remain full
+  loads to the unconverted pages. The root `NotificationController` remains
+  for its storefront/seller branches; the dead admin branch is removed.
+- `Store\Admin\CustomerNotificationController` retains `admin.notifications.*`
+  names. Index/create/send use `add_notification`; deletion uses
+  `delete_notification`, a bound model and DELETE. The nonexistent
+  `admin.notifications.mark-read` action is retired. Customer selection and
+  writes are restricted to customer accounts, matching the old picker.
+- FCM retains `device_key`, `services.fcm.project_id` and the existing service
+  account path `storage/app/json/file.json`. Sending uses the existing Laravel
+  HTTP client, with a timeout and safe bilingual validation errors; failed
+  authentication/provider requests no longer create a misleading `sent` row.
+  Real delivery still needs valid deployment credentials and production
+  permission rows/grants (`legacy-albaraka-holland.md §7.1`); automated tests
+  fake credentials and HTTP rather than send notifications.
+- The removed legacy controllers, the report relation models brought under
+  type checking (`Category`, `Shop`, `CommissionHistory`, `Wallet`), and the
+  customer notification model (`Notification`) are removed from both
+  static-analysis/formatting exclusion lists. Model relation
+  signatures are typed; their relation behavior is preserved.
+- Coverage: `tests/Feature/Store/Admin/{Report,Notification,
+  CustomerNotification}ControllerTest.php`, the new report/notification Vue
+  tests, menu tests, and `tests/e2e/store-{report-filters,notifications}.spec.ts`.
+  Report cases moved out of `LegacyAdminOwnershipTest`; the former direct
+  seller-controller case is replaced by a seller rejection test on the admin
+  route because no seller route called that controller.
+
+Remaining migration work: batches 1–2 and 4–12 retain their audit verdicts;
+no progress in those batches is claimed by this patch. The shell's notification
+**dropdown** remains dashboard/shell work; migrating the list does not implement
+it. Production permission imports, FCM credential/delivery checks and unresolved
+owner decisions in other batches remain outstanding. See completion verification
+below for the checks actually run.
+
+### 4.2 Batch 3 completion verification
+
+- The required `python3 .claude/scripts/pre_push_check.py` completed
+  successfully. All 2,895 backend tests passed (12,609 assertions), including
+  permission ratchets, guard isolation, Blade/Inertia coexistence and the
+  static-analysis exclusions check.
+- Focused report feature tests: 63 passed, 654 assertions. Personal/customer
+  notification and notification-model tests: 33 passed, 256 assertions.
+  Cases cover whole-day and rolling date boundaries, legacy filter URLs,
+  multiple selections, unrelated noise, stable ordering, pagination, complete
+  narrow payloads, rejected callers, recipient selection, read marking and
+  successful/failed notification delivery.
+- Full frontend verification: ESLint, Prettier and vue-tsc passed; all 120
+  Vitest files passed (1,614 tests). Full Pint and PHPStan passed (zero errors).
+- `npm run build` passed and regenerated Wayfinder actions. No dependency or
+  lockfile changes were needed.
+- Seven focused browser cases passed across the final run and RTL rerun:
+  report dark date pickers/contrast/date round-trips, Arabic RTL, customer
+  notification confirmation/form validation, and staff Blade/Inertia
+  coexistence. Tests use the dedicated e2e database. This environment lacks
+  Playwright's bundled browser/video tools; a temporary config used installed
+  Chromium without video. Repository Playwright settings were unchanged.
+- PHP verification used PHP 8.5 with `short_open_tag=Off` and local worker
+  sockets allowed. This runtime's default enables short tags, which misparses
+  the XML literal in the existing receipt PDF Blade template; its six feature
+  tests pass with short tags disabled. The PDF source was unchanged.
+- Real FCM delivery was not attempted: credentials/provider responses were
+  faked in tests. Deployment credentials and production permission imports
+  remain deployment prerequisites, rather than verified production progress.
 
 ## 5. Views to delete rather than port
 
@@ -517,7 +616,9 @@ Most severe first:
 8. **N+1 and strict mode.** `Model::shouldBeStrict()` throws on a lazy load
    once a list has two or more rows, and no list view in sales, reports,
    customer or sellers has a render test. Each port eager-loads what its
-   Resource reads.
+   Resource reads. **Batch 3 verified:** report relations select only required
+   fields; stock/wishlist and seller calculations use SQL aggregates. The
+   nonexistent `$seller->shop` access is replaced by the actual shop name.
 
 ## 6. Audit, per view
 
@@ -642,7 +743,7 @@ URIs are under `/temp/admin`. Every gated route is also hit by the 403 sweep; SC
 | marketing/offer_deals/offer_deal_discount | `offer_deals.product_discount` · GET (:467) | OfferController@product_discount (:164) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
 | marketing/offer_deals/offer_deal_discount_edit | `offer_deals.product_discount_edit` · POST (:468) | OfferController@product_discount_edit (:175) | `edit_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
 | marketing/subscribers/index | admin route unnamed (:478); the name `subscribers.index` went to the storefront's GET /temp/subscribers (shop-web:245) | SubscriberController@index (:36) | `view_all_subscribers` | list | confirm-delete | SCR:84 | port; give the admin route its own name |
-| notification/index | `admin.all-notification` (:654) | NotificationController@index (:16) | ungated (READS list) | list (15/page) | none | none | port; the GET marks every unread notification as read |
+| notification/index | `admin.all-notification` · GET /temp/admin/all-notification | Store\Admin\NotificationController@index | ungated (READS list) | list (20 default) | none | NotificationControllerTest; Index.test.ts | converted → Store/Admin/Notifications; Blade deleted (verified §4.1) |
 
 Notes:
 1. AJAX endpoints that return HTML (all injected with `.html(data)`): `coupon.get_coupon_form[_edit]` (returning `shop.partials.coupons.*`, outside this folder, with their own inline scripts), `flash_deals.product_discount[_edit]`, `offer_deals.base_product_discount`, `product_discount`, `base_brand_discount`, `product_discount_edit`, `brand_discount_edit`. The partials only render product name, thumbnail and price plus inputs: client-side rows fed by props.
@@ -749,8 +850,8 @@ URIs are under `/temp/admin` unless shown. No view here is rendered by any test;
 | customer/customers/edit_password | `change_password` (:191) | @change_password (:601) | `view_all_customers` | form → `update_password` | none | GET_ROUTES_THAT_MAY_STAY | port, folded into edit |
 | customer/customers/index | `customers.index` (:185) | @index (:105) | `view_all_customers` | list | bulk delete `$.ajax`, notes modal, confirm-delete, ban/unban modals, login-as, verify/important/activity POST links | SCR | port (Package column header and cell use different conditions) |
 | customer/customers/views | `customers.page-views` (:199) | @pages_views (:744) | `view_all_customers` | list | none | none | port (category link goes to an empty `CategoryController@show`) |
-| customer/notifications/create | `admin.notifications.create` (:663) | AdminNotificationController@createNotification (:53) | `add_notification` | form → `admin.notifications.send` (FCM HTTP v1) | aiz-selectpicker; inert select2 markup | none | port-trim: drop the select2 markup |
-| customer/notifications/index | `admin.notifications.all` (:661) | @getAllNotifications (:35) | `add_notification` | list | confirm-delete | LegacyAdminPermissionsTest:261; SCR | port-trim: commented-out search and categories script |
+| customer/notifications/create | `admin.notifications.create` | Store\Admin\CustomerNotificationController@create, @store | `add_notification` | form → `admin.notifications.send` (FCM HTTP v1) | none | CustomerNotificationControllerTest; Vue tests; store-notifications.spec.ts | converted → Store/Admin/Notifications; Blade deleted (verified §4.1) |
+| customer/notifications/index | `admin.notifications.all` | Store\Admin\CustomerNotificationController@index, @destroy | `add_notification` (index), `delete_notification` (destroy) | list | confirmDelete | CustomerNotificationControllerTest; Vue tests; store-notifications.spec.ts | converted → Store/Admin/Notifications; Blade deleted (verified §4.1) |
 | sellers/create | `sellers.create` (:155) | SellerController@create (:80) | `edit_seller` | form | none | none | port |
 | sellers/edit | `sellers.edit` · GET …/sellers/{encrypted}/edit (:155) | @edit (:146) | `edit_seller` | form | none | none | port |
 | sellers/index | `sellers.index` (:155) | @index (:70) | `view_all_seller` | list | aiz-selectpicker; bulk delete; `$.post sellers.payment_modal`/`profile_modal` → `.html(data)`; approve toggle; a `.select2()` call that throws; login-as | payout (redirect target); SCR | port-trim: drop `.select2()`; the approve toggle checks `approve_seller`, which exists nowhere, while the endpoint needs `edit_seller` |
@@ -779,14 +880,14 @@ URIs are under `/temp/admin` unless shown.
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | invoices/invoice | `invoice.download` · GET /temp/invoice/{order_id} (shop-web:355); `seller.invoice.download` (shop-seller:74) | InvoiceController@invoice_download (:80), Seller\InvoiceController (:69) | `Gate::authorize('downloadInvoice')` (OrderPolicy) | print (mPDF) | none (QR SVG) | LegacyStoreInvoiceTest:36; Policies/OrderPolicyTest:28 | keep Blade (PDF) |
-| reports/commission_history_report | `commission-log.index` (:523) | ReportController@commission_history (:164) | `commission_history_report` | list | includes the partial | Own:78 (renders) | port-trim: fold the partial in, drop the dead seller branch |
-| reports/partials/commission_history_section | (via the page above) | — | as above | partial | aiz-selectpicker, aiz-date-range | indirect | merge into the page |
-| reports/in_house_sale_report | `in_house_sale_report.index` (:518) | ReportController@in_house_sale_report (:102) | `in_house_product_sale_report` | list | aiz-selectpicker | none | port |
-| reports/seller_sale_report | `seller_sale_report.index` (:519) | ReportController@seller_sale_report (:115) | `seller_products_sale_report` | list | aiz-selectpicker | none | port-trim: `$seller->shop` is not an attribute (MissingAttributeException in strict mode); per-row sums are N+1 |
-| reports/stock_report | `stock_report.index` (:520) | ReportController@stock_report (:90) | `products_stock_report` | list | aiz-selectpicker | none | port |
-| reports/user_search_report | `user_search_report.index` (:522) | ReportController@user_search_report (:132) | `user_search_report` | list | none | none | port |
-| reports/wallet_history_report | `wallet-history.index` (:524) | ReportController@wallet_transaction_history (:195) | `wallet_transaction_report` | list | aiz-selectpicker, aiz-date-range | Own:71 (validation only) | port-trim: dead seller check; "Approval" column is offline-payment addon data |
-| reports/wish_report | `wish_report.index` (:521) | ReportController@wish_report (:127) | `product_wishlist_report` | list | aiz-selectpicker | none | port (use `withCount`) |
+| reports/commission_history_report | `commission-log.index` | Store\Admin\ReportController@commission_history | `commission_history_report` | list | DateRangeFilterFields, FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/CommissionHistory`; Blade deleted (verified §4.1) |
+| reports/partials/commission_history_section | (via the page above) | — | as above | partial | aiz-selectpicker, aiz-date-range | indirect | folded into CommissionHistory Vue after tracing its sole consumer; deleted |
+| reports/in_house_sale_report | `in_house_sale_report.index` | Store\Admin\ReportController@in_house_sale_report | `in_house_product_sale_report` | list | FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/InHouseSales`; Blade deleted (verified §4.1) |
+| reports/seller_sale_report | `seller_sale_report.index` | Store\Admin\ReportController@seller_sale_report | `seller_products_sale_report` | list | FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/SellerSales`; Blade deleted (verified §4.1) |
+| reports/stock_report | `stock_report.index` | Store\Admin\ReportController@stock_report | `products_stock_report` | list | FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/Stock`; Blade deleted (verified §4.1) |
+| reports/user_search_report | `user_search_report.index` | Store\Admin\ReportController@user_search_report | `user_search_report` | list | none | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/Searches`; Blade deleted (verified §4.1) |
+| reports/wallet_history_report | `wallet-history.index` | Store\Admin\ReportController@wallet_transaction_history | `wallet_transaction_report` | list | DateRangeFilterFields, FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/WalletHistory`; Blade deleted (verified §4.1) |
+| reports/wish_report | `wish_report.index` | Store\Admin\ReportController@wish_report | `product_wishlist_report` | list | FilterMultiSelect | ReportControllerTest; Reports.test.ts; shared component tests | converted → `Store/Admin/Reports/Wishlist`; Blade deleted (verified §4.1) |
 | sales/edit-shipping-order | `new.feat-order.trip.edit` · GET …/feat/new/order/trip/edit/{id} (:447) | FeatureOrderTripController@newEdit (:223), @newUpdate | ungated | form | select2 4.1 (CDN), `$.ajax products.get-details` (JSON), PUT JSON returning a URL | none | port as the shared order-entry component; newUpdate stores the line total as the unit price and drops variations |
 | sales/index | `all_orders.index`, `inhouse_orders.index`, `seller_orders.index`, `pick_up_point.index` (:487-490) | OrderController@all_orders (:156) | `view_all_orders\|view_inhouse_orders\|view_seller_orders\|view_pickup_point_orders` + per-route check (:85-113) | list | aiz-selectpicker, aiz-date-range, bulk checkboxes, `$.ajax bulk-order-delete`, `$.post orders.update_manager_notes` | RouteServiceProviderTest:51; SCR:183 | port-trim: refund column, commented bulk-status JS; `date` filter unvalidated (500 on bad input) |
 | sales/new-new-order | `feat-order.create` · GET …/feat/order/create (:433) | FeatureOrderController@create (:17), @store | ungated | form | select2 (CDN), `products.get-details`, POST JSON returning a URL | none | port as the shared order-entry component |
@@ -841,5 +942,7 @@ Notes:
 
 Notes:
 1. The aiz uploader posts to `AIZ.data.appUrl + "/aiz-uploader"`, where `appUrl` is `getBaseURL()` (no `/temp`), while the uploader routes exist only under `/temp`. Check in a browser before relying on the Blade uploader during coexistence.
-2. `admin.all-notification` returns a view only for `user_type` admin/seller/customer: staff and accountants (both let through by `IsAdmin`) get an empty 200.
+2. **Fixed in batch 3:** `admin.all-notification` renders Inertia for every
+   account admitted by `IsAdmin`, including staff/accountants, and scopes all
+   reads/read-at writes to the authenticated store account.
 3. `Language` middleware writes `session('locale')` on every request and runs after WMS's `SetLocale` (en/ar only), so it wins on `/temp` pages; both use the same session key.

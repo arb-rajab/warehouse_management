@@ -34,4 +34,6 @@ return [
     'verification_round_rows_not_found' => 'واحد أو أكثر من الممرات المطلوبة لم يعد موجودًا.',
     'cannot_remove_last_admin' => 'هذا هو آخر حساب مسؤول، لذا لا يمكن إزالة صلاحياته أو حذفه.',
     'open_level_not_allowed' => 'مستوى هذه المنصة ليس من المستويات المسموح فيها بفتح المنصات.',
+    'notification_no_device_token' => 'لا يملك هذا العميل رمز جهاز.',
+    'notification_send_failed' => 'تعذر إرسال الإشعار. يرجى المحاولة مرة أخرى.',
 ];

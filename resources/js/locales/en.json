@@ -912,6 +912,85 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "reports": {
+            "all": "All",
+            "dateFrom": "From date",
+            "dateTo": "To date",
+            "withinDays": "Within last (days)",
+            "empty": "No report records found.",
+            "category": "Category",
+            "verification": "Verification status",
+            "seller": "Seller",
+            "user": "User",
+            "productName": "Product name",
+            "sales": "Number of sales",
+            "stock": "Stock",
+            "wishes": "Number of wishes",
+            "sellerName": "Seller name",
+            "shopName": "Shop name",
+            "orderAmount": "Order amount",
+            "searchBy": "Search term",
+            "searchCount": "Number of searches",
+            "orderCode": "Order code",
+            "adminCommission": "Admin commission",
+            "sellerEarning": "Seller earning",
+            "createdAt": "Date",
+            "customer": "Customer",
+            "amount": "Amount",
+            "paymentMethod": "Payment method",
+            "orderDeleted": "Order deleted",
+            "userNotFound": "User not found",
+            "inHouseSalesTitle": "In-house product sales report",
+            "sellerSalesTitle": "Seller sales report",
+            "stockTitle": "Product stock report",
+            "wishlistTitle": "Product wishlist report",
+            "searchesTitle": "User search report",
+            "commissionHistoryTitle": "Commission history report",
+            "walletHistoryTitle": "Wallet transaction report",
+            "approved": "Approved",
+            "nonApproved": "Non-approved"
+        },
+        "notifications": {
+            "index": {
+                "title": "Customer notifications",
+                "add": "Add notification",
+                "status": "Status",
+                "actions": "Actions",
+                "empty": "No notifications found",
+                "sent": "Sent",
+                "delete": "Delete"
+            },
+            "fields": {
+                "title": "Title",
+                "body": "Description",
+                "customer": "Customer",
+                "customerPlaceholder": "Choose a customer"
+            },
+            "create": {
+                "title": "Send customer notification",
+                "submit": "Send notification",
+                "submitting": "Sending…"
+            },
+            "personal": {
+                "title": "All notifications",
+                "orderCode": "Order code:",
+                "status": "has been {status}",
+                "other": "Notification"
+            },
+            "statuses": {
+                "placed": "Placed",
+                "paid": "Paid",
+                "unpaid": "Unpaid",
+                "pending": "Pending",
+                "confirmed": "Confirmed",
+                "picked_up": "Picked up",
+                "on_the_way": "On the way",
+                "on_delivery": "On delivery",
+                "delivered": "Delivered",
+                "cancelled": "Cancelled",
+                "payment_received": "Payment received"
+            }
         }
     }
 }

@@ -16,6 +16,8 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * @property bool $is_rep
  * @property bool|null $raizer_admin
+ * @property int|null $AccSysID
+ * @property string|null $device_key
  * @property-read StoreUser|null $current_customer
  */
 class StoreUser extends Authenticatable implements MustVerifyEmail

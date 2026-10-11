@@ -912,6 +912,85 @@
                 "nameTranslationHint": "الاسم باللغة الافتراضية هو اسم الدور نفسه، وأي لغة أخرى تترجمه فقط.",
                 "permissions": "الصلاحيات"
             }
+        },
+        "reports": {
+            "all": "الكل",
+            "dateFrom": "من تاريخ",
+            "dateTo": "إلى تاريخ",
+            "withinDays": "خلال آخر (أيام)",
+            "empty": "لا توجد سجلات للتقرير.",
+            "category": "الفئة",
+            "verification": "حالة التحقق",
+            "seller": "البائع",
+            "user": "المستخدم",
+            "productName": "اسم المنتج",
+            "sales": "عدد المبيعات",
+            "stock": "المخزون",
+            "wishes": "عدد مرات الإضافة للمفضلة",
+            "sellerName": "اسم البائع",
+            "shopName": "اسم المتجر",
+            "orderAmount": "مبلغ الطلبات",
+            "searchBy": "عبارة البحث",
+            "searchCount": "عدد مرات البحث",
+            "orderCode": "رمز الطلب",
+            "adminCommission": "عمولة الإدارة",
+            "sellerEarning": "أرباح البائع",
+            "createdAt": "التاريخ",
+            "customer": "العميل",
+            "amount": "المبلغ",
+            "paymentMethod": "طريقة الدفع",
+            "orderDeleted": "تم حذف الطلب",
+            "userNotFound": "المستخدم غير موجود",
+            "inHouseSalesTitle": "تقرير مبيعات منتجات المتجر",
+            "sellerSalesTitle": "تقرير مبيعات البائعين",
+            "stockTitle": "تقرير مخزون المنتجات",
+            "wishlistTitle": "تقرير المنتجات المفضلة",
+            "searchesTitle": "تقرير بحث المستخدمين",
+            "commissionHistoryTitle": "تقرير سجل العمولات",
+            "walletHistoryTitle": "تقرير معاملات المحفظة",
+            "approved": "معتمد",
+            "nonApproved": "غير معتمد"
+        },
+        "notifications": {
+            "index": {
+                "title": "إشعارات العملاء",
+                "add": "إضافة إشعار",
+                "status": "الحالة",
+                "actions": "الإجراءات",
+                "empty": "لا توجد إشعارات",
+                "sent": "تم الإرسال",
+                "delete": "حذف"
+            },
+            "fields": {
+                "title": "العنوان",
+                "body": "الوصف",
+                "customer": "العميل",
+                "customerPlaceholder": "اختر عميلاً"
+            },
+            "create": {
+                "title": "إرسال إشعار للعميل",
+                "submit": "إرسال الإشعار",
+                "submitting": "جارٍ الإرسال…"
+            },
+            "personal": {
+                "title": "جميع الإشعارات",
+                "orderCode": "رمز الطلب:",
+                "status": "تم {status}",
+                "other": "إشعار"
+            },
+            "statuses": {
+                "placed": "تم تقديمه",
+                "paid": "مدفوع",
+                "unpaid": "غير مدفوع",
+                "pending": "قيد الانتظار",
+                "confirmed": "مؤكد",
+                "picked_up": "تم الاستلام",
+                "on_the_way": "في الطريق",
+                "on_delivery": "قيد التوصيل",
+                "delivered": "تم التوصيل",
+                "cancelled": "ملغى",
+                "payment_received": "تم استلام الدفع"
+            }
         }
     }
 }

@@ -37,7 +37,6 @@ use Spatie\Permission\Models\Permission;
  */
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
-    'AdminNotificationController@markAsRead',
     'FeatureOrderController@store',
     'FeatureOrderTripController@newStore',
     'FeatureOrderTripController@newUpdate',
@@ -263,7 +262,6 @@ test('the offer deal pages and the notification pages ask for the permissions th
     $this->get(route('offer_deals.index'))->assertForbidden();
     $this->post(route('offer_deals.update_status'), ['id' => 1, 'status' => 1])->assertForbidden();
     $this->post(route('offer_deals.destroy', 1))->assertForbidden();
-    $this->post(route('admin.notifications.delete', ['id' => 1]))->assertForbidden();
 
     $staff->givePermissionTo('view_all_offer_deals');
 

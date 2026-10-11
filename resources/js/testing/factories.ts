@@ -17,6 +17,18 @@ import type {
     StoreRole,
     StoreSharedProps,
 } from '@/types/store';
+import type {
+    CustomerNotification,
+    NotificationCustomer,
+    AdminNotification,
+} from '@/types/storeNotifications';
+import type {
+    StoreProductReportRow,
+    StoreSellerReportRow,
+    StoreSearchReportRow,
+    StoreCommissionReportRow,
+    StoreWalletReportRow,
+} from '@/types/storeReports';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -253,6 +265,91 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+export function storeProductReportRow(
+    overrides: Partial<StoreProductReportRow> = {},
+): StoreProductReportRow {
+    return { id: 1, name: 'Olive oil', value: 12, ...overrides };
+}
+
+export function storeSellerReportRow(
+    overrides: Partial<StoreSellerReportRow> = {},
+): StoreSellerReportRow {
+    return {
+        id: 1,
+        seller_name: 'Sam Seller',
+        shop_name: 'Sam shop',
+        num_of_sale: 14,
+        order_amount: '€125.00',
+        ...overrides,
+    };
+}
+
+export function storeSearchReportRow(
+    overrides: Partial<StoreSearchReportRow> = {},
+): StoreSearchReportRow {
+    return { id: 1, query: 'Olive oil', count: 9, ...overrides };
+}
+
+export function storeCommissionReportRow(
+    overrides: Partial<StoreCommissionReportRow> = {},
+): StoreCommissionReportRow {
+    return {
+        id: 1,
+        order_code: '20261008-101',
+        admin_commission: '3.50',
+        seller_earning: '31.50',
+        created_at: '2026-10-08T10:30:00Z',
+        ...overrides,
+    };
+}
+
+export function storeWalletReportRow(
+    overrides: Partial<StoreWalletReportRow> = {},
+): StoreWalletReportRow {
+    return {
+        id: 1,
+        user_name: 'Sam Customer',
+        amount: '€100.00',
+        payment_method: 'Cash on delivery',
+        created_at: '2026-10-08T10:30:00Z',
+        ...overrides,
+    };
+}
+
+export function customerNotification(
+    overrides: Partial<CustomerNotification> = {},
+): CustomerNotification {
+    return {
+        id: 11,
+        title: 'Hello',
+        status: 'sent',
+        customer: { id: 21, name: 'Customer' },
+        ...overrides,
+    };
+}
+
+export function notificationCustomer(
+    overrides: Partial<NotificationCustomer> = {},
+): NotificationCustomer {
+    return { id: 21, name: 'Customer', account_id: 100, ...overrides };
+}
+
+export function adminNotification(
+    overrides: Partial<AdminNotification> = {},
+): AdminNotification {
+    return {
+        id: 'notification-uuid',
+        kind: 'order',
+        order_code: 'ORDER-7',
+        status: 'payment_received',
+        customer_name: null,
+        message: null,
+        url: '/temp/admin/orders/encrypted/show',
+        created_at: '2026-10-01T12:00:00+00:00',
         ...overrides,
     };
 }

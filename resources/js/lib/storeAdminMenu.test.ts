@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import {
+    in_house_sale_report,
+    seller_sale_report,
+    stock_report,
+    wish_report,
+    user_search_report,
+    commission_history,
+    wallet_transaction_history,
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { i18n } from '@/lib/i18n';
@@ -51,12 +61,23 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits to the converted staff, reports and notification modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            customerNotificationsIndex.url(),
+            in_house_sale_report.url(),
+            seller_sale_report.url(),
+            stock_report.url(),
+            wish_report.url(),
+            user_search_report.url(),
+            commission_history.url(),
+            wallet_transaction_history.url(),
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {

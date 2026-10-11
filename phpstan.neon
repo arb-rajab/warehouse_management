@@ -55,7 +55,6 @@ parameters:
         - app/Events/SetTruckAvailability.php
         - app/Http/Controllers/AddressController.php
         - app/Http/Controllers/AdminController.php
-        - app/Http/Controllers/AdminNotificationController.php
         - app/Http/Controllers/AizUploadController.php
         - app/Http/Controllers/Api/V2/AddressController.php
         - app/Http/Controllers/Api/V2/AizUploadController.php
@@ -193,7 +192,6 @@ parameters:
         - app/Http/Controllers/ProductController.php
         - app/Http/Controllers/ProductQueryController.php
         - app/Http/Controllers/PurchaseHistoryController.php
-        - app/Http/Controllers/ReportController.php
         - app/Http/Controllers/RepresentativePackageController.php
         - app/Http/Controllers/RepresentativePaymentAdminController.php
         - app/Http/Controllers/RepresentativePaymentController.php
@@ -379,7 +377,6 @@ parameters:
         - app/Models/CarrierRangePrice.php
         - app/Models/Cart.php
         - app/Models/CartOffered.php
-        - app/Models/Category.php
         - app/Models/CategoryTranslation.php
         - app/Models/Checkpoint.php
         - app/Models/City.php
@@ -388,7 +385,6 @@ parameters:
         - app/Models/ClubPointDetail.php
         - app/Models/Color.php
         - app/Models/CombinedOrder.php
-        - app/Models/CommissionHistory.php
         - app/Models/Conversation.php
         - app/Models/Country.php
         - app/Models/Coupon.php
@@ -413,7 +409,6 @@ parameters:
         - app/Models/Language.php
         - app/Models/ManualPaymentMethod.php
         - app/Models/Message.php
-        - app/Models/Notification.php
         - app/Models/Offer.php
         - app/Models/OfferProduct.php
         - app/Models/OffersCatalog.php
@@ -448,7 +443,6 @@ parameters:
         - app/Models/SellerPackagePayment.php
         - app/Models/SellerPackageTranslation.php
         - app/Models/SellerWithdrawRequest.php
-        - app/Models/Shop.php
         - app/Models/SmsTemplate.php
         - app/Models/State.php
         - app/Models/StoreProductBarcode.php
@@ -464,7 +458,6 @@ parameters:
         - app/Models/Upload.php
         - app/Models/UserPageView.php
         - app/Models/Visit.php
-        - app/Models/Wallet.php
         - app/Models/WholesalePrice.php
         - app/Models/Wishlist.php
         - app/Models/Zone.php
