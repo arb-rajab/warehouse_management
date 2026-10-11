@@ -9,36 +9,6 @@ use Illuminate\Http\Request;
 
 class VisitController extends Controller
 {
-    public function index(Request $request){
-
-        $visits = Visit::query();
-        $date = $request->date;
-
-        if ($date != null) {
-            $orders = $visits->where('visit_date', '>=', date('Y-m-d', strtotime(explode(" to ", $date)[0])) . '  00:00:00')
-                ->where('visit_date', '<=', date('Y-m-d', strtotime(explode(" to ", $date)[1])) . '  23:59:59');
-        }
-
-        if ($request->has('search')){
-            $sort_search = $request->search;
-            $visits->where(function ($q) use ($sort_search){
-                $q->whereHas('rep', function ($item) use ($sort_search){
-                    $item->where('name', 'like', '%' . $sort_search . '%');
-                })
-                ->orWhereHas('customer', function ($item) use ($sort_search){
-                    $item->where('name', 'like', '%' . $sort_search . '%');
-                });
-            });
-        }
-
-        $visits = $visits
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-
-        return view('shop.backend.representatives.visits.index', compact('visits', 'date'));
-
-    }
-
     public function create()
     {
         //
@@ -77,25 +47,6 @@ class VisitController extends Controller
 
         return view('shop.backend.representatives.visits.rep-show', compact('visits', 'date', 'rep'));
     }
-
-    public function destroy($id)
-    {
-        $visit = Visit::findOrFail($id);
-        Visit::destroy($id);
-
-        flash(translate('Visit has been deleted successfully'))->success();
-        return redirect()->back();
-    }
-
-    public function bulk_visit_delete(Request $request) {
-        if($request->id) {
-            foreach ($request->id as $visit_id) {
-                $this->destroy($visit_id);
-            }
-        }
-        return 1;
-    }
-
 
     public function update_note(Request $request)
     {

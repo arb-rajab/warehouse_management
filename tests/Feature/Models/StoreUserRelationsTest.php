@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Product;
+use App\Models\RepresentativePackage;
 use App\Models\StoreUser;
+use App\Models\UserPageView;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -72,4 +75,15 @@ test('the drivers scope returns only users of type driver', function () {
 
     expect($drivers->pluck('id')->all())->toBe([$driver->id])
         ->and($drivers->first()->user_type)->toBe('driver');
+});
+
+test('customer page views resolve by owner and representative packages resolve by rep_package_id', function () {
+    $customer = createStoreUser();
+    $noise = createStoreUser();
+    $package = RepresentativePackage::forceCreate(['name' => 'Owned Package', 'percentage' => 10]);
+    RepresentativePackage::forceCreate(['name' => 'Noise Package', 'percentage' => 20]);
+    $customer->forceFill(['rep_package_id' => $package->id])->save();
+    $view = UserPageView::create(['user_id' => $customer->id, 'viewable_id' => 123, 'viewable_type' => Product::class, 'viewed_at' => now()]);
+    UserPageView::create(['user_id' => $noise->id, 'viewable_id' => 456, 'viewable_type' => Product::class, 'viewed_at' => now()]);
+    expect($customer->pageViews->pluck('id')->all())->toBe([$view->id])->and($customer->representativePackage->id)->toBe($package->id)->and($noise->representativePackage)->toBeNull();
 });

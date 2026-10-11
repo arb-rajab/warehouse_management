@@ -95,7 +95,7 @@
             </tr>
             <tr>
                 <td class="key gry-color small">{{ translate('QR') }}</td>
-                <td class="value gry-color small">{!! str_replace('<?xml version="1.0" encoding="UTF-8"?>', '', $qr) !!}
+                <td class="value gry-color small">{!! preg_replace('/<\?xml[^>]*\?>/', '', $qr) !!}
                 </td>
             </tr>
         </table>

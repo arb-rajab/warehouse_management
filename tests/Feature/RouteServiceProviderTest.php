@@ -37,7 +37,7 @@ test('keepLastRegisteredRouteNames keeps the last route registered with a duplic
  * duplicate. Which registration keeps a duplicated name depends on the order
  * RouteServiceProvider::map() loads the route files in: with the api/v2 files
  * loaded after the admin one, every admin link to a name the API also
- * registers (brands.index, categories.index, customers.show, ...) pointed at
+ * registers (brands.index, categories.index, customers.edit, ...) pointed at
  * the JSON API instead.
  */
 test('duplicated store route names resolve to the route the legacy app gave them', function () {
@@ -45,7 +45,7 @@ test('duplicated store route names resolve to the route the legacy app gave them
         ->and(route('brands.destroy', 5, false))->toBe('/temp/admin/brands/destroy/5')
         ->and(route('brands.edit', 5, false))->toBe('/temp/admin/brands/edit/5')
         ->and(route('categories.index', [], false))->toBe('/temp/admin/categories')
-        ->and(route('customers.show', 1, false))->toBe('/temp/admin/customers/1')
+        ->and(route('customers.edit', 1, false))->toBe('/temp/admin/customers/1/edit')
         ->and(route('customers.store', [], false))->toBe('/temp/admin/customer/store')
         ->and(route('languages.update', 3, false))->toBe('/temp/admin/languages/3/update')
         ->and(route('orders.destroy', 7, false))->toBe('/temp/admin/orders/destroy/7')

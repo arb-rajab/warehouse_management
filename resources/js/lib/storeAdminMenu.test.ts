@@ -1,3 +1,11 @@
+import {
+    index as customersIndex,
+    archive as customersArchive,
+    repIndex as representativesIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
@@ -100,6 +108,13 @@ describe('storeAdminMenu', () => {
                 commission_history.url(),
                 wallet_transaction_history.url(),
                 uploadsIndex.url(),
+                '/temp/admin/customers/create',
+                customersIndex.url(),
+                customersArchive.url(),
+                representativesIndex.url(),
+                representativePackagesIndex.url(),
+                representativePaymentsIndex.url(),
+                visitsIndex.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),
@@ -235,7 +250,7 @@ describe('visibleStoreMenu', () => {
                 [representatives],
                 storeAccess(
                     storeSharedProps({
-                        permissions: ['view_classified_packages'],
+                        permissions: ['view_representative_packages'],
                     }),
                 ),
             ).map((item) => item.labelKey),

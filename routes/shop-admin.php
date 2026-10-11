@@ -19,7 +19,7 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
 use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
 use App\Http\Controllers\Store\Admin\OrderConfigurationController;
-use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\Store\Admin\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
@@ -43,12 +43,13 @@ use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\ProfileController;
 use App\Http\Controllers\Store\Admin\UploadController;
-use App\Http\Controllers\RepresentativePackageController;
-use App\Http\Controllers\RepresentativePaymentAdminController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\RepresentativePackageController;
+use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
+use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
 use App\Http\Controllers\SubscriberController;
@@ -184,62 +185,67 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/withdraw_request/message_modal', 'message_modal')->name('withdraw_request.message_modal');
     });
 
-    // Customer
-    Route::resource('customers', CustomerController::class)->except(['update']);
-
-    // custom route for making update method as POST action
-    Route::post('customers/{id}', [CustomerController::class, 'update'])->name('customers.update');
-    Route::post('customer/store', [CustomerController::class, 'store_customer'])->name('customers.store');
-    Route::get('customers/archive/get', [CustomerController::class, 'archive'])->name('customers.archive');
-    Route::get('customer/change_password/{id}', [CustomerController::class, 'change_password'])->name('change_password');
-    Route::post('customers/restore/{id}', [CustomerController::class, 'restore'])->name('customers.restore');
-    Route::post('customer/update_password/', [CustomerController::class, 'update_password'])->name('update_password');
-    Route::get('customer/whatsapp-contact/{id}', [CustomerController::class, 'whatsapp_contact'])->name('customers.whatsapp_contact');
-    Route::post('customer/important/{id}', [CustomerController::class, 'important'])->name('customers.important');
-    Route::post('customer/not-important/{id}', [CustomerController::class, 'not_important'])->name('customers.not_important');
-    Route::post('customer/change-activity-status', [CustomerController::class, 'change_activity_status'])->name('customers.change_activity_status');
-    Route::post('customer/update-customer-notes', [CustomerController::class, 'update_customer_notes'])->name('customers.update_customer_notes');
-    Route::get('customer/{user_id}/pages-views', [CustomerController::class, 'pages_views'])->name('customers.page-views');
-
+    // Customers and representatives share customer records, with explicit write gates.
     Route::controller(CustomerController::class)->group(function () {
-        Route::post('/customers/verify/{customer}', 'verify')->name('customers.verify');
-
+        Route::get('customers', 'index')->name('customers.index');
+        Route::get('customers/create', 'create')->name('customers.create');
+        Route::post('customer/store', 'store')->name('customers.store');
+        Route::get('customers/archive/get', 'archive')->name('customers.archive');
+        Route::get('customers/{customer}/edit', 'edit')->name('customers.edit');
+        Route::post('customers/{customer}', 'update')->name('customers.update');
+        Route::delete('customers/{customer}', 'destroy')->name('customers.destroy');
+        Route::post('customers/restore/{customer}', 'restore')->name('customers.restore');
+        Route::get('customer/change_password/{customer}', 'changePassword')->name('change_password');
+        Route::post('customers/{customer}/password', 'updatePassword')->name('update_password');
+        Route::get('customer/whatsapp-contact/{customer}', 'whatsappContact')->name('customers.whatsapp_contact');
+        Route::post('customer/important/{customer}', 'important')->name('customers.important');
+        Route::post('customer/not-important/{customer}', 'notImportant')->name('customers.not_important');
+        Route::post('customers/{customer}/activity', 'changeActivityStatus')->name('customers.change_activity_status');
+        Route::post('customers/{customer}/notes', 'updateNotes')->name('customers.update_customer_notes');
+        Route::get('customer/{customer}/pages-views', 'pageViews')->name('customers.page-views');
+        Route::post('customers/verify/{customer}', 'verify')->name('customers.verify');
         Route::post('customers_ban/{customer}', 'ban')->name('customers.ban');
-        Route::get('/customers/login/{id}', 'login')->name('customers.login');
-        Route::post('/customers/destroy/{id}', 'destroy')->name('customers.destroy');
-        Route::post('/bulk-customer-delete', 'bulk_customer_delete')->name('bulk-customer-delete');
-        Route::get('/customers/download_trade_license/{filename}', 'downloadTradeLicense')->name('download.trade_license');
-        Route::get('/representatives', 'repIndex')->name('representatives.index');
-        Route::get('/representatives/create', 'repCreate')->name('representatives.create');
-        Route::post('/representatives/store', 'repStore')->name('representatives.store');
+        Route::get('customers/login/{customer}', 'login')->name('customers.login');
+        Route::post('bulk-customer-delete', 'bulkDestroy')->name('bulk-customer-delete');
+        Route::get('customers/download_trade_license/{filename}', 'downloadTradeLicense')->name('download.trade_license');
+        Route::post('customers/terms/sendMail/{customer}', 'sendAgreement')->name('customers.sendAgreement');
+        Route::get('representatives', 'repIndex')->name('representatives.index');
+        Route::get('representatives/create', 'repCreate')->name('representatives.create');
+        Route::post('representatives/store', 'repStore')->name('representatives.store');
+    });
+    Route::controller(AddressController::class)->group(function () {
+        Route::get('addresses/states', 'states')->name('admin.addresses.states');
+        Route::get('addresses/cities', 'cities')->name('admin.addresses.cities');
+        Route::post('customers/{customer}/addresses', 'store')->name('admin.customers.addresses.store');
+        Route::put('customers/{customer}/addresses/{address}', 'update')->name('admin.customers.addresses.update');
+        Route::delete('customers/{customer}/addresses/{address}', 'destroy')->name('admin.customers.addresses.destroy');
+        Route::post('customers/{customer}/addresses/{address}/default', 'setDefault')->name('admin.customers.addresses.default');
     });
 
-    Route::controller(RepresentativePaymentAdminController::class)->group(function() {
+    Route::controller(RepresentativePaymentController::class)->group(function () {
         Route::get('admin/representatives/payments/index', 'index')->name('admin.rep.payments.index');
-        Route::post('admin/representatives/payments/accept/{id}', 'accept')->name('admin.rep.payments.accept');
-        Route::post('admin/representatives/payments/reject/{id}', 'reject')->name('admin.rep.payments.reject');
-        Route::get('admin/representatives/payments/export/{id}', 'export')->name('admin.rep.payments.export');
-
+        Route::post('admin/representatives/payments/accept/{payment}', 'accept')->name('admin.rep.payments.accept');
+        Route::post('admin/representatives/payments/reject/{payment}', 'reject')->name('admin.rep.payments.reject');
+        Route::get('admin/representatives/payments/export/{payment}', 'export')->name('admin.rep.payments.export');
     });
 
-    Route::controller(VisitController::class)->group(function() {
+    Route::controller(App\Http\Controllers\Store\Admin\VisitController::class)->group(function () {
         Route::get('/representatives/visits/index', 'index')->name('admin.rep.visits.index');
-        Route::get('/representatives/visits/show/{id}', 'show')->name('admin.rep.visits.show');
-        Route::get('/representatives/visits/rep-show/{id}', 'show_all_visits_in_a_day')->name('admin.rep.visits.rep-show');
-        Route::post('/representatives/visits/delete/{id}', 'destroy')->name('admin.rep.visits.destroy');
-        Route::post('/representatives/visits/bulk-visit-delete', 'bulk_visit_delete')->name('bulk-visit-delete');
+        Route::delete('/representatives/visits/delete/{visit}', 'destroy')->name('admin.rep.visits.destroy');
+        Route::post('/representatives/visits/bulk-visit-delete', 'bulkDestroy')->name('bulk-visit-delete');
     });
+    // Map details remain server-rendered until the logistics patch.
+    Route::get('/representatives/visits/show/{id}', [VisitController::class, 'show'])->name('admin.rep.visits.show')->middleware('permission:view_representative_visits');
+    Route::get('/representatives/visits/rep-show/{id}', [VisitController::class, 'show_all_visits_in_a_day'])->name('admin.rep.visits.rep-show')->middleware('permission:view_representative_visits');
 
-    Route::controller(RepresentativePackageController::class)->group(function() {
+    Route::controller(RepresentativePackageController::class)->group(function () {
         Route::get('/representatives/packages/index', 'index')->name('rep.packages.index');
         Route::get('/representatives/packages/create', 'create')->name('rep.packages.create');
         Route::post('/representatives/packages/store', 'store')->name('rep.packages.store');
-        Route::get('/representatives/packages/edit/{id}', 'edit')->name('rep.packages.edit');
-        Route::post('/representatives/packages/update', 'update')->name('rep.packages.update');
-        Route::post('/representatives/packages/delete/{id}', 'delete')->name('rep.packages.destroy');
-        Route::post('/representatives/packages', 'package_modal')->name('rep.packages.modal');
-        Route::post('/representatives/packages/set_package', 'set_package')->name('rep.set-package');
-
+        Route::get('/representatives/packages/{package}/edit', 'edit')->name('rep.packages.edit');
+        Route::put('/representatives/packages/{package}', 'update')->name('rep.packages.update');
+        Route::delete('/representatives/packages/delete/{package}', 'destroy')->name('rep.packages.destroy');
+        Route::post('/representatives/packages/set_package', 'assign')->name('rep.set-package');
     });
     Route::group(['prefix' => 'trips'], function () {
         Route::controller(TripController::class)->group(function() {

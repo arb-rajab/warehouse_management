@@ -37,4 +37,7 @@ return [
     'open_level_not_allowed' => 'This pallet\'s level is not one where opening pallets is allowed.',
     'notification_no_device_token' => 'This customer does not have a device token.',
     'notification_send_failed' => 'Notification could not be sent. Please try again.',
+    'customer_agreement_incomplete' => 'Customer information is incomplete or the account is already verified.',
+    'customer_phone_required' => 'A customer phone number is required.',
+    'customer_phone_invalid' => 'The customer phone number is invalid.',
 ];

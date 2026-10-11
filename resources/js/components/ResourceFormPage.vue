@@ -74,6 +74,7 @@ withDefaults(
                     />
                 </div>
             </Form>
+            <slot name="after-form" />
         </div>
     </component>
 </template>

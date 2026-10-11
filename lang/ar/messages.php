@@ -37,4 +37,7 @@ return [
     'open_level_not_allowed' => 'مستوى هذه المنصة ليس من المستويات المسموح فيها بفتح المنصات.',
     'notification_no_device_token' => 'لا يملك هذا العميل رمز جهاز.',
     'notification_send_failed' => 'تعذر إرسال الإشعار. يرجى المحاولة مرة أخرى.',
+    'customer_agreement_incomplete' => 'بيانات العميل غير مكتملة أو الحساب موثق بالفعل.',
+    'customer_phone_required' => 'رقم هاتف العميل مطلوب.',
+    'customer_phone_invalid' => 'رقم هاتف العميل غير صالح.',
 ];

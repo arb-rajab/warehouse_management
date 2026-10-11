@@ -156,8 +156,6 @@
         "app/Http/Controllers/ProductController.php",
         "app/Http/Controllers/ProductQueryController.php",
         "app/Http/Controllers/PurchaseHistoryController.php",
-        "app/Http/Controllers/RepresentativePackageController.php",
-        "app/Http/Controllers/RepresentativePaymentAdminController.php",
         "app/Http/Controllers/RepresentativePaymentController.php",
         "app/Http/Controllers/ReviewController.php",
         "app/Http/Controllers/SSLCommerz.php",
@@ -355,7 +353,6 @@
         "app/Models/CustomerPackage.php",
         "app/Models/CustomerPackagePayment.php",
         "app/Models/CustomerPackageTranslation.php",
-        "app/Models/CustomerProduct.php",
         "app/Models/CustomerProductTranslation.php",
         "app/Models/CustomersImport.php",
         "app/Models/DeliveryBoy.php",
@@ -393,7 +390,6 @@
         "app/Models/ProxyPayment.php",
         "app/Models/RefundRequest.php",
         "app/Models/RepresentativePackage.php",
-        "app/Models/RepresentativePayment.php",
         "app/Models/Review.php",
         "app/Models/Role.php",
         "app/Models/RoleTranslation.php",
@@ -417,7 +413,6 @@
         "app/Models/Truck.php",
         "app/Models/Upload.php",
         "app/Models/UserPageView.php",
-        "app/Models/Visit.php",
         "app/Models/WholesalePrice.php",
         "app/Models/Wishlist.php",
         "app/Models/Zone.php",
@@ -473,6 +468,7 @@
         "routes/shop-api_trip.php",
         "routes/shop-api_warehouse.php",
         "routes/shop-seller.php",
-        "routes/shop-web.php"
+        "routes/shop-web.php",
+        "app/Models/CustomerProduct.php"
     ]
 }

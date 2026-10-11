@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\App;
  * admin payloads keep the shape their clients already consume.
  *
  * @property int $id
+ * @property string|null $slug
  * @property string $name
  * @property string $ar_name
  * @property int|null $thumbnail_img

@@ -41,14 +41,7 @@ import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierCo
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
 import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
-import {
-    archive as customersArchive,
-    create as customersCreate,
-    index as customersIndex,
-    repIndex as representativesIndex,
-} from '@/actions/App/Http/Controllers/CustomerController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
@@ -70,8 +63,6 @@ import {
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
-import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
-import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
@@ -92,6 +83,15 @@ import { index as order_configuration } from '@/actions/App/Http/Controllers/Sto
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
+import {
+    archive as customersArchive,
+    create as customersCreate,
+    index as customersIndex,
+    repIndex as representativesIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     activation,
@@ -110,6 +110,7 @@ import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import {
@@ -127,7 +128,6 @@ import {
     create as trucksCreate,
     index as trucksIndex,
 } from '@/actions/App/Http/Controllers/Trip/TruckController';
-import { index as visitsIndex } from '@/actions/App/Http/Controllers/VisitController';
 import {
     appearance,
     footer,
@@ -298,16 +298,19 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.customerList',
+                inertia: true,
                 href: customersIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.customerCreate',
+                inertia: true,
                 href: customersCreate(),
-                permission: 'view_all_customers',
+                permission: 'edit_customer',
             },
             {
                 labelKey: 'store.nav.customerArchive',
+                inertia: true,
                 href: customersArchive(),
                 permission: 'delete_customer',
             },
@@ -336,26 +339,34 @@ export const storeAdminMenu: StoreMenuItem[] = [
         icon: Contact,
         permission: [
             'view_all_customers',
-            'view_classified_products',
-            'view_classified_packages',
+            'view_representative_packages',
+            'view_representative_payments',
+            'view_representative_visits',
         ],
         children: [
             {
                 labelKey: 'store.nav.representativeList',
+                inertia: true,
                 href: representativesIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.representativePackages',
+                inertia: true,
                 href: representativePackagesIndex(),
+                permission: 'view_representative_packages',
             },
             {
                 labelKey: 'store.nav.representativePayments',
+                inertia: true,
                 href: representativePaymentsIndex(),
+                permission: 'view_representative_payments',
             },
             {
                 labelKey: 'store.nav.representativeVisits',
+                inertia: true,
                 href: visitsIndex(),
+                permission: 'view_representative_visits',
             },
         ],
     },

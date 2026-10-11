@@ -122,3 +122,13 @@ export interface StoreProfile {
     email: string;
     avatar: StoreUpload | null;
 }
+
+export interface ClassifiedProduct {
+    id: number;
+    name: string;
+    public_url: string;
+    added_by: string;
+    status: boolean;
+    published: boolean;
+    thumbnail_url: string | null;
+}
