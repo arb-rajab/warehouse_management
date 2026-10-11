@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import {
+    in_house_sale_report,
+    seller_sale_report,
+    stock_report,
+    wish_report,
+    user_search_report,
+    commission_history,
+    wallet_transaction_history,
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     activation,
@@ -80,6 +90,14 @@ describe('storeAdminMenu', () => {
                 '/temp/admin/states',
                 '/temp/admin/cities',
                 '/temp/admin/zones',
+                customerNotificationsIndex.url(),
+                in_house_sale_report.url(),
+                seller_sale_report.url(),
+                stock_report.url(),
+                wish_report.url(),
+                user_search_report.url(),
+                commission_history.url(),
+                wallet_transaction_history.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),

@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\AizUploadController;
 use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\BlogCategoryController;
@@ -29,7 +29,7 @@ use App\Http\Controllers\FlashDealController;
 use App\Http\Controllers\Store\Admin\LanguageController;
 use App\Http\Controllers\Store\Admin\SettingsController;
 use App\Http\Controllers\NewsletterController;
-use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\OfferController;
 use App\Http\Controllers\OffersCatalogController;
 use App\Http\Controllers\OrderController;
@@ -40,7 +40,7 @@ use App\Http\Controllers\ProductBulkUploadController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\RepresentativePackageController;
 use App\Http\Controllers\RepresentativePaymentAdminController;
 use App\Http\Controllers\ReviewController;
@@ -522,15 +522,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
 
     //Reports
-    Route::controller(ReportController::class)->group(function () {
-        Route::get('/in_house_sale_report', 'in_house_sale_report')->name('in_house_sale_report.index');
-        Route::get('/seller_sale_report', 'seller_sale_report')->name('seller_sale_report.index');
-        Route::get('/stock_report', 'stock_report')->name('stock_report.index');
-        Route::get('/wish_report', 'wish_report')->name('wish_report.index');
-        Route::get('/user_search_report', 'user_search_report')->name('user_search_report.index');
-        Route::get('/commission-log', 'commission_history')->name('commission-log.index');
-        Route::get('/wallet-history', 'wallet_transaction_history')->name('wallet-history.index');
-    });
+    Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');
+    Route::get('/seller_sale_report', [ReportController::class, 'seller_sale_report'])->name('seller_sale_report.index');
+    Route::get('/stock_report', [ReportController::class, 'stock_report'])->name('stock_report.index');
+    Route::get('/wish_report', [ReportController::class, 'wish_report'])->name('wish_report.index');
+    Route::get('/user_search_report', [ReportController::class, 'user_search_report'])->name('user_search_report.index');
+    Route::get('/commission-log', [ReportController::class, 'commission_history'])->name('commission-log.index');
+    Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
 
     //Blog Section
     //Blog cateory
@@ -671,11 +669,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::post('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
 
-    Route::controller(AdminNotificationController::class)->group(function () {
-        Route::get('/notifications', 'getAllNotifications')->name('admin.notifications.all');
-        Route::post('/notifications/{id}/read', 'markAsRead')->name('admin.notifications.mark-read');
-        Route::get('/notifications/create', 'createNotification')->name('admin.notifications.create');
-        Route::post('/notifications/send', 'sendFcmNotification')->name('admin.notifications.send');
-        Route::post('/notifications/{id}', 'deleteNotification')->name('admin.notifications.delete');
-    });
+    Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
+    Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');
+    Route::post('/notifications/send', [CustomerNotificationController::class, 'store'])->name('admin.notifications.send');
+    Route::delete('/notifications/{notification}', [CustomerNotificationController::class, 'destroy'])->name('admin.notifications.delete');
 });

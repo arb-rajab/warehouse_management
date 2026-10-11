@@ -44,7 +44,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function general_setting(Request $request)
     {
-    	return view('shop.backend.setup_configurations.general_settings');
+        return view('shop.backend.setup_configurations.general_settings');
     }
 
     public function google_map(Request $request) {
@@ -123,7 +123,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function seller_verification_form(Request $request)
     {
-    	return view('shop.backend.sellers.seller_verification_form.index');
+        return view('shop.backend.sellers.seller_verification_form.index');
     }
 
     /**

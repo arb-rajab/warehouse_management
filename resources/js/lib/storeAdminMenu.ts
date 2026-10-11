@@ -21,7 +21,6 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
     colors,
@@ -72,6 +71,12 @@ import {
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
+import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
+import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
+import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import {
     commission_history,
     in_house_sale_report,
@@ -80,12 +85,7 @@ import {
     user_search_report,
     wallet_transaction_history,
     wish_report,
-} from '@/actions/App/Http/Controllers/ReportController';
-import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
-import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
-import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
-import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
-import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
 import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
@@ -313,7 +313,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.notifications',
-                href: getAllNotifications(),
+                href: customerNotificationsIndex(),
+                inertia: true,
                 permission: 'add_notification',
             },
             {
@@ -497,42 +498,49 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.inHouseSaleReport',
                 href: in_house_sale_report(),
+                inertia: true,
                 permission: 'in_house_product_sale_report',
                 setting: 'In_House_Sales_Report',
             },
             {
                 labelKey: 'store.nav.sellerSaleReport',
                 href: seller_sale_report(),
+                inertia: true,
                 permission: 'seller_products_sale_report',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.stockReport',
                 href: stock_report(),
+                inertia: true,
                 permission: 'products_stock_report',
                 setting: 'Products_Stock_Report',
             },
             {
                 labelKey: 'store.nav.wishlistReport',
                 href: wish_report(),
+                inertia: true,
                 permission: 'product_wishlist_report',
                 setting: 'Products_Wishlist_Report',
             },
             {
                 labelKey: 'store.nav.userSearchReport',
                 href: user_search_report(),
+                inertia: true,
                 permission: 'user_search_report',
                 setting: 'User_Searches_Report',
             },
             {
                 labelKey: 'store.nav.commissionHistory',
                 href: commission_history(),
+                inertia: true,
                 permission: 'commission_history_report',
                 setting: 'Commission_History_Report',
             },
             {
                 labelKey: 'store.nav.walletHistory',
                 href: wallet_transaction_history(),
+                inertia: true,
                 permission: 'wallet_transaction_report',
                 setting: 'Wallet_Recharge_History',
             },
