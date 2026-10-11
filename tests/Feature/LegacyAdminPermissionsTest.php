@@ -42,8 +42,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'FeatureOrderTripController@newStore',
     'FeatureOrderTripController@newUpdate',
     'FeatureOrderTripController@store',
-    'OffersCatalogController@destroy',
-    'OffersCatalogController@store',
     'RepresentativePackageController@delete',
     'RepresentativePackageController@package_modal',
     'RepresentativePackageController@set_package',
@@ -63,7 +61,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
-    'ProductController@add_more_choice_option',
     'ProductController@fetch',
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
@@ -94,8 +91,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'FeatureOrderTripController@newEdit',
     'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
-    'OffersCatalogController@download',
-    'OffersCatalogController@index',
     'RepresentativePackageController@create',
     'RepresentativePackageController@edit',
     'RepresentativePackageController@index',
@@ -114,15 +109,12 @@ const ADMIN_READS_STILL_UNGATED = [
     'ProfileController@index',
 
     // Read-only AJAX helpers the product forms use.
-    'BusinessSettingsController@search',
     'ProductController@getDetails',
 
     // The controller has no such method, so the request errors out.
     'CarrierController@show',
     'CityController@show',
     'OrderController@index',
-    'ProductBulkUploadController@import_product',
-    'ProductBulkUploadController@import_vendor_product',
     'ZoneController@show',
 ];
 

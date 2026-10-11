@@ -5,6 +5,7 @@ namespace App\Models;
 use App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
@@ -32,7 +33,8 @@ class Category extends Model
         return $category_translation != null ? $category_translation->$field : $this->$field;
     }
 
-    public function category_translations()
+    /** @return HasMany<CategoryTranslation, $this> */
+    public function category_translations(): HasMany
     {
         return $this->hasMany(CategoryTranslation::class);
     }

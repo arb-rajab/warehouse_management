@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { index as brandDiscountsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as colorsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { i18n } from '@/lib/i18n';
@@ -51,12 +57,21 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            bulkIndex.url(),
+            brandDiscountsIndex.url(),
+            attributesIndex.url(),
+            colorsIndex.url(),
+            reviewsIndex.url(),
+            offersIndex.url(),
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {
@@ -87,7 +102,6 @@ describe('visibleStoreMenu', () => {
 
         expect(labelKeys(menu)).toEqual([
             'store.nav.uploadedFiles',
-            'store.nav.offersCatalog',
             'store.nav.staff',
             'store.nav.allStaff',
         ]);

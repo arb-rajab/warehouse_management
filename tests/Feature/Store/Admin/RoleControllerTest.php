@@ -84,6 +84,15 @@ describe('create', function () {
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
                 ->where('permissionGroups', [
                     [
+                        'section' => 'offers_catalog',
+                        'label' => 'Offers Catalog',
+                        'permissions' => [
+                            ['id' => Permission::findByName('view_offers_catalog', 'store')->id, 'label' => 'View Offers Catalog'],
+                            ['id' => Permission::findByName('add_offers_catalog', 'store')->id, 'label' => 'Add Offers Catalog'],
+                            ['id' => Permission::findByName('delete_offers_catalog', 'store')->id, 'label' => 'Delete Offers Catalog'],
+                        ],
+                    ],
+                    [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
                         'permissions' => [['id' => $approve->id, 'label' => 'Approve Bulk Price Changes']],
@@ -172,7 +181,7 @@ describe('edit', function () {
                 ->where('name', 'Clerk')
                 ->where('languages', [['code' => 'en', 'name' => 'English'], ['code' => 'ar', 'name' => 'Arabic']])
                 ->where('permissionIds', [$permission->id])
-                ->has('permissionGroups', 2)
+                ->has('permissionGroups', 3)
         );
     });
 

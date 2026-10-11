@@ -26,10 +26,14 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Audit baseline:** 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
-- **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
+- **Verified progress:** staff/roles (6 screens) and the independent catalogue
+  screens (10 screens, §4.1) are converted. There are now 187 backend Blade
+  files: 195 after the pilot, minus 9 catalogue views, plus one shared safe
+  attribute-choice script. The review Blade view remains a public-route
+  dependency. The audit counts in §6 remain the original baseline.
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
 
@@ -89,7 +93,10 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff/roles, attributes/values, colors,
+brand discounts, reviews, bulk import and the offers catalogue are Inertia.
+Bulk export and PDF downloads remain native links; the dependent catalogue
+forms, general settings and carriers remain Blade (§4.1).
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -163,7 +170,15 @@ What it means for the translation admin:
   - The layout reuses WMS's `LanguageSwitcher`. It writes the same `locale`
     session key that the store's `Language` middleware reads.
 
-### 2.4 Uploads: replacing the aiz file manager (design; built in batch 4)
+### 2.4 Uploads: replacing the aiz file manager (design; not implemented)
+
+**Prerequisite verified 2026-10-08:** no `StoreUploadField`,
+`StoreFileManagerDialog`, admin `UploadController` or `UploadResource` exists.
+The design below is pending batch 4; it is not an available picker. Legacy
+Summernote/Tagify scripts are not reusable Vue controls. There is no suitable
+Vue rich-text editor, tag input or variant grid in the current source/dependencies.
+Do not migrate their dependent forms or add dependencies without the applicable
+owner approval. The plain PDF/import upload paths remain independent.
 
 **Today** (audit §6, product and uploaded_files):
 
@@ -292,7 +307,9 @@ Do every step for each module, in one change per batch.
 2. **Controller**
    - Create `App\Http\Controllers\Store\Admin\<Name>Controller` with
      `HasMiddleware`, keeping the existing `permission:` names per action.
-   - Delete the root-namespace legacy controller.
+   - Delete the root-namespace legacy controller when it has no remaining
+     storefront/seller/API consumers. Otherwise remove only migrated actions
+     and retain its server-rendered consumers (for example reviews).
    - Remove it from both `pint.json` and `phpstan.neon` in the same change
      (`StaticAnalysisExclusionsTest`). A legacy model you clean up comes out
      of both lists too (`Staff`).
@@ -349,7 +366,8 @@ Do every step for each module, in one change per batch.
    - Flip the module's entries in `lib/storeAdminMenu.ts` to `inertia: true`,
      and update the Inertia list in `storeAdminMenu.test.ts`.
 8. **Delete the Blade views** with `git rm`, along with any partial only they
-   used.
+   used. Check public/seller callers first; retain their shared Blade templates
+   and partials even when the admin screen is converted.
 9. **Pest**
    - Write `tests/Feature/Store/Admin/<Resource>ControllerTest.php`, covering
      per action:
@@ -415,8 +433,8 @@ modules too:
 ## 4. Migration batches
 
 The request that set up this migration had no batch list attached, so these
-batches come from the audit alone. Each batch is one session's change: one
-push and one CI round.
+batches come from the audit alone. Complete and verify the authorized patch;
+committing, pushing and deployment require their own authorization.
 
 Batches are ordered by what they need first:
 
@@ -435,7 +453,7 @@ Batches are ordered by what they need first:
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
-| 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
+| 7 | Catalogue (partially converted; §4.1) | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; offers permission rows are now added; staff grants remain an owner decision |
 | 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
 | 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
@@ -443,6 +461,55 @@ Batches are ordered by what they need first:
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+
+### 4.1 Verified catalogue patch (2026-10-08)
+
+Progress is checked against current routes, controller renders, Vue pages and
+remaining Blade callers, rather than inferred from the planned batches.
+
+| Area | Verified status | Remaining dependency/work |
+| --- | --- | --- |
+| Attributes and values | Four Inertia screens; explicit bound PUT/DELETE routes, existing permission names, translated attribute names, validated values and paginated narrow resources | None for these screens; creation retains the legacy edit permissions rather than inventing new grants |
+| Colors | Two Inertia screens; validation, existing gates and delete confirmation | Color-filter activation remains in settings; its broad legacy write endpoint is not migrated here |
+| Brand product discounts | One Inertia screen; `view_all_brands` read / `product_edit` write, exact scheduled-date validation, confirmation and existing service pricing/seller scope | Brand CRUD still needs the upload picker |
+| Reviews | One admin Inertia screen and publication write; product/shop ratings preserved; `admin.reviews.index` corrects the public name collision | Root review controller, `reviews.index`, public submission/modal and its shared Blade view remain server-rendered |
+| Bulk import | One Inertia screen, validated spreadsheet input and real stock/product writes with an existing administrator owner required, scoped export | Existing Excel dependency reused; reference PDFs stay Blade; dead CSV routes removed. Seller import contract retained; admin import suppresses legacy flash |
+| Offers catalogue | One Inertia screen; private PDF upload/download/delete and singleton validation; store-only `view_offers_catalog`, `add_offers_catalog`, `delete_offers_catalog` rows added idempotently | Owner chooses staff role grants; migration grants none. Public `offers.download` still uses server-side private-storage download |
+| JSON/XSS fixes | Order product search now gated, validated and capped at 20 `{id,name,mat_id}` records; translated names and identifiers render as text; the Blade script uses bundled jQuery after the layout loads it. Admin attribute choices return `{id,value}` JSON and create native literal options/inputs | Seller attribute endpoint/contract unchanged; SKU HTML endpoints/partials still required by seller and blocked admin product forms |
+| Physical/digital products, categories, brand CRUD | Still Blade, including variants, translations, pricing, stock and upload fields | Upload picker first; product forms also need an approved reusable editor/tag input/variant grid. Then test complex variants and all writes; correct digital redirects that lose `/temp` and admin seller-product edit's missing variations/barcodes |
+| General product settings and carriers | Still Blade | Upload picker first; preserve carrier ranges and validation. General-settings migration must omit `.env` timezone edits and shared-WMS cache clears, and use an allowlisted page-specific endpoint |
+
+Public product/category content, metadata and structured data remain in their
+original server-rendered templates. Storefront, seller, authentication, emails,
+PDFs and required root layouts are outside this patch. No dependency or
+unresolved product/grant decision is approved by this progress record.
+
+**Completed verification:** `python3 .claude/scripts/pre_push_check.py`
+passed ESLint, Prettier, vue-tsc, all 1,645 Vitest tests (127 files), Pint,
+PHPStan (zero errors), and all 2,989 Pest tests (12,652 assertions).
+`npm run build` passed, with the existing chunk-size warning. Focused
+Playwright passed all nine cases in `store-catalogue-forms.spec.ts`,
+`store-offers-catalogue.spec.ts` and `store-staff-coexistence.spec.ts`.
+`git diff --check` passed. No PHP checks were skipped.
+
+**Environment qualifications:** the installed PHP binary defaults to short
+open tags; the initial full suite failed the existing receipt Blade XML-string
+case. A temporary `PHPRC` configuration with `short_open_tag=Off`, followed by
+clearing compiled views, made that case and the full required script pass.
+The default Playwright setup could not start with this runtime / missing
+bundled Chromium. Browser checks used a temporary configuration with installed
+system Chromium, `serve --no-reload` (preserves PHP library paths), isolated
+SQLite files reset between runs, and built assets while the stale `public/hot`
+marker was preserved temporarily. No application dependency/configuration was
+changed for these workarounds; the marker was restored afterward.
+
+The complete browser suite was not run. The seeded legacy dashboard returns
+500 for WMS seed products without store slugs; the existing coexistence spec
+checks navigation and Blade/Inertia document boundaries, not dashboard render
+success. Complex product/variant forms remain unconverted and their future
+migration tests remain pending the prerequisites above. Public metadata and
+structured-data templates have no diff; this patch does not add new browser
+coverage for them.
 
 ## 5. Views to delete rather than port
 
@@ -486,10 +553,13 @@ Most severe first:
    - Batches 2 and 9 replace it with one endpoint per page, each with that
      page's permission and its own keys.
 3. **Unescaped HTML built from data:**
-   - `order_configuration.product-search` concatenates `product.name` into
-     HTML (batch 1);
-   - `products.add-more-choice-option` returns unescaped `<option>` values
-     (batch 7).
+   - **Fixed 2026-10-08:** admin `order_configuration.product-search` now
+     returns narrow, bounded JSON behind its page permission; its remaining
+     Blade consumer renders names/identifiers as text and uses the layout
+     script section instead of a second CDN jQuery dependency.
+   - **Fixed 2026-10-08:** admin `products.add-more-choice-option` now returns
+     narrow JSON; both admin product forms build literal DOM values/options.
+     Seller uses its separate unchanged endpoint and contract.
 4. **Write gates that don't match the buttons:**
    - `CustomerController` writes behind the read permission
      `view_all_customers`;
@@ -513,7 +583,9 @@ Most severe first:
      modules still use it.
 7. **Route names that went to storefront routes:** `reviews.index` and
    `subscribers.index`. Give the admin routes their own names when their
-   batch converts. The new sidebar already links to the admin URIs.
+   batch converts. Reviews now use `admin.reviews.index`; public
+   `reviews.index` remains intact. Subscribers are still pending. The sidebar
+   already links to the admin URIs.
 8. **N+1 and strict mode.** `Model::shouldBeStrict()` throws on a lazy load
    once a list has two or more rows, and no list view in sales, reports,
    customer or sellers has a render test. Each port eager-loads what its
@@ -559,9 +631,9 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | downloads/category | `pdf.download_category`, `seller.pdf.download_category` (:148; shop-seller:42) | ProductBulkUploadController@pdf_download_category (:58), Seller\… (:30) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF download) |
 | downloads/user | `pdf.download_seller` · GET …/bulk-upload/download/seller (:150) | ProductBulkUploadController@pdf_download_seller (:76) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF); nothing links to it |
 | s/c/activation | `activation.index` · GET …/activation (:315) | BSC@activation (:54) | `features_activation` + `RaizerSuperAdmin` | form (toggle board) | `$.post business_settings.update.activation` (returns 1/0), notify | LegacyAdminPanelTest:152,158; LegacyEnvFileProtectionTest:77 | port-trim: wholesale/auction cards (194-223), ProxyPay card (734-752, no controller), FORCE_HTTPS card (7-19, `.env` only); do not port `maintenance_mode` → `artisan down` (takes WMS down too) |
-| s/c/carriers/create | `carriers.create` (:625) | CarrierController@create (:50) | `manage_carriers` | form | aizuploader, aiz-selectpicker, range-table cloning, `$.ajax` FormData → `carriers.store` (1 or 422 JSON) | none | port |
-| s/c/carriers/edit | `carriers.edit` (:625) | CarrierController@edit (:106) | `manage_carriers` | form | as create, `$.ajax` → `carriers.update` | none | port |
-| s/c/carriers/index | `carriers.index` (:625) | CarrierController@index (:39) | `manage_carriers` | list | `$.post carriers.update_status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
+| s/c/carriers/create | `carriers.create` (:625) | CarrierController@create (:50) | `manage_carriers` | form | aizuploader, aiz-selectpicker, range-table cloning, `$.ajax` FormData → `carriers.store` (1 or 422 JSON) | none | port; **pending prerequisites (§4.1)** |
+| s/c/carriers/edit | `carriers.edit` (:625) | CarrierController@edit (:106) | `manage_carriers` | form | as create, `$.ajax` → `carriers.update` | none | port; **pending prerequisites (§4.1)** |
+| s/c/carriers/index | `carriers.index` (:625) | CarrierController@index (:39) | `manage_carriers` | list | `$.post carriers.update_status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port; **pending prerequisites (§4.1)** |
 | s/c/cities/create | `cities.create` (:636) | CityController@create — empty | `manage_shipping_cities` | — (0-byte file) | — | none | **delete** (empty file, nothing renders it) |
 | s/c/cities/edit | `cities.edit` · GET …/cities/edit/{id}?lang= (:638) | CityController@edit (:91) | `manage_shipping_cities` | form (language tabs) | aiz-selectpicker | none | port |
 | s/c/cities/index | `cities.index` (:636) | CityController@index (:47) | `manage_shipping_cities` | list + inline add form | aiz-selectpicker, `$.post cities.status`, confirm-delete | LegacyPaginationTest:257 | port |
@@ -572,7 +644,7 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/facebook_chat | `facebook_chat.index` (:326) | BSC@facebook_chat (:87) | `facebook_chat` | form | none | none | port-trim: the page-id field writes `.env` (refused); only the toggle saves |
 | s/c/facebook_configuration/facebook_comment | `facebook-comment` (:328) | BSC@facebook_comment (:92) | `facebook_comment` | form | none | none | port-trim: app-id `.env` field does nothing |
 | s/c/file_system | `file_system.index` (:317) | BSC@file_system (:102) | `file_system_&_cache_configuration` | form | aiz-selectpicker, `$.post …update.activation` | LegacyEnvFileProtectionTest:38 | port-trim: every input is `.env` (refused) and its forms post to `payment_method.update`, resetting `paypal_sandbox`; read-only status at most, stop printing secrets |
-| s/c/general_settings | `general_setting.index` (:314) | BSC@general_setting (:49) | `general_settings` | form | aizuploader ×3, aiz-selectpicker | LegacyAdminPermissionsTest:228 (write endpoint) | port-trim: timezone is `.env` only |
+| s/c/general_settings | `general_setting.index` (:314) | BSC@general_setting (:49) | `general_settings` | form | aizuploader ×3, aiz-selectpicker | LegacyAdminPermissionsTest:228 (write endpoint) | port-trim: timezone is `.env` only; **pending prerequisites (§4.1)** |
 | s/c/google_configuration/google_analytics | `google_analytics.index` (:320) | BSC@google_analytics (:69) | `analytics_tools_configuration` | form | none | none | port-trim: pixel/tracking-id `.env` fields do nothing |
 | s/c/google_configuration/google_firebase | `google-firebase.index` (:323) | BSC@google_firebase (:82) | `google_firebase_setting` | form | none | none | port-trim: `FCM_SERVER_KEY` field does nothing |
 | s/c/google_configuration/google_map | `google-map.index` (:322) | BSC@google_map (:78) | `google_map_setting` | form + map picker | Google Maps JS (places) via `shop.frontend.partials.google_map` | none | port-trim: `MAP_API_KEY` field does nothing |
@@ -582,7 +654,7 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/languages/edit | `languages.edit` (:374) | LanguageController@edit (:91) | `language_setup` | form | aiz-selectpicker | RouteServiceProviderTest:43 | port |
 | s/c/languages/index | `languages.index` (:374) | LanguageController@index (:46) | `language_setup` | list + 2 forms | `$.post languages.update_rtl_status`/`update-status`, confirm-delete | LegacyTripUploadTest:43; LegacyEnvFileProtectionTest:50 | port-trim: Default Language form posts to `env_key_update` (refused) |
 | s/c/languages/language_view | `languages.show` (:374) | LanguageController@show (:85) | `language_setup` | form (key grid) | inline copyTranslation() | none | port — this is the translation admin; see §2.3 |
-| s/c/order_configuration/index | `order_configuration.index` (:349) | BSC@order_configuration (:531) | `order_configuration` | form | second jQuery from a CDN; `$.ajax order_configuration.product-search` (JSON, ungated) builds unescaped HTML (XSS sink) | none | port |
+| s/c/order_configuration/index | `order_configuration.index` (:349) | BSC@order_configuration (:531) | `order_configuration` | form | legacy form; narrow permission-gated JSON product search, text-only rendering | ProductSearchControllerTest; store-offers-catalogue.spec | Blade form pending; **JSON/XSS fixed** |
 | s/c/payment_method | `payment_method.index` (:316) | BSC@payment_method (:97) | `payment_methods_configurations` | form (8 gateway cards) | none | none | port-trim: credential inputs are `.env` (do nothing), Authorize.Net stub; only `<gw>_sandbox` toggles save; gateways pending phase 0b |
 | s/c/pickup_point/create | `pick_up_points.create` (:563) | PickupPointController@create (:52) | `pickup_point_setup` | form | aiz-selectpicker | none | port |
 | s/c/pickup_point/edit | `pick_up_points.edit` · GET …/edit/{id}?lang= (:565) | PickupPointController@edit (:107) | `pickup_point_setup` | form (language tabs) | aiz-selectpicker | none | port |
@@ -656,35 +728,35 @@ URIs are under `/temp/admin` unless shown. SCR = `LegacyStoreStateChangingRoutes
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| offers_catalog/index | `offers.index` · GET …/offers/index (:124) | OffersCatalogController@index (:21) | ungated (READS list) | list + inline PDF upload (plain file input, `OffersCatalogStorage`, not aiz) | confirm-delete | LegacyOffersCatalogTest (store/download/destroy, not this page) | port; needs a permission name (§7.1) |
-| product/attribute/attribute_value/edit | `edit-attribute-value` (:590) | AttributeController@edit_attribute_value (:166) | `edit_product_attribute_value` | form | none | none | port |
-| product/attribute/attribute_value/index | `attributes.show` (:583) | AttributeController@show (:93) | `view_product_attribute_values` | list + inline create | confirm-delete | SCR | port |
-| product/attribute/edit | `attributes.edit` · GET …/attributes/edit/{id} (:585) | AttributeController@edit (:106) | `edit_product_attribute` | form (language tabs) | none | none | port |
-| product/attribute/index | `attributes.index` (:583) | AttributeController@index (:47) | `view_product_attributes` | list + inline create | confirm-delete | SCR | port |
-| product/brand_wise_discount/set_discount | `brands_wise_product_discount` (:91) | BrandController@brandsWiseProductDiscount (:175) | `view_all_brands` (its write needs `product_edit`) | list, a form per row | aiz-date-range, `$.post set_product_discount` | none | port |
-| product/brands/edit | `brands.edit` · GET …/brands/edit/{id} (:87) | BrandController@edit (:111) | `edit_brand` | form | aizuploader ×2 | RouteServiceProviderTest:46 (name) | port |
-| product/brands/index | `brands.index` (:85) | BrandController@index (:46) | `view_all_brands` (store: `add_brand`) | list + inline create | aizuploader, confirm-delete | **LegacyAdminPanelTest:66-76 (renders)**; LegacyAdminPermissionsTest:212 | port |
-| product/bulk_upload/index | `product_bulk_upload.index` (:143) | ProductBulkUploadController@index (:46) | `product_bulk_import` | form (plain file input) | none | none | port |
-| product/categories/create | `categories.create` (:77) | CategoryController@create (:63) | `add_product_category` | form | aiz-selectpicker (live search), aizuploader ×3, `shop.categories.child_category` | none | port |
-| product/categories/edit | `categories.edit` · GET …/categories/edit/{id} (:79) | CategoryController@edit (:143) | `edit_product_category` | form | as create | none | port |
-| product/categories/index | `categories.index` (:77) | CategoryController@index (:49) | `view_product_categories` | list | `$.post categories.featured`, confirm-delete | RouteServiceProviderTest:47 (name); SCR | port |
-| product/color/edit | `colors.edit` · GET …/colors/edit/{id} (:597) | AttributeController@edit_color (:223) | `edit_color` | form | none | none | port |
-| product/color/index | `colors` (:595) | AttributeController@colors (:202) | `view_colors` | list + inline create | color-filter switch posts to `business_settings.update.activation` (RaizerSuperAdmin only) | SCR | port-trim: move the switch to settings |
-| product/digital_products/create | `digitalproducts.create` (:131) | DigitalProductController@create (:66) | `add_digital_product` | form | aizuploader ×4 (one any-type file), selectpicker, summernote, aiz-tag-input, aiz-date-range | none | port |
-| product/digital_products/edit | `digitalproducts.edit` · GET …/edit/{id} (:133) | DigitalProductController@edit (:164) | `edit_digital_product` | form | as create | none | port |
-| product/digital_products/index | `digitalproducts.index` (:131) | DigitalProductController@index (:52) | `show_digital_products` | list | 3 switches posting to `products.*` (need `product_edit`) | SCR | port |
-| product/products/create | `products.create` (:99) | ProductController@create (:270) | `add_new_product` | form | selectpicker ×10, switches ×22, aizuploader ×4, summernote, aiz-tag-input, aiz-date-range; `$.ajax add-more-choice-option` (`<option>` strings) and `sku_combination` → `.html(data)` | none | port-trim: pos barcode (:92), refund (:101), club point (:306) blocks |
-| product/products/edit | `products.admin.edit`, `products.seller.edit` · GET …/products/{admin\|seller}/{id}/edit (:101-102) | ProductController@admin_product_edit (:421), @seller_product_edit (:445) | `product_edit` | form | as create + tagify; `sku_combination_edit` → `.html(data)` | none | port-trim: same addon blocks; `seller_product_edit` passes no `$variations`/`$barcodes`, so the page errors |
-| product/products/index | `products.admin`, `products.seller`, `products.all` (:96-98) | ProductController@admin_products (:119), seller_products (:161), all_products (:253) | `show_in_house_products` / `show_seller_products` / `show_all_products` | list | switches ×20, 5 `$.post` toggles, bulk delete, `products.fetch` (JSON) | SCR | port |
-| product/products/sku_combinations | `products.sku_combination` · POST (:117); also the seller's | ProductController@sku_combination (:749) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as a client-side variant grid; retire the endpoint |
-| product/products/sku_combinations_edit | `products.sku_combination_edit` · POST (:118) | ProductController@sku_combination_edit (:781) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as above |
-| product/reviews/index | admin GET …/reviews (:551) is unnamed; `reviews.index` went to the storefront GET /temp/reviews (shop-web:358) | ReviewController@index (:42) | `view_product_reviews` | list | `$.post reviews.published` | **LegacyPaginationTest:238 (renders)** | port; give the admin route its own name |
+| offers_catalog/index | `offers.index`, `offers.store`, `offers.download`, DELETE `offers.destroy` | Store/Admin/OffersCatalogController | `view_offers_catalog` / `add_offers_catalog` / `delete_offers_catalog` | Inertia list + PDF upload | shared confirmation, native download | Store/Admin/OffersCatalogControllerTest; AddOffersCatalogPermissionsTest; Offers/Index.test; store-offers-catalogue.spec | **converted**; public download intact; owner staff grants pending |
+| product/attribute/attribute_value/edit | `edit-attribute-value`, PUT `update-attribute-value` | Store/Admin/AttributeValueController@edit/update | `edit_product_attribute_value` | Inertia form | StoreAttributeValueFormFields | AttributeValueControllerTest; AttributeValues/Edit.test | **converted** |
+| product/attribute/attribute_value/index | `attributes.show`, `store-attribute-value`, DELETE `destroy-attribute-value` | Store/Admin/AttributeValueController | view / edit / delete product attribute value permissions | Inertia list + create | shared confirmation | AttributeValueControllerTest; AttributeValues/Index.test; store-catalogue-forms.spec | **converted** |
+| product/attribute/edit | `attributes.edit`, PUT `attributes.update` | Store/Admin/AttributeController@edit/update | `edit_product_attribute` | Inertia translated form | existing language tabs | AttributeControllerTest; Attributes/Edit.test | **converted** |
+| product/attribute/index | `attributes.index/store`, DELETE `attributes.destroy` | Store/Admin/AttributeController | view / edit / delete product attribute permissions | Inertia list + create | shared confirmation | AttributeControllerTest; AttributeTest; Attributes/Index.test; store-catalogue-forms.spec | **converted** |
+| product/brand_wise_discount/set_discount | `brands_wise_product_discount`, POST `set_product_discount` | Store/Admin/BrandDiscountController@index/update | `view_all_brands` / `product_edit` | Inertia list + forms | shared FilterDialog confirmation | BrandDiscountControllerTest; BrandDiscounts/Index.test | **converted**; existing service scope retained |
+| product/brands/edit | `brands.edit` · GET …/brands/edit/{id} (:87) | BrandController@edit (:111) | `edit_brand` | form | aizuploader ×2 | RouteServiceProviderTest:46 (name) | port; **pending prerequisites (§4.1)** |
+| product/brands/index | `brands.index` (:85) | BrandController@index (:46) | `view_all_brands` (store: `add_brand`) | list + inline create | aizuploader, confirm-delete | **LegacyAdminPanelTest:66-76 (renders)**; LegacyAdminPermissionsTest:212 | port; **pending prerequisites (§4.1)** |
+| product/bulk_upload/index | `product_bulk_upload.index`, POST `bulk_product_upload`; native export/reference PDFs | Store/Admin/ProductBulkUploadController | `product_bulk_import` | Inertia upload form | plain file input | ProductBulkUploadControllerTest; ProductsImportTest; ProductsExportTest; BulkUpload/Index.test | **converted**; PDFs remain Blade |
+| product/categories/create | `categories.create` (:77) | CategoryController@create (:63) | `add_product_category` | form | aiz-selectpicker (live search), aizuploader ×3, `shop.categories.child_category` | none | port; **pending prerequisites (§4.1)** |
+| product/categories/edit | `categories.edit` · GET …/categories/edit/{id} (:79) | CategoryController@edit (:143) | `edit_product_category` | form | as create | none | port; **pending prerequisites (§4.1)** |
+| product/categories/index | `categories.index` (:77) | CategoryController@index (:49) | `view_product_categories` | list | `$.post categories.featured`, confirm-delete | RouteServiceProviderTest:47 (name); SCR | port; **pending prerequisites (§4.1)** |
+| product/color/edit | `colors.edit`, PUT `colors.update` | Store/Admin/ColorController@edit/update | `edit_color` | Inertia form | StoreColorFormFields | ColorControllerTest; Colors/Edit.test | **converted** |
+| product/color/index | `colors`, `colors.store`, DELETE `colors.destroy` | Store/Admin/ColorController | `view_colors` / `edit_color` / `delete_color` | Inertia list + create | shared confirmation | ColorControllerTest; Colors/Index.test; store-catalogue-forms.spec | **converted**; activation switch stays in settings |
+| product/digital_products/create | `digitalproducts.create` (:131) | DigitalProductController@create (:66) | `add_digital_product` | form | aizuploader ×4 (one any-type file), selectpicker, summernote, aiz-tag-input, aiz-date-range | none | port; **pending prerequisites (§4.1)** |
+| product/digital_products/edit | `digitalproducts.edit` · GET …/edit/{id} (:133) | DigitalProductController@edit (:164) | `edit_digital_product` | form | as create | none | port; **pending prerequisites (§4.1)** |
+| product/digital_products/index | `digitalproducts.index` (:131) | DigitalProductController@index (:52) | `show_digital_products` | list | 3 switches posting to `products.*` (need `product_edit`) | SCR | port; **pending prerequisites (§4.1)** |
+| product/products/create | `products.create` (:99) | ProductController@create (:270) | `add_new_product` | form | selectpicker ×10, switches ×22, aizuploader ×4, summernote, aiz-tag-input, aiz-date-range; `$.ajax add-more-choice-option` (safe narrow JSON; §4.1) and `sku_combination` → `.html(data)` | none | port-trim: pos barcode (:92), refund (:101), club point (:306) blocks; **pending prerequisites (§4.1)** |
+| product/products/edit | `products.admin.edit`, `products.seller.edit` · GET …/products/{admin\|seller}/{id}/edit (:101-102) | ProductController@admin_product_edit (:421), @seller_product_edit (:445) | `product_edit` | form | as create + tagify; `sku_combination_edit` → `.html(data)` | none | port-trim: same addon blocks; `seller_product_edit` passes no `$variations`/`$barcodes`, so the page errors; **pending prerequisites (§4.1)** |
+| product/products/index | `products.admin`, `products.seller`, `products.all` (:96-98) | ProductController@admin_products (:119), seller_products (:161), all_products (:253) | `show_in_house_products` / `show_seller_products` / `show_all_products` | list | switches ×20, 5 `$.post` toggles, bulk delete, `products.fetch` (JSON) | SCR | port; **pending prerequisites (§4.1)** |
+| product/products/sku_combinations | `products.sku_combination` · POST (:117); also the seller's | ProductController@sku_combination (:749) | ungated | partial (AJAX HTML) | aizuploader per variant | none | pending client-side variant grid; retain endpoint/partial for seller |
+| product/products/sku_combinations_edit | `products.sku_combination_edit` · POST (:118) | ProductController@sku_combination_edit (:781) | ungated | partial (AJAX HTML) | aizuploader per variant | none | pending grid; seller also renders this backend partial |
+| product/reviews/index | admin `admin.reviews.index`, POST `reviews.published`; public `reviews.index` retained | Store/Admin/ReviewController; root public ReviewController retained | `view_product_reviews` / `publish_product_review` | Inertia admin list; shared Blade public dependency retained | native publication POST | ReviewControllerTest; ReviewTest; LegacyReviewTest; Reviews/Index.test | **admin converted**; public view must not be deleted |
 | uploaded_files/create | `uploaded-files.create` (:646) | AizUploadController@create (:57) | ungated | form (Uppy dashboard) | `AIZ.plugins.aizUppy` → `/aiz-uploader/upload` | none | port into the uploads replacement (§2.4) |
 | uploaded_files/index | `uploaded-files.index` (:646) | AizUploadController@index (:50) | ungated | list (60-per-page grid, search/sort) | `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | SCR | port into §2.4 |
 | uploaded_files/info | `uploaded-files.info` · ANY …/uploaded-files/file-info (:648) | AizUploadController@file_info (:217) | ungated + UploadPolicy | modal partial (AJAX HTML) | none | none | port-trim: a client-side panel from JSON; the GET is shadowed by the resource `show` route |
 
 Notes:
-1. HTML over AJAX: `products.sku_combination[_edit]`, `uploaded-files.info`, `/temp/aiz-uploader` (the modal); `products.add-more-choice-option` returns unescaped `<option>` strings.
+1. HTML over AJAX: `products.sku_combination[_edit]`, `uploaded-files.info`, `/temp/aiz-uploader` (the modal); admin `products.add-more-choice-option` is now safe JSON. Seller has a separate unchanged helper; do not remove its contract with the admin port.
 2. Redirects that drop `/temp`: `admin_product_edit`/`seller_product_edit` send digital products to `redirect('admin/digitalproducts/…')`, which lands in the warehouse app.
 3. `ProductController@get_products_by_subcategory` (route :109) does not exist; the `uploaded-files` resource's store/show/edit/update map to missing methods.
 4. Two upload paths bypass aiz on purpose: the offers catalogue (`OffersCatalogStorage`, private disk) and bulk import (plain file input). Keep both out of §2.4.

@@ -34,4 +34,7 @@ return [
     'verification_round_rows_not_found' => 'One or more of the requested rows no longer exist.',
     'cannot_remove_last_admin' => 'This is the last admin account, so it cannot be demoted or deleted.',
     'open_level_not_allowed' => 'This pallet\'s level is not one where opening pallets is allowed.',
+    'store_offers_catalog_exists' => 'Only one catalogue can be uploaded. Delete the existing catalogue first.',
+    'store_brand_discount_admin_required' => 'An administrator account is required before setting brand discounts.',
+    'store_product_import_admin_required' => 'An administrator account is required before importing products.',
 ];

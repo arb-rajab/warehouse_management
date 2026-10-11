@@ -45,3 +45,23 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+export interface StoreOffersCatalog {
+    id: number;
+    created_at: string | null;
+}
+
+export interface StoreReview {
+    id: number;
+    rating: number;
+    comment: string;
+    published: boolean;
+    product: { id: number; name: string; owner: string; url: string };
+    customer: { id: number; name: string; email: string };
+}
+
+export interface StoreBrandDiscount {
+    id: number;
+    name: string;
+    logo_url: string | null;
+}

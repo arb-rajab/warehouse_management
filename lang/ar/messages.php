@@ -34,4 +34,7 @@ return [
     'verification_round_rows_not_found' => 'واحد أو أكثر من الممرات المطلوبة لم يعد موجودًا.',
     'cannot_remove_last_admin' => 'هذا هو آخر حساب مسؤول، لذا لا يمكن إزالة صلاحياته أو حذفه.',
     'open_level_not_allowed' => 'مستوى هذه المنصة ليس من المستويات المسموح فيها بفتح المنصات.',
+    'store_offers_catalog_exists' => 'يمكن رفع كتالوج واحد فقط. احذف الكتالوج الحالي أولاً.',
+    'store_brand_discount_admin_required' => 'يلزم وجود حساب مسؤول قبل تعيين خصومات العلامات التجارية.',
+    'store_product_import_admin_required' => 'يلزم وجود حساب مسؤول قبل استيراد المنتجات.',
 ];

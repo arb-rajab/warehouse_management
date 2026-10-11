@@ -62,7 +62,7 @@ class ProductController extends Controller implements HasMiddleware
             new Middleware('permission:show_all_products', only: ['all_products']),
             new Middleware('permission:show_in_house_products', only: ['admin_products']),
             new Middleware('permission:show_seller_products', only: ['seller_products']),
-            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'setProductDiscount', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
+            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate']),
             new Middleware('permission:product_delete', only: ['destroy', 'bulk_product_delete']),
         ];
@@ -270,18 +270,7 @@ class ProductController extends Controller implements HasMiddleware
         return view('shop.backend.product.products.create', compact('categories'));
     }
 
-    public function add_more_choice_option(Request $request)
-    {
-        $all_attribute_values = AttributeValue::with('attribute')->where('attribute_id', $request->attribute_id)->get();
 
-        $html = '';
-
-        foreach ($all_attribute_values as $row) {
-            $html .= '<option value="' . $row->value . '">' . $row->value . '</option>';
-        }
-
-        echo json_encode($html);
-    }
 
     /**
      * Store a newly created resource in storage.
@@ -860,11 +849,6 @@ class ProductController extends Controller implements HasMiddleware
 
         return 0;
     }
-    public function setProductDiscount(Request $request)
-    {
-        return $this->productService->setBrandWiseDiscount($request->except(['_token']));
-    }
-
     public function search(Request $request)
     {
         $products = Product::where('auction_product', 0)->where('wholesale_product', 0);

@@ -21,6 +21,10 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
 {
     private $rows = 0;
 
+    public function __construct(private bool $notify = true)
+    {
+    }
+
     public function collection(Collection $rows): void
     {
         $canImport = true;
@@ -42,11 +46,11 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
                     $approved = 0;
                 }
 
-                $productId = Product::create([
+                $productId = Product::forceCreate([
                     'name' => $row['name'],
-                    'description' => $row['description'],
+                    'description' => clean_html($row['description']),
                     'added_by' => $user->user_type == 'seller' ? 'seller' : 'admin',
-                    'user_id' => $user->user_type == 'seller' ? $user->id : StoreUser::where('user_type', 'admin')->first()->id,
+                    'user_id' => $user->user_type == 'seller' ? $user->id : StoreUser::query()->where('user_type', 'admin')->value('id'),
                     'approved' => $approved,
                     'category_id' => $row['category_id'],
                     'brand_id' => $row['brand_id'],
@@ -73,7 +77,9 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
                 ]);
             }
 
-            flash(translate('Products imported successfully'))->success();
+            if ($this->notify) {
+                flash(translate('Products imported successfully'))->success();
+            }
         }
     }
 
@@ -92,17 +98,37 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
     public function rules(): array
     {
         return [
-            // Can also use callback validation rules
-            'unit_price' => function ($attribute, $value, $onFailure) {
-                if (!is_numeric($value)) {
-                    $onFailure('Unit price is not numeric');
+            'name' => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
+            'current_stock' => ['required', 'integer', 'min:0'],
+            'unit' => ['required', 'string', 'max:50'],
+            'slug' => ['required', 'string', 'max:200'],
+            'sku' => ['nullable', 'string', 'max:255'],
+            'tags' => ['nullable', 'string'],
+            'video_provider' => ['nullable', 'string', 'in:youtube,vimeo,dailymotion'],
+            'video_link' => ['nullable', 'url:http,https'],
+            'meta_title' => ['nullable', 'string', 'max:200'],
+            'meta_description' => ['nullable', 'string'],
+            'thumbnail_img' => ['nullable', 'url:http,https'],
+            'photos' => ['nullable', 'string', function ($attribute, $value, $onFailure) {
+                foreach (explode(',', $value) as $url) {
+                    if (! filter_var(trim($url), FILTER_VALIDATE_URL) || ! in_array(strtolower((string) parse_url(trim($url), PHP_URL_SCHEME)), ['http', 'https'], true)) {
+                        $onFailure(__('validation.url', ['attribute' => $attribute]));
+                        return;
+                    }
                 }
-            },
+            }],
         ];
     }
 
     public function downloadThumbnail($url)
     {
+        if (blank($url)) {
+            return null;
+        }
         try {
             $upload = new Upload;
             $upload->external_link = $url;
@@ -117,6 +143,9 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
 
     public function downloadGalleryImages($urls)
     {
+        if (blank($urls)) {
+            return null;
+        }
         $data = [];
         foreach (explode(',', str_replace(' ', '', $urls)) as $url) {
             $data[] = $this->downloadThumbnail($url);

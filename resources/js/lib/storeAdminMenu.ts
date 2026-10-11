@@ -23,16 +23,9 @@ import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
-import {
-    colors,
-    index as attributesIndex,
-} from '@/actions/App/Http/Controllers/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
-import {
-    brandsWiseProductDiscount,
-    index as brandsIndex,
-} from '@/actions/App/Http/Controllers/BrandController';
+import { index as brandsIndex } from '@/actions/App/Http/Controllers/BrandController';
 import {
     activation,
     facebook_chat,
@@ -73,15 +66,10 @@ import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDe
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
-import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/PickupPointController';
-import {
-    exportMethod as productBulkExport,
-    index as productBulkImport,
-} from '@/actions/App/Http/Controllers/ProductBulkUploadController';
 import {
     admin_products,
     all_products,
@@ -100,10 +88,18 @@ import {
 } from '@/actions/App/Http/Controllers/ReportController';
 import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
-import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import {
+    exportMethod as productBulkExport,
+    index as productBulkImport,
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
@@ -221,6 +217,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.bulkImport',
+                inertia: true,
                 href: productBulkImport(),
                 permission: 'product_bulk_import',
             },
@@ -243,20 +240,24 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.brandDiscount',
                 href: brandsWiseProductDiscount(),
                 permission: 'view_all_brands',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.attributes',
+                inertia: true,
                 href: attributesIndex(),
                 permission: 'view_product_attributes',
             },
             {
                 labelKey: 'store.nav.colors',
+                inertia: true,
                 href: colors(),
                 permission: 'view_colors',
             },
             {
                 labelKey: 'store.nav.productReviews',
-                href: reviewsIndex['/temp/admin/reviews'](),
+                inertia: true,
+                href: reviewsIndex(),
                 permission: 'view_product_reviews',
                 setting: 'Product_Reviews_Section',
             },
@@ -483,6 +484,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.offersCatalog',
+        inertia: true,
+        permission: 'view_offers_catalog',
         href: offersCatalogIndex(),
         icon: BookOpen,
     },

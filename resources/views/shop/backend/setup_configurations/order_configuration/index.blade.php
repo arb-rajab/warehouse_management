@@ -103,7 +103,7 @@
 
 @endsection
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@section('script')
 
 <script>
     $(document).ready(function () {
@@ -122,16 +122,19 @@
                         console.error(error);
                     }
                 });
+            } else {
+                $('#search_results').empty();
             }
         });
 
         function displaySearchResults(results) {
             var resultsContainer = $('#search_results');
             resultsContainer.empty();
-            resultsContainer.append('<label class="control-label mt-2">Search Results:</label>');
+            resultsContainer.append($('<label>').addClass('control-label mt-2').text(@json(translate('Search Results:'))));
 
             $.each(results, function (index, product) {
-                var resultDiv = $('<div class="search-result m-3" data-product-id="' + product.mat_id + '">' + product.name + '</div>');
+                var resultDiv = $('<div>').addClass('search-result m-3')
+                    .attr('data-product-id', product.mat_id).text(product.name);
                 resultDiv.css('cursor', 'pointer');
 
                 resultsContainer.append(resultDiv);
@@ -142,10 +145,11 @@
                 var productName = $(this).text();
 
                 $('#product_search').val(matId);
-                $('#selected_product_name').text('Selected Product:  ' + productName);
+                $('#selected_product_name').text(@json(translate('Selected Product:')) + ' ' + productName);
 
                 resultsContainer.empty();
             });
         }
     });
 </script>
+@endsection

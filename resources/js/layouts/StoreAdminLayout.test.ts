@@ -94,10 +94,10 @@ describe('StoreAdminLayout', () => {
         ).toEqual([
             'store.nav.dashboard',
             'store.nav.uploadedFiles',
-            'store.nav.offersCatalog',
             'store.nav.allStaff',
         ]);
         expect(wrapper.text()).not.toContain(t('store.nav.staffRoles'));
+        expect(navLink(wrapper, 'store.nav.offersCatalog')).toBeUndefined();
         expect(wrapper.text()).not.toContain(t('store.nav.products'));
     });
 

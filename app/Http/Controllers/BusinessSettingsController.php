@@ -531,14 +531,5 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return view('shop.backend.setup_configurations.order_configuration.index');
     }
 
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
 
-        $results = Product::where('mat_id', 'like', '%' . $query . '%')
-            ->select('id', 'name', 'mat_id')
-            ->get();
-
-        return response()->json($results);
-    }
 }
