@@ -122,8 +122,9 @@ return [
     | config/secure-headers.php's strict policy blocks. HandleStoreBladePages
     | swaps these directives in for a Blade page only; Inertia pages, store
     | ones included, keep the strict policy. Each entry replaces that whole
-    | directive. Shrink this as the back office moves to Inertia and drop it
-    | with the last Blade page (.ai/rules/store-backoffice-migration.md §2.5).
+    | directive. Shrink this only as the remaining store Blade consumers permit;
+    | retained storefront, seller and authentication pages still use it after
+    | the back office moves (.ai/rules/store-backoffice-migration.md §2.5).
     |
     */
 

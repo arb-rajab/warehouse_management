@@ -45,3 +45,84 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+export interface StoreCountry {
+    id: number;
+    code: string;
+    name: string;
+    zone_id: number;
+    active: boolean;
+}
+
+export interface StoreState {
+    id: number;
+    name: string;
+    country_id: number;
+    active: boolean;
+    country?: StoreCountry | null;
+}
+
+export interface StoreCity {
+    id: number;
+    name: string;
+    state_id: number;
+    cost: string;
+    active: boolean;
+    state?: StoreState | null;
+}
+
+export interface StoreZone {
+    id: number;
+    name: string;
+}
+
+export interface StoreStaffOption {
+    id: number;
+    name: string;
+}
+
+export interface StorePickupPoint {
+    id: number;
+    staff_id: number;
+    name: string;
+    address: string;
+    phone: string;
+    active: boolean;
+    manager: StoreStaffOption | null;
+}
+
+export interface StoreTax {
+    id: number;
+    name: string;
+    active: boolean;
+}
+
+export interface StoreCurrency {
+    id: number;
+    name: string;
+    symbol: string;
+    code: string | null;
+    exchange_rate: string;
+    active: boolean;
+}
+
+export interface StoreCurrencySettings {
+    system_default_currency: number;
+    symbol_format: number;
+    decimal_separator: number;
+    no_of_decimals: number;
+}
+
+export interface StoreOrderProduct {
+    id: number;
+    name: string;
+    mat_id: string;
+}
+
+export interface StoreOrderConfigurationSettings {
+    minimum_order_amount_check: boolean;
+    minimum_order_amount: string;
+    default_specific_product: string;
+    default_representative_check: boolean;
+    default_representative_id: number;
+}

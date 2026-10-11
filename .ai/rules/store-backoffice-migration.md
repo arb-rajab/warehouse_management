@@ -26,12 +26,39 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Starting count:** there were 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
 - **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
+
+### Cleanup gate (verified 2026-10-10)
+
+Final shell cleanup is not unblocked. Batches 0 and 1 are converted. The
+current tree has 174 Blade files under `resources/views/shop/backend` after
+deleting the independently dead `layouts/blank` and batch 1's 20 views; 138
+still extend `layouts/app`. Batches 2-11 in §4 therefore remain outstanding.
+
+- Keep `layouts/app`, `inc/admin_sidenav` and `inc/admin_nav`: the layout is
+  still the sole consumer of both includes and still serves those 138 pages.
+- Keep `layouts/layout`: its exact consumers are the seller login, delivery-boy
+  login and store 503 page.
+- Keep the Inertia root `resources/views/app.blade.php`.
+- Keep `invoices/invoice` and `downloads/brand`, `category` and `user`: the
+  admin and seller PDF controllers still render them.
+- Keep `HandleStoreBladePages`, `SendSecureHeaders`' request override and
+  `store.blade_csp`. The override applies to all three store web groups, and
+  retained storefront, seller, authentication and back-office Blade pages
+  still require inline and third-party assets. No directive is proven obsolete
+  while that route-wide consumer set remains.
+- Keep `system/server_status` and its route until the documented owner call is
+  supplied. The technical recommendation in §5 is not approval.
+
+`StoreBackOfficeShellTest` ratchets these retained boundaries and the removal
+of `layouts/blank`. Re-run this trace after every remaining module is converted
+or explicitly resolved; only then may batch 12 remove the admin shell and
+re-audit the CSP directives and legacy assets.
 
 ## 2. Foundation decisions
 
@@ -89,7 +116,8 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles and batch 1's shipping/tax
+reference and configuration pages are Inertia so far.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -251,8 +279,11 @@ strict policy. Unconverted Blade pages need inline scripts.
 - Before this change, Blade pages received the strict policy too, which would
   have blocked their scripts once it was enforced.
 - CSP stays report-only outside production, as before.
-- Shrink `blade_csp` as modules convert, and delete it with the last Blade
-  page.
+- Shrink `blade_csp` only when the remaining consumers prove a directive is no
+  longer needed. Do not delete it with the last back-office page: the retained
+  storefront, seller and authentication Blade pages use the same route-wide
+  override. Delete it only with the last store Blade page after a separate
+  consumer audit.
 
 **Tests:** tests/Feature/Store/HandleStoreBladePagesTest.php.
 
@@ -412,6 +443,50 @@ modules too:
   - The role form never offers the removed addons' permission sections
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
+**What batch 1 changed in behaviour (verified 2026-10-10).**
+
+- The empty cities create route/view and orphan tax create route/view are
+  gone. Currency create/edit are client dialogs, so their AJAX-HTML routes are
+  gone as well.
+- Edit/update/delete/status routes are explicit and model-bound; deletes use
+  `DELETE` and statuses use `PATCH`. Existing route names were retained where
+  a live consumer used them.
+- The zone list no longer shows the legacy status switch: it called a method
+  that never existed. Zone assignment updates countries transactionally.
+- Currency codes are required and unique. A default currency cannot be
+  disabled. The storefront's separate `/temp/currency` session switcher stays
+  in the root `CurrencyController` and has retained-storefront coverage.
+- Currency, shipping and order settings no longer pass through the generic
+  `business_settings.update` OR gate and no longer run `cache:clear`.
+- Order product search now requires `order_configuration`, validates the
+  query, returns a narrow JSON shape and is rendered as text by Vue.
+- Lists page 20 at a time, preserve filters and expose only Resource fields.
+  Translated city and pickup-point edits keep language validation and store
+  translations without exposing model timestamps.
+
+**Batch 1 verification (2026-10-10).** The recorded cleanup gate was checked
+against the current tree again: 174 back-office Blade files remain and 138
+still extend `layouts/app`; only that layout includes `inc/admin_sidenav` and
+`inc/admin_nav`. The retained seller/delivery-boy login and 503 templates,
+four PDF templates, Inertia root, coexistence middleware and route-wide Blade
+CSP still have live consumers. Verification passed as follows:
+
+- full parallel Pest: 2,845 tests, 12,369 assertions;
+- full Vitest: 121 files, 1,609 tests; focused batch 1 backend: 95 tests,
+  881 assertions; focused batch 1 Vitest: 9 files, 34 tests;
+- ESLint, Prettier, `vue-tsc`, Pint (798 files) and PHPStan (467 files);
+- production asset build, including Wayfinder generation;
+- the three store coexistence Playwright flows: staff creation/deletion,
+  Inertia-to-Blade navigation plus logout, and direct country/tax visits with
+  destructive confirmation. The local run used the built assets because a
+  stale ignored `public/hot` marker pointed at a stopped Vite server.
+
+The full PHP run also exposed and fixed the retained representative-payment
+PDF's XML-declaration stripping: the literal `<?xml ... ?>` inside a Blade raw
+echo prevented Blade from compiling the template. It now removes the trusted
+QR SVG declaration with a regular expression and the retained PDF regression
+file passes. This does not change the decision to keep the template in Blade.
+
 ## 4. Migration batches
 
 The request that set up this migration had no batch list attached, so these
@@ -429,7 +504,7 @@ Batches are ordered by what they need first:
 | # | Batch | Views | Modules (views) | Needs first |
 | --- | --- | --- | --- | --- |
 | 0 | Staff (pilot) | 6 | staff (6) | done |
-| 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
+| 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | **done 2026-10-10.** Currency create/edit are dialogs; product search is permission-gated JSON rendered as Vue text; currency, shipping and order settings use dedicated allowlisted endpoints and targeted cache invalidation |
 | 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
@@ -440,7 +515,7 @@ Batches are ordered by what they need first:
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
 | 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
 | 11 | Orders and dashboard | 10 | sales (9, four deleted), dashboard (1) | a shared order-entry component with async search; a chart library (a new dependency); permission names for order entry |
-| 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
+| 12 | Shell and leftovers | 10 originally (9 remain) | layouts (3; blank deleted), inc (2), system (1), invoices (1), downloads (3) | Last: delete only `layouts/app` and its includes after the last Blade module; keep `layouts/layout` and the PDF views (§5), resolve server status with the owner, then re-audit the route-wide CSP against every retained store Blade page |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 
@@ -448,8 +523,8 @@ Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 
 | View | Why |
 | --- | --- |
-| setup_configurations/cities/create | 0-byte file. `CityController@create` is empty |
-| setup_configurations/tax/create | Nothing renders it; a byte copy of pickup_point/create |
+| setup_configurations/cities/create | **Deleted in batch 1.** 0-byte file; `CityController@create` was empty |
+| setup_configurations/tax/create | **Deleted in batch 1.** Nothing rendered it; a byte copy of pickup_point/create |
 | marketing/offer_deals/brands/index | Nothing renders it; a duplicate of offer_deals/index |
 | marketing/offer_deals/brands/offer_deal_discount | Nothing renders it. Its route `offer_deals.brand_discount` points at a missing method: delete the route too |
 | sales/new-order | Nothing links to `feat-order.trip.create`; new-shipping-order replaced it. Delete routes shop-admin.php :435, :440-442 and :450 with it |
@@ -483,11 +558,16 @@ Most severe first:
    upserts any key with no allowlist. A user holding only `currency_setup` can
    write `header_script`/`footer_script`, which the storefront prints raw
    (stored XSS).
+   - **Batch 1 fixed:** currency formats/defaults, shipping configuration and
+     order configuration now use separate permission-gated controllers,
+     request allowlists and `Cache::forget('business_settings')`; their old
+     generic methods were removed from `BusinessSettingsController`.
    - Batches 2 and 9 replace it with one endpoint per page, each with that
      page's permission and its own keys.
 3. **Unescaped HTML built from data:**
-   - `order_configuration.product-search` concatenates `product.name` into
-     HTML (batch 1);
+   - **Fixed in batch 1:** `order_configuration.product-search` returns only
+     `id`, `name` and `mat_id` as permission-gated JSON; Vue renders names as
+     text instead of concatenating HTML;
    - `products.add-more-choice-option` returns unescaped `<option>` values
      (batch 7).
 4. **Write gates that don't match the buttons:**
@@ -562,13 +642,13 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/carriers/create | `carriers.create` (:625) | CarrierController@create (:50) | `manage_carriers` | form | aizuploader, aiz-selectpicker, range-table cloning, `$.ajax` FormData → `carriers.store` (1 or 422 JSON) | none | port |
 | s/c/carriers/edit | `carriers.edit` (:625) | CarrierController@edit (:106) | `manage_carriers` | form | as create, `$.ajax` → `carriers.update` | none | port |
 | s/c/carriers/index | `carriers.index` (:625) | CarrierController@index (:39) | `manage_carriers` | list | `$.post carriers.update_status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/cities/create | `cities.create` (:636) | CityController@create — empty | `manage_shipping_cities` | — (0-byte file) | — | none | **delete** (empty file, nothing renders it) |
-| s/c/cities/edit | `cities.edit` · GET …/cities/edit/{id}?lang= (:638) | CityController@edit (:91) | `manage_shipping_cities` | form (language tabs) | aiz-selectpicker | none | port |
-| s/c/cities/index | `cities.index` (:636) | CityController@index (:47) | `manage_shipping_cities` | list + inline add form | aiz-selectpicker, `$.post cities.status`, confirm-delete | LegacyPaginationTest:257 | port |
-| s/c/countries/index | `countries.index` (:617) | CountryController@index (:41) | `shipping_country_setting` | list | `$.post countries.status` | LegacyPaginationTest:273; LegacyControllerMiddlewareConversionTest:27 | port |
-| s/c/currencies/create | `currency.create` · GET (:359) | CurrencyController@create (:69) | `currency_setup` | modal partial (AJAX HTML) | injected by currencies/index with `.html(data)` | none | port as a dialog |
-| s/c/currencies/edit | `currency.edit` · POST …/currency/currency_edit (:361) | CurrencyController@edit (:75) | `currency_setup` | modal partial (AJAX HTML) | injected with `.html(data)` | none | port as a dialog |
-| s/c/currencies/index | `currency.index` (:356) | CurrencyController@currency (:46) | `currency_setup` | list + 2 settings forms | aiz-selectpicker, the two `.html(data)` loads, `$.post currency.update_status` | none | port |
+| s/c/cities/create | dead route removed | — | `manage_shipping_cities` | — (0-byte file) | — | CityControllerTest | **deleted in batch 1** |
+| s/c/cities/edit | `cities.edit` · GET …/cities/{city}/edit; update PUT and destroy DELETE …/cities/{city} | Store\Admin\CityController → `Store/Admin/Shipping/Cities/Edit` | `manage_shipping_cities` | form (language tabs) | shared Vue fields | CityControllerTest; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/cities/index | `cities.index` · GET …/cities; store POST; status PATCH …/{city}/status | Store\Admin\CityController → `Store/Admin/Shipping/Cities/Index` | `manage_shipping_cities` | paginated list + inline add form | Inertia forms/status/delete | CityControllerTest; StoreCityFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/countries/index | `countries.index` · GET …/countries; status PATCH …/{country}/status | Store\Admin\CountryController → `Store/Admin/Shipping/Countries/Index` | `shipping_country_setting` | paginated list | Inertia status form | CountryControllerTest; StoreReferenceStatusForm.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/currencies/create | folded into `currency.index` | Store\Admin\CurrencyController@index → create dialog | `currency_setup` | dialog | Vue form; no AJAX HTML injection | CurrencyControllerTest; StoreCurrencyFormFields.test.ts; BatchOnePages.test.ts | converted, Blade and dead route deleted |
+| s/c/currencies/edit | folded into `currency.index`; update PUT …/currency/{currency} | Store\Admin\CurrencyController@index → edit dialog | `currency_setup` | dialog | Vue form; no AJAX HTML injection | same | converted, Blade and dead route deleted |
+| s/c/currencies/index | `currency.index` · GET/POST …/currency; default/formats PUT; status PATCH | Store\Admin\CurrencyController → `Store/Admin/Setup/Currencies/Index` | `currency_setup` | paginated list + dialogs + settings forms | dedicated allowlisted endpoints | CurrencyControllerTest; StoreCurrencyFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
 | s/c/facebook_chat | `facebook_chat.index` (:326) | BSC@facebook_chat (:87) | `facebook_chat` | form | none | none | port-trim: the page-id field writes `.env` (refused); only the toggle saves |
 | s/c/facebook_configuration/facebook_comment | `facebook-comment` (:328) | BSC@facebook_comment (:92) | `facebook_comment` | form | none | none | port-trim: app-id `.env` field does nothing |
 | s/c/file_system | `file_system.index` (:317) | BSC@file_system (:102) | `file_system_&_cache_configuration` | form | aiz-selectpicker, `$.post …update.activation` | LegacyEnvFileProtectionTest:38 | port-trim: every input is `.env` (refused) and its forms post to `payment_method.update`, resetting `paypal_sandbox`; read-only status at most, stop printing secrets |
@@ -582,28 +662,28 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/languages/edit | `languages.edit` (:374) | LanguageController@edit (:91) | `language_setup` | form | aiz-selectpicker | RouteServiceProviderTest:43 | port |
 | s/c/languages/index | `languages.index` (:374) | LanguageController@index (:46) | `language_setup` | list + 2 forms | `$.post languages.update_rtl_status`/`update-status`, confirm-delete | LegacyTripUploadTest:43; LegacyEnvFileProtectionTest:50 | port-trim: Default Language form posts to `env_key_update` (refused) |
 | s/c/languages/language_view | `languages.show` (:374) | LanguageController@show (:85) | `language_setup` | form (key grid) | inline copyTranslation() | none | port — this is the translation admin; see §2.3 |
-| s/c/order_configuration/index | `order_configuration.index` (:349) | BSC@order_configuration (:531) | `order_configuration` | form | second jQuery from a CDN; `$.ajax order_configuration.product-search` (JSON, ungated) builds unescaped HTML (XSS sink) | none | port |
+| s/c/order_configuration/index | `order_configuration.index` · GET …/order-configuration; two PUT settings endpoints; GET …/product/search | Store\Admin\OrderConfigurationController → `Store/Admin/Setup/OrderConfiguration/Index` | `order_configuration` | form | permission-gated JSON search; Vue text rendering | ConfigurationControllersTest; BatchOnePages.test.ts | converted, Blade deleted; XSS sink removed |
 | s/c/payment_method | `payment_method.index` (:316) | BSC@payment_method (:97) | `payment_methods_configurations` | form (8 gateway cards) | none | none | port-trim: credential inputs are `.env` (do nothing), Authorize.Net stub; only `<gw>_sandbox` toggles save; gateways pending phase 0b |
-| s/c/pickup_point/create | `pick_up_points.create` (:563) | PickupPointController@create (:52) | `pickup_point_setup` | form | aiz-selectpicker | none | port |
-| s/c/pickup_point/edit | `pick_up_points.edit` · GET …/edit/{id}?lang= (:565) | PickupPointController@edit (:107) | `pickup_point_setup` | form (language tabs) | aiz-selectpicker | none | port |
-| s/c/pickup_point/index | `pick_up_points.index` (:563) | PickupPointController@index (:42) | `pickup_point_setup` | list | confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/shipping_configuration/index | `shipping_configuration.index` (:345) | BSC@shipping_configuration (:517) | `shipping_configuration` | form | none | none | port |
+| s/c/pickup_point/create | `pick_up_points.create` · GET …/pick_up_points/create; store POST | Store\Admin\PickupPointController → `Store/Admin/Setup/PickupPoints/Create` | `pickup_point_setup` | form | shared Vue fields | PickupPointControllerTest; StorePickupPointFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/pickup_point/edit | `pick_up_points.edit` · GET …/pick_up_points/{pickupPoint}/edit; update PUT | Store\Admin\PickupPointController → `Store/Admin/Setup/PickupPoints/Edit` | `pickup_point_setup` | form (language tabs) | shared Vue fields | same | converted, Blade deleted |
+| s/c/pickup_point/index | `pick_up_points.index` · GET; destroy DELETE …/{pickupPoint} | Store\Admin\PickupPointController → `Store/Admin/Setup/PickupPoints/Index` | `pickup_point_setup` | paginated list | native confirm through shared table action | same; focused Playwright spec | converted, Blade deleted |
+| s/c/shipping_configuration/index | `shipping_configuration.index` · GET; update POST | Store\Admin\ShippingConfigurationController → `Store/Admin/Shipping/Configuration/Index` | `shipping_configuration` | form | dedicated allowlisted endpoint | ConfigurationControllersTest; BatchOnePages.test.ts | converted, Blade deleted |
 | s/c/smtp_settings | `smtp_settings.index` (:319) | BSC@smtp_settings (:64) | `smtp_settings` | form | aiz-selectpicker, inline checkMailDriver() | LegacyEnvFileProtectionTest:50 | port-trim: whole form posts to `env_key_update` (refused) — read-only; keep "Send test email" (`test.smtp`, gated by `send_newsletter`) |
 | s/c/social_login | `social_login.index` (:318) | BSC@social_login (:59) | `social_media_logins` | form | none | LegacyEnvFileProtectionTest:50 | port-trim: all 4 forms post to `env_key_update` — read-only or drop |
-| s/c/states/edit | `states.edit` (:621) | StateController@edit (:101) | `manage_shipping_states` | form | aiz-selectpicker | none | port |
-| s/c/states/index | `states.index` (:621) | StateController@index (:47) | `manage_shipping_states` | list + inline add form | aiz-selectpicker, `$.post states.status` | none | port |
-| s/c/tax/create | `tax.create` (:366) | TaxController@create — empty | `vat_&_tax_setup` | form (orphan) | aiz-selectpicker | none | **delete** (nothing renders it; byte copy of pickup_point/create) |
-| s/c/tax/edit | `tax.edit` · GET …/tax/edit/{id} (:368) | TaxController@edit (:92) | `vat_&_tax_setup` | form | none | none | port |
-| s/c/tax/index | `tax.index` (:366) | TaxController@index (:35) | `vat_&_tax_setup` | list + inline add modal | `$.post taxes.tax-status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/zones/create | `zones.create` (:633) | ZoneController@create (:39) | `manage_zones` | form | aiz-selectpicker (multiple) | none | port |
-| s/c/zones/edit | `zones.edit` (:633) | ZoneController@edit (:63) | `manage_zones` | form | aiz-selectpicker (multiple) | none | port |
-| s/c/zones/index | `zones.index` (:633) | ZoneController@index (:32) | `manage_zones` | list | confirm-delete; status switch calls an undefined `update_status()` | LegacyStoreStateChangingRoutesTest:117 | port (build or drop the status toggle) |
+| s/c/states/edit | `states.edit` · GET …/states/{state}/edit; update PUT and destroy DELETE …/{state} | Store\Admin\StateController → `Store/Admin/Shipping/States/Edit` | `manage_shipping_states` | form | shared Vue fields | StateControllerTest; StoreStateFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/states/index | `states.index` · GET/POST …/states; status PATCH …/{state}/status | Store\Admin\StateController → `Store/Admin/Shipping/States/Index` | `manage_shipping_states` | paginated list + inline add form | Inertia forms/status/delete | same | converted, Blade deleted |
+| s/c/tax/create | dead route removed | — | `vat_&_tax_setup` | — (orphan) | — | TaxControllerTest | **deleted in batch 1** |
+| s/c/tax/edit | `tax.edit` · GET …/tax/{tax}/edit; update PUT and destroy DELETE …/{tax} | Store\Admin\TaxController → `Store/Admin/Setup/Taxes/Edit` | `vat_&_tax_setup` | form | shared Vue fields | TaxControllerTest; StoreTaxFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/tax/index | `tax.index` · GET/POST …/tax; status PATCH …/{tax}/status | Store\Admin\TaxController → `Store/Admin/Setup/Taxes/Index` | `vat_&_tax_setup` | paginated list + inline add | Inertia forms/status/delete | same; focused Playwright spec | converted, Blade deleted |
+| s/c/zones/create | `zones.create` · GET …/zones/create; store POST | Store\Admin\ZoneController → `Store/Admin/Shipping/Zones/Create` | `manage_zones` | form | shared Vue fields | ZoneControllerTest; StoreZoneFormFields.test.ts; BatchOnePages.test.ts | converted, Blade deleted |
+| s/c/zones/edit | `zones.edit` · GET …/zones/{zone}/edit; update PUT and destroy DELETE …/{zone} | Store\Admin\ZoneController → `Store/Admin/Shipping/Zones/Edit` | `manage_zones` | form | shared Vue fields | same | converted, Blade deleted |
+| s/c/zones/index | `zones.index` · GET …/zones | Store\Admin\ZoneController → `Store/Admin/Shipping/Zones/Index` | `manage_zones` | paginated list | native confirm; broken legacy status toggle deliberately dropped | same | converted, Blade deleted |
 
 Notes:
 1. `env_key_update`, `overWriteEnvFile` and `updateActivationSettingsInEnv` refuse every request (BSC.php:320-358, 483-488), so smtp_settings, social_login, file_system and the Default Language form save nothing, and the google_*/facebook_*/payment_method screens save only their toggles. These views print `env()` secrets into `value=` attributes (`NoEnvOutsideConfigTest.php:58` exempts this folder); the port reads `config()` or masks them.
-2. Every settings save runs `Artisan::call('cache:clear')`, which clears the cache WMS shares. Do not port it; forget the specific keys.
-3. Only currencies/index loads HTML over AJAX (`currency.create`, `currency.edit`).
-4. Duplicate names where the explicit override wins: `tax.edit`, `cities.edit`, `pick_up_points.edit` (`…/edit/{id}`), `languages.update` (POST `…/{id}/update`), every `*.destroy` (POST `…/destroy/{id}`). The resource `GET …/{x}/edit` URIs stay registered without a name.
+2. Retained generic settings saves still run `Artisan::call('cache:clear')`, which clears the cache WMS shares. Batch 1's currency, shipping and order settings no longer use it; later ports must also forget only their specific cache keys.
+3. Batch 1 removed currencies/index's AJAX HTML create/edit endpoints; no converted page injects server HTML.
+4. Batch 1 resolved the duplicate `tax.edit`, `cities.edit`, `pick_up_points.edit` and destroy routes into explicit model-bound routes. Remaining duplicates (`languages.update` and unconverted `*.destroy`) stay for their batches.
 
 ### marketing (25 views), blog_system (6), notification (1)
 
@@ -833,8 +913,8 @@ Notes:
 
 | View | Used by | Kind | What it carries | Verdict |
 | --- | --- | --- | --- | --- |
-| layouts/app | 161 back-office views | layout | vendors.css/js + aiz-core.css/js, `bootstrap-rtl.min.css` and `dir="rtl"` from `languages.rtl` (:2-6, :25), 2 inline scripts (`AIZ.local` uploader strings :37-59, flash notify loop + language switcher + `menuSearch()` :88-134), Poppins from Google Fonts. Yields `content`, `modal`, `script` only — **no `style` yield**, so the `@section('style')` in 7 views (3 order-entry, 4 trips) is dropped | replaced by `StoreAdminLayout.vue`; delete with the last Blade module |
-| layouts/blank | nothing (0 users) | layout | leftover installer CSS | **delete now-able** (dead) — deleted in the last batch with the others to keep this pilot's diff to staff |
+| layouts/app | 138 back-office views remain (161 before the staff pilot; 155 before batch 1) | layout | vendors.css/js + aiz-core.css/js, `bootstrap-rtl.min.css` and `dir="rtl"` from `languages.rtl` (:2-6, :25), 2 inline scripts (`AIZ.local` uploader strings :37-59, flash notify loop + language switcher + `menuSearch()` :88-134), Poppins from Google Fonts. Yields `content`, `modal`, `script` only — **no `style` yield**, so the `@section('style')` in 7 views (3 order-entry, 4 trips) is dropped | replaced by `StoreAdminLayout.vue`; delete with the last Blade module |
+| layouts/blank | nothing (0 users) | layout | leftover installer CSS | **deleted 2026-10-10** after a repository-wide consumer trace found no references |
 | layouts/layout | `shop/frontend/seller_login`, `deliveryboy_login` (HomeController.php:71,73), `shop/errors/503` | layout (no nav) | same assets as app | stays: it serves the storefront's seller login, not the back office |
 | inc/admin_sidenav | layouts/app:66 | partial (sidebar, 1747 lines) | the menu tree (§2.2); 12 removed-addon blocks link to route names that no longer exist; malformed `@canany`/`@endif` nesting in Setup & Configurations (L1392-1650); a stray top-level duplicate "Shipping" group (L1654-1687); "Home Banners" hardcodes a URL without `/temp` (L771-777) | replaced by `lib/storeAdminMenu.ts`; delete with the last Blade module |
 | inc/admin_nav | layouts/app:68 | partial (top bar) | browse-website link (`home`), Clear Cache (`cache.clear`, raizer admin), notifications dropdown (unread, `admin.all-notification`), language switcher (POST `language.change`, empty 200, then reload), user menu (`profile.index`, `shop.logout`) | replaced by the layout's header/account block |

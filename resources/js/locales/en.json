@@ -25,6 +25,10 @@
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
         "close": "Close",
+        "save": "Save",
+        "saving": "Saving...",
+        "edit": "Edit",
+        "delete": "Delete",
         "filters": {
             "title": "Filters",
             "apply": "Apply filters",
@@ -912,6 +916,198 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "reference": {
+            "search": "Search",
+            "filter": "Filter",
+            "filtering": "Filtering...",
+            "all": "All",
+            "active": "Active",
+            "inactive": "Inactive",
+            "actions": "Actions",
+            "languages": "Languages"
+        },
+        "countries": {
+            "index": {
+                "title": "Shipping countries",
+                "columnName": "Country",
+                "columnCode": "Code",
+                "columnStatus": "Status",
+                "empty": "No countries found."
+            }
+        },
+        "states": {
+            "index": {
+                "title": "Shipping states",
+                "add": "Add state",
+                "columnName": "State",
+                "columnCountry": "Country",
+                "columnStatus": "Status",
+                "empty": "No states found."
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "fields": {
+                "name": "Name",
+                "country": "Country",
+                "countryPlaceholder": "Choose a country"
+            }
+        },
+        "cities": {
+            "index": {
+                "title": "Shipping cities",
+                "add": "Add city",
+                "columnName": "City",
+                "columnState": "State",
+                "columnCost": "Shipping cost",
+                "columnStatus": "Status",
+                "empty": "No cities found."
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "fields": {
+                "name": "Name",
+                "state": "State",
+                "statePlaceholder": "Choose a state",
+                "cost": "Shipping cost"
+            }
+        },
+        "zones": {
+            "index": {
+                "title": "Shipping zones",
+                "add": "Add zone",
+                "columnName": "Zone",
+                "empty": "No zones found."
+            },
+            "create": {
+                "title": "Add shipping zone"
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "fields": {
+                "name": "Name",
+                "countries": "Countries"
+            }
+        },
+        "pickupPoints": {
+            "index": {
+                "title": "Pick-up points",
+                "add": "Add pick-up point",
+                "columnName": "Name",
+                "columnManager": "Manager",
+                "columnAddress": "Location",
+                "columnPhone": "Contact",
+                "columnStatus": "Status",
+                "noManager": "No manager",
+                "open": "Open",
+                "closed": "Closed",
+                "empty": "No pick-up points found."
+            },
+            "create": {
+                "title": "Add pick-up point"
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "fields": {
+                "name": "Name",
+                "address": "Location",
+                "phone": "Phone",
+                "manager": "Manager",
+                "managerPlaceholder": "Choose a manager",
+                "active": "Open for pick-up"
+            }
+        },
+        "taxes": {
+            "index": {
+                "title": "VAT & tax",
+                "add": "Add tax",
+                "columnName": "Tax type",
+                "columnStatus": "Status",
+                "empty": "No taxes found."
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "fields": {
+                "name": "Tax name"
+            }
+        },
+        "currencies": {
+            "index": {
+                "title": "Currencies",
+                "add": "Add currency",
+                "columnName": "Currency",
+                "columnSymbol": "Symbol",
+                "columnCode": "Code",
+                "columnRate": "Exchange rate (1 USD)",
+                "columnStatus": "Status",
+                "default": "Default",
+                "empty": "No currencies found."
+            },
+            "create": {
+                "title": "Add currency"
+            },
+            "edit": {
+                "title": "Edit currency"
+            },
+            "fields": {
+                "name": "Name",
+                "symbol": "Symbol",
+                "code": "Code",
+                "exchangeRate": "Exchange rate"
+            },
+            "settings": {
+                "defaultTitle": "System default currency",
+                "defaultCurrency": "Default currency",
+                "formatsTitle": "Currency formats",
+                "symbolFormat": "Symbol format",
+                "symbol1": "[Symbol][Amount]",
+                "symbol2": "[Amount][Symbol]",
+                "symbol3": "[Symbol] [Amount]",
+                "symbol4": "[Amount] [Symbol]",
+                "decimalSeparator": "Decimal separator",
+                "decimals": "Decimal places"
+            }
+        },
+        "shippingConfiguration": {
+            "title": "Shipping configuration",
+            "methodTitle": "Shipping method",
+            "notesTitle": "How each method works",
+            "flatRateTitle": "Flat-rate cost",
+            "adminCostTitle": "Shipping cost for admin products",
+            "cost": "Cost",
+            "methods": {
+                "product_wise_shipping": "Product-wise shipping cost",
+                "flat_rate": "Flat-rate shipping cost",
+                "seller_wise_shipping": "Seller-wise flat shipping cost",
+                "area_wise_shipping": "Area-wise flat shipping cost",
+                "carrier_wise_shipping": "Carrier-wise shipping cost"
+            },
+            "notes": {
+                "product": "Adds the configured shipping cost of each product.",
+                "flat": "Uses one fixed cost regardless of how many products are purchased.",
+                "seller": "Adds one fixed cost for each seller in the order.",
+                "area": "Uses the customer's shipping city. Configure it under",
+                "carrier": "Uses carrier weight or price ranges. Configure them under"
+            }
+        },
+        "orderConfiguration": {
+            "title": "Order configuration",
+            "minimumTitle": "Minimum order amount",
+            "minimumEnabled": "Enforce a minimum order amount",
+            "minimumAmount": "Minimum amount",
+            "defaultProduct": "Default product",
+            "productPlaceholder": "Search by MAT ID",
+            "selectedProduct": "Selected product: {name}",
+            "searching": "Searching...",
+            "representativeTitle": "Default representative",
+            "representativeEnabled": "Assign a default representative",
+            "representative": "Representative",
+            "representativePlaceholder": "Choose a representative"
         }
     }
 }

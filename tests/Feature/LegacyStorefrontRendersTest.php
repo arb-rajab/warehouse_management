@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Currency;
 use Database\Seeders\PageSeeder;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,24 @@ test('the legacy registration page renders successfully', function () {
     $response = $this->get('/temp/users/registration');
 
     $response->assertOk();
+});
+
+test('the retained storefront currency switcher still updates the session', function () {
+    $currency = Currency::forceCreate([
+        'name' => 'Euro',
+        'symbol' => '€',
+        'code' => 'EUR',
+        'exchange_rate' => 1.25,
+        'status' => 1,
+    ]);
+
+    $this->post('/temp/currency', ['currency_code' => $currency->code])
+        ->assertOk()
+        ->assertSessionHas('currency_code', 'EUR')
+        ->assertSessionHas('currency_symbol', '€')
+        ->assertSessionHas('currency_exchange_rate', 1.25);
+
+    $this->post('/temp/currency', ['currency_code' => 'missing'])->assertNotFound();
 });
 
 /**

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessSetting;
-use App\Models\Product;
 use Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,7 +18,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
      * See Auth\LoginController::middleware()'s docblock for why this
      * replaces the constructor-based $this->middleware() call.
      *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     * @return array<int, Middleware>
      */
     public static function middleware(): array
     {
@@ -30,7 +29,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:features_activation', only: ['activation']),
             new Middleware('permission:smtp_settings', only: ['smtp_settings']),
             new Middleware('permission:payment_methods_configurations', only: ['payment_method', 'payment_method_update']),
-            new Middleware('permission:order_configuration', only: ['order_configuration']),
             new Middleware('permission:file_system_&_cache_configuration', only: ['file_system']),
             new Middleware('permission:social_media_logins', only: ['social_login']),
             new Middleware('permission:facebook_chat', only: ['facebook_chat', 'facebook_chat_update']),
@@ -39,19 +37,20 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha', 'google_recaptcha_update']),
             new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
             new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
-            new Middleware('permission:shipping_configuration', only: ['shipping_configuration', 'shipping_configuration_update']),
-            // Posted from several pages (general settings, order configuration, google map, currencies, website header/footer/appearance/home page).
-            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            // Posted from the Blade pages not migrated yet (general settings,
+            // Google Maps, website header/footer/appearance/home page).
+            new Middleware('permission:general_settings|google_map_setting|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
+
     public function general_setting(Request $request)
     {
-    	return view('shop.backend.setup_configurations.general_settings');
+        return view('shop.backend.setup_configurations.general_settings');
     }
 
     public function activation(Request $request)
     {
-    	return view('shop.backend.setup_configurations.activation');
+        return view('shop.backend.setup_configurations.activation');
     }
 
     public function social_login(Request $request)
@@ -74,11 +73,13 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return view('shop.backend.setup_configurations.google_configuration.google_recaptcha');
     }
 
-    public function google_map(Request $request) {
+    public function google_map(Request $request)
+    {
         return view('shop.backend.setup_configurations.google_configuration.google_map');
     }
 
-    public function google_firebase(Request $request) {
+    public function google_firebase(Request $request)
+    {
         return view('shop.backend.setup_configurations.google_configuration.google_firebase');
     }
 
@@ -104,22 +105,21 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     /**
      * Update the API key's for payment methods.
-     * @param  Request  $request
+     *
      * @return Response
      */
     public function payment_method_update(Request $request)
     {
         foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
+            $this->overWriteEnvFile($type, $request[$type]);
         }
 
         $business_settings = BusinessSetting::where('type', $request->payment_method.'_sandbox')->first();
-        if($business_settings != null){
+        if ($business_settings != null) {
             if ($request->has($request->payment_method.'_sandbox')) {
                 $business_settings->value = 1;
                 $business_settings->save();
-            }
-            else{
+            } else {
                 $business_settings->value = 0;
                 $business_settings->save();
             }
@@ -127,19 +127,20 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
     /**
      * Update the API key's for GOOGLE analytics.
-     * @param  Request  $request
+     *
      * @return Response
      */
     public function google_analytics_update(Request $request)
     {
         foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
+            $this->overWriteEnvFile($type, $request[$type]);
         }
 
         $business_settings = BusinessSetting::where('type', 'google_analytics')->first();
@@ -147,15 +148,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('google_analytics')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
@@ -170,15 +171,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('google_recaptcha')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
@@ -193,15 +194,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('google_map')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
@@ -216,28 +217,27 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('google_firebase')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
-
     /**
      * Update the API key's for GOOGLE analytics.
-     * @param  Request  $request
+     *
      * @return Response
      */
     public function facebook_chat_update(Request $request)
     {
         foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
+            $this->overWriteEnvFile($type, $request[$type]);
         }
 
         $business_settings = BusinessSetting::where('type', 'facebook_chat')->first();
@@ -245,15 +245,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('facebook_chat')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
@@ -264,7 +264,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         }
 
         $business_settings = BusinessSetting::where('type', 'facebook_comment')->first();
-        if(!$business_settings) {
+        if (! $business_settings) {
             $business_settings = new BusinessSetting;
             $business_settings->type = 'facebook_comment';
         }
@@ -278,14 +278,15 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
     public function facebook_pixel_update(Request $request)
     {
         foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
+            $this->overWriteEnvFile($type, $request[$type]);
         }
 
         $business_settings = BusinessSetting::where('type', 'facebook_pixel')->first();
@@ -293,28 +294,27 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         if ($request->has('facebook_pixel')) {
             $business_settings->value = 1;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings->value = 0;
             $business_settings->save();
         }
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
     /**
      * Update the API key's for other methods.
-     * @param  Request  $request
+     *
      * @return Response
      */
     /**
      * The settings screens used to post `.env` keys here. The server's `.env` is
      * managed by the deploy, so nothing in the admin panel writes it any more.
      *
-     * @param  Request  $request
      * @return Response
      */
     public function env_key_update(Request $request)
@@ -359,12 +359,12 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function seller_verification_form(Request $request)
     {
-    	return view('shop.backend.sellers.seller_verification_form.index');
+        return view('shop.backend.sellers.seller_verification_form.index');
     }
 
     /**
      * Update sell verification form.
-     * @param  Request  $request
+     *
      * @return Response
      */
     public function seller_verification_form_update(Request $request)
@@ -372,10 +372,10 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         $form = [];
         $select_types = ['select', 'multi_select', 'radio'];
         $j = 0;
-        for ($i=0; $i < count($request->type); $i++) {
+        for ($i = 0; $i < count($request->type); $i++) {
             $item['type'] = $request->type[$i];
             $item['label'] = $request->label[$i];
-            if(in_array($request->type[$i], $select_types)){
+            if (in_array($request->type[$i], $select_types)) {
                 $item['options'] = json_encode($request['options_'.$request->option[$j]]);
                 $j++;
             }
@@ -383,10 +383,11 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         }
         $business_settings = BusinessSetting::where('type', 'verification_form')->first();
         $business_settings->value = json_encode($form);
-        if($business_settings->save()){
+        if ($business_settings->save()) {
             Artisan::call('cache:clear');
 
-            flash(translate("Verification form updated successfully"))->success();
+            flash(translate('Verification form updated successfully'))->success();
+
             return back();
         }
     }
@@ -395,39 +396,35 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     {
 
         foreach ($request->types as $key => $type) {
-            if($type == 'site_name'){
+            if ($type == 'site_name') {
                 $this->overWriteEnvFile('APP_NAME', $request[$type]);
             }
-            if($type == 'timezone'){
+            if ($type == 'timezone') {
                 $this->overWriteEnvFile('APP_TIMEZONE', $request[$type]);
-            }
-            else {
+            } else {
                 $lang = null;
-                if(gettype($type) == 'array'){
+                if (gettype($type) == 'array') {
                     $lang = array_key_first($type);
                     $type = $type[$lang];
-                    $business_settings = BusinessSetting::where('type', $type)->where('lang',$lang)->first();
-                }else{
+                    $business_settings = BusinessSetting::where('type', $type)->where('lang', $lang)->first();
+                } else {
                     $business_settings = BusinessSetting::where('type', $type)->first();
                 }
 
-                if($business_settings!=null){
-                    if(gettype($request[$type]) == 'array'){
+                if ($business_settings != null) {
+                    if (gettype($request[$type]) == 'array') {
                         $business_settings->value = json_encode($request[$type]);
-                    }
-                    else {
+                    } else {
                         $business_settings->value = $request[$type];
                     }
                     $business_settings->lang = $lang;
                     $business_settings->save();
-                }
-                else{
+                } else {
                     $business_settings = new BusinessSetting;
                     $business_settings->type = $type;
-                    if(gettype($request[$type]) == 'array'){
+                    if (gettype($request[$type]) == 'array') {
                         $business_settings->value = json_encode($request[$type]);
-                    }
-                    else {
+                    } else {
                         $business_settings->value = $request[$type];
                     }
                     $business_settings->lang = $lang;
@@ -438,7 +435,8 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
         Artisan::call('cache:clear');
 
-        flash(translate("Settings updated successfully"))->success();
+        flash(translate('Settings updated successfully'))->success();
+
         return back();
     }
 
@@ -451,21 +449,19 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         }
 
         $business_settings = BusinessSetting::where('type', $request->type)->first();
-        if($business_settings!=null){
+        if ($business_settings != null) {
             if ($request->type == 'maintenance_mode' && $request->value == '1') {
-                if(env('DEMO_MODE') != 'On'){
+                if (env('DEMO_MODE') != 'On') {
                     Artisan::call('down');
                 }
-            }
-            elseif ($request->type == 'maintenance_mode' && $request->value == '0') {
-                if(env('DEMO_MODE') != 'On') {
+            } elseif ($request->type == 'maintenance_mode' && $request->value == '0') {
+                if (env('DEMO_MODE') != 'On') {
                     Artisan::call('up');
                 }
             }
             $business_settings->value = $request->value;
             $business_settings->save();
-        }
-        else{
+        } else {
             $business_settings = new BusinessSetting;
             $business_settings->type = $request->type;
             $business_settings->value = $request->value;
@@ -473,6 +469,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         }
 
         Artisan::call('cache:clear');
+
         return '1';
     }
 
@@ -492,14 +489,14 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return view('shop.backend.sellers.seller_commission.index');
     }
 
-    public function vendor_commission_update(Request $request){
+    public function vendor_commission_update(Request $request)
+    {
         foreach ($request->types as $key => $type) {
             $business_settings = BusinessSetting::where('type', $type)->first();
-            if($business_settings!=null){
+            if ($business_settings != null) {
                 $business_settings->value = $request[$type];
                 $business_settings->save();
-            }
-            else{
+            } else {
                 $business_settings = new BusinessSetting;
                 $business_settings->type = $type;
                 $business_settings->value = $request[$type];
@@ -510,35 +507,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         Artisan::call('cache:clear');
 
         flash(translate('Seller Commission updated successfully'))->success();
+
         return back();
-    }
-
-    public function shipping_configuration(Request $request){
-        return view('shop.backend.setup_configurations.shipping_configuration.index');
-    }
-
-    public function shipping_configuration_update(Request $request){
-        $business_settings = BusinessSetting::where('type', $request->type)->first();
-        $business_settings->value = $request[$request->type];
-        $business_settings->save();
-
-        Artisan::call('cache:clear');
-        flash(translate('Shipping Method updated successfully'))->success();
-        return back();
-    }
-
-    public function order_configuration(){
-        return view('shop.backend.setup_configurations.order_configuration.index');
-    }
-
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-
-        $results = Product::where('mat_id', 'like', '%' . $query . '%')
-            ->select('id', 'name', 'mat_id')
-            ->get();
-
-        return response()->json($results);
     }
 }

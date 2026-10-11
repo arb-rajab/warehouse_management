@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
+import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { index as orderConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
+import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as shippingConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
+import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
+import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -51,12 +60,24 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            orderConfigurationIndex.url(),
+            currenciesIndex.url(),
+            taxesIndex.url(),
+            pickupPointsIndex.url(),
+            shippingConfigurationIndex.url(),
+            countriesIndex.url(),
+            statesIndex.url(),
+            citiesIndex.url(),
+            zonesIndex.url(),
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {

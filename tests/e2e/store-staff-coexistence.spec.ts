@@ -54,3 +54,33 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     await expect(page).toHaveURL(/\/temp\/login$/);
     await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
 });
+
+test('migrated setup pages support direct visits and destructive confirmation', async ({
+    page,
+}) => {
+    await loginAsStoreAdmin(page);
+
+    await page.goto('/temp/admin/countries');
+    await expect(
+        page.getByRole('heading', { name: 'Shipping countries' }),
+    ).toBeVisible();
+    await expect(page.locator('#app')).toHaveCount(1);
+
+    await page.goto('/temp/admin/tax');
+    await expect(
+        page.getByRole('heading', { name: 'VAT & tax' }),
+    ).toBeVisible();
+    await page.locator('#name').fill('Browser VAT');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const row = page.getByRole('row', { name: /Browser VAT/ });
+    const deleteButton = row.getByRole('button', { name: 'Delete' });
+
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await deleteButton.click();
+    await expect(row).toBeVisible();
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await deleteButton.click();
+    await expect(page.getByRole('row', { name: /Browser VAT/ })).toHaveCount(0);
+});

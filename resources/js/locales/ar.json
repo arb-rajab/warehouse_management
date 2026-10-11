@@ -25,6 +25,10 @@
         "confirmDelete": "هل تريد حذف {label}؟ لا يمكن التراجع عن هذا الإجراء.",
         "cancel": "إلغاء",
         "close": "إغلاق",
+        "save": "حفظ",
+        "saving": "جارٍ الحفظ...",
+        "edit": "تعديل",
+        "delete": "حذف",
         "filters": {
             "title": "الفلاتر",
             "apply": "تطبيق الفلاتر",
@@ -912,6 +916,198 @@
                 "nameTranslationHint": "الاسم باللغة الافتراضية هو اسم الدور نفسه، وأي لغة أخرى تترجمه فقط.",
                 "permissions": "الصلاحيات"
             }
+        },
+        "reference": {
+            "search": "بحث",
+            "filter": "تصفية",
+            "filtering": "جارٍ التصفية...",
+            "all": "الكل",
+            "active": "نشط",
+            "inactive": "غير نشط",
+            "actions": "الإجراءات",
+            "languages": "اللغات"
+        },
+        "countries": {
+            "index": {
+                "title": "دول الشحن",
+                "columnName": "الدولة",
+                "columnCode": "الرمز",
+                "columnStatus": "الحالة",
+                "empty": "لم يتم العثور على دول."
+            }
+        },
+        "states": {
+            "index": {
+                "title": "مناطق الشحن",
+                "add": "إضافة منطقة",
+                "columnName": "المنطقة",
+                "columnCountry": "الدولة",
+                "columnStatus": "الحالة",
+                "empty": "لم يتم العثور على مناطق."
+            },
+            "edit": {
+                "title": "تعديل {name}"
+            },
+            "fields": {
+                "name": "الاسم",
+                "country": "الدولة",
+                "countryPlaceholder": "اختر دولة"
+            }
+        },
+        "cities": {
+            "index": {
+                "title": "مدن الشحن",
+                "add": "إضافة مدينة",
+                "columnName": "المدينة",
+                "columnState": "المنطقة",
+                "columnCost": "تكلفة الشحن",
+                "columnStatus": "الحالة",
+                "empty": "لم يتم العثور على مدن."
+            },
+            "edit": {
+                "title": "تعديل {name}"
+            },
+            "fields": {
+                "name": "الاسم",
+                "state": "المنطقة",
+                "statePlaceholder": "اختر منطقة",
+                "cost": "تكلفة الشحن"
+            }
+        },
+        "zones": {
+            "index": {
+                "title": "نطاقات الشحن",
+                "add": "إضافة نطاق",
+                "columnName": "النطاق",
+                "empty": "لم يتم العثور على نطاقات."
+            },
+            "create": {
+                "title": "إضافة نطاق شحن"
+            },
+            "edit": {
+                "title": "تعديل {name}"
+            },
+            "fields": {
+                "name": "الاسم",
+                "countries": "الدول"
+            }
+        },
+        "pickupPoints": {
+            "index": {
+                "title": "نقاط الاستلام",
+                "add": "إضافة نقطة استلام",
+                "columnName": "الاسم",
+                "columnManager": "المدير",
+                "columnAddress": "الموقع",
+                "columnPhone": "الاتصال",
+                "columnStatus": "الحالة",
+                "noManager": "بدون مدير",
+                "open": "مفتوحة",
+                "closed": "مغلقة",
+                "empty": "لم يتم العثور على نقاط استلام."
+            },
+            "create": {
+                "title": "إضافة نقطة استلام"
+            },
+            "edit": {
+                "title": "تعديل {name}"
+            },
+            "fields": {
+                "name": "الاسم",
+                "address": "الموقع",
+                "phone": "الهاتف",
+                "manager": "المدير",
+                "managerPlaceholder": "اختر مديرًا",
+                "active": "مفتوحة للاستلام"
+            }
+        },
+        "taxes": {
+            "index": {
+                "title": "ضريبة القيمة المضافة والضرائب",
+                "add": "إضافة ضريبة",
+                "columnName": "نوع الضريبة",
+                "columnStatus": "الحالة",
+                "empty": "لم يتم العثور على ضرائب."
+            },
+            "edit": {
+                "title": "تعديل {name}"
+            },
+            "fields": {
+                "name": "اسم الضريبة"
+            }
+        },
+        "currencies": {
+            "index": {
+                "title": "العملات",
+                "add": "إضافة عملة",
+                "columnName": "العملة",
+                "columnSymbol": "الرمز",
+                "columnCode": "الكود",
+                "columnRate": "سعر الصرف (1 دولار)",
+                "columnStatus": "الحالة",
+                "default": "الافتراضية",
+                "empty": "لم يتم العثور على عملات."
+            },
+            "create": {
+                "title": "إضافة عملة"
+            },
+            "edit": {
+                "title": "تعديل العملة"
+            },
+            "fields": {
+                "name": "الاسم",
+                "symbol": "الرمز",
+                "code": "الكود",
+                "exchangeRate": "سعر الصرف"
+            },
+            "settings": {
+                "defaultTitle": "العملة الافتراضية للنظام",
+                "defaultCurrency": "العملة الافتراضية",
+                "formatsTitle": "تنسيقات العملة",
+                "symbolFormat": "تنسيق الرمز",
+                "symbol1": "[الرمز][المبلغ]",
+                "symbol2": "[المبلغ][الرمز]",
+                "symbol3": "[الرمز] [المبلغ]",
+                "symbol4": "[المبلغ] [الرمز]",
+                "decimalSeparator": "الفاصل العشري",
+                "decimals": "المنازل العشرية"
+            }
+        },
+        "shippingConfiguration": {
+            "title": "إعدادات الشحن",
+            "methodTitle": "طريقة الشحن",
+            "notesTitle": "آلية عمل كل طريقة",
+            "flatRateTitle": "تكلفة السعر الثابت",
+            "adminCostTitle": "تكلفة شحن منتجات الإدارة",
+            "cost": "التكلفة",
+            "methods": {
+                "product_wise_shipping": "تكلفة الشحن حسب المنتج",
+                "flat_rate": "تكلفة شحن ثابتة",
+                "seller_wise_shipping": "تكلفة ثابتة حسب البائع",
+                "area_wise_shipping": "تكلفة ثابتة حسب المنطقة",
+                "carrier_wise_shipping": "تكلفة الشحن حسب شركة النقل"
+            },
+            "notes": {
+                "product": "تجمع تكلفة الشحن المحددة لكل منتج.",
+                "flat": "تستخدم تكلفة ثابتة بغض النظر عن عدد المنتجات.",
+                "seller": "تجمع تكلفة ثابتة لكل بائع في الطلب.",
+                "area": "تستخدم مدينة شحن العميل. اضبطها ضمن",
+                "carrier": "تستخدم نطاقات الوزن أو السعر لشركة النقل. اضبطها ضمن"
+            }
+        },
+        "orderConfiguration": {
+            "title": "إعدادات الطلب",
+            "minimumTitle": "الحد الأدنى لقيمة الطلب",
+            "minimumEnabled": "فرض حد أدنى لقيمة الطلب",
+            "minimumAmount": "الحد الأدنى للقيمة",
+            "defaultProduct": "المنتج الافتراضي",
+            "productPlaceholder": "البحث بمعرّف MAT",
+            "selectedProduct": "المنتج المحدد: {name}",
+            "searching": "جارٍ البحث...",
+            "representativeTitle": "المندوب الافتراضي",
+            "representativeEnabled": "تعيين مندوب افتراضي",
+            "representative": "المندوب",
+            "representativePlaceholder": "اختر مندوبًا"
         }
     }
 }

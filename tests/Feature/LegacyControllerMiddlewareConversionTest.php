@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Controllers\CountryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\View\View;
 
 /**
  * Regression coverage for converting 41 legacy controllers' constructor-based
@@ -24,16 +22,6 @@ use Illuminate\View\View;
  * that had extra constructor logic (dependency injection) or a different
  * call shape ($this->middleware('x', ['only' => [...]])) kept working.
  */
-test('a simple permission-gated controller\'s middleware() preserves the original permission name and scoping', function () {
-    $middleware = CountryController::middleware();
-
-    expect($middleware)->toHaveCount(1)
-        ->and($middleware[0])->toBeInstanceOf(Middleware::class)
-        ->and($middleware[0]->middleware)->toBe('permission:shipping_country_setting')
-        // The write endpoints share their page's permission (LegacyAdminPermissionsTest).
-        ->and($middleware[0]->only)->toContain('index', 'store', 'update', 'destroy');
-});
-
 test('a controller using the alternate $this->middleware($name, [\'only\' => [...]]) call shape converts correctly', function () {
     $middleware = ShopController::middleware();
 
@@ -52,18 +40,4 @@ test('a controller with dependency-injected constructor arguments keeps them alo
     // been lost during the conversion instead of just the middleware calls.
     $controller = app(ProductController::class);
     expect($controller)->toBeInstanceOf(ProductController::class);
-});
-
-test('CountryController::index() still returns its view, unaffected by the middleware conversion', function () {
-    // Deliberately calls the action directly rather than the real route:
-    // the admin layout (shop/backend/inc/admin_nav.blade.php) has its own,
-    // separate rendering issues under a synthetic auth context (the same
-    // Language-row null-safety gap fixed elsewhere for the frontend layout,
-    // plus user-relation accessors that assume a real request cycle) --
-    // real bugs, but a distinct, unscoped investigation from this pass,
-    // which only touched the controllers' own constructors.
-    $response = app(CountryController::class)->index(request());
-
-    expect($response)->toBeInstanceOf(View::class)
-        ->and($response->getName())->toBe('shop.backend.setup_configurations.countries.index');
 });

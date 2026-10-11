@@ -34,6 +34,12 @@ export default defineConfig({
     reporter: 'list',
     use: {
         baseURL,
+        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+            ? {
+                  executablePath:
+                      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+              }
+            : undefined,
         // No `retries` is configured, so 'on-first-retry' never actually
         // captured anything -- there's no first retry to trigger on.
         // 'retain-on-failure' captures a trace/screenshot/video for any
@@ -51,7 +57,7 @@ export default defineConfig({
     ],
     webServer: {
         command:
-            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
+            'rm -f database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && touch database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,
