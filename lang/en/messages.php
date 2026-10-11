@@ -46,4 +46,5 @@ return [
     'upload_refused' => 'This file type is not allowed.',
     'custom_script_editing_unavailable' => 'Custom script editing is unavailable.',
     'Manage Website Scripts' => 'Manage website scripts',
+    'upload_refused' => 'This file type is not allowed.',
 ];

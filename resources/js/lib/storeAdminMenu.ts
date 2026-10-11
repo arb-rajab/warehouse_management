@@ -32,7 +32,7 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/BlogCategoryController';
+import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
 import { index as brandsIndex } from '@/actions/App/Http/Controllers/BrandController';
 import {
@@ -44,14 +44,14 @@ import {
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
-import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
-import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
-import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
-import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import {
@@ -108,7 +108,7 @@ import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
-import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import {
     create as driversCreate,
@@ -572,6 +572,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.blogCategories',
+                inertia: true,
                 href: blogCategoriesIndex(),
                 permission: 'view_blog_categories',
             },
@@ -584,18 +585,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.flashDeals',
+                inertia: true,
                 href: flashDealsIndex(),
                 permission: 'view_all_flash_deals',
                 setting: 'Flash_deals',
             },
             {
                 labelKey: 'store.nav.offerDeals',
+                inertia: true,
                 href: offerDealsIndex(),
                 permission: 'view_all_offer_deals',
                 setting: 'Offer_deals',
             },
             {
                 labelKey: 'store.nav.dynamicPopups',
+                inertia: true,
                 href: dynamicPopupsIndex(),
                 permission: 'view_all_dynamic_popups',
                 setting: 'Offer_deals',
@@ -608,12 +612,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.subscribers',
-                href: subscribersIndex['/temp/admin/subscribers'](),
+                inertia: true,
+                href: subscribersIndex(),
                 permission: 'view_all_subscribers',
                 setting: 'Newsletters',
             },
             {
                 labelKey: 'store.nav.coupons',
+                inertia: true,
                 href: couponsIndex(),
                 permission: 'view_all_coupons',
                 setting: 'coupon_system',

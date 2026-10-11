@@ -17,7 +17,6 @@ const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
     formSlotPropsMock: vi.fn(() => ({
         errors: {} as Record<string, string>,
         processing: false,
-        cancel: () => {},
     })),
     usePageMock: vi.fn(),
     routerPostMock: vi.fn(),

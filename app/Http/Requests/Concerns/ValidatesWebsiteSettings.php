@@ -16,7 +16,7 @@ trait ValidatesWebsiteSettings
     {
         $user = $this->user('store');
 
-        return ['nullable', 'integer', Rule::exists('uploads', 'id')->where('type', 'image')->where(fn (Builder $query) => $query->when(! $user->can('viewAny', Upload::class), fn (Builder $query) => $query->where('user_id', $user->id)))];
+        return ['nullable', 'integer', Rule::exists('uploads', 'id')->where('type', 'image')->where(fn (Builder $query) => $query->when((! $user->can('view_uploads') || ! $user->can('viewAny', Upload::class)), fn (Builder $query) => $query->where('user_id', $user->id)))];
     }
 
     /** @return array<int, string> */
@@ -36,7 +36,7 @@ trait ValidatesWebsiteSettings
             }
             $ids = array_map(intval(...), explode(',', $value));
             $user = $this->user('store');
-            $found = Upload::query()->whereIn('id', $ids)->when($type !== null, fn ($query) => $query->where('type', $type))->when(! $user->can('viewAny', Upload::class), fn ($query) => $query->where('user_id', $user->id))->count();
+            $found = Upload::query()->whereIn('id', $ids)->when($type !== null, fn ($query) => $query->where('type', $type))->when((! $user->can('view_uploads') || ! $user->can('viewAny', Upload::class)), fn ($query) => $query->where('user_id', $user->id))->count();
             if (count($ids) > 20 || count(array_unique($ids)) !== count($ids) || $found !== count($ids)) {
                 $fail(__('validation.exists', ['attribute' => $attribute]));
             }

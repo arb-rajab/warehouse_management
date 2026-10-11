@@ -1,3 +1,9 @@
+import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
@@ -136,6 +142,12 @@ describe('storeAdminMenu', () => {
                 conversationsIndex.url(),
                 productQueriesIndex.url(),
                 supportTicketsIndex.url(),
+                blogCategoriesIndex.url(),
+                couponsIndex.url(),
+                dynamicPopupsIndex.url(),
+                flashDealsIndex.url(),
+                offerDealsIndex.url(),
+                subscribersIndex.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),

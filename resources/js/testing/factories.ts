@@ -10,7 +10,34 @@ import type {
     StoreWebsiteHomeSettings,
     StoreWebsitePage,
     StoreWebsitePageForm,
+    PermissionGroup,
+    StaffMember,
+    StoreBlogCategory,
+    StoreCoupon,
+    StoreSubscriber,
+    StoreRole,
+    StoreSharedProps,
+    StoreUpload,
+    StoreOffer,
+    StoreFlashDeal,
+    StoreCampaignProduct,
+    AdminLanguage,
+    StoreTranslation,
+    StoreCountry,
+    StoreState,
+    StoreCity,
+    StoreZone,
+    StorePickupPoint,
+    StoreTax,
+    StoreCurrency,
+    StoreProfile,
+    ClassifiedProduct,
+    StoreBrandDiscount,
+    StoreOffersCatalog,
+    StoreReview,
+    StoreTicketReply,
 } from '@/types/store';
+
 import type {
     StoreAttribute,
     StoreAttributeValue,
@@ -47,28 +74,6 @@ import type {
     Setting,
     User,
 } from '@/types/admin';
-import type {
-    AdminLanguage,
-    StoreTranslation,
-    PermissionGroup,
-    StoreCountry,
-    StoreState,
-    StoreCity,
-    StoreZone,
-    StorePickupPoint,
-    StoreTax,
-    StoreCurrency,
-    StaffMember,
-    StoreRole,
-    StoreSharedProps,
-    StoreUpload,
-    StoreProfile,
-    ClassifiedProduct,
-    StoreBrandDiscount,
-    StoreOffersCatalog,
-    StoreReview,
-    StoreTicketReply,
-} from '@/types/store';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -851,6 +856,86 @@ export function storeTicketReply(
         attachments: [
             { id: 8, name: 'reply.png', url: '/uploads/all/reply.png' },
         ],
+        ...overrides,
+    };
+}
+
+export function storeBlogCategory(
+    overrides: Partial<StoreBlogCategory> = {},
+): StoreBlogCategory {
+    return { id: 4, category_name: 'Recipes', ...overrides };
+}
+
+export function storeSubscriber(
+    overrides: Partial<StoreSubscriber> = {},
+): StoreSubscriber {
+    return {
+        id: 5,
+        email: 'reader@example.com',
+        created_at: '2026-10-08',
+        ...overrides,
+    };
+}
+
+export function storeCoupon(overrides: Partial<StoreCoupon> = {}): StoreCoupon {
+    return {
+        id: 6,
+        type: 'cart_base',
+        code: 'SPRING',
+        discount: 10,
+        discount_type: 'percent',
+        start_date: '2026-10-01',
+        end_date: '2026-10-31',
+        product_ids: [],
+        min_buy: 20,
+        max_discount: 5,
+        ...overrides,
+    };
+}
+
+/** UploadResource: a stored PNG, as the uploads library lists it. */
+export function storeOffer(overrides: Partial<StoreOffer> = {}): StoreOffer {
+    return {
+        id: 1,
+        title: 'Product offer',
+        banner: '',
+        start_date: '2026-10-01T08:09:11',
+        end_date: '2026-10-30T09:08:07',
+        offer_type: 'products_offer',
+        brand_id: null,
+        is_active: true,
+        is_repeatable: false,
+        multiple_usage: false,
+        ...overrides,
+    };
+}
+export function storeFlashDeal(
+    overrides: Partial<StoreFlashDeal> = {},
+): StoreFlashDeal {
+    return {
+        id: 2,
+        title: 'Flash deal',
+        slug: 'flash-deal',
+        banner: '',
+        start_date: '2026-10-01T08:09:11',
+        end_date: '2026-10-30T09:08:07',
+        background_color: '#ffffff',
+        text_color: 'dark',
+        status: true,
+        featured: false,
+        public_url: '/temp/flash-deal/flash-deal',
+        ...overrides,
+    };
+}
+export function storeCampaignProduct(
+    overrides: Partial<StoreCampaignProduct> = {},
+): StoreCampaignProduct {
+    return {
+        id: 12,
+        name: 'Translated product',
+        price: 100,
+        discount: 10,
+        discount_type: 'amount',
         ...overrides,
     };
 }

@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\Store\Admin\CampaignProductController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Store\Admin\ProductQueryController;
 use App\Http\Controllers\Store\Admin\ConversationController;
@@ -10,7 +11,7 @@ use App\Http\Controllers\Store\Admin\AttributeController;
 use App\Http\Controllers\Store\Admin\BrandDiscountController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
 use App\Http\Controllers\Store\Admin\ColorController;
-use App\Http\Controllers\BlogCategoryController;
+use App\Http\Controllers\Store\Admin\BlogCategoryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
@@ -19,7 +20,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\Store\Admin\CountryController;
-use App\Http\Controllers\CouponController;
+use App\Http\Controllers\Store\Admin\CouponController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
 use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
 use App\Http\Controllers\Store\Admin\OrderConfigurationController;
@@ -27,15 +28,15 @@ use App\Http\Controllers\Store\Admin\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
-use App\Http\Controllers\DynamicPopupController;
+use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\FeatureOrderController;
 use App\Http\Controllers\FeatureOrderTripController;
-use App\Http\Controllers\FlashDealController;
+use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\LanguageController;
 use App\Http\Controllers\Store\Admin\SettingsController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Store\Admin\NotificationController;
-use App\Http\Controllers\OfferController;
+use App\Http\Controllers\Store\Admin\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
 use App\Http\Controllers\Store\Admin\ProductSearchController;
 use App\Http\Controllers\OrderController;
@@ -58,7 +59,7 @@ use App\Http\Controllers\Store\Admin\StaffController;
 use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
-use App\Http\Controllers\SubscriberController;
+use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
 use App\Http\Controllers\Trip\DriverController;
@@ -300,11 +301,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     // Dynamic Popup
-    Route::resource('dynamic-popups', DynamicPopupController::class);
+    Route::get('/dynamic-popups', [DynamicPopupController::class, 'index'])->name('dynamic-popups.index');
+    Route::get('/dynamic-popups/create', [DynamicPopupController::class, 'create'])->name('dynamic-popups.create');
+    Route::post('/dynamic-popups', [DynamicPopupController::class, 'store'])->name('dynamic-popups.store');
+    Route::get('/dynamic-popups/{popup}/edit', [DynamicPopupController::class, 'edit'])->name('dynamic-popups.edit');
+    Route::put('/dynamic-popups/{popup}', [DynamicPopupController::class, 'update'])->name('dynamic-popups.update');
+    Route::delete('/dynamic-popups/{popup}', [DynamicPopupController::class, 'destroy'])->name('dynamic-popups.destroy');
     Route::controller(DynamicPopupController::class)->group(function () {
-        Route::post('/dynamic-popups/destroy/{id}', 'destroy')->name('dynamic-popups.destroy');
-        Route::post('/bulk-dynamic-popup-delete', 'bulk_dynamic_popup_delete')->name('bulk-dynamic-popup-delete');
-        Route::post('/dynamic-popups-update-status', 'update_status')->name('dynamic-popups.update-status');
+        Route::post('/bulk-dynamic-popup-delete', 'bulkDestroy')->name('bulk-dynamic-popup-delete');
+        Route::post('/dynamic-popups-update-status', 'updateStatus')->name('dynamic-popups.update-status');
     });
 
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
@@ -437,15 +442,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::delete('/staffs/{staff}', 'destroy')->name('staffs.destroy');
     });
 
-    // Flash Deal
-    Route::resource('flash_deals', FlashDealController::class);
+    Route::get('/campaign-products', [CampaignProductController::class, 'index'])->name('admin.campaign-products.index');
+    Route::get('/campaign-brands', [CampaignProductController::class, 'brands'])->name('admin.campaign-products.brands');
     Route::controller(FlashDealController::class)->group(function () {
-        Route::get('/flash_deals/edit/{id}', 'edit')->name('flash_deals.edit');
-        Route::post('/flash_deals/destroy/{id}', 'destroy')->name('flash_deals.destroy');
-        Route::post('/flash_deals/update_status', 'update_status')->name('flash_deals.update_status');
-        Route::post('/flash_deals/update_featured', 'update_featured')->name('flash_deals.update_featured');
-        Route::post('/flash_deals/product_discount', 'product_discount')->name('flash_deals.product_discount');
-        Route::post('/flash_deals/product_discount_edit', 'product_discount_edit')->name('flash_deals.product_discount_edit');
+        Route::get('/flash_deals', 'index')->name('flash_deals.index');
+        Route::get('/flash_deals/create', 'create')->name('flash_deals.create');
+        Route::post('/flash_deals', 'store')->name('flash_deals.store');
+        Route::get('/flash_deals/{flashDeal}/edit', 'edit')->name('flash_deals.edit');
+        Route::put('/flash_deals/{flashDeal}', 'update')->name('flash_deals.update');
+        Route::delete('/flash_deals/{flashDeal}', 'destroy')->name('flash_deals.destroy');
+        Route::put('/flash_deals/{flashDeal}/status', 'update_status')->name('flash_deals.update_status');
+        Route::put('/flash_deals/{flashDeal}/featured', 'update_featured')->name('flash_deals.update_featured');
     });
 
     Route::controller(FeatureOrderController::class)->group(function () {
@@ -474,29 +481,19 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(OfferController::class)->group(function () {
         Route::get('/offer_deals/index', 'index')->name('offer_deals.index');
         Route::get('/offer_deals/create', 'create')->name('offer_deals.create');
-        Route::post('/offer_deals/store', 'store')->name('offer_deals.store');
-        Route::get('/offer_deals/edit/{id}', 'edit')->name('offer_deals.edit');
-        Route::post('/offer_deals/update/{id}', 'update')->name('offer_deals.update');
-        Route::post('/offer_deals/destroy/{id}', 'destroy')->name('offer_deals.destroy');
-        Route::post('/offer_deals/update_status', 'update_status')->name('offer_deals.update_status');
-        Route::post('/offer_deals/update_repeatable', 'update_repeatable')->name('offer_deals.update_repeatable');
-        Route::post('/offer_deals/update_multiple_usage', 'update_multiple_usage')->name('offer_deals.update_multiple_usage');
-
-        Route::get('/offer_deals/base_product_discount', 'base_product_discount')->name('offer_deals.base_product_discount');//post
-        Route::get('/offer_deals/product_discount', 'product_discount')->name('offer_deals.product_discount');//post
-        Route::post('/offer_deals/product_discount_edit', 'product_discount_edit')->name('offer_deals.product_discount_edit');
-
         Route::get('/offer_deals/brand-create', 'brandCreate')->name('offer_deals.brands.create');
-        Route::get('/offer_deals/base_brand_discount', 'base_brand_discount')->name('offer_deals.base_brand_discount');//post
-        Route::get('/offer_deals/brand_discount', 'brand_discount')->name('offer_deals.brand_discount');//post
-        Route::post('/offer_deals/brand_discount_edit', 'brand_discount_edit')->name('offer_deals.brand_discount_edit');
+        Route::post('/offer_deals/store', 'store')->name('offer_deals.store');
+        Route::get('/offer_deals/{offer}/edit', 'edit')->name('offer_deals.edit');
+        Route::put('/offer_deals/{offer}', 'update')->name('offer_deals.update');
+        Route::delete('/offer_deals/{offer}', 'destroy')->name('offer_deals.destroy');
+        Route::put('/offer_deals/{offer}/status', 'update_status')->name('offer_deals.update_status');
+        Route::put('/offer_deals/{offer}/repeatable', 'update_repeatable')->name('offer_deals.update_repeatable');
+        Route::put('/offer_deals/{offer}/multiple-usage', 'update_multiple_usage')->name('offer_deals.update_multiple_usage');
     });
 
-    //Subscribers
-    Route::controller(SubscriberController::class)->group(function () {
-        Route::get('/subscribers', 'index')->name('subscribers.index');
-        Route::post('/subscribers/destroy/{id}', 'destroy')->name('subscriber.destroy');
-    });
+    // Subscribers: the storefront keeps subscribers.index and subscribers.store.
+    Route::get('/subscribers', [SubscriberController::class, 'index'])->name('admin.subscribers.index');
+    Route::delete('/subscribers/{subscriber}', [SubscriberController::class, 'destroy'])->name('subscriber.destroy');
 
     // Order
     Route::resource('orders', OrderController::class)->except(['destroy']);
@@ -542,9 +539,12 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
 
     //Blog Section
-    //Blog cateory
-    Route::resource('blog-category', BlogCategoryController::class);
-    Route::post('/blog-category/destroy/{id}', [BlogCategoryController::class, 'destroy'])->name('blog-category.destroy');
+    Route::get('/blog-category', [BlogCategoryController::class, 'index'])->name('blog-category.index');
+    Route::get('/blog-category/create', [BlogCategoryController::class, 'create'])->name('blog-category.create');
+    Route::post('/blog-category', [BlogCategoryController::class, 'store'])->name('blog-category.store');
+    Route::get('/blog-category/{category}/edit', [BlogCategoryController::class, 'edit'])->name('blog-category.edit');
+    Route::put('/blog-category/{category}', [BlogCategoryController::class, 'update'])->name('blog-category.update');
+    Route::delete('/blog-category/{category}', [BlogCategoryController::class, 'destroy'])->name('blog-category.destroy');
 
     // Blog
     Route::resource('blog', BlogController::class);
@@ -553,15 +553,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/blog/change-status', 'change_status')->name('blog.change-status');
     });
 
-    //Coupons
-    Route::resource('coupon', CouponController::class);
-    Route::controller(CouponController::class)->group(function () {
-        Route::post('/coupon/destroy/{id}', 'destroy')->name('coupon.destroy');
-
-        //Coupon Form
-        Route::post('/coupon/get_form', 'get_coupon_form')->name('coupon.get_coupon_form');
-        Route::post('/coupon/get_form_edit', 'get_coupon_form_edit')->name('coupon.get_coupon_form_edit');
-    });
+    // Coupons: the seller's shared Blade partials and request remain in place.
+    Route::get('/coupon', [CouponController::class, 'index'])->name('coupon.index');
+    Route::get('/coupon/create', [CouponController::class, 'create'])->name('coupon.create');
+    Route::get('/coupon/product-options', [CouponController::class, 'productOptions'])->name('coupon.product-options');
+    Route::post('/coupon', [CouponController::class, 'store'])->name('coupon.store');
+    Route::get('/coupon/{coupon}/edit', [CouponController::class, 'edit'])->name('coupon.edit');
+    Route::put('/coupon/{coupon}', [CouponController::class, 'update'])->name('coupon.update');
+    Route::delete('/coupon/{coupon}', [CouponController::class, 'destroy'])->name('coupon.destroy');
 
     //Reviews
     Route::get('/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');

@@ -208,9 +208,9 @@ test('the store admin flash deal list pages', function () {
     }
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/flash_deals?page=$page"),
-        fn ($response) => $response->viewData('flash_deals')->pluck('id')->all(),
+        fn (int $page) => $this->get("/temp/admin/flash_deals?per_page=10&page=$page"),
+        fn ($response) => array_column($response->inertiaProps('deals.data'), 'id'),
         total: 18,
-        perPage: 15,
+        perPage: 10,
     );
 });

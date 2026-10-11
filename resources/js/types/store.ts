@@ -310,3 +310,113 @@ export interface StoreTicketReply {
     reply_html: string;
     attachments: StoreTicketAttachment[];
 }
+
+export interface StoreBlogCategory {
+    id: number;
+    category_name: string;
+}
+
+export interface StoreSubscriber {
+    id: number;
+    email: string;
+    created_at: string | null;
+}
+
+export interface StoreCoupon {
+    id: number;
+    type: 'product_base' | 'cart_base';
+    code: string;
+    discount: number;
+    discount_type: 'amount' | 'percent';
+    start_date: string;
+    end_date: string;
+    product_ids: number[];
+    min_buy: number | null;
+    max_discount: number | null;
+}
+
+export interface StoreCouponProductOption {
+    id: number;
+    name: string;
+}
+
+/** The kinds of file the store's uploader accepts (MultipartUploadService::KINDS). */
+export interface StoreCampaignProduct {
+    id: number;
+    name: string;
+    price: number;
+    discount: number;
+    discount_type: 'amount' | 'percent';
+}
+export interface StoreCampaignRow {
+    id: number;
+    discount: number;
+    discount_type: 'amount' | 'percent';
+    quantity?: number;
+}
+export interface StoreCampaign {
+    id: number;
+    title: string;
+    banner: string;
+    start_date: string;
+    end_date: string;
+}
+export interface StoreOffer extends StoreCampaign {
+    offer_type: 'products_offer' | 'brand_offer';
+    brand_id: number | null;
+    is_active: boolean;
+    is_repeatable: boolean;
+    multiple_usage: boolean;
+}
+export interface StoreFlashDeal extends StoreCampaign {
+    slug: string;
+    background_color: string;
+    text_color: 'dark' | 'light';
+    status: boolean;
+    featured: boolean;
+    public_url: string;
+}
+export interface StoreCampaignFilters {
+    search: string | null;
+    per_page: number;
+}
+
+export interface StoreMarketingOption {
+    id: number;
+    name: string;
+}
+export interface StoreDynamicPopup {
+    id: number;
+    title: string;
+    summary: string | null;
+    banner: string;
+    btn_text: string | null;
+    delay_seconds: number;
+    offer_id: number | null;
+    show_page: number;
+}
+export interface StoreDynamicPopupSummary {
+    id: number;
+    title: string;
+    banner_url: string | null;
+    btn_link: string | null;
+    status: boolean;
+}
+export interface StoreBlogSummary {
+    id: number;
+    title: string;
+    category: { id: number; category_name: string } | null;
+    status: boolean;
+    public_url: string;
+}
+export interface StoreBlog extends StoreBlogSummary {
+    slug: string;
+    short_description: string | null;
+    banner: string;
+    description: string;
+    meta_title: string;
+    meta_img: string;
+    meta_description: string;
+    meta_keywords: string;
+    category_id: number;
+}

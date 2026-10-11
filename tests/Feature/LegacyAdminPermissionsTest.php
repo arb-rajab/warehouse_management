@@ -44,9 +44,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own profile and uploads.
     'ProfileController@update',
-    'UploadController@bulkDestroy',
-    'UploadController@destroy',
-    'UploadController@store',
 
     // Read-only AJAX helpers the product forms post to.
     'ProductController@fetch',
@@ -82,10 +79,6 @@ const ADMIN_READS_STILL_UNGATED = [
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
     'ProfileController@index',
-    'UploadController@browse',
-    'UploadController@create',
-    'UploadController@index',
-    'UploadController@previews',
 
     // Read-only AJAX helpers the product forms use.
     'ProductController@getDetails',
@@ -204,19 +197,20 @@ test('the offer deal pages and the notification pages ask for the permissions th
         Permission::findOrCreate($name, 'store');
     }
 
+    $offer = \App\Models\Offer::forceCreate(['title' => 'Permission fixture']);
     $staff = createStoreUser('staff');
     actingAsStoreUser($staff);
 
     $this->get(route('offer_deals.index'))->assertForbidden();
-    $this->post(route('offer_deals.update_status'), ['id' => 1, 'status' => 1])->assertForbidden();
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+    $this->put(route('offer_deals.update_status', $offer), ['status' => 1])->assertForbidden();
+    $this->delete(route('offer_deals.destroy', $offer))->assertForbidden();
 
     $staff->givePermissionTo('view_all_offer_deals');
 
     expect($this->get(route('offer_deals.index'))->getStatusCode())->not->toBe(403);
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+    $this->delete(route('offer_deals.destroy', $offer))->assertForbidden();
 
     $staff->givePermissionTo('delete_offer_deal');
 
-    expect($this->post(route('offer_deals.destroy', 1))->getStatusCode())->not->toBe(403);
+    expect($this->delete(route('offer_deals.destroy', $offer))->getStatusCode())->not->toBe(403);
 });

@@ -1665,6 +1665,293 @@
             "removeTable": "إزالة الجدول",
             "source": "مصدر HTML",
             "fullscreen": "ملء الشاشة"
+        },
+        "blogCategories": {
+            "index": {
+                "title": "فئات المدونة",
+                "add": "إضافة فئة",
+                "columnName": "الاسم",
+                "columnActions": "الإجراءات",
+                "empty": "لا توجد فئات.",
+                "edit": "تعديل",
+                "delete": "حذف",
+                "search": "البحث",
+                "searching": "جارٍ البحث…"
+            },
+            "fields": {
+                "name": "الاسم"
+            },
+            "create": {
+                "title": "إضافة فئة مدونة",
+                "submit": "إنشاء فئة",
+                "submitting": "جارٍ الإنشاء…"
+            },
+            "edit": {
+                "title": "تعديل فئة المدونة",
+                "submit": "حفظ التغييرات",
+                "submitting": "جارٍ الحفظ…"
+            }
+        },
+        "subscribers": {
+            "index": {
+                "title": "المشتركون",
+                "columnEmail": "البريد الإلكتروني",
+                "columnDate": "التاريخ",
+                "columnActions": "الإجراءات",
+                "empty": "لا يوجد مشتركون.",
+                "delete": "حذف"
+            }
+        },
+        "coupons": {
+            "index": {
+                "title": "القسائم",
+                "add": "إضافة قسيمة",
+                "code": "الرمز",
+                "type": "النوع",
+                "discount": "الخصم",
+                "startDate": "تاريخ البداية",
+                "endDate": "تاريخ النهاية",
+                "actions": "الإجراءات",
+                "empty": "لم يتم العثور على قسائم.",
+                "edit": "تعديل",
+                "delete": "حذف"
+            },
+            "create": {
+                "title": "إضافة قسيمة",
+                "submit": "إنشاء قسيمة",
+                "submitting": "جارٍ الإنشاء…"
+            },
+            "edit": {
+                "title": "تعديل القسيمة",
+                "submit": "حفظ التغييرات",
+                "submitting": "جارٍ الحفظ…"
+            },
+            "fields": {
+                "type": "نوع القسيمة",
+                "cart": "خصم السلة",
+                "product": "خصم المنتج",
+                "code": "رمز القسيمة",
+                "discountType": "نوع الخصم",
+                "amount": "مبلغ",
+                "percent": "نسبة مئوية",
+                "discount": "الخصم",
+                "startDate": "تاريخ البداية",
+                "endDate": "تاريخ النهاية",
+                "minBuy": "الحد الأدنى للشراء",
+                "maxDiscount": "الحد الأقصى للخصم",
+                "searchProducts": "البحث عن المنتجات",
+                "searching": "جارٍ البحث…",
+                "products": "المنتجات"
+            }
+        },
+        "campaigns": {
+            "fields": {
+                "title": "العنوان",
+                "banner": "البانر",
+                "startDate": "تاريخ البداية",
+                "endDate": "تاريخ النهاية",
+                "searchProducts": "البحث عن المنتجات الأساسية والمكافآت",
+                "searchBrands": "البحث عن العلامات التجارية",
+                "searching": "جارٍ البحث…",
+                "products": "منتجات المكافأة",
+                "product": "المنتج",
+                "discount": "الخصم",
+                "quantity": "كمية المكافأة",
+                "discountType": "نوع الخصم",
+                "amount": "مبلغ",
+                "percent": "نسبة مئوية",
+                "actions": "الإجراءات",
+                "remove": "إزالة",
+                "empty": "لم يتم اختيار منتجات.",
+                "unavailable": "المنتج غير متاح رقم {id}",
+                "brand": "العلامة التجارية",
+                "baseProduct": "المنتج الأساسي",
+                "baseQuantity": "الكمية الأساسية المطلوبة",
+                "spendThreshold": "الإنفاق المطلوب على العلامة",
+                "choose": "اختر…",
+                "backgroundColor": "لون الخلفية",
+                "textColor": "لون النص",
+                "dark": "داكن",
+                "light": "فاتح",
+                "languages": "اللغات",
+                "active": "نشط",
+                "repeatable": "متكرر",
+                "multipleUsage": "استخدام متعدد",
+                "featured": "مميز",
+                "price": "السعر الأساسي"
+            },
+            "saving": "جارٍ الحفظ…",
+            "search": "بحث",
+            "enable": "تفعيل",
+            "disable": "تعطيل",
+            "enabled": "مفعّل",
+            "disabled": "معطّل",
+            "toggle": "تبديل {field} لـ {title}",
+            "viewPublic": "عرض الحملة العامة",
+            "edit": "تعديل",
+            "delete": "حذف"
+        },
+        "offers": {
+            "index": {
+                "title": "العروض",
+                "add": "إضافة عرض منتج",
+                "addBrand": "إضافة عرض علامة تجارية"
+            },
+            "create": {
+                "title": "إنشاء عرض",
+                "submit": "إنشاء عرض"
+            },
+            "edit": {
+                "title": "تعديل العرض",
+                "submit": "حفظ العرض"
+            }
+        },
+        "flashDeals": {
+            "index": {
+                "title": "العروض السريعة",
+                "add": "إضافة عرض سريع"
+            },
+            "create": {
+                "title": "إنشاء عرض سريع",
+                "submit": "إنشاء عرض سريع"
+            },
+            "edit": {
+                "title": "تعديل العرض السريع",
+                "submit": "حفظ العرض السريع"
+            }
+        },
+        "dynamicPopups": {
+            "create": {
+                "title": "إضافة نافذة منبثقة",
+                "submit": "حفظ النافذة",
+                "submitting": "جارٍ الحفظ…"
+            },
+            "edit": {
+                "title": "تعديل النافذة المنبثقة",
+                "submit": "حفظ التغييرات",
+                "submitting": "جارٍ الحفظ…"
+            },
+            "fields": {
+                "title": "العنوان",
+                "summary": "الملخص",
+                "banner": "الصورة",
+                "buttonText": "نص الزر",
+                "delay": "التأخير بالثواني",
+                "offer": "العرض",
+                "page": "صفحة العرض",
+                "home": "الرئيسية",
+                "choose": "اختر خيارًا"
+            },
+            "index": {
+                "title": "النوافذ المنبثقة",
+                "add": "إضافة نافذة",
+                "search": "بحث",
+                "searching": "جارٍ البحث…",
+                "select": "تحديد",
+                "image": "الصورة",
+                "link": "الرابط",
+                "status": "الحالة",
+                "actions": "الإجراءات",
+                "empty": "لا توجد نوافذ منبثقة.",
+                "edit": "تعديل",
+                "delete": "حذف",
+                "published": "منشورة",
+                "hidden": "مخفية",
+                "publish": "نشر",
+                "hide": "إخفاء",
+                "updating": "جارٍ التحديث…",
+                "selectPopup": "تحديد {title}",
+                "selectAll": "تحديد الكل في هذه الصفحة",
+                "selection": "{count} نوافذ محددة",
+                "deleteSelection": "حذف المحدد",
+                "deleting": "جارٍ الحذف…",
+                "confirmPublish": "هل تريد نشر هذه النافذة؟ ستظهر للعملاء الزائرين فورًا.",
+                "confirmHide": "هل تريد إخفاء هذه النافذة؟ سيتوقف ظهورها للعملاء الزائرين فورًا."
+            }
+        },
+        "newsletters": {
+            "title": "إرسال نشرة بريدية",
+            "send": "إرسال",
+            "sending": "جارٍ الإرسال…",
+            "subject": "موضوع النشرة البريدية",
+            "content": "محتوى النشرة البريدية",
+            "smtpMissing": "يرجى إعداد SMTP قبل إرسال النشرات البريدية.",
+            "recipientHelp": "اختر بريد مستخدم أو مشترك واحدًا على الأقل. ابحث للعثور على المزيد من المستلمين.",
+            "searching": "جارٍ البحث…",
+            "search": {
+                "users": "بحث في بريد المستخدمين",
+                "subscribers": "بحث في بريد المشتركين"
+            },
+            "recipients": {
+                "users": "بريد المستخدمين",
+                "subscribers": "بريد المشتركين"
+            }
+        },
+        "blogPosts": {
+            "index": {
+                "title": "مقالات المدونة",
+                "add": "إضافة مقال",
+                "search": "بحث المقالات",
+                "searching": "جارٍ البحث…",
+                "columnTitle": "العنوان",
+                "columnCategory": "الفئة",
+                "columnStatus": "منشور",
+                "columnActions": "الإجراءات",
+                "empty": "لم يتم العثور على مقالات.",
+                "edit": "تعديل",
+                "delete": "حذف",
+                "view": "عرض المقال العام",
+                "publish": "نشر",
+                "unpublish": "إلغاء النشر",
+                "updating": "جارٍ التحديث…"
+            },
+            "create": {
+                "title": "إضافة مقال للمدونة",
+                "submit": "إنشاء مقال",
+                "submitting": "جارٍ الإنشاء…"
+            },
+            "edit": {
+                "title": "تعديل مقال المدونة",
+                "submit": "حفظ المقال",
+                "submitting": "جارٍ الحفظ…"
+            },
+            "fields": {
+                "title": "العنوان",
+                "category": "الفئة",
+                "selectCategory": "اختر فئة",
+                "slug": "الرابط المختصر",
+                "summary": "الوصف المختصر",
+                "description": "المحتوى",
+                "banner": "الصورة الرئيسية",
+                "metaTitle": "عنوان البيانات الوصفية",
+                "metaImage": "صورة البيانات الوصفية",
+                "metaDescription": "الوصف التعريفي",
+                "metaKeywords": "الكلمات المفتاحية"
+            }
+        },
+        "richText": {
+            "toolbar": "تنسيق النص",
+            "bold": "غامق",
+            "italic": "مائل",
+            "underline": "تسطير",
+            "paragraph": "فقرة",
+            "heading": "عنوان",
+            "bulletList": "قائمة نقطية",
+            "orderedList": "قائمة مرقمة",
+            "quote": "اقتباس",
+            "table": "إدراج جدول",
+            "clear": "إزالة التنسيق",
+            "undo": "تراجع",
+            "redo": "إعادة",
+            "source": "تعديل HTML",
+            "visual": "المحرر المرئي",
+            "linkUrl": "رابط",
+            "addLink": "إدراج رابط",
+            "imageUrl": "رابط الصورة",
+            "addImage": "إدراج صورة",
+            "invalidUrl": "أدخل رابط ويب آمنًا أو رابطًا نسبيًا.",
+            "required": "أدخل المحتوى.",
+            "tooLong": "يتجاوز المحتوى الطول المسموح."
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

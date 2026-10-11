@@ -32,6 +32,7 @@ parameters:
     # by hand going forward — a genuinely new legacy-style file belongs in
     # its own reviewed exclusion, not silently folded into this one.
     excludePaths:
+        - app/Http/Controllers/NewsletterController.php
         - app/Http/Controllers/PageController.php
         - app/Http/Controllers/WebsiteController.php
         - app/Models/CustomerProduct.php
@@ -142,7 +143,6 @@ parameters:
         - app/Http/Controllers/Auth/RegisterController.php
         - app/Http/Controllers/Auth/ResetPasswordController.php
         - app/Http/Controllers/Auth/VerificationController.php
-        - app/Http/Controllers/BlogCategoryController.php
         - app/Http/Controllers/BlogController.php
         - app/Http/Controllers/BrandController.php
         - app/Http/Controllers/BusinessSettingsController.php
@@ -154,24 +154,19 @@ parameters:
         - app/Http/Controllers/CommissionController.php
         - app/Http/Controllers/CompareController.php
         - app/Http/Controllers/ConversationController.php
-        - app/Http/Controllers/CouponController.php
         - app/Http/Controllers/CronJobsController.php
         - app/Http/Controllers/CurrencyController.php
         - app/Http/Controllers/CustomerController.php
         - app/Http/Controllers/CustomerPackageController.php
         - app/Http/Controllers/CustomerProductController.php
         - app/Http/Controllers/DigitalProductController.php
-        - app/Http/Controllers/DynamicPopupController.php
         - app/Http/Controllers/FeatureOrderController.php
         - app/Http/Controllers/FeatureOrderTripController.php
-        - app/Http/Controllers/FlashDealController.php
         - app/Http/Controllers/FollowSellerController.php
         - app/Http/Controllers/HomeController.php
         - app/Http/Controllers/InvoiceController.php
         - app/Http/Controllers/MessageController.php
-        - app/Http/Controllers/NewsletterController.php
         - app/Http/Controllers/NotificationController.php
-        - app/Http/Controllers/OfferController.php
         - app/Http/Controllers/OrderController.php
         - app/Http/Controllers/Payment/AamarpayController.php
         - app/Http/Controllers/Payment/BkashController.php
@@ -241,7 +236,6 @@ parameters:
         - app/Http/Requests/AttributeValueRequest.php
         - app/Http/Requests/CarrierRequest.php
         - app/Http/Requests/CouponRequest.php
-        - app/Http/Requests/DynamicPopupRequest.php
         - app/Http/Requests/ProductRequest.php
         - app/Http/Requests/SellerProfileRequest.php
         - app/Http/Requests/Trips/DriverRequest.php
@@ -354,7 +348,6 @@ parameters:
         - app/Models/AttributeTranslation.php
         - app/Models/AttributeValue.php
         - app/Models/AuctionProductBid.php
-        - app/Models/Blog.php
         - app/Models/BlogCategory.php
         - app/Models/Brand.php
         - app/Models/BrandTranslation.php
