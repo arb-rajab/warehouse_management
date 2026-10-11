@@ -12,9 +12,9 @@ import {
 import { computed, ref } from 'vue';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
+import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as notificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/NotificationController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
-import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import FormField from '@/components/FormField.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
@@ -345,9 +345,7 @@ function toggle(labelKey: string): void {
                                 </li>
                             </ul>
                             <a
-                                :href="
-                                    notificationsIndex.url()
-                                "
+                                :href="notificationsIndex.url()"
                                 class="mt-3 block text-blue-700 dark:text-blue-400"
                                 >{{ t('store.nav.allNotifications') }}</a
                             >

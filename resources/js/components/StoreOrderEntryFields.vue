@@ -77,10 +77,7 @@ const subtotal = computed(() =>
 );
 const tax = computed(() =>
     lines.value.reduce(
-        (sum, line) =>
-            sum +
-            (line.tax ??
-                (line.option?.tax ?? 0)),
+        (sum, line) => sum + (line.tax ?? line.option?.tax ?? 0),
         0,
     ),
 );

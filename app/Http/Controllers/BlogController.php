@@ -35,27 +35,13 @@ class BlogController extends Controller implements HasMiddleware
      *
      * @return Response
      */
-    public function index(Request $request)
-    {
-        $sort_search = null;
-        $blogs = Blog::orderBy('created_at', 'desc');
-
-        if ($request->search != null){
-            $blogs = $blogs->where('title', 'like', '%'.$request->search.'%');
-            $sort_search = $request->search;
-        }
-
-        $blogs = $blogs->paginate(15);
-
-        return view('shop.backend.blog_system.blog.index', compact('blogs','sort_search'));
-    }
 
     /**
      * Show the form for creating a new resource.
      *
      * @return Response
      */
-    public function create()
+    public function create(): \Illuminate\Contracts\View\View
     {
         $blog_categories = BlogCategory::all();
         return view('shop.backend.blog_system.blog.create', compact('blog_categories'));
@@ -112,7 +98,7 @@ class BlogController extends Controller implements HasMiddleware
      * @param  int  $id
      * @return Response
      */
-    public function edit($id)
+    public function edit($id): \Illuminate\Contracts\View\View
     {
         $blog = Blog::find($id);
         $blog_categories = BlogCategory::all();
@@ -179,7 +165,7 @@ class BlogController extends Controller implements HasMiddleware
     public function all_blog(Request $request) {
         $selected_categories = [];
         $search = null;
-        $blogs = Blog::query();
+        $blogs = Blog::query()->with('category:id,category_name');
 
         if ($request->has('search')) {
             $search = $request->search;;
@@ -209,14 +195,14 @@ class BlogController extends Controller implements HasMiddleware
 
         $blogs = $blogs->where('status', 1)->orderBy('created_at', 'desc')->paginate(12);
 
-        $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
+        $recent_blogs = Blog::with('category:id,category_name')->where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
 
         return view("shop.frontend.blog.listing", compact('blogs', 'selected_categories', 'search', 'recent_blogs'));
     }
 
     public function blog_details($slug) {
-        $blog = Blog::where('slug', $slug)->first();
-        $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
+        $blog = Blog::with('category:id,category_name')->where('slug', $slug)->first();
+        $recent_blogs = Blog::with('category:id,category_name')->where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
         return view("shop.frontend.blog.details", compact('blog', 'recent_blogs'));
     }
 }

@@ -1,14 +1,3 @@
-import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
-import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
-import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
-import {
-    exportMethod as productBulkExport,
-    index as productBulkImport,
-} from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
-import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
-import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
-import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
-import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import type { UrlMethodPair } from '@inertiajs/core';
 import {
     Banknote,
@@ -32,8 +21,6 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
-import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
 import { index as brandsIndex } from '@/actions/App/Http/Controllers/BrandController';
 import {
     general_setting,
@@ -43,16 +30,9 @@ import {
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
-import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
-import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
+import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
-import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
-import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
-import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
-import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
-import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import {
     admin_products,
@@ -60,10 +40,44 @@ import {
     create as productsCreate,
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
-import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
+import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
+import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
+import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
+import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import {
+    archive as customersArchive,
+    create as customersCreate,
+    index as customersIndex,
+    repIndex as representativesIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import {
+    create as driversCreate,
+    index as driversIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
+import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
+import {
+    exportMethod as productBulkExport,
+    index as productBulkImport,
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     commission_history,
     in_house_sale_report,
@@ -73,22 +87,9 @@ import {
     wallet_transaction_history,
     wish_report,
 } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
-import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
-import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
-import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
-import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
-import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
-import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
-import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
-import {
-    archive as customersArchive,
-    create as customersCreate,
-    index as customersIndex,
-    repIndex as representativesIndex,
-} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     activation,
@@ -102,18 +103,21 @@ import {
     payments,
     filesystem,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
+import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
-import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
-import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
-import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import {
-    create as driversCreate,
-    index as driversIndex,
-} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+    create as trucksCreate,
+    index as trucksIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import {
     all_orders as tripOrders,
     create as tripsCreate,
@@ -121,10 +125,6 @@ import {
     getAllTrips,
     getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
-import {
-    create as trucksCreate,
-    index as trucksIndex,
-} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import {
     appearance,
     footer,
@@ -272,26 +272,26 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allOrders',
- inertia: true,
+                inertia: true,
                 href: all_orders['/temp/admin/all_orders'](),
                 permission: 'view_all_orders',
             },
             {
                 labelKey: 'store.nav.createOrder',
- inertia: true,
+                inertia: true,
                 href: featureOrderCreate(),
                 permission: 'add_order',
             },
             {
                 labelKey: 'store.nav.sellerOrders',
- inertia: true,
+                inertia: true,
                 href: all_orders['/temp/admin/seller_orders'](),
                 permission: 'view_seller_orders',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.pickupPointOrders',
- inertia: true,
+                inertia: true,
                 href: all_orders['/temp/admin/orders_by_pickup_point'](),
                 permission: 'view_pickup_point_orders',
                 setting: 'Pickup_Orders_Section',
@@ -383,7 +383,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allSellers',
- badgeKey: 'sellers',
+                badgeKey: 'sellers',
                 href: sellersIndex(),
                 permission: 'view_all_seller',
             },
@@ -579,6 +579,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allPosts',
+                inertia: true,
                 href: blogIndex(),
                 permission: 'view_blogs',
             },
@@ -645,14 +646,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.tickets',
- badgeKey: 'tickets',
+                badgeKey: 'tickets',
                 inertia: true,
                 href: supportTicketsIndex(),
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
- badgeKey: 'conversations',
+                badgeKey: 'conversations',
                 inertia: true,
                 href: conversationsIndex(),
                 permission: 'view_all_product_conversations',

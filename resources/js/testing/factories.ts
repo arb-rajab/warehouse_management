@@ -1,4 +1,17 @@
 import type {
+    Cell,
+    CellPallet,
+    CellWithLocation,
+    CellStatusLog,
+    CellVerificationReport,
+    CellVerificationRound,
+    MatchingPallet,
+    Paginated,
+    Row,
+    Setting,
+    User,
+} from '@/types/admin';
+import type {
     StoreConversation,
     StoreMessage,
     StoreProductQuery,
@@ -39,20 +52,18 @@ import type {
     StoreDriver,
     StoreOrder,
 } from '@/types/store';
-import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
-
 
 import type {
     StoreAttribute,
     StoreAttributeValue,
     StoreColor,
 } from '@/types/storeCatalogue';
-import type {
-    RepresentativePackage,
-    RepresentativePayment,
-    RepresentativeVisit,
-} from '@/types/storeRepresentatives';
 import type { CustomerDetails } from '@/types/storeCustomers';
+import type {
+    CustomerNotification,
+    NotificationCustomer,
+    AdminNotification,
+} from '@/types/storeNotifications';
 import type {
     StoreProductReportRow,
     StoreSellerReportRow,
@@ -61,23 +72,11 @@ import type {
     StoreWalletReportRow,
 } from '@/types/storeReports';
 import type {
-    CustomerNotification,
-    NotificationCustomer,
-    AdminNotification,
-} from '@/types/storeNotifications';
-import type {
-    Cell,
-    CellPallet,
-    CellWithLocation,
-    CellStatusLog,
-    CellVerificationReport,
-    CellVerificationRound,
-    MatchingPallet,
-    Paginated,
-    Row,
-    Setting,
-    User,
-} from '@/types/admin';
+    RepresentativePackage,
+    RepresentativePayment,
+    RepresentativeVisit,
+} from '@/types/storeRepresentatives';
+import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated

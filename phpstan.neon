@@ -33,7 +33,6 @@ parameters:
     # its own reviewed exclusion, not silently folded into this one.
     excludePaths:
         - app/Http/Controllers/AdminController.php
-        - app/Http/Controllers/NewsletterController.php
         - app/Http/Controllers/PageController.php
         - app/Http/Controllers/WebsiteController.php
         - app/Models/CustomerProduct.php
@@ -155,7 +154,6 @@ parameters:
         - app/Http/Controllers/CompareController.php
         - app/Http/Controllers/ConversationController.php
         - app/Http/Controllers/CronJobsController.php
-        - app/Http/Controllers/CurrencyController.php
         - app/Http/Controllers/CustomerController.php
         - app/Http/Controllers/CustomerPackageController.php
         - app/Http/Controllers/CustomerProductController.php

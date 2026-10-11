@@ -2,10 +2,10 @@ import { Link } from '@inertiajs/vue3';
 import { CircleUser, Globe, Store } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import {
     edit as staffEdit,
     index as staffIndex,
@@ -93,10 +93,7 @@ describe('StoreAdminLayout', () => {
             wrapper
                 .findAllComponents(StoreAdminNavLink)
                 .map((link) => link.props('item').labelKey),
-        ).toEqual([
-            'store.nav.dashboard',
-            'store.nav.allStaff',
-        ]);
+        ).toEqual(['store.nav.dashboard', 'store.nav.allStaff']);
         expect(wrapper.text()).not.toContain(t('store.nav.staffRoles'));
         expect(wrapper.text()).not.toContain(t('store.nav.products'));
     });
@@ -149,8 +146,16 @@ describe('StoreAdminLayout', () => {
                 ?.findComponent(Link)
                 .props('href'),
         ).toEqual(staffIndex());
-        expect(navLink(wrapper, 'store.nav.dashboard')?.get('a').attributes('href')).toBe(admin_dashboard.url());
-        expect(navLink(wrapper, 'store.nav.dashboard')?.findComponent(Link).exists()).toBe(false);
+        expect(
+            navLink(wrapper, 'store.nav.dashboard')
+                ?.get('a')
+                .attributes('href'),
+        ).toBe(admin_dashboard.url());
+        expect(
+            navLink(wrapper, 'store.nav.dashboard')
+                ?.findComponent(Link)
+                .exists(),
+        ).toBe(false);
         expect(wrapper.find('a[href="/temp"]').exists()).toBe(true);
     });
 

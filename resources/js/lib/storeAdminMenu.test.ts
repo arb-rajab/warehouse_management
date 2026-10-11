@@ -1,35 +1,30 @@
-import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
-import {
-    index as driversIndex,
-    create as driversCreate,
-} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
-import {
-    index as trucksIndex,
-    create as trucksCreate,
-} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
+import { describe, expect, it } from 'vitest';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
-import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
-import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
-import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
-import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
-import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
-import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
-import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
+import { index as brandDiscountsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as colorsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
-import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
-import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import {
     index as customersIndex,
     archive as customersArchive,
     repIndex as representativesIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
-import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
-import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
-import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
-import { describe, expect, it } from 'vitest';
-import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import {
+    index as driversIndex,
+    create as driversCreate,
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
+import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     in_house_sale_report,
     seller_sale_report,
@@ -39,11 +34,8 @@ import {
     commission_history,
     wallet_transaction_history,
 } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
-import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
-import { index as brandDiscountsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
-import { index as colorsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
-import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
-import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
@@ -59,7 +51,16 @@ import {
     filesystem,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import {
+    index as trucksIndex,
+    create as trucksCreate,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as uploadsIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -153,6 +154,7 @@ describe('storeAdminMenu', () => {
                 productQueriesIndex.url(),
                 supportTicketsIndex.url(),
                 blogCategoriesIndex.url(),
+                blogIndex.url(),
                 couponsIndex.url(),
                 dynamicPopupsIndex.url(),
                 flashDealsIndex.url(),
@@ -162,7 +164,10 @@ describe('storeAdminMenu', () => {
                 driversCreate.url(),
                 trucksIndex.url(),
                 trucksCreate.url(),
-                all_orders['/temp/admin/all_orders'].url(), all_orders['/temp/admin/seller_orders'].url(), all_orders['/temp/admin/orders_by_pickup_point'].url(), featureOrderCreate.url(),
+                all_orders['/temp/admin/all_orders'].url(),
+                all_orders['/temp/admin/seller_orders'].url(),
+                all_orders['/temp/admin/orders_by_pickup_point'].url(),
+                featureOrderCreate.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),

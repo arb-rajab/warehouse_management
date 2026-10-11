@@ -14,7 +14,7 @@ use App\Http\Controllers\Store\Admin\BrandDiscountController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
 use App\Http\Controllers\Store\Admin\ColorController;
 use App\Http\Controllers\Store\Admin\BlogCategoryController;
-use App\Http\Controllers\BlogController;
+use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\CarrierController;
@@ -34,7 +34,7 @@ use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\LanguageController;
 use App\Http\Controllers\Store\Admin\SettingsController;
-use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\Store\Admin\NewsletterController;
 use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\Store\Admin\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
@@ -293,6 +293,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     // Newsletter
     Route::controller(NewsletterController::class)->group(function () {
         Route::get('/newsletter', 'index')->name('newsletters.index');
+        Route::get('/newsletter/recipients', 'recipients')->name('newsletters.recipients');
         Route::post('/newsletter/send', 'send')->name('newsletters.send');
     });
 
@@ -516,10 +517,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/blog-category/{category}', [BlogCategoryController::class, 'destroy'])->name('blog-category.destroy');
 
     // Blog
-    Route::resource('blog', BlogController::class);
-    Route::controller(BlogController::class)->group(function () {
-        Route::post('/blog/destroy/{id}', 'destroy')->name('blog.destroy');
-        Route::post('/blog/change-status', 'change_status')->name('blog.change-status');
+    Route::controller(AdminBlogController::class)->group(function () {
+        Route::get('/blog', 'index')->name('blog.index');
+        Route::get('/blog/create', 'create')->name('blog.create');
+        Route::post('/blog', 'store')->name('blog.store');
+        Route::get('/blog/{blog}/edit', 'edit')->name('blog.edit');
+        Route::put('/blog/{blog}', 'update')->name('blog.update');
+        Route::delete('/blog/{blog}', 'destroy')->name('blog.destroy');
+        Route::put('/blog/{blog}/status', 'changeStatus')->name('blog.change-status');
     });
 
     // Coupons: the seller's shared Blade partials and request remain in place.
@@ -545,7 +550,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
     Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
-    Route::post('support_ticket/reply', [SupportTicketController::class, 'admin_store'])->name('support_ticket.admin_store');
+    Route::post('support_ticket/reply', [AdminSupportTicketController::class, 'reply'])->name('support_ticket.admin_store');
 
     //Pickup_Points
     Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');

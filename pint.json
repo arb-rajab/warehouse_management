@@ -118,7 +118,6 @@
         "app/Http/Controllers/CompareController.php",
         "app/Http/Controllers/ConversationController.php",
         "app/Http/Controllers/CronJobsController.php",
-        "app/Http/Controllers/CurrencyController.php",
         "app/Http/Controllers/CustomerController.php",
         "app/Http/Controllers/CustomerPackageController.php",
         "app/Http/Controllers/CustomerProductController.php",
@@ -444,7 +443,6 @@
         "app/Models/CustomerProduct.php",
         "app/Http/Controllers/WebsiteController.php",
         "app/Http/Controllers/PageController.php",
-        "app/Http/Controllers/NewsletterController.php",
         "app/Http/Controllers/AdminController.php"
     ]
 }

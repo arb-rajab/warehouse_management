@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Store\Admin\DashboardController;
-use App\Models\Category;
 use App\Models\StoreUser;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -48,4 +47,3 @@ test('warehouse authentication cannot authorize store dashboard or order entry',
     $this->get(route('shop.admin.dashboard'))->assertRedirect(route('shop.login'));
     $this->get(route('feat-order.create'))->assertRedirect(route('shop.login'));
 });
-

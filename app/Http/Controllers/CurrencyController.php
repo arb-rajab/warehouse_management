@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CurrencyController extends Controller
 {
-    public function changeCurrency(Request $request)
+    public function changeCurrency(Request $request): Response
     {
-        $currency = Currency::where('code', $request->currency_code)->first();
-        $request->session()->put('currency_code', $request->currency_code);
+        $currency = Currency::query()->where('code', $request->input('currency_code'))->firstOrFail();
+        $request->session()->put('currency_code', $currency->code);
         $request->session()->put('currency_symbol', $currency->symbol);
         $request->session()->put('currency_exchange_rate', $currency->exchange_rate);
-    	flash(translate('Currency changed to ').$currency->name)->success();
-    }
+        flash(translate('Currency changed to ').$currency->name)->success();
 
+        return response('');
+    }
 }
