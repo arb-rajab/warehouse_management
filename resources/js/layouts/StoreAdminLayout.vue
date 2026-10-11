@@ -1,14 +1,27 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import { ChevronDown, CircleUser, Globe, Menu, Store, X } from '@lucide/vue';
+import { Form, usePage } from '@inertiajs/vue3';
+import {
+    Bell,
+    ChevronDown,
+    CircleUser,
+    Globe,
+    Menu,
+    Store,
+    X,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
+import { index as notificationsIndex } from '@/actions/App/Http/Controllers/NotificationController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/ProfileController';
+import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
+import FormField from '@/components/FormField.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import StoreAdminNavLink from '@/components/StoreAdminNavLink.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
+import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { isActiveNavUrl } from '@/lib/navigation';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -19,6 +32,7 @@ import {
     visibleStoreMenu,
 } from '@/lib/storeAdminMenu';
 import type { StoreMenuItem } from '@/lib/storeAdminMenu';
+import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
 /**
  * The store back office's shell: a sidebar built from lib/storeAdminMenu.ts,
@@ -30,7 +44,43 @@ const access = useStoreAccess();
 
 const isSidebarOpen = ref(false);
 
-const menu = computed(() => visibleStoreMenu(storeAdminMenu, access.value));
+const menuQuery = ref('');
+const { open: notificationsOpen, containerRef: notificationsRef } =
+    useDismissibleListbox(() => 0);
+const notifications = computed(
+    () => page.props.store?.notifications ?? { unread_count: 0, items: [] },
+);
+const menu = computed(() => {
+    const visible = visibleStoreMenu(storeAdminMenu, access.value);
+    const query = menuQuery.value.trim().toLocaleLowerCase();
+
+    if (!query) {
+        return visible;
+    }
+
+    function filter(items: StoreMenuItem[]): StoreMenuItem[] {
+        return items.flatMap((item) => {
+            if (t(item.labelKey).toLocaleLowerCase().includes(query)) {
+                return [item];
+            }
+
+            if (!isStoreMenuGroup(item)) {
+                return [];
+            }
+
+            const children = filter(item.children);
+
+            return children.length ? [{ ...item, children }] : [];
+        });
+    }
+
+    return filter(visible);
+});
+function badge(item: StoreMenuItem): number {
+    return !isStoreMenuGroup(item) && item.badgeKey
+        ? (page.props.store?.counts?.[item.badgeKey] ?? 0)
+        : 0;
+}
 const menuUrls = computed(() =>
     storeMenuLinks(menu.value).map((link) => link.href.url),
 );
@@ -50,7 +100,10 @@ function containsActive(item: StoreMenuItem): boolean {
 const toggledGroups = ref(new Set<string>());
 
 function isOpen(item: StoreMenuItem): boolean {
-    return containsActive(item) !== toggledGroups.value.has(item.labelKey);
+    return (
+        !!menuQuery.value ||
+        containsActive(item) !== toggledGroups.value.has(item.labelKey)
+    );
 }
 
 function toggle(labelKey: string): void {
@@ -100,6 +153,17 @@ function toggle(labelKey: string): void {
                 <Store class="h-5 w-5 shrink-0" />
                 {{ t('store.nav.brand') }}
             </span>
+            <div class="px-3 pb-3">
+                <FormField
+                    id="store-menu-search"
+                    type="search"
+                    :label="t('store.nav.searchMenu')"
+                    maxlength="100"
+                    @input="
+                        menuQuery = ($event.target as HTMLInputElement).value
+                    "
+                />
+            </div>
             <nav
                 :aria-label="t('store.nav.menuLabel')"
                 class="flex-1 overflow-y-auto px-2 pb-2"
@@ -154,6 +218,7 @@ function toggle(labelKey: string): void {
                                             >
                                                 <StoreAdminNavLink
                                                     :item="link"
+                                                    :count="badge(link)"
                                                     :active="
                                                         isActive(link.href.url)
                                                     "
@@ -167,6 +232,7 @@ function toggle(labelKey: string): void {
                                     <StoreAdminNavLink
                                         v-else
                                         :item="child"
+                                        :count="badge(child)"
                                         :active="isActive(child.href.url)"
                                         @click="isSidebarOpen = false"
                                     />
@@ -176,6 +242,7 @@ function toggle(labelKey: string): void {
                         <StoreAdminNavLink
                             v-else
                             :item="item"
+                            :count="badge(item)"
                             :active="isActive(item.href.url)"
                             @click="isSidebarOpen = false"
                         />
@@ -213,6 +280,82 @@ function toggle(labelKey: string): void {
         </aside>
         <main id="main" class="min-w-0 flex-1 px-4 py-8 sm:px-6">
             <div class="mx-auto max-w-6xl">
+                <div class="mb-5 flex items-center justify-end gap-3">
+                    <Form
+                        v-if="access.isRaizerAdmin"
+                        :action="clearCache()"
+                        #default="{ processing }"
+                    >
+                        <SubmitButton
+                            :label="t('store.nav.clearCache')"
+                            :processing-label="t('store.orders.saving')"
+                            :processing="processing"
+                        />
+                    </Form>
+                    <div ref="notificationsRef" class="relative">
+                        <button
+                            type="button"
+                            class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 px-3 py-2 dark:border-neutral-700"
+                            :aria-expanded="notificationsOpen"
+                            aria-controls="store-notifications"
+                            @click="notificationsOpen = !notificationsOpen"
+                        >
+                            <Bell class="h-4 w-4" />{{
+                                t('store.nav.notifications')
+                            }}
+                            <span v-if="notifications.unread_count">{{
+                                notifications.unread_count
+                            }}</span>
+                        </button>
+                        <div
+                            v-if="notificationsOpen"
+                            id="store-notifications"
+                            class="absolute end-0 z-30 mt-2 max-h-96 w-80 overflow-y-auto rounded-md border border-gray-200 bg-white p-4 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+                        >
+                            <p v-if="!notifications.items.length">
+                                {{ t('store.nav.noNotifications') }}
+                            </p>
+                            <ul v-else class="space-y-3">
+                                <li
+                                    v-for="notification in notifications.items"
+                                    :key="notification.id"
+                                >
+                                    <p v-if="notification.kind === 'order'">
+                                        {{
+                                            t('store.nav.orderNotification', {
+                                                code: notification.order_code,
+                                                status: t(
+                                                    `store.orders.status.${notification.status}`,
+                                                ),
+                                            })
+                                        }}
+                                    </p>
+                                    <p v-else>
+                                        {{ notification.user_name }}
+                                        {{ notification.message }}
+                                    </p>
+                                    <time
+                                        class="text-xs text-gray-500 dark:text-neutral-400"
+                                        >{{
+                                            formatDateTime(
+                                                notification.created_at ?? '',
+                                            )
+                                        }}</time
+                                    >
+                                </li>
+                            </ul>
+                            <a
+                                :href="
+                                    notificationsIndex[
+                                        '/temp/admin/all-notification'
+                                    ].url()
+                                "
+                                class="mt-3 block text-blue-700 dark:text-blue-400"
+                                >{{ t('store.nav.allNotifications') }}</a
+                            >
+                        </div>
+                    </div>
+                </div>
                 <slot />
             </div>
         </main>

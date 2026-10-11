@@ -12,7 +12,7 @@ export async function loginAsAdmin(page: Page): Promise<void> {
 /**
  * Sign in to the store back office as the seeded Super Admin
  * (database/seeders/StoreUserSeeder.php), through the store's own Blade
- * login page, which lands on the Blade dashboard.
+ * login page, which lands on the Inertia dashboard.
  */
 export async function loginAsStoreAdmin(page: Page): Promise<void> {
     await page.goto('/temp/login');

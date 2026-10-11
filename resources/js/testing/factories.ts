@@ -15,6 +15,7 @@ import type {
     PermissionGroup,
     StaffMember,
     StoreRole,
+    StoreOrder,
     StoreSharedProps,
 } from '@/types/store';
 
@@ -222,6 +223,8 @@ export function storeSharedProps(
         isSuperAdmin: false,
         isRaizerAdmin: false,
         settings: {},
+        counts: { sellers: 0, tickets: 0, conversations: 0 },
+        notifications: { unread_count: 0, items: [] },
         ...overrides,
     };
 }
@@ -252,6 +255,49 @@ export function permissionGroup(
         permissions: [
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
+        ],
+        ...overrides,
+    };
+}
+
+export function storeOrder(overrides: Partial<StoreOrder> = {}): StoreOrder {
+    return {
+        id: 7,
+        code: 'ORD-7',
+        invoice_number: null,
+        customer: { id: 3, name: 'Buyer', AccSysID: null },
+        representative: null,
+        editable: true,
+        by_rep: false,
+        delivery_date: '2026-10-15',
+        delivery_status: 'ready_for_delivery',
+        payment_status: 'unpaid',
+        payment_type: 'cash_on_delivery',
+        grand_total: 30.3,
+        profits: 2,
+        discount_percent: 16.67,
+        indicator: 10,
+        manager_notes: 'Office notes',
+        created_at: '2026-10-10',
+        details: [
+            {
+                id: 1,
+                product_id: 5,
+                name: '<script>unsafe()</script>',
+                serial: 'SER-5',
+                mat_id: null,
+                quantity: 2,
+                price: 20,
+                unit_price: 10,
+                original_price: 24,
+                tax: 6.3,
+                shipping_cost: 4,
+                profits: 2,
+                variation: '',
+                variation_qty: '[]',
+                unit: 'PerBox',
+                info: 'Notes',
+            },
         ],
         ...overrides,
     };

@@ -3,6 +3,7 @@
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -83,6 +84,7 @@ describe('create', function () {
         $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
                 ->where('permissionGroups', [
+                    ['section' => 'sales', 'label' => 'Sales', 'permissions' => Permission::query()->where('section', 'sales')->orderBy('id')->get()->map(fn (Permission $permission) => ['id' => $permission->id, 'label' => Str::headline($permission->name)])->all()],
                     [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
@@ -172,7 +174,7 @@ describe('edit', function () {
                 ->where('name', 'Clerk')
                 ->where('languages', [['code' => 'en', 'name' => 'English'], ['code' => 'ar', 'name' => 'Arabic']])
                 ->where('permissionIds', [$permission->id])
-                ->has('permissionGroups', 2)
+                ->has('permissionGroups', 3)
         );
     });
 

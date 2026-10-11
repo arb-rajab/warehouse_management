@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +15,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * (add_legacy_columns_to_store_tables) builds its columns from a map, which
  * Larastan's migration reader can't follow.
  *
+ * @property bool $by_rep
+ * @property int|null $invoice_number
+ * @property string|null $delivery_date
  * @property int|null $for_customer the customer a representative placed the order for
  * @property-read StoreUser|null $customer
  * @property-read StoreUser|null $representative
@@ -65,7 +72,8 @@ class Order extends Model
         return $this->hasMany(RefundRequest::class);
     }
 
-    public function user()
+    /** @return BelongsTo<StoreUser, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(StoreUser::class);
     }
@@ -84,7 +92,8 @@ class Order extends Model
         return Attribute::get(fn (): ?StoreUser => $this->by_rep ? $this->rep : $this->user);
     }
 
-    public function rep()
+    /** @return BelongsTo<StoreUser, $this> */
+    public function rep(): BelongsTo
     {
         return $this->belongsTo(StoreUser::class, 'for_customer');
     }
@@ -157,7 +166,8 @@ class Order extends Model
     }
 
     // Define the relation with Checkpoint
-    public function checkpoints()
+    /** @return MorphMany<Checkpoint, $this> */
+    public function checkpoints(): MorphMany
     {
         return $this->morphMany(Checkpoint::class, 'relationable');
     }

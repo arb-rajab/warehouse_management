@@ -301,7 +301,7 @@
                 @endif
 
                 <!-- Sales -->
-                @canany(['view_all_orders', 'view_inhouse_orders', 'view_seller_orders', 'view_pickup_point_orders'])
+                @canany(['view_all_orders', 'view_inhouse_orders', 'view_seller_orders', 'view_pickup_point_orders', 'add_order'])
                     <li class="aiz-side-nav-item">
                         <a href="#" class="aiz-side-nav-link">
                             <i class="las la-money-bill aiz-side-nav-icon"></i>
@@ -317,6 +317,8 @@
                                         <span class="aiz-side-nav-text">{{ translate('All Orders') }}</span>
                                     </a>
                                 </li>
+                            @endcan
+                            @can('add_order')
                                 <li class="aiz-side-nav-item">
                                     <a href="{{ route('feat-order.create') }}"
                                         class="aiz-side-nav-link {{ areActiveRoutes(['all_orders.index', 'all_orders.show', 'feat-order.create']) }}">

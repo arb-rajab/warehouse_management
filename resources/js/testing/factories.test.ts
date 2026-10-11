@@ -205,6 +205,8 @@ describe('storeSharedProps', () => {
             isSuperAdmin: false,
             isRaizerAdmin: false,
             settings: {},
+            counts: { sellers: 0, tickets: 0, conversations: 0 },
+            notifications: { unread_count: 0, items: [] },
         });
     });
 
@@ -215,6 +217,8 @@ describe('storeSharedProps', () => {
             isSuperAdmin: false,
             isRaizerAdmin: false,
             settings: {},
+            counts: { sellers: 0, tickets: 0, conversations: 0 },
+            notifications: { unread_count: 0, items: [] },
         });
     });
 });

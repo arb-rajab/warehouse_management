@@ -43,9 +43,9 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
 
     await page
         .getByRole('navigation', { name: 'Store admin menu' })
-        .getByRole('link', { name: 'Dashboard' })
+        .getByRole('link', { name: 'Uploaded files' })
         .click();
-    await expect(page).toHaveURL(/\/temp\/admin$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/uploaded-files$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');

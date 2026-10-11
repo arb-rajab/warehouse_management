@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
 use App\Models\Cart;
 use App\Notifications\EmailVerificationNotification;
 use App\Notifications\TermsAgreementNotification;
@@ -169,7 +171,8 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Seller::class);
     }
 
-    public function staff()
+    /** @return HasOne<Staff, $this> */
+    public function staff(): HasOne
     {
         return $this->hasOne(Staff::class);
     }

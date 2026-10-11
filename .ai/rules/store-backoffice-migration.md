@@ -26,10 +26,12 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Audit baseline:** 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
-- **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
+- **Current code (2026-10-10):** 185 back-office Blade files remain after the six staff/role views and this batch's ten order/dashboard views were removed.
+- **Pilot:** staff, 6 views, converted. It sets the pattern (§3).
+- **Completed batch 11:** orders and dashboard; verified implementation details and remaining verification limits are in §2.7.
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
 
@@ -53,7 +55,9 @@ On a store page it shares:
   - `permissions`: the user's store permission names;
   - `isSuperAdmin`;
   - `isRaizerAdmin`;
-  - `settings`: one boolean per `STORE_MENU_SETTINGS` key.
+  - `settings`: one boolean per `STORE_MENU_SETTINGS` key;
+  - `counts`: permission-filtered seller verifications, unread tickets and the account's unread received conversations;
+  - `notifications`: the account's unread count and at most 20 narrow notification records.
 
 Everything except `name` is a closure, because `Language` runs after this
 middleware. WMS pages keep their props exactly as before, with no `store` key.
@@ -89,7 +93,7 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, orders and dashboard are Inertia. Other modules continue to load Blade.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -108,11 +112,12 @@ plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
   - notifications: `add_notification`;
   - brand discount: `view_all_brands`;
   - Home Banners: `edit_website_page`.
-- **Not built yet.** They belong with the dashboard batch:
-  - the badge counts (seller verifications, unread tickets, conversations);
-  - the menu search;
-  - the notifications dropdown;
-  - Clear Cache.
+- **Completed with dashboard (2026-10-10):** permission-filtered badge counts,
+  translated menu search, an account-scoped notifications dropdown with Escape
+  and outside-click dismissal, and the vendor-only Clear Cache POST form.
+  Conversation badges count `receiver_viewed = 0`; the Blade query counted read
+  conversations (`1`). Cache invalidation forgets only the dashboard graph keys
+  and never runs `optimize:clear` or clears the shared cache.
 
 **Shared with WMS.** Both layouts genuinely need these:
 
@@ -280,6 +285,117 @@ Converted and unconverted pages coexist through four mechanisms:
   - A response counts as Blade when it renders a view other than Inertia's
     root view, i.e. the view has no `page` data.
 
+### 2.7 Orders and dashboard progress (2026-10-10)
+
+Checked current routes, render calls, views and dependency versions before this
+batch. Laravel 13 / PHP 8.5, Inertia 3, Vue 3 and TypeScript are reused.
+The owner explicitly approved Chart.js 4 (direct Vue integration, no wrapper)
+and calculated tax in **new** administrative order totals. Existing line tax
+and shipping amounts stay recorded amounts during edits.
+
+- `Store/Admin/OrderController`, `OrderEntryController` and `DashboardController`
+  implement `HasMiddleware`, use validated requests and narrow props, and enter
+  PHPStan/Pint coverage. The retired three controllers and their exclusions are
+  removed. Root `OrderController::store/placeOrder` still serves public checkout
+  through `CheckoutController`; it remains in the legacy exclusions because
+  migrating public checkout is outside this patch. Existing model relations
+  receive return types without behavioral changes.
+- Four order pages (list, detail, shared create, edit) and dashboard use
+  `StoreAdminLayout`, Wayfinder and the established shared components. Both
+  languages have labels, search errors and action errors; dynamic text is escaped.
+  `StoreOrderEntryFields` handles representative/shipping/create/edit forms;
+  `StoreOrderSearch` returns paginated JSON with debounce, loading, errors,
+  stale-response protection and request cancellation.
+- New store permissions: `add_order`, `edit_order`, `update_order_tracking`,
+  `update_order_notes`, `edit_order_price`. The existing delivery/payment names
+  now gate their writes. The migration inserts names idempotently and grants
+  **no roles**. Owner assignment to existing staff roles remains pending.
+- Order creation groups actual sellers, validates integral quantities and line
+  references, reserves exact stock variants via `OrderPlacementService`, and
+  writes orders, lines, combined totals and submission keys in one transaction.
+  `wms_store_order_submissions` records actor/payload hashes and retains a
+  tombstone after deletion; retries cannot reserve stock twice. Conflicting
+  replays fail validation. Edits reject duplicate/foreign line IDs, retain serials
+  and variation quantities, restore/reserve stock transactionally, multiply unit
+  prices by quantities, update profits/discount/indicator and combined totals,
+  and guard zero denominators. A changed customer updates combined ownership
+  only for a single-seller order; a multi-seller combined order refuses that
+  ownership change before writes.
+- Settled/paid/terminal orders refuse edits. Terminal transitions cannot reverse;
+  repeated payment/cancellation is a no-op under locks. Cancellation restores
+  stock and refunds wallets once. Payment retains the existing commission helper
+  under the same transaction. Database/Firebase and driver notifications run
+  after commit. Removed addon branches are not recreated: `SmsUtility`, affiliate
+  and delivery-boy controllers are unavailable in this repository.
+- `entry_unit` stores box/piece labels independently of stock variation. Legacy
+  feature lines used unit labels while reserving the first stock row: their
+  restoration resolves the historical first row by ID. Invoice, email, seller
+  and customer Blade displays use `entry_unit ?? variation`, remaining server
+  rendered. Public checkout's reservation default and financial policy stay intact.
+- List aliases retain their names and each route's permission/seller/pickup scope;
+  search ORs are grouped inside that scope. Staff pickup ownership uses the
+  existing `staff.pick_up_point` relation. Detail aliases still accept encrypted
+  links from storefront/admin notification Blade callers, with invalid IDs 404.
+  Numeric Wayfinder detail parameters are used because that compatibility
+  resolver is intentionally not implicit model binding. Other model-bound
+  actions use model objects. `orders.destroy` deliberately becomes DELETE
+  `/temp/admin/orders/{order}` per §3. Existing parameterless POST names for
+  transitions, bulk deletion, notes, tracking, prices and `orders.details` remain.
+  Details mark `viewed = 1`; `orders.details` redirects to the maintained detail
+  page rather than rendering its nonexistent legacy partial.
+- Static render/route searches verified the four dead sales templates and their
+  AJAX/form routes before removal. All nine sales Blade files and the dashboard
+  Blade file are removed; missing/empty resource methods and delivery-boy routes
+  are retired. Remaining trips/notification/storefront callers still resolve.
+- Dashboard aggregates counts in PHP, sends translated labels and numeric chart
+  arrays, removes the never-written visits graph, fixes overlapping active-product
+  chart slices, preserves filtered Top 12 Products cards with public links, prices,
+  thumbnail and rating, and excludes products without a usable public slug.
+  The SMTP notice remains permission-gated. Clear Cache is tested with a mock;
+  no operational cache clearing was performed against a shared environment.
+
+Verification coverage: `Store/Admin/OrderControllerTest`,
+`DashboardControllerTest`, `Database/StoreOrderMigrationTest`, mounted Vue tests,
+existing public checkout/invoice/model/coexistence/permissions tests, and
+`store-orders-dashboard.spec.ts` plus `store-staff-coexistence.spec.ts`.
+Playwright fixtures are guarded to the dedicated `e2e.sqlite` database; repeat
+runs reset only dedicated telemetry files, and `serve --no-reload` preserves the
+runtime environment. System Chromium is supported through the optional
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when the browser CDN is unavailable.
+
+Verified completion checks (2026-10-10):
+
+- `python3 .claude/scripts/pre_push_check.py` ran every configured check: ESLint,
+  Prettier, TypeScript, all 118 Vitest files / 1,598 tests, Pint and PHPStan
+  (zero errors) passed. No configured check was skipped.
+- Full Pest: **2,890 of 2,891 tests passed** (12,265 assertions). The required
+  script exits 1 because `LegacyRepresentativePaymentLinksTest`'s signed receipt
+  export returns 500: `shop/frontend/user/export-rep-payments.blade.php` compiles
+  with `syntax error, unexpected identifier "version"` around its XML declaration.
+  The template is byte-for-byte identical to HEAD; the receipt controller and
+  test are unchanged. This existing public PDF defect is outside this patch,
+  so the full suite is **not green** and still needs a separate fix.
+- Focused order tests: **73 passed / 430 assertions**, including refused writes,
+  calculations, transitions, exact stock variants, replay tombstones, search,
+  missing records, pagination, and transactional bulk rollback. Another
+  **52 tests / 338 assertions** passed for dashboard/migrations, invoice, public
+  checkout, order relations, shared props and Blade/Inertia coexistence.
+- `npm run test:e2e` passed **all 26 Chromium tests**, including async entry and
+  representative discount/piece conversion, native constraints, stock-error
+  retention, editing/cancellation, real dashboard canvases, menu search,
+  notifications, storefront navigation, Arabic RTL and dark-mode contrast.
+  The production build passed. The browser CDN was unavailable (HTTP 403);
+  installed system Chromium and ffmpeg completed the suite instead. The existing
+  local Vite hot marker was restored after testing.
+- Changed Playwright files passed Prettier; `git diff --check` passed. Current
+  back-office Blade inventory was rechecked at **185 files**. Removed order views
+  and retired controller/render references have no remaining active callers.
+
+Remaining migration work: batches 1–10 and their unresolved owner decisions,
+other legacy exclusions, and the shared Blade shell until its last caller moves.
+This batch does not authorize dependency additions beyond Chart.js 4, staff role
+grants, deployment, operational cache clearing, or changes to public rendering.
+
 ## 3. Per-module checklist (the staff pattern)
 
 Do every step for each module, in one change per batch.
@@ -439,7 +555,7 @@ Batches are ordered by what they need first:
 | 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
 | 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
-| 11 | Orders and dashboard | 10 | sales (9, four deleted), dashboard (1) | a shared order-entry component with async search; a chart library (a new dependency); permission names for order entry |
+| 11 | Orders and dashboard — completed 2026-10-10 | 10 | sales (9 removed), dashboard (1 removed) | shared async entry, approved Chart.js 4, store permissions added; role grants pending (§2.7) |
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
@@ -452,10 +568,10 @@ Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 | setup_configurations/tax/create | Nothing renders it; a byte copy of pickup_point/create |
 | marketing/offer_deals/brands/index | Nothing renders it; a duplicate of offer_deals/index |
 | marketing/offer_deals/brands/offer_deal_discount | Nothing renders it. Its route `offer_deals.brand_discount` points at a missing method: delete the route too |
-| sales/new-order | Nothing links to `feat-order.trip.create`; new-shipping-order replaced it. Delete routes shop-admin.php :435, :440-442 and :450 with it |
-| sales/user-data-table | Its only caller is new-order |
-| sales/products-data-repeater | Nothing renders it |
-| sales/products-data-table | Nothing renders it. Its route is commented out and its method is missing |
+| sales/new-order | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/user-data-table | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/products-data-repeater | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/products-data-table | removed 2026-10-10 after caller/route verification (§2.7) |
 | trips/inc/styles | Only included inside `@section('style')`, which the layout never yields |
 | layouts/blank | No view extends it (leftover installer CSS) |
 | system/server_status | Owner call. `/health` supersedes it; its PHP "7.3/7.4" check is always red and its `select version()` is MySQL-only |
@@ -787,15 +903,15 @@ URIs are under `/temp/admin` unless shown.
 | reports/user_search_report | `user_search_report.index` (:522) | ReportController@user_search_report (:132) | `user_search_report` | list | none | none | port |
 | reports/wallet_history_report | `wallet-history.index` (:524) | ReportController@wallet_transaction_history (:195) | `wallet_transaction_report` | list | aiz-selectpicker, aiz-date-range | Own:71 (validation only) | port-trim: dead seller check; "Approval" column is offline-payment addon data |
 | reports/wish_report | `wish_report.index` (:521) | ReportController@wish_report (:127) | `product_wishlist_report` | list | aiz-selectpicker | none | port (use `withCount`) |
-| sales/edit-shipping-order | `new.feat-order.trip.edit` · GET …/feat/new/order/trip/edit/{id} (:447) | FeatureOrderTripController@newEdit (:223), @newUpdate | ungated | form | select2 4.1 (CDN), `$.ajax products.get-details` (JSON), PUT JSON returning a URL | none | port as the shared order-entry component; newUpdate stores the line total as the unit price and drops variations |
-| sales/index | `all_orders.index`, `inhouse_orders.index`, `seller_orders.index`, `pick_up_point.index` (:487-490) | OrderController@all_orders (:156) | `view_all_orders\|view_inhouse_orders\|view_seller_orders\|view_pickup_point_orders` + per-route check (:85-113) | list | aiz-selectpicker, aiz-date-range, bulk checkboxes, `$.ajax bulk-order-delete`, `$.post orders.update_manager_notes` | RouteServiceProviderTest:51; SCR:183 | port-trim: refund column, commented bulk-status JS; `date` filter unvalidated (500 on bad input) |
-| sales/new-new-order | `feat-order.create` · GET …/feat/order/create (:433) | FeatureOrderController@create (:17), @store | ungated | form | select2 (CDN), `products.get-details`, POST JSON returning a URL | none | port as the shared order-entry component |
-| sales/new-order | `feat-order.trip.create` (:440) | FeatureOrderTripController@create (:19) | ungated | form | `$.get feat-order.trip.needed-data` → `.html(data)` | none | **delete** with routes :435, :440-442, :450: nothing links to it; replaced by new-shipping-order |
-| sales/new-shipping-order | `new.feat-order.trip.create` (:444) | FeatureOrderTripController@newCreate (:214), @newStore | ungated | form | select2 (CDN), `products.get-details`, POST JSON returning a URL | none | port as the shared order-entry component (drop dead `.rep-search` JS, which throws on load) |
-| sales/products-data-repeater | none | none | — | partial | jQuery UI sortable | none | **delete**: nothing renders it |
-| sales/products-data-table | none (route commented out at :436, :452) | `productsData` — missing | — | partial | inline script | none | **delete**: nothing renders it |
-| sales/show | `orders.show` + 4 aliases (:483, :492-495) | OrderController@show (:184) | `view_order_details` | show | aiz-selectpicker; `$.post orders.update_payment_status`, `update_tracking_code`, `order.item.edit_price`, `delivery-boy-assign` (dead addon); invoice link | none | port-trim: delivery-boy, manual-payment and auction sections, the hard-coded `disabled` delivery-status select; the view's `@can` checks for payment/delivery status are not enforced server-side |
-| sales/user-data-table | `feat-order.trip.needed-data`, `feat-order.needed-data`, `new.feat-order.trip.needed-data` (:442, :435, :450) | FeatureOrderTripController@getNeededData (:29), FeatureOrderController@getNeededData (:27), @newGetNeededData (:296) | ungated | partial (AJAX HTML) | footable; its inline script never runs after injection | none | **delete**: only new-order calls it |
+| sales/edit-shipping-order | `new.feat-order.trip.edit` · GET …/feat/new/order/trip/edit/{id} (:447) | Store/Admin/OrderEntryController@edit/update | `edit_order` | Inertia | shared Vue components, Wayfinder | OrderControllerTest; Orders.test.ts; store-orders-dashboard.spec.ts | completed 2026-10-10 (§2.7) |
+| sales/index | `all_orders.index`, `inhouse_orders.index`, `seller_orders.index`, `pick_up_point.index` | Store/Admin/OrderController@all_orders | per-route order view permission | Inertia list | shared table/filter/pagination | OrderControllerTest; Orders.test.ts | completed: validated dates, grouped search, seller/pickup isolation; dead refund/bulk-status UI removed |
+| sales/new-new-order | `feat-order.create` · GET …/feat/order/create (:433) | Store/Admin/OrderEntryController@create/store | `add_order` | Inertia | shared Vue components, Wayfinder | OrderControllerTest; Orders.test.ts; store-orders-dashboard.spec.ts | completed 2026-10-10 (§2.7) |
+| sales/new-order | `feat-order.trip.create` (:440) | FeatureOrderTripController@create (:19) | ungated | form | `$.get feat-order.trip.needed-data` → `.html(data)` | none | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/new-shipping-order | `new.feat-order.trip.create` (:444) | Store/Admin/OrderEntryController@shippingCreate/shippingStore | `add_order` | Inertia | shared Vue components, Wayfinder | OrderControllerTest; Orders.test.ts; store-orders-dashboard.spec.ts | completed 2026-10-10 (§2.7) |
+| sales/products-data-repeater | none | none | — | partial | jQuery UI sortable | none | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/products-data-table | none (route commented out at :436, :452) | `productsData` — missing | — | partial | inline script | none | removed 2026-10-10 after caller/route verification (§2.7) |
+| sales/show | `orders.show` + 4 aliases (:483, :492-495) | Store/Admin/OrderController@show | `view_order_details; each write has its own permission` | Inertia | shared Vue components, Wayfinder | OrderControllerTest; Orders.test.ts; store-orders-dashboard.spec.ts | completed 2026-10-10 (§2.7) |
+| sales/user-data-table | `feat-order.trip.needed-data`, `feat-order.needed-data`, `new.feat-order.trip.needed-data` (:442, :435, :450) | FeatureOrderTripController@getNeededData (:29), FeatureOrderController@getNeededData (:27), @newGetNeededData (:296) | ungated | partial (AJAX HTML) | footable; its inline script never runs after injection | none | removed 2026-10-10 after caller/route verification (§2.7) |
 
 Notes:
 1. The three order-entry screens are ~95% the same view (rep select, target and pre-filled rows differ); port them as one Vue component with async customer/product search, and give them a permission name first (§7.1).
@@ -806,7 +922,7 @@ Notes:
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| dashboard | `shop.admin.dashboard` · GET /temp/admin (:71) | AdminController@admin_dashboard (:62) | ungated (READS list); view wraps all in `@can('admin_dashboard')`, SMTP alert `smtp_settings` | show | Chart.js 2.8 via `AIZ.plugins.chart` ×5, `aiz-carousel` (slick) | LegacyAdminPanelTest:34,42,78,164; LegacyTempRoutesReachableTest:24; StoreRoleMiddlewareTest:100; RouteServiceProviderTest:86 | port-trim: drop graph-3/`total_visits` card (never written since CountWebRouteVisits was dropped), move ~10 inline counts into the controller, send arrays not comma strings from `cached_graph_data` |
+| dashboard | `shop.admin.dashboard` · GET /temp/admin | Store/Admin/DashboardController@index | `admin_dashboard`; SMTP `smtp_settings` | Inertia | approved Chart.js 4; shared layout | DashboardControllerTest; Dashboard/Index.test.ts; store-orders-dashboard.spec.ts | completed 2026-10-10: narrow aggregates/arrays, filtered Top Products, shell utilities; visits removed (§2.7) |
 | website_settings/header | `website.header` · GET …/website/header (:394) | WebsiteController@header (:30) | `header_setup` | form (settings) | aizuploader ×4, add-more repeater, aiz-switch | none | port (keep the misspelt `header_stikcy` key: the storefront reads it) |
 | website_settings/footer | `website.footer` · GET …/website/footer?lang= (:393) | WebsiteController@footer (:35) | `footer_setup` | form (settings, translatable) | language tabs, aizuploader ×2 (one multiple), summernote ×2, repeater, aiz-switch | none (storefront output: HtmlSanitizerTest:189) | port-trim: drop Delivery Boy app link (304-312, dead addon); Seller app link is an owner call |
 | website_settings/appearance | `website.appearance` · GET …/website/appearance (:395) | WebsiteController@appearance (:43) | `website_appearance` | form (settings) | aizuploader ×9, summernote ×2, aiz-switch | none | port-trim: drop `delivery_boy_login_page_bg` (103-118); re-gate the custom-script card (see note 1) |
@@ -837,7 +953,7 @@ Notes:
 | layouts/blank | nothing (0 users) | layout | leftover installer CSS | **delete now-able** (dead) — deleted in the last batch with the others to keep this pilot's diff to staff |
 | layouts/layout | `shop/frontend/seller_login`, `deliveryboy_login` (HomeController.php:71,73), `shop/errors/503` | layout (no nav) | same assets as app | stays: it serves the storefront's seller login, not the back office |
 | inc/admin_sidenav | layouts/app:66 | partial (sidebar, 1747 lines) | the menu tree (§2.2); 12 removed-addon blocks link to route names that no longer exist; malformed `@canany`/`@endif` nesting in Setup & Configurations (L1392-1650); a stray top-level duplicate "Shipping" group (L1654-1687); "Home Banners" hardcodes a URL without `/temp` (L771-777) | replaced by `lib/storeAdminMenu.ts`; delete with the last Blade module |
-| inc/admin_nav | layouts/app:68 | partial (top bar) | browse-website link (`home`), Clear Cache (`cache.clear`, raizer admin), notifications dropdown (unread, `admin.all-notification`), language switcher (POST `language.change`, empty 200, then reload), user menu (`profile.index`, `shop.logout`) | replaced by the layout's header/account block |
+| inc/admin_nav | layouts/app:68 | partial (top bar) | browse-website link (`home`), Clear Cache (`cache.clear`, raizer admin), notifications dropdown (unread, `admin.all-notification`), language switcher (POST `language.change`, empty 200, then reload), user menu (`profile.index`, `shop.logout`) | header/account block complete 2026-10-10 (§2.7); Clear Cache POST only forgets dashboard graph keys; retain Blade partial until its last caller moves |
 
 Notes:
 1. The aiz uploader posts to `AIZ.data.appUrl + "/aiz-uploader"`, where `appUrl` is `getBaseURL()` (no `/temp`), while the uploader routes exist only under `/temp`. Check in a browser before relying on the Blade uploader during coexistence.

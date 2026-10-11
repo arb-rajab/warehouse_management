@@ -4,6 +4,7 @@ use App\Http\Controllers\RepresentativePaymentController;
 use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /**
  * Regression coverage for the legacy store's admin panel under /temp/admin,
@@ -33,7 +34,7 @@ test('the store admin dashboard renders for a signed-in store admin', function (
 
     $this->get('/temp/admin')
         ->assertOk()
-        ->assertSee($admin->name);
+        ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Dashboard/Index')->where('auth.user.name', $admin->name));
 });
 
 test("the admin dashboard shows the admin's unread notifications", function () {
@@ -56,8 +57,7 @@ test("the admin dashboard shows the admin's unread notifications", function () {
 
     $this->get('/temp/admin')
         ->assertOk()
-        ->assertSee('ORD-MINE')
-        ->assertDontSee('ORD-THEIRS');
+        ->assertInertia(fn (Assert $page) => $page->where('store.notifications.unread_count', 1)->where('store.notifications.items.0.order_code', 'ORD-MINE'));
 });
 
 test('a permission-gated admin page renders for a Super Admin', function () {
@@ -98,13 +98,13 @@ test('a vendor-only admin page renders for the vendor super admin', function () 
 test('the vendor super admin gets the cache-clear button', function () {
     actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
 
-    $this->get('/temp/admin')->assertSee(route('cache.clear'));
+    $this->get('/temp/admin')->assertInertia(fn (Assert $page) => $page->where('store.isRaizerAdmin', true));
 });
 
 test('an admin who is not the vendor super admin gets no cache-clear button', function () {
     actingAsStoreUser(createStoreAdmin());
 
-    $this->get('/temp/admin')->assertDontSee(route('cache.clear'));
+    $this->get('/temp/admin')->assertInertia(fn (Assert $page) => $page->where('store.isRaizerAdmin', false));
 });
 
 /**

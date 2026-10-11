@@ -220,8 +220,8 @@
                             </td>
 
                             <td>
-                                @if ($orderDetail->variation != null)
-                                    ({{ $orderDetail->variation }})
+                                @if (($orderDetail->entry_unit ?? $orderDetail->variation) != null)
+                                    ({{ ($orderDetail->entry_unit ?? $orderDetail->variation) }})
                                 @endif
                             </td>
 

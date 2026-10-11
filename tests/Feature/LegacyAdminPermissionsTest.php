@@ -38,10 +38,6 @@ use Spatie\Permission\Models\Permission;
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
     'AdminNotificationController@markAsRead',
-    'FeatureOrderController@store',
-    'FeatureOrderTripController@newStore',
-    'FeatureOrderTripController@newUpdate',
-    'FeatureOrderTripController@store',
     'OffersCatalogController@destroy',
     'OffersCatalogController@store',
     'RepresentativePackageController@delete',
@@ -72,7 +68,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
 
     // The controller has no such method, so the request errors out.
     'CurrencyController@updateCurrency',
-    'OrderController@bulk_order_status',
 
     // Refuses every request (see LegacyEnvFileProtectionTest).
     'BusinessSettingsController@env_key_update',
@@ -85,14 +80,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
  */
 const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
-    'FeatureOrderController@create',
-    'FeatureOrderController@getNeededData',
-    'FeatureOrderController@getRepDiscount',
-    'FeatureOrderTripController@create',
-    'FeatureOrderTripController@getNeededData',
-    'FeatureOrderTripController@newCreate',
-    'FeatureOrderTripController@newEdit',
-    'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
     'OffersCatalogController@download',
     'OffersCatalogController@index',
@@ -106,7 +93,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'VisitController@show_all_visits_in_a_day',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
-    'AdminController@admin_dashboard',
     'AizUploadController@create',
     'AizUploadController@edit',
     'AizUploadController@index',
@@ -120,7 +106,6 @@ const ADMIN_READS_STILL_UNGATED = [
     // The controller has no such method, so the request errors out.
     'CarrierController@show',
     'CityController@show',
-    'OrderController@index',
     'ProductBulkUploadController@import_product',
     'ProductBulkUploadController@import_vendor_product',
     'ZoneController@show',

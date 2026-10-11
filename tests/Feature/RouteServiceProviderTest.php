@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -48,7 +48,7 @@ test('duplicated store route names resolve to the route the legacy app gave them
         ->and(route('customers.show', 1, false))->toBe('/temp/admin/customers/1')
         ->and(route('customers.store', [], false))->toBe('/temp/admin/customer/store')
         ->and(route('languages.update', 3, false))->toBe('/temp/admin/languages/3/update')
-        ->and(route('orders.destroy', 7, false))->toBe('/temp/admin/orders/destroy/7')
+        ->and(route('orders.destroy', 7, false))->toBe('/temp/admin/orders/7')
         ->and(route('payhere.checkout.testing', [], false))->toBe('/temp/payhere/wallet/testing');
 });
 
@@ -95,7 +95,7 @@ test("this app's own auth route names point at its own routes, and the store's s
 test('the store admin dashboard is not swallowed by the storefront catch-all', function () {
     $route = Route::getRoutes()->match(Request::create('/temp/admin'));
 
-    expect($route->getActionName())->toBe(AdminController::class.'@admin_dashboard');
+    expect($route->getActionName())->toBe(DashboardController::class.'@index');
 });
 
 test("the store's route provider does not register this app's own routes a second time", function () {

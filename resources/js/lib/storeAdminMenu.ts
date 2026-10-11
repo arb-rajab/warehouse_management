@@ -20,7 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
@@ -68,13 +67,11 @@ import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/C
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
 import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
-import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/PickupPointController';
@@ -104,6 +101,9 @@ import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewCont
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
@@ -149,6 +149,7 @@ interface StoreMenuGate {
 }
 
 export interface StoreMenuLink extends StoreMenuGate {
+    badgeKey?: 'sellers' | 'tickets' | 'conversations';
     labelKey: string;
     href: UrlMethodPair;
     /** Top-level entries carry an icon (.ai/rules/layouts.md). */
@@ -183,6 +184,7 @@ export function isStoreMenuGroup(item: StoreMenuItem): item is StoreMenuGroup {
 export const storeAdminMenu: StoreMenuItem[] = [
     {
         labelKey: 'store.nav.dashboard',
+        inertia: true,
         href: admin_dashboard(),
         icon: LayoutDashboard,
         permission: 'admin_dashboard',
@@ -268,22 +270,26 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/all_orders'](),
                 permission: 'view_all_orders',
             },
             {
                 labelKey: 'store.nav.createOrder',
+                inertia: true,
                 href: featureOrderCreate(),
-                permission: 'view_all_orders',
+                permission: 'add_order',
             },
             {
                 labelKey: 'store.nav.sellerOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/seller_orders'](),
                 permission: 'view_seller_orders',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.pickupPointOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/orders_by_pickup_point'](),
                 permission: 'view_pickup_point_orders',
                 setting: 'Pickup_Orders_Section',
@@ -363,6 +369,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allSellers',
+                badgeKey: 'sellers',
                 href: sellersIndex(),
                 permission: 'view_all_seller',
             },
@@ -602,11 +609,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.tickets',
+                badgeKey: 'tickets',
                 href: supportTicketsIndex(),
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
+                badgeKey: 'conversations',
                 href: conversationsIndex(),
                 permission: 'view_all_product_conversations',
                 setting: 'conversation_system',
