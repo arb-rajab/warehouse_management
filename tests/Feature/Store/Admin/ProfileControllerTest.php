@@ -3,6 +3,7 @@
 use App\Models\StoreUser;
 use App\Models\Upload;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /**
  * The store back office's own-profile page (/temp/admin/profile): self-service
@@ -23,7 +24,7 @@ function adminProfilePayload(array $overrides = []): array
         'email' => 'renamed-staff@example.com',
         'new_password' => 'a-Strong-Passw0rd!',
         'confirm_password' => 'a-Strong-Passw0rd!',
-        'avatar' => (string) Upload::factory()->create()->id,
+        'avatar' => (string) Upload::factory()->create(['type' => 'image'])->id,
         ...$overrides,
     ];
 }
@@ -39,7 +40,7 @@ function adminProfileSnapshot(StoreUser $user): array
 test('the profile page renders for staff', function () {
     actingAsStoreUser(createStoreStaff());
 
-    $this->get(ADMIN_PROFILE_URI)->assertOk()->assertViewIs('shop.backend.admin_profile.index');
+    $this->get(ADMIN_PROFILE_URI)->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Profile/Index'));
 });
 
 test('the profile page is refused to a guest and a customer', function (string $caller) {
@@ -53,8 +54,9 @@ test('staff can update their own name, email, avatar and password', function () 
     $payload = adminProfilePayload();
 
     $this->patch("/temp/admin/profile/{$staff->id}", $payload)
-        ->assertRedirect()
-        ->assertSessionHas('flash_notification');
+        ->assertRedirect(route('profile.index'))
+        ->assertSessionHasNoErrors()
+        ->assertSessionMissing('flash_notification');
 
     $staff = $staff->fresh();
     expect($staff->name)->toBe('Renamed Staff')
@@ -156,7 +158,58 @@ test('the demo mode refuses the profile update and changes nothing', function ()
     $staff = actingAsStoreUser(createStoreStaff());
     $before = adminProfileSnapshot($staff);
 
-    $this->patch("/temp/admin/profile/{$staff->id}", adminProfilePayload())->assertRedirect();
+    $this->patch("/temp/admin/profile/{$staff->id}", adminProfilePayload())->assertForbidden();
 
+    expect(adminProfileSnapshot($staff))->toEqual($before);
+});
+
+test('profile props expose only account fields and the selected preview', function () {
+    $staff = actingAsStoreUser(createStoreStaff());
+    $this->get(ADMIN_PROFILE_URI)->assertInertia(fn (Assert $page) => $page->has('profile', fn (Assert $profile) => $profile
+        ->where('id', $staff->id)->where('name', $staff->name)->where('email', $staff->email)->where('avatar', null)));
+});
+
+test('a Super Admin cannot rewrite a foreign profile even with invalid input', function () {
+    $victim = createStoreStaff();
+    $before = adminProfileSnapshot($victim);
+    actingAsStoreUser(createStoreAdmin());
+    $this->patch('/temp/admin/profile/'.$victim->id, ['name' => ''])->assertForbidden();
+    expect(adminProfileSnapshot($victim))->toEqual($before);
+});
+
+test('a missing bound profile is a 404', function () {
+    actingAsStoreUser(createStoreStaff());
+    $this->patch('/temp/admin/profile/999999', [])->assertNotFound();
+});
+
+test('a document avatar is refused and posted account privileges are ignored', function () {
+    $staff = actingAsStoreUser(createStoreStaff());
+    $document = Upload::factory()->create(['type' => 'document']);
+    $before = adminProfileSnapshot($staff);
+    $this->patch('/temp/admin/profile/'.$staff->id, adminProfilePayload(['avatar' => $document->id]))->assertSessionHasErrors('avatar');
+    expect(adminProfileSnapshot($staff))->toEqual($before);
+    $this->patch('/temp/admin/profile/'.$staff->id, adminProfilePayload(['avatar' => null, 'user_type' => 'admin', 'banned' => 1]))->assertSessionHasNoErrors();
+    expect($staff->fresh()->user_type)->toBe('staff')->and($staff->fresh()->avatar_original)->toBeNull();
+});
+
+test('profile props include a full narrow selected image preview', function () {
+    config(['store.asset_base_url' => 'https://store.example']);
+    $staff = actingAsStoreUser(createStoreStaff());
+    $avatar = Upload::factory()->stored('uploads/all/avatar.webp')->create(['file_original_name' => 'Avatar', 'type' => 'image', 'file_size' => 42]);
+    $staff->forceFill(['avatar_original' => $avatar->id])->save();
+    $this->get(ADMIN_PROFILE_URI)->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('profile', fn (Assert $profile) => $profile
+            ->where('id', $staff->id)->where('name', $staff->name)->where('email', $staff->email)
+            ->has('avatar', fn (Assert $image) => $image->where('id', $avatar->id)->where('name', 'Avatar')
+                ->where('type', 'image')->where('size', 42)->where('url', 'https://store.example/uploads/all/avatar.webp'))));
+});
+
+test('a banned staff account cannot read or write its profile', function () {
+    $staff = createStoreStaff();
+    $staff->forceFill(['banned' => 1])->save();
+    actingAsStoreUser($staff);
+    $before = adminProfileSnapshot($staff);
+    $this->get(ADMIN_PROFILE_URI)->assertNotFound();
+    $this->patch('/temp/admin/profile/'.$staff->id, adminProfilePayload())->assertNotFound();
     expect(adminProfileSnapshot($staff))->toEqual($before);
 });

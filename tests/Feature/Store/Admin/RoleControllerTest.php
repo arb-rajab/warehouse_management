@@ -84,6 +84,19 @@ describe('create', function () {
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
                 ->where('permissionGroups', [
                     [
+                        'section' => 'uploads',
+                        'label' => 'Uploads',
+                        'permissions' => collect(['view_uploads', 'upload_files', 'delete_uploads'])
+                            ->map(fn (string $name) => [
+                                'id' => Permission::findByName($name, 'store')->id,
+                                'label' => match ($name) {
+                                    'view_uploads' => 'View Uploads',
+                                    'upload_files' => 'Upload Files',
+                                    'delete_uploads' => 'Delete Uploads',
+                                },
+                            ])->all(),
+                    ],
+                    [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
                         'permissions' => [['id' => $approve->id, 'label' => 'Approve Bulk Price Changes']],
@@ -172,7 +185,7 @@ describe('edit', function () {
                 ->where('name', 'Clerk')
                 ->where('languages', [['code' => 'en', 'name' => 'English'], ['code' => 'ar', 'name' => 'Arabic']])
                 ->where('permissionIds', [$permission->id])
-                ->has('permissionGroups', 2)
+                ->has('permissionGroups', 3)
         );
     });
 

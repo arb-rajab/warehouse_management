@@ -50,13 +50,17 @@ export default defineConfig({
         },
     ],
     webServer: {
+        // Keep these isolated DB/cache overrides in the server process;
+        // serve's reload mode otherwise removes them in favor of .env.
         command:
-            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
+            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010 --no-reload',
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,
         env: {
             APP_ENV: 'testing',
+            // Upload::url needs a store asset origin for local image previews.
+            STORE_ASSET_BASE_URL: baseURL,
             DB_CONNECTION: 'sqlite',
             DB_DATABASE: dbPath,
             TELESCOPE_DB_DATABASE: telescopeDbPath,

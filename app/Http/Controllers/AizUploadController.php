@@ -45,16 +45,12 @@ class AizUploadController extends Controller
         $all_uploads = $all_uploads->paginate(60)->appends(request()->query());
 
 
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.index', compact('all_uploads', 'search', 'sort_by'))
-            : view('shop.backend.uploaded_files.index', compact('all_uploads', 'search', 'sort_by'));
+        return view('shop.seller.uploads.index', compact('all_uploads', 'search', 'sort_by'));
     }
 
     public function create()
     {
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.create')
-            : view('shop.backend.uploaded_files.create');
+        return view('shop.seller.uploads.create');
     }
 
 
@@ -167,32 +163,6 @@ class AizUploadController extends Controller
         // return $files;
     }
 
-    public function all_file()
-    {
-        $uploads = Upload::all();
-        foreach ($uploads as $upload) {
-            try {
-                if (config('filesystems.default') == 's3') {
-                    Storage::disk('s3')->delete($upload->file_name);
-                    if (file_exists(public_path() . '/' . $upload->file_name)) {
-                        unlink(public_path() . '/' . $upload->file_name);
-                    }
-                } else {
-                    unlink(public_path() . '/' . $upload->file_name);
-                }
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            } catch (\Exception $e) {
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            }
-        }
-
-        Upload::query()->truncate();
-
-        return back();
-    }
-
     //Download project attachment
     public function attachment_download($id)
     {
@@ -212,8 +182,6 @@ class AizUploadController extends Controller
         $file = Upload::findOrFail($request['id']);
         abort_if(auth()->user()->cannot('view', $file), 403);
 
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.info', compact('file'))
-            : view('shop.backend.uploaded_files.info', compact('file'));
+        return view('shop.seller.uploads.info', compact('file'));
     }
 }

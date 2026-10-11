@@ -16,6 +16,8 @@ import type {
     StaffMember,
     StoreRole,
     StoreSharedProps,
+    StoreUpload,
+    StoreProfile,
 } from '@/types/store';
 
 /**
@@ -253,6 +255,28 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+export function storeUpload(overrides: Partial<StoreUpload> = {}): StoreUpload {
+    return {
+        id: 1,
+        name: 'Photo',
+        type: 'image',
+        size: 42,
+        url: 'https://store.example/photo.webp',
+        ...overrides,
+    };
+}
+export function storeProfile(
+    overrides: Partial<StoreProfile> = {},
+): StoreProfile {
+    return {
+        id: 7,
+        name: 'Sam Staff',
+        email: 'sam@example.com',
+        avatar: null,
         ...overrides,
     };
 }

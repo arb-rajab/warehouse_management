@@ -912,6 +912,53 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "uploads": {
+            "library": "Uploaded files",
+            "upload": "Upload files",
+            "choose": "Choose files",
+            "select": "Use selected files",
+            "remove": "Remove {name}",
+            "search": "Search files",
+            "sort": "Sort files",
+            "type": "File type",
+            "allTypes": "All types",
+            "newest": "Newest first",
+            "oldest": "Oldest first",
+            "smallest": "Smallest first",
+            "largest": "Largest first",
+            "image": "Images",
+            "video": "Videos",
+            "audio": "Audio",
+            "archive": "Archives",
+            "document": "Documents",
+            "loading": "Loading files…",
+            "empty": "No files found.",
+            "info": "File information",
+            "size": "Size (bytes)",
+            "openFile": "Open file",
+            "files": "Files to upload",
+            "progress": "Upload progress",
+            "uploading": "Uploading…",
+            "loadFailed": "Could not load files. Try again.",
+            "uploadFailed": "Could not upload this file.",
+            "deleteFailed": "Could not delete this file.",
+            "tooLarge": "Each file must be at most 512 MB.",
+            "limits": "Maximum 512 MB per file and 40 megapixels per image.",
+            "delete": "Delete",
+            "deleteSelected": "Delete selected files",
+            "selectedFiles": "{count} selected files",
+            "selectFile": "Select {name}"
+        },
+        "profile": {
+            "title": "Administrator profile",
+            "name": "Name",
+            "email": "Email",
+            "newPassword": "New password",
+            "confirmPassword": "Confirm password",
+            "avatar": "Avatar",
+            "save": "Save profile",
+            "saving": "Saving…"
         }
     }
 }

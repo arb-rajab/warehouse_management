@@ -36,7 +36,7 @@ test('a driver\'s photos and CMR are stored by what they are, and a file that is
             ->and(Upload::pluck('id')->all())->toEqual($ids)
             ->and(Upload::pluck('user_id')->unique()->all())->toEqual([$driverId])
             ->and($stored)->toHaveCount(2)
-            ->and(collect($stored)->every(fn (string $name) => preg_match('/^[A-Za-z0-9]{40}\.(png|pdf)$/', $name) === 1))->toBeTrue();
+            ->and(collect($stored)->every(fn (string $name) => preg_match('/^[A-Za-z0-9]{40}\.(webp|pdf)$/', $name) === 1))->toBeTrue();
     });
 });
 

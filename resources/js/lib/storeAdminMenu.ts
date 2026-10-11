@@ -22,7 +22,6 @@ import {
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
     colors,
     index as attributesIndex,
@@ -106,6 +105,7 @@ import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/S
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
@@ -462,7 +462,9 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.uploadedFiles',
-        href: uploadedFilesIndex['/temp/admin/uploaded-files'](),
+        href: uploadedFilesIndex(),
+        permission: 'view_uploads',
+        inertia: true,
         icon: FolderOpen,
     },
     {

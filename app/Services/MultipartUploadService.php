@@ -7,7 +7,8 @@ use App\Services\Concerns\WritesUploads;
 use enshrined\svgSanitize\Sanitizer;
 use finfo;
 use Illuminate\Http\UploadedFile;
-use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManagerStatic as Image;
 use InvalidArgumentException;
 use Symfony\Component\Mime\MimeTypes;
 use Throwable;
@@ -26,8 +27,8 @@ use Throwable;
  * nothing is served.
  *
  * Here the client's extension only picks the kind, and the stored extension
- * comes from the content: an image must be an image and keeps the extension its
- * content has; anything else keeps the allowlisted extension the client named,
+ * comes from the content: a raster image must decode and is stored as WebP;
+ * anything else keeps the allowlisted extension the client named,
  * unless it holds markup a browser would run (HTML, XHTML, scripts), which is
  * refused; SVG is sanitised wherever it turns up.
  */
@@ -55,7 +56,7 @@ class MultipartUploadService
     private const MAX_DECODED_PIXELS = 40_000_000;
 
     /** Maximum file size in bytes (512 MB). */
-    private const MAX_BYTES = 512 * 1024 * 1024;
+    public const MAX_BYTES = 512 * 1024 * 1024;
 
     private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
@@ -95,8 +96,13 @@ class MultipartUploadService
             if ($contents === '') {
                 return null;
             }
-        } elseif ($kind === 'image' && get_setting('disable_image_optimization') != 1) {
+        } elseif ($kind === 'image') {
             $contents = $this->optimised($contents);
+            if ($contents === null) {
+                return null;
+            }
+            $extension = 'webp';
+            $mimeType = 'image/webp';
         }
 
         try {
@@ -143,31 +149,49 @@ class MultipartUploadService
     }
 
     /**
-     * The image re-encoded, and shrunk when it is large; the original bytes when
-     * it cannot be read or is too large to decode (the optimisation is an extra, not a gate).
+     * Every raster image is decoded and re-encoded, or refused. SVG remains
+     * sanitised above: Intervention's installed GD driver cannot rasterise it.
      */
-    private function optimised(string $contents): string
+    private function optimised(string $contents): ?string
     {
         $info = @getimagesizefromstring($contents);
 
         if ($info === false || $info[0] * $info[1] > self::MAX_DECODED_PIXELS) {
-            return $contents;
+            return null;
         }
 
         try {
-            $image = Image::make($contents)->encode();
+            $image = Image::make($contents);
             $width = $image->width();
             $height = $image->height();
 
             if ($width > $height && $width > 1500) {
                 $image->resize(1500, null, fn ($constraint) => $constraint->aspectRatio());
             } elseif ($height > 1500) {
-                $image->resize(null, 800, fn ($constraint) => $constraint->aspectRatio());
+                $image->resize(null, 1500, fn ($constraint) => $constraint->aspectRatio());
             }
 
-            return (string) $image->encode();
+            $encoded = (string) $image->encode('webp');
+
+            return $encoded === '' ? null : $encoded;
         } catch (Throwable) {
-            return $contents;
+            return null;
         }
+    }
+
+    /** Remove a managed file before removing its row; never follow a stored path outside uploads/all. */
+    public function delete(Upload $upload): void
+    {
+        $path = $upload->file_name;
+        if (blank($upload->external_link) && $path !== null && preg_match('#^uploads/all/[^/\\\\]+$#D', $path) === 1) {
+            if (config('filesystems.default') === 's3') {
+                if (! Storage::disk('s3')->delete($path)) {
+                    throw new InvalidArgumentException('Deleting error');
+                }
+            } elseif (is_file(public_path($path)) && ! unlink(public_path($path))) {
+                throw new InvalidArgumentException('Deleting error');
+            }
+        }
+        $upload->delete();
     }
 }

@@ -45,3 +45,18 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+/** UploadResource, shared by the library, picker and profile. */
+export interface StoreUpload {
+    id: number;
+    name: string | null;
+    type: string | null;
+    size: number | null;
+    url: string | null;
+}
+export interface StoreProfile {
+    id: number;
+    name: string;
+    email: string;
+    avatar: StoreUpload | null;
+}

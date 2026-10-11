@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'upload_rejected' => 'This file is unsupported, invalid, or exceeds the upload limits.',
     'admin_cannot_remove_own_access' => 'You cannot remove your own admin access.',
     'row_cannot_resize_has_pallets' => 'Cannot resize a row that has pallets in it.',
     'row_cannot_delete_has_pallets' => 'Cannot delete a row that has pallets in it.',
