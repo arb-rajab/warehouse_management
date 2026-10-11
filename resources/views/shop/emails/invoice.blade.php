@@ -135,7 +135,7 @@
 		                @if ($orderDetail->product != null)
 							<tr class="">
 								<td>  {{ $orderDetail->product->name . $orderDetail->product->ar_name }}
-                                    @if($orderDetail->variation != null) ({{ $orderDetail->variation }}) @endif
+                                    @if(($orderDetail->entry_unit ?? $orderDetail->variation) != null) ({{ $orderDetail->entry_unit ?? $orderDetail->variation }}) @endif
                                     <br>
                                 </td>
 

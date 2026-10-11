@@ -48,11 +48,11 @@ import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admi
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
-import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import {
     admin_products,
@@ -147,6 +147,7 @@ interface StoreMenuGate {
 }
 
 export interface StoreMenuLink extends StoreMenuGate {
+    badgeKey?: 'sellers' | 'tickets' | 'conversations';
     labelKey: string;
     href: UrlMethodPair;
     /** Top-level entries carry an icon (.ai/rules/layouts.md). */
@@ -271,22 +272,26 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allOrders',
+ inertia: true,
                 href: all_orders['/temp/admin/all_orders'](),
                 permission: 'view_all_orders',
             },
             {
                 labelKey: 'store.nav.createOrder',
+ inertia: true,
                 href: featureOrderCreate(),
-                permission: 'view_all_orders',
+                permission: 'add_order',
             },
             {
                 labelKey: 'store.nav.sellerOrders',
+ inertia: true,
                 href: all_orders['/temp/admin/seller_orders'](),
                 permission: 'view_seller_orders',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.pickupPointOrders',
+ inertia: true,
                 href: all_orders['/temp/admin/orders_by_pickup_point'](),
                 permission: 'view_pickup_point_orders',
                 setting: 'Pickup_Orders_Section',
@@ -378,6 +383,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allSellers',
+ badgeKey: 'sellers',
                 href: sellersIndex(),
                 permission: 'view_all_seller',
             },
@@ -639,12 +645,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.tickets',
+ badgeKey: 'tickets',
                 inertia: true,
                 href: supportTicketsIndex(),
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
+ badgeKey: 'conversations',
                 inertia: true,
                 href: conversationsIndex(),
                 permission: 'view_all_product_conversations',

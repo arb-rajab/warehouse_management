@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,7 +37,8 @@ class Trip extends Model
         'duration' => 'decimal:2',
     ];
 
-    public function driver()
+    /** @return BelongsTo<StoreUser, $this> */
+    public function driver(): BelongsTo
     {
         return $this->belongsTo(StoreUser::class, 'driver_id');
     }

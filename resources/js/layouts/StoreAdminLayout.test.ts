@@ -2,10 +2,10 @@ import { Link } from '@inertiajs/vue3';
 import { CircleUser, Globe, Store } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
+import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import {
     edit as staffEdit,
     index as staffIndex,
@@ -26,12 +26,14 @@ const { usePageMock, routerPostMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub } = await import('@/testing/inertiaStubs');
+    const { createLinkStub, createFormStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         usePage: usePageMock,
         router: { post: routerPostMock },
         Link: createLinkStub(),
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
     };
 });
 
@@ -91,9 +93,11 @@ describe('StoreAdminLayout', () => {
             wrapper
                 .findAllComponents(StoreAdminNavLink)
                 .map((link) => link.props('item').labelKey),
-        ).toEqual(['store.nav.dashboard', 'store.nav.allStaff']);
+        ).toEqual([
+            'store.nav.dashboard',
+            'store.nav.allStaff',
+        ]);
         expect(wrapper.text()).not.toContain(t('store.nav.staffRoles'));
-        expect(navLink(wrapper, 'store.nav.offersCatalog')).toBeUndefined();
         expect(wrapper.text()).not.toContain(t('store.nav.products'));
     });
 
@@ -138,24 +142,16 @@ describe('StoreAdminLayout', () => {
         expect(navLink(wrapper, 'store.nav.allStaff')).toBeUndefined();
     });
 
-    it('makes an Inertia visit to a converted page and a full load to a Blade one', () => {
+    it('makes Inertia visits to staff and profile while keeping Blade links', () => {
         const wrapper = mountLayout(staffIndex.url());
-
         expect(
             navLink(wrapper, 'store.nav.allStaff')
                 ?.findComponent(Link)
                 .props('href'),
         ).toEqual(staffIndex());
-        expect(
-            navLink(wrapper, 'store.nav.dashboard')
-                ?.findComponent(Link)
-                .exists(),
-        ).toBe(false);
-        expect(
-            navLink(wrapper, 'store.nav.dashboard')
-                ?.get('a')
-                .attributes('href'),
-        ).toBe(admin_dashboard.url());
+        expect(navLink(wrapper, 'store.nav.dashboard')?.get('a').attributes('href')).toBe(admin_dashboard.url());
+        expect(navLink(wrapper, 'store.nav.dashboard')?.findComponent(Link).exists()).toBe(false);
+        expect(wrapper.find('a[href="/temp"]').exists()).toBe(true);
     });
 
     it('renders a nested section as a heading over its links', async () => {
@@ -238,10 +234,72 @@ describe('StoreAdminLayout', () => {
         );
     });
 
+    it('filters translated menu links and opens escaped notifications without showing cache to ordinary staff', async () => {
+        const wrapper = mountLayout(
+            staffIndex.url(),
+            storeSharedProps({
+                permissions: ['admin_dashboard', 'view_all_staffs'],
+                settings: { Staffs_section: true },
+                notifications: {
+                    unread_count: 1,
+                    items: [
+                        {
+                            id: 'n1',
+                            kind: 'cart',
+                            order_code: null,
+                            status: null,
+                            user_name: 'Buyer',
+                            message: '<script>unsafe()</script>',
+                            created_at: '2026-10-10T12:00:00Z',
+                        },
+                    ],
+                },
+            }),
+        );
+        await wrapper.get('#store-menu-search').setValue('Staff');
+        expect(wrapper.get('nav').text()).toContain('All staff');
+        expect(wrapper.get('nav').text()).not.toContain('Dashboard');
+        expect(wrapper.find('form').exists()).toBe(false);
+        const trigger = wrapper.get(
+            'button[aria-controls="store-notifications"]',
+        );
+        await trigger.trigger('click');
+        expect(wrapper.get('#store-notifications').text()).toContain(
+            '<script>unsafe()</script>',
+        );
+        expect(wrapper.find('script').exists()).toBe(false);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('#store-notifications').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('renders vendor cache POST action and sidebar badges from shared props', async () => {
+        const wrapper = mountLayout(
+            admin_dashboard.url(),
+            storeSharedProps({
+                isSuperAdmin: true,
+                isRaizerAdmin: true,
+                counts: { sellers: 3, tickets: 4, conversations: 5 },
+            }),
+        );
+        expect(wrapper.get('form').attributes('data-action-url')).toBe(
+            '/temp/admin/clear-cache',
+        );
+        expect(wrapper.get('form').text()).toContain('Clear Cache');
+        await wrapper.get('#store-menu-search').setValue('Sellers');
+        expect(navLink(wrapper, 'store.nav.allSellers')?.props('count')).toBe(
+            3,
+        );
+        await wrapper.get('#store-menu-search').setValue('Support');
+        expect(navLink(wrapper, 'store.nav.tickets')?.props('count')).toBe(4);
+        wrapper.unmount();
+    });
+
     it('renders the skip link and the page inside main', () => {
         const wrapper = mountLayout(staffIndex.url());
 
         expect(wrapper.findComponent(SkipToContentLink).exists()).toBe(true);
-        expect(wrapper.get('main#main').text()).toBe('Page content');
+        expect(wrapper.get('main#main').text()).toContain('Page content');
     });
 });

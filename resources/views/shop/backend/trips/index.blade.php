@@ -21,8 +21,10 @@
                 </div>
                   <div class="col-auto">
                     <div class="form-group mb-0">
+                        @can('add_order')
                         <a href="{{ route('new.feat-order.trip.create') }}"
                             class="btn btn-primary">{{ translate('Create Order') }}</a>
+                        @endcan
                     </div>
                 </div>
                   @can('add_trip')

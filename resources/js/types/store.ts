@@ -14,6 +14,8 @@ export interface StoreSharedProps {
     isRaizerAdmin: boolean;
     /** The business settings that switch sidebar sections on or off. */
     settings: Record<string, boolean>;
+    counts: { sellers: number; tickets: number; conversations: number };
+    notifications: { unread_count: number; items: StoreNotification[] };
 }
 
 /** RoleResource: a store role, named in the current language. */
@@ -427,4 +429,70 @@ export interface StoreDriver {
     email: string | null;
     phone: string | null;
     country: string | null;
+}
+
+export interface StoreNotification {
+    id: string;
+    kind: 'order' | 'cart' | 'other';
+    order_code: string | null;
+    status: string | null;
+    user_name: string | null;
+    message: string | null;
+    created_at: string | null;
+}
+export interface StoreOrderOption {
+    id: number;
+    name: string;
+    AccSysID?: string | null;
+    member_serial?: string | null;
+    rep_discount_percentage?: number | null;
+    serial?: string | null;
+    mat_id?: string | null;
+    unit_price?: number;
+    unit_equal?: number;
+    tax?: number;
+    digital?: boolean;
+    stocks?: { variant: string; price: number; qty: number }[];
+}
+export interface StoreOrderLine {
+    id: number;
+    product_id: number;
+    name: string;
+    serial: string | null;
+    mat_id: string | null;
+    quantity: number;
+    price: number;
+    unit_price: number;
+    original_price: number;
+    tax: number;
+    shipping_cost: number;
+    profits: number;
+    variation: string | null;
+    variation_qty: string | null;
+    unit: string;
+    info: string | null;
+}
+export interface StoreOrder {
+    id: number;
+    code: string;
+    invoice_number: string | null;
+    customer: { id: number; name: string; AccSysID: string | null } | null;
+    representative: {
+        id: number;
+        name: string;
+        rep_discount_percentage: number | null;
+    } | null;
+    editable: boolean;
+    by_rep: boolean;
+    delivery_date: string | null;
+    delivery_status: string;
+    payment_status: string;
+    payment_type: string;
+    grand_total: number;
+    profits: number;
+    discount_percent: number;
+    indicator: number;
+    manager_notes: string | null;
+    created_at: string | null;
+    details?: StoreOrderLine[];
 }

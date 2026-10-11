@@ -128,6 +128,6 @@ class TruckController extends Controller implements HasMiddleware
     private function photoQuery(array $attachedPhotoIds = []): Builder
     {
         return Upload::query()->select(['id', 'file_original_name', 'file_name', 'external_link', 'type', 'file_size'])->where('type', 'image')
-            ->when((! auth('store')->user()?->can('view_uploads') || ! auth('store')->user()?->can('viewAny', Upload::class)), fn (Builder $query) => $query->where(fn (Builder $query) => $query->where('user_id', auth('store')->id())->orWhereIn('id', $attachedPhotoIds)));
+            ->when((! auth('store')->user()->can('view_uploads') || ! auth('store')->user()->can('viewAny', Upload::class)), fn (Builder $query) => $query->where(fn (Builder $query) => $query->where('user_id', auth('store')->id())->orWhereIn('id', $attachedPhotoIds)));
     }
 }

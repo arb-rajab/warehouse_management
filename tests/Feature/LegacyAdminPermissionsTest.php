@@ -38,10 +38,6 @@ use Spatie\Permission\Models\Permission;
  */
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
-    'FeatureOrderController@store',
-    'FeatureOrderTripController@newStore',
-    'FeatureOrderTripController@newUpdate',
-    'FeatureOrderTripController@store',
 
     // Self-service: the signed-in user's own profile and uploads.
     'ProfileController@update',
@@ -54,7 +50,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProductController@sku_combination_edit',
 
     // The controller has no such method, so the request errors out.
-    'OrderController@bulk_order_status',
 
     // Refuses every request (see LegacyEnvFileProtectionTest).
     'BusinessSettingsController@env_key_update',
@@ -67,14 +62,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
  */
 const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
-    'FeatureOrderController@create',
-    'FeatureOrderController@getNeededData',
-    'FeatureOrderController@getRepDiscount',
-    'FeatureOrderTripController@create',
-    'FeatureOrderTripController@getNeededData',
-    'FeatureOrderTripController@newCreate',
-    'FeatureOrderTripController@newEdit',
-    'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
@@ -86,7 +73,6 @@ const ADMIN_READS_STILL_UNGATED = [
 
     // The controller has no such method, so the request errors out.
     'CarrierController@show',
-    'OrderController@index',
 ];
 
 /**

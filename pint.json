@@ -23,7 +23,6 @@
         "app/Enums/TripStatus.php",
         "app/Events/SetTruckAvailability.php",
         "app/Http/Controllers/AddressController.php",
-        "app/Http/Controllers/AdminController.php",
         "app/Http/Controllers/AizUploadController.php",
         "app/Http/Controllers/Api/V2/AddressController.php",
         "app/Http/Controllers/Api/V2/AizUploadController.php",
@@ -124,8 +123,6 @@
         "app/Http/Controllers/CustomerPackageController.php",
         "app/Http/Controllers/CustomerProductController.php",
         "app/Http/Controllers/DigitalProductController.php",
-        "app/Http/Controllers/FeatureOrderController.php",
-        "app/Http/Controllers/FeatureOrderTripController.php",
         "app/Http/Controllers/FollowSellerController.php",
         "app/Http/Controllers/HomeController.php",
         "app/Http/Controllers/InvoiceController.php",
@@ -447,6 +444,7 @@
         "app/Models/CustomerProduct.php",
         "app/Http/Controllers/WebsiteController.php",
         "app/Http/Controllers/PageController.php",
-        "app/Http/Controllers/NewsletterController.php"
+        "app/Http/Controllers/NewsletterController.php",
+        "app/Http/Controllers/AdminController.php"
     ]
 }

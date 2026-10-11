@@ -1,4 +1,6 @@
 <?php
+use App\Http\Controllers\Store\Admin\DashboardController;
+use App\Http\Controllers\Store\Admin\OrderEntryController;
 use App\Http\Controllers\Store\Admin\CampaignProductController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Store\Admin\ProductQueryController;
@@ -29,8 +31,6 @@ use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
-use App\Http\Controllers\FeatureOrderController;
-use App\Http\Controllers\FeatureOrderTripController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\LanguageController;
 use App\Http\Controllers\Store\Admin\SettingsController;
@@ -39,7 +39,7 @@ use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\Store\Admin\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
 use App\Http\Controllers\Store\Admin\ProductSearchController;
-use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Store\Admin\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductController;
@@ -451,29 +451,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::put('/flash_deals/{flashDeal}/featured', 'update_featured')->name('flash_deals.update_featured');
     });
 
-    Route::controller(FeatureOrderController::class)->group(function () {
-        Route::get('/feat/order/create', 'create')->name('feat-order.create');
-        Route::post('/feat/order/store', 'store')->name('feat-order.store');
-        Route::get('/feat/order/get-needed-data', 'getNeededData')->name('feat-order.needed-data');
-        // Route::get('/feat/order/products-data', 'productsData')->name('feat-order.products-table');
-        Route::get('feat/order/rep-discount', 'getRepDiscount')->name('feat-order.rep-discount');
-    });
-    Route::controller(FeatureOrderTripController::class)->group(function () {
-        Route::get('/feat/order/trip/create', 'create')->name('feat-order.trip.create');
-        Route::post('/feat/order/trip/store', 'store')->name('feat-order.trip.store');
-        Route::get('/feat/order/trip/get-needed-data', 'getNeededData')->name('feat-order.trip.needed-data');
+    Route::get('/feat/order/create', [OrderEntryController::class, 'create'])->name('feat-order.create');
+    Route::post('/feat/order/store', [OrderEntryController::class, 'store'])->name('feat-order.store');
+    Route::get('/feat/new/order/trip/create', [OrderEntryController::class, 'shippingCreate'])->name('new.feat-order.trip.create');
+    Route::post('/feat/new/order/trip/store', [OrderEntryController::class, 'shippingStore'])->name('new.feat-order.trip.store');
+    Route::get('/feat/new/order/trip/edit/{order}', [OrderEntryController::class, 'edit'])->name('new.feat-order.trip.edit');
+    Route::put('/feat/new/order/trip/update/{order}', [OrderEntryController::class, 'update'])->name('new.feat-order.trip.update');
+    Route::get('/orders/search-options', [OrderEntryController::class, 'search'])->name('orders.search-options');
 
-        Route::get('/feat/new/order/trip/create', 'newCreate')->name('new.feat-order.trip.create');
-        Route::post('/feat/new/order/trip/store', 'newStore')->name('new.feat-order.trip.store');
-
-        Route::get('/feat/new/order/trip/edit/{id}', 'newEdit')->name('new.feat-order.trip.edit');
-        Route::put('/feat/new/order/trip/update/{id}', 'newUpdate')->name('new.feat-order.trip.update');
-
-        Route::get('/feat/new/order/trip/get-needed-data', 'newGetNeededData')->name('new.feat-order.trip.needed-data');
-
-        // Route::get('/feat/order/products-data', 'productsData')->name('feat-order.products-table');
-        // Route::get('feat/order/trip/rep-discount', 'getRepDiscount')->name('feat-order.trip.rep-discount');
-    });
     Route::controller(OfferController::class)->group(function () {
         Route::get('/offer_deals/index', 'index')->name('offer_deals.index');
         Route::get('/offer_deals/create', 'create')->name('offer_deals.create');
@@ -492,36 +477,24 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/subscribers/{subscriber}', [SubscriberController::class, 'destroy'])->name('subscriber.destroy');
 
     // Order
-    Route::resource('orders', OrderController::class)->except(['destroy']);
-    Route::controller(OrderController::class)->group(function () {
-        Route::post('orders/delete/{id}', 'destroy')->name('orders.destroy');
-        // All Orders
-        Route::get('/all_orders', 'all_orders')->name('all_orders.index');
-        Route::get('/inhouse-orders', 'all_orders')->name('inhouse_orders.index');
-        Route::get('/seller_orders', 'all_orders')->name('seller_orders.index');
-        Route::get('orders_by_pickup_point', 'all_orders')->name('pick_up_point.index');
+    Route::get('/all_orders', [OrderController::class, 'all_orders'])->name('all_orders.index');
+    Route::get('/inhouse-orders', [OrderController::class, 'all_orders'])->name('inhouse_orders.index');
+    Route::get('/seller_orders', [OrderController::class, 'all_orders'])->name('seller_orders.index');
+    Route::get('/orders_by_pickup_point', [OrderController::class, 'all_orders'])->name('pick_up_point.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/show', [OrderController::class, 'show'])->name('all_orders.show');
+    Route::get('/inhouse-orders/{order}/show', [OrderController::class, 'show'])->name('inhouse_orders.show');
+    Route::get('/seller_orders/{order}/show', [OrderController::class, 'show'])->name('seller_orders.show');
+    Route::get('/orders_by_pickup_point/{order}/show', [OrderController::class, 'show'])->name('pick_up_point.order_show');
+    Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    Route::post('/bulk-order-delete', [OrderController::class, 'bulk_order_delete'])->name('bulk-order-delete');
+    Route::post('/orders/details', [OrderController::class, 'details'])->name('orders.details');
+    Route::post('/orders/update_delivery_status', [OrderController::class, 'update_delivery_status'])->name('orders.update_delivery_status');
+    Route::post('/orders/update_payment_status', [OrderController::class, 'update_payment_status'])->name('orders.update_payment_status');
+    Route::post('/orders/update_tracking_code', [OrderController::class, 'update_tracking_code'])->name('orders.update_tracking_code');
+    Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
+    Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-        Route::get('/orders/{id}/show', 'show')->name('all_orders.show');
-        Route::get('/inhouse-orders/{id}/show', 'show')->name('inhouse_orders.show');
-        Route::get('/seller_orders/{id}/show', 'show')->name('seller_orders.show');
-        Route::get('/orders_by_pickup_point/{id}/show', 'show')->name('pick_up_point.order_show');
-
-        Route::post('/bulk-order-status', 'bulk_order_status')->name('bulk-order-status');
-
-        Route::post('/orders/destroy/{id}', 'destroy')->name('orders.destroy');
-        Route::post('/bulk-order-delete', 'bulk_order_delete')->name('bulk-order-delete');
-
-        Route::post('/orders/destroy/{id}', 'destroy')->name('orders.destroy');
-        Route::post('/orders/details', 'order_details')->name('orders.details');
-        Route::post('/orders/update_delivery_status', 'update_delivery_status')->name('orders.update_delivery_status');
-        Route::post('/orders/update_payment_status', 'update_payment_status')->name('orders.update_payment_status');
-        Route::post('/orders/update_tracking_code', 'update_tracking_code')->name('orders.update_tracking_code');
-        Route::post('/orders/update_manager_notes', 'update_manager_notes')->name('orders.update_manager_notes');
-        Route::post('/orders/item/edit_price', 'edit_item_price')->name('order.item.edit_price');
-
-        //Delivery Boy Assign
-        Route::post('/orders/delivery-boy-assign', 'assign_delivery_boy')->name('orders.delivery-boy-assign');
-    });
 
     Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
 
@@ -671,7 +644,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
-    Route::post('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
+    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
 
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
     Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');

@@ -1,3 +1,5 @@
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
     index as driversIndex,
     create as driversCreate,
@@ -160,6 +162,7 @@ describe('storeAdminMenu', () => {
                 driversCreate.url(),
                 trucksIndex.url(),
                 trucksCreate.url(),
+                all_orders['/temp/admin/all_orders'].url(), all_orders['/temp/admin/seller_orders'].url(), all_orders['/temp/admin/orders_by_pickup_point'].url(), featureOrderCreate.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),

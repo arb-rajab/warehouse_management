@@ -33,7 +33,7 @@ trait ValidatesStoreTruck
             'description' => ['nullable', 'string', 'max:255'],
             'license_plate' => ['nullable', 'string', 'max:50', Rule::unique(Truck::class, 'license_plate')->ignore($truck)],
             'photos' => ['nullable', 'array', 'max:128'],
-            'photos.*' => ['required', 'integer', 'distinct', Rule::exists(Upload::class, 'id')->where('type', 'image')->when((! $this->user('store')?->can('view_uploads') || ! $this->user('store')?->can('viewAny', Upload::class)), fn (Exists $rule) => $rule->where(fn (Builder $query) => $query->where('user_id', $this->user('store')?->id)->orWhereIn('id', $retainedPhotoIds)))],
+            'photos.*' => ['required', 'integer', 'distinct', Rule::exists(Upload::class, 'id')->where('type', 'image')->when((! $this->user('store')->can('view_uploads') || ! $this->user('store')->can('viewAny', Upload::class)), fn (Exists $rule) => $rule->where(fn (Builder $query) => $query->where('user_id', $this->user('store')?->id)->orWhereIn('id', $retainedPhotoIds)))],
         ];
     }
 

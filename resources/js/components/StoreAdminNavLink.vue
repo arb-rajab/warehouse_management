@@ -11,6 +11,7 @@ import type { StoreMenuLink } from '@/lib/storeAdminMenu';
 defineProps<{
     item: StoreMenuLink;
     active: boolean;
+    count?: number;
 }>();
 </script>
 
@@ -28,5 +29,10 @@ defineProps<{
     >
         <component :is="item.icon" v-if="item.icon" class="h-4 w-4 shrink-0" />
         {{ t(item.labelKey) }}
+        <span
+            v-if="count"
+            class="ms-auto rounded-full bg-blue-100 px-2 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+            >{{ count }}</span
+        >
     </component>
 </template>
