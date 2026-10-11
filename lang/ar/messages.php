@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'upload_rejected' => 'هذا الملف غير مدعوم أو غير صالح أو يتجاوز حدود الرفع.',
     'admin_cannot_remove_own_access' => 'لا يمكنك إزالة صلاحية المسؤول الخاصة بك.',
     'row_cannot_resize_has_pallets' => 'لا يمكن تغيير أبعاد ممر يحتوي على منصات نقالة.',
     'row_cannot_delete_has_pallets' => 'لا يمكن حذف ممر يحتوي على منصات نقالة.',

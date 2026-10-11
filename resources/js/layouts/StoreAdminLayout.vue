@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown, CircleUser, Globe, Menu, Store, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
-import { index as profileIndex } from '@/actions/App/Http/Controllers/ProfileController';
+import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
@@ -194,8 +194,8 @@ function toggle(labelKey: string): void {
                     <Globe class="h-4 w-4 shrink-0" />
                     {{ t('store.nav.browseWebsite') }}
                 </a>
-                <a
-                    :href="profileIndex.url()"
+                <Link
+                    :href="profileIndex()"
                     :aria-label="t('store.nav.profile')"
                     class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
                 >
@@ -203,7 +203,7 @@ function toggle(labelKey: string): void {
                     <span class="truncate">{{
                         page.props.auth.user?.name
                     }}</span>
-                </a>
+                </Link>
                 <LanguageSwitcher />
                 <LogoutLink
                     :href="logout.post()"

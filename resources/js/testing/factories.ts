@@ -37,6 +37,8 @@ import type {
     StaffMember,
     StoreRole,
     StoreSharedProps,
+    StoreUpload,
+    StoreProfile,
 } from '@/types/store';
 
 /**
@@ -458,6 +460,28 @@ export function adminNotification(
         message: null,
         url: '/temp/admin/orders/encrypted/show',
         created_at: '2026-10-01T12:00:00+00:00',
+        ...overrides,
+    };
+}
+
+export function storeUpload(overrides: Partial<StoreUpload> = {}): StoreUpload {
+    return {
+        id: 1,
+        name: 'Photo',
+        type: 'image',
+        size: 42,
+        url: 'https://store.example/photo.webp',
+        ...overrides,
+    };
+}
+export function storeProfile(
+    overrides: Partial<StoreProfile> = {},
+): StoreProfile {
+    return {
+        id: 7,
+        name: 'Sam Staff',
+        email: 'sam@example.com',
+        avatar: null,
         ...overrides,
     };
 }

@@ -21,7 +21,6 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
     colors,
     index as attributesIndex,
@@ -110,6 +109,7 @@ import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/
 import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import {
@@ -465,7 +465,9 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.uploadedFiles',
-        href: uploadedFilesIndex['/temp/admin/uploaded-files'](),
+        href: uploadedFilesIndex(),
+        permission: 'view_uploads',
+        inertia: true,
         icon: FolderOpen,
     },
     {

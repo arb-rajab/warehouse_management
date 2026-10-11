@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Store\Admin;
 
 use App\Models\StoreUser;
 use App\Models\Upload;
@@ -14,11 +14,13 @@ use Illuminate\Validation\Rules\Password;
  * their own account only, so another account's id in the URL is a 403 before
  * any validation runs.
  */
-class AdminProfileRequest extends FormRequest
+class UpdateProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (int) $this->route('profile') === $this->user('store')->id;
+        $profile = $this->route('profile');
+
+        return $profile instanceof StoreUser && $profile->id === $this->user('store')?->id;
     }
 
     /**
@@ -30,7 +32,7 @@ class AdminProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(StoreUser::class, 'email')->ignore($this->user('store')->id)],
             'new_password' => ['nullable', 'string', 'max:255', 'same:confirm_password', Password::default()],
-            'avatar' => ['nullable', 'integer', Rule::exists(Upload::class, 'id')],
+            'avatar' => ['nullable', 'integer', Rule::exists(Upload::class, 'id')->where('type', 'image')],
         ];
     }
 }

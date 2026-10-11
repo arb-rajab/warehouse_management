@@ -25,6 +25,7 @@ import {
     filesystem,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as uploadsIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -98,6 +99,7 @@ describe('storeAdminMenu', () => {
                 user_search_report.url(),
                 commission_history.url(),
                 wallet_transaction_history.url(),
+                uploadsIndex.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),
@@ -142,7 +144,6 @@ describe('visibleStoreMenu', () => {
         );
 
         expect(labelKeys(menu)).toEqual([
-            'store.nav.uploadedFiles',
             'store.nav.offersCatalog',
             'store.nav.staff',
             'store.nav.allStaff',

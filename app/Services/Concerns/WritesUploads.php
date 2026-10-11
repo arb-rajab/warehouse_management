@@ -27,7 +27,9 @@ trait WritesUploads
         $path = 'uploads/all/'.Str::random(40).'.'.$extension;
 
         if (config('filesystems.default') === 's3') {
-            Storage::disk('s3')->put($path, $contents, array_filter(['visibility' => 'public', 'ContentType' => $mimeType]));
+            if (! Storage::disk('s3')->put($path, $contents, array_filter(['visibility' => 'public', 'ContentType' => $mimeType]))) {
+                throw new InvalidArgumentException('Uploading error');
+            }
         } else {
             File::ensureDirectoryExists(public_path('uploads/all'));
 

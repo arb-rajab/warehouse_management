@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\AizUploadController;
+use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\BlogCategoryController;
 use App\Http\Controllers\BlogController;
@@ -39,8 +40,9 @@ use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductBulkUploadController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductQueryController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Store\Admin\ReportController;
+use App\Http\Controllers\Store\Admin\ProfileController;
+use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\RepresentativePackageController;
 use App\Http\Controllers\RepresentativePaymentAdminController;
 use App\Http\Controllers\ReviewController;
@@ -303,7 +305,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/dynamic-popups-update-status', 'update_status')->name('dynamic-popups.update-status');
     });
 
-    Route::resource('profile', ProfileController::class)->only(['index', 'update']);
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::match(['PUT', 'PATCH'], '/profile/{profile}', [ProfileController::class, 'update'])->name('profile.update');
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
@@ -656,14 +659,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
-    // uploaded files
-    Route::resource('/uploaded-files', AizUploadController::class);
-    Route::controller(AizUploadController::class)->group(function () {
-        Route::any('/uploaded-files/file-info', 'file_info')->name('uploaded-files.info');
-        Route::post('/uploaded-files/destroy/{id}', 'destroy')->name('uploaded-files.destroy');
-        Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
-        Route::post('/all-file', 'all_file')->name('all-file')->middleware('permission:delete_all_uploads');
-    });
+    // Admin JSON file manager; the shared Blade uploader remains in shop-web/seller.
+    Route::get('/uploads', [UploadController::class, 'index'])->name('uploaded-files.index');
+    Route::get('/uploads/create', [UploadController::class, 'create'])->name('uploaded-files.create');
+    Route::get('/uploads/files', [UploadController::class, 'files'])->name('uploaded-files.files');
+    Route::get('/uploads/previews', [UploadController::class, 'previews'])->name('uploaded-files.info');
+    Route::post('/uploads', [UploadController::class, 'store'])->name('uploaded-files.store');
+    Route::delete('/uploads/{upload}', [UploadController::class, 'destroy'])->name('uploaded-files.destroy');
+    Route::post('/bulk-uploaded-files-delete', [UploadController::class, 'bulkDestroy'])->name('bulk-uploaded-files-delete');
+    Route::post('/all-file', [UploadController::class, 'destroyAll'])->name('all-file');
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
-import { index as profileIndex } from '@/actions/App/Http/Controllers/ProfileController';
+import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import {
     edit as staffEdit,
     index as staffIndex,
@@ -93,7 +93,6 @@ describe('StoreAdminLayout', () => {
                 .map((link) => link.props('item').labelKey),
         ).toEqual([
             'store.nav.dashboard',
-            'store.nav.uploadedFiles',
             'store.nav.offersCatalog',
             'store.nav.allStaff',
         ]);

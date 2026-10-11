@@ -18,6 +18,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -698,4 +699,10 @@ function createStoreReferenceData(): array
     $currency = DB::table('currencies')->insertGetId(['name' => 'Euro', 'code' => 'EUR', 'symbol' => '€', 'exchange_rate' => 1.23, 'status' => 1]);
 
     return compact('country', 'state', 'city', 'zone', 'staff', 'pickup', 'tax', 'currency');
+}
+
+/** Build a real multipart payload shared by upload endpoint tests. */
+function uploadedFile(string $name, string $contents): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent($name, $contents);
 }

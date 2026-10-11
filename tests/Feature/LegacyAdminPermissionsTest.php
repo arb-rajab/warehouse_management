@@ -54,11 +54,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
-    'AizUploadController@bulk_uploaded_files_delete',
-    'AizUploadController@destroy',
-    'AizUploadController@file_info',
-    'AizUploadController@store',
-    'AizUploadController@update',
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
@@ -105,10 +100,6 @@ const ADMIN_READS_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
-    'AizUploadController@create',
-    'AizUploadController@edit',
-    'AizUploadController@index',
-    'AizUploadController@show',
     'ProfileController@index',
 
     // Read-only AJAX helpers the product forms use.
