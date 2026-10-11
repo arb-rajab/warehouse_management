@@ -516,7 +516,7 @@ Batches are ordered by what they need first:
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
-| 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
+| 6 | Sellers | 13 | sellers (13) | Pending owner decision (§4.1): confirmed multi-vendor use permits migration; removal needs an explicit decision and scope. A setting value or missing confirmation authorizes neither |
 | 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
 | 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
@@ -525,6 +525,53 @@ Batches are ordered by what they need first:
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete back-office layouts/app, unused layouts/blank and the admin nav/sidenav. Keep layouts/layout, invoices and downloads (§5), plus the CSP policy/middleware needed by protected store Blade surfaces (§2.5). Server-status deletion remains an owner call |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+
+### 4.1 Seller prerequisite review (2026-10-08)
+
+**Blocked on the owner decision, not complete.** No confirmation of active
+multi-vendor use or explicit authorization to remove seller administration was
+found in the checked-in guidance, README or available local Git history. The
+2026-10-05 back-office approval does not resolve this separate prerequisite.
+`vendor_system_activation`, its consumers and test fixtures establish a feature
+flag, not an owner decision.
+
+The exact outstanding decision is: **Is multi-vendor actively used, so the
+remaining `/temp/admin` seller screens should migrate, or does the owner
+explicitly authorize removing seller administration, and with what scope?**
+Until recorded, leave both migration and removal pending. If removal is
+authorized, trace consumers and data dependencies first and preserve business
+data. The seller-facing area and public seller pages remain Blade.
+
+Verified against code at `8e3f82b`:
+
+- All 13 seller views in §6 still exist and are rendered by the root-namespace
+  `SellerController`, `PaymentController`, `SellerWithdrawRequestController`
+  and `BusinessSettingsController`. There are no converted seller controllers
+  or pages under `Store/Admin`. All five seller menu entries remain full-load
+  Blade links in `resources/js/lib/storeAdminMenu.ts`.
+- The §5.1 and seller-row corrections remain pending: the approval toggle
+  checks `approve_seller` while writes require `edit_seller`; the withdraw list
+  exposes Pay Now without `pay_to_seller` and gates Message View with that
+  permission; all four AJAX HTML modal endpoints remain, as do both `.select2()`
+  calls. Commission toggles still use the `RaizerSuperAdmin` activation route;
+  commission and verification-form saves still clear the shared cache.
+- Existing boundaries were reviewed statically: store web groups use
+  `UseStoreAuthGuard` and `HandleStoreBladePages`; verification downloads use
+  private `ShopVerificationStorage` and `view_all_seller`; payout submission
+  requires `pay_to_seller` and locks the shop and the seller-owned pending
+  withdraw request. Preserve these when migration is authorized.
+- Existing backend coverage includes `LegacyCommissionPayoutTest`,
+  `LegacySellerWithdrawRequestTest`, `LegacyShopVerificationTest` and
+  `LegacySellerScopingTest`, plus the admin-permission and state-changing-route
+  sweeps. This is not complete seller-screen render, payload or per-action
+  migration coverage; those checks in §3 remain to be implemented with the port.
+- Independent verification: `storeAdminMenu.test.ts` and
+  `StoreAdminNavLink.test.ts` passed (2 files, 14 tests), covering menu labels in
+  English/Arabic, permission/setting filtering and Blade/Inertia link selection.
+  PHP and Composer executables are unavailable in this environment, so Artisan
+  route inspection and backend tests were not run. The §3 full migration gate,
+  production build and browser checks were skipped for this documentation-only
+  review; the AGENTS.md documentation checks apply at completion.
 
 ## 5. Views to delete rather than port
 
@@ -852,7 +899,7 @@ Notes:
 2. "Login as" (`sellers.login`, `customers.login`, GET with `encrypt(id)`) replaces the admin's session with the customer's on the store guard and redirects into the storefront: in Vue a plain `<a>` (full page load), never an Inertia visit.
 3. `CustomerController` gates every write behind the read permission `view_all_customers` (update, update_password, store_customer, verify, important, notes); `customers.sendAgreement` and the `addresses.*` routes live in shop-web.php outside `temp/admin`, so the permission ratchet never sees them; `addresses.store` accepts a posted `customer_id` from any signed-in user.
 4. select2 is not in vendors.js: the `.select2()` calls in sellers/index and the withdraw-requests list throw.
-5. Confirm with the owner that multi-vendor (`vendor_system_activation`) and classifieds (`classified_product`) are in use before porting their 17 views.
+5. Confirm with the owner that multi-vendor (`vendor_system_activation`) and classifieds (`classified_product`) are in use before porting their 17 views. Seller verdicts above are conditional plans, not completed migrations or removal authorization; §4.1 records the unresolved seller decision and verified review. A disabled flag or absent confirmation does not authorize deletion.
 
 ### sales (9 views), reports (8), invoices (1)
 
