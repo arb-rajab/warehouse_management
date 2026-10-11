@@ -78,23 +78,6 @@ test('the store admin panel is not found for a customer', function () {
     $this->get('/temp/admin')->assertNotFound();
 });
 
-/**
- * RaizerSuperAdmin returned null for anyone but the vendor's own super admin,
- * which Laravel 8 rendered as an empty page and this app's own typed web
- * middleware turned into a 500.
- */
-test('a vendor-only admin page refuses an admin who is not the vendor super admin', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->get('/temp/admin/activation')->assertForbidden();
-});
-
-test('a vendor-only admin page renders for the vendor super admin', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
-
-    $this->get('/temp/admin/activation')->assertOk();
-});
-
 test('the vendor super admin gets the cache-clear button', function () {
     actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
 

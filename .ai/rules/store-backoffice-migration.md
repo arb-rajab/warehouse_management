@@ -4,7 +4,7 @@ paths:
   - 'resources/js/pages/Store/**'
   - 'resources/js/layouts/StoreAdminLayout.vue'
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
-  - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
+  - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue,resources/js/components/StoreLanguageFormFields.vue,resources/js/components/StoreBooleanField.vue'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -26,10 +26,12 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Baseline count:** there were 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
-- **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
+- **Verified on 2026-10-08:** staff/roles (6 views) and batch 2 (15 views)
+  are converted; 180 backend Blade files remain, including required PDF/root
+  templates. Batch 1 has not migrated. Staff still sets the pattern (§3).
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
 
@@ -89,7 +91,8 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, languages and the ten
+plain-settings pages are Inertia; the other entries still load Blade.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -151,9 +154,11 @@ Why not the other two options:
 
 What it means for the translation admin:
 
-- It (`languages.show`, `app-translations.show`) keeps editing `translations`,
-  which still drives the storefront, the seller area, emails, PDFs and the
-  mobile API.
+- `languages.show` keeps editing `translations`,
+  which still drives the storefront, the seller area, emails and PDFs.
+  The mobile editor separately updates `app_translations`, using
+  `languages.app_lang_code`, for the mobile API. Neither table is replaced
+  by frontend locale files.
 - A converted module's strings stop being read from that table. Editing
   "All Staffs" there no longer changes the back office. The rows stay and do
   no harm.
@@ -430,7 +435,7 @@ Batches are ordered by what they need first:
 | --- | --- | --- | --- | --- |
 | 0 | Staff (pilot) | 6 | staff (6) | done |
 | 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
-| 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
+| 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | converted on 2026-10-08; page permissions and boolean allowlists; environment fields omitted; verification and remaining prerequisites below |
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
@@ -443,6 +448,79 @@ Batches are ordered by what they need first:
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+
+### Batch 2: verified implementation and deliberate corrections
+
+- `Store\Admin\SettingsController` renders ten sections through
+  `Store/Admin/Settings/Index`. Each database write has the page's existing
+  permission and the exact boolean keys in `SettingsController::PAGES`.
+  Activation also requires `RaizerSuperAdmin`. Unknown keys, malformed values
+  and legacy `types[]`/environment payloads are rejected before any write.
+  The retained generic settings endpoint refuses all migrated keys, including
+  nested language-key payloads, so its OR gate cannot bypass these endpoints.
+- SMTP, social login and filesystem are read-only notices; environment fields
+  and secret values are omitted entirely. SMTP testing keeps `test.smtp`, now
+  POST `/temp/admin/smtp-settings/test`, and requires both `smtp_settings` and
+  `send_newsletter`. Tests fake mail; no real email was sent during verification.
+- Activation omits FORCE_HTTPS, maintenance mode, wholesale/auction and ProxyPay.
+  Payment settings expose only the six audited sandbox booleans; the
+  Authorize.Net stub and credentials are omitted. Gateway activation is not
+  gateway implementation: provider configuration/callbacks remain a separate
+  prerequisite in legacy phase 0b. No new dependencies or product approvals
+  are assumed. Writes forget only `business_settings`, not the WMS cache.
+- `Store\Admin\LanguageController` owns administration, with bound models,
+  validated names/codes, paginated languages/translation keys, explicit
+  redirects and atomic JSON import/translation saves. Language deletion uses
+  DELETE `/languages/{language}` and retains both translation tables. English
+  and the configured default cannot be deleted or renamed; the default cannot
+  be deactivated. The default-language environment form is replaced by a
+  read-only notice. Database text is escaped in Vue, never rendered as HTML.
+- Store translation saves invalidate `translations-<code>`; language writes
+  invalidate `app.languages`. Mobile editing/export uses `app_lang_code`.
+  Frontend chrome uses only `store.*` en/ar keys. Other store languages use the
+  English frontend fallback while retaining their public database translations.
+- Route names remain intact, including `facebook_pixel.update` as an analytics
+  write alias; ordinary settings POSTs now use their page's URI. The public
+  language switch and translation-check routes keep their response behavior
+  on the small `Store\LanguageController`. The old root LanguageController
+  and its Pint/PHPStan exclusions are removed. BusinessSettingsController
+  remains excluded while its unrelated Blade modules still depend on it.
+- All 15 audited Blade views are deleted. Required public/auth/email/PDF/root
+  templates remain Blade. Converted menu links use Wayfinder and Inertia.
+- Remaining work: the other batches are pending. The generic settings OR gate,
+  raw header/footer-script settings and global cache clearing in unrelated
+  legacy writes still require their own page allowlists in batches 1/7/9/10.
+  Remaining catalogue/seller forms that posted activation-style payloads need
+  their own permission-gated endpoints when migrated; the new activation
+  endpoint deliberately rejects their old payload format.
+
+**Verification on 2026-10-08:**
+
+- `python3 .claude/scripts/pre_push_check.py` completed successfully: ESLint,
+  Prettier, vue-tsc, all 1,626 Vitest tests (120 files), Pint, PHPStan and all
+  3,128 Pest tests (13,753 assertions). No check in that script was skipped.
+- Production assets built successfully; Wayfinder actions regenerated from the
+  explicit routes. The existing large-bundle warning remains.
+- Scoped Chromium verification: all four tests in
+  `store-language-settings.spec.ts` and `store-staff-coexistence.spec.ts`
+  passed, including native language-code constraints, retained validation
+  input, confirm dismissal/acceptance, Arabic RTL and Blade/Inertia navigation.
+  The remaining unrelated browser suites were not run.
+- Focused backend checks ran during implementation, including settings keys,
+  permissions, translations, validation, redirects, legacy route/permission
+  ratchets and guard/coexistence checks. `git diff --check` passed.
+- Host PHP was unavailable. Verification used the existing local PHP 8.5 image
+  and installed project dependencies, without changing dependency lockfiles.
+  Its test-only memory limit was raised and short tags disabled; the initial
+  short-tag setting had miscompiled an existing PDF template. The six receipt
+  tests then passed. An existing random row-factory collision in `CellTest`
+  failed one full run, passed in isolation, and the final full run passed.
+- The browser harness now uses `serve --no-reload` so Laravel retains e2e DB
+  overrides when `.env` exists, and resets only the four dedicated e2e SQLite
+  files before seeding. The earlier task-created local language row was
+  removed; final browser data was verified to reside in the e2e database.
+- No `artisan down` or `cache:clear` command was executed. No application
+  dependencies were added; no commit, push or deployment was performed.
 
 ## 5. Views to delete rather than port
 
@@ -483,8 +561,10 @@ Most severe first:
    upserts any key with no allowlist. A user holding only `currency_setup` can
    write `header_script`/`footer_script`, which the storefront prints raw
    (stored XSS).
-   - Batches 2 and 9 replace it with one endpoint per page, each with that
-     page's permission and its own keys.
+   - **Batch 2 fixed for its pages:** page-specific writes and allowlists,
+     plus a refusal guard on the old generic endpoint for every migrated key.
+     The OR gate and header/footer-script vulnerability remain on unrelated
+     legacy pages; their batches still need per-page endpoints.
 3. **Unescaped HTML built from data:**
    - `order_configuration.product-search` concatenates `product.name` into
      HTML (batch 1);
@@ -500,10 +580,10 @@ Most severe first:
      `addresses.*`) are invisible to the permission ratchet.
    - The port gates the endpoint, not the button.
 5. **Settings that affect the whole merged app:**
-   - every settings save runs `cache:clear` on the cache WMS shares;
-   - activation's `maintenance_mode` runs `artisan down`, which takes WMS down
-     too.
-   - Neither is ported.
+   - Unconverted settings saves still run `cache:clear` on the shared cache.
+   - **Batch 2 fixed:** scoped writes invalidate specific cache keys. The old
+     activation handler and its `maintenance_mode` → `artisan down` path are
+     removed; migrated writes reject that key and never call Artisan.
 6. **Links and redirects that drop `/temp`:**
    - blog category links;
    - the flash deal page link;
@@ -549,7 +629,7 @@ for a batch.
 | staff/staff_roles/create | `roles.create`, `roles.store` | @create, @store → `…/Roles/Create` | `add_staff_role` | form (permission grid) | aiz-switch checkboxes | same; Create.test.ts | converted |
 | staff/staff_roles/edit | `roles.edit` · GET …/roles/{role}/edit?lang=; `roles.update` · PUT …/roles/{role} | @edit, @update → `…/Roles/Edit` | `edit_staff_role` | form (language tabs + permission grid) | aiz-switch checkboxes | same; Edit.test.ts | converted |
 
-### setup_configurations (40 views) and downloads (3 views)
+### setup_configurations (40 baseline views; 15 converted, 25 remaining) and downloads (3 views)
 
 URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC = BusinessSettingsController. Every gated route here is also hit by the 403 sweep (`LegacyAdminPermissionsTest.php:185`), which never renders a page; "none" below means no test renders the view.
 
@@ -558,7 +638,7 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | downloads/brand | `pdf.download_brand`, `seller.pdf.download_brand` · GET …/bulk-upload/download/brand (:149; shop-seller:43) | ProductBulkUploadController@pdf_download_brand (:67), Seller\… (:39) | `product_bulk_import`; seller: role middleware | print (mPDF) | none | none | keep Blade (PDF download, shared with the seller area) |
 | downloads/category | `pdf.download_category`, `seller.pdf.download_category` (:148; shop-seller:42) | ProductBulkUploadController@pdf_download_category (:58), Seller\… (:30) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF download) |
 | downloads/user | `pdf.download_seller` · GET …/bulk-upload/download/seller (:150) | ProductBulkUploadController@pdf_download_seller (:76) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF); nothing links to it |
-| s/c/activation | `activation.index` · GET …/activation (:315) | BSC@activation (:54) | `features_activation` + `RaizerSuperAdmin` | form (toggle board) | `$.post business_settings.update.activation` (returns 1/0), notify | LegacyAdminPanelTest:152,158; LegacyEnvFileProtectionTest:77 | port-trim: wholesale/auction cards (194-223), ProxyPay card (734-752, no controller), FORCE_HTTPS card (7-19, `.env` only); do not port `maintenance_mode` → `artisan down` (takes WMS down too) |
+| s/c/activation | `activation.index` · GET …/activation; `business_settings.update.activation` · POST same URI | Store\Admin\SettingsController@activation, @updateActivation → Inertia | `features_activation` + `RaizerSuperAdmin` | boolean grid | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; removed addon/environment/maintenance keys omitted; Blade deleted |
 | s/c/carriers/create | `carriers.create` (:625) | CarrierController@create (:50) | `manage_carriers` | form | aizuploader, aiz-selectpicker, range-table cloning, `$.ajax` FormData → `carriers.store` (1 or 422 JSON) | none | port |
 | s/c/carriers/edit | `carriers.edit` (:625) | CarrierController@edit (:106) | `manage_carriers` | form | as create, `$.ajax` → `carriers.update` | none | port |
 | s/c/carriers/index | `carriers.index` (:625) | CarrierController@index (:39) | `manage_carriers` | list | `$.post carriers.update_status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
@@ -569,27 +649,27 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/currencies/create | `currency.create` · GET (:359) | CurrencyController@create (:69) | `currency_setup` | modal partial (AJAX HTML) | injected by currencies/index with `.html(data)` | none | port as a dialog |
 | s/c/currencies/edit | `currency.edit` · POST …/currency/currency_edit (:361) | CurrencyController@edit (:75) | `currency_setup` | modal partial (AJAX HTML) | injected with `.html(data)` | none | port as a dialog |
 | s/c/currencies/index | `currency.index` (:356) | CurrencyController@currency (:46) | `currency_setup` | list + 2 settings forms | aiz-selectpicker, the two `.html(data)` loads, `$.post currency.update_status` | none | port |
-| s/c/facebook_chat | `facebook_chat.index` (:326) | BSC@facebook_chat (:87) | `facebook_chat` | form | none | none | port-trim: the page-id field writes `.env` (refused); only the toggle saves |
-| s/c/facebook_configuration/facebook_comment | `facebook-comment` (:328) | BSC@facebook_comment (:92) | `facebook_comment` | form | none | none | port-trim: app-id `.env` field does nothing |
-| s/c/file_system | `file_system.index` (:317) | BSC@file_system (:102) | `file_system_&_cache_configuration` | form | aiz-selectpicker, `$.post …update.activation` | LegacyEnvFileProtectionTest:38 | port-trim: every input is `.env` (refused) and its forms post to `payment_method.update`, resetting `paypal_sandbox`; read-only status at most, stop printing secrets |
+| s/c/facebook_chat | `facebook_chat.index`, `facebook_chat.update` · GET/POST …/facebook-chat | Store\Admin\SettingsController@facebookChat, @updateFacebookChat → Inertia | `facebook_chat` | boolean form | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts; e2e store-language-settings.spec.ts | converted; environment page id omitted; Blade deleted |
+| s/c/facebook_configuration/facebook_comment | `facebook-comment`, `facebook-comment.update` · GET/POST …/facebook-comment | Store\Admin\SettingsController@facebookComments, @updateFacebookComments → Inertia | `facebook_comment` | boolean form | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; environment app id omitted; Blade deleted |
+| s/c/file_system | `file_system.index` · GET …/file_system | Store\Admin\SettingsController@filesystem → Inertia | `file_system_&_cache_configuration` | read-only notice | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; no values or write form; Blade deleted |
 | s/c/general_settings | `general_setting.index` (:314) | BSC@general_setting (:49) | `general_settings` | form | aizuploader ×3, aiz-selectpicker | LegacyAdminPermissionsTest:228 (write endpoint) | port-trim: timezone is `.env` only |
-| s/c/google_configuration/google_analytics | `google_analytics.index` (:320) | BSC@google_analytics (:69) | `analytics_tools_configuration` | form | none | none | port-trim: pixel/tracking-id `.env` fields do nothing |
-| s/c/google_configuration/google_firebase | `google-firebase.index` (:323) | BSC@google_firebase (:82) | `google_firebase_setting` | form | none | none | port-trim: `FCM_SERVER_KEY` field does nothing |
+| s/c/google_configuration/google_analytics | `google_analytics.index`, `google_analytics.update` · GET/POST …/google-analytics; `facebook_pixel.update` · POST …/google-analytics/pixel | Store\Admin\SettingsController@analytics, @updateAnalytics → Inertia | `analytics_tools_configuration` | boolean form | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; pixel/tracking ids omitted; Blade deleted |
+| s/c/google_configuration/google_firebase | `google-firebase.index`, `google-firebase.update` · GET/POST …/google-firebase | Store\Admin\SettingsController@firebase, @updateFirebase → Inertia | `google_firebase_setting` | boolean form | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; FCM key omitted; Blade deleted |
 | s/c/google_configuration/google_map | `google-map.index` (:322) | BSC@google_map (:78) | `google_map_setting` | form + map picker | Google Maps JS (places) via `shop.frontend.partials.google_map` | none | port-trim: `MAP_API_KEY` field does nothing |
-| s/c/google_configuration/google_recaptcha | `google_recaptcha.index` (:321) | BSC@google_recaptcha (:74) | `google_recaptcha_configuration` | form | none | none | port-trim: key field does nothing |
-| s/c/languages/app_translation | `app-translations.show` (:384) | LanguageController@showAppTranlsationView (:226) | `language_setup` | form (key grid) | inline copyTranslation() | none | port |
-| s/c/languages/create | `languages.create` (:374) | LanguageController@create (:51) | `language_setup` | form | aiz-selectpicker (flags) | none | port |
-| s/c/languages/edit | `languages.edit` (:374) | LanguageController@edit (:91) | `language_setup` | form | aiz-selectpicker | RouteServiceProviderTest:43 | port |
-| s/c/languages/index | `languages.index` (:374) | LanguageController@index (:46) | `language_setup` | list + 2 forms | `$.post languages.update_rtl_status`/`update-status`, confirm-delete | LegacyTripUploadTest:43; LegacyEnvFileProtectionTest:50 | port-trim: Default Language form posts to `env_key_update` (refused) |
-| s/c/languages/language_view | `languages.show` (:374) | LanguageController@show (:85) | `language_setup` | form (key grid) | inline copyTranslation() | none | port — this is the translation admin; see §2.3 |
+| s/c/google_configuration/google_recaptcha | `google_recaptcha.index`, `google_recaptcha.update` · GET/POST …/google-recaptcha | Store\Admin\SettingsController@recaptcha, @updateRecaptcha → Inertia | `google_recaptcha_configuration` | boolean form | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; keys omitted; Blade deleted |
+| s/c/languages/app_translation | `app-translations.show` · GET …/languages/app-translations/show/{language}; `.store`, `.import`, `.export` retained | Store\Admin\LanguageController@showAppTranslations, @storeAppTranslations, @importAppTranslations, @exportAppTranslations → Inertia | `language_setup` | paginated key editor/import/export | Wayfinder/Inertia; no legacy JS | LanguageControllerTest; Languages/Translations.test.ts | converted; app_translations preserved; Blade deleted |
+| s/c/languages/create | `languages.create` · GET …/languages/create; `languages.store` · POST …/languages | Store\Admin\LanguageController@create, @store → Inertia | `language_setup` | form | Wayfinder/Inertia; no legacy JS | LanguageControllerTest; Languages/Create.test.ts; e2e store-language-settings.spec.ts | converted; validated text codes replace flag picker; Blade deleted |
+| s/c/languages/edit | `languages.edit` · GET …/languages/{language}/edit; `languages.update` · POST …/languages/{language}/update | Store\Admin\LanguageController@edit, @update → Inertia | `language_setup` | form | Wayfinder/Inertia; no legacy JS | LanguageControllerTest; Languages/Edit.test.ts | converted; bound language; Blade deleted |
+| s/c/languages/index | `languages.index` · GET …/languages; `.update-status`, `.update_rtl_status` · POST; `.destroy` · DELETE …/languages/{language} | Store\Admin\LanguageController@index, @updateStatus, @updateRtlStatus, @destroy → Inertia | `language_setup` | paginated list + import | Wayfinder/Inertia; no legacy JS | LanguageControllerTest; Languages/Index.test.ts; e2e store-language-settings.spec.ts | converted; configured default read-only; Blade deleted |
+| s/c/languages/language_view | `languages.show` · GET …/languages/{language}; `languages.key_value_store` · POST …/languages/key_value_store | Store\Admin\LanguageController@show, @storeTranslations → Inertia | `language_setup` | paginated key editor | Wayfinder/Inertia; no legacy JS | LanguageControllerTest; Languages/Translations.test.ts | converted; translations preserved (§2.3); Blade deleted |
 | s/c/order_configuration/index | `order_configuration.index` (:349) | BSC@order_configuration (:531) | `order_configuration` | form | second jQuery from a CDN; `$.ajax order_configuration.product-search` (JSON, ungated) builds unescaped HTML (XSS sink) | none | port |
-| s/c/payment_method | `payment_method.index` (:316) | BSC@payment_method (:97) | `payment_methods_configurations` | form (8 gateway cards) | none | none | port-trim: credential inputs are `.env` (do nothing), Authorize.Net stub; only `<gw>_sandbox` toggles save; gateways pending phase 0b |
+| s/c/payment_method | `payment_method.index`, `payment_method.update` · GET/POST …/payment-method | Store\Admin\SettingsController@payments, @updatePayments → Inertia | `payment_methods_configurations` | sandbox boolean grid | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; credentials/stub omitted; gateways pending phase 0b; Blade deleted |
 | s/c/pickup_point/create | `pick_up_points.create` (:563) | PickupPointController@create (:52) | `pickup_point_setup` | form | aiz-selectpicker | none | port |
 | s/c/pickup_point/edit | `pick_up_points.edit` · GET …/edit/{id}?lang= (:565) | PickupPointController@edit (:107) | `pickup_point_setup` | form (language tabs) | aiz-selectpicker | none | port |
 | s/c/pickup_point/index | `pick_up_points.index` (:563) | PickupPointController@index (:42) | `pickup_point_setup` | list | confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
 | s/c/shipping_configuration/index | `shipping_configuration.index` (:345) | BSC@shipping_configuration (:517) | `shipping_configuration` | form | none | none | port |
-| s/c/smtp_settings | `smtp_settings.index` (:319) | BSC@smtp_settings (:64) | `smtp_settings` | form | aiz-selectpicker, inline checkMailDriver() | LegacyEnvFileProtectionTest:50 | port-trim: whole form posts to `env_key_update` (refused) — read-only; keep "Send test email" (`test.smtp`, gated by `send_newsletter`) |
-| s/c/social_login | `social_login.index` (:318) | BSC@social_login (:59) | `social_media_logins` | form | none | LegacyEnvFileProtectionTest:50 | port-trim: all 4 forms post to `env_key_update` — read-only or drop |
+| s/c/smtp_settings | `smtp_settings.index` · GET …/smtp-settings; `test.smtp` · POST …/smtp-settings/test | Store\Admin\SettingsController@smtp, @testSmtp → Inertia | `smtp_settings`; testing also `send_newsletter` | read-only notice + test email | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; credentials omitted; Blade deleted |
+| s/c/social_login | `social_login.index` · GET …/social-login | Store\Admin\SettingsController@socialLogin → Inertia | `social_media_logins` | read-only notice | Wayfinder/Inertia; no legacy JS | SettingsControllerTest; Settings/Index.test.ts | converted; credentials omitted; Blade deleted |
 | s/c/states/edit | `states.edit` (:621) | StateController@edit (:101) | `manage_shipping_states` | form | aiz-selectpicker | none | port |
 | s/c/states/index | `states.index` (:621) | StateController@index (:47) | `manage_shipping_states` | list + inline add form | aiz-selectpicker, `$.post states.status` | none | port |
 | s/c/tax/create | `tax.create` (:366) | TaxController@create — empty | `vat_&_tax_setup` | form (orphan) | aiz-selectpicker | none | **delete** (nothing renders it; byte copy of pickup_point/create) |
@@ -600,10 +680,10 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/zones/index | `zones.index` (:633) | ZoneController@index (:32) | `manage_zones` | list | confirm-delete; status switch calls an undefined `update_status()` | LegacyStoreStateChangingRoutesTest:117 | port (build or drop the status toggle) |
 
 Notes:
-1. `env_key_update`, `overWriteEnvFile` and `updateActivationSettingsInEnv` refuse every request (BSC.php:320-358, 483-488), so smtp_settings, social_login, file_system and the Default Language form save nothing, and the google_*/facebook_*/payment_method screens save only their toggles. These views print `env()` secrets into `value=` attributes (`NoEnvOutsideConfigTest.php:58` exempts this folder); the port reads `config()` or masks them.
-2. Every settings save runs `Artisan::call('cache:clear')`, which clears the cache WMS shares. Do not port it; forget the specific keys.
+1. Batch 2 omits all environment fields and frontend secrets; its environment-only pages/default language are read-only. `updateActivationSettingsInEnv` was removed. The retained `env_key_update` and `overWriteEnvFile` still refuse writes for unrelated legacy callers; inspect those remaining views separately when they migrate.
+2. Unconverted settings saves still run `Artisan::call('cache:clear')`. Batch 2 forgets specific cache keys only; preserve this restriction in later batches.
 3. Only currencies/index loads HTML over AJAX (`currency.create`, `currency.edit`).
-4. Duplicate names where the explicit override wins: `tax.edit`, `cities.edit`, `pick_up_points.edit` (`…/edit/{id}`), `languages.update` (POST `…/{id}/update`), every `*.destroy` (POST `…/destroy/{id}`). The resource `GET …/{x}/edit` URIs stay registered without a name.
+4. Duplicate names where the explicit override wins: `tax.edit`, `cities.edit`, `pick_up_points.edit` (`…/edit/{id}`), legacy `*.destroy` (POST `…/destroy/{id}`). Languages now have explicit bound routes; their retained update name uses POST `…/{language}/update`, and deletion uses DELETE. The resource `GET …/{x}/edit` URIs stay registered without a name.
 
 ### marketing (25 views), blog_system (6), notification (1)
 

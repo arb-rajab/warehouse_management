@@ -169,7 +169,6 @@ parameters:
         - app/Http/Controllers/FollowSellerController.php
         - app/Http/Controllers/HomeController.php
         - app/Http/Controllers/InvoiceController.php
-        - app/Http/Controllers/LanguageController.php
         - app/Http/Controllers/MessageController.php
         - app/Http/Controllers/NewsletterController.php
         - app/Http/Controllers/NotificationController.php

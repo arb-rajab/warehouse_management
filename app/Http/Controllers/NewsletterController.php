@@ -23,7 +23,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:send_newsletter', only: ['index', 'send', 'testEmail']),
+            new Middleware('permission:send_newsletter', only: ['index', 'send']),
         ];
     }
     public function index(Request $request)
@@ -77,19 +77,4 @@ class NewsletterController extends Controller implements HasMiddleware
     	return redirect()->route('shop.admin.dashboard');
     }
 
-    public function testEmail(Request $request){
-        $array['view'] = 'shop.emails.newsletter';
-        $array['subject'] = "SMTP Test";
-        $array['from'] = config('mail.from.address');
-        $array['content'] = "This is a test email.";
-
-        try {
-            Mail::to($request->email)->queue(new EmailManager($array));
-        } catch (\Exception $e) {
-            dd($e);
-        }
-
-        flash(translate('An email has been sent.'))->success();
-        return back();
-    }
 }

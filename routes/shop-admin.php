@@ -24,7 +24,8 @@ use App\Http\Controllers\DynamicPopupController;
 use App\Http\Controllers\FeatureOrderController;
 use App\Http\Controllers\FeatureOrderTripController;
 use App\Http\Controllers\FlashDealController;
-use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\Store\Admin\LanguageController;
+use App\Http\Controllers\Store\Admin\SettingsController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfferController;
@@ -70,8 +71,6 @@ use Aws\Middleware;
 // test majd
 Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
-
-
 
     // category
     Route::resource('categories', CategoryController::class);
@@ -211,7 +210,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/representatives/store', 'repStore')->name('representatives.store');
     });
 
-
     Route::controller(RepresentativePaymentAdminController::class)->group(function() {
         Route::get('admin/representatives/payments/index', 'index')->name('admin.rep.payments.index');
         Route::post('admin/representatives/payments/accept/{id}', 'accept')->name('admin.rep.payments.accept');
@@ -237,7 +235,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/representatives/packages/delete/{id}', 'delete')->name('rep.packages.destroy');
         Route::post('/representatives/packages', 'package_modal')->name('rep.packages.modal');
         Route::post('/representatives/packages/set_package', 'set_package')->name('rep.set-package');
-
 
     });
     Route::group(['prefix' => 'trips'], function () {
@@ -294,7 +291,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(NewsletterController::class)->group(function () {
         Route::get('/newsletter', 'index')->name('newsletters.index');
         Route::post('/newsletter/send', 'send')->name('newsletters.send');
-        Route::post('/newsletter/test/smtp', 'testEmail')->name('test.smtp');
     });
 
     // Dynamic Popup
@@ -310,31 +306,12 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
         Route::post('/business-settings/update', 'update')->name('business_settings.update');
-        Route::post('/business-settings/update/activation', 'updateActivationSettings')->name('business_settings.update.activation')->middleware('RaizerSuperAdmin');
         Route::get('/general-setting', 'general_setting')->name('general_setting.index');
-        Route::get('/activation', 'activation')->name('activation.index')->middleware('RaizerSuperAdmin');
-        Route::get('/payment-method', 'payment_method')->name('payment_method.index');
-        Route::get('/file_system', 'file_system')->name('file_system.index');
-        Route::get('/social-login', 'social_login')->name('social_login.index');
-        Route::get('/smtp-settings', 'smtp_settings')->name('smtp_settings.index');
-        Route::get('/google-analytics', 'google_analytics')->name('google_analytics.index');
-        Route::get('/google-recaptcha', 'google_recaptcha')->name('google_recaptcha.index');
-        Route::get('/google-map', 'google_map')->name('google-map.index');
-        Route::get('/google-firebase', 'google_firebase')->name('google-firebase.index');
 
-        //Facebook Settings
-        Route::get('/facebook-chat', 'facebook_chat')->name('facebook_chat.index');
-        Route::post('/facebook_chat', 'facebook_chat_update')->name('facebook_chat.update');
-        Route::get('/facebook-comment', 'facebook_comment')->name('facebook-comment');
-        Route::post('/facebook-comment', 'facebook_comment_update')->name('facebook-comment.update');
-        Route::post('/facebook_pixel', 'facebook_pixel_update')->name('facebook_pixel.update');
+        Route::get('/google-map', 'google_map')->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
-        Route::post('/payment_method_update', 'payment_method_update')->name('payment_method.update');
-        Route::post('/google_analytics', 'google_analytics_update')->name('google_analytics.update');
-        Route::post('/google_recaptcha', 'google_recaptcha_update')->name('google_recaptcha.update');
         Route::post('/google-map', 'google_map_update')->name('google-map.update');
-        Route::post('/google-firebase', 'google_firebase_update')->name('google-firebase.update');
 
         Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
         Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
@@ -350,6 +327,26 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/product/search', 'search')->name('order_configuration.product-search');
     });
 
+    // Migrated plain settings: each write has its page permission and keys.
+    Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');
+    Route::post('/activation', [SettingsController::class, 'updateActivation'])->name('business_settings.update.activation');
+    Route::get('/smtp-settings', [SettingsController::class, 'smtp'])->name('smtp_settings.index');
+    Route::get('/social-login', [SettingsController::class, 'socialLogin'])->name('social_login.index');
+    Route::get('/facebook-chat', [SettingsController::class, 'facebookChat'])->name('facebook_chat.index');
+    Route::post('/facebook-chat', [SettingsController::class, 'updateFacebookChat'])->name('facebook_chat.update');
+    Route::get('/facebook-comment', [SettingsController::class, 'facebookComments'])->name('facebook-comment');
+    Route::post('/facebook-comment', [SettingsController::class, 'updateFacebookComments'])->name('facebook-comment.update');
+    Route::get('/google-analytics', [SettingsController::class, 'analytics'])->name('google_analytics.index');
+    Route::post('/google-analytics', [SettingsController::class, 'updateAnalytics'])->name('google_analytics.update');
+    Route::get('/google-recaptcha', [SettingsController::class, 'recaptcha'])->name('google_recaptcha.index');
+    Route::post('/google-recaptcha', [SettingsController::class, 'updateRecaptcha'])->name('google_recaptcha.update');
+    Route::get('/google-firebase', [SettingsController::class, 'firebase'])->name('google-firebase.index');
+    Route::post('/google-firebase', [SettingsController::class, 'updateFirebase'])->name('google-firebase.update');
+    Route::get('/payment-method', [SettingsController::class, 'payments'])->name('payment_method.index');
+    Route::post('/payment-method', [SettingsController::class, 'updatePayments'])->name('payment_method.update');
+    Route::get('/file_system', [SettingsController::class, 'filesystem'])->name('file_system.index');
+    Route::post('/google-analytics/pixel', [SettingsController::class, 'updateAnalytics'])->name('facebook_pixel.update');
+    Route::post('/smtp-settings/test', [SettingsController::class, 'testSmtp'])->name('test.smtp');
 
     //Currency
     Route::controller(CurrencyController::class)->group(function () {
@@ -370,22 +367,21 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('tax-status', 'change_tax_status')->name('taxes.tax-status');
     });
 
-    // Language
-    Route::resource('/languages', LanguageController::class);
-    Route::controller(LanguageController::class)->group(function () {
-        Route::post('/languages/{id}/update', 'update')->name('languages.update');
-        Route::post('/languages/destroy/{id}', 'destroy')->name('languages.destroy');
-        Route::post('/languages/update_rtl_status', 'update_rtl_status')->name('languages.update_rtl_status');
-        Route::post('/languages/update-status', 'update_status')->name('languages.update-status');
-        Route::post('/languages/key_value_store', 'key_value_store')->name('languages.key_value_store');
-
-        //App Trasnlation
-        Route::post('/languages/app-translations/import', 'importEnglishFile')->name('app-translations.import');
-        Route::get('/languages/app-translations/show/{id}', 'showAppTranlsationView')->name('app-translations.show');
-        Route::post('/languages/app-translations/key_value_store', 'storeAppTranlsation')->name('app-translations.store');
-        Route::get('/languages/app-translations/export/{id}', 'exportARBFile')->name('app-translations.export');
-    });
-
+    // Database languages and translations (storefront, seller, emails, PDFs, mobile).
+    Route::get('/languages', [LanguageController::class, 'index'])->name('languages.index');
+    Route::get('/languages/create', [LanguageController::class, 'create'])->name('languages.create');
+    Route::post('/languages', [LanguageController::class, 'store'])->name('languages.store');
+    Route::post('/languages/update_rtl_status', [LanguageController::class, 'updateRtlStatus'])->name('languages.update_rtl_status');
+    Route::post('/languages/update-status', [LanguageController::class, 'updateStatus'])->name('languages.update-status');
+    Route::post('/languages/key_value_store', [LanguageController::class, 'storeTranslations'])->name('languages.key_value_store');
+    Route::post('/languages/app-translations/import', [LanguageController::class, 'importAppTranslations'])->name('app-translations.import');
+    Route::get('/languages/app-translations/show/{language}', [LanguageController::class, 'showAppTranslations'])->name('app-translations.show');
+    Route::post('/languages/app-translations/key_value_store', [LanguageController::class, 'storeAppTranslations'])->name('app-translations.store');
+    Route::get('/languages/app-translations/export/{language}', [LanguageController::class, 'exportAppTranslations'])->name('app-translations.export');
+    Route::get('/languages/{language}/edit', [LanguageController::class, 'edit'])->name('languages.edit');
+    Route::post('/languages/{language}/update', [LanguageController::class, 'update'])->name('languages.update');
+    Route::delete('/languages/{language}', [LanguageController::class, 'destroy'])->name('languages.destroy');
+    Route::get('/languages/{language}', [LanguageController::class, 'show'])->name('languages.show');
 
     // website setting
     Route::group(['prefix' => 'website'], function () {
@@ -634,7 +630,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/carriers/destroy/{id}', 'destroy')->name('carriers.destroy');
         Route::post('/carriers/update_status', 'updateStatus')->name('carriers.update_status');
     });
-
 
     // Zones
     Route::resource('zones', ZoneController::class);
