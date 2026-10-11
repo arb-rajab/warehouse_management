@@ -4,12 +4,10 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Store\Admin\SearchOrderProductsRequest;
 use App\Http\Requests\Store\Admin\UpdateDefaultRepresentativeRequest;
 use App\Http\Requests\Store\Admin\UpdateOrderConfigurationRequest;
 use App\Models\Product;
 use App\Models\StoreUser;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -49,10 +47,5 @@ class OrderConfigurationController extends Controller implements HasMiddleware
         $this->updateSettings($request->validated());
 
         return redirect()->route('order_configuration.index');
-    }
-
-    public function search(SearchOrderProductsRequest $request): JsonResponse
-    {
-        return response()->json(Product::query()->select(['id', 'name', 'mat_id'])->where('mat_id', 'like', '%'.$request->validated('query').'%')->orderBy('id')->limit(20)->get());
     }
 }

@@ -40,4 +40,7 @@ return [
     'customer_agreement_incomplete' => 'بيانات العميل غير مكتملة أو الحساب موثق بالفعل.',
     'customer_phone_required' => 'رقم هاتف العميل مطلوب.',
     'customer_phone_invalid' => 'رقم هاتف العميل غير صالح.',
+    'store_offers_catalog_exists' => 'يمكن رفع كتالوج واحد فقط. احذف الكتالوج الحالي أولاً.',
+    'store_brand_discount_admin_required' => 'يلزم وجود حساب مسؤول قبل تعيين خصومات العلامات التجارية.',
+    'store_product_import_admin_required' => 'يلزم وجود حساب مسؤول قبل استيراد المنتجات.',
 ];

@@ -3,8 +3,10 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\AizUploadController;
-use App\Http\Controllers\AdminNotificationController;
-use App\Http\Controllers\AttributeController;
+use App\Http\Controllers\Store\Admin\AttributeController;
+use App\Http\Controllers\Store\Admin\BrandDiscountController;
+use App\Http\Controllers\Store\Admin\AttributeValueController;
+use App\Http\Controllers\Store\Admin\ColorController;
 use App\Http\Controllers\BlogCategoryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandController;
@@ -32,18 +34,19 @@ use App\Http\Controllers\Store\Admin\SettingsController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\OfferController;
-use App\Http\Controllers\OffersCatalogController;
+use App\Http\Controllers\Store\Admin\OffersCatalogController;
+use App\Http\Controllers\Store\Admin\ProductSearchController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
-use App\Http\Controllers\ProductBulkUploadController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\ProfileController;
 use App\Http\Controllers\Store\Admin\UploadController;
-use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\Store\Admin\ProductBulkUploadController;
+use App\Http\Controllers\Store\Admin\ReviewController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\StateController;
@@ -90,10 +93,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(BrandController::class)->group(function () {
         Route::get('/brands/edit/{id}', 'edit')->name('brands.edit');
         Route::post('/brands/destroy/{id}', 'destroy')->name('brands.destroy');
-
-        // brand-wise discount set
-        Route::get('/brands-wise-product-discount', 'brandsWiseProductDiscount')->name('brands_wise_product_discount');
     });
+
+    // Brand-wide product discounts
+    Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
+    Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
     // Products
     Route::controller(ProductController::class)->group(function () {
@@ -120,16 +124,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
         Route::post('/products/sku_combination_edit', 'sku_combination_edit')->name('products.sku_combination_edit');
-        Route::post('/products/add-more-choice-option', 'add_more_choice_option')->name('products.add-more-choice-option');
-        Route::post('/set-product-discount', 'setProductDiscount')->name('set_product_discount');
     });
 
-    Route::controller(OffersCatalogController::class)->group(function () {
-        Route::get('/offers/index', 'index')->name('offers.index');
-        Route::post('/offers/store', 'store')->name('offers.store');
-        Route::get('/offers/download', 'download')->name('offers.download');
-        Route::post('/offers/destroy/{destroy}', 'destroy')->name('offers.destroy');
-    });
+    Route::get('/offers/index', [OffersCatalogController::class, 'index'])->name('offers.index');
+    Route::post('/offers/store', [OffersCatalogController::class, 'store'])->name('offers.store');
+    Route::get('/offers/download', [OffersCatalogController::class, 'download'])->name('offers.download');
+    Route::delete('/offers/destroy/{catalog}', [OffersCatalogController::class, 'destroy'])->name('offers.destroy');
+    Route::post('/products/add-more-choice-option', [ProductSearchController::class, 'attributeValues'])->name('products.add-more-choice-option');
 
     // Digital Product
     Route::resource('digitalproducts', DigitalProductController::class);
@@ -139,21 +140,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/digitalproducts/download/{id}', 'download')->name('digitalproducts.download');
     });
 
-    Route::controller(ProductBulkUploadController::class)->group(function () {
-        //Product Export
-        Route::get('/product-bulk-export', 'export')->name('product_bulk_export.index');
-
-        //Product Bulk Upload
-        Route::get('/product-bulk-upload/index', 'index')->name('product_bulk_upload.index');
-        Route::post('/bulk-product-upload', 'bulk_upload')->name('bulk_product_upload');
-        Route::get('/product-csv-download/{type}', 'import_product')->name('product_csv.download');
-        Route::get('/vendor-product-csv-download/{id}', 'import_vendor_product')->name('import_vendor_product.download');
-        Route::group(['prefix' => 'bulk-upload/download'], function () {
-            Route::get('/category', 'pdf_download_category')->name('pdf.download_category');
-            Route::get('/brand', 'pdf_download_brand')->name('pdf.download_brand');
-            Route::get('/seller', 'pdf_download_seller')->name('pdf.download_seller');
-        });
-    });
+    // Bulk import/export; downloads remain server-rendered PDFs.
+    Route::get('/product-bulk-export', [ProductBulkUploadController::class, 'export'])->name('product_bulk_export.index');
+    Route::get('/product-bulk-upload/index', [ProductBulkUploadController::class, 'index'])->name('product_bulk_upload.index');
+    Route::post('/bulk-product-upload', [ProductBulkUploadController::class, 'bulkUpload'])->name('bulk_product_upload');
+    Route::get('/bulk-upload/download/category', [ProductBulkUploadController::class, 'pdfDownloadCategory'])->name('pdf.download_category');
+    Route::get('/bulk-upload/download/brand', [ProductBulkUploadController::class, 'pdfDownloadBrand'])->name('pdf.download_brand');
+    Route::get('/bulk-upload/download/seller', [ProductBulkUploadController::class, 'pdfDownloadSeller'])->name('pdf.download_seller');
 
     // Seller
     Route::resource('sellers', SellerController::class);
@@ -362,7 +355,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
     Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
     Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
-    Route::get('/product/search', [OrderConfigurationController::class, 'search'])->name('order_configuration.product-search');
+    Route::get('/product/search', [ProductSearchController::class, 'search'])->name('order_configuration.product-search');
 
     // Currency forms are Vue dialogs; create/edit URLs also support direct visits.
     Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');
@@ -562,10 +555,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     //Reviews
-    Route::controller(ReviewController::class)->group(function () {
-        Route::get('/reviews', 'index')->name('reviews.index');
-        Route::post('/reviews/published', 'updatePublished')->name('reviews.published');
-    });
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');
+    Route::post('/reviews/{review}/published', [ReviewController::class, 'updatePublished'])->name('reviews.published');
 
     //Support_Ticket
     Route::controller(SupportTicketController::class)->group(function () {
@@ -595,25 +586,22 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::put('/product-queries/{id}', 'reply')->name('product_query.reply');
     });
 
-    // Product Attribute
-    Route::resource('attributes', AttributeController::class);
-    Route::controller(AttributeController::class)->group(function () {
-        Route::get('/attributes/edit/{id}', 'edit')->name('attributes.edit');
-        Route::post('/attributes/destroy/{id}', 'destroy')->name('attributes.destroy');
-
-        //Attribute Value
-        Route::post('/store-attribute-value', 'store_attribute_value')->name('store-attribute-value');
-        Route::get('/edit-attribute-value/{id}', 'edit_attribute_value')->name('edit-attribute-value');
-        Route::post('/update-attribute-value/{id}', 'update_attribute_value')->name('update-attribute-value');
-        Route::post('/destroy-attribute-value/{id}', 'destroy_attribute_value')->name('destroy-attribute-value');
-
-        //Colors
-        Route::get('/colors', 'colors')->name('colors');
-        Route::post('/colors/store', 'store_color')->name('colors.store');
-        Route::get('/colors/edit/{id}', 'edit_color')->name('colors.edit');
-        Route::post('/colors/update/{id}', 'update_color')->name('colors.update');
-        Route::post('/colors/destroy/{id}', 'destroy_color')->name('colors.destroy');
-    });
+    // Product attributes, values and colors
+    Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
+    Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
+    Route::get('/attributes/edit/{attribute}', [AttributeController::class, 'edit'])->name('attributes.edit');
+    Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
+    Route::delete('/attributes/destroy/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
+    Route::get('/attributes/{attribute}', [AttributeValueController::class, 'index'])->name('attributes.show');
+    Route::post('/store-attribute-value', [AttributeValueController::class, 'store'])->name('store-attribute-value');
+    Route::get('/edit-attribute-value/{attributeValue}', [AttributeValueController::class, 'edit'])->name('edit-attribute-value');
+    Route::put('/update-attribute-value/{attributeValue}', [AttributeValueController::class, 'update'])->name('update-attribute-value');
+    Route::delete('/destroy-attribute-value/{attributeValue}', [AttributeValueController::class, 'destroy'])->name('destroy-attribute-value');
+    Route::get('/colors', [ColorController::class, 'index'])->name('colors');
+    Route::post('/colors/store', [ColorController::class, 'store'])->name('colors.store');
+    Route::get('/colors/edit/{color}', [ColorController::class, 'edit'])->name('colors.edit');
+    Route::put('/colors/update/{color}', [ColorController::class, 'update'])->name('colors.update');
+    Route::delete('/colors/destroy/{color}', [ColorController::class, 'destroy'])->name('colors.destroy');
 
     //Customer Package
     Route::resource('customer_packages', CustomerPackageController::class);

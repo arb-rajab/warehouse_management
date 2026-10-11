@@ -1,4 +1,9 @@
 import type {
+    StoreAttribute,
+    StoreAttributeValue,
+    StoreColor,
+} from '@/types/storeCatalogue';
+import type {
     RepresentativePackage,
     RepresentativePayment,
     RepresentativeVisit,
@@ -46,6 +51,9 @@ import type {
     StoreUpload,
     StoreProfile,
     ClassifiedProduct,
+    StoreBrandDiscount,
+    StoreOffersCatalog,
+    StoreReview,
 } from '@/types/store';
 
 /**
@@ -577,4 +585,49 @@ export function representativeVisit(
         customer: { id: 11, name: 'Customer One' },
         ...overrides,
     };
+}
+
+export function storeOffersCatalog(
+    overrides: Partial<StoreOffersCatalog> = {},
+): StoreOffersCatalog {
+    return { id: 1, created_at: '2026-10-09T00:00:00+00:00', ...overrides };
+}
+
+export function storeReview(overrides: Partial<StoreReview> = {}): StoreReview {
+    return {
+        id: 1,
+        rating: 4,
+        comment: 'Good product',
+        published: true,
+        product: {
+            id: 7,
+            name: 'Dates',
+            owner: 'admin',
+            url: '/temp/product/dates',
+        },
+        customer: { id: 9, name: 'Customer', email: 'customer@example.com' },
+        ...overrides,
+    };
+}
+
+export function storeAttribute(
+    overrides: Partial<StoreAttribute> = {},
+): StoreAttribute {
+    return { id: 1, name: 'Size', values: [], ...overrides };
+}
+
+export function storeAttributeValue(
+    overrides: Partial<StoreAttributeValue> = {},
+): StoreAttributeValue {
+    return { id: 1, attribute_id: 1, value: 'Large', ...overrides };
+}
+
+export function storeColor(overrides: Partial<StoreColor> = {}): StoreColor {
+    return { id: 1, name: 'Red', code: '#ff0000', ...overrides };
+}
+
+export function storeBrandDiscount(
+    overrides: Partial<StoreBrandDiscount> = {},
+): StoreBrandDiscount {
+    return { id: 3, name: 'Dates brand', logo_url: null, ...overrides };
 }

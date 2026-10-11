@@ -1,3 +1,4 @@
+import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
 import { Form, Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,7 +7,6 @@ import {
     index,
     update,
     updateRepresentative,
-    search,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';

@@ -134,7 +134,6 @@ parameters:
         - app/Http/Controllers/Api/V2/Warehouse/OrderController.php
         - app/Http/Controllers/Api/V2/Warehouse/ProductController.php
         - app/Http/Controllers/Api/V2/WishlistController.php
-        - app/Http/Controllers/AttributeController.php
         - app/Http/Controllers/AttributeValueController.php
         - app/Http/Controllers/Auth/ForgotPasswordController.php
         - app/Http/Controllers/Auth/LoginController.php
@@ -171,7 +170,6 @@ parameters:
         - app/Http/Controllers/NewsletterController.php
         - app/Http/Controllers/NotificationController.php
         - app/Http/Controllers/OfferController.php
-        - app/Http/Controllers/OffersCatalogController.php
         - app/Http/Controllers/OrderController.php
         - app/Http/Controllers/PageController.php
         - app/Http/Controllers/Payment/AamarpayController.php
@@ -185,7 +183,6 @@ parameters:
         - app/Http/Controllers/Payment/VoguepayController.php
         - app/Http/Controllers/Payment/WalletController.php
         - app/Http/Controllers/PaymentController.php
-        - app/Http/Controllers/ProductBulkUploadController.php
         - app/Http/Controllers/ProductController.php
         - app/Http/Controllers/ProductQueryController.php
         - app/Http/Controllers/PurchaseHistoryController.php
@@ -353,7 +350,6 @@ parameters:
         - app/Models/AffiliateUser.php
         - app/Models/AppSettings.php
         - app/Models/AppTranslation.php
-        - app/Models/Attribute.php
         - app/Models/AttributeCategory.php
         - app/Models/AttributeTranslation.php
         - app/Models/AttributeValue.php
@@ -423,7 +419,6 @@ parameters:
         - app/Models/ProxyPayment.php
         - app/Models/RefundRequest.php
         - app/Models/RepresentativePackage.php
-        - app/Models/Review.php
         - app/Models/Role.php
         - app/Models/RoleTranslation.php
         - app/Models/Search.php

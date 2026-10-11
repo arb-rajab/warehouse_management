@@ -40,4 +40,7 @@ return [
     'customer_agreement_incomplete' => 'Customer information is incomplete or the account is already verified.',
     'customer_phone_required' => 'A customer phone number is required.',
     'customer_phone_invalid' => 'The customer phone number is invalid.',
+    'store_offers_catalog_exists' => 'Only one catalogue can be uploaded. Delete the existing catalogue first.',
+    'store_brand_discount_admin_required' => 'An administrator account is required before setting brand discounts.',
+    'store_product_import_admin_required' => 'An administrator account is required before importing products.',
 ];

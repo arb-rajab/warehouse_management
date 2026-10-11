@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
+
 import { Form, Head, useHttp } from '@inertiajs/vue3';
 import { LoaderCircle } from '@lucide/vue';
 import { ref, onBeforeUnmount } from 'vue';
 import {
     update,
     updateRepresentative,
-    search,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FormField from '@/components/FormField.vue';

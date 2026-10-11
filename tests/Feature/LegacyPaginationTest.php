@@ -214,22 +214,3 @@ test('the store admin flash deal list pages', function () {
         perPage: 15,
     );
 });
-
-test('the store admin review list pages', function () {
-    actingAsStoreUser(createStoreAdmin());
-    $reviewer = createStoreUser('customer');
-
-    foreach (range(1, 18) as $number) {
-        DB::table('reviews')->insert([
-            'product_id' => 1, 'user_id' => $reviewer->id, 'rating' => 5, 'comment' => "Review $number",
-            'created_at' => now()->subMinutes($number), 'updated_at' => now()->subMinutes($number),
-        ]);
-    }
-
-    assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/reviews?page=$page"),
-        fn ($response) => $response->viewData('reviews')->pluck('id')->all(),
-        total: 18,
-        perPage: 15,
-    );
-});

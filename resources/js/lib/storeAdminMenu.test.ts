@@ -19,6 +19,12 @@ import {
     commission_history,
     wallet_transaction_history,
 } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { index as brandDiscountsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as colorsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     activation,
@@ -115,6 +121,12 @@ describe('storeAdminMenu', () => {
                 representativePackagesIndex.url(),
                 representativePaymentsIndex.url(),
                 visitsIndex.url(),
+                bulkIndex.url(),
+                brandDiscountsIndex.url(),
+                attributesIndex.url(),
+                colorsIndex.url(),
+                reviewsIndex.url(),
+                offersIndex.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),
@@ -159,7 +171,6 @@ describe('visibleStoreMenu', () => {
         );
 
         expect(labelKeys(menu)).toEqual([
-            'store.nav.offersCatalog',
             'store.nav.staff',
             'store.nav.allStaff',
         ]);

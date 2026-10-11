@@ -91,12 +91,9 @@ describe('StoreAdminLayout', () => {
             wrapper
                 .findAllComponents(StoreAdminNavLink)
                 .map((link) => link.props('item').labelKey),
-        ).toEqual([
-            'store.nav.dashboard',
-            'store.nav.offersCatalog',
-            'store.nav.allStaff',
-        ]);
+        ).toEqual(['store.nav.dashboard', 'store.nav.allStaff']);
         expect(wrapper.text()).not.toContain(t('store.nav.staffRoles'));
+        expect(navLink(wrapper, 'store.nav.offersCatalog')).toBeUndefined();
         expect(wrapper.text()).not.toContain(t('store.nav.products'));
     });
 

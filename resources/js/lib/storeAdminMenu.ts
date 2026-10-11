@@ -1,3 +1,12 @@
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
+import {
+    exportMethod as productBulkExport,
+    index as productBulkImport,
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import type { UrlMethodPair } from '@inertiajs/core';
 import {
     Banknote,
@@ -21,16 +30,9 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import {
-    colors,
-    index as attributesIndex,
-} from '@/actions/App/Http/Controllers/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
-import {
-    brandsWiseProductDiscount,
-    index as brandsIndex,
-} from '@/actions/App/Http/Controllers/BrandController';
+import { index as brandsIndex } from '@/actions/App/Http/Controllers/BrandController';
 import {
     general_setting,
     google_map,
@@ -48,14 +50,9 @@ import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Fea
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
-import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import {
-    exportMethod as productBulkExport,
-    index as productBulkImport,
-} from '@/actions/App/Http/Controllers/ProductBulkUploadController';
 import {
     admin_products,
     all_products,
@@ -63,7 +60,6 @@ import {
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
-import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
@@ -223,6 +219,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.bulkImport',
+                inertia: true,
                 href: productBulkImport(),
                 permission: 'product_bulk_import',
             },
@@ -245,20 +242,24 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.brandDiscount',
                 href: brandsWiseProductDiscount(),
                 permission: 'view_all_brands',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.attributes',
+                inertia: true,
                 href: attributesIndex(),
                 permission: 'view_product_attributes',
             },
             {
                 labelKey: 'store.nav.colors',
+                inertia: true,
                 href: colors(),
                 permission: 'view_colors',
             },
             {
                 labelKey: 'store.nav.productReviews',
-                href: reviewsIndex['/temp/admin/reviews'](),
+                inertia: true,
+                href: reviewsIndex(),
                 permission: 'view_product_reviews',
                 setting: 'Product_Reviews_Section',
             },
@@ -500,6 +501,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.offersCatalog',
+        inertia: true,
+        permission: 'view_offers_catalog',
         href: offersCatalogIndex(),
         icon: BookOpen,
     },

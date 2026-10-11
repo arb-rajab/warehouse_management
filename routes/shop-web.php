@@ -25,7 +25,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\Store\LanguageController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\OffersCatalogController;
+use App\Http\Controllers\Store\OffersCatalogDownloadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Payment\AamarpayController;
 use App\Http\Controllers\Payment\BkashController;
@@ -480,8 +480,4 @@ Route::controller(PageController::class)->group(function () {
 //     Route::get('/my_connections/show/{user_id}', 'my_connections')->name('show.connections')->middleware('auth');
 // });
 
-Route::controller(OffersCatalogController::class)->group(function () {
-
-    Route::get('/offers/download', 'download')->name('offers.download');
-
-});
+Route::get('/offers/download', OffersCatalogDownloadController::class)->name('offers.download');

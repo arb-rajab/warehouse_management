@@ -24,7 +24,6 @@ class ReviewController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:view_product_reviews', only: ['index']),
-            new Middleware('permission:publish_product_review', only: ['updatePublished']),
         ];
     }
     /**
@@ -34,7 +33,7 @@ class ReviewController extends Controller implements HasMiddleware
      */
     public function index(Request $request)
     {
-        $reviews = Review::with(['product', 'user']);
+        $reviews = Review::with(['product', 'product.product_translations', 'user']);
         if($request->rating){
             $reviews->orderBy('rating', explode(",",$request->rating)[1]);
         }
@@ -139,38 +138,6 @@ class ReviewController extends Controller implements HasMiddleware
     public function destroy($id)
     {
         //
-    }
-
-    public function updatePublished(Request $request)
-    {
-        $review = Review::findOrFail($request->id);
-        $review->status = $request->status;
-        $review->save();
-
-        $product = Product::findOrFail($review->product->id);
-        if(Review::where('product_id', $product->id)->where('status', 1)->count() > 0){
-            $product->rating = Review::where('product_id', $product->id)->where('status', 1)->sum('rating')/Review::where('product_id', $product->id)->where('status', 1)->count();
-        }
-        else {
-            $product->rating = 0;
-        }
-        $product->save();
-
-        if($product->added_by == 'seller'){
-            $seller = $product->user->shop;
-            if ($review->status) {
-                $seller->rating = (($seller->rating*$seller->num_of_reviews)+$review->rating)/($seller->num_of_reviews + 1);
-                $seller->num_of_reviews += 1;
-            }
-            else {
-                $seller->rating = (($seller->rating*$seller->num_of_reviews)-$review->rating)/max(1, $seller->num_of_reviews - 1);
-                $seller->num_of_reviews -= 1;
-            }
-
-            $seller->save();
-        }
-
-        return 1;
     }
 
     public function product_review_modal(Request $request){

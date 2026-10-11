@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use App;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\App;
 
 class Attribute extends Model
 {
@@ -11,18 +12,23 @@ class Attribute extends Model
 
     protected $guarded = [];
 
-    public function getTranslation($field = '', $lang = false){
-      $lang = $lang == false ? App::getLocale() : $lang;
-      $attribute_translation = $this->attribute_translations->where('lang', $lang)->first();
-      return $attribute_translation != null ? $attribute_translation->$field : $this->$field;
+    public function getTranslation(string $field = '', string|false $lang = false): mixed
+    {
+        $lang = $lang == false ? App::getLocale() : $lang;
+        $translation = $this->attribute_translations->where('lang', $lang)->first();
+
+        return $translation !== null ? $translation->{$field} : $this->{$field};
     }
 
-    public function attribute_translations(){
-      return $this->hasMany(AttributeTranslation::class);
+    /** @return HasMany<AttributeTranslation, $this> */
+    public function attribute_translations(): HasMany
+    {
+        return $this->hasMany(AttributeTranslation::class);
     }
 
-    public function attribute_values() {
+    /** @return HasMany<AttributeValue, $this> */
+    public function attribute_values(): HasMany
+    {
         return $this->hasMany(AttributeValue::class);
     }
-
 }

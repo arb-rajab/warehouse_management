@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Brand extends Model
 {
@@ -16,7 +17,8 @@ class Brand extends Model
       return $brand_translation != null ? $brand_translation->$field : $this->$field;
   }
 
-  public function brand_translations(){
+  /** @return HasMany<BrandTranslation, $this> */
+    public function brand_translations(): HasMany{
     return $this->hasMany(BrandTranslation::class);
   }
 

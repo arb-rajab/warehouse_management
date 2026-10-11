@@ -16,7 +16,7 @@
                 
             </div>
             <div class="col-md-6 col-xl-4 ml-auto mr-0">
-                <form class="" id="sort_by_rating" action="{{ route('reviews.index') }}" method="GET">
+                <form class="" id="sort_by_rating" action="{{ route('admin.reviews.index') }}" method="GET">
                     <div class="" style="min-width: 200px;">
                         <select class="form-control aiz-selectpicker" name="rating" id="rating" onchange="filter_by_rating()">
                             <option value="">{{translate('Filter by Rating')}}</option>
@@ -54,15 +54,21 @@
                             <td>{{ $review->rating }}</td>
                             <td>{{ $review->comment }}</td>
                             <td>
-                                <label class="aiz-switch aiz-switch-success mb-0">
-                                    <input 
-                                        @can('publish_product_review') onchange="update_published(this)" @endcan 
-                                        value="{{ $review->id }}" type="checkbox" 
-                                        @if($review->status == 1) checked @endif
-                                        @cannot('publish_product_review') disabled @endcan
-                                    >
-                                    <span class="slider round"></span>
-                                </label>
+                                @can('publish_product_review')
+                                    <form method="POST" action="{{ route('reviews.published', ['review' => $review->id]) }}">
+                                        @csrf
+                                        <input type="hidden" name="status" value="{{ $review->status == 1 ? 0 : 1 }}">
+                                        <label class="aiz-switch aiz-switch-success mb-0">
+                                            <input type="checkbox" onchange="this.form.submit()" @if($review->status == 1) checked @endif>
+                                            <span class="slider round"></span>
+                                        </label>
+                                    </form>
+                                @else
+                                    <label class="aiz-switch aiz-switch-success mb-0">
+                                        <input type="checkbox" disabled @if($review->status == 1) checked @endif>
+                                        <span class="slider round"></span>
+                                    </label>
+                                @endcan
                             </td>
                         </tr>
                     @endif
@@ -79,22 +85,6 @@
 
 @section('script')
     <script type="text/javascript">
-        function update_published(el){
-            if(el.checked){
-                var status = 1;
-            }
-            else{
-                var status = 0;
-            }
-            $.post('{{ route('reviews.published') }}', {_token:'{{ csrf_token() }}', id:el.value, status:status}, function(data){
-                if(data == 1){
-                    AIZ.plugins.notify('success', '{{ translate('Published reviews updated successfully') }}');
-                }
-                else{
-                    AIZ.plugins.notify('danger', '{{ translate('Something went wrong') }}');
-                }
-            });
-        }
         function filter_by_rating(el){
             var rating = $('#rating').val();
             if (rating != '') {

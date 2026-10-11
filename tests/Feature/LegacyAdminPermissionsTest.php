@@ -41,14 +41,11 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'FeatureOrderTripController@newStore',
     'FeatureOrderTripController@newUpdate',
     'FeatureOrderTripController@store',
-    'OffersCatalogController@destroy',
-    'OffersCatalogController@store',
 
     // Self-service: the signed-in user's own profile and uploads.
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
-    'ProductController@add_more_choice_option',
     'ProductController@fetch',
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
@@ -78,8 +75,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'FeatureOrderTripController@newEdit',
     'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
-    'OffersCatalogController@download',
-    'OffersCatalogController@index',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
@@ -91,8 +86,6 @@ const ADMIN_READS_STILL_UNGATED = [
     // The controller has no such method, so the request errors out.
     'CarrierController@show',
     'OrderController@index',
-    'ProductBulkUploadController@import_product',
-    'ProductBulkUploadController@import_vendor_product',
 ];
 
 /**
