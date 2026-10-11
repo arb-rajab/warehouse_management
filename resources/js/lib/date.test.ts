@@ -1,11 +1,26 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+    currentLocaleTag,
     formatDate,
     formatDateTime,
     formatDuration,
     subtractDays,
 } from './date';
 import { i18n } from './i18n';
+
+describe('currentLocaleTag', () => {
+    afterEach(() => {
+        i18n.global.locale.value = 'en';
+    });
+
+    it('is US English for English and Arabic with Western digits for Arabic', () => {
+        expect(currentLocaleTag()).toBe('en-US');
+
+        i18n.global.locale.value = 'ar';
+
+        expect(currentLocaleTag()).toBe('ar-u-nu-latn');
+    });
+});
 
 describe('formatDate', () => {
     afterEach(() => {

@@ -31,6 +31,14 @@ return [
         ...(env('APP_ENV') === 'local' ? ['_boost', '_boost/*'] : []),
         'up',
         '.well-known/*',
+        // Store rich-text writers sanitize HTML after exact permission/allowlist checks.
+        // Scripts deliberately accept code, under manage_website_scripts only.
+        'temp/admin/website/footer',
+        'temp/admin/website/appearance',
+        'temp/admin/website/scripts',
+        'temp/admin/website/custom-pages',
+        'temp/admin/website/custom-pages/*',
+        'temp/admin/support_ticket/reply',
     ],
 
     /*

@@ -42,7 +42,11 @@ function mountPage(extraProps: Record<string, unknown> = {}) {
             submittingLabel: 'Creating...',
             ...extraProps,
         },
-        slots: { default: '<p>form fields go here</p>' },
+        slots: {
+            default: '<p>form fields go here</p>',
+            'after-form':
+                '<section data-test="after-form">Separate form slot</section>',
+        },
     });
 }
 
@@ -110,6 +114,16 @@ describe('ResourceFormPage', () => {
         expect(wrapper.get('form').text()).toContain('form fields go here');
     });
 
+    it('places a separate action form slot outside the resource form', () => {
+        const wrapper = mountPage();
+        expect(wrapper.get('[data-test="after-form"]').text()).toBe(
+            'Separate form slot',
+        );
+        expect(
+            wrapper.get('form').find('[data-test="after-form"]').exists(),
+        ).toBe(false);
+    });
+
     it('shows the submitting label and disables the button while processing', () => {
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
 
@@ -173,7 +187,11 @@ describe('ResourceFormPage', () => {
                 submittingLabel: 'Creating...',
                 transform,
             },
-            slots: { default: '<p>form fields go here</p>' },
+            slots: {
+                default: '<p>form fields go here</p>',
+                'after-form':
+                    '<section data-test="after-form">Separate form slot</section>',
+            },
         });
 
         expect(wrapper.findComponent(Form).props('transform')).toBe(transform);
@@ -202,7 +220,11 @@ describe('ResourceFormPage', () => {
                 submittingLabel: 'Creating...',
                 cancelHref: rowsIndex.url(),
             },
-            slots: { default: '<p>form fields go here</p>' },
+            slots: {
+                default: '<p>form fields go here</p>',
+                'after-form':
+                    '<section data-test="after-form">Separate form slot</section>',
+            },
         });
 
         const cancelLink = wrapper.get('form a');

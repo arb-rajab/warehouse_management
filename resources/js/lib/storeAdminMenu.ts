@@ -22,7 +22,6 @@ import {
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
     colors,
     index as attributesIndex,
@@ -54,7 +53,6 @@ import {
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/CityController';
-import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/CountryController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
 import { currency as currenciesIndex } from '@/actions/App/Http/Controllers/CurrencyController';
@@ -75,7 +73,6 @@ import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Newsle
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
 import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
-import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/PickupPointController';
 import {
@@ -88,7 +85,6 @@ import {
     create as productsCreate,
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
-import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
 import {
     commission_history,
     in_house_sale_report,
@@ -104,10 +100,19 @@ import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewCont
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
+import { edit as scripts } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteScriptsController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
-import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
     create as driversCreate,
@@ -125,12 +130,6 @@ import {
     index as trucksIndex,
 } from '@/actions/App/Http/Controllers/Trip/TruckController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/VisitController';
-import {
-    appearance,
-    footer,
-    header,
-    pages,
-} from '@/actions/App/Http/Controllers/WebsiteController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/ZoneController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
@@ -462,16 +461,15 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.uploadedFiles',
-        href: uploadedFilesIndex['/temp/admin/uploaded-files'](),
+        href: uploadedFilesIndex(),
         icon: FolderOpen,
+        inertia: true,
     },
     {
         labelKey: 'store.nav.homeBanners',
-        href: customPageEdit['/temp/admin/website/custom-pages/edit/{id}'](
-            { id: 'home' },
-            { query: { page: 'home' } },
-        ),
+        href: homeEdit(),
         icon: Images,
+        inertia: true,
         permission: 'edit_website_page',
     },
     {
@@ -603,17 +601,20 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.tickets',
                 href: supportTicketsIndex(),
+                inertia: true,
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
                 href: conversationsIndex(),
+                inertia: true,
                 permission: 'view_all_product_conversations',
                 setting: 'conversation_system',
             },
             {
                 labelKey: 'store.nav.productQueries',
-                href: productQueriesIndex['/temp/admin/product-queries'](),
+                href: productQueriesIndex(),
+                inertia: true,
                 permission: 'view_all_product_queries',
                 setting: 'product_query_activation',
             },
@@ -627,6 +628,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.header',
                 href: header(),
+                inertia: true,
                 permission: 'header_setup',
                 setting: 'website_setup_header',
             },
@@ -635,10 +637,12 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: footer(),
                 permission: 'footer_setup',
                 setting: 'website_setup_footer',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.pages',
                 href: pages(),
+                inertia: true,
                 permission: 'view_all_website_pages',
                 setting: 'website_setup_pages',
             },
@@ -647,6 +651,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: appearance(),
                 permission: 'website_appearance',
                 setting: 'website_setup_appearance',
+                inertia: true,
+            },
+            {
+                labelKey: 'store.nav.websiteScripts',
+                href: scripts(),
+                permission: 'manage_website_scripts',
+                inertia: true,
             },
         ],
     },

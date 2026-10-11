@@ -233,3 +233,14 @@ test('an admin can log in through the full middleware stack with a symbol-heavy 
     $response->assertRedirect(route('admin.dashboard'));
     $this->assertAuthenticatedAs($admin);
 });
+
+test('store rich-text paths pass signatures to their authorized sanitizing writers only', function (string $path) {
+    $request = Request::create($path, 'POST', ['reply' => '<script>alert(1)</script>']);
+    $response = app(BlockMaliciousRequests::class)->handle($request, fn () => response('writer'));
+    expect($response->getContent())->toBe('writer');
+})->with(['/temp/admin/website/footer', '/temp/admin/website/appearance', '/temp/admin/website/scripts', '/temp/admin/website/custom-pages', '/temp/admin/website/custom-pages/17', '/temp/admin/support_ticket/reply']);
+
+test('store HTML exclusions do not cover other store settings or look-alike paths', function (string $path) {
+    $request = Request::create($path, 'POST', ['reply' => '<script>alert(1)</script>']);
+    expect(fn () => app(BlockMaliciousRequests::class)->handle($request, fn () => response('writer')))->toThrow(HttpException::class);
+})->with(['/temp/admin/website/header', '/temp/admin/website/home', '/temp/admin/website/scripts-other', '/admin/website/scripts', '/temp/website/scripts']);

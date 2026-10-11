@@ -3,9 +3,11 @@
 use App\Http\Controllers\AizUploadController;
 use App\Http\Controllers\Api\V2\AizUploadController as ApiAizUploadController;
 use App\Http\Controllers\Api\V2\Seller\SellerFileUploadController;
+use App\Models\Page;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 
 /**
@@ -90,6 +92,8 @@ test('a super admin can delete every upload', function () {
     });
 });
 
-test('the page editor prints its values escaped', function () {
-    expect(file_get_contents(resource_path('views/shop/backend/website_settings/pages/edit.blade.php')))->not->toContain('{!!');
+test('the migrated page editor exposes only sanitized rich text', function () {
+    actingAsStoreUser(createStoreStaff('edit_website_page'));
+    $record = Page::forceCreate(['title' => 'Safe title', 'slug' => 'safe-editor', 'type' => 'custom_page', 'content' => '<p>Kept</p><img src="x" onerror="attack"><script>attack</script>']);
+    $this->get(route('custom-pages.edit', $record))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Website/Pages/Edit')->where('page.content', '<p>Kept</p><img src="x">'));
 });

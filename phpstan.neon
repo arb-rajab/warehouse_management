@@ -176,7 +176,6 @@ parameters:
         - app/Http/Controllers/OfferController.php
         - app/Http/Controllers/OffersCatalogController.php
         - app/Http/Controllers/OrderController.php
-        - app/Http/Controllers/PageController.php
         - app/Http/Controllers/Payment/AamarpayController.php
         - app/Http/Controllers/Payment/BkashController.php
         - app/Http/Controllers/Payment/CashOnDeliveryController.php
@@ -231,7 +230,6 @@ parameters:
         - app/Http/Controllers/Trip/TruckController.php
         - app/Http/Controllers/VisitController.php
         - app/Http/Controllers/WalletController.php
-        - app/Http/Controllers/WebsiteController.php
         - app/Http/Controllers/WishlistController.php
         - app/Http/Controllers/ZoneController.php
         - app/Http/Helpers.php
@@ -389,7 +387,6 @@ parameters:
         - app/Models/Color.php
         - app/Models/CombinedOrder.php
         - app/Models/CommissionHistory.php
-        - app/Models/Conversation.php
         - app/Models/Country.php
         - app/Models/Coupon.php
         - app/Models/CouponUsage.php
@@ -412,14 +409,12 @@ parameters:
         - app/Models/FollowSeller.php
         - app/Models/Language.php
         - app/Models/ManualPaymentMethod.php
-        - app/Models/Message.php
         - app/Models/Notification.php
         - app/Models/Offer.php
         - app/Models/OfferProduct.php
         - app/Models/OffersCatalog.php
         - app/Models/Order.php
         - app/Models/OrderDetail.php
-        - app/Models/Page.php
         - app/Models/PageTranslation.php
         - app/Models/PasswordReset.php
         - app/Models/Payment.php
@@ -428,7 +423,6 @@ parameters:
         - app/Models/PickupPointTranslation.php
         - app/Models/Product.php
         - app/Models/ProductCollection.php
-        - app/Models/ProductQuery.php
         - app/Models/ProductStock.php
         - app/Models/ProductTax.php
         - app/Models/ProductTranslation.php
@@ -455,8 +449,6 @@ parameters:
         - app/Models/StoreUser.php
         - app/Models/Subscriber.php
         - app/Models/Tax.php
-        - app/Models/Ticket.php
-        - app/Models/TicketReply.php
         - app/Models/Transaction.php
         - app/Models/Translation.php
         - app/Models/Trip.php

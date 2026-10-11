@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
+import { index as queriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as pagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
+import { edit as scripts } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteScriptsController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -51,12 +60,25 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            uploadedFilesIndex.url(),
+            homeEdit.url(),
+            supportTicketsIndex.url(),
+            conversationsIndex.url(),
+            queriesIndex.url(),
+            header.url(),
+            footer.url(),
+            pagesIndex.url(),
+            appearance.url(),
+            scripts.url(),
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {
@@ -64,12 +86,8 @@ describe('storeAdminMenu', () => {
             (link) => link.labelKey === 'store.nav.homeBanners',
         );
 
-        expect(homeBanners?.href.url).toBe(
-            customPageEdit['/temp/admin/website/custom-pages/edit/{id}'].url(
-                { id: 'home' },
-                { query: { page: 'home' } },
-            ),
-        );
+        expect(homeBanners?.href).toEqual(homeEdit());
+        expect(homeBanners?.inertia).toBe(true);
     });
 });
 

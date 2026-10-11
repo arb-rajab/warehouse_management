@@ -111,7 +111,7 @@ test('the admin ticket page prints a customer\'s ticket text without its script'
         $encryptedId = encrypt($ticketId);
     } while (preg_match('#[/+]#', $encryptedId));
 
-    $this->get(route('support_ticket.admin_show', ['id' => $encryptedId]))
+    $this->get(route('support_ticket.admin_show', ['supportTicket' => $encryptedId]))
         ->assertOk()
         ->assertSee('keep-details', false)
         ->assertSee('keep-reply', false)

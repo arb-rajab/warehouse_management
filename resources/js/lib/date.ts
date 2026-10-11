@@ -17,7 +17,7 @@ const DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
  * (`latn`) digits via the `-u-nu-latn` extension — the default `ar` numbering
  * system renders Arabic-Indic digits, which this app's UI doesn't otherwise use.
  */
-function currentLocaleTag(): string {
+export function currentLocaleTag(): string {
     return i18n.global.locale.value === 'ar' ? 'ar-u-nu-latn' : 'en-US';
 }
 

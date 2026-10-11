@@ -83,6 +83,7 @@ describe('create', function () {
         $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
                 ->where('permissionGroups', [
+                    ['section' => 'website_setup', 'label' => 'Website Setup', 'permissions' => [['id' => Permission::findByName('manage_website_scripts', 'store')->id, 'label' => 'Manage Website Scripts']]],
                     [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
@@ -172,7 +173,7 @@ describe('edit', function () {
                 ->where('name', 'Clerk')
                 ->where('languages', [['code' => 'en', 'name' => 'English'], ['code' => 'ar', 'name' => 'Arabic']])
                 ->where('permissionIds', [$permission->id])
-                ->has('permissionGroups', 2)
+                ->has('permissionGroups', 3)
         );
     });
 

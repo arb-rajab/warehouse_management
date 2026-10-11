@@ -12,7 +12,7 @@ use App\Http\Controllers\CarrierController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\Store\Admin\ConversationController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CurrencyController;
@@ -30,12 +30,11 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfferController;
 use App\Http\Controllers\OffersCatalogController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PickupPointController;
 use App\Http\Controllers\ProductBulkUploadController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProductQueryController;
+use App\Http\Controllers\Store\Admin\ProductQueryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepresentativePackageController;
@@ -46,14 +45,20 @@ use App\Http\Controllers\SellerWithdrawRequestController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\UploadController;
+use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
+use App\Http\Controllers\Store\Admin\WebsiteHomeController;
+use App\Http\Controllers\Store\Admin\WebsitePageController;
+use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\SubscriberController;
-use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TaxController;
 use App\Http\Controllers\Trip\DriverController;
 use App\Http\Controllers\Trip\TripController;
 use App\Http\Controllers\Trip\TruckController;
 use App\Http\Controllers\VisitController;
-use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\Store\Admin\WebsiteFooterController;
+use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
+use App\Http\Controllers\Store\Admin\WebsiteScriptsController;
 use App\Http\Controllers\ZoneController;
 use Aws\Middleware;
 
@@ -389,19 +394,25 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     // website setting
     Route::group(['prefix' => 'website'], function () {
-        Route::controller(WebsiteController::class)->group(function () {
-            Route::get('/footer', 'footer')->name('website.footer');
-            Route::get('/header', 'header')->name('website.header');
-            Route::get('/appearance', 'appearance')->name('website.appearance');
-            Route::get('/pages', 'pages')->name('website.pages');
-        });
+        Route::get('/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
+        Route::put('/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');
+        Route::get('/footer', [WebsiteFooterController::class, 'edit'])->name('website.footer');
+        Route::put('/footer', [WebsiteFooterController::class, 'update'])->name('website.footer.update');
+        Route::get('/appearance', [WebsiteAppearanceController::class, 'edit'])->name('website.appearance');
+        Route::put('/appearance', [WebsiteAppearanceController::class, 'update'])->name('website.appearance.update');
+        Route::get('/scripts', [WebsiteScriptsController::class, 'edit'])->name('website.scripts');
+        Route::put('/scripts', [WebsiteScriptsController::class, 'update'])->name('website.scripts.update');
 
-        // Custom Page
-        Route::resource('custom-pages', PageController::class);
-        Route::controller(PageController::class)->group(function () {
-            Route::get('/custom-pages/edit/{id}', 'edit')->name('custom-pages.edit');
-            Route::post('/custom-pages/destroy/{id}', 'destroy')->name('custom-pages.destroy');
-        });
+        Route::get('/pages', [WebsitePageController::class, 'index'])->name('website.pages');
+        Route::get('/custom-pages/edit/home', [WebsiteHomeController::class, 'edit'])->name('website.home.edit');
+        Route::put('/home', [WebsiteHomeController::class, 'update'])->name('website.home.update');
+        Route::delete('/custom-pages/{page}', [WebsitePageController::class, 'destroy'])->name('custom-pages.destroy');
+
+        Route::get('/custom-pages/create', [WebsitePageController::class, 'create'])->name('custom-pages.create');
+        Route::post('/custom-pages', [WebsitePageController::class, 'store'])->name('custom-pages.store');
+        Route::get('/custom-pages/{page}/edit', [WebsitePageController::class, 'edit'])->name('custom-pages.edit');
+        Route::put('/custom-pages/{page}', [WebsitePageController::class, 'update'])->name('custom-pages.update');
+
     });
 
     // Staff roles and staff: Inertia pages (resources/js/pages/Store/Admin/Staff),
@@ -560,11 +571,16 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     //Support_Ticket
-    Route::controller(SupportTicketController::class)->group(function () {
-        Route::get('support_ticket/', 'admin_index')->name('support_ticket.admin_index');
-        Route::get('support_ticket/{id}/show', 'admin_show')->name('support_ticket.admin_show');
-        Route::post('support_ticket/reply', 'admin_store')->name('support_ticket.admin_store');
+    Route::get('support_ticket/', [AdminSupportTicketController::class, 'index'])->name('support_ticket.admin_index');
+    // Preserve encrypted identifiers in existing email links while binding the record.
+    Route::bind('supportTicket', function (string $value) {
+        try { $id = ctype_digit($value) ? $value : decrypt($value); }
+        catch (\Illuminate\Contracts\Encryption\DecryptException) { abort(404); }
+        abort_unless((is_int($id) && $id > 0) || (is_string($id) && ctype_digit($id)), 404);
+        return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
+    Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
+    Route::post('support_ticket/reply', [AdminSupportTicketController::class, 'reply'])->name('support_ticket.admin_store');
 
     //Pickup_Points
     Route::resource('pick_up_points', PickupPointController::class);
@@ -573,18 +589,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/pick_up_points/destroy/{id}', 'destroy')->name('pick_up_points.destroy');
     });
 
-    //conversation of seller customer
-    Route::controller(ConversationController::class)->group(function () {
-        Route::get('conversations', 'admin_index')->name('conversations.admin_index');
-        Route::get('conversations/{id}/show', 'admin_show')->name('conversations.admin_show');
-    });
+    // Back-office support; storefront conversation/message routes remain Blade.
+    Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.admin_index');
+    Route::get('conversations/{conversation}/show', [ConversationController::class, 'show'])->name('conversations.admin_show');
+    Route::post('conversations/{conversation}/reply', [ConversationController::class, 'reply'])->name('conversations.admin_reply');
+    Route::delete('conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.admin_destroy');
 
-    // product Queries show on Admin panel
-    Route::controller(ProductQueryController::class)->group(function () {
-        Route::get('/product-queries', 'index')->name('product_query.index');
-        Route::get('/product-queries/{id}', 'show')->name('product_query.show');
-        Route::put('/product-queries/{id}', 'reply')->name('product_query.reply');
-    });
+    Route::get('product-queries', [ProductQueryController::class, 'index'])->name('product_query.index');
+    Route::get('product-queries/{productQuery}', [ProductQueryController::class, 'show'])->name('product_query.show');
+    Route::put('product-queries/{productQuery}', [ProductQueryController::class, 'reply'])->name('product_query.reply');
 
     // Product Attribute
     Route::resource('attributes', AttributeController::class);
@@ -649,14 +662,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
-    // uploaded files
-    Route::resource('/uploaded-files', AizUploadController::class);
-    Route::controller(AizUploadController::class)->group(function () {
-        Route::any('/uploaded-files/file-info', 'file_info')->name('uploaded-files.info');
-        Route::post('/uploaded-files/destroy/{id}', 'destroy')->name('uploaded-files.destroy');
-        Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
-        Route::post('/all-file', 'all_file')->name('all-file')->middleware('permission:delete_all_uploads');
+    // Uploaded files: Inertia pages (resources/js/pages/Store/Admin/UploadedFiles)
+    // and the JSON endpoints of the shared file manager dialog.
+    Route::controller(UploadController::class)->group(function () {
+        Route::get('/uploaded-files', 'index')->name('uploaded-files.index');
+        Route::get('/uploaded-files/create', 'create')->name('uploaded-files.create');
+        Route::get('/uploaded-files/browse', 'browse')->name('uploaded-files.browse');
+        Route::get('/uploaded-files/previews', 'previews')->name('uploaded-files.previews');
+        Route::post('/uploaded-files', 'store')->name('uploaded-files.store');
+        Route::delete('/uploaded-files/{upload}', 'destroy')->name('uploaded-files.destroy');
+        Route::post('/bulk-uploaded-files-delete', 'bulkDestroy')->name('bulk-uploaded-files-delete');
     });
+    Route::post('/all-file', [AizUploadController::class, 'all_file'])->name('all-file')->middleware('permission:delete_all_uploads');
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 

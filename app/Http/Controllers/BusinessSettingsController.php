@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessSetting;
+use App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest;
+use App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest;
+use Illuminate\Support\Arr;
 use App\Models\Product;
 use Artisan;
 use Illuminate\Http\Request;
@@ -40,8 +43,8 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
             new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
             new Middleware('permission:shipping_configuration', only: ['shipping_configuration', 'shipping_configuration_update']),
-            // Posted from several pages (general settings, order configuration, google map, currencies, website header/footer/appearance/home page).
-            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            // Only the remaining general/order/map/currency pages use this legacy writer.
+            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup', only: ['update']),
         ];
     }
     public function general_setting(Request $request)
@@ -391,8 +394,18 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         }
     }
 
+    private function refuseWebsiteSettingKeys(array $types): void
+    {
+        // Migrated keys belong to their exact page endpoint. Script writes remain
+        // refused until the owner defines their permission policy.
+        foreach (Arr::flatten($types) as $type) {
+            abort_if(in_array($type, [...UpdateWebsiteHeaderRequest::KEYS, ...UpdateWebsiteHomeRequest::KEYS, ...\App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest::KEYS, ...\App\Http\Requests\Store\Admin\UpdateWebsiteAppearanceRequest::KEYS, 'header_script', 'footer_script'], true), 403);
+        }
+    }
+
     public function update(Request $request)
     {
+        $this->refuseWebsiteSettingKeys((array) $request->input('types', []));
 
         foreach ($request->types as $key => $type) {
             if($type == 'site_name'){
@@ -444,6 +457,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function updateActivationSettings(Request $request)
     {
+        $this->refuseWebsiteSettingKeys((array) $request->input('type', []));
         $env_changes = ['FORCE_HTTPS', 'FILESYSTEM_DRIVER'];
         if (in_array($request->type, $env_changes)) {
 
@@ -493,6 +507,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     }
 
     public function vendor_commission_update(Request $request){
+        $this->refuseWebsiteSettingKeys((array) $request->input('types', []));
         foreach ($request->types as $key => $type) {
             $business_settings = BusinessSetting::where('type', $type)->first();
             if($business_settings!=null){
@@ -518,6 +533,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     }
 
     public function shipping_configuration_update(Request $request){
+        $this->refuseWebsiteSettingKeys((array) $request->input('type', []));
         $business_settings = BusinessSetting::where('type', $request->type)->first();
         $business_settings->value = $request[$request->type];
         $business_settings->save();

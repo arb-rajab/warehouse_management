@@ -7,14 +7,15 @@ use App\Services\MultipartUploadService;
 use Auth;
 use Illuminate\Http\Request;
 use Response;
-use Storage;
 
 class AizUploadController extends Controller
 {
     public function index(Request $request)
     {
 
-        $all_uploads = (auth()->user()->user_type == 'seller') ? Upload::where('user_id', auth()->user()->id) : Upload::query();
+        // Only the seller area renders this now: the back office's library is
+        // Store\Admin\UploadController.
+        $all_uploads = Upload::where('user_id', auth()->user()->id);
         $search = null;
         $sort_by = null;
 
@@ -45,16 +46,12 @@ class AizUploadController extends Controller
         $all_uploads = $all_uploads->paginate(60)->appends(request()->query());
 
 
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.index', compact('all_uploads', 'search', 'sort_by'))
-            : view('shop.backend.uploaded_files.index', compact('all_uploads', 'search', 'sort_by'));
+        return view('shop.seller.uploads.index', compact('all_uploads', 'search', 'sort_by'));
     }
 
     public function create()
     {
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.create')
-            : view('shop.backend.uploaded_files.create');
+        return view('shop.seller.uploads.create');
     }
 
 
@@ -120,21 +117,8 @@ class AizUploadController extends Controller
             flash(translate("You don't have permission for deleting this!"))->error();
             return back();
         }
-        try {
-            if (config('filesystems.default') == 's3') {
-                Storage::disk('s3')->delete($upload->file_name);
-                if (file_exists(public_path() . '/' . $upload->file_name)) {
-                    unlink(public_path() . '/' . $upload->file_name);
-                }
-            } else {
-                unlink(public_path() . '/' . $upload->file_name);
-            }
-            $upload->delete();
-            flash(translate('File deleted successfully'))->success();
-        } catch (\Exception $e) {
-            $upload->delete();
-            flash(translate('File deleted successfully'))->success();
-        }
+        app(MultipartUploadService::class)->delete($upload);
+        flash(translate('File deleted successfully'))->success();
         return back();
     }
 
@@ -167,26 +151,12 @@ class AizUploadController extends Controller
         // return $files;
     }
 
-    public function all_file()
+    public function all_file(MultipartUploadService $uploads)
     {
-        $uploads = Upload::all();
-        foreach ($uploads as $upload) {
-            try {
-                if (config('filesystems.default') == 's3') {
-                    Storage::disk('s3')->delete($upload->file_name);
-                    if (file_exists(public_path() . '/' . $upload->file_name)) {
-                        unlink(public_path() . '/' . $upload->file_name);
-                    }
-                } else {
-                    unlink(public_path() . '/' . $upload->file_name);
-                }
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            } catch (\Exception $e) {
-                $upload->delete();
-                flash(translate('File deleted successfully'))->success();
-            }
+        foreach (Upload::all() as $upload) {
+            $uploads->delete($upload);
         }
+        flash(translate('File deleted successfully'))->success();
 
         Upload::query()->truncate();
 
@@ -212,8 +182,6 @@ class AizUploadController extends Controller
         $file = Upload::findOrFail($request['id']);
         abort_if(auth()->user()->cannot('view', $file), 403);
 
-        return (auth()->user()->user_type == 'seller')
-            ? view('shop.seller.uploads.info', compact('file'))
-            : view('shop.backend.uploaded_files.info', compact('file'));
+        return view('shop.seller.uploads.info', compact('file'));
     }
 }
