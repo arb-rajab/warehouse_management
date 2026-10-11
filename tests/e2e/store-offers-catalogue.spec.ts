@@ -52,14 +52,18 @@ test('order configuration renders hostile search results as text', async ({
         route.fulfill({ json: [{ id: 1, name, mat_id: matId }] }),
     );
     await page.goto('/temp/admin/order-configuration');
-    await page.locator('#product_search').fill('MAT-');
-    const result = page.locator('#search_results .search-result');
-    await expect(result).toHaveText(name);
-    await expect(result).toHaveAttribute('data-product-id', matId);
+    await page.locator('#default_specific_product').fill('MAT-');
+    const result = page.getByRole('button', {
+        name: `${name} (${matId})`,
+        exact: true,
+    });
+    await expect(result).toHaveText(`${name} (${matId})`);
     await expect(result.locator('img')).toHaveCount(0);
     await result.click();
-    await expect(page.locator('#product_search')).toHaveValue(matId);
-    await expect(page.locator('#selected_product_name')).toContainText(name);
+    await expect(page.locator('#default_specific_product')).toHaveValue(matId);
+    await expect(
+        page.getByText(`Selected product: ${name}`, { exact: true }),
+    ).toBeVisible();
     expect(await page.evaluate(() => 'catalogueXss' in window)).toBe(false);
 });
 

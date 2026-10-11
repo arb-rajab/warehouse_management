@@ -83,7 +83,8 @@ test('edits preserve stored tax shipping serials and variants, adjust stock, and
     $this->put(route('new.feat-order.trip.update', $order), $payload)->assertRedirect();
     expect((float) $order->fresh()->grand_total)->toBe(20.0)
         ->and((float) $line->fresh()->tax)->toBe(21.0)
-        ->and($line->fresh()->getAttribute('variation_qty'))->toBe('{"boxes":3}')
+        ->and(json_decode($line->fresh()->getAttribute('variation_qty'), true, flags: JSON_THROW_ON_ERROR))->toBe(['boxes' => 3])
+        ->and((float) $line->fresh()->shipping_cost)->toBe(4.0)
         ->and($line->fresh()->getAttribute('product_serial'))->not->toBeNull()
         ->and(DB::table('product_stocks')->where('product_id', $line->product_id)->value('qty'))->toBe(48);
     $payload['products'][] = $payload['products'][0];
@@ -151,7 +152,7 @@ test('order lists paginate and group search within seller and pickup scopes', fu
     $staffRow = createStaffRow($staff);
     $pickup = DB::table('pickup_points')->insertGetId(['name' => 'Own pickup', 'staff_id' => $staffRow->id, 'address' => 'Pickup street', 'phone' => '0612345678']);
     $customer = createStoreUser();
-    $customer->forceFill(['AccSysID' => 'MATCH'])->save();
+    $customer->forceFill(['AccSysID' => 8675309])->save();
     for ($i = 0; $i < 21; $i++) {
         createStoreOrder($customer, ['seller_id' => $admin->id]);
     }
@@ -159,8 +160,8 @@ test('order lists paginate and group search within seller and pickup scopes', fu
     $own = createStoreOrder($customer, ['seller_id' => $admin->id, 'shipping_type' => 'pickup_point', 'pickup_point_id' => $pickup]);
     actingAsStoreUser($staff);
     $this->get(route('all_orders.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Sales/Orders/Index')->has('orders.data', 20)->where('orders.meta.total', 23));
-    $this->get(route('inhouse_orders.index', ['search' => 'MATCH']))->assertOk()->assertInertia(fn (Assert $page) => $page->where('orders.meta.total', 22));
-    $this->get(route('pick_up_point.index', ['search' => 'MATCH']))->assertOk()->assertInertia(fn (Assert $page) => $page->has('orders.data', 1)->where('orders.data.0.id', $own->id));
+    $this->get(route('inhouse_orders.index', ['search' => '8675309']))->assertOk()->assertInertia(fn (Assert $page) => $page->where('orders.meta.total', 22));
+    $this->get(route('pick_up_point.index', ['search' => '8675309']))->assertOk()->assertInertia(fn (Assert $page) => $page->has('orders.data', 1)->where('orders.data.0.id', $own->id));
     $this->getJson(route('all_orders.index', ['date' => 'bad']))->assertUnprocessable();
 });
 

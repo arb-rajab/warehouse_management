@@ -33,7 +33,12 @@ test('async order entry enforces native fields, calculates totals, retains serve
         .selectOption({ label: 'Browser Order Product BROWSER-ORDER' });
     await expect(page.locator('#price-1')).toHaveValue('12');
     await page.locator('#quantity-1').fill('2');
-    await expect(page.getByText('24.00', { exact: true })).toBeVisible();
+    await expect(
+        page
+            .locator('dt')
+            .filter({ hasText: /^Total$/ })
+            .locator('xpath=following-sibling::dd[1]'),
+    ).toHaveText('24.00');
     await page.locator('#quantity-1').fill('999');
     await page.getByRole('button', { name: 'Save order', exact: true }).click();
     await expect(
@@ -46,7 +51,12 @@ test('async order entry enforces native fields, calculates totals, retains serve
     await page.getByRole('link', { name: 'Edit order' }).click();
     await page.locator('#quantity-1').fill('1');
     await page.getByRole('button', { name: 'Save order', exact: true }).click();
-    await expect(page.getByText('12.00', { exact: true })).toBeVisible();
+    await expect(
+        page
+            .locator('dt')
+            .filter({ hasText: /^Total$/ })
+            .locator('xpath=following-sibling::dd[1]'),
+    ).toHaveText('12.00');
     await page.locator('#delivery').selectOption('cancelled');
     await page
         .locator('form')
@@ -128,7 +138,12 @@ test('representative search applies the discount and piece conversion with the e
     await page.locator('#unit-1').selectOption('PerPiece');
     await expect(page.locator('#price-1')).toHaveValue('1.8');
     await page.locator('#quantity-1').fill('3');
-    await expect(page.getByText('5.40', { exact: true })).toBeVisible();
+    await expect(
+        page
+            .locator('dt')
+            .filter({ hasText: /^Total$/ })
+            .locator('xpath=following-sibling::dd[1]'),
+    ).toHaveText('5.40');
     await page.getByRole('button', { name: 'Save order', exact: true }).click();
     await expect(page).toHaveURL(/\/orders\/\d+\/show$/);
     await expect(

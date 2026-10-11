@@ -1,7 +1,8 @@
 # Store back-office reconciliation — 2026-10-11
 
-Integration and audit handoff; final combined verification is blocked as recorded
-in the prompt 4 section below. Integration branch:
+Integration and audit handoff; current results and the remaining browser gate are
+recorded in [resumed runtime verification](#resumed-runtime-verification-2026-10-11)
+below. Earlier blocked attempts remain historical evidence. Integration branch:
 `codex/store-backoffice-reconciliation-20261011-01`, worktree:
 `/workspace/store-backoffice-reconciliation-20261011-01`, based on latest fetched
 `origin/develop`, `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69`.
@@ -717,3 +718,174 @@ changing verification or publication status. Backend/PHP/build/template/PDF,
 browser and isolated MySQL checks remain outstanding; deployed grants remain
 unverified. Frontend results remain as recorded. No push or deployment.
 A verified Git bundle will preserve the integration branch's reachable history.
+
+
+## Resumed runtime verification (2026-10-11)
+
+Fetched and checked out the integration branch in the separate worktree above;
+starting HEAD was exactly `924d7d9319cd1a69c41e0b191724a309f05ae86a`, the authorized
+preservation checkpoint. The subsequent resume preserved every local fix and
+confirmed the same HEAD. The original checkout remains clean. Current scratch,
+runtime helpers, logs and browser traces are external under
+`/workspace/work/store-reconcile-resume/`; none is a source change or a commit
+candidate. Untracked `public/uploads/` contains browser-generated files and is
+excluded from the intended source changes.
+
+### Runtime recovery and completed checks
+
+Checked PHP/Docker execution before setup. Supported network-enabled execution
+restored Git fetch and local Docker socket access during the preceding resume.
+The provisioned PHP 8.5.11 runtime initially lacked GD WebP; the five image-test
+failures in `logs/backend-initial.log` were runtime limitations. An external
+Docker image enabled WebP with the configured proxy/CA trust; the resulting GD
+extension is selected by the external activation script. No platform-requirement
+bypass, TLS bypass, system/root installer, dependency installation or lockfile
+change was used. `composer check-platform-reqs` passed with the existing lock.
+Dependencies were copied into this worktree from the provisioned checkout.
+
+Results below were actually executed in the preceding resume and are reused.
+The latest changes are browser-test spacing and documentation, so they do not
+invalidate backend, build, template or frontend application-test results.
+
+| Check | Actual result | External evidence relative to the scratch directory |
+| --- | --- | --- |
+| Full backend suite | **4,961/4,961 tests passed; 23,810 assertions**, including the four new permission-migration tests | `logs/backend-final.log` |
+| Affected SQLite order tests after MySQL fixture corrections | **73/73 passed; 431 assertions**; this is subsequent focused evidence, not another full-suite run | `logs/sqlite-order-final.log` |
+| Pint | Full `--parallel --test` and dirty/scoped checks passed after import-format fixes | `logs/pint-final.log`, `logs/pint-dirty.log` |
+| PHPStan | Passed with zero errors after the PHP test changes | `logs/phpstan-final.log` |
+| Fresh Wayfinder | `php artisan wayfinder:generate --skip-routes --with-form` passed | `logs/wayfinder.log` |
+| Production assets | `npm run build` passed; fontaine/chunk-size advisories remain | `logs/build.log` |
+| TypeScript after fresh actions | `npm run types:check` passed; fresh generation justified this repeat | `logs/types-fresh-actions.log` |
+| Blade syntax | All **255** current/retained templates compiled and generated PHP linted with zero failures | `logs/templates.log`, `logs/templates.json` |
+| Retained rendering/PDF | Full backend coverage includes nullable CMS metadata, configured VoguePay currency, seller/email/reference template rendering, real invoice PDFs with `%PDF-` signatures, and representative receipt coverage | Full backend log and the existing render/PDF tests |
+| Isolated MySQL | Fresh migrations passed; **101/101 focused tests passed; 587 assertions** on MySQL 8.4.11 | `logs/mysql-migrate.log`, `logs/mysql-tests-final.log` |
+| MySQL engine/locking/FK probe | All stated checks below passed | `logs/mysql-engine.json` |
+| Changed browser-spec lint/format, latest resume | Scoped ESLint and Prettier checks passed after two required blank lines | `logs/e2e-lint-final.log`, `logs/e2e-format-final.log` |
+
+The previous full frontend **2,050 tests / 227 files**, full ESLint and full
+Prettier results remain as recorded in prompt 4. They were not repeated because
+no production Vue/TypeScript change invalidated them. Manifests and lockfiles
+remain identical to the recorded develop baseline. Template syntax and sampled
+rendering are distinct from visual PDF review and complete endpoint coverage;
+the admin receipt download unit test uses a mock, while retained PDF tests supply
+runtime rendering evidence. No live payment or email delivery was exercised.
+
+### Local fixes and isolated MySQL evidence
+
+Pint corrected imports in `HandleInertiaRequests`, `Category` and
+`RouteServiceProviderTest`, without a behavior change. New
+`AddStoreActionPermissionsTest` covers the order-entry and blog/support
+migrations: store-only definitions, existing staff denied without grants,
+idempotent replay, and nondestructive rollback preserving store/web permissions
+and role pivots. Its four tests and 31 assertions are included in the full suite.
+This closes the dedicated test gap recorded in §8 of the migration rules; it
+does not verify or authorize any deployed role grants.
+
+MySQL exposed two SQLite-permissive test assumptions. The order test now compares
+decoded JSON content instead of insignificant JSON spacing, also checking the
+persisted shipping cost. The account-search fixture uses a valid integer
+`AccSysID` rather than `MATCH`. Both affected SQLite and isolated MySQL suites
+passed afterward; order tax/grand-total business behavior was preserved.
+
+The isolated MySQL suite covers order migrations, the six additive permission
+migrations, admin orders and bounded product search. The direct two-connection
+probe confirms InnoDB/`utf8mb4_unicode_ci` for `orders`, `order_details`,
+`product_stocks`, `wms_permissions` and `wms_store_order_submissions`; all eight
+actual product foreign-key columns match their signed `int` parent. A held
+`FOR UPDATE` row rejects a second connection's `NOWAIT` with error 3572, rollback
+releases the lock, transactional payload-hash rollback preserves the old hash,
+and the collation is case insensitive. Its temporary probe row was deleted.
+This is isolated engine evidence, not a production-data migration rehearsal or
+an end-to-end concurrent HTTP load test. The session-owned MySQL container was
+stopped after these checks (`logs/mysql-stop.log`).
+
+### Browser results and current execution limitation
+
+Used installed Chromium 151 with local HTTPS, enforced CSP, one worker, zero
+retries and no server reuse. Each run resets only the four dedicated e2e SQLite
+files through the existing Playwright configuration. Prior actual attempts:
+
+| Attempt | Actual result | Evidence |
+| --- | --- | --- |
+| All store specs, before contract fixes | **31 passed, 8 failed** (39 tests) | `logs/browser-initial.log` |
+| Seven affected spec files after initial fixes | **11 passed, 3 failed** (14 tests) | `logs/browser-focused.log` |
+| Language/orders/support follow-up | **5 passed, 2 failed** (7 tests) | `logs/browser-fix2.log` |
+| Latest final all-store attempt | **Zero tests executed**, web-server startup exit 1; loopback connection denied with `EPERM` | `logs/browser-final.log`, `logs/browser-final-startup.log` |
+
+The browser fixes align selectors with the canonical uploader, current Inertia
+visits and retained Blade trips, escaped product-search buttons, explicit total
+labels, and the accessible header picker/focus return. The simulated failed
+support reply uses the request's HTTPS origin and a final Inertia error response;
+its text-retention/dark-mode assertions passed in the follow-up. It does not
+claim an actual failed-write redirect was tested. The Arabic fixture is
+idempotent; each RTL save now waits for its response and reloads to assert
+persistence. The final follow-up showed the endpoint returns 302, whereas the
+test expected 303 and stopped after saving RTL off; the dependent order RTL
+assertion then failed. The latest 302 expectation is preserved but remains
+browser-unverified until the all-store suite can execute. Partial runs are not
+combined into a claimed 39-test pass.
+
+The latest managed shell supports PHP/filesystem commands but denies loopback
+TCP bind/connect. An additional-network execution request was rejected by the
+current granular approval policy; the supported network permission request
+returned no grant. Default execution confirmed Playwright's
+`connect EPERM 127.0.0.1:9443` and startup failure. No permission or sandbox bypass
+was attempted. This differs from the earlier out-of-credits automatic-review
+failure, which blocked the preceding final attempt before execution. Supported
+local network execution must be restored before the remaining browser gate.
+
+Retained dashboard lazy-loading can still return 500 after login, legacy vendor
+JavaScript emits a null-`getAttribute` error, and Google Fonts is unavailable
+under the current network policy. These are recorded limitations; browser
+workflow assertions are not evidence of globally clean console/network output.
+Previous traces/screenshots remain external for review.
+
+To resume after network access is restored, start the external session-owned
+HTTPS helper (it was stopped during cleanup), then run from this worktree:
+
+```sh
+source /workspace/work/store-reconcile-resume/activate.sh
+PLAYWRIGHT_BROWSERS_PATH=/workspace/work/store-reconcile-resume/browser-cache PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium PLAYWRIGHT_BASE_URL=https://127.0.0.1:9443 TRUSTED_PROXIES=127.0.0.1 npx playwright test tests/e2e/store- --output=/workspace/work/store-reconcile-resume/browser-final
+```
+
+### Remaining gate and preserved scope
+
+All deferred source dispositions and owner decisions above remain unchanged:
+Tiptap/editor, chart/Leaflet dependencies, stored-script policy, seller/classified
+feature use, pending catalogue/customer-package work, SVG/shared upload policy,
+departure semantics, order tax arithmetic, logout and server status. The missing
+audit commit remains excluded and unrecovered. Deployed role grants, production
+MySQL version/configuration and data rehearsal, external services/payment/email,
+and unavailable baseline/visual captures remain unverified; no production access
+or deployment occurred.
+
+Only session-owned helper processes are cleanup targets; the healthy managed
+Docker daemon and unrelated services are retained. The owned HTTPS proxy was
+stopped; Playwright's attempted upstream exited. Source fixes and generated
+artifacts are preserved. Verification-record file links and `git diff --check`
+pass. The combined gate is still incomplete because the latest browser changes
+have not run. No staging or new local commit; HEAD stays at the checkpoint above.
+After a successful fresh all-store run, update both records, clean up its helpers
+and create the authorized local verification commit. No push, PR, merge or deploy.
+
+
+### Authorized backup checkpoint — pending browser verification
+
+The user subsequently authorized a preservation-only local checkpoint and its
+publication to the public `arb-rajab/warehouse_management` repository on a new
+backup branch. This supersedes the previous no-commit/no-push instruction only
+for this checkpoint. Intended branch:
+`codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`.
+Commit label: `chore: checkpoint reconciliation fixes pending browser verification`.
+
+The checkpoint contains exactly the intended PHP formatting/test fixes, seven
+browser-spec fixes, new action-permission migration tests and these two records.
+Scratch, runtime helpers, generated assets/actions, database files, uploads,
+logs and secrets are excluded. Completed check results are reused; the full
+pre-push verification script is not repeated for this preservation checkpoint.
+The latest browser gate and deployed-role/production verification limits remain
+unresolved. This checkpoint does not claim verification or publication readiness.
+The backup push must create only the new branch and verify its remote HEAD;
+`develop` and the existing integration branch are not push targets. No PR, merge
+or deployment is authorized. Push/remote verification outcome is reported to the
+user after execution, rather than presumed by this authorization record.

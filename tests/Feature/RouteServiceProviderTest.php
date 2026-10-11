@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
 use App\Http\Controllers\BrandController;
-use App\Http\Controllers\AdminController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;

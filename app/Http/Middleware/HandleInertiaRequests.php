@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\Store\AdminNotificationResource;
 use App\Models\BusinessSetting;
 use App\Models\Conversation;
 use App\Models\Language;
@@ -165,7 +166,7 @@ class HandleInertiaRequests extends Middleware
 
         return ['unread_count' => $user->unreadNotifications()->count(),
             'items' => $user->unreadNotifications()->select(['id', 'type', 'data', 'created_at'])->orderByDesc('created_at')->orderBy('id')->limit(20)->get()->map(function ($notification) use ($request): array {
-                $item = (new \App\Http\Resources\Store\AdminNotificationResource($notification))->toArray($request);
+                $item = (new AdminNotificationResource($notification))->toArray($request);
 
                 return ['id' => $item['id'], 'kind' => $item['kind'], 'order_code' => $item['order_code'],
                     'status' => $item['status'], 'user_name' => $item['customer_name'], 'message' => $item['message'], 'created_at' => $item['created_at']];

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { ensureStoreRtlLanguage } from './support/storeFixtures';
 
 test('language forms retain input after validation and confirm deletion in the browser', async ({
     page,
@@ -44,19 +45,27 @@ test('language forms retain input after validation and confirm deletion in the b
 test('RTL settings and translation inputs coexist with Blade and retain Arabic layout', async ({
     page,
 }) => {
+    ensureStoreRtlLanguage();
     await loginAsStoreAdmin(page);
-    await page.goto('/temp/admin/languages/create');
-    await page.locator('#name').fill('Arabic');
-    await page.locator('#code').fill('ar');
-    await page.locator('#app_lang_code').fill('ar');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.goto('/temp/admin/languages');
     const row = page.getByRole('row', { name: /^Arabic/ });
-    await row.locator('select').first().selectOption('1');
-    await row
-        .getByRole('button', { name: 'Save', exact: true })
-        .first()
-        .click();
-    await expect(row.locator('select').first()).toHaveValue('1');
+
+    for (const value of ['0', '1']) {
+        await row.locator('select').first().selectOption(value);
+        const saved = page.waitForResponse(
+            (response) =>
+                response.url().endsWith('/languages/update_rtl_status') &&
+                response.request().method() === 'POST',
+        );
+        await row
+            .getByRole('button', { name: 'Save', exact: true })
+            .first()
+            .click();
+        expect((await saved).status()).toBe(302);
+        await page.reload();
+        await expect(row.locator('select').first()).toHaveValue(value);
+    }
+
     await page.getByRole('button', { name: 'Arabic', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(

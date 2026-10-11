@@ -27,20 +27,24 @@ test('campaign dates keep seconds and picker selection, while native offer and p
     await page.locator(`#discount-${rewardId}`).fill('15');
     await page.locator(`#quantity-${rewardId}`).fill('2');
     await page
-        .getByRole('button', { name: 'Choose a file', exact: true })
+        .getByRole('button', { name: 'Choose files', exact: true })
         .click();
-    const dialog = page.getByRole('dialog', { name: 'File manager' });
+    const dialog = page.getByRole('dialog', { name: 'Choose files' });
     await dialog
-        .getByRole('button', { name: 'Upload new', exact: true })
+        .getByRole('button', { name: 'Upload files', exact: true })
         .click();
     await dialog
         .locator('input[type="file"]')
         .setInputFiles('tests/e2e/fixtures/e2e-pixel.png');
-    await expect(
-        dialog.getByRole('listitem').filter({ hasText: 'e2e-pixel.png' }),
-    ).toContainText('Uploaded');
     await dialog
-        .getByRole('button', { name: 'Add selected', exact: true })
+        .getByRole('button', { name: 'Upload files', exact: true })
+        .last()
+        .click();
+    await expect(
+        dialog.getByRole('button', { name: 'e2e-pixel', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await dialog
+        .getByRole('button', { name: 'Use selected files', exact: true })
         .click();
     await expect(page.locator('input[name="banner"]')).not.toHaveValue('');
     await page
@@ -67,9 +71,11 @@ test('campaign dates keep seconds and picker selection, while native offer and p
     await page.getByRole('button', { name: 'Save popup', exact: true }).click();
     await expect(dialog).toBeVisible();
     await expect(page).toHaveURL(/\/dynamic-popups\/create$/);
-    await dialog.getByRole('checkbox', { name: /e2e-pixel/ }).check();
     await dialog
-        .getByRole('button', { name: 'Add selected', exact: true })
+        .getByRole('button', { name: 'e2e-pixel', exact: true })
+        .click();
+    await dialog
+        .getByRole('button', { name: 'Use selected files', exact: true })
         .click();
     await page.getByRole('button', { name: 'Save popup', exact: true }).click();
     await expect(page).toHaveURL(/\/temp\/admin\/dynamic-popups$/);

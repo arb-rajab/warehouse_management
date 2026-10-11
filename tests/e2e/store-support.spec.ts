@@ -96,16 +96,12 @@ test('a failed reply retains text and the native field has dark-mode styling', a
     await page.route('**/temp/admin/product-queries/43', async (route) => {
         if (route.request().method() === 'PUT') {
             refused = true;
-            await route.fulfill({
-                status: 303,
-                headers: { location: '/temp/admin/product-queries/43' },
-            });
-
-            return;
         }
 
         const response = await route.fetch({
-            url: 'http://127.0.0.1:8010/temp/admin/product-queries',
+            url: new URL('/temp/admin/product-queries', route.request().url())
+                .href,
+            method: 'GET',
         });
         const update = (data: {
             component: string;

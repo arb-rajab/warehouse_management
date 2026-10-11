@@ -12,10 +12,15 @@ test('header edits keep the picker, paired menu rows, and storefront rendering',
     await expect(
         page.locator('input[name="settings[header_logo]"]'),
     ).toHaveAttribute('type', 'hidden');
-    await page.locator('#header_logo').click();
+    const picker = page
+        .locator('#header_logo')
+        .locator('..')
+        .getByRole('button', { name: 'Choose files', exact: true });
+    await picker.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(picker).toBeFocused();
 
     await page.locator('#helpline_number').fill('55512345');
     await page.locator('#header_stikcy').check();

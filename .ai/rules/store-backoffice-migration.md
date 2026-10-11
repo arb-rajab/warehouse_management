@@ -747,3 +747,75 @@ changing verification or publication status. Backend/PHP/build/template/PDF,
 browser and isolated MySQL checks remain outstanding; deployed grants remain
 unverified. Frontend results remain as recorded. No push or deployment.
 A verified Git bundle will preserve the integration branch's reachable history.
+
+
+## 9. Resumed runtime verification (2026-10-11)
+
+The separate worktree started and remains at preservation checkpoint
+`924d7d9319cd1a69c41e0b191724a309f05ae86a`. Current results supersede earlier
+runtime-blocked status only for the checks actually completed. Exact evidence
+and next command are in [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#resumed-runtime-verification-2026-10-11).
+
+- PHP 8.5.11 with GD WebP and supported Docker execution were recovered during
+  the preceding resume; Composer platform requirements passed. Manifests and
+  locks remain unchanged. Scratch/runtime extensions and generated data stay
+  outside the intended source changes.
+- Full backend: **4,961 tests passed / 23,810 assertions**. Subsequent affected
+  SQLite order tests: **73 passed / 431 assertions**. Pint and PHPStan passed;
+  fresh Wayfinder, production build and TypeScript with generated actions passed.
+  The earlier full frontend 2,050-test/227-file run and full lint/format results
+  remain valid and were not repeated. Latest changed browser-spec lint/format
+  also passed.
+- All **255** Blade templates compile and lint. Full backend includes sampled
+  retained rendering and PDF evidence; syntax does not establish visual parity,
+  every endpoint, or external delivery/payment behavior.
+- New dedicated order-entry/blog-support migration tests close the §8 coverage
+  gap: store-only definitions, no automatic existing-staff grants, idempotent
+  replay and nondestructive rollback preserving permissions/store/web pivots.
+  Deployed role grants remain unverified and are not inferred from definitions.
+- Isolated MySQL 8.4.11 fresh migrations and **101 tests / 587 assertions** passed.
+  JSON assertions compare semantic content; account-search fixtures use integer
+  `AccSysID`, matching the schema. Preserve established order tax arithmetic.
+  Engine metadata confirms InnoDB/`utf8mb4_unicode_ci` and eight signed product
+  FK matches; a two-connection probe confirms held/released row locking,
+  transactional rollback and case-insensitive collation. This is not production
+  data/configuration or concurrent HTTP-load verification. The owned container
+  was stopped afterward.
+- Browser contract fixes preserve workflow/security assertions while using the
+  canonical uploader, current Inertia visits, retained Blade trips, escaped
+  search results, explicit total labels and accessible picker focus return.
+  Simulated support errors preserve the HTTPS origin and use a final Inertia
+  error response; failed-write redirect coverage is not claimed. RTL saves
+  await responses/reload; the endpoint's observed 302 is the current expectation.
+- Actual browser runs were **31 passed/8 failed**, then **11 passed/3 failed**,
+  then **5 passed/2 failed**. The last failures were the incorrect 303 expectation
+  and dependent RTL fixture state. The corrected 302 expectation has not run.
+  Latest fresh all-store attempt executed **zero tests**: current managed shell
+  denies loopback TCP with `EPERM`, and a network permission request returned no
+  grant. Preserve HTTPS/enforced CSP, single worker, zero retries, isolated DB
+  reset and no server reuse when supported access is restored. Do not count
+  partial attempts as a full pass or bypass execution policy.
+
+The session-owned HTTPS proxy was stopped, and no unrelated processes/healthy
+Docker daemon were targeted. Local fixes, traces and generated artifacts remain
+preserved; no staging/new commit because the browser gate is incomplete. Keep
+all source dispositions and owner-decision gaps in §§4–8, inherited brands/
+dashboard/legacy-route issues, and the excluded unavailable audit unchanged.
+Production MySQL/data rehearsal, deployed grants, external services and absent
+baseline captures remain unverified. No push, PR, merge or deployment.
+
+
+### Authorized backup checkpoint — pending browser verification
+
+The user's subsequent instruction authorizes a preservation-only local checkpoint
+of the intended fixes and both verification records, and a public backup push to
+new branch `codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`
+in `arb-rajab/warehouse_management`. Label the commit
+`chore: checkpoint reconciliation fixes pending browser verification`. Exclude
+scratch/generated files and secrets. Reuse completed checks; do not describe
+the incomplete browser gate or deployed-role/production checks as verified.
+This narrowly supersedes the previous no-commit/no-push status for backup only;
+verify the remote HEAD afterward. No push to `develop` or the existing integration
+branch, PR, merge or deployment. Exact intended scope/limitations are in the
+ledger's matching authorization section; actual publication outcome is reported
+after execution.

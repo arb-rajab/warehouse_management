@@ -60,7 +60,16 @@ test('drivers navigate between Inertia and Blade and confirm deletion', async ({
         /\/temp\/admin\/representatives\/visits\/index$/,
     );
     await expect(
-        page.getByRole('heading', { name: 'All Visits', exact: true }),
+        page.getByRole('heading', {
+            name: 'Representative visits',
+            exact: true,
+        }),
+    ).toBeVisible();
+    await expect(page.locator('#app')).toHaveCount(1);
+    await menu.getByRole('button', { name: 'Trips', exact: true }).click();
+    await menu.getByRole('link', { name: 'All trips', exact: true }).click();
+    await expect(
+        page.getByRole('heading', { name: 'All Trips', exact: true }),
     ).toBeVisible();
     await expect(page.locator('#app')).toHaveCount(0);
     await page.goto('/temp/admin/trips/drivers/index');
