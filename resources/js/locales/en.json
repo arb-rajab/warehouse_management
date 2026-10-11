@@ -912,6 +912,373 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "blogCategories": {
+            "index": {
+                "title": "Blog categories",
+                "add": "Add category",
+                "columnName": "Name",
+                "columnActions": "Actions",
+                "empty": "No categories found.",
+                "edit": "Edit",
+                "delete": "Delete",
+                "search": "Search",
+                "searching": "Searching…"
+            },
+            "fields": {
+                "name": "Name"
+            },
+            "create": {
+                "title": "Add blog category",
+                "submit": "Create category",
+                "submitting": "Creating…"
+            },
+            "edit": {
+                "title": "Edit blog category",
+                "submit": "Save changes",
+                "submitting": "Saving…"
+            }
+        },
+        "subscribers": {
+            "index": {
+                "title": "Subscribers",
+                "columnEmail": "Email",
+                "columnDate": "Date",
+                "columnActions": "Actions",
+                "empty": "No subscribers found.",
+                "delete": "Delete"
+            }
+        },
+        "coupons": {
+            "index": {
+                "title": "Coupons",
+                "add": "Add coupon",
+                "code": "Code",
+                "type": "Type",
+                "discount": "Discount",
+                "startDate": "Start date",
+                "endDate": "End date",
+                "actions": "Actions",
+                "empty": "No coupons found.",
+                "edit": "Edit",
+                "delete": "Delete"
+            },
+            "create": {
+                "title": "Add coupon",
+                "submit": "Create coupon",
+                "submitting": "Creating…"
+            },
+            "edit": {
+                "title": "Edit coupon",
+                "submit": "Save changes",
+                "submitting": "Saving…"
+            },
+            "fields": {
+                "type": "Coupon type",
+                "cart": "Cart discount",
+                "product": "Product discount",
+                "code": "Coupon code",
+                "discountType": "Discount type",
+                "amount": "Amount",
+                "percent": "Percent",
+                "discount": "Discount",
+                "startDate": "Start date",
+                "endDate": "End date",
+                "minBuy": "Minimum purchase",
+                "maxDiscount": "Maximum discount",
+                "searchProducts": "Search products",
+                "searching": "Searching…",
+                "products": "Products"
+            }
+        },
+        "uploads": {
+            "unknownName": "Unknown",
+            "selectFile": "Select {name}",
+            "empty": "No files found.",
+            "kind": {
+                "image": "Image",
+                "video": "Video",
+                "audio": "Audio",
+                "archive": "Archive",
+                "document": "Document"
+            },
+            "sort": {
+                "newest": "Newest first",
+                "oldest": "Oldest first",
+                "smallest": "Smallest first",
+                "largest": "Largest first"
+            },
+            "filters": {
+                "search": "Search files",
+                "searchPlaceholder": "Search your files",
+                "sort": "Sort files",
+                "submit": "Search"
+            },
+            "uploader": {
+                "choose": "Choose files to upload",
+                "hint": "Up to 512 MB each: images, videos, audio, archives and documents.",
+                "tooLarge": "This file is larger than 512 MB.",
+                "failed": "The upload failed. Try again.",
+                "status": {
+                    "waiting": "Waiting",
+                    "uploading": "Uploading",
+                    "done": "Uploaded",
+                    "failed": "Not uploaded"
+                }
+            },
+            "dialog": {
+                "title": "File manager",
+                "browseTab": "Select files",
+                "uploadTab": "Upload new",
+                "loading": "Loading files...",
+                "loadMore": "Load more",
+                "confirm": "Add selected",
+                "clear": "Clear selection",
+                "selectedCount": "Selected: {count}"
+            },
+            "field": {
+                "browse": "Choose a file",
+                "browseMany": "Choose files",
+                "remove": "Remove",
+                "removeFile": "Remove {name}"
+            },
+            "index": {
+                "title": "All uploaded files",
+                "uploadNew": "Upload new file",
+                "selectAll": "Select all",
+                "deleteSelection": "Delete selection",
+                "selection": "{count} selected files",
+                "details": "Details",
+                "detailsFor": "Details of {name}",
+                "download": "Download",
+                "copyLink": "Copy link",
+                "delete": "Delete",
+                "linkCopied": "Link copied to the clipboard.",
+                "linkNotCopied": "The link could not be copied."
+            },
+            "info": {
+                "title": "File info",
+                "name": "File name",
+                "type": "File type",
+                "size": "File size",
+                "uploadedBy": "Uploaded by",
+                "uploadedAt": "Uploaded at",
+                "download": "Download"
+            },
+            "create": {
+                "title": "Upload new files",
+                "back": "Back to uploaded files",
+                "heading": "Choose your files"
+            }
+        },
+        "campaigns": {
+            "fields": {
+                "title": "Title",
+                "banner": "Banner",
+                "startDate": "Start date",
+                "endDate": "End date",
+                "searchProducts": "Search products (base and rewards)",
+                "searchBrands": "Search brands",
+                "searching": "Searching…",
+                "products": "Reward products",
+                "product": "Product",
+                "discount": "Discount",
+                "quantity": "Reward quantity",
+                "discountType": "Discount type",
+                "amount": "Amount",
+                "percent": "Percent",
+                "actions": "Actions",
+                "remove": "Remove",
+                "empty": "No products selected.",
+                "unavailable": "Unavailable product #{id}",
+                "brand": "Brand",
+                "baseProduct": "Base product",
+                "baseQuantity": "Required base quantity",
+                "spendThreshold": "Required brand spend",
+                "choose": "Choose…",
+                "backgroundColor": "Background colour",
+                "textColor": "Text colour",
+                "dark": "Dark",
+                "light": "Light",
+                "languages": "Languages",
+                "active": "Active",
+                "repeatable": "Repeatable",
+                "multipleUsage": "Multiple usage",
+                "featured": "Featured",
+                "price": "Base price"
+            },
+            "saving": "Saving…",
+            "search": "Search",
+            "enable": "Enable",
+            "disable": "Disable",
+            "enabled": "Enabled",
+            "disabled": "Disabled",
+            "toggle": "Toggle {field} for {title}",
+            "viewPublic": "View public campaign",
+            "edit": "Edit",
+            "delete": "Delete"
+        },
+        "offers": {
+            "index": {
+                "title": "Offers",
+                "add": "Add product offer",
+                "addBrand": "Add brand offer"
+            },
+            "create": {
+                "title": "Create offer",
+                "submit": "Create offer"
+            },
+            "edit": {
+                "title": "Edit offer",
+                "submit": "Save offer"
+            }
+        },
+        "flashDeals": {
+            "index": {
+                "title": "Flash deals",
+                "add": "Add flash deal"
+            },
+            "create": {
+                "title": "Create flash deal",
+                "submit": "Create flash deal"
+            },
+            "edit": {
+                "title": "Edit flash deal",
+                "submit": "Save flash deal"
+            }
+        },
+        "dynamicPopups": {
+            "create": {
+                "title": "Add dynamic popup",
+                "submit": "Save popup",
+                "submitting": "Saving…"
+            },
+            "edit": {
+                "title": "Edit dynamic popup",
+                "submit": "Save changes",
+                "submitting": "Saving…"
+            },
+            "fields": {
+                "title": "Title",
+                "summary": "Summary",
+                "banner": "Image",
+                "buttonText": "Button text",
+                "delay": "Delay in seconds",
+                "offer": "Offer",
+                "page": "Show on page",
+                "home": "Home",
+                "choose": "Choose an option"
+            },
+            "index": {
+                "title": "Dynamic popups",
+                "add": "Add popup",
+                "search": "Search",
+                "searching": "Searching…",
+                "select": "Select",
+                "image": "Image",
+                "link": "Link",
+                "status": "Status",
+                "actions": "Actions",
+                "empty": "No dynamic popups found.",
+                "edit": "Edit",
+                "delete": "Delete",
+                "published": "Published",
+                "hidden": "Hidden",
+                "publish": "Publish",
+                "hide": "Hide",
+                "updating": "Updating…",
+                "selectPopup": "Select {title}",
+                "selectAll": "Select all on this page",
+                "selection": "{count} selected popups",
+                "deleteSelection": "Delete selection",
+                "deleting": "Deleting…",
+                "confirmPublish": "Publish this popup? Visiting customers will see it immediately.",
+                "confirmHide": "Hide this popup? Visiting customers will stop seeing it immediately."
+            }
+        },
+        "newsletters": {
+            "title": "Send newsletter",
+            "send": "Send",
+            "sending": "Sending…",
+            "subject": "Newsletter subject",
+            "content": "Newsletter content",
+            "smtpMissing": "Configure SMTP before sending newsletters.",
+            "recipientHelp": "Choose at least one user or subscriber email. Search to find more recipients.",
+            "searching": "Searching…",
+            "search": {
+                "users": "Search user emails",
+                "subscribers": "Search subscriber emails"
+            },
+            "recipients": {
+                "users": "User emails",
+                "subscribers": "Subscriber emails"
+            }
+        },
+        "blogPosts": {
+            "index": {
+                "title": "Blog posts",
+                "add": "Add post",
+                "search": "Search posts",
+                "searching": "Searching…",
+                "columnTitle": "Title",
+                "columnCategory": "Category",
+                "columnStatus": "Published",
+                "columnActions": "Actions",
+                "empty": "No posts found.",
+                "edit": "Edit",
+                "delete": "Delete",
+                "view": "View public post",
+                "publish": "Publish",
+                "unpublish": "Unpublish",
+                "updating": "Updating…"
+            },
+            "create": {
+                "title": "Add blog post",
+                "submit": "Create post",
+                "submitting": "Creating…"
+            },
+            "edit": {
+                "title": "Edit blog post",
+                "submit": "Save post",
+                "submitting": "Saving…"
+            },
+            "fields": {
+                "title": "Title",
+                "category": "Category",
+                "selectCategory": "Select a category",
+                "slug": "Slug",
+                "summary": "Short description",
+                "description": "Content",
+                "banner": "Banner",
+                "metaTitle": "Meta title",
+                "metaImage": "Meta image",
+                "metaDescription": "Meta description",
+                "metaKeywords": "Meta keywords"
+            }
+        },
+        "richText": {
+            "toolbar": "Text formatting",
+            "bold": "Bold",
+            "italic": "Italic",
+            "underline": "Underline",
+            "paragraph": "Paragraph",
+            "heading": "Heading",
+            "bulletList": "Bullet list",
+            "orderedList": "Numbered list",
+            "quote": "Quote",
+            "table": "Insert table",
+            "clear": "Clear formatting",
+            "undo": "Undo",
+            "redo": "Redo",
+            "source": "Edit HTML",
+            "visual": "Visual editor",
+            "linkUrl": "Link URL",
+            "addLink": "Insert link",
+            "imageUrl": "Image URL",
+            "addImage": "Insert image",
+            "invalidUrl": "Enter a safe web or relative URL.",
+            "required": "Enter content.",
+            "tooLong": "Content exceeds the permitted length."
         }
     }
 }

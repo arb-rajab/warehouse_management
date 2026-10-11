@@ -34,4 +34,5 @@ return [
     'verification_round_rows_not_found' => 'One or more of the requested rows no longer exist.',
     'cannot_remove_last_admin' => 'This is the last admin account, so it cannot be demoted or deleted.',
     'open_level_not_allowed' => 'This pallet\'s level is not one where opening pallets is allowed.',
+    'upload_refused' => 'This file type is not allowed.',
 ];

@@ -55,12 +55,10 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
-    'AizUploadController@bulk_uploaded_files_delete',
-    'AizUploadController@destroy',
-    'AizUploadController@file_info',
-    'AizUploadController@store',
-    'AizUploadController@update',
     'ProfileController@update',
+    'UploadController@bulkDestroy',
+    'UploadController@destroy',
+    'UploadController@store',
 
     // Read-only AJAX helpers the product forms post to.
     'ProductController@add_more_choice_option',
@@ -107,11 +105,11 @@ const ADMIN_READS_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
-    'AizUploadController@create',
-    'AizUploadController@edit',
-    'AizUploadController@index',
-    'AizUploadController@show',
     'ProfileController@index',
+    'UploadController@browse',
+    'UploadController@create',
+    'UploadController@index',
+    'UploadController@previews',
 
     // Read-only AJAX helpers the product forms use.
     'BusinessSettingsController@search',
@@ -252,25 +250,8 @@ test('the customer pages that carry personal data need the customer permission, 
     expect($this->get(route('customers.archive'))->getStatusCode())->not->toBe(403);
 });
 
-test('the offer deal pages and the notification pages ask for the permissions their buttons already name', function () {
-    foreach (['view_all_offer_deals', 'add_offer_deal', 'edit_offer_deal', 'delete_offer_deal', 'add_notification', 'delete_notification'] as $name) {
-        Permission::findOrCreate($name, 'store');
-    }
-
-    $staff = createStoreUser('staff');
-    actingAsStoreUser($staff);
-
-    $this->get(route('offer_deals.index'))->assertForbidden();
-    $this->post(route('offer_deals.update_status'), ['id' => 1, 'status' => 1])->assertForbidden();
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+test('notification deletes ask for their named permission', function () {
+    Permission::findOrCreate('delete_notification', 'store');
+    actingAsStoreUser(createStoreUser('staff'));
     $this->post(route('admin.notifications.delete', ['id' => 1]))->assertForbidden();
-
-    $staff->givePermissionTo('view_all_offer_deals');
-
-    expect($this->get(route('offer_deals.index'))->getStatusCode())->not->toBe(403);
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
-
-    $staff->givePermissionTo('delete_offer_deal');
-
-    expect($this->post(route('offer_deals.destroy', 1))->getStatusCode())->not->toBe(403);
 });

@@ -7,6 +7,8 @@ use App\Services\Concerns\WritesUploads;
 use enshrined\svgSanitize\Sanitizer;
 use finfo;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
 use InvalidArgumentException;
 use Symfony\Component\Mime\MimeTypes;
@@ -104,6 +106,24 @@ class MultipartUploadService
         } catch (InvalidArgumentException) {
             return null;
         }
+    }
+
+    /**
+     * Remove an upload's file from wherever WritesUploads put it, then its
+     * row. A file already gone does not keep the row: the row would only
+     * point at nothing.
+     */
+    public function delete(Upload $upload): void
+    {
+        if (filled($upload->file_name)) {
+            if (config('filesystems.default') === 's3') {
+                Storage::disk('s3')->delete($upload->file_name);
+            }
+
+            File::delete(public_path($upload->file_name));
+        }
+
+        $upload->delete();
     }
 
     private function storedExtension(string $kind, string $clientExtension, ?string $guessed, string $mimeType): ?string

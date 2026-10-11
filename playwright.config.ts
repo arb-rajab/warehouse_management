@@ -51,7 +51,7 @@ export default defineConfig({
     ],
     webServer: {
         command:
-            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
+            "touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan db:seed --class='Tests\\Fixtures\\StoreCampaignBrowserSeeder' --force && php artisan serve --host=127.0.0.1 --port=8010",
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,

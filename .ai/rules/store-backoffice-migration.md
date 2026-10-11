@@ -4,7 +4,7 @@ paths:
   - 'resources/js/pages/Store/**'
   - 'resources/js/layouts/StoreAdminLayout.vue'
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
-  - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
+  - 'resources/js/components/Store*.vue,resources/js/lib/storeUploads.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -26,7 +26,8 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Audit baseline:** 201 Blade files, not the 214 that legacy §5 states.
+  This is the original inventory, including views since converted or deleted:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
 - **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
@@ -89,7 +90,8 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, uploaded files and all batch 8 marketing/blog entries are
+Inertia. Other entries still make full page loads.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -163,69 +165,47 @@ What it means for the translation admin:
   - The layout reuses WMS's `LanguageSwitcher`. It writes the same `locale`
     session key that the store's `Language` middleware reads.
 
-### 2.4 Uploads: replacing the aiz file manager (design; built in batch 4)
+### 2.4 Upload picker and rich-text editor (implemented)
 
-**Today** (audit §6, product and uploaded_files):
+**Verified 2026-10-09:** the upload implementation from
+[`f96fcf8d87eee991101f1a6405be965911c061a1`](https://github.com/arb-rajab/warehouse_management/commit/f96fcf8d87eee991101f1a6405be965911c061a1)
+was integrated as a scoped patch; unrelated branch history was not merged.
 
-- A form field is a `data-toggle="aizuploader"` group around a hidden input
-  that holds comma-separated upload ids.
-- Clicking it POSTs `/temp/aiz-uploader`, which returns the modal's HTML.
-- The modal uses:
-  - `get_uploaded_files` (JSON, 60 per page, own files only);
-  - `get_file_by_ids` (previews);
-  - `upload` (Uppy).
-- `uploaded_asset($id)` and `Upload::url` resolve an id to a URL.
+- `StoreUploadField.vue` uses a string `v-model` of comma-separated upload IDs.
+  Supply `id`, `name`, `label`, optionally `multiple`, `type`, `error` and
+  `required`. Its hidden named input preserves the backend contract; required
+  fields use an unnamed native validity input that opens the picker on invalid.
+- `StoreFileManagerDialog.vue` shares `StoreFileGrid`, `StoreFileFilterBar`,
+  `StoreFileUploader` and `lib/storeUploads.ts` with the uploaded-files pages.
+  It provides bounded JSON search/sort/type filters, pagination, previews and
+  multipart uploads, without Uppy or another upload dependency.
+- `Store\Admin\UploadController` serves `/temp/admin/uploaded-files`, preserving
+  `uploaded-files.*` library names and providing browse/previews/upload endpoints.
+  Library rows use narrow `UploadResource` data, explicit columns and pagination.
+  The old library create/index/info Blade views and dead library actions are gone.
+- Existing access is preserved deliberately: store back-office auth/admin
+  middleware, no new permission names, `UploadPolicy` for previews/deletes,
+  own files in picker browsing, admin/staff library visibility and accountant
+  ownership restrictions. Refused callers and writes are tested.
+- Uploads and deletion reuse `MultipartUploadService`; existing content-based
+  extension checks, SVG sanitization, image re-encoding and storage behavior
+  remain. The optimization opt-out, over-40-MP bypass and original image formats
+  remain pending hardening; this integration does not claim the earlier proposed
+  unconditional WebP conversion was implemented.
+- Keep `/temp/aiz-uploader*` and its Blade partials while unconverted admin and
+  seller pages still use them. Seller migration, bulk import and the offers
+  catalogue upload path are outside this patch.
 
-**Storage already normalises** (`MultipartUploadService`):
-
-- The extension comes from the content, not the client.
-- Markup is refused, and SVG is sanitised.
-- Images are re-encoded with Intervention v2.
-
-Two gaps remain against CLAUDE.md's "re-encode to a fixed format":
-
-- the `disable_image_optimization` setting, and any image over 40 MP, skip the
-  re-encode;
-- the re-encode keeps each image's own format.
-
-**Design:**
-
-- **Backend.** JSON endpoints under `/temp/admin/uploads`, in
-  `Store\Admin\UploadController`. All writes go through
-  `MultipartUploadService`.
-  - **Endpoints:**
-    - `GET` list: paginated, with server-side search, sort and type filter
-      (today the type filter runs client-side on one page only);
-    - `POST` upload, multipart;
-    - `GET ?ids=`: the chosen files' previews;
-    - `DELETE`.
-  - **Response:** an `UploadResource` of `id, name, type, size, url`.
-  - **Permissions:** gate the endpoints with new permission names, and empty
-    the `AizUploadController` entries of the ratchet lists.
-  - **Normalising images:**
-    - re-encode every image to WebP;
-    - drop the opt-out;
-    - refuse an image over 40 MP instead of storing it raw;
-    - fix the 1500 → 800 resize typo (`MultipartUploadService.php:162-166`).
-- **Vue.**
-  - `components/StoreUploadField.vue`: a form field.
-    - It keeps the backend contract, a hidden input `name` with
-      comma-separated ids, so product and category forms post what they post
-      today.
-    - It shows thumbnails, a remove button, and a "Choose" button that opens
-      the file manager.
-  - `components/StoreFileManagerDialog.vue`:
-    - a grid, search, sort, type filter and pagination, over `useHttp`;
-    - an upload tab with `<input type="file" multiple>` and a progress bar;
-    - no Uppy dependency.
-  - **The library page.** `uploaded_files/index` becomes a page around the
-    dialog's grid component. The info modal becomes a side panel fed by JSON.
-- **Retire** `/temp/aiz-uploader*` with the last Blade view that uses
-  aizuploader. The seller area keeps its Blade uploader until the seller UI
-  moves, which is out of scope.
-
-Two upload paths are not aiz and stay as they are: the offers catalogue and
-bulk import.
+**Editor approval:** the owner explicitly approved Tiptap for this migration
+in the 2026-10-09 conversation. `StoreRichTextField.vue` uses MIT-licensed Tiptap
+3.31.4 Vue/starter-kit/image/table/text-style/text-align packages, stored HTML
+and no hosted service. It provides visual and HTML source editing, native
+required/length validation and translated controls. Its client allowlist strips
+unsafe markup/URLs before editor DOM insertion while preserving supported
+legacy formatting, tables, images and direction. Server-side `clean_html()`
+remains authoritative for blog storage and newsletter mail; public rendering
+continues to use Blade's established safe HTML path. No editor approval is
+assumed for unrelated future dependencies.
 
 ### 2.5 Content-Security-Policy
 
@@ -436,7 +416,7 @@ Batches are ordered by what they need first:
 | 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
 | 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
-| 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
+| 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | complete (§4.1); integrated uploader, approved editor and Vue product rows |
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
 | 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
 | 11 | Orders and dashboard | 10 | sales (9, four deleted), dashboard (1) | a shared order-entry component with async search; a chart library (a new dependency); permission names for order entry |
@@ -444,14 +424,115 @@ Batches are ordered by what they need first:
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 
+### 4.1 Verified batch 8 progress (2026-10-09)
+
+All 31 audited batch 8 views are accounted for: 29 migrated or folded into Vue
+pages/components and two verified dead views deleted. The uploader prerequisite
+also migrates its three library views. The current backend Blade inventory is
+161 files (historical baseline 201); the admin profile portion of batch 4 and
+other batches remain outstanding. The §6 historical routes/controllers remain
+an audit reference; its verdicts and this section record current implementation.
+
+- **Blog categories:** `Store\Admin\BlogCategoryController`, narrow resource,
+  dedicated requests and `Store/Admin/Blog/Categories/{Index,Create,Edit}`.
+  Database names including Arabic, slug generation and soft deletion remain.
+- **Coupons:** `Store\Admin\CouponController` and marketing coupon pages.
+  Type and product selections are Vue state with bounded JSON search; backend
+  validation covers code uniqueness, dates, discounts and eligible references.
+  Epoch dates/details JSON remain compatible with `CouponService`. Foreign
+  seller coupons are refused; existing selections are hydrated and invalid
+  submissions cannot silently change targeting. Seller/API `CouponRequest`
+  and four seller-used `shop.partials.coupons.*` templates remain.
+- **Subscribers:** `Store\Admin\SubscriberController` and paginated index.
+  Admin listing is `admin.subscribers.index`, deliberately distinct from public
+  `subscribers.index`; `subscriber.destroy` binds a model and uses DELETE.
+  The root public subscription controller and public behavior remain.
+- **Offers and flash deals:** separate Store/Admin controllers, dedicated
+  requests/resources and marketing Index/Create/Edit pages. Shared
+  `StoreCampaignProductRows` holds product selection, discounts/types and offer
+  quantities in Vue state. Bounded JSON product search replaces HTML loaders;
+  backend validation checks distinct published/approved products, references,
+  amounts, percentage limits, ordered second-precision dates and integer units.
+  Selected existing rows are hydrated; invalid writes leave storage unchanged.
+  Offer type is preserved on update; brand targeting explicitly resolves an
+  eligible base product, correcting the documented missing `brand_offer` bug.
+  Positive base quantities prevent repeatable-offer division by zero. Offer
+  status/repeatability/multiple-usage flags and publication permissions remain.
+  Flash deal edits retain locale-specific title translations, canonical slug,
+  styles and featured behavior. Global product discounts/date writes remain;
+  removing membership or deleting a deal does not reset those global discounts.
+- **Dynamic popups:** Store/Admin CRUD/index, shared picker, validated offer and
+  home/category targeting, publication and atomic bulk deletion. Binding,
+  permissions and Vue targeting state preserve selection through picker changes
+  and validation. The bulk route now invokes the implemented action.
+- **Newsletters:** Store/Admin form with approved editor and bounded recipient
+  search. Backend validation authoritatively checks distinct existing recipients;
+  mail rendering remains Blade with cleaned HTML. Existing send and SMTP-test
+  names and permission checks remain.
+- **Blog posts:** Store/Admin CRUD/list/status with safe rich text, banner/meta
+  image picker, validated category/slug, SEO fields and publication permissions.
+  Root public BlogController remains; public queries now eager-load categories
+  to prevent strict-mode failures with multiple recent posts. Public templates,
+  URLs, canonical metadata and structured data remain server-rendered.
+- **Verified dead offer-brand views:** repository renderer/caller searches
+  confirmed `offer_deals/brands/index` and `brands/offer_deal_discount` unused;
+  the latter route targeted a missing method. Both views and the broken route
+  were removed. All replaced HTML row-loader/empty show routes were removed.
+
+All admin routes retain established names except the documented subscriber
+collision correction. Explicit routes bind records and use PUT/DELETE; writes
+redirect to named admin indexes, deletes retain query state. Legacy admin
+controllers/exclusions and migrated Blade views are removed together; public
+controllers and their required exclusions stay. All converted menu entries use
+Inertia, and English/Arabic UI strings retain RTL support. No storefront, seller,
+auth, email, PDF or required root template was migrated. The offers catalogue
+belongs to batch 7 and remains unchanged.
+
+Coverage includes dedicated admin controller tests, full-payload/narrow-prop
+assertions, paginated/filter validation, missing bindings, translated content,
+form/product-row validation and database-unchanged refused writes; full-mount
+Vue component/page tests; public Blade/meta/schema/coexistence regression tests;
+and five focused browser specs for editor/form retention, native constraints,
+confirmations, dark date controls, popup targeting and multipart uploads.
+Existing coupon application, guard/permission/state-changing-route and exclusion
+ratchets remain covered. Remaining work is the other batches and uploader
+normalization hardening described in §2.4, not additional batch 8 screens.
+
+**Completion verification:** required `pre_push_check.py` passed ESLint,
+Prettier, TypeScript, all 152 Vitest files (1,725 tests), Pint, PHPStan and all
+3,161 Pest tests (14,116 assertions). The final focused campaign suite passed
+89 tests (574 assertions). Production assets and `git diff --check` passed.
+All seven focused Playwright scenarios passed across the five migration specs
+(the newsletter DOM-injection fixture was corrected and rerun separately;
+the expanded blog publication/delete-confirmation scenario also passed its
+final separate run).
+Other Playwright specs were not run for this patch.
+
+**Dependency verification:** the approved editor packages are locked at 3.31.4.
+Available audit fixes upgraded concurrently to 9.2.5 and eslint-plugin-vue to
+10.11.1. `npm audit` still reports four high entries for one upstream advisory,
+GHSA-vfj7-8cjw-p6xm, through braces → micromatch → fast-glob →
+@vue/eslint-config-typescript; braces 3.0.3 is the latest release and affected,
+so no patched release is available. No override or suppression was added.
+Composer audit was attempted but its Packagist advisory endpoint returned a
+proxy CONNECT 403; that audit could not be completed. Application tests,
+formatting, static analysis and builds were available and passed.
+
+The prepared runtime requires a temporary PHP ini with `short_open_tag=Off`:
+its default setting broke XML tokenization in an unchanged receipt-PDF Blade
+file. Browser verification uses installed Chromium and built assets; bundled
+Playwright Chromium/ffmpeg are unavailable, so video is disabled. The stale Vite
+hot marker is temporarily moved aside and `artisan serve --no-reload` preserves
+the portable PHP runtime. These adaptations are outside the patch.
+
 ## 5. Views to delete rather than port
 
 | View | Why |
 | --- | --- |
 | setup_configurations/cities/create | 0-byte file. `CityController@create` is empty |
 | setup_configurations/tax/create | Nothing renders it; a byte copy of pickup_point/create |
-| marketing/offer_deals/brands/index | Nothing renders it; a duplicate of offer_deals/index |
-| marketing/offer_deals/brands/offer_deal_discount | Nothing renders it. Its route `offer_deals.brand_discount` points at a missing method: delete the route too |
+| marketing/offer_deals/brands/index | Verified unused duplicate; deleted in batch 8 |
+| marketing/offer_deals/brands/offer_deal_discount | Verified unused view and missing controller method; view and broken route deleted in batch 8 |
 | sales/new-order | Nothing links to `feat-order.trip.create`; new-shipping-order replaced it. Delete routes shop-admin.php :435, :440-442 and :450 with it |
 | sales/user-data-table | Its only caller is new-order |
 | sales/products-data-repeater | Nothing renders it |
@@ -611,43 +692,43 @@ URIs are under `/temp/admin`. Every gated route is also hit by the 403 sweep; SC
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| blog_system/blog/create | `blog.create` (:533) | BlogController@create (:61) | `add_blog` | form | aiz-selectpicker, aizuploader ×2, summernote, makeSlug() | none | port |
-| blog_system/blog/edit | `blog.edit` (:533) | BlogController@edit (:120) | `edit_blog` | form | as create | none | port (`Blog::find` without 404) |
-| blog_system/blog/index | `blog.index` (:533) | BlogController@index (:50) | `view_blogs` | list | `$.post blog.change-status` (`publish_blog`), confirm-delete | SCR:32 | port |
-| blog_system/category/create | `blog-category.create` (:529) | BlogCategoryController@create (:58) | `add_blog_category` | form | none | none | port |
-| blog_system/category/edit | `blog-category.edit` (:529) | BlogCategoryController@edit (:108) | `edit_blog_category` | form | none | none | port |
-| blog_system/category/index | `blog-category.index` (:529) | BlogCategoryController@index (:47) | `view_blog_categories` | list | confirm-delete | SCR:31 | port (its links use `url('admin/blog-category/…')`, which misses `/temp`) |
-| marketing/coupons/create | `coupon.create` (:540) | CouponController@create (:51) | `add_coupon` | form | aiz-selectpicker; `$.post coupon.get_coupon_form` → `.html(data)` | none | port |
-| marketing/coupons/edit | `coupon.edit` (:540) | CouponController@edit (:90) | `edit_coupon` | form | `$.post coupon.get_coupon_form_edit` → `.html(data)` on load | none | port |
-| marketing/coupons/index | `coupon.index` (:540) | CouponController@index (:41) | `view_all_coupons` | list (not paginated) | confirm-delete | SCR:42 | port |
-| marketing/dynamic_popup/create | `dynamic-popups.create` (:301) | DynamicPopupController@create (:58) | `add_dynamic_popups` | form | aizuploader, aiz-selectpicker ×2 (queries in the view) | LegacyDynamicPopupTest:39 (store) | port |
-| marketing/dynamic_popup/edit | `dynamic-popups.edit` (:301) | DynamicPopupController@edit (:93) | `edit_dynamic_popups` | form | as create | LegacyDynamicPopupTest:60 (update) | port |
-| marketing/dynamic_popup/index | `dynamic-popups.index` (:301) | DynamicPopupController@index (:48) | `view_all_dynamic_popups` | list | confirm-delete, bulk-delete `$.ajax`, `$.post dynamic-popups.update-status` | SCR:57 | port |
-| marketing/flash_deals/create | `flash_deals.create` (:422) | FlashDealController@create (:59) | `add_flash_deal` | form | aizuploader, aiz-date-range, aiz-selectpicker ×2; `$.post flash_deals.product_discount` → `.html(data)` | none | port |
-| marketing/flash_deals/edit | `flash_deals.edit` · GET …/flash_deals/edit/{id}?lang= (:424) | FlashDealController@edit (:130) | `edit_flash_deal` | form (language tabs) | as create; `…product_discount_edit` → `.html(data)` | none | port |
-| marketing/flash_deals/flash_deal_discount | `flash_deals.product_discount` · POST (:428) | FlashDealController@product_discount (:236) | `add_flash_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/flash_deals/flash_deal_discount_edit | `flash_deals.product_discount_edit` · POST (:429) | FlashDealController@product_discount_edit (:242) | `edit_flash_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/flash_deals/index | `flash_deals.index` (:422) | FlashDealController@index (:49) | `view_all_flash_deals` | list | `$.post flash_deals.update_status`/`update_featured` | LegacyPaginationTest:220 (renders) | port (page link `url('flash-deal/'.slug)` misses `/temp`) |
-| marketing/newsletters/index | `newsletters.index` (:295) | NewsletterController@index (:33) | `send_newsletter` | form | aiz-selectpicker ×2 (every user email), summernote | none | port (replace the all-emails select with search) |
-| marketing/offer_deals/base_offer_deal_discount | `offer_deals.base_product_discount` · GET (:466) | OfferController@base_product_discount (:168) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/brands/base_offer_deal_discount | `offer_deals.base_brand_discount` · GET (:471) | OfferController@base_brand_discount (:180) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/brands/create | `offer_deals.brands.create` (:470) | OfferController@brandCreate (:192) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | port |
-| marketing/offer_deals/brands/edit | `offer_deals.edit` (brand offers) (:459) | OfferController@edit (:59) | `edit_offer_deal` | form | as create; `…brand_discount_edit` → `.html(data)` | none | port (no `brand_offer` input today, so saving recreates the base row with a null product) |
-| marketing/offer_deals/brands/index | — | none | — | list | — | none | **delete** (nothing renders it; duplicate of offer_deals/index) |
-| marketing/offer_deals/brands/offer_deal_discount | `offer_deals.brand_discount` · GET (:472) | OfferController@brand_discount — **missing** | `add_offer_deal` | partial | — | none | **delete**, with its route |
-| marketing/offer_deals/brands/offer_deal_discount_edit | `offer_deals.brand_discount_edit` · POST (:473) | OfferController@brand_discount_edit (:187) | `edit_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/create | `offer_deals.create` (:457) | OfferController@create (:47) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | port |
-| marketing/offer_deals/edit | `offer_deals.edit` (product offers) (:459) | OfferController@edit (:61) | `edit_offer_deal` | form | `…product_discount_edit` → `.html(data)` | none | port |
-| marketing/offer_deals/index | `offer_deals.index` (:456) | OfferController@index (:42) | `view_all_offer_deals` | list | `$.post` status/repeatable/multiple-usage toggles | LegacyAdminPermissionsTest:260; SCR:62 | port |
-| marketing/offer_deals/offer_deal_discount | `offer_deals.product_discount` · GET (:467) | OfferController@product_discount (:164) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/offer_deal_discount_edit | `offer_deals.product_discount_edit` · POST (:468) | OfferController@product_discount_edit (:175) | `edit_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/subscribers/index | admin route unnamed (:478); the name `subscribers.index` went to the storefront's GET /temp/subscribers (shop-web:245) | SubscriberController@index (:36) | `view_all_subscribers` | list | confirm-delete | SCR:84 | port; give the admin route its own name |
+| blog_system/blog/create | `blog.create` (:533) | BlogController@create (:61) | `add_blog` | form | aiz-selectpicker, aizuploader ×2, summernote, makeSlug() | none | converted; see §4.1 for current controller/routes/tests |
+| blog_system/blog/edit | `blog.edit` (:533) | BlogController@edit (:120) | `edit_blog` | form | as create | none | converted; see §4.1 for current controller/routes/tests |
+| blog_system/blog/index | `blog.index` (:533) | BlogController@index (:50) | `view_blogs` | list | `$.post blog.change-status` (`publish_blog`), confirm-delete | SCR:32 | converted; see §4.1 for current controller/routes/tests |
+| blog_system/category/create | `blog-category.create` (:529) | BlogCategoryController@create (:58) | `add_blog_category` | form | none | none | converted; see §4.1 for current controller/routes/tests |
+| blog_system/category/edit | `blog-category.edit` (:529) | BlogCategoryController@edit (:108) | `edit_blog_category` | form | none | none | converted; see §4.1 for current controller/routes/tests |
+| blog_system/category/index | `blog-category.index` (:529) | BlogCategoryController@index (:47) | `view_blog_categories` | list | confirm-delete | SCR:31 | converted; see §4.1 for current controller/routes/tests |
+| marketing/coupons/create | `coupon.create` (:540) | CouponController@create (:51) | `add_coupon` | form | aiz-selectpicker; `$.post coupon.get_coupon_form` → `.html(data)` | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/coupons/edit | `coupon.edit` (:540) | CouponController@edit (:90) | `edit_coupon` | form | `$.post coupon.get_coupon_form_edit` → `.html(data)` on load | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/coupons/index | `coupon.index` (:540) | CouponController@index (:41) | `view_all_coupons` | list (not paginated) | confirm-delete | SCR:42 | converted; see §4.1 for current controller/routes/tests |
+| marketing/dynamic_popup/create | `dynamic-popups.create` (:301) | DynamicPopupController@create (:58) | `add_dynamic_popups` | form | aizuploader, aiz-selectpicker ×2 (queries in the view) | LegacyDynamicPopupTest:39 (store) | converted; see §4.1 for current controller/routes/tests |
+| marketing/dynamic_popup/edit | `dynamic-popups.edit` (:301) | DynamicPopupController@edit (:93) | `edit_dynamic_popups` | form | as create | LegacyDynamicPopupTest:60 (update) | converted; see §4.1 for current controller/routes/tests |
+| marketing/dynamic_popup/index | `dynamic-popups.index` (:301) | DynamicPopupController@index (:48) | `view_all_dynamic_popups` | list | confirm-delete, bulk-delete `$.ajax`, `$.post dynamic-popups.update-status` | SCR:57 | converted; see §4.1 for current controller/routes/tests |
+| marketing/flash_deals/create | `flash_deals.create` (:422) | FlashDealController@create (:59) | `add_flash_deal` | form | aizuploader, aiz-date-range, aiz-selectpicker ×2; `$.post flash_deals.product_discount` → `.html(data)` | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/flash_deals/edit | `flash_deals.edit` · GET …/flash_deals/edit/{id}?lang= (:424) | FlashDealController@edit (:130) | `edit_flash_deal` | form (language tabs) | as create; `…product_discount_edit` → `.html(data)` | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/flash_deals/flash_deal_discount | `flash_deals.product_discount` · POST (:428) | FlashDealController@product_discount (:236) | `add_flash_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/flash_deals/flash_deal_discount_edit | `flash_deals.product_discount_edit` · POST (:429) | FlashDealController@product_discount_edit (:242) | `edit_flash_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/flash_deals/index | `flash_deals.index` (:422) | FlashDealController@index (:49) | `view_all_flash_deals` | list | `$.post flash_deals.update_status`/`update_featured` | LegacyPaginationTest:220 (renders) | converted; see §4.1 for current controller/routes/tests |
+| marketing/newsletters/index | `newsletters.index` (:295) | NewsletterController@index (:33) | `send_newsletter` | form | aiz-selectpicker ×2 (every user email), summernote | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/base_offer_deal_discount | `offer_deals.base_product_discount` · GET (:466) | OfferController@base_product_discount (:168) | `add_offer_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/offer_deals/brands/base_offer_deal_discount | `offer_deals.base_brand_discount` · GET (:471) | OfferController@base_brand_discount (:180) | `add_offer_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/offer_deals/brands/create | `offer_deals.brands.create` (:470) | OfferController@brandCreate (:192) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/brands/edit | `offer_deals.edit` (brand offers) (:459) | OfferController@edit (:59) | `edit_offer_deal` | form | as create; `…brand_discount_edit` → `.html(data)` | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/brands/index | — | none | — | list | — | none | verified dead; view/route deleted |
+| marketing/offer_deals/brands/offer_deal_discount | `offer_deals.brand_discount` · GET (:472) | OfferController@brand_discount — **missing** | `add_offer_deal` | partial | — | none | verified dead; view/route deleted |
+| marketing/offer_deals/brands/offer_deal_discount_edit | `offer_deals.brand_discount_edit` · POST (:473) | OfferController@brand_discount_edit (:187) | `edit_offer_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/offer_deals/create | `offer_deals.create` (:457) | OfferController@create (:47) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/edit | `offer_deals.edit` (product offers) (:459) | OfferController@edit (:61) | `edit_offer_deal` | form | `…product_discount_edit` → `.html(data)` | none | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/index | `offer_deals.index` (:456) | OfferController@index (:42) | `view_all_offer_deals` | list | `$.post` status/repeatable/multiple-usage toggles | LegacyAdminPermissionsTest:260; SCR:62 | converted; see §4.1 for current controller/routes/tests |
+| marketing/offer_deals/offer_deal_discount | `offer_deals.product_discount` · GET (:467) | OfferController@product_discount (:164) | `add_offer_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/offer_deals/offer_deal_discount_edit | `offer_deals.product_discount_edit` · POST (:468) | OfferController@product_discount_edit (:175) | `edit_offer_deal` | partial (AJAX HTML) | — | none | converted into Vue product rows; Blade/HTML route deleted |
+| marketing/subscribers/index | admin route unnamed (:478); the name `subscribers.index` went to the storefront's GET /temp/subscribers (shop-web:245) | SubscriberController@index (:36) | `view_all_subscribers` | list | confirm-delete | SCR:84 | converted; see §4.1 for current controller/routes/tests |
 | notification/index | `admin.all-notification` (:654) | NotificationController@index (:16) | ungated (READS list) | list (15/page) | none | none | port; the GET marks every unread notification as read |
 
 Notes:
-1. AJAX endpoints that return HTML (all injected with `.html(data)`): `coupon.get_coupon_form[_edit]` (returning `shop.partials.coupons.*`, outside this folder, with their own inline scripts), `flash_deals.product_discount[_edit]`, `offer_deals.base_product_discount`, `product_discount`, `base_brand_discount`, `product_discount_edit`, `brand_discount_edit`. The partials only render product name, thumbnail and price plus inputs: client-side rows fed by props.
+1. Historical AJAX endpoints (removed from admin routes by batch 8; seller coupon partials remain): `coupon.get_coupon_form[_edit]` (returning `shop.partials.coupons.*`, outside this folder, with their own inline scripts), `flash_deals.product_discount[_edit]`, `offer_deals.base_product_discount`, `product_discount`, `base_brand_discount`, `product_discount_edit`, `brand_discount_edit`. The partials only render product name, thumbnail and price plus inputs: client-side rows fed by props.
 2. The sidebar only shows these screens when `raizer_admin` is set or a business setting is on (`Blog_Section`, `Marketing_Section`, `Flash_deals`, `Offer_deals`, `Newsletters`, `coupon_system`); the controllers never check those settings.
-3. Hardcoded URLs without `/temp`: blog category links, the flash deal page link, `BlogController.php:175` (`redirect('admin/blogs')`), `BlogCategoryController.php:146`.
+3. Fixed by batch 8; historical hardcoded URLs without `/temp`: blog category links, the flash deal page link, `BlogController.php:175` (`redirect('admin/blogs')`), `BlogCategoryController.php:146`.
 4. No FCM sending here: that is `AdminNotificationController`, rendering `customer/notifications/*`.
 
 ### product (22 views), uploaded_files (3), offers_catalog (1)
@@ -679,9 +760,9 @@ URIs are under `/temp/admin` unless shown. SCR = `LegacyStoreStateChangingRoutes
 | product/products/sku_combinations | `products.sku_combination` · POST (:117); also the seller's | ProductController@sku_combination (:749) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as a client-side variant grid; retire the endpoint |
 | product/products/sku_combinations_edit | `products.sku_combination_edit` · POST (:118) | ProductController@sku_combination_edit (:781) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as above |
 | product/reviews/index | admin GET …/reviews (:551) is unnamed; `reviews.index` went to the storefront GET /temp/reviews (shop-web:358) | ReviewController@index (:42) | `view_product_reviews` | list | `$.post reviews.published` | **LegacyPaginationTest:238 (renders)** | port; give the admin route its own name |
-| uploaded_files/create | `uploaded-files.create` (:646) | AizUploadController@create (:57) | ungated | form (Uppy dashboard) | `AIZ.plugins.aizUppy` → `/aiz-uploader/upload` | none | port into the uploads replacement (§2.4) |
-| uploaded_files/index | `uploaded-files.index` (:646) | AizUploadController@index (:50) | ungated | list (60-per-page grid, search/sort) | `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | SCR | port into §2.4 |
-| uploaded_files/info | `uploaded-files.info` · ANY …/uploaded-files/file-info (:648) | AizUploadController@file_info (:217) | ungated + UploadPolicy | modal partial (AJAX HTML) | none | none | port-trim: a client-side panel from JSON; the GET is shadowed by the resource `show` route |
+| uploaded_files/create | `uploaded-files.create` (:646) | AizUploadController@create (:57) | ungated | form (Uppy dashboard) | `AIZ.plugins.aizUppy` → `/aiz-uploader/upload` | none | converted; see §2.4 |
+| uploaded_files/index | `uploaded-files.index` (:646) | AizUploadController@index (:50) | ungated | list (60-per-page grid, search/sort) | `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | SCR | converted; see §2.4 |
+| uploaded_files/info | `uploaded-files.info` · ANY …/uploaded-files/file-info (:648) | AizUploadController@file_info (:217) | ungated + UploadPolicy | modal partial (AJAX HTML) | none | none | converted; see §2.4 |
 
 Notes:
 1. HTML over AJAX: `products.sku_combination[_edit]`, `uploaded-files.info`, `/temp/aiz-uploader` (the modal); `products.add-more-choice-option` returns unescaped `<option>` strings.

@@ -18,7 +18,6 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
-use App\Http\Controllers\DynamicPopupController;
 use App\Http\Controllers\FollowSellerController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
@@ -186,9 +185,6 @@ Route::get('/sitemap.xml', function() {
     return base_path('sitemap.xml');
 });
 
-Route::controller(DynamicPopupController::class)->group(function () {
-    //
-});
 Route::controller(CartOfferedController::class)->group(function () {
     Route::post('/cart-offered/postpone', 'postpone')->name('cart-offered.postpone');
     Route::post('/cart-offered/removeOffersFromCart', 'removeOffersFromCart')->name('cart-offered.removeOffersFromCart');

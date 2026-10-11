@@ -197,24 +197,6 @@ test("the seller coupon product search API pages, and searches only the signed-i
     );
 });
 
-test('the store admin flash deal list pages', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    foreach (range(1, 18) as $number) {
-        DB::table('flash_deals')->insert([
-            'title' => "Deal $number", 'slug' => "deal-$number", 'start_date' => now()->subDay()->timestamp,
-            'end_date' => now()->addDay()->timestamp, 'created_at' => now()->subMinutes($number),
-        ]);
-    }
-
-    assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/flash_deals?page=$page"),
-        fn ($response) => $response->viewData('flash_deals')->pluck('id')->all(),
-        total: 18,
-        perPage: 15,
-    );
-});
-
 test('the store admin review list pages', function () {
     actingAsStoreUser(createStoreAdmin());
     $reviewer = createStoreUser('customer');

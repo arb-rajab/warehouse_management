@@ -22,13 +22,10 @@ import {
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
     colors,
     index as attributesIndex,
 } from '@/actions/App/Http/Controllers/AttributeController';
-import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/BlogCategoryController';
-import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
 import {
     brandsWiseProductDiscount,
     index as brandsIndex,
@@ -56,7 +53,6 @@ import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Categor
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/CityController';
 import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/CountryController';
-import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
 import { currency as currenciesIndex } from '@/actions/App/Http/Controllers/CurrencyController';
 import {
     archive as customersArchive,
@@ -67,12 +63,8 @@ import {
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
-import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
-import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/LanguageController';
-import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
-import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
 import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
@@ -104,9 +96,17 @@ import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewCont
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
+import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
-import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
@@ -462,7 +462,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.uploadedFiles',
-        href: uploadedFilesIndex['/temp/admin/uploaded-files'](),
+        href: uploadedFilesIndex(),
+        inertia: true,
         icon: FolderOpen,
     },
     {
@@ -543,11 +544,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.allPosts',
                 href: blogIndex(),
+                inertia: true,
                 permission: 'view_blogs',
             },
             {
                 labelKey: 'store.nav.blogCategories',
                 href: blogCategoriesIndex(),
+                inertia: true,
                 permission: 'view_blog_categories',
             },
         ],
@@ -560,36 +563,42 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.flashDeals',
                 href: flashDealsIndex(),
+                inertia: true,
                 permission: 'view_all_flash_deals',
                 setting: 'Flash_deals',
             },
             {
                 labelKey: 'store.nav.offerDeals',
                 href: offerDealsIndex(),
+                inertia: true,
                 permission: 'view_all_offer_deals',
                 setting: 'Offer_deals',
             },
             {
                 labelKey: 'store.nav.dynamicPopups',
                 href: dynamicPopupsIndex(),
+                inertia: true,
                 permission: 'view_all_dynamic_popups',
                 setting: 'Offer_deals',
             },
             {
                 labelKey: 'store.nav.newsletters',
                 href: newslettersIndex(),
+                inertia: true,
                 permission: 'send_newsletter',
                 setting: 'Newsletters',
             },
             {
                 labelKey: 'store.nav.subscribers',
-                href: subscribersIndex['/temp/admin/subscribers'](),
+                href: subscribersIndex(),
+                inertia: true,
                 permission: 'view_all_subscribers',
                 setting: 'Newsletters',
             },
             {
                 labelKey: 'store.nav.coupons',
                 href: couponsIndex(),
+                inertia: true,
                 permission: 'view_all_coupons',
                 setting: 'coupon_system',
             },
