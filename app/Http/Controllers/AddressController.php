@@ -64,6 +64,7 @@ class AddressController extends Controller
                 $address->user_id   = Auth::user()->id;
             }
         }
+        Gate::authorize('manage', $address);
         $address->address       = $request->address;
         $address->country_id    = $request->country_id;
         $address->state_id      = $request->state_id;

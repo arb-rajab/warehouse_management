@@ -58,14 +58,7 @@ import { admin_index as conversationsIndex } from '@/actions/App/Http/Controller
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/CountryController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
 import { currency as currenciesIndex } from '@/actions/App/Http/Controllers/CurrencyController';
-import {
-    archive as customersArchive,
-    create as customersCreate,
-    index as customersIndex,
-    repIndex as representativesIndex,
-} from '@/actions/App/Http/Controllers/CustomerController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
@@ -98,14 +91,22 @@ import {
     wallet_transaction_history,
     wish_report,
 } from '@/actions/App/Http/Controllers/ReportController';
-import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
-import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ClassifiedProductController';
+import {
+    archive as customersArchive,
+    create as customersCreate,
+    index as customersIndex,
+    repIndex as representativesIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
@@ -124,7 +125,6 @@ import {
     create as trucksCreate,
     index as trucksIndex,
 } from '@/actions/App/Http/Controllers/Trip/TruckController';
-import { index as visitsIndex } from '@/actions/App/Http/Controllers/VisitController';
 import {
     appearance,
     footer,
@@ -296,16 +296,19 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.customerList',
+                inertia: true,
                 href: customersIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.customerCreate',
+                inertia: true,
                 href: customersCreate(),
-                permission: 'view_all_customers',
+                permission: 'edit_customer',
             },
             {
                 labelKey: 'store.nav.customerArchive',
+                inertia: true,
                 href: customersArchive(),
                 permission: 'delete_customer',
             },
@@ -316,6 +319,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.classifiedProducts',
+                inertia: true,
                 href: classifiedProductsIndex(),
                 permission: 'view_classified_products',
                 setting: 'classified_product',
@@ -333,26 +337,34 @@ export const storeAdminMenu: StoreMenuItem[] = [
         icon: Contact,
         permission: [
             'view_all_customers',
-            'view_classified_products',
-            'view_classified_packages',
+            'view_representative_packages',
+            'view_representative_payments',
+            'view_representative_visits',
         ],
         children: [
             {
                 labelKey: 'store.nav.representativeList',
+                inertia: true,
                 href: representativesIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.representativePackages',
+                inertia: true,
                 href: representativePackagesIndex(),
+                permission: 'view_representative_packages',
             },
             {
                 labelKey: 'store.nav.representativePayments',
+                inertia: true,
                 href: representativePaymentsIndex(),
+                permission: 'view_representative_payments',
             },
             {
                 labelKey: 'store.nav.representativeVisits',
+                inertia: true,
                 href: visitsIndex(),
+                permission: 'view_representative_visits',
             },
         ],
     },

@@ -118,7 +118,6 @@ Route::controller(VerificationController::class)->group(function () {
 Route::controller(CustomerController::class)->group(function () {
 // Activate the customer account after he agrees on the terms sent by email
     Route::get('/terms-activation/{code}', 'account_activation')->name('terms.activation');
-    Route::post('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
 
 });
 

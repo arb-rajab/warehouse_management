@@ -89,7 +89,9 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, customers, classified-product administration and the
+converted representative screens use Inertia. Customer package forms still
+use Blade until the upload-picker prerequisite is available.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -163,7 +165,7 @@ What it means for the translation admin:
   - The layout reuses WMS's `LanguageSwitcher`. It writes the same `locale`
     session key that the store's `Language` middleware reads.
 
-### 2.4 Uploads: replacing the aiz file manager (design; built in batch 4)
+### 2.4 Uploads: replacing the aiz file manager (design; batch 4 prerequisite)
 
 **Today** (audit §6, product and uploaded_files):
 
@@ -433,7 +435,7 @@ Batches are ordered by what they need first:
 | 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
 | 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
 | 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
-| 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
+| 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | **Partial:** 16 original views migrated/folded/retired; customer packages (3 views) blocked on the absent upload field. Representative permission rows and admin-side address endpoints implemented; see §4.1 |
 | 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
 | 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
 | 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
@@ -443,6 +445,110 @@ Batches are ordered by what they need first:
 | 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+
+### 4.1 Verified customer/representative patch (2026-10-08)
+
+The working tree was checked against the audit; it had only the staff/roles
+pilot migrated before this patch. Batch 4 is **not complete**: neither
+`StoreUploadField.vue`, `StoreFileManagerDialog.vue` nor the admin JSON upload
+controller/endpoints exists. Existing AIZ upload tests cover the legacy flow,
+not this prerequisite. Customer package create/edit/index remain Blade and
+are not marked migrated; their upload-selection checks are unavailable until
+batch 4. No new dependency or role-grant decision was inferred.
+
+Implemented independently of that prerequisite:
+
+- Customer and representative lists/creation, customer edit/password,
+  archive (the same index with an archived filter) and page-view reporting.
+  The unused `customers.show` and unnamed duplicate store route are removed.
+  The local schema lacked `users.is_delete`; the guarded additive migration
+  `2026_10_08_000001_add_customer_archive_column_to_users_table.php` adds its
+  nullable boolean and preserves imported archive flags on repeat/rollback.
+  Customer creation retains the required business details and trade licence;
+  representative creation retains its separate field requirements.
+- Classified-product administration is a separate Inertia controller. The
+  public product/listing and seller/customer controllers/views remain Blade;
+  descriptions still use `clean_html()`.
+- Representative package CRUD and assignment (props replace the retired
+  `rep.packages.modal` HTML endpoint), payments and visits index/deletion.
+  Visit detail/day-map screens remain Blade for batch 10, now behind the
+  visit read permission. Receipt export remains a server-rendered PDF and
+  its QR target remains signed.
+- Admin address writes use nested customer/address routes; lookups return
+  narrow JSON instead of HTML options. A foreign address is refused even for
+  Super Admin. Country/state/city hierarchy, coordinate ranges and default
+  address invariants are validated; default changes/deletion lock the parent
+  and re-read the address before writing; public address creation also enforces
+  the existing ownership policy against a forged `customer_id`.
+- Customer writes now require `edit_customer`, not `view_all_customers`.
+  Agreement sending keeps `customers.sendAgreement` but moves under
+  `/temp/admin`. Login-as remains a full-load link and changes the store
+  session only. Privileged/seller accounts are not editable through customer
+  routes. The existing representative conversion checkbox is explicitly
+  validated on admin edit; creation still fixes the flag from its route, and
+  package/discount fields stay protected from account-form input. Archiving preserves account-linked domain records.
+- Eleven store-only permission rows are added by
+  `2026_10_08_102608_add_customer_administration_permissions.php`:
+  `edit_customer`; `view_representative_packages`,
+  `add_representative_package`, `edit_representative_package`,
+  `delete_representative_package`, `assign_representative_package`;
+  `view_representative_payments`, `approve_representative_payment`,
+  `export_representative_payment`; `view_representative_visits`,
+  `delete_representative_visit`. No existing staff role receives a grant;
+  owners can assign these through the established role editor. The additive
+  migration preserves imported permissions/grants on rollback.
+- Package percentages stay between 0 and 100; updates synchronize assigned
+  representatives and deletion clears stale package discounts. Payment
+  accept/reject locks the row and permits only a pending transition; repeats
+  return 409 and do not alter the amount or wallets. Status filters stay
+  grouped with search. Shared `DataTable` accepts the receipt's string ID,
+  and the model now preserves that schema type when hydrating/binding IDs.
+  A literal XML declaration in the existing QR stripping expression prevented
+  Blade PDF compilation; its equivalent regular expression now compiles,
+  verified by the existing signed public export regression.
+
+Existing seller/customer receipt creation has no generator/default for its
+string primary key, although those legacy controllers insert without an ID.
+The admin migration preserves the existing incrementing setting and does not
+invent an ID generator. That pre-existing workflow limitation needs a separate
+domain decision; admin receipt listing/decisions/export cover existing IDs.
+
+Root `CustomerController`, `CustomerProductController` and `VisitController`
+remain because they still serve public/customer workflows or deferred Blade
+map details. Only their migrated admin methods are removed. The two fully
+retired representative controllers are removed from both static-analysis
+exclusion lists. No storefront, seller, authentication, email, PDF or required
+root template is migrated by this patch.
+
+Verified checks for this patch:
+
+- `python3 .claude/scripts/pre_push_check.py` passed every step: ESLint,
+  Prettier, `vue-tsc`, all **1,624 Vitest tests**, Pint, PHPStan and all
+  **3,098 Pest tests / 13,157 assertions** (five parallel workers). No PHP
+  check was skipped. The supplied PHP 8.5 runtime was activated; the installed
+  Laravel PAO formatter was disabled with its supported `PAO_DISABLE=1`
+  option, and a stale PHPStan reflection cache was cleared before the final run.
+- `npm run build` passed and generated current Wayfinder actions. The stale
+  development-server marker was temporarily moved so browser tests loaded the
+  production assets.
+- Six focused store Playwright cases passed: classified publication/deletion,
+  private trade-licence selection, customer edit/address/archive, representative
+  package deletion, payment decisions/visit selection, RTL pagination/dark
+  contrast and Blade/Inertia coexistence. The matching Playwright browser
+  download failed; checks used existing Chromium 151 through a temporary
+  config, with `serve --no-reload` to preserve this runtime's library paths
+  and video disabled. Disposable monitoring test databases were cleared
+  between runs. The full WMS/unrelated browser suite was not run.
+- `git diff --check` passed. No dependencies/lockfiles changed; no commit,
+  push or deployment was performed.
+
+Remaining work is bounded: batch 4's upload picker and its selection tests
+must precede the three customer package screens; representative visit details
+and map corrections remain in batch 10. The receipt-ID generator limitation
+above remains outside this admin patch. The seeded mixed WMS/store dashboard
+also encounters product rows without public slugs; this pre-existing dashboard
+issue belongs to its batch, so coexistence coverage uses a successful Blade
+notifications response and the Blade login redirect instead.
 
 ## 5. Views to delete rather than port
 
@@ -491,13 +597,14 @@ Most severe first:
    - `products.add-more-choice-option` returns unescaped `<option>` values
      (batch 7).
 4. **Write gates that don't match the buttons:**
-   - `CustomerController` writes behind the read permission
-     `view_all_customers`;
+   - **Fixed in this patch:** customer admin writes require `edit_customer`;
+     read access remains `view_all_customers`;
    - ticket, product-query and conversation replies are checked in the view
      only;
    - `approve_seller` exists nowhere;
-   - the store routes outside `temp/admin` (`customers.sendAgreement`,
-     `addresses.*`) are invisible to the permission ratchet.
+   - **Customer fix:** agreement sending now lives under `temp/admin` and
+     admin address routes have `edit_customer`; public `addresses.*` retain
+     their ownership policy.
    - The port gates the endpoint, not the button.
 5. **Settings that affect the whole merged app:**
    - every settings save runs `cache:clear` on the cache WMS shares;
@@ -714,41 +821,41 @@ URIs are under `/temp/admin`. Own = `LegacyAdminOwnershipTest` (its renders only
 | trips/trucks/index | `trucks.index` (:282) | Trip\TruckController@index (:28) | `view_all_trucks` | list + print | qrcode 1.5.0 + jsPDF 2.4.0 (cdnjs): QR PDF built and printed client-side | Own:113 | port (no delete UI: `trucks.destroy`/`bulk-truck-delete` point at missing methods) |
 | trips/trucks/create | `trucks.create` (:283) | TruckController@create (:33) | `add_truck` | form | aizuploader (multiple) | none | port |
 | trips/trucks/edit | `trucks.edit` (:285) | TruckController@edit (:67) | `edit_truck` | form | aizuploader | none | port (`find()` 500s on a missing id) |
-| representatives/index | `representatives.index` (:209) | CustomerController@repIndex (:441) | `view_all_customers` | list | `$.post rep.packages.modal` → `.html(data)`; bulk delete; ban/unban modals | SCR (ban buttons) | port-trim: orphan `<td>`s misalign columns |
-| representatives/create | `representatives.create` (:210) | CustomerController@repCreate (:446) | `view_all_customers` | form | double-submit guard | none | port |
-| representatives/packages/index | `rep.packages.index` (:232) | RepresentativePackageController@index (:15) | ungated | list (cards) | confirm-delete | SCR | port; needs a permission name (§7.1) |
-| representatives/packages/create | `rep.packages.create` (:233) | RepresentativePackageController@create (:21) | ungated | form | none | none | port; needs a permission name |
-| representatives/packages/edit | `rep.packages.edit` (:235) | RepresentativePackageController@edit (:47) | ungated | form | none | none | port; needs a permission name |
-| representatives/packages/modal | `rep.packages.modal` · POST (:238) | RepresentativePackageController@package_modal (:110) | ungated | modal partial (AJAX HTML) | posts to `rep.set-package` | none | port as a Vue dialog fed by props; retire the endpoint |
-| representatives/payments/index | `admin.rep.payments.index` · GET /temp/admin/**admin**/representatives/payments/index (:216) | RepresentativePaymentAdminController@index (:68) | ungated | list | accept/reject `data-method="post"`; export is a server PDF | SCR:27 | port-trim: dead ban/unban modals, package modal, checkbox column |
-| representatives/visits/index | `admin.rep.visits.index` (:224) | VisitController@index (:38) | ungated | list | aiz-date-range, `$.ajax bulk-visit-delete` | SCR:29 | port |
-| representatives/visits/show | `admin.rep.visits.show` (:225) | VisitController@show (:55) | ungated | show | Leaflet + OSM, one marker | none | port (null coordinates break the JS) |
-| representatives/visits/rep-show | `admin.rep.visits.rep-show` (:226) | VisitController@show_all_visits_in_a_day (:78) | ungated | show (map) | Leaflet markers + polyline | none | port-trim: each marker drawn twice |
+| representatives/index | `representatives.index` · GET …/representatives | Store\Admin\CustomerController@repIndex → Customers/Customers/Index | `view_all_customers` | list | Inertia, package assignment form fed by props | CustomerControllerTest; Customers.test.ts | converted; Blade deleted |
+| representatives/create | `representatives.create/store` | @repCreate/@repStore → Customers/Customers/Create | `edit_customer` | form | ResourceFormPage; native validation | CustomerControllerTest; Customers.test.ts | converted; Blade deleted |
+| representatives/packages/index | `rep.packages.index` | Store\Admin\RepresentativePackageController@index | `view_representative_packages` | paginated list | DataTable/Pagination | RepresentativePackageControllerTest; Representatives.test.ts | converted |
+| representatives/packages/create | `rep.packages.create/store` | @create/@store | `add_representative_package` | form | shared form fields | same; Representatives.test.ts | converted |
+| representatives/packages/edit | `rep.packages.edit/update/destroy` · bound `{package}` | @edit/@update/@destroy | `edit_representative_package`, `delete_representative_package` | form | shared form fields; confirmed DELETE | same; Representatives.test.ts | converted |
+| representatives/packages/modal | `rep.packages.modal` retired; `rep.set-package` remains POST | @assign | `assign_representative_package` | form in representative list | props; no injected HTML | RepresentativePackageControllerTest; Customers.test.ts | Blade partial/endpoint retired |
+| representatives/payments/index | `admin.rep.payments.index/accept/reject/export` (existing duplicated admin URI retained) | Store\Admin\RepresentativePaymentController | `view_representative_payments`, `approve_representative_payment`, `export_representative_payment` | paginated list | search/status filters; forms | RepresentativePaymentControllerTest; Representatives.test.ts | converted; export stays Blade PDF |
+| representatives/visits/index | `admin.rep.visits.index/destroy`, `bulk-visit-delete` | Store\Admin\VisitController@index/@destroy/@bulkDestroy | `view_representative_visits`, `delete_representative_visit` | paginated list | validated date/search filters; confirmed delete | VisitControllerTest; Representatives.test.ts | converted; details deferred |
+| representatives/visits/show | `admin.rep.visits.show` (:225) | VisitController@show (:55) | `view_representative_visits` | show | Leaflet + OSM, one marker | VisitControllerTest (authorization) | deferred to logistics/maps (null coordinates still need correction) |
+| representatives/visits/rep-show | `admin.rep.visits.rep-show` (:226) | VisitController@show_all_visits_in_a_day (:78) | `view_representative_visits` | show (map) | Leaflet markers + polyline | VisitControllerTest (authorization) | deferred to logistics/maps (duplicate markers still need correction) |
 
 Notes:
 1. Maps: no Google Maps JS here. Leaflet 1.7.1 from unpkg with OSM tiles (no key); routes from the public OSRM demo server over plain HTTP (TripController.php:514, :569); geocoding through OpenCage (`services.opencage.key`, UserService.php:80), and both GET create-from-map and `trips.user-coordinates` write coordinates back into addresses. A Vue map needs a Leaflet dependency (owner approval: CLAUDE.md "no new dependencies without approval").
-2. Only `rep.packages.modal` returns HTML; everything else answers JSON, `1`/`0` or a redirect.
-3. The trips, trucks, drivers and visits controllers are excluded from the "no `back()`" rule (`ControllerRedirectsTest.php:61-65`); converting them removes the exclusions.
-4. The representatives packages/payments/visits screens and the order-entry screens have no permission name yet (§7.1): their batch must add the names first.
+2. `rep.packages.modal` is retired; package assignment uses narrow props and a validated Inertia form.
+3. The trips, trucks and drivers controllers remain excluded from the "no `back()`" rule. Root `VisitController` stays excluded while its map/detail and representative note workflows remain Blade; the migrated admin visit controller is checked.
+4. Representative packages/payments/visits now have explicit store permission rows (§4.1); order-entry permission names remain for their later batch.
 
 ### sellers (13 views), customer (13), admin_profile (1)
 
-URIs are under `/temp/admin` unless shown. No view here is rendered by any test; coverage is the 403 sweep, the SCR source scan, two "not 403" checks and the payout form-target tests.
+URIs are under `/temp/admin` unless shown. Converted customer screens now have dedicated render, payload and action tests; remaining package/seller rows retain the original audit coverage and findings.
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | admin_profile/index | `profile.index`, `profile.update` (:308, 2 routes) | ProfileController@index, @update | ungated by design: self-service, `update` is self-only (`AdminProfileRequest`) | form → PATCH `profile.update` | aizuploader (single id) | LegacyAdminProfileTest | port |
-| customer/classified_products/index | `classified_products` (:611) | CustomerProductController@customer_product_index (:52) | `view_classified_products` | list | `$.post classified_products.published`, confirm-delete | SCR | port (behind `classified_product`); destroy `data-href` ends in `}}}}` |
-| customer/customer_packages/create | `customer_packages.create` (:603) | CustomerPackageController@create (:52) | `edit_classified_package` | form | aizuploader | none | port |
-| customer/customer_packages/edit | `customer_packages.edit` · GET …/edit/{id}?lang= (:605) | @edit (:101) | `edit_classified_package` | form (language tabs) | aizuploader | none | port |
-| customer/customer_packages/index | `customer_packages.index` (:603) | @index (:42) | `view_classified_packages` | list (cards) | confirm-delete | SCR | port |
-| customer/customers/address_modal | (included by customers/edit:266) | CustomerController@edit (:254) | `view_all_customers` | modal partial | 3× aiz-selectpicker; `$.ajax addresses.edit` → JSON `{html}` injected; `get-state`/`get-city` → `<option>` HTML injected; google_map partial | none | port (rework): admin edits of a customer's address get 403 from `AddressPolicy::manage`, so it needs admin-side address endpoints |
-| customer/customers/archive | `customers.archive` · GET …/customers/archive/get (:190) | @archive (:161) | `delete_customer` | list | dead bulk-delete JS, notes modal, ban/unban modals, login-as, restore | LegacyAdminPermissionsTest:238 (not 403); SCR | port-trim: fold into index as an "archived" filter |
-| customer/customers/create | `customers.create` (:185) | @create (:173) | `view_all_customers` | form → `customers.store` = POST …/customer/store → `store_customer` (:189) | none | RouteServiceProviderTest:49 | port; pick one store handler (StoreUserMassAssignmentTest covers the unnamed `@store`) |
-| customer/customers/edit | `customers.edit` (:185) | @edit (:254) | `view_all_customers` | form → POST `customers.update` (:188) | address_modal; links to trade license, `addresses.destroy`, `customers.sendAgreement` | SCR | port |
-| customer/customers/edit_password | `change_password` (:191) | @change_password (:601) | `view_all_customers` | form → `update_password` | none | GET_ROUTES_THAT_MAY_STAY | port, folded into edit |
-| customer/customers/index | `customers.index` (:185) | @index (:105) | `view_all_customers` | list | bulk delete `$.ajax`, notes modal, confirm-delete, ban/unban modals, login-as, verify/important/activity POST links | SCR | port (Package column header and cell use different conditions) |
-| customer/customers/views | `customers.page-views` (:199) | @pages_views (:744) | `view_all_customers` | list | none | none | port (category link goes to an empty `CategoryController@show`) |
+| customer/classified_products/index | `classified_products`, `.published`, `.destroy` · bound `{product}` | Store\Admin\ClassifiedProductController@index/@publish/@destroy | `view_classified_products`, `publish_classified_product`, `delete_classified_product` | paginated list | Inertia form; batched previews; DELETE | ClassifiedProductControllerTest; Index.test.ts | converted; public rendering stays Blade |
+| customer/customer_packages/create | `customer_packages.create` (:603) | CustomerPackageController@create (:52) | `edit_classified_package` | form | aizuploader | none | **blocked:** upload-picker prerequisite absent; remains Blade |
+| customer/customer_packages/edit | `customer_packages.edit` · GET …/edit/{id}?lang= (:605) | @edit (:101) | `edit_classified_package` | form (language tabs) | aizuploader | none | **blocked:** upload-picker prerequisite absent; remains Blade |
+| customer/customer_packages/index | `customer_packages.index` (:603) | @index (:42) | `view_classified_packages` | list (cards) | confirm-delete | SCR | **blocked:** upload-picker prerequisite absent; remains Blade |
+| customer/customers/address_modal | `admin.customers.addresses.*`, `admin.addresses.states/cities` | Store\Admin\AddressController | `edit_customer` | forms + JSON lookups | StoreCustomerAddressForm; no maps dependency | CustomerAddressControllerTest; component tests | converted/folded into edit |
+| customer/customers/archive | `customers.archive` | Store\Admin\CustomerController@archive → Customers/Customers/Index | `delete_customer` | paginated list | archived filter | CustomerControllerTest; Customers.test.ts | folded into index |
+| customer/customers/create | `customers.create/store` | @create/@store → Customers/Customers/Create | `edit_customer` | form | ResourceFormPage | CustomerControllerTest; Customers.test.ts | converted; duplicate store removed |
+| customer/customers/edit | `customers.edit/update` · bound `{customer}` (POST update keeps native file upload) | @edit/@update → Customers/Customers/Edit | `edit_customer` | form | address/password/agreement forms | CustomerControllerTest; Customers.test.ts | converted |
+| customer/customers/edit_password | `change_password`, `update_password` | @changePassword redirects to edit; @updatePassword | `edit_customer` | form | inside edit | CustomerControllerTest; Customers.test.ts | folded into edit |
+| customer/customers/index | `customers.index` + row actions | @index → Customers/Customers/Index | read `view_all_customers`; writes `edit_customer`/`ban_customer`/`delete_customer`/`login_as_customer` | paginated list | permission gates; no HTML injection | CustomerControllerTest; Customers.test.ts | converted |
+| customer/customers/views | `customers.page-views` · bound `{customer}` | @pageViews → Customers/Customers/Views | `view_all_customers` | grouped paginated list | Inertia | CustomerControllerTest; Customers.test.ts | converted; empty category show link removed |
 | customer/notifications/create | `admin.notifications.create` (:663) | AdminNotificationController@createNotification (:53) | `add_notification` | form → `admin.notifications.send` (FCM HTTP v1) | aiz-selectpicker; inert select2 markup | none | port-trim: drop the select2 markup |
 | customer/notifications/index | `admin.notifications.all` (:661) | @getAllNotifications (:35) | `add_notification` | list | confirm-delete | LegacyAdminPermissionsTest:261; SCR | port-trim: commented-out search and categories script |
 | sellers/create | `sellers.create` (:155) | SellerController@create (:80) | `edit_seller` | form | none | none | port |
@@ -768,7 +875,7 @@ URIs are under `/temp/admin` unless shown. No view here is rendered by any test;
 Notes:
 1. Four admin endpoints answer a POST with Blade HTML that the page injects (`sellers.payment_modal`, `sellers.profile_modal`, `withdraw_request.payment_modal`, `withdraw_request.message_modal`); the storefront `addresses.edit` returns `{html}` and `get-state`/`get-city` return `<option>` strings.
 2. "Login as" (`sellers.login`, `customers.login`, GET with `encrypt(id)`) replaces the admin's session with the customer's on the store guard and redirects into the storefront: in Vue a plain `<a>` (full page load), never an Inertia visit.
-3. `CustomerController` gates every write behind the read permission `view_all_customers` (update, update_password, store_customer, verify, important, notes); `customers.sendAgreement` and the `addresses.*` routes live in shop-web.php outside `temp/admin`, so the permission ratchet never sees them; `addresses.store` accepts a posted `customer_id` from any signed-in user.
+3. Fixed by this customer patch: admin writes use `edit_customer`, agreement sending is admin-scoped, and admin addresses have their own endpoints. Public `addresses.store` now checks the existing ownership policy before saving a posted `customer_id`.
 4. select2 is not in vendors.js: the `.select2()` calls in sellers/index and the withdraw-requests list throw.
 5. Confirm with the owner that multi-vendor (`vendor_system_activation`) and classifieds (`classified_product`) are in use before porting their 17 views.
 

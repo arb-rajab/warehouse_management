@@ -34,4 +34,7 @@ return [
     'verification_round_rows_not_found' => 'One or more of the requested rows no longer exist.',
     'cannot_remove_last_admin' => 'This is the last admin account, so it cannot be demoted or deleted.',
     'open_level_not_allowed' => 'This pallet\'s level is not one where opening pallets is allowed.',
+    'customer_agreement_incomplete' => 'Customer information is incomplete or the account is already verified.',
+    'customer_phone_required' => 'A customer phone number is required.',
+    'customer_phone_invalid' => 'The customer phone number is invalid.',
 ];

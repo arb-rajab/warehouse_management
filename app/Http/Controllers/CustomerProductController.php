@@ -27,9 +27,7 @@ class CustomerProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_classified_products', only: ['customer_product_index']),
             new Middleware('permission:publish_classified_product', only: ['updatePublished']),
-            new Middleware('permission:delete_classified_product', only: ['destroy_by_admin']),
         ];
     }
     /**
@@ -44,12 +42,6 @@ class CustomerProductController extends Controller implements HasMiddleware
         }
         $products = CustomerProduct::where('user_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(10);
         return view('shop.frontend.user.customer.products', compact('products'));
-    }
-
-    public function customer_product_index()
-    {
-        $products = CustomerProduct::orderBy('created_at', 'desc')->paginate(10);
-        return view('shop.backend.customer.classified_products.index', compact('products'));
     }
 
     /**
@@ -232,16 +224,6 @@ class CustomerProductController extends Controller implements HasMiddleware
         if (CustomerProduct::destroy($id)) {
             flash(translate('Product has been deleted successfully'))->success();
             return redirect()->route('customer_products.index');
-        }
-    }
-
-    public function destroy_by_admin($id)
-    {
-        $product = CustomerProduct::findOrFail($id);
-        $product->customer_product_translations()->delete();
-
-        if (CustomerProduct::destroy($id)) {
-            return back();
         }
     }
 

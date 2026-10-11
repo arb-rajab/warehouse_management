@@ -2,40 +2,57 @@
 
 namespace App\Models;
 
-use App;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\App;
 
 class CustomerProduct extends Model
 {
+    /** @var list<string> */
     protected $with = ['customer_product_translations'];
 
-    public function getTranslation($field = '', $lang = false){
-      $lang = $lang == false ? App::getLocale() : $lang;
-      $customer_product_translations = $this->customer_product_translations->where('lang', $lang)->first();
-      return $customer_product_translations != null ? $customer_product_translations->$field : $this->$field;
+    public function getTranslation(string $field = '', string|bool|null $lang = false): mixed
+    {
+        $lang = $lang == false ? App::getLocale() : $lang;
+        $translation = $this->customer_product_translations->firstWhere('lang', $lang);
+
+        return $translation !== null ? $translation->$field : $this->$field;
     }
 
-    public function category(){
-    	return $this->belongsTo(Category::class);
+    /** @return BelongsTo<Category, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
-    public function brand(){
-    	return $this->belongsTo(Brand::class);
+    /** @return BelongsTo<Brand, $this> */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
-    public function user(){
-    	return $this->belongsTo(StoreUser::class);
+    /** @return BelongsTo<StoreUser, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
     }
 
-    public function state(){
-    	return $this->belongsTo(State::class);
+    /** @return BelongsTo<State, $this> */
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(State::class);
     }
 
-    public function city(){
-    	return $this->belongsTo(City::class);
+    /** @return BelongsTo<City, $this> */
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
     }
 
-    public function customer_product_translations(){
-      return $this->hasMany(CustomerProductTranslation::class);
+    /** @return HasMany<CustomerProductTranslation, $this> */
+    public function customer_product_translations(): HasMany
+    {
+        return $this->hasMany(CustomerProductTranslation::class);
     }
 }

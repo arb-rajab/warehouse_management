@@ -51,12 +51,23 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            '/temp/admin/customers',
+            '/temp/admin/customers/create',
+            '/temp/admin/customers/archive/get',
+            '/temp/admin/classified_products',
+            '/temp/admin/representatives',
+            '/temp/admin/representatives/packages/index',
+            '/temp/admin/admin/representatives/payments/index',
+            '/temp/admin/representatives/visits/index',
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {
@@ -178,7 +189,7 @@ describe('visibleStoreMenu', () => {
                 [representatives],
                 storeAccess(
                     storeSharedProps({
-                        permissions: ['view_classified_packages'],
+                        permissions: ['view_representative_packages'],
                     }),
                 ),
             ).map((item) => item.labelKey),

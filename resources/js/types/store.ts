@@ -45,3 +45,14 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+/** Administrative summary; public classified content remains Blade. */
+export interface ClassifiedProduct {
+    id: number;
+    name: string;
+    public_url: string;
+    added_by: string;
+    status: boolean;
+    published: boolean;
+    thumbnail_url: string | null;
+}

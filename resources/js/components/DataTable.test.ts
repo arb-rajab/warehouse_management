@@ -24,6 +24,20 @@ function mountTable(rows: TestRow[], extraProps: Record<string, unknown> = {}) {
 }
 
 describe('DataTable', () => {
+    it('renders rows with string primary keys without coercing them', () => {
+        const wrapper = mount(DataTable<{ id: string; receipt: string }>, {
+            props: {
+                columns: ['Receipt'],
+                rows: [{ id: 'receipt-01', receipt: 'R-01' }],
+                emptyMessage: 'Empty',
+            },
+            slots: {
+                row: '<td>{{ params.row.id }} {{ params.row.receipt }}</td>',
+            },
+        });
+        expect(wrapper.get('tbody tr').text()).toBe('receipt-01 R-01');
+    });
+
     it('uses a logical text-align utility so RTL locales flip alignment', () => {
         const wrapper = mountTable([{ id: 1, letter: 'A' }]);
 

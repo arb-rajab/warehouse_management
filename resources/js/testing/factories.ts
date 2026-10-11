@@ -12,11 +12,18 @@ import type {
     User,
 } from '@/types/admin';
 import type {
+    ClassifiedProduct,
     PermissionGroup,
     StaffMember,
     StoreRole,
     StoreSharedProps,
 } from '@/types/store';
+import type { CustomerDetails } from '@/types/storeCustomers';
+import type {
+    RepresentativePackage,
+    RepresentativePayment,
+    RepresentativeVisit,
+} from '@/types/storeRepresentatives';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -253,6 +260,92 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+export function classifiedProduct(
+    overrides: Partial<ClassifiedProduct> = {},
+): ClassifiedProduct {
+    return {
+        id: 1,
+        name: 'Customer advert',
+        public_url: '/temp/customer-product/customer-advert',
+        added_by: 'customer',
+        status: true,
+        published: false,
+        thumbnail_url: null,
+        ...overrides,
+    };
+}
+
+/** A customer account and its editable store profile. */
+export function storeCustomer(
+    overrides: Partial<CustomerDetails> = {},
+): CustomerDetails {
+    return {
+        id: 17,
+        name: 'Amy',
+        email: 'amy@example.com',
+        phone: '31612345678',
+        company_name: 'Company',
+        is_rep: false,
+        archived: false,
+        banned: false,
+        verified: true,
+        important: false,
+        activity_status: 'new_user',
+        rep_id: null,
+        rep_serial: null,
+        country: 'Netherlands',
+        tax_number: 'VAT',
+        bank_account_number: 'NL123',
+        company_address: 'Company address',
+        shipping_address: 'Shipping address',
+        member_serial: '123',
+        AccSysID: 123,
+        trade_license: 'license.pdf',
+        admin_notes: 'Call later',
+        registration_completed: false,
+        ...overrides,
+    };
+}
+
+export function representativePackage(
+    overrides: Partial<RepresentativePackage> = {},
+): RepresentativePackage {
+    return { id: 3, name: 'Gold', percentage: '12.5', ...overrides };
+}
+
+export function representativePayment(
+    overrides: Partial<RepresentativePayment> = {},
+): RepresentativePayment {
+    return {
+        id: 'receipt-001',
+        amount: '125.50',
+        receipt_code: 'R-001',
+        invoice_code: 123,
+        notes: 'Paid in cash',
+        status: 'pending',
+        date: '2026-10-08 10:00:00',
+        customer_name: 'Customer One',
+        account_id: 42,
+        representative: { id: 10, name: 'Rep One' },
+        accountant: null,
+        ...overrides,
+    };
+}
+
+export function representativeVisit(
+    overrides: Partial<RepresentativeVisit> = {},
+): RepresentativeVisit {
+    return {
+        id: 4,
+        note: 'Visit note',
+        visit_date: '2026-10-08 10:00:00',
+        has_order: false,
+        representative: { id: 10, name: 'Rep One' },
+        customer: { id: 11, name: 'Customer One' },
         ...overrides,
     };
 }

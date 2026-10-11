@@ -194,8 +194,6 @@ parameters:
         - app/Http/Controllers/ProductQueryController.php
         - app/Http/Controllers/PurchaseHistoryController.php
         - app/Http/Controllers/ReportController.php
-        - app/Http/Controllers/RepresentativePackageController.php
-        - app/Http/Controllers/RepresentativePaymentAdminController.php
         - app/Http/Controllers/RepresentativePaymentController.php
         - app/Http/Controllers/ReviewController.php
         - app/Http/Controllers/SSLCommerz.php
@@ -399,7 +397,6 @@ parameters:
         - app/Models/CustomerPackage.php
         - app/Models/CustomerPackagePayment.php
         - app/Models/CustomerPackageTranslation.php
-        - app/Models/CustomerProduct.php
         - app/Models/CustomerProductTranslation.php
         - app/Models/CustomersImport.php
         - app/Models/DeliveryBoy.php
@@ -438,7 +435,6 @@ parameters:
         - app/Models/ProxyPayment.php
         - app/Models/RefundRequest.php
         - app/Models/RepresentativePackage.php
-        - app/Models/RepresentativePayment.php
         - app/Models/Review.php
         - app/Models/Role.php
         - app/Models/RoleTranslation.php
@@ -463,7 +459,6 @@ parameters:
         - app/Models/Truck.php
         - app/Models/Upload.php
         - app/Models/UserPageView.php
-        - app/Models/Visit.php
         - app/Models/Wallet.php
         - app/Models/WholesalePrice.php
         - app/Models/Wishlist.php

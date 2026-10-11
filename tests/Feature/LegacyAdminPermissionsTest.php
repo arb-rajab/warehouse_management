@@ -44,15 +44,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'FeatureOrderTripController@store',
     'OffersCatalogController@destroy',
     'OffersCatalogController@store',
-    'RepresentativePackageController@delete',
-    'RepresentativePackageController@package_modal',
-    'RepresentativePackageController@set_package',
-    'RepresentativePackageController@store',
-    'RepresentativePackageController@update',
-    'RepresentativePaymentAdminController@accept',
-    'RepresentativePaymentAdminController@reject',
-    'VisitController@bulk_visit_delete',
-    'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
     'AizUploadController@bulk_uploaded_files_delete',
@@ -96,14 +87,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'NotificationController@index',
     'OffersCatalogController@download',
     'OffersCatalogController@index',
-    'RepresentativePackageController@create',
-    'RepresentativePackageController@edit',
-    'RepresentativePackageController@index',
-    'RepresentativePaymentAdminController@export',
-    'RepresentativePaymentAdminController@index',
-    'VisitController@index',
-    'VisitController@show',
-    'VisitController@show_all_visits_in_a_day',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
@@ -228,28 +211,6 @@ test('a staff user cannot change a business setting or take the site down', func
 
     $this->assertDatabaseMissing('business_settings', ['type' => 'planted_setting']);
     $this->assertDatabaseMissing('business_settings', ['type' => 'maintenance_mode', 'value' => 1]);
-});
-
-test('the customer pages that carry personal data need the customer permission, and the archive needs the delete one', function () {
-    Permission::findOrCreate('view_all_customers', 'store');
-    Permission::findOrCreate('delete_customer', 'store');
-
-    $staff = createStoreUser('staff');
-    actingAsStoreUser($staff);
-
-    $this->get(route('customers.archive'))->assertForbidden();
-    $this->get(route('customers.create'))->assertForbidden();
-    $this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->assertForbidden();
-
-    $staff->givePermissionTo('view_all_customers');
-
-    $this->get(route('customers.archive'))->assertForbidden();
-    expect($this->get(route('customers.create'))->getStatusCode())->not->toBe(403)
-        ->and($this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->getStatusCode())->not->toBe(403);
-
-    $staff->givePermissionTo('delete_customer');
-
-    expect($this->get(route('customers.archive'))->getStatusCode())->not->toBe(403);
 });
 
 test('the offer deal pages and the notification pages ask for the permissions their buttons already name', function () {

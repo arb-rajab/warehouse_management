@@ -2,25 +2,45 @@
 
 namespace App\Models;
 
-use App\Models\Cart;
 use App\Notifications\EmailVerificationNotification;
 use App\Notifications\TermsAgreementNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
+ * @property string|null $company_name
+ * @property bool|null $admin_verified
+ * @property string|null $trade_license
+ * @property int|null $AccSysID
+ * @property string|null $admin_notes
+ * @property string|null $bank_account_number
+ * @property string|null $company_address
+ * @property string|null $member_serial
+ * @property bool|null $registration_completed
+ * @property string|null $shipping_address
+ * @property string|null $tax_number
+ * @property int|null $is_delete
+ * @property string|null $admin_verified_at
+ * @property string|null $last_order_at
+ * @property int $is_important
+ * @property string $activity_status
+ * @property string|null $rep_id
+ * @property string|null $rep_serial
+ * @property-read RepresentativePackage|null $representativePackage
  * @property bool $is_rep
  * @property bool|null $raizer_admin
  * @property-read StoreUser|null $current_customer
  */
 class StoreUser extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The legacy User -> StoreUser rename (see
@@ -61,12 +81,12 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
 
     public function sendEmailVerificationNotification()
     {
-        $this->notify(new EmailVerificationNotification());
+        $this->notify(new EmailVerificationNotification);
     }
 
     public function sendTermsAgreementNotification()
     {
-        $this->notify(new TermsAgreementNotification());
+        $this->notify(new TermsAgreementNotification);
     }
 
     /**
@@ -164,6 +184,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Shop::class);
     }
+
     public function seller()
     {
         return $this->hasOne(Seller::class);
@@ -191,11 +212,12 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
 
     public function seller_orders()
     {
-        return $this->hasMany(Order::class, "seller_id");
+        return $this->hasMany(Order::class, 'seller_id');
     }
+
     public function seller_sales()
     {
-        return $this->hasMany(OrderDetail::class, "seller_id");
+        return $this->hasMany(OrderDetail::class, 'seller_id');
     }
 
     public function wallets()
@@ -232,10 +254,12 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Cart::class);
     }
+
     public function offers()
     {
         return $this->belongsToMany(Offer::class, 'offer_user', 'user_id', 'offer_id');
     }
+
     public function carts_offered()
     {
         return $this->hasMany(CartOffered::class);
@@ -254,6 +278,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     public function current_customer()
     {
         $cart = $this->carts->first();
+
         return $cart ? $cart->belongsTo(StoreUser::class, 'for_customer', 'id') : $this->belongsTo(StoreUser::class, 'for_customer', 'id')->where('id', '=', null);
     }
 
@@ -261,16 +286,19 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(AuctionProductBid::class);
     }
+
     public function product_queries()
     {
         return $this->hasMany(ProductQuery::class, 'customer_id');
     }
+
     public function uploads()
     {
         return $this->hasMany(Upload::class);
     }
 
-    public function representativePackage()
+    /** @return BelongsTo<RepresentativePackage, $this> */
+    public function representativePackage(): BelongsTo
     {
         return $this->belongsTo(RepresentativePackage::class, 'rep_package_id');
     }
@@ -296,6 +324,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         if ($offer->is_repeatable) {
             return 0;
         }
+
         return $this->offers->where('id', $offer_id)->count();
     }
 
@@ -334,7 +363,8 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
             ->first();
     }
 
-    public function pageViews()
+    /** @return HasMany<UserPageView, $this> */
+    public function pageViews(): HasMany
     {
         return $this->hasMany(UserPageView::class);
     }

@@ -34,4 +34,7 @@ return [
     'verification_round_rows_not_found' => 'واحد أو أكثر من الممرات المطلوبة لم يعد موجودًا.',
     'cannot_remove_last_admin' => 'هذا هو آخر حساب مسؤول، لذا لا يمكن إزالة صلاحياته أو حذفه.',
     'open_level_not_allowed' => 'مستوى هذه المنصة ليس من المستويات المسموح فيها بفتح المنصات.',
+    'customer_agreement_incomplete' => 'بيانات العميل غير مكتملة أو الحساب موثق بالفعل.',
+    'customer_phone_required' => 'رقم هاتف العميل مطلوب.',
+    'customer_phone_invalid' => 'رقم هاتف العميل غير صالح.',
 ];
