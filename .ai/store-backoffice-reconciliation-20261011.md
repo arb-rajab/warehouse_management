@@ -1,8 +1,9 @@
 # Store back-office reconciliation — 2026-10-11
 
-Integration and audit handoff; current results and the remaining browser gate are
-recorded in [resumed runtime verification](#resumed-runtime-verification-2026-10-11)
-below. Earlier blocked attempts remain historical evidence. Integration branch:
+Integration and audit handoff; current results are recorded in
+[final all-store browser verification](#final-all-store-browser-verification-2026-10-12)
+below. The browser gate has passed. Earlier integration and blocked attempts
+remain historical evidence. Original integration branch:
 `codex/store-backoffice-reconciliation-20261011-01`, worktree:
 `/workspace/store-backoffice-reconciliation-20261011-01`, based on latest fetched
 `origin/develop`, `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69`.
@@ -889,3 +890,97 @@ The backup push must create only the new branch and verify its remote HEAD;
 `develop` and the existing integration branch are not push targets. No PR, merge
 or deployment is authorized. Push/remote verification outcome is reported to the
 user after execution, rather than presumed by this authorization record.
+
+
+## Final all-store browser verification (2026-10-12)
+
+Fetched and checked out
+`codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`
+in `/workspace/warehouse_management`. Starting HEAD was confirmed exactly as
+`a0c880ea376e716ee633c5c5191c45a0a521780a`. Both verification records and the
+repository guidance were read before verification. This section supersedes the
+pending browser gate above; prior attempts retain their historical scope.
+
+### Runtime and isolation
+
+Before starting servers, IPv4 `127.0.0.1` and IPv6 `::1` bind/connect/data-transfer
+probes passed through approved execution. Default sandbox execution still denies
+sockets; approved execution supported the actual servers and browser runs.
+Used the provisioned native PHP 8.5.11 runtime and installed Chromium
+151.0.7922.173, with Playwright 1.62.1. The native GD extension initially lacked
+WebP. An external helper image rebuilt that extension with WebP using the
+configured proxy and mounted CA trust; native WebP encoding and Composer platform
+requirements passed. No application dependency or lockfile changed.
+
+Fresh Wayfinder generation through `npm run build`, production assets and
+`npm run types:check` passed. The stale provisioned Vite hot marker was preserved
+externally so browser requests used those production assets. Build advisories
+for optional fontaine and chunk size remain. Generated assets/actions, the local
+certificate/key, runtime extensions and logs are excluded from source changes.
+
+Every browser invocation recreated only the four dedicated `database/e2e*.sqlite`
+files through the checked-in configuration, including ancillary connections and
+existing store seeders. The resolved database paths were checked before execution.
+Mail used the array driver. All runs used local HTTPS, enforced CSP, one worker,
+zero retries and `reuseExistingServer:false`.
+
+### Actual browser results
+
+Current external evidence is under
+`/workspace/work/store-browser-final-20261012/`; paths in this table are relative
+to that directory. Counts describe individual runs and are not summed.
+
+| Run | Result | Evidence |
+| --- | --- | --- |
+| First all-store run, Python HTTPS helper | 37 passed / 2 failed | `logs/browser-final.log`, `browser-final/` |
+| Unchanged driver/support files, fresh databases | 3/3 passed | `logs/browser-affected-initial.log` |
+| Second all-store run, Python HTTPS helper | 38 passed / 1 failed | `logs/browser-final-rerun.log`, `browser-final-rerun/` |
+| Driver/marketing/support files, Node HTTPS helper | 5/5 passed | `logs/browser-transport-focused.log` |
+| **Final complete all-store run, Node HTTPS helper** | **39/39 passed in 22 files; exit 0 (2.7 minutes)** | `logs/browser-final-node.log`, `browser-final-node/` |
+
+Final command, with the session-owned Node HTTPS helper already listening:
+
+```sh
+source /workspace/work/store-browser-final-20261012/activate.sh
+npx playwright test tests/e2e/store- --output=/workspace/work/store-browser-final-20261012/browser-final-node
+```
+
+The first driver failure was `net::ERR_TOO_MANY_RETRIES` during navigation. The
+support RTL and later coupon dark-control failures each have a trace showing
+the application stylesheet request failed with status -1; their CSS assertions
+were running without that stylesheet. The Python helper also logged broken-pipe
+and SSL write errors. Replacing this session-owned helper with a streaming Node
+HTTPS proxy that handles cancelled requests resolved the affected checks and
+the complete suite. Application and browser-test source were unchanged; no
+assertion was weakened and no retry was added. Failed traces remain available.
+
+The final run verifies the latest RTL correction: both saves receive 302, reloads
+confirm persisted off/on values, and the subsequent Arabic order-layout check
+passes. It also includes the existing coexistence, native confirmations, picker
+focus, dark controls, upload/profile, reports, representatives, catalogue,
+marketing, logistics, support, orders and header workflows. Simulated support
+errors retain their previously documented coverage limit.
+
+### Reused checks, scope and cleanup
+
+The recorded full backend **4,961 tests / 23,810 assertions**, full frontend
+**2,050 tests / 227 files**, isolated MySQL **101 tests / 587 assertions** and
+engine probe, PHP analysis/formatting, template/render/PDF and earlier lint/format
+results are reused rather than claimed as newly executed. No application/test
+source changed to invalidate them; fresh generated actions justified the current
+TypeScript check. Their original logs belong to the earlier workspace. Current
+manifests/locks match the develop baseline and recorded source fingerprints.
+
+Playwright stopped its upstream servers after each run. Both session-owned HTTPS
+helpers were stopped; ports 8010 and 9443 have no listeners, and no helper
+container remains running. The managed Docker daemon was retained. Generated
+public uploads were preserved externally, leaving only these two verification
+records as commit candidates. Relative file links and `git diff --check` pass.
+
+The browser gate is satisfactory for the authorized local verification commit.
+All deferred source dispositions, inherited retained-module issues and owner
+decisions remain unchanged. Production MySQL/data rehearsal, deployed role
+grants, external services/payment/email, complete visual parity and unavailable
+baseline captures remain outside the completed evidence. Workflow success does
+not claim globally clean console/network output. No push, PR, merge or deployment
+was performed or authorized in this session.

@@ -13,6 +13,10 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
+Latest verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
+close the pending browser gate. Earlier dated verification sections remain
+historical evidence; §10 records this session's result and limits.
+
 ## 1. Decision and scope
 
 The current reconciliation request authorizes integration of independently developed
@@ -819,3 +823,48 @@ verify the remote HEAD afterward. No push to `develop` or the existing integrati
 branch, PR, merge or deployment. Exact intended scope/limitations are in the
 ledger's matching authorization section; actual publication outcome is reported
 after execution.
+
+
+## 10. Final all-store browser verification (2026-10-12)
+
+Resumed branch
+`codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`
+in `/workspace/warehouse_management`, confirming starting HEAD
+`a0c880ea376e716ee633c5c5191c45a0a521780a`. Both records and repository guidance
+were read. Approved IPv4/IPv6 loopback bind/connect/transfer probes passed before
+servers started. The default sandbox's socket denial was not treated as evidence
+about approved execution.
+
+- **Final complete browser run: 39/39 tests passed in 22 files**, exit 0, using
+  installed Chromium 151, local HTTPS, enforced CSP, one worker, zero retries and
+  no server reuse. Every invocation recreated only the four dedicated e2e SQLite
+  databases; mail used the array driver.
+- The latest language correction is now browser-verified: RTL saves return 302,
+  reloads confirm both persisted values, and dependent Arabic order layout passes.
+- Initial complete runs passed 37/39 and 38/39. Traces show failed local navigation
+  and application stylesheet transport through the external Python HTTPS helper.
+  An unchanged fresh driver/support run passed 3/3. A streaming Node helper fixed
+  the transport problem; the five affected driver/marketing/support checks and
+  the subsequent full 39-test run passed. No application/test source, assertion
+  or retry configuration changed. Failed-attempt evidence is retained externally.
+- Native PHP 8.5.11 gained GD WebP through an external runtime extension build;
+  WebP encoding and Composer platform checks passed. Fresh Wayfinder/production
+  build and TypeScript passed. Manifests/locks remain unchanged.
+- Reuse the earlier recorded backend 4,961-test, frontend 2,050-test, isolated
+  MySQL 101-test/engine-probe, PHP/template/render/PDF and lint/format evidence
+  within its stated limits; those checks were not rerun because application/test
+  source is unchanged. Current logs/helpers are external under
+  `/workspace/work/store-browser-final-20261012/`.
+- Playwright upstreams and both owned HTTPS helpers are stopped. Ports 8010/9443
+  have no listeners; no helper container remains running. The managed Docker
+  daemon was retained. Generated uploads are preserved externally. Both records'
+  file links and `git diff --check` pass; only these records enter the authorized
+  local verification commit.
+
+This closes the pending browser gate while preserving all source dispositions,
+inherited retained-module issues, owner decisions and excluded unavailable audit
+in §§4–9. Production data/configuration, deployed grants, real external delivery/
+payment, complete visual parity and unavailable baseline captures remain unverified.
+Browser workflows do not establish globally clean console/network output.
+No push, PR, merge or deployment. Exact per-run logs and commands are in
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12).
