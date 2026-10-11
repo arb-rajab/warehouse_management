@@ -71,7 +71,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProductController@sku_combination_edit',
 
     // The controller has no such method, so the request errors out.
-    'CurrencyController@updateCurrency',
     'OrderController@bulk_order_status',
 
     // Refuses every request (see LegacyEnvFileProtectionTest).
@@ -114,16 +113,13 @@ const ADMIN_READS_STILL_UNGATED = [
     'ProfileController@index',
 
     // Read-only AJAX helpers the product forms use.
-    'BusinessSettingsController@search',
     'ProductController@getDetails',
 
     // The controller has no such method, so the request errors out.
     'CarrierController@show',
-    'CityController@show',
     'OrderController@index',
     'ProductBulkUploadController@import_product',
     'ProductBulkUploadController@import_vendor_product',
-    'ZoneController@show',
 ];
 
 /**

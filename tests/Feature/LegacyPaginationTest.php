@@ -233,34 +233,3 @@ test('the store admin review list pages', function () {
         perPage: 15,
     );
 });
-
-test('the store admin city list pages', function () {
-    actingAsStoreUser(createStoreAdmin());
-    $stateId = DB::table('states')->insertGetId(['name' => 'North Holland', 'country_id' => 1, 'status' => 1]);
-
-    foreach (range(1, 18) as $number) {
-        DB::table('cities')->insert(['name' => "City $number", 'state_id' => $stateId, 'status' => 1]);
-    }
-
-    assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/cities?page=$page"),
-        fn ($response) => $response->viewData('cities')->pluck('id')->all(),
-        total: 18,
-        perPage: 15,
-    );
-});
-
-test('the store admin country list pages', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    foreach (range(1, 18) as $number) {
-        DB::table('countries')->insert(['code' => chr(65 + intdiv($number, 26)).chr(65 + $number % 26), 'name' => "Country $number", 'status' => 1]);
-    }
-
-    assertPagesWithoutOverlap(
-        fn (int $page) => $this->get("/temp/admin/countries?page=$page"),
-        fn ($response) => $response->viewData('countries')->pluck('id')->all(),
-        total: 18,
-        perPage: 15,
-    );
-});

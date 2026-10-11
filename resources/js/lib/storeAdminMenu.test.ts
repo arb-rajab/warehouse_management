@@ -51,12 +51,24 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            '/temp/admin/order-configuration',
+            '/temp/admin/currency',
+            '/temp/admin/tax',
+            '/temp/admin/pick_up_points',
+            '/temp/admin/shipping_configuration',
+            '/temp/admin/countries',
+            '/temp/admin/states',
+            '/temp/admin/cities',
+            '/temp/admin/zones',
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {
