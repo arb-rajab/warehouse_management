@@ -26,9 +26,11 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Audited baseline:** 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
+  - Verified 2026-10-07: 195 remain, alongside six staff/roles Vue pages;
+    the six pilot Blade views and both root-namespace controllers are gone.
 - **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
@@ -251,8 +253,11 @@ strict policy. Unconverted Blade pages need inline scripts.
 - Before this change, Blade pages received the strict policy too, which would
   have blocked their scripts once it was enforced.
 - CSP stays report-only outside production, as before.
-- Shrink `blade_csp` as modules convert, and delete it with the last Blade
-  page.
+- Review `blade_csp` directives as modules convert, accounting for every
+  remaining consumer. It also serves the protected storefront, seller area
+  and authentication Blade pages. Keep both middleware and the policy after
+  the last back-office Blade module converts; removing them requires a
+  separate change that preserves those surfaces' scripts and assets.
 
 **Tests:** tests/Feature/Store/HandleStoreBladePagesTest.php.
 
@@ -279,6 +284,83 @@ Converted and unconverted pages coexist through four mechanisms:
   - It also covers any link wrongly marked Inertia.
   - A response counts as Blade when it renders a view other than Inertia's
     root view, i.e. the view has no `page` data.
+
+### 2.7 Foundation verification (2026-10-07)
+
+This pass verified the existing implementation against §§2–3, the staff and
+shell audit rows in §6, and the relevant findings in §5.1. No runtime
+foundation defect requiring a migration blocker fix was confirmed. Reuse the
+foundation and pilot; their presence does not establish full runtime readiness.
+
+**Verified in current source and focused frontend checks:**
+
+- `HandleInertiaRequests` selects the store branch from route middleware,
+  defers store locale/auth resolution, exposes only `{id, name, email}` for
+  the signed-in user, and leaves WMS props without `store`. All 42 menu
+  setting keys match the middleware list.
+- `StoreAdminLayout`, `storeAdminMenu`, `StoreAdminNavLink` and `storeAccess`
+  retain permission/setting/vendor gates, discard empty groups, use the
+  deliberate admin URLs for reviews, subscribers and Home Banners, and make
+  only staff/roles sidebar destinations Inertia visits. Profile and
+  storefront links load in full; logout passes the store's POST action.
+- The six Vue pages use the existing layout, forms, tables, pagination,
+  Wayfinder actions and permission gates. Controllers keep action-level
+  backend gates, store-only role/permission references, explicit list
+  selections, model binding, transaction boundaries, Super Admin/self-delete
+  protections and documented redirects. The obsolete controllers and Staff
+  model are absent from both analysis exclusion lists.
+- All 159 `store.*` translation keys exist and have values in both locales.
+  Database-held names remain server-translated; Vue renders them through
+  escaped interpolation. Root `dir` follows `store.rtl`, WMS retains its
+  Arabic fallback, and the shell uses logical spacing/border utilities.
+- `HandleStoreBladePages` is on all three store web groups. Blade GETs with
+  `X-Inertia` take the installed Inertia `409`/`X-Inertia-Location` path;
+  ordinary Blade loads get a request-attribute CSP override. Inertia roots
+  and WMS retain the strict policy. The override does not mutate config.
+  Blade links to the pilot retain their route names and boot Inertia on a
+  direct load. The existing profile ownership fix in §5.1(1) is still present.
+
+**Actual readiness and check results:**
+
+| Check or prerequisite | Observed result |
+| --- | --- |
+| Runtime and packages | Node 24.19.0/npm 11.9.0 available. Installed metadata: Laravel 13.34.0, inertia-laravel 3.3.1, Wayfinder 0.1.21, Vue 3.5.43, Inertia Vue 3.6.1, Vite 8.2.1, Pest 5.0.4. PHP and Composer executables unavailable; `install_php.sh --check` fails. |
+| Local setup | `vendor/`, `node_modules/`, a nonempty local `APP_KEY`, generated actions and a manifest containing all six pilot pages exist. No Claude setup is running. These artifacts alone cannot prove backend or fresh-build readiness. |
+| Laravel Boost | No Boost tools exposed. AGENTS.md's fallback used repository files and installed package source. No Claude SessionStart hook or forced Claude remote mode used. |
+| Focused Vitest | 17 files, 119 tests passed: store shell/menu/access/nav link, staff/role form fields and all six pages, plus language/logout/resource-form/navigation/i18n utilities. |
+| Frontend types | `npm run types:check` passed against the existing generated actions. |
+| Production build | `npm run build` failed at Wayfinder's `php artisan wayfinder:generate --skip-routes --with-form`: PHP unavailable. No fresh assets or route generation verified. |
+| Focused Pest | Attempted foundation/pilot/guard-isolation/shared-auth files; PHP unavailable, so no backend tests executed. |
+| Playwright coexistence | Attempted `store-staff-coexistence.spec.ts`; the configured PHP web server could not start. Neither browser test executed. |
+| Completion gate | `python3 .claude/scripts/pre_push_check.py`: ESLint, Prettier, vue-tsc and all 113 Vitest files/1,586 tests passed. Exit 1 at the Pint step: `FileNotFoundError: composer`. Pint, PHPStan and Pest did not execute; the gate is incomplete. |
+
+**Remaining work and prerequisites:**
+
+- Provision PHP 8.5 with the required extensions and Composer in the execution
+  environment, preserving lockfiles/platform requirements. Then regenerate
+  Wayfinder, build, and run the foundation/pilot tests, `LegacyStoreAuthTest`,
+  guard-isolation/shared-auth/security tests, PHP formatting/static analysis,
+  and Playwright. Current backend conclusions are source review, with runtime
+  verification pending.
+- The pilot's browser spec covers native delete confirmation, a sidebar visit
+  to Blade and logout's Blade redirect. It does not cover store RTL, language
+  switching or dark contrast; add those checks before claiming §3(11) complete.
+  `RoleControllerTest` verifies pagination but lacks its own allowed/refused
+  `per_page` cases required by §3(9).
+- Session guards isolate authentication and authorization, but both existing
+  logout controllers call `session()->invalidate()`. Laravel flushes the whole
+  shared session, including both guards' login keys if both are present.
+  Existing logout tests check the selected guard and redirect only. Preserve
+  this existing behavior here; independent logout semantics require an owner
+  decision and coverage for both active guards, including remember cookies.
+- The 195 remaining backend Blade files include the protected PDF downloads
+  and `layouts/layout`; they are not all migration targets. Dashboard chrome
+  listed in §2.2 remains unbuilt. Batch 1 still owns its product-search HTML
+  sink; batches 2/9 own settings allowlists and per-page write gates (§5.1).
+  Production permission vocabulary/grants remain pending in legacy §7.1.
+  Multi-vendor/classifieds usage, server-status deletion and new editor/map/
+  chart dependencies retain their documented owner prerequisites; this pass
+  grants none of those approvals.
 
 ## 3. Per-module checklist (the staff pattern)
 
@@ -440,7 +522,7 @@ Batches are ordered by what they need first:
 | 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
 | 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
 | 11 | Orders and dashboard | 10 | sales (9, four deleted), dashboard (1) | a shared order-entry component with async search; a chart library (a new dependency); permission names for order entry |
-| 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
+| 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete back-office layouts/app, unused layouts/blank and the admin nav/sidenav. Keep layouts/layout, invoices and downloads (§5), plus the CSP policy/middleware needed by protected store Blade surfaces (§2.5). Server-status deletion remains an owner call |
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 
