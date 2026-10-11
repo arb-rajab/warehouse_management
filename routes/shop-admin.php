@@ -10,12 +10,14 @@ use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\CarrierController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CityController;
+use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\ConversationController;
-use App\Http\Controllers\CountryController;
+use App\Http\Controllers\Store\Admin\CountryController;
 use App\Http\Controllers\CouponController;
-use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\Store\Admin\CurrencyController;
+use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
+use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
@@ -32,7 +34,7 @@ use App\Http\Controllers\OffersCatalogController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\PickupPointController;
+use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductBulkUploadController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductQueryController;
@@ -43,18 +45,18 @@ use App\Http\Controllers\RepresentativePaymentAdminController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
-use App\Http\Controllers\StateController;
+use App\Http\Controllers\Store\Admin\StateController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\TaxController;
+use App\Http\Controllers\Store\Admin\TaxController;
 use App\Http\Controllers\Trip\DriverController;
 use App\Http\Controllers\Trip\TripController;
 use App\Http\Controllers\Trip\TruckController;
 use App\Http\Controllers\VisitController;
 use App\Http\Controllers\WebsiteController;
-use App\Http\Controllers\ZoneController;
+use App\Http\Controllers\Store\Admin\ZoneController;
 use Aws\Middleware;
 
 /*
@@ -342,33 +344,35 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
 
         //Shipping Configuration
-        Route::get('/shipping_configuration', 'shipping_configuration')->name('shipping_configuration.index');
-        Route::post('/shipping_configuration/update', 'shipping_configuration_update')->name('shipping_configuration.update');
 
         // Order Configuration
-        Route::get('/order-configuration', 'order_configuration')->name('order_configuration.index');
-        Route::get('/product/search', 'search')->name('order_configuration.product-search');
     });
 
 
-    //Currency
-    Route::controller(CurrencyController::class)->group(function () {
-        Route::get('/currency', 'currency')->name('currency.index');
-        Route::post('/currency/update', 'updateCurrency')->name('currency.update');
-        Route::post('/your-currency/update', 'updateYourCurrency')->name('your_currency.update');
-        Route::get('/currency/create', 'create')->name('currency.create');
-        Route::post('/currency/store', 'store')->name('currency.store');
-        Route::post('/currency/currency_edit', 'edit')->name('currency.edit');
-        Route::post('/currency/update_status', 'update_status')->name('currency.update_status');
-    });
+    // Shipping and order settings have page-specific write permissions and keys.
+    Route::get('/shipping_configuration', [ShippingConfigurationController::class, 'index'])->name('shipping_configuration.index');
+    Route::post('/shipping_configuration/update', [ShippingConfigurationController::class, 'update'])->name('shipping_configuration.update');
+    Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
+    Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
+    Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
+    Route::get('/product/search', [OrderConfigurationController::class, 'search'])->name('order_configuration.product-search');
 
-    //Tax
-    Route::resource('tax', TaxController::class);
-    Route::controller(TaxController::class)->group(function () {
-        Route::get('/tax/edit/{id}', 'edit')->name('tax.edit');
-        Route::post('/tax/destroy/{id}', 'destroy')->name('tax.destroy');
-        Route::post('tax-status', 'change_tax_status')->name('taxes.tax-status');
-    });
+    // Currency forms are Vue dialogs; create/edit URLs also support direct visits.
+    Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');
+    Route::get('/currency/create', [CurrencyController::class, 'create'])->name('currency.create');
+    Route::get('/currency/{currency}/edit', [CurrencyController::class, 'edit'])->name('currency.edit');
+    Route::post('/currency/store', [CurrencyController::class, 'store'])->name('currency.store');
+    Route::put('/your-currency/{currency}', [CurrencyController::class, 'update'])->name('your_currency.update');
+    Route::post('/currency/{currency}/status', [CurrencyController::class, 'updateStatus'])->name('currency.update_status');
+    Route::post('/currency/settings', [CurrencyController::class, 'configure'])->name('currency.settings.update');
+
+    // Tax is added inline; the orphan create and empty show routes are retired.
+    Route::get('/tax', [TaxController::class, 'index'])->name('tax.index');
+    Route::post('/tax', [TaxController::class, 'store'])->name('tax.store');
+    Route::get('/tax/{tax}/edit', [TaxController::class, 'edit'])->name('tax.edit');
+    Route::put('/tax/{tax}', [TaxController::class, 'update'])->name('tax.update');
+    Route::delete('/tax/{tax}', [TaxController::class, 'destroy'])->name('tax.destroy');
+    Route::post('/tax/{tax}/status', [TaxController::class, 'updateStatus'])->name('taxes.tax-status');
 
     // Language
     Route::resource('/languages', LanguageController::class);
@@ -567,11 +571,12 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     //Pickup_Points
-    Route::resource('pick_up_points', PickupPointController::class);
-    Route::controller(PickupPointController::class)->group(function () {
-        Route::get('/pick_up_points/edit/{id}', 'edit')->name('pick_up_points.edit');
-        Route::post('/pick_up_points/destroy/{id}', 'destroy')->name('pick_up_points.destroy');
-    });
+    Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');
+    Route::get('/pick_up_points/create', [PickupPointController::class, 'create'])->name('pick_up_points.create');
+    Route::post('/pick_up_points', [PickupPointController::class, 'store'])->name('pick_up_points.store');
+    Route::get('/pick_up_points/{pickupPoint}/edit', [PickupPointController::class, 'edit'])->name('pick_up_points.edit');
+    Route::put('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'update'])->name('pick_up_points.update');
+    Route::delete('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'destroy'])->name('pick_up_points.destroy');
 
     //conversation of seller customer
     Route::controller(ConversationController::class)->group(function () {
@@ -621,12 +626,16 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     // Countries
-    Route::resource('countries', CountryController::class);
-    Route::post('/countries/status', [CountryController::class, 'updateStatus'])->name('countries.status');
+    Route::get('/countries', [CountryController::class, 'index'])->name('countries.index');
+    Route::post('/countries/{country}/status', [CountryController::class, 'updateStatus'])->name('countries.status');
 
     // States
-    Route::resource('states', StateController::class);
-    Route::post('/states/status', [StateController::class, 'updateStatus'])->name('states.status');
+    Route::get('/states', [StateController::class, 'index'])->name('states.index');
+    Route::post('/states', [StateController::class, 'store'])->name('states.store');
+    Route::get('/states/{state}/edit', [StateController::class, 'edit'])->name('states.edit');
+    Route::put('/states/{state}', [StateController::class, 'update'])->name('states.update');
+    Route::delete('/states/{state}', [StateController::class, 'destroy'])->name('states.destroy');
+    Route::post('/states/{state}/status', [StateController::class, 'updateStatus'])->name('states.status');
 
     // Carriers
     Route::resource('carriers', CarrierController::class);
@@ -637,15 +646,19 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
 
     // Zones
-    Route::resource('zones', ZoneController::class);
-    Route::post('/zones/destroy/{id}', [ZoneController::class, 'destroy'])->name('zones.destroy');
+    Route::get('/zones', [ZoneController::class, 'index'])->name('zones.index');
+    Route::get('/zones/create', [ZoneController::class, 'create'])->name('zones.create');
+    Route::post('/zones', [ZoneController::class, 'store'])->name('zones.store');
+    Route::get('/zones/{zone}/edit', [ZoneController::class, 'edit'])->name('zones.edit');
+    Route::put('/zones/{zone}', [ZoneController::class, 'update'])->name('zones.update');
+    Route::delete('/zones/{zone}', [ZoneController::class, 'destroy'])->name('zones.destroy');
 
-    Route::resource('cities', CityController::class);
-    Route::controller(CityController::class)->group(function () {
-        Route::get('/cities/edit/{id}', 'edit')->name('cities.edit');
-        Route::post('/cities/destroy/{id}', 'destroy')->name('cities.destroy');
-        Route::post('/cities/status', 'updateStatus')->name('cities.status');
-    });
+    Route::get('/cities', [CityController::class, 'index'])->name('cities.index');
+    Route::post('/cities', [CityController::class, 'store'])->name('cities.store');
+    Route::get('/cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
+    Route::put('/cities/{city}', [CityController::class, 'update'])->name('cities.update');
+    Route::delete('/cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
+    Route::post('/cities/{city}/status', [CityController::class, 'updateStatus'])->name('cities.status');
 
     Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 

@@ -683,3 +683,19 @@ function storedUploadFiles(string $publicPath): array
 {
     return array_map('basename', glob("$publicPath/uploads/all/*") ?: []);
 }
+
+/** @return array<string, int> */
+function createStoreReferenceData(): array
+{
+    $country = DB::table('countries')->insertGetId(['name' => 'Netherlands', 'code' => 'NL', 'status' => 1, 'zone_id' => 0]);
+    $state = DB::table('states')->insertGetId(['name' => 'North Holland', 'country_id' => $country, 'status' => 1]);
+    $city = DB::table('cities')->insertGetId(['name' => 'Amsterdam', 'state_id' => $state, 'cost' => 2.50, 'status' => 1]);
+    $zone = DB::table('zones')->insertGetId(['name' => 'Europe', 'status' => 1]);
+    $staffUser = createStoreStaff('pickup_point_setup');
+    $staff = createStaffRow($staffUser)->id;
+    $pickup = DB::table('pickup_points')->insertGetId(['name' => 'Warehouse', 'address' => 'Main Street', 'phone' => '0612345678', 'staff_id' => $staff, 'pick_up_status' => 1]);
+    $tax = DB::table('taxes')->insertGetId(['name' => 'VAT', 'tax_status' => 1]);
+    $currency = DB::table('currencies')->insertGetId(['name' => 'Euro', 'code' => 'EUR', 'symbol' => '€', 'exchange_rate' => 1.23, 'status' => 1]);
+
+    return compact('country', 'state', 'city', 'zone', 'staff', 'pickup', 'tax', 'currency');
+}

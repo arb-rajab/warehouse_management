@@ -13,6 +13,13 @@ import type {
 } from '@/types/admin';
 import type {
     PermissionGroup,
+    StoreCountry,
+    StoreState,
+    StoreCity,
+    StoreZone,
+    StorePickupPoint,
+    StoreTax,
+    StoreCurrency,
     StaffMember,
     StoreRole,
     StoreSharedProps,
@@ -253,6 +260,78 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+export function storeCountry(
+    overrides: Partial<StoreCountry> = {},
+): StoreCountry {
+    return {
+        id: 11,
+        name: 'Netherlands',
+        code: 'NL',
+        status: true,
+        ...overrides,
+    };
+}
+
+export function storeState(overrides: Partial<StoreState> = {}): StoreState {
+    return {
+        id: 12,
+        name: 'North Holland',
+        country_id: 11,
+        country: { id: 11, name: 'Netherlands' },
+        status: true,
+        ...overrides,
+    };
+}
+
+export function storeCity(overrides: Partial<StoreCity> = {}): StoreCity {
+    return {
+        id: 13,
+        name: 'Amsterdam',
+        state_id: 12,
+        state: { id: 12, name: 'North Holland' },
+        cost: '2.50',
+        status: true,
+        ...overrides,
+    };
+}
+
+export function storeZone(overrides: Partial<StoreZone> = {}): StoreZone {
+    return { id: 14, name: 'Europe', status: true, ...overrides };
+}
+
+export function storePickupPoint(
+    overrides: Partial<StorePickupPoint> = {},
+): StorePickupPoint {
+    return {
+        id: 15,
+        name: 'Warehouse',
+        address: 'Warehouse road',
+        phone: '0612345678',
+        staff_id: 16,
+        staff: { id: 16, name: 'Manager' },
+        pick_up_status: true,
+        ...overrides,
+    };
+}
+
+export function storeTax(overrides: Partial<StoreTax> = {}): StoreTax {
+    return { id: 17, name: 'VAT', tax_status: true, ...overrides };
+}
+
+export function storeCurrency(
+    overrides: Partial<StoreCurrency> = {},
+): StoreCurrency {
+    return {
+        id: 18,
+        name: 'Euro',
+        symbol: '€',
+        code: 'EUR',
+        exchange_rate: '1.23000',
+        status: true,
         ...overrides,
     };
 }

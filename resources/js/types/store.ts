@@ -45,3 +45,47 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+export interface StoreReferenceOption {
+    id: number;
+    name: string;
+}
+export interface StoreCountry extends StoreReferenceOption {
+    code: string;
+    status: boolean;
+}
+export interface StoreState extends StoreReferenceOption {
+    country_id: number;
+    country: StoreReferenceOption | null;
+    status: boolean;
+}
+export interface StoreCity extends StoreReferenceOption {
+    state_id: number;
+    state: StoreReferenceOption | null;
+    cost: string;
+    status: boolean;
+}
+export interface StoreZone extends StoreReferenceOption {
+    status: boolean;
+}
+export interface StorePickupPoint extends StoreReferenceOption {
+    address: string;
+    phone: string;
+    staff_id: number;
+    staff: StoreReferenceOption | null;
+    pick_up_status: boolean;
+}
+export interface StoreTax extends StoreReferenceOption {
+    tax_status: boolean;
+}
+export interface StoreCurrency extends StoreReferenceOption {
+    symbol: string;
+    code: string;
+    exchange_rate: string;
+    status: boolean;
+}
+export interface OrderConfigurationProduct {
+    id: number;
+    name: string;
+    mat_id: string;
+}

@@ -912,6 +912,109 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions"
             }
+        },
+        "reference": {
+            "name": "Name",
+            "country": "Country",
+            "state": "State",
+            "status": "Status",
+            "actions": "Actions",
+            "edit": "Edit",
+            "delete": "Delete",
+            "save": "Save",
+            "saving": "Saving…",
+            "search": "Search by name",
+            "filter": "Apply filters",
+            "empty": "No records found.",
+            "select": "Select an option",
+            "enabled": "Enabled",
+            "disabled": "Disabled",
+            "enable": "Enable {name}",
+            "disable": "Disable {name}",
+            "languages": "Translation language"
+        },
+        "countries": {
+            "title": "Shipping countries",
+            "code": "Country code"
+        },
+        "states": {
+            "title": "Shipping states",
+            "add": "Add state",
+            "edit": "Edit state"
+        },
+        "cities": {
+            "title": "Shipping cities",
+            "add": "Add city",
+            "edit": "Edit city",
+            "cost": "Shipping cost"
+        },
+        "zones": {
+            "title": "Shipping zones",
+            "add": "Add zone",
+            "edit": "Edit zone",
+            "countries": "Countries in this zone"
+        },
+        "pickupPoints": {
+            "title": "Pickup points",
+            "add": "Add pickup point",
+            "edit": "Edit pickup point",
+            "address": "Address",
+            "phone": "Phone",
+            "manager": "Manager"
+        },
+        "taxes": {
+            "title": "Taxes",
+            "add": "Add tax",
+            "edit": "Edit tax"
+        },
+        "currencies": {
+            "title": "Currencies",
+            "add": "Add currency",
+            "edit": "Edit currency",
+            "symbol": "Symbol",
+            "code": "Currency code",
+            "rate": "Exchange rate (1 USD =)",
+            "defaultCurrency": "System default currency",
+            "formats": "Currency formats",
+            "symbolFormat": "Symbol format",
+            "decimalSeparator": "Decimal separator",
+            "decimals": "Number of decimals",
+            "symbolFirst": "[Symbol][Amount]",
+            "amountFirst": "[Amount][Symbol]",
+            "symbolFirstSpace": "[Symbol] [Amount]",
+            "amountFirstSpace": "[Amount] [Symbol]"
+        },
+        "shippingConfiguration": {
+            "title": "Shipping configuration",
+            "method": "Shipping method",
+            "product_wise_shipping": "Product wise shipping cost",
+            "flat_rate": "Flat rate shipping cost",
+            "seller_wise_shipping": "Seller wise flat shipping cost",
+            "area_wise_shipping": "Area wise shipping cost",
+            "carrier_wise_shipping": "Carrier wise shipping cost",
+            "flatCost": "Flat rate cost",
+            "adminCost": "In-house seller shipping cost",
+            "productNote": "Adds the shipping cost of each product.",
+            "flatNote": "Charges a fixed amount regardless of the number of products.",
+            "sellerNote": "Adds each seller’s fixed shipping charge.",
+            "areaNote": "Uses the customer’s shipping area. Configure shipping cities to set area costs.",
+            "carrierNote": "Uses the carrier’s free shipping, weight range, or price range. Configure shipping carriers to set these costs.",
+            "cities": "Configure shipping cities",
+            "carriers": "Configure shipping carriers"
+        },
+        "orderConfiguration": {
+            "title": "Order configuration",
+            "minimum": "Minimum order amount settings",
+            "minimumCheck": "Check minimum order amount",
+            "amount": "Minimum order amount",
+            "product": "Default product MAT ID",
+            "selected": "Selected product: {name}",
+            "searchResults": "Search results",
+            "searchHint": "Enter at least 4 characters to search by MAT ID.",
+            "searching": "Searching…",
+            "noResults": "No products found.",
+            "representative": "Default representative",
+            "representativeCheck": "Use a default representative"
         }
     }
 }

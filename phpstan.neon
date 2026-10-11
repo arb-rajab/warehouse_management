@@ -150,11 +150,9 @@ parameters:
         - app/Http/Controllers/CartOfferedController.php
         - app/Http/Controllers/CategoryController.php
         - app/Http/Controllers/CheckoutController.php
-        - app/Http/Controllers/CityController.php
         - app/Http/Controllers/CommissionController.php
         - app/Http/Controllers/CompareController.php
         - app/Http/Controllers/ConversationController.php
-        - app/Http/Controllers/CountryController.php
         - app/Http/Controllers/CouponController.php
         - app/Http/Controllers/CronJobsController.php
         - app/Http/Controllers/CurrencyController.php
@@ -188,7 +186,6 @@ parameters:
         - app/Http/Controllers/Payment/VoguepayController.php
         - app/Http/Controllers/Payment/WalletController.php
         - app/Http/Controllers/PaymentController.php
-        - app/Http/Controllers/PickupPointController.php
         - app/Http/Controllers/ProductBulkUploadController.php
         - app/Http/Controllers/ProductController.php
         - app/Http/Controllers/ProductQueryController.php
@@ -222,10 +219,8 @@ parameters:
         - app/Http/Controllers/SellerController.php
         - app/Http/Controllers/SellerWithdrawRequestController.php
         - app/Http/Controllers/ShopController.php
-        - app/Http/Controllers/StateController.php
         - app/Http/Controllers/SubscriberController.php
         - app/Http/Controllers/SupportTicketController.php
-        - app/Http/Controllers/TaxController.php
         - app/Http/Controllers/Trip/DriverController.php
         - app/Http/Controllers/Trip/TripController.php
         - app/Http/Controllers/Trip/TruckController.php
@@ -233,7 +228,6 @@ parameters:
         - app/Http/Controllers/WalletController.php
         - app/Http/Controllers/WebsiteController.php
         - app/Http/Controllers/WishlistController.php
-        - app/Http/Controllers/ZoneController.php
         - app/Http/Helpers.php
         - app/Http/Middleware/AppLanguage.php
         - app/Http/Middleware/CheckForMaintenanceMode.php
@@ -262,7 +256,6 @@ parameters:
         - app/Http/Requests/Trips/TripRequest.php
         - app/Http/Requests/Trips/UpdateCheckpointRequest.php
         - app/Http/Requests/Trips/UpdateTripRequest.php
-        - app/Http/Requests/ZoneRequest.php
         - app/Http/Resources/PosProductCollection.php
         - app/Http/Resources/V2/AddressCollection.php
         - app/Http/Resources/V2/AuctionMiniCollection.php

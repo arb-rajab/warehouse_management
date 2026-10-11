@@ -43,21 +43,16 @@ import {
     google_firebase,
     google_map,
     google_recaptcha,
-    order_configuration,
     payment_method,
     seller_verification_form,
-    shipping_configuration,
     smtp_settings,
     social_login,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
-import { index as citiesIndex } from '@/actions/App/Http/Controllers/CityController';
 import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
-import { index as countriesIndex } from '@/actions/App/Http/Controllers/CountryController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
-import { currency as currenciesIndex } from '@/actions/App/Http/Controllers/CurrencyController';
 import {
     archive as customersArchive,
     create as customersCreate,
@@ -77,7 +72,6 @@ import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Offe
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/PickupPointController';
 import {
     exportMethod as productBulkExport,
     index as productBulkImport,
@@ -103,12 +97,19 @@ import { index as representativePaymentsIndex } from '@/actions/App/Http/Control
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
-import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
+import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
+import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
+import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
+import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
 import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
-import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
     create as driversCreate,
     index as driversIndex,
@@ -131,7 +132,6 @@ import {
     header,
     pages,
 } from '@/actions/App/Http/Controllers/WebsiteController';
-import { index as zonesIndex } from '@/actions/App/Http/Controllers/ZoneController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -476,6 +476,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.orderConfiguration',
+        inertia: true,
         href: order_configuration(),
         icon: SlidersHorizontal,
         permission: 'order_configuration',
@@ -674,18 +675,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.currency',
+                inertia: true,
                 href: currenciesIndex(),
                 permission: 'currency_setup',
                 setting: 'currency_section',
             },
             {
                 labelKey: 'store.nav.vatTax',
+                inertia: true,
                 href: taxesIndex(),
                 permission: 'vat_&_tax_setup',
                 setting: 'VAT_TAX_section',
             },
             {
                 labelKey: 'store.nav.pickupPoints',
+                inertia: true,
                 href: pickupPointsIndex(),
                 permission: 'pickup_point_setup',
                 setting: 'Setup_pickup_point_section',
@@ -762,26 +766,31 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.shippingConfiguration',
+                        inertia: true,
                         href: shipping_configuration(),
                         permission: 'shipping_configuration',
                     },
                     {
                         labelKey: 'store.nav.shippingCountries',
+                        inertia: true,
                         href: countriesIndex(),
                         permission: 'shipping_country_setting',
                     },
                     {
                         labelKey: 'store.nav.shippingStates',
+                        inertia: true,
                         href: statesIndex(),
                         permission: 'manage_shipping_states',
                     },
                     {
                         labelKey: 'store.nav.shippingCities',
+                        inertia: true,
                         href: citiesIndex(),
                         permission: 'manage_shipping_cities',
                     },
                     {
                         labelKey: 'store.nav.shippingZones',
+                        inertia: true,
                         href: zonesIndex(),
                         permission: 'manage_zones',
                     },

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessSetting;
-use App\Models\Product;
 use Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,7 +29,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:features_activation', only: ['activation']),
             new Middleware('permission:smtp_settings', only: ['smtp_settings']),
             new Middleware('permission:payment_methods_configurations', only: ['payment_method', 'payment_method_update']),
-            new Middleware('permission:order_configuration', only: ['order_configuration']),
             new Middleware('permission:file_system_&_cache_configuration', only: ['file_system']),
             new Middleware('permission:social_media_logins', only: ['social_login']),
             new Middleware('permission:facebook_chat', only: ['facebook_chat', 'facebook_chat_update']),
@@ -39,9 +37,8 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha', 'google_recaptcha_update']),
             new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
             new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
-            new Middleware('permission:shipping_configuration', only: ['shipping_configuration', 'shipping_configuration_update']),
-            // Posted from several pages (general settings, order configuration, google map, currencies, website header/footer/appearance/home page).
-            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            // Remaining Blade callers: general settings, Google Map and website setup.
+            new Middleware('permission:general_settings|google_map_setting|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
     public function general_setting(Request $request)
@@ -393,6 +390,12 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function update(Request $request)
     {
+        $reserved = ['shipping_type', 'flat_rate_shipping_cost', 'shipping_cost_admin', 'minimum_order_amount_check', 'minimum_order_amount', 'default_specific_product', 'default_representative_check', 'default_representative_id', 'system_default_currency', 'symbol_format', 'decimal_separator', 'no_of_decimals'];
+        foreach ((array) $request->input('types', []) as $type) {
+            foreach (is_array($type) ? $type : [$type] as $key) {
+                abort_if(in_array($key, $reserved, true), 403);
+            }
+        }
 
         foreach ($request->types as $key => $type) {
             if($type == 'site_name'){
@@ -513,32 +516,4 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return back();
     }
 
-    public function shipping_configuration(Request $request){
-        return view('shop.backend.setup_configurations.shipping_configuration.index');
-    }
-
-    public function shipping_configuration_update(Request $request){
-        $business_settings = BusinessSetting::where('type', $request->type)->first();
-        $business_settings->value = $request[$request->type];
-        $business_settings->save();
-
-        Artisan::call('cache:clear');
-        flash(translate('Shipping Method updated successfully'))->success();
-        return back();
-    }
-
-    public function order_configuration(){
-        return view('shop.backend.setup_configurations.order_configuration.index');
-    }
-
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-
-        $results = Product::where('mat_id', 'like', '%' . $query . '%')
-            ->select('id', 'name', 'mat_id')
-            ->get();
-
-        return response()->json($results);
-    }
 }
