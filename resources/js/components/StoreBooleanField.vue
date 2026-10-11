@@ -2,23 +2,32 @@
 import FieldError from '@/components/FieldError.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-defineProps<{ id: string; label: string; value?: boolean; error?: string }>();
+defineProps<{
+    name: string;
+    label: string;
+    value?: boolean;
+    error?: string;
+    disabled?: boolean;
+}>();
 </script>
-
 <template>
     <div>
-        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="name" :class="fieldLabelClass">{{ label }}</label>
         <select
-            :id="id"
-            :name="id"
+            :id="name"
+            :name="name"
             required
-            :class="[plainFieldInputClass, 'cursor-pointer']"
+            :disabled="disabled"
+            :class="[
+                plainFieldInputClass,
+                'cursor-pointer disabled:cursor-not-allowed',
+            ]"
         >
-            <option value="1" :selected="value === true">
-                {{ t('store.reference.enabled') }}
+            <option value="1" :selected="value">
+                {{ t('store.settings.enabled') }}
             </option>
-            <option value="0" :selected="value !== true">
-                {{ t('store.reference.disabled') }}
+            <option value="0" :selected="!value">
+                {{ t('store.settings.disabled') }}
             </option>
         </select>
         <FieldError :message="error" />

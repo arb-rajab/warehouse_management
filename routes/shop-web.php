@@ -22,7 +22,7 @@ use App\Http\Controllers\DynamicPopupController;
 use App\Http\Controllers\FollowSellerController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\Store\LanguageController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OffersCatalogController;
@@ -177,6 +177,7 @@ Route::controller(HomeController::class)->group(function () {
 
 // Language Switch
 Route::post('/language', [LanguageController::class, 'changeLanguage'])->name('language.change');
+Route::get('translation-check/{check}', [LanguageController::class, 'getTranslation']);
 
 // Currency Switch
 Route::post('/currency', [CurrencyController::class, 'changeCurrency'])->name('currency.change');
@@ -347,7 +348,6 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
 });
 
 
-Route::get('translation-check/{check}', [LanguageController::class, 'get_translation']);
 
 
 Route::group(['middleware' => ['auth']], function() {

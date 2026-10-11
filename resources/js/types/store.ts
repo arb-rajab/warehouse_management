@@ -89,3 +89,22 @@ export interface OrderConfigurationProduct {
     name: string;
     mat_id: string;
 }
+
+/** The narrow database language shape used by administration. */
+export interface AdminLanguage {
+    id: number;
+    name: string;
+    code: string;
+    app_lang_code: string | null;
+    rtl: boolean;
+    status: boolean;
+    is_default: boolean;
+    is_english: boolean;
+}
+
+export interface StoreTranslation {
+    id: number;
+    key: string;
+    source: string;
+    value: string | null;
+}

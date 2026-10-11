@@ -34,19 +34,9 @@ import {
     index as brandsIndex,
 } from '@/actions/App/Http/Controllers/BrandController';
 import {
-    activation,
-    facebook_chat,
-    facebook_comment,
-    file_system,
     general_setting,
-    google_analytics,
-    google_firebase,
     google_map,
-    google_recaptcha,
-    payment_method,
     seller_verification_form,
-    smtp_settings,
-    social_login,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
@@ -65,7 +55,6 @@ import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/Di
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
-import { index as languagesIndex } from '@/actions/App/Http/Controllers/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
 import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
@@ -102,8 +91,21 @@ import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Ad
 import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
 import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
-import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
+import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import {
+    activation,
+    smtp,
+    socialLogin,
+    facebookChat,
+    facebookComments,
+    analytics,
+    recaptcha,
+    firebase,
+    payments,
+    filesystem,
+} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
@@ -664,12 +666,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.featuresActivation',
                 href: activation(),
+                inertia: true,
                 permission: 'features_activation',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.languages',
                 href: languagesIndex(),
+                inertia: true,
                 permission: 'language_setup',
                 setting: 'Languages_section',
             },
@@ -696,25 +700,29 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.smtpSettings',
-                href: smtp_settings(),
+                href: smtp(),
+                inertia: true,
                 permission: 'smtp_settings',
                 setting: 'SMTP_Section',
             },
             {
                 labelKey: 'store.nav.paymentMethods',
-                href: payment_method(),
+                href: payments(),
+                inertia: true,
                 permission: 'payment_methods_configurations',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.fileSystem',
-                href: file_system(),
+                href: filesystem(),
+                inertia: true,
                 permission: 'file_system_&_cache_configuration',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.socialLogins',
-                href: social_login(),
+                href: socialLogin(),
+                inertia: true,
                 permission: 'social_media_logins',
                 setting: 'Socail_Media_logins_section',
             },
@@ -724,12 +732,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.facebookChat',
-                        href: facebook_chat(),
+                        href: facebookChat(),
+                        inertia: true,
                         permission: 'facebook_chat',
                     },
                     {
                         labelKey: 'store.nav.facebookComment',
-                        href: facebook_comment(),
+                        href: facebookComments(),
+                        inertia: true,
                         permission: 'facebook_comment',
                     },
                 ],
@@ -740,12 +750,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.analyticsTools',
-                        href: google_analytics(),
+                        href: analytics(),
+                        inertia: true,
                         permission: 'analytics_tools_configuration',
                     },
                     {
                         labelKey: 'store.nav.googleRecaptcha',
-                        href: google_recaptcha(),
+                        href: recaptcha(),
+                        inertia: true,
                         permission: 'google_recaptcha_configuration',
                     },
                     {
@@ -755,7 +767,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.googleFirebase',
-                        href: google_firebase(),
+                        href: firebase(),
+                        inertia: true,
                         permission: 'google_firebase_setting',
                     },
                 ],

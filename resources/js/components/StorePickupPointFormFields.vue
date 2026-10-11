@@ -49,7 +49,7 @@ defineProps<{
             required
         />
         <StoreBooleanField
-            id="pick_up_status"
+            name="pick_up_status"
             :label="t('store.reference.status')"
             :value="pickupPoint?.pick_up_status"
             :error="errors.pick_up_status"

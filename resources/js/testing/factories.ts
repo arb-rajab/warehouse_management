@@ -12,6 +12,8 @@ import type {
     User,
 } from '@/types/admin';
 import type {
+    AdminLanguage,
+    StoreTranslation,
     PermissionGroup,
     StoreCountry,
     StoreState,
@@ -332,6 +334,33 @@ export function storeCurrency(
         code: 'EUR',
         exchange_rate: '1.23000',
         status: true,
+        ...overrides,
+    };
+}
+
+export function adminLanguage(
+    overrides: Partial<AdminLanguage> = {},
+): AdminLanguage {
+    return {
+        id: 3,
+        name: 'Arabic',
+        code: 'ar',
+        app_lang_code: 'ar',
+        rtl: true,
+        status: true,
+        is_default: false,
+        is_english: false,
+        ...overrides,
+    };
+}
+export function storeTranslation(
+    overrides: Partial<StoreTranslation> = {},
+): StoreTranslation {
+    return {
+        id: 7,
+        key: 'hello',
+        source: 'Hello',
+        value: 'مرحبا',
         ...overrides,
     };
 }

@@ -73,16 +73,3 @@ test('a customer is refused the .env settings route and nothing is written', fun
         expect(file_get_contents($path))->toBe($original);
     });
 });
-
-test('the activation toggles that lived in .env report a failure and write nothing', function (string $type) {
-    $original = scratchEnvContents();
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
-
-    withScratchEnvFile($original, function (string $path) use ($original, $type) {
-        $this->post(route('business_settings.update.activation'), ['type' => $type, 'value' => 1])
-            ->assertOk()
-            ->assertContent('0');
-
-        expect(file_get_contents($path))->toBe($original);
-    });
-})->with(['FORCE_HTTPS', 'FILESYSTEM_DRIVER']);

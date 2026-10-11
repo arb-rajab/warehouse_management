@@ -50,8 +50,11 @@ export default defineConfig({
         },
     ],
     webServer: {
+        // Reset only dedicated e2e files, including ancillary connections that
+        // migrate:fresh does not drop. --no-reload keeps these DB overrides in
+        // the PHP server child; serve otherwise discards them when .env exists.
         command:
-            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
+            'rm -f database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && touch database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --no-reload --host=127.0.0.1 --port=8010',
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,

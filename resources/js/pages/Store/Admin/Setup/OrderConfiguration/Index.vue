@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
                     {{ t('store.orderConfiguration.minimum') }}
                 </h2>
                 <StoreBooleanField
-                    id="minimum_order_amount_check"
+                    name="minimum_order_amount_check"
                     :label="t('store.orderConfiguration.minimumCheck')"
                     :value="settings.minimum_order_amount_check"
                     :error="errors.minimum_order_amount_check"
@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
                     {{ t('store.orderConfiguration.representative') }}
                 </h2>
                 <StoreBooleanField
-                    id="default_representative_check"
+                    name="default_representative_check"
                     :label="t('store.orderConfiguration.representativeCheck')"
                     :value="settings.default_representative_check"
                     :error="errors.default_representative_check"

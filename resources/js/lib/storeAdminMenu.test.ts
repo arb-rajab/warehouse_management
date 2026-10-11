@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import {
+    activation,
+    smtp,
+    socialLogin,
+    facebookChat,
+    facebookComments,
+    analytics,
+    recaptcha,
+    firebase,
+    payments,
+    filesystem,
+} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
@@ -56,19 +69,32 @@ describe('storeAdminMenu', () => {
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([
-            '/temp/admin/order-configuration',
-            '/temp/admin/currency',
-            '/temp/admin/tax',
-            '/temp/admin/pick_up_points',
-            '/temp/admin/shipping_configuration',
-            '/temp/admin/countries',
-            '/temp/admin/states',
-            '/temp/admin/cities',
-            '/temp/admin/zones',
-            staffIndex.url(),
-            rolesIndex.url(),
-        ]);
+        expect(inertiaUrls.sort()).toEqual(
+            [
+                '/temp/admin/order-configuration',
+                '/temp/admin/currency',
+                '/temp/admin/tax',
+                '/temp/admin/pick_up_points',
+                '/temp/admin/shipping_configuration',
+                '/temp/admin/countries',
+                '/temp/admin/states',
+                '/temp/admin/cities',
+                '/temp/admin/zones',
+                staffIndex.url(),
+                rolesIndex.url(),
+                languagesIndex.url(),
+                activation.url(),
+                smtp.url(),
+                socialLogin.url(),
+                facebookChat.url(),
+                facebookComments.url(),
+                analytics.url(),
+                recaptcha.url(),
+                firebase.url(),
+                payments.url(),
+                filesystem.url(),
+            ].sort(),
+        );
     });
 
     it('sends Home banners to the home page editor inside the store', () => {

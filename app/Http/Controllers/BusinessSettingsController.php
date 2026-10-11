@@ -26,157 +26,29 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:seller_commission_configuration', only: ['vendor_commission', 'vendor_commission_update']),
             new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form', 'seller_verification_form_update']),
             new Middleware('permission:general_settings', only: ['general_setting']),
-            new Middleware('permission:features_activation', only: ['activation']),
-            new Middleware('permission:smtp_settings', only: ['smtp_settings']),
-            new Middleware('permission:payment_methods_configurations', only: ['payment_method', 'payment_method_update']),
-            new Middleware('permission:file_system_&_cache_configuration', only: ['file_system']),
-            new Middleware('permission:social_media_logins', only: ['social_login']),
-            new Middleware('permission:facebook_chat', only: ['facebook_chat', 'facebook_chat_update']),
-            new Middleware('permission:facebook_comment', only: ['facebook_comment', 'facebook_comment_update']),
-            new Middleware('permission:analytics_tools_configuration', only: ['google_analytics', 'google_analytics_update', 'facebook_pixel_update']),
-            new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha', 'google_recaptcha_update']),
+            new Middleware('permission:features_activation', only: ['updateSellerCommissionActivation']),
             new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
-            new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
-            // Remaining Blade callers: general settings, Google Map and website setup.
             new Middleware('permission:general_settings|google_map_setting|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
+    public function updateSellerCommissionActivation(\App\Http\Requests\Store\Admin\UpdateSellerCommissionActivationRequest $request): Response
+    {
+        $setting = BusinessSetting::query()->where('type', $request->validated('type'))->whereNull('lang')->first() ?? new BusinessSetting;
+        $setting->type = $request->validated('type');
+        $setting->value = $request->boolean('value') ? '1' : '0';
+        $setting->save();
+        \Illuminate\Support\Facades\Cache::forget('business_settings');
+
+        return response('1');
+    }
+
     public function general_setting(Request $request)
     {
     	return view('shop.backend.setup_configurations.general_settings');
     }
 
-    public function activation(Request $request)
-    {
-    	return view('shop.backend.setup_configurations.activation');
-    }
-
-    public function social_login(Request $request)
-    {
-        return view('shop.backend.setup_configurations.social_login');
-    }
-
-    public function smtp_settings(Request $request)
-    {
-        return view('shop.backend.setup_configurations.smtp_settings');
-    }
-
-    public function google_analytics(Request $request)
-    {
-        return view('shop.backend.setup_configurations.google_configuration.google_analytics');
-    }
-
-    public function google_recaptcha(Request $request)
-    {
-        return view('shop.backend.setup_configurations.google_configuration.google_recaptcha');
-    }
-
     public function google_map(Request $request) {
         return view('shop.backend.setup_configurations.google_configuration.google_map');
-    }
-
-    public function google_firebase(Request $request) {
-        return view('shop.backend.setup_configurations.google_configuration.google_firebase');
-    }
-
-    public function facebook_chat(Request $request)
-    {
-        return view('shop.backend.setup_configurations.facebook_chat');
-    }
-
-    public function facebook_comment(Request $request)
-    {
-        return view('shop.backend.setup_configurations.facebook_configuration.facebook_comment');
-    }
-
-    public function payment_method(Request $request)
-    {
-        return view('shop.backend.setup_configurations.payment_method');
-    }
-
-    public function file_system(Request $request)
-    {
-        return view('shop.backend.setup_configurations.file_system');
-    }
-
-    /**
-     * Update the API key's for payment methods.
-     * @param  Request  $request
-     * @return Response
-     */
-    public function payment_method_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', $request->payment_method.'_sandbox')->first();
-        if($business_settings != null){
-            if ($request->has($request->payment_method.'_sandbox')) {
-                $business_settings->value = 1;
-                $business_settings->save();
-            }
-            else{
-                $business_settings->value = 0;
-                $business_settings->save();
-            }
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    /**
-     * Update the API key's for GOOGLE analytics.
-     * @param  Request  $request
-     * @return Response
-     */
-    public function google_analytics_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'google_analytics')->first();
-
-        if ($request->has('google_analytics')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    public function google_recaptcha_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-            $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'google_recaptcha')->first();
-
-        if ($request->has('google_recaptcha')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
     }
 
     public function google_map_update(Request $request)
@@ -202,111 +74,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return back();
     }
 
-    public function google_firebase_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-            $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'google_firebase')->first();
-
-        if ($request->has('google_firebase')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-
-    /**
-     * Update the API key's for GOOGLE analytics.
-     * @param  Request  $request
-     * @return Response
-     */
-    public function facebook_chat_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'facebook_chat')->first();
-
-        if ($request->has('facebook_chat')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    public function facebook_comment_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-            $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'facebook_comment')->first();
-        if(!$business_settings) {
-            $business_settings = new BusinessSetting;
-            $business_settings->type = 'facebook_comment';
-        }
-
-        $business_settings->value = 0;
-        if ($request->facebook_comment) {
-            $business_settings->value = 1;
-        }
-
-        $business_settings->save();
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    public function facebook_pixel_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-                $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'facebook_pixel')->first();
-
-        if ($request->has('facebook_pixel')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    /**
-     * Update the API key's for other methods.
-     * @param  Request  $request
-     * @return Response
-     */
     /**
      * The settings screens used to post `.env` keys here. The server's `.env` is
      * managed by the deploy, so nothing in the admin panel writes it any more.
@@ -390,12 +157,12 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function update(Request $request)
     {
-        $reserved = ['shipping_type', 'flat_rate_shipping_cost', 'shipping_cost_admin', 'minimum_order_amount_check', 'minimum_order_amount', 'default_specific_product', 'default_representative_check', 'default_representative_id', 'system_default_currency', 'symbol_format', 'decimal_separator', 'no_of_decimals'];
-        foreach ((array) $request->input('types', []) as $type) {
-            foreach (is_array($type) ? $type : [$type] as $key) {
-                abort_if(in_array($key, $reserved, true), 403);
-            }
-        }
+        $migratedKeys = array_merge(...array_column(\App\Http\Controllers\Store\Admin\SettingsController::PAGES, 'keys'));
+        $types = $request->input('types', []);
+        abort_unless(is_array($types), 422);
+        $postedKeys = [];
+        array_walk_recursive($types, function ($key) use (&$postedKeys) { $postedKeys[] = $key; });
+        abort_if(array_intersect($postedKeys, [...$migratedKeys, 'shipping_type', 'flat_rate_shipping_cost', 'shipping_cost_admin', 'minimum_order_amount_check', 'minimum_order_amount', 'default_specific_product', 'default_representative_check', 'default_representative_id', 'system_default_currency', 'symbol_format', 'decimal_separator', 'no_of_decimals', 'maintenance_mode', 'FORCE_HTTPS', 'FILESYSTEM_DRIVER']) !== [], 403);
 
         foreach ($request->types as $key => $type) {
             if($type == 'site_name'){
@@ -443,51 +210,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
         flash(translate("Settings updated successfully"))->success();
         return back();
-    }
-
-    public function updateActivationSettings(Request $request)
-    {
-        $env_changes = ['FORCE_HTTPS', 'FILESYSTEM_DRIVER'];
-        if (in_array($request->type, $env_changes)) {
-
-            return $this->updateActivationSettingsInEnv($request);
-        }
-
-        $business_settings = BusinessSetting::where('type', $request->type)->first();
-        if($business_settings!=null){
-            if ($request->type == 'maintenance_mode' && $request->value == '1') {
-                if(env('DEMO_MODE') != 'On'){
-                    Artisan::call('down');
-                }
-            }
-            elseif ($request->type == 'maintenance_mode' && $request->value == '0') {
-                if(env('DEMO_MODE') != 'On') {
-                    Artisan::call('up');
-                }
-            }
-            $business_settings->value = $request->value;
-            $business_settings->save();
-        }
-        else{
-            $business_settings = new BusinessSetting;
-            $business_settings->type = $request->type;
-            $business_settings->value = $request->value;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-        return '1';
-    }
-
-    /**
-     * `FORCE_HTTPS` and `FILESYSTEM_DRIVER` live in `.env`, which the panel no
-     * longer writes. '0' is what the toggle's script reads as a failure.
-     */
-    public function updateActivationSettingsInEnv($request)
-    {
-        $this->overWriteEnvFile($request->type, $request->value);
-
-        return '0';
     }
 
     public function vendor_commission(Request $request)
