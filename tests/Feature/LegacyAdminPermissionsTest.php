@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Offer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -197,7 +198,7 @@ test('the offer deal pages and the notification pages ask for the permissions th
         Permission::findOrCreate($name, 'store');
     }
 
-    $offer = \App\Models\Offer::forceCreate(['title' => 'Permission fixture']);
+    $offer = Offer::forceCreate(['title' => 'Permission fixture']);
     $staff = createStoreUser('staff');
     actingAsStoreUser($staff);
 

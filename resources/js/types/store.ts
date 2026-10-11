@@ -420,3 +420,11 @@ export interface StoreBlog extends StoreBlogSummary {
     meta_keywords: string;
     category_id: number;
 }
+
+export interface StoreDriver {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    country: string | null;
+}

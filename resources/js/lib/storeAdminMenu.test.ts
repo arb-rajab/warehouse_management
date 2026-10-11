@@ -1,3 +1,11 @@
+import {
+    index as driversIndex,
+    create as driversCreate,
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+import {
+    index as trucksIndex,
+    create as trucksCreate,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
@@ -148,6 +156,10 @@ describe('storeAdminMenu', () => {
                 flashDealsIndex.url(),
                 offerDealsIndex.url(),
                 subscribersIndex.url(),
+                driversIndex.url(),
+                driversCreate.url(),
+                trucksIndex.url(),
+                trucksCreate.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),

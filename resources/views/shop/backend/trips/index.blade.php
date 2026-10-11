@@ -25,13 +25,16 @@
                             class="btn btn-primary">{{ translate('Create Order') }}</a>
                     </div>
                 </div>
+                  @can('add_trip')
                   <div class="col-auto">
                     <div class="form-group mb-0">
                         <a href="{{ route('trips.create') }}"
                             class="btn btn-primary">{{ translate('Create Trip') }}</a>
                     </div>
                 </div>
+                @endcan
 
+                @can('delete_trip')
                 <div class="dropdown mb-2 mb-md-0">
                     <button class="btn border dropdown-toggle" type="button" data-toggle="dropdown">
                         {{ translate('Bulk Action') }}
@@ -41,6 +44,7 @@
                             onclick="bulk_delete()">{{ translate('Delete selection') }}</a>
                     </div>
                 </div>
+                @endcan
               
 
                 <div class="dropdown mb-2 mb-md-0 ml-1">
@@ -189,12 +193,14 @@
 
                                 <td>
                                     <span id="trip-status-{{ $trip->id }}">{{ translate($trip->status) }}</span>
+                                    @can('edit_trip')
                                     <a href="#" onclick="openUpdateModal(this)" data-trip-id="{{ $trip->id }}"
                                         data-old-status="{{ $trip->status }}"
                                         class="btn btn-soft-warning btn-icon btn-circle btn-sm"
                                         title="{{ translate('Update Status') }}">
                                         <i class="las la-edit"></i>
                                     </a>
+                                    @endcan
                                 </td>
 
                                 <td>
@@ -225,7 +231,11 @@
                                 </td>
 
                                 <td>
+                                    @can('edit_trip')
                                     <textarea type="text" class="form-control trip-notes" style="width: 7rem;" data-trip-id="{{ $trip->id }}">{{ $trip->notes }}</textarea>
+                                    @else
+                                    {{ $trip->notes }}
+                                    @endcan
                                 </td>
                                 <td>
                                     <div class="dropdown mb-2 mb-md-0 ">
@@ -236,13 +246,15 @@
 
                                         <div class="dropdown-menu dropdown-menu-right">
 
+                                            @can('edit_trip')
                                             <a href="{{ route('trips.edit', $trip->id) }}" class="dropdown-item"
                                                 data-href="{{ route('trips.edit', $trip->id) }}"
                                                 title="{{ translate('Edit') }}">
                                                 {{ translate('Edit') }}
                                             </a>
+                                            @endcan
 
-                                            @can('delete_customer')
+                                            @can('delete_trip')
                                                 <a href="#" class="dropdown-item confirm-delete"
                                                     data-method="post" data-href="{{ route('trips.destroy', $trip->id) }}"
                                                     title="{{ translate('Delete') }}">
@@ -265,7 +277,9 @@
 @endsection
 
 @section('modal')
+    @can('edit_trip')
     @include('shop.backend.trips.components.update-trip-status-modal')
+    @endcan
     @include('shop.modals.delete_modal')
 @endsection
 

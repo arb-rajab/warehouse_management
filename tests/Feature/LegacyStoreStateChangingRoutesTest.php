@@ -86,7 +86,6 @@ const STATE_CHANGING_STORE_ROUTES = [
     'subscriber.destroy',
     'tax.destroy',
     'trips.destroy',
-    'trucks.destroy',
     'uploaded-files.destroy',
     'zones.destroy',
 ];

@@ -47,4 +47,5 @@ return [
     'custom_script_editing_unavailable' => 'Custom script editing is unavailable.',
     'Manage Website Scripts' => 'Manage website scripts',
     'upload_refused' => 'This file type is not allowed.',
+    'store_trip_departure_unavailable' => 'The default departure checkpoint is unavailable.',
 ];

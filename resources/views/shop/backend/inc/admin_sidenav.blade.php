@@ -530,7 +530,7 @@
                 @endcanany
 
                 <!-- representatives -->
-                @canany(['view_all_customers', 'view_classified_products', 'view_classified_packages'])
+                @canany(['view_all_customers', 'view_classified_products', 'view_classified_packages', 'view_representative_visits'])
                     <li class="aiz-side-nav-item">
                         <a href="#" class="aiz-side-nav-link">
                             <i class="las la-user-friends aiz-side-nav-icon"></i>
@@ -563,12 +563,14 @@
                                 </a>
                             </li>
 
+                            @can('view_representative_visits')
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('admin.rep.visits.index') }}"
                                     class="aiz-side-nav-link {{ areActiveRoutes(['admin.rep.visits.index', 'admin.rep.visits.show']) }}">
                                     <span class="aiz-side-nav-text">{{ translate('Representatives Visits') }}</span>
                                 </a>
                             </li>
+                            @endcan
 
                         </ul>
                     </li>

@@ -1952,6 +1952,76 @@
             "invalidUrl": "Enter a safe web or relative URL.",
             "required": "Enter content.",
             "tooLong": "Content exceeds the permitted length."
+        },
+        "drivers": {
+            "index": {
+                "title": "Drivers",
+                "add": "Add driver",
+                "name": "Name",
+                "id": "ID",
+                "email": "Email",
+                "phone": "Phone",
+                "country": "Country",
+                "actions": "Actions",
+                "empty": "No drivers.",
+                "edit": "Edit",
+                "delete": "Delete",
+                "search": "Search name or email"
+            },
+            "create": {
+                "title": "Add driver",
+                "submit": "Create driver",
+                "submitting": "Creating…"
+            },
+            "edit": {
+                "title": "Edit {name}",
+                "submit": "Save driver",
+                "submitting": "Saving…"
+            },
+            "fields": {
+                "name": "Full name",
+                "email": "Email",
+                "phone": "Phone",
+                "country": "Country",
+                "countryPlaceholder": "Select a country",
+                "password": "Password",
+                "newPassword": "New password",
+                "confirmPassword": "Confirm password",
+                "passwordPlaceholder": "Leave blank to keep the password"
+            }
+        },
+        "trucks": {
+            "fields": {
+                "name": "Name",
+                "model": "Model",
+                "capacity": "Max pallets number",
+                "plate": "License plate",
+                "description": "Description",
+                "photos": "Photos",
+                "photosHint": "Choose existing images from the upload library.",
+                "photoSearch": "Image name",
+                "searchPhotos": "Search images",
+                "photosFailed": "Unable to load images. Try again.",
+                "morePhotos": "More images"
+            },
+            "index": {
+                "title": "All trucks",
+                "add": "Add truck",
+                "search": "Search name or license plate, then press Enter",
+                "id": "ID",
+                "actions": "Actions",
+                "empty": "No trucks found.",
+                "edit": "Edit",
+                "print": "Print QR"
+            },
+            "create": {
+                "title": "Create truck"
+            },
+            "edit": {
+                "title": "Edit {name}"
+            },
+            "submit": "Save",
+            "submitting": "Saving…"
         }
     },
     "store.attributes.index.title": "Product attributes",

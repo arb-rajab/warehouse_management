@@ -62,9 +62,9 @@ use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTick
 use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
-use App\Http\Controllers\Trip\DriverController;
+use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Trip\TripController;
-use App\Http\Controllers\Trip\TruckController;
+use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\VisitController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\Store\Admin\ZoneController;
@@ -273,25 +273,21 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
         Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
 
-        Route::controller(DriverController::class)->group(function() {
-            Route::get('/drivers/index', 'index')->name('drivers.index')->middleware('permission:view_all_drivers');
-            Route::get('/drivers/create', 'create')->name('drivers.create')->middleware('permission:add_driver');
-            Route::post('/drivers/store', 'store')->name('drivers.store')->middleware('permission:add_driver');
-            Route::get('/drivers/edit/{id}', 'edit')->name('drivers.edit')->middleware('permission:edit_driver');
-            Route::post('/drivers/update', 'update')->name('drivers.update')->middleware('permission:edit_driver');
-            Route::post('/drivers/delete/{id}', 'delete')->name('drivers.destroy')->middleware('permission:delete_driver');
-        });
+        Route::get('/drivers/index', [DriverController::class, 'index'])->name('drivers.index');
+        Route::get('/drivers/create', [DriverController::class, 'create'])->name('drivers.create');
+        Route::post('/drivers/store', [DriverController::class, 'store'])->name('drivers.store');
+        Route::get('/drivers/{driver}/edit', [DriverController::class, 'edit'])->name('drivers.edit');
+        Route::put('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+        Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
 
-        Route::controller(TruckController::class)->group(function() {
-            Route::get('/trucks/index', 'index')->name('trucks.index')->middleware('permission:view_all_trucks');
-            Route::get('/trucks/create', 'create')->name('trucks.create')->middleware('permission:add_truck');
-            Route::post('/trucks/store', 'store')->name('trucks.store')->middleware('permission:add_truck');
-            Route::get('/trucks/edit/{id}', 'edit')->name('trucks.edit')->middleware('permission:edit_truck');
-            Route::post('/trucks/update', 'update')->name('trucks.update')->middleware('permission:edit_truck');
-            Route::post('/trucks/delete/{id}', 'delete')->name('trucks.destroy')->middleware('permission:delete_truck');
-            Route::post('/trucks/bulk-trucks-delete', 'bulk_truck_delete')->name('trucks.bulk-truck-delete')->middleware('permission:delete_truck');
+        Route::get('/trucks/index', [TruckController::class, 'index'])->name('trucks.index');
+        Route::get('/trucks/create', [TruckController::class, 'create'])->name('trucks.create');
+        Route::get('/trucks/photos', [TruckController::class, 'photos'])->name('trucks.photos');
+        Route::post('/trucks/store', [TruckController::class, 'store'])->name('trucks.store');
+        Route::get('/trucks/{truck}/edit', [TruckController::class, 'edit'])->name('trucks.edit');
+        Route::put('/trucks/{truck}', [TruckController::class, 'update'])->name('trucks.update');
+        Route::get('/trucks/{truck}/qr', [TruckController::class, 'qr'])->name('trucks.qr');
 
-        });
     });
 
     // Newsletter
@@ -324,7 +320,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/google-map', 'google_map')->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
-        Route::post('/google-map', 'google_map_update')->name('google-map.update');
+        Route::post('/google-map', [\App\Http\Controllers\Store\Admin\GoogleMapController::class, 'update'])->name('google-map.update');
 
         Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
         Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');

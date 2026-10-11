@@ -47,4 +47,5 @@ return [
     'custom_script_editing_unavailable' => 'تعديل البرامج النصية المخصصة غير متاح.',
     'Manage Website Scripts' => 'إدارة سكريبتات الموقع',
     'upload_refused' => 'نوع هذا الملف غير مسموح به.',
+    'store_trip_departure_unavailable' => 'نقطة الانطلاق الافتراضية غير متاحة.',
 ];

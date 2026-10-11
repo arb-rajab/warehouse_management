@@ -16,7 +16,7 @@
         <form class="" id="sort_checkpoints" action="" method="GET">
             <div class="card-header row gutters-5">
                 <div class="col">
-                    <h5 class="mb-0 h6">{{ translate('checkpoints') . ' | ' . $checkpoints->first()->trip->driver?->name }}</h5>
+                    <h5 class="mb-0 h6">{{ translate('checkpoints') . ' | ' . $trip->driver?->name }}</h5>
                 </div>
                 <div class="d-flex justify-content-end mb-3">
                     <button onclick="printPage()" class="btn btn-primary">
@@ -110,21 +110,15 @@
                                     @endif
                                 </td>
 
-                                @php
-                                    if ($checkpoint->isOrder()){
-                                        $shipping_address = json_decode($checkpoint->getOrder()->shipping_address, true);
-                                    } else {
-                                        $shipping_address = formateAddressArray($checkpoint->getCustomer()->addresses?->first());
-                                    }
-                                @endphp
-
                                 <td>{{ $checkpoint->getCustomerForCheckpoint()?->shipping_address }}</td>
 
                                 <td>
                                     <span id="checkpoint-status-{{ $checkpoint->id }}">{{ translate($checkpoint->status) }}</span>
+                                    @can('edit_trip')
                                     <a href="#" onclick="openUpdateModal(this)" data-checkpoint-id="{{ $checkpoint->id }}" data-old-status="{{ $checkpoint->status }}" class="btn btn-soft-warning btn-icon btn-circle btn-sm" title="{{ translate('Update Status') }}">
                                         <i class="las la-edit"></i>
                                     </a>
+                                    @endcan
                                 </td>
 
                                 <td>
@@ -142,7 +136,11 @@
                                 </td>
 
                                 <td>
+                                    @can('edit_trip')
                                     <textarea type="text" class="form-control checkpoint-notes" style="width: 7rem;" data-checkpoint-id="{{ $checkpoint->id }}">{{ $checkpoint->notes }}</textarea>
+                                    @else
+                                    {{ $checkpoint->notes }}
+                                    @endcan
                                 </td>
 
                                 <td>{{ $checkpoint->getCustomerForCheckpoint()?->phone ?? '-' }}</td>
@@ -215,7 +213,9 @@
 @endsection
 
 @section('modal')
+    @can('edit_trip')
     @include('shop.backend.trips.components.update-checkpoint-status-modal')
+    @endcan
     @include('shop.modals.delete_modal')
 @endsection
 
@@ -276,22 +276,22 @@
 @endsection
 
 @section('script')
+    @include('shop.backend.trips.inc.map-popups')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
+        if (document.getElementById('map')) {
         // Marker data passed from PHP
         var markers = @json($long_lat_array);
 
         // Route coordinates passed from PHP
         var routeCoordinates = @json($coordinates);
 
-        // Initialize the map and set the initial view to the first marker's coordinates
-        if (markers.length > 0) {
-            var map = L.map('map').setView([markers[0].latitude, markers[0].longitude], 2);
-        } else {
-            var map = L.map('map').setView([0, 0], 2); // Default view if no markers
-        }
+        var firstPoint = markers.map(function(marker) {
+            return tripMapCoordinates(marker.latitude, marker.longitude);
+        }).find(function(point) { return point !== null; });
+        var map = L.map('map').setView(firstPoint || [0, 0], 2);
 
         // Add the base OSM tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -302,16 +302,17 @@
         var latLngBounds = new L.LatLngBounds();
 
         markers.forEach(function(marker) {
-            if (marker.latitude && marker.longitude) {
+            const point = tripMapCoordinates(marker.latitude, marker.longitude);
+            if (point !== null) {
                 // Define a custom marker icon (optional)
                 var customIcon = L.divIcon({ className: 'custom-marker blue' });
 
                 // Add the marker to the map
-                L.marker([marker.latitude, marker.longitude]).addTo(map)
-                    .bindPopup(marker.label);
+                L.marker(point).addTo(map)
+                    .bindPopup(tripMapPopup([[null, marker.label]]));
 
                 // Extend the map bounds to include the marker
-                latLngBounds.extend([marker.latitude, marker.longitude]);
+                latLngBounds.extend(point);
             }
         });
 
@@ -332,6 +333,8 @@
             map.setZoom(map.getZoom() - 1); // Decrease zoom level slightly for better fit
         } else {
             console.warn('No valid markers or routes to display on the map.');
+        }
+
         }
 
         $(document).on("change", ".checkpoint-notes", function() {

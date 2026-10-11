@@ -27,8 +27,8 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form', 'seller_verification_form_update']),
             new Middleware('permission:general_settings', only: ['general_setting']),
             new Middleware('permission:features_activation', only: ['updateSellerCommissionActivation']),
-            new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
-            new Middleware('permission:general_settings|google_map_setting|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            new Middleware('permission:google_map_setting', only: ['google_map']),
+            new Middleware('permission:general_settings|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
     public function updateSellerCommissionActivation(\App\Http\Requests\Store\Admin\UpdateSellerCommissionActivationRequest $request): Response
@@ -49,29 +49,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function google_map(Request $request) {
         return view('shop.backend.setup_configurations.google_configuration.google_map');
-    }
-
-    public function google_map_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-            $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'google_map')->first();
-
-        if ($request->has('google_map')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
     }
 
     /**
@@ -158,7 +135,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     public function update(Request $request)
     {
         $migratedKeys = array_merge(...array_column(\App\Http\Controllers\Store\Admin\SettingsController::PAGES, 'keys'));
-        $migratedKeys = array_merge($migratedKeys, \App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script']);
+        $migratedKeys = array_merge($migratedKeys, \App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY']);
         $types = $request->input('types', []);
         abort_unless(is_array($types), 422);
         $postedKeys = [];

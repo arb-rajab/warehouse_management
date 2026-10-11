@@ -113,7 +113,7 @@ import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Sto
 import {
     create as driversCreate,
     index as driversIndex,
-} from '@/actions/App/Http/Controllers/Trip/DriverController';
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import {
     all_orders as tripOrders,
     create as tripsCreate,
@@ -124,7 +124,7 @@ import {
 import {
     create as trucksCreate,
     index as trucksIndex,
-} from '@/actions/App/Http/Controllers/Trip/TruckController';
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import {
     appearance,
     footer,
@@ -415,14 +415,17 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.trucks',
+                inertia: true,
                 children: [
                     {
                         labelKey: 'store.nav.allTrucks',
+                        inertia: true,
                         href: trucksIndex(),
                         permission: 'view_all_trucks',
                     },
                     {
                         labelKey: 'store.nav.createTruck',
+                        inertia: true,
                         href: trucksCreate(),
                         permission: 'add_truck',
                     },
@@ -460,14 +463,17 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.drivers',
+                inertia: true,
                 children: [
                     {
                         labelKey: 'store.nav.allDrivers',
+                        inertia: true,
                         href: driversIndex(),
                         permission: 'view_all_drivers',
                     },
                     {
                         labelKey: 'store.nav.createDriver',
+                        inertia: true,
                         href: driversCreate(),
                         permission: 'add_driver',
                     },

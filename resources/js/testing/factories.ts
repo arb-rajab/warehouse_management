@@ -1,3 +1,4 @@
+import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 import type {
     StoreConversation,
     StoreMessage,
@@ -36,6 +37,7 @@ import type {
     StoreOffersCatalog,
     StoreReview,
     StoreTicketReply,
+    StoreDriver,
 } from '@/types/store';
 
 import type {
@@ -936,6 +938,40 @@ export function storeCampaignProduct(
         price: 100,
         discount: 10,
         discount_type: 'amount',
+        ...overrides,
+    };
+}
+
+export function storeDriver(overrides: Partial<StoreDriver> = {}): StoreDriver {
+    return {
+        id: 31,
+        name: 'Sam Driver',
+        email: 'sam@example.com',
+        phone: '0612345678',
+        country: 'Netherlands',
+        ...overrides,
+    };
+}
+
+export function storeTruck(overrides: Partial<StoreTruck> = {}): StoreTruck {
+    return {
+        id: 11,
+        name: 'Cargo truck',
+        model: 'Volvo',
+        max_pallets_number: '32',
+        description: 'Refrigerated',
+        license_plate: 'AB-123',
+        photos: [7],
+        open_trip_id: null,
+        ...overrides,
+    };
+}
+
+export function truckPhoto(overrides: Partial<TruckPhoto> = {}): TruckPhoto {
+    return {
+        id: 7,
+        name: 'Truck photo',
+        url: 'https://images.example/truck.jpg',
         ...overrides,
     };
 }

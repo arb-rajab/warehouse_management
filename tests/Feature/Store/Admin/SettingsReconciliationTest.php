@@ -16,7 +16,7 @@ test('the legacy settings writer rejects every migrated settings key atomically'
     ])->assertForbidden();
     $this->assertDatabaseHas('business_settings', ['type' => 'site_name', 'value' => 'Original']);
     expect(DB::table('business_settings')->count())->toBe(1);
-})->with(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script'])))->with([false, true]);
+})->with(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY'])))->with([false, true]);
 
 test('the retained seller activation form has an exact two-key contract', function () {
     actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
