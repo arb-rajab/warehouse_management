@@ -51,8 +51,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'RepresentativePackageController@update',
     'RepresentativePaymentAdminController@accept',
     'RepresentativePaymentAdminController@reject',
-    'VisitController@bulk_visit_delete',
-    'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
     'AizUploadController@bulk_uploaded_files_delete',
@@ -101,9 +99,6 @@ const ADMIN_READS_STILL_UNGATED = [
     'RepresentativePackageController@index',
     'RepresentativePaymentAdminController@export',
     'RepresentativePaymentAdminController@index',
-    'VisitController@index',
-    'VisitController@show',
-    'VisitController@show_all_visits_in_a_day',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',

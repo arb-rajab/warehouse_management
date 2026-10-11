@@ -19,6 +19,7 @@
                     <h5 class="mb-0 h6">{{ translate('Visits') }}</h5>
                 </div>
 
+                @can('delete_representative_visits')
                 <div class="dropdown mb-2 mb-md-0">
                     <button class="btn border dropdown-toggle" type="button" data-toggle="dropdown">
                         {{ translate('Bulk Action') }}
@@ -28,6 +29,7 @@
                             onclick="bulk_delete()">{{ translate('Delete selection') }}</a>
                     </div>
                 </div>
+                @endcan
                 <div class="col-lg-2">
                     <div class="form-group mb-0">
                         <input type="text" class="aiz-date-range form-control" value="{{ $date }}" name="date" placeholder="{{ translate('Filter by date') }}" data-format="DD-MM-Y" data-separator=" to " data-advanced-range="true" autocomplete="off">
@@ -36,7 +38,7 @@
                 <div class="col-md-3">
                     <div class="form-group mb-0">
                         <input type="text" class="form-control" id="search"
-                            name="search" @if(request()->has('search')) value="{{ request()->search }}" @endisset
+                            name="search" maxlength="255" @if(request()->has('search')) value="{{ request()->search }}" @endisset
                             placeholder="{{ translate('Type rep or customer name & Enter') }}">
                     </div>
                 </div>
@@ -116,11 +118,13 @@
                                                     {{ translate('View All Representative Visits on this Day') }}
                                                 </a>
 
+                                                @can('delete_representative_visits')
                                                 <a href="#" class="dropdown-item confirm-delete"
                                                     data-method="post" data-href="{{ route('admin.rep.visits.destroy', $visit->id) }}"
                                                     title="{{ translate('Delete') }}">
                                                     {{ translate('Delete') }}
                                                 </a>
+                                                @endcan
                                             </div>
                                         </div>
                                     </td>

@@ -73,6 +73,8 @@ describe('index', function () {
 
 describe('create', function () {
     test('the add-role form can be rendered with the permissions grouped by section', function () {
+        // These section fixtures are independent of migration-provisioned permissions.
+        Permission::query()->delete();
         $approve = Permission::create(['name' => 'approve_bulk_price_changes', 'section' => 'price_changes']);
         $unsorted = Permission::create(['name' => 'export_everything']);
         Permission::create(['name' => 'add_auction_product', 'section' => 'auction']);
@@ -158,6 +160,7 @@ describe('store', function () {
 
 describe('edit', function () {
     test('the edit-role form can be rendered in the default language', function () {
+        Permission::query()->delete();
         $permission = Permission::create(['name' => 'view_all_orders', 'section' => 'order']);
         $role = Role::findOrCreate('Clerk', 'store');
         $role->givePermissionTo($permission);

@@ -14,9 +14,11 @@ import type {
 import type {
     PermissionGroup,
     StaffMember,
+    StoreDriver,
     StoreRole,
     StoreSharedProps,
 } from '@/types/store';
+import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
@@ -253,6 +255,41 @@ export function permissionGroup(
             { id: 1, label: 'View All Staffs' },
             { id: 2, label: 'Add Staff' },
         ],
+        ...overrides,
+    };
+}
+
+/** DriverResource contact payload. */
+export function storeDriver(overrides: Partial<StoreDriver> = {}): StoreDriver {
+    return {
+        id: 31,
+        name: 'Sam Driver',
+        email: 'sam@example.com',
+        phone: '0612345678',
+        country: 'Netherlands',
+        ...overrides,
+    };
+}
+
+export function storeTruck(overrides: Partial<StoreTruck> = {}): StoreTruck {
+    return {
+        id: 11,
+        name: 'Cargo truck',
+        model: 'Volvo',
+        max_pallets_number: '32',
+        description: 'Refrigerated',
+        license_plate: 'AB-123',
+        photos: [7],
+        open_trip_id: null,
+        ...overrides,
+    };
+}
+
+export function truckPhoto(overrides: Partial<TruckPhoto> = {}): TruckPhoto {
+    return {
+        id: 7,
+        name: 'Truck photo',
+        url: 'https://images.example/truck.jpg',
         ...overrides,
     };
 }

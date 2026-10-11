@@ -104,15 +104,19 @@ import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewCont
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
-import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
-import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
-import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
-import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
-import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
     create as driversCreate,
     index as driversIndex,
-} from '@/actions/App/Http/Controllers/Trip/DriverController';
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import {
+    create as trucksCreate,
+    index as trucksIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
+import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
+import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
     all_orders as tripOrders,
     create as tripsCreate,
@@ -120,10 +124,6 @@ import {
     getAllTrips,
     getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
-import {
-    create as trucksCreate,
-    index as trucksIndex,
-} from '@/actions/App/Http/Controllers/Trip/TruckController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/VisitController';
 import {
     appearance,
@@ -335,6 +335,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             'view_all_customers',
             'view_classified_products',
             'view_classified_packages',
+            'view_representative_visits',
         ],
         children: [
             {
@@ -352,6 +353,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.representativeVisits',
+                permission: 'view_representative_visits',
                 href: visitsIndex(),
             },
         ],
@@ -403,11 +405,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.allTrucks',
+                        inertia: true,
                         href: trucksIndex(),
                         permission: 'view_all_trucks',
                     },
                     {
                         labelKey: 'store.nav.createTruck',
+                        inertia: true,
                         href: trucksCreate(),
                         permission: 'add_truck',
                     },
@@ -448,11 +452,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.allDrivers',
+                        inertia: true,
                         href: driversIndex(),
                         permission: 'view_all_drivers',
                     },
                     {
                         labelKey: 'store.nav.createDriver',
+                        inertia: true,
                         href: driversCreate(),
                         permission: 'add_driver',
                     },

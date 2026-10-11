@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
+import {
+    create as driversCreate,
+    index as driversIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import {
+    create as trucksCreate,
+    index as trucksIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -51,12 +59,19 @@ describe('storeAdminMenu', () => {
         }
     });
 
-    it('makes Inertia visits only to the converted staff module', () => {
+    it('makes Inertia visits only to converted modules', () => {
         const inertiaUrls = storeMenuLinks(storeAdminMenu)
             .filter((link) => link.inertia)
             .map((link) => link.href.url);
 
-        expect(inertiaUrls).toEqual([staffIndex.url(), rolesIndex.url()]);
+        expect(inertiaUrls).toEqual([
+            trucksIndex.url(),
+            trucksCreate.url(),
+            driversIndex.url(),
+            driversCreate.url(),
+            staffIndex.url(),
+            rolesIndex.url(),
+        ]);
     });
 
     it('sends Home banners to the home page editor inside the store', () => {
@@ -146,6 +161,29 @@ describe('visibleStoreMenu', () => {
         );
 
         expect(keys).toEqual(labelKeys(storeAdminMenu));
+    });
+
+    it('gates the representative visits link and keeps its Blade navigation', () => {
+        const visits = storeMenuLinks(storeAdminMenu).find(
+            (link) => link.labelKey === 'store.nav.representativeVisits',
+        );
+        expect(visits?.permission).toBe('view_representative_visits');
+        expect(visits?.inertia).not.toBe(true);
+        const props = storeSharedProps({
+            permissions: ['view_representative_visits'],
+            settings: { Customer_section: true },
+        });
+        expect(
+            labelKeys(visibleStoreMenu(storeAdminMenu, storeAccess(props))),
+        ).toContain('store.nav.representativeVisits');
+        expect(
+            labelKeys(
+                visibleStoreMenu(
+                    storeAdminMenu,
+                    storeAccess({ ...props, permissions: [] }),
+                ),
+            ),
+        ).not.toContain('store.nav.representativeVisits');
     });
 
     it('drops a group with no entry left to show', () => {

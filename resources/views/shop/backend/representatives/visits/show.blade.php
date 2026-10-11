@@ -131,44 +131,5 @@
         </div>
     </div>
 
-    <script>
-        // Initialize the map centered at (0, 0) with zoom level 2
-        var map = L.map('map');
-
-        // Add the base OSM tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy;'
-        }).addTo(map);
-
-        // Build markers data array
-        var markers = [
-            { lat: {{ $visit->map_lat }}, lng: {{ $visit->map_lng }}, label: "{{ $visit->customer->name }}"}
-        ];
-
-        // Create a LatLngBounds object to calculate bounds for the map
-        var latLngBounds = new L.LatLngBounds();
-        // Create an array for the polyline points
-        var polylinePoints = [];
-
-        // Add markers to the map. Also, store their lat/lng pairs for the polyline and bounds.
-        markers.forEach(function(marker) {
-            // Create a new marker and add it to the map
-            var addedMarker = L.marker([marker.lat, marker.lng]).addTo(map);
-            // Add popup with label to the marker
-            addedMarker.bindPopup(marker.label);
-            // Extend our LatLngBounds object with each marker
-            latLngBounds.extend([marker.lat, marker.lng]);
-            // Push the marker to our array of polyline points
-            polylinePoints.push([marker.lat, marker.lng]);
-        });
-
-        // Draw the polyline with our points
-        var polyline = L.polyline(polylinePoints).addTo(map);
-
-        // Fit the map to the LatLngBounds with some padding
-        map.fitBounds(latLngBounds);
-        // Decrease zoom level by 4 to show all markers
-        map.setZoom(map.getZoom() - 2);
-
-    </script>
+    @include('shop.backend.representatives.visits.map')
 @endsection

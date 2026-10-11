@@ -26,9 +26,13 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
+- **Audit baseline:** 201 Blade files, not the 214 that legacy §5 states:
   - 200 in module folders, plus `dashboard.blade.php`;
   - the per-module counts in §6 add up to 201.
+- **Current count (verified 2026-10-10):** 190 back-office Blade files:
+  201 minus six staff views, six driver/truck views and the unused trip style
+  partial, plus the two shared map partials added during coexistence. Module
+  counts below retain the original audit baseline; their rows record progress.
 - **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
 - **Order:** §4 lists the remaining batches.
 - **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
@@ -89,7 +93,9 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Staff, roles, drivers and trucks are
+Inertia. Trip screens, representative visits and Google Maps configuration
+still use full page loads.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -444,6 +450,104 @@ Batches are ordered by what they need first:
 
 Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 
+### Batch 10 verified progress (2026-10-10): partial
+
+Verified against the current routes, controllers, templates and installed
+dependencies; batch 10 is **not complete**.
+
+The owner's follow-up confirms these screen conversions remain **pending**:
+
+| Screens | Migration status | Current rendering | Prerequisite |
+| --- | --- | --- | --- |
+| Trip maps | Pending | Blade | Explicit Leaflet installation approval |
+| Representative visit details (`show`, `rep-show`) | Pending | Blade | Explicit Leaflet installation approval |
+| Google Maps configuration picker | Pending | Blade | Explicit Leaflet installation approval |
+
+Retain these screens in Blade until that approval is given. Independent
+logistics work may continue; backend fixes and retained-map safety checks do
+not count as completed screen conversions.
+
+- **Converted:** the three driver and three truck pages follow §3, with
+  `Store\Admin` controllers, validated requests, narrow Resources,
+  `StoreAdminLayout`, Wayfinder actions, English/Arabic strings and permission
+  gates. Their old controllers and six Blade pages are removed. Replacement
+  Pest/Vitest coverage permits removal of their redirect and static-analysis
+  exclusions and the superseded legacy test cases.
+- **Truck attachments:** the bounded image selector uses existing upload
+  records and preserves the CSV storage contract. Upload creation remains in
+  the existing Blade library; the shared uploader in §2.4 is still pending.
+  QR output uses the installed server-side QR/PDF tooling and stays a PDF.
+  Missing truck delete/bulk methods have no routes now.
+- **Permissions:** `add_store_logistics_permissions` idempotently adds the
+  store-guard trip, truck, driver, visit read/delete and Google Maps permission
+  rows. Existing sections, WMS rows and role grants are preserved. It does not
+  grant new abilities to existing staff; role assignment remains an owner
+  decision. Visit reads and deletes now have backend and Blade button/menu
+  gates; representative storefront note ownership is preserved.
+- **Trip prerequisites:** validated checkpoint payloads and references,
+  transactional truck assignment, trip/checkpoint transitions and retained
+  checkpoint coordinates, arrival state and attachments have focused
+  replacement coverage. The existing departure user id `9` remains the
+  contract; its absence is a translated validation error before mutation.
+  Choosing a different departure is an unresolved product decision.
+- **Maps during coexistence:** representative visit maps now reject invalid
+  coordinates while preserving zero, render names as text, draw each marker
+  once and handle empty/single/multiple points. Trip routing uses HTTPS OSRM
+  with bounded timeouts and retains markers on routing failure. Shared trip
+  map code validates ranges, uses text popups and gates delivered actions.
+  Empty trips and busy trucks without an open trip now render safely.
+- **Google Maps writes:** `GoogleMapController@update` accepts only the three
+  existing setting keys, validates coordinate pairs/ranges and invalidates
+  only the store settings cache. The generic settings endpoint refuses those
+  keys. The unused `MAP_API_KEY` input is removed; the GET picker stays Blade
+  and its public Google Maps rendering remains intact.
+- **Deleted after verification:** `trips/inc/styles` was included only inside
+  three `@section('style')` blocks; their layout has no corresponding yield.
+  Those includes and the unused partial are removed.
+- **Blocked:** Leaflet is absent from `package.json`, the lockfile and installed
+  modules, and explicit installation approval has not been recorded. No new
+  package was installed. The remaining 15 audited batch-10 Blade files
+  (12 trip files, two visit details and the Google Maps picker) await that
+  prerequisite; two new shared map partials support the retained screens.
+  The visit index belongs to batch 5 and also remains Blade. Retained legacy
+  controllers keep their exclusions until their screens and actions convert.
+
+Verified checks:
+
+- Production build and Wayfinder generation pass. Full ESLint, Prettier,
+  vue-tsc, Pint and PHPStan pass; the full Vitest run passes 1,647 tests in
+  123 files. Driver/truck page and component tests include permission gates,
+  native constraints, attachment selection and actual textarea value/retention.
+- Focused Pest covers authorized/refused trip and checkpoint transitions,
+  validation, retained attachments/coordinates, truck assignment and closed
+  history edits, representative identity/ownership, settings key isolation,
+  permission migration reruns, explicit redirects and legacy exclusion parity.
+  Role section tests now isolate their custom fixture rows from migrated
+  permission rows.
+- Both focused Playwright specs pass: driver native delete cancel/confirm and
+  Inertia → Blade visits navigation; truck create/edit, native QR PDF download
+  and server-validation text retention. The existing seeded dashboard has a
+  missing product-slug 500, so coexistence navigation targets visits instead.
+  Its login redirect is not evidence that the dashboard renders correctly.
+- Runtime adaptations: sourced the cloud PHP runtime; allowed local worker
+  sockets; used installed system Chromium, disabled unavailable FFmpeg video
+  recording and retained the server environment with a temporary `--no-reload`
+  config. Reset only E2E telemetry databases and removed the stale generated
+  Vite hot marker so browser tests used the production assets. The initial
+  required check stopped on sandboxed Pint sockets; the subsequent run reached
+  Pest. The existing receipt PDF failed under `short_open_tag=On`, then passed
+  with short tags disabled in the test runtime. Public PDF source is unchanged.
+- The final required `python3 .claude/scripts/pre_push_check.py` run passes
+  every step with the temporary PHP runtime configuration, including all
+  3,012 Pest tests (12,817 assertions). No completion checks were skipped.
+  The production build and the two focused browser specs were run separately.
+
+External map tiles/routing/geocoding and a converted Inertia map were not
+browser-verified. Backend HTTP fakes and tests executing the actual retained
+Blade map scripts cover valid/invalid/zero coordinates, safe labels, marker
+counts, bounds and routing failures. Do not infer dependency approval from this
+partial progress.
+
 ## 5. Views to delete rather than port
 
 | View | Why |
@@ -456,7 +560,7 @@ Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
 | sales/user-data-table | Its only caller is new-order |
 | sales/products-data-repeater | Nothing renders it |
 | sales/products-data-table | Nothing renders it. Its route is commented out and its method is missing |
-| trips/inc/styles | Only included inside `@section('style')`, which the layout never yields |
+| trips/inc/styles | Deleted 2026-10-10 after verifying its only includes were inside unyielded style sections |
 | layouts/blank | No view extends it (leftover installer CSS) |
 | system/server_status | Owner call. `/health` supersedes it; its PHP "7.3/7.4" check is always red and its `select version()` is MySQL-only |
 
@@ -485,6 +589,9 @@ Most severe first:
    (stored XSS).
    - Batches 2 and 9 replace it with one endpoint per page, each with that
      page's permission and its own keys.
+   - Batch 10 now isolates the three Google Maps keys behind
+     `google_map_setting` and a validated, dedicated update endpoint. Other
+     settings still need their batch-specific allowlists.
 3. **Unescaped HTML built from data:**
    - `order_configuration.product-search` concatenates `product.name` into
      HTML (batch 1);
@@ -575,7 +682,7 @@ URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC
 | s/c/general_settings | `general_setting.index` (:314) | BSC@general_setting (:49) | `general_settings` | form | aizuploader ×3, aiz-selectpicker | LegacyAdminPermissionsTest:228 (write endpoint) | port-trim: timezone is `.env` only |
 | s/c/google_configuration/google_analytics | `google_analytics.index` (:320) | BSC@google_analytics (:69) | `analytics_tools_configuration` | form | none | none | port-trim: pixel/tracking-id `.env` fields do nothing |
 | s/c/google_configuration/google_firebase | `google-firebase.index` (:323) | BSC@google_firebase (:82) | `google_firebase_setting` | form | none | none | port-trim: `FCM_SERVER_KEY` field does nothing |
-| s/c/google_configuration/google_map | `google-map.index` (:322) | BSC@google_map (:78) | `google_map_setting` | form + map picker | Google Maps JS (places) via `shop.frontend.partials.google_map` | none | port-trim: `MAP_API_KEY` field does nothing |
+| s/c/google_configuration/google_map | `google-map.index` · GET /temp/admin/google-map; `google-map.update` · POST same | BSC@google_map; Store\Admin\GoogleMapController@update | `google_map_setting` | Blade form + map picker | Existing public Google Maps partial preserved | Store/Admin/GoogleMapControllerTest.php | update isolated and validated; no-op key removed; Inertia picker pending explicit Leaflet installation approval |
 | s/c/google_configuration/google_recaptcha | `google_recaptcha.index` (:321) | BSC@google_recaptcha (:74) | `google_recaptcha_configuration` | form | none | none | port-trim: key field does nothing |
 | s/c/languages/app_translation | `app-translations.show` (:384) | LanguageController@showAppTranlsationView (:226) | `language_setup` | form (key grid) | inline copyTranslation() | none | port |
 | s/c/languages/create | `languages.create` (:374) | LanguageController@create (:51) | `language_setup` | form | aiz-selectpicker (flags) | none | port |
@@ -695,25 +802,25 @@ URIs are under `/temp/admin`. Own = `LegacyAdminOwnershipTest` (its renders only
 
 | View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| trips/index | `trips.index`, `trips.today-trips` (:245, :250) | Trip\TripController@getAllTrips/@getTodayTrips (:396) | `view_all_trips` | list | `$.ajax trips.bulk-trip-delete`, `trips.update-notes` (JSON), status modal, confirm-delete | Own:101 | port-trim: delete link gated by `delete_customer` (should be `delete_trip`); edit/status/notes buttons have no `edit_trip` check |
+| trips/index | `trips.index`, `trips.today-trips` | Trip\TripController@getAllTrips/@getTodayTrips | `view_all_trips`; writes use edit/delete_trip | Blade list | existing AJAX and status/confirm controls | Store/Admin/TripControllerTest.php; Own | correct write gates and eager loads; transitions covered; Inertia pending |
 | trips/orders | `trips.orders` (:246) | TripController@all_orders (:721) | `view_all_trips` | list | aiz-date-range; `bulk-order-delete`, `…bulk-change-delivery-status`, `…update_invoice_number`, `…update_order_status_to_delivered` (JSON); google.com/maps links | none | port-trim: dead manager-notes modal, "Change status" actually marks delivered, nested `<form>`, broken `onchange` typo |
-| trips/create | `trips.create` (:251) | TripController@create (:59) | `add_trip` | form | aiz-selectpicker; includes inc/scripts, inc/map-scripts, checkpoint partials | Own:102 | port (`checkpoints_array` is never validated by TripRequest) |
-| trips/edit | `trips.edit` · GET …/trips/edit/{id} (:256) | TripController@edit (:161) | `edit_trip` | form | as create | none | port (`Trip::find` 500s on a missing id; existing checkpoints never plotted) |
-| trips/create-from-map | `trips.create-from-map` (:252) | TripController@create_from_map (:71) | `add_trip` | form (map picker) | Leaflet 1.7.1 (unpkg) + OSM tiles; `fetch` → `trips.store-from-map`, `…update_order_status_to_delivered` | none | port-trim: drop inc/scripts (throws) and inc/styles; `$truck->lastTrip()->id` fatals when a busy truck has no open trip |
-| trips/checkpoints/index | `trips.show` · GET …/trips/show/{id} (:255) | TripController@show (:52) | `view_all_trips` | show + print | Leaflet + OSM, OSRM route computed server-side, `$.ajax checkpoints.update-notes`, `window.print()`, CMR link | none | port-trim: print CSS never output (`@section('style')` has no yield); crashes on a trip with no checkpoints |
+| trips/create | `trips.create` | TripController@create/@store | `add_trip` | Blade form | existing checkpoint/map partials | Store/Admin/TripControllerTest.php | payload/references validated; transactional assignment; departure id9 checked; Inertia blocked on Leaflet |
+| trips/edit | `trips.edit` · GET …/trips/edit/{id}; `trips.update` | TripController@edit/@update | `edit_trip` | Blade form | existing checkpoint/map partials | Store/Admin/TripControllerTest.php | missing id 404; existing checkpoint state and attachments preserved; Inertia pending |
+| trips/create-from-map | `trips.create-from-map`, `trips.store-from-map` | TripController@create_from_map/@store_from_map | `add_trip`; extending existing trip also edit_trip | Blade map picker | existing Leaflet/OSM | Store/Admin/TripControllerTest.php; storeTripBladeMap.test.ts | busy truck without open trip safe; scoped orders/coordinates/text popups; unused styles removed; legacy inc/scripts remains to retire with Inertia |
+| trips/checkpoints/index | `trips.show` · GET …/trips/show/{id} | TripController@show | `view_all_trips`; controls edit_trip | Blade detail + print | Leaflet/OSM, HTTPS OSRM; CMR stays server PDF | same | empty trip safe; markers survive routing failure; safe labels; ineffective print style section still awaits conversion |
 | trips/components/checkpoint-template | (via create/edit) | — | add/edit_trip | partial | hidden clone template; Eloquent queries inside the view | indirect | port as one Vue checkpoint-row component |
 | trips/components/checkpoint | (via create/edit) | — | add/edit_trip | partial | bootstrap-select + inline script per row | none | port, merged with checkpoint-template |
 | trips/components/update-trip-status-modal | (via index) | — | endpoint needs `edit_trip` | modal partial | `$.post trips.update-status` | indirect | port |
 | trips/components/update-checkpoint-status-modal | (via checkpoints/index) | — | endpoint needs `edit_trip` | modal partial | `$.post checkpoints.update-status` | none | port |
 | trips/inc/scripts | (via create/edit/create-from-map) | — | add/edit_trip | partial (JS) | SortableJS `@latest` (jsdelivr), `$.ajax trips.available-vehicles` (JSON) | indirect | port as a composable |
 | trips/inc/map-scripts | (via create/edit) | — | add/edit_trip | partial (JS) | Leaflet + OSM, `fetch trips.user-coordinates` (JSON; geocodes through OpenCage) | indirect | port |
-| trips/inc/styles | (included inside `@section('style')`) | — | — | partial (CSS) | none | — | **delete**: the layout has no `@yield('style')`, so it never reaches the page |
-| trips/drivers/index | `drivers.index` (:273) | Trip\DriverController@index (:30) | `view_all_drivers` | list | confirm-delete | Own:108; SCR | port-trim: delete link gated by `delete_customer` (should be `delete_driver`) |
-| trips/drivers/create | `drivers.create` (:274) | DriverController@create (:37) | `add_driver` | form | aiz-selectpicker | Own:109 | port-trim: dead recaptcha div |
-| trips/drivers/edit | `drivers.edit` · GET …/edit/{id} (:276) | DriverController@edit (:68) | `edit_driver` | form | aiz-selectpicker | Own:127,144,179 (non-200 paths only) | port-trim: dead recaptcha div |
-| trips/trucks/index | `trucks.index` (:282) | Trip\TruckController@index (:28) | `view_all_trucks` | list + print | qrcode 1.5.0 + jsPDF 2.4.0 (cdnjs): QR PDF built and printed client-side | Own:113 | port (no delete UI: `trucks.destroy`/`bulk-truck-delete` point at missing methods) |
-| trips/trucks/create | `trucks.create` (:283) | TruckController@create (:33) | `add_truck` | form | aizuploader (multiple) | none | port |
-| trips/trucks/edit | `trucks.edit` (:285) | TruckController@edit (:67) | `edit_truck` | form | aizuploader | none | port (`find()` 500s on a missing id) |
+| trips/inc/styles | Formerly included in three unyielded style sections | — | — | unused CSS | none | Static reference/yield inspection | deleted, unused confirmed |
+| trips/drivers/index | `drivers.index` · GET …/trips/drivers/index; `drivers.destroy` · DELETE …/trips/drivers/{driver} | Store\Admin\DriverController@index/@destroy → Store/Admin/Trips/Drivers/Index | `view_all_drivers`, `delete_driver` | Inertia list | native confirmDelete | Store/Admin/DriverControllerTest.php; page/component Vitest; e2e/store-drivers.spec.ts | converted; scoped deletion preserves trip history |
+| trips/drivers/create | `drivers.create`, `drivers.store` | Store\Admin\DriverController@create/@store → …/Drivers/Create | `add_driver` | Inertia form | StoreDriverFormFields | same; Create.test.ts | converted; no dead recaptcha |
+| trips/drivers/edit | `drivers.edit` · GET …/trips/drivers/{driver}/edit; `drivers.update` · PUT …/trips/drivers/{driver} | Store\Admin\DriverController@edit/@update → …/Drivers/Edit | `edit_driver` | Inertia form | StoreDriverFormFields | same; Edit.test.ts | converted; email/account type immutable |
+| trips/trucks/index | `trucks.index`; `trucks.qr` · GET …/trips/trucks/{truck}/qr | Store\Admin\TruckController@index/@qr → Store/Admin/Trips/Trucks/Index or server PDF | `view_all_trucks` | Inertia list + PDF | installed server QR/PDF tooling | Store/Admin/TruckControllerTest.php; page/component Vitest; e2e/store-trucks.spec.ts | converted; dead delete/bulk routes removed |
+| trips/trucks/create | `trucks.create`, `trucks.store`; `trucks.photos` | Store\Admin\TruckController@create/@store/@photos → …/Trucks/Create | `add_truck` (photo list add or edit) | Inertia form | bounded existing-upload image picker | same; Create.test.ts | converted; uploader creation stays Blade |
+| trips/trucks/edit | `trucks.edit` · GET …/trips/trucks/{truck}/edit; `trucks.update` · PUT …/trips/trucks/{truck} | Store\Admin\TruckController@edit/@update → …/Trucks/Edit | `edit_truck` | Inertia form | StoreTruckFormFields | same; Edit.test.ts | converted; missing id 404; existing attachments preserved |
 | representatives/index | `representatives.index` (:209) | CustomerController@repIndex (:441) | `view_all_customers` | list | `$.post rep.packages.modal` → `.html(data)`; bulk delete; ban/unban modals | SCR (ban buttons) | port-trim: orphan `<td>`s misalign columns |
 | representatives/create | `representatives.create` (:210) | CustomerController@repCreate (:446) | `view_all_customers` | form | double-submit guard | none | port |
 | representatives/packages/index | `rep.packages.index` (:232) | RepresentativePackageController@index (:15) | ungated | list (cards) | confirm-delete | SCR | port; needs a permission name (§7.1) |
@@ -721,15 +828,15 @@ URIs are under `/temp/admin`. Own = `LegacyAdminOwnershipTest` (its renders only
 | representatives/packages/edit | `rep.packages.edit` (:235) | RepresentativePackageController@edit (:47) | ungated | form | none | none | port; needs a permission name |
 | representatives/packages/modal | `rep.packages.modal` · POST (:238) | RepresentativePackageController@package_modal (:110) | ungated | modal partial (AJAX HTML) | posts to `rep.set-package` | none | port as a Vue dialog fed by props; retire the endpoint |
 | representatives/payments/index | `admin.rep.payments.index` · GET /temp/admin/**admin**/representatives/payments/index (:216) | RepresentativePaymentAdminController@index (:68) | ungated | list | accept/reject `data-method="post"`; export is a server PDF | SCR:27 | port-trim: dead ban/unban modals, package modal, checkbox column |
-| representatives/visits/index | `admin.rep.visits.index` (:224) | VisitController@index (:38) | ungated | list | aiz-date-range, `$.ajax bulk-visit-delete` | SCR:29 | port |
-| representatives/visits/show | `admin.rep.visits.show` (:225) | VisitController@show (:55) | ungated | show | Leaflet + OSM, one marker | none | port (null coordinates break the JS) |
-| representatives/visits/rep-show | `admin.rep.visits.rep-show` (:226) | VisitController@show_all_visits_in_a_day (:78) | ungated | show (map) | Leaflet markers + polyline | none | port-trim: each marker drawn twice |
+| representatives/visits/index | `admin.rep.visits.index` | VisitController@index | `view_representative_visits`; delete/bulk `delete_representative_visits` | Blade list | existing date range + AJAX | Store/Admin/VisitControllerTest.php; SCR | permissions, filters, bulk validation and explicit delete redirects fixed; batch-5 conversion pending |
+| representatives/visits/show | `admin.rep.visits.show` | VisitController@show | `view_representative_visits` | Blade detail | shared safe Leaflet map | Store/Admin/VisitControllerTest.php; storeVisitBladeMap.test.ts | null/invalid coords and unsafe labels fixed; Inertia blocked on Leaflet |
+| representatives/visits/rep-show | `admin.rep.visits.rep-show` | VisitController@show_all_visits_in_a_day | `view_representative_visits` | Blade day map | shared Leaflet markers + polyline | same | is_rep identity/date scoped; no duplicate markers; Inertia pending |
 
 Notes:
-1. Maps: no Google Maps JS here. Leaflet 1.7.1 from unpkg with OSM tiles (no key); routes from the public OSRM demo server over plain HTTP (TripController.php:514, :569); geocoding through OpenCage (`services.opencage.key`, UserService.php:80), and both GET create-from-map and `trips.user-coordinates` write coordinates back into addresses. A Vue map needs a Leaflet dependency (owner approval: CLAUDE.md "no new dependencies without approval").
+1. Maps: existing trip/visit Blade screens use Leaflet 1.7.1 from unpkg with OSM tiles (no key). Trip routing now uses HTTPS OSRM with timeouts and graceful failure. Geocoding remains OpenCage (`services.opencage.key`), and the existing GET coordinate side effects remain to be retired with conversion. A Vue map needs a Leaflet dependency; none is installed or explicitly approved in this patch.
 2. Only `rep.packages.modal` returns HTML; everything else answers JSON, `1`/`0` or a redirect.
-3. The trips, trucks, drivers and visits controllers are excluded from the "no `back()`" rule (`ControllerRedirectsTest.php:61-65`); converting them removes the exclusions.
-4. The representatives packages/payments/visits screens and the order-entry screens have no permission name yet (§7.1): their batch must add the names first.
+3. Converted drivers and trucks have replacement coverage and no longer have redirect/static-analysis exclusions. Retained TripController and VisitController remain excluded until conversion.
+4. Visit read/delete, trip/truck/driver and Google Maps permission rows are now added by a store-guard migration. Representative packages/payments and order-entry permission names remain their own batches' prerequisites (§7.1).
 
 ### sellers (13 views), customer (13), admin_profile (1)
 
@@ -823,7 +930,7 @@ Notes:
 | system/server_status | `system_server` · GET …/system/server-status (:643) | `Route::view` | `RaizerSuperAdmin` | show | none | none | delete: superseded by the WMS `/health` page (PHP "7.3/7.4" check always red, MySQL-only `select version()`, installer-era writable checks) — owner call |
 
 Notes:
-1. Every settings form posts `types[]` + values to `business_settings.update` (BusinessSettingsController@update, shop-admin.php:312), which upserts any key with no allowlist, runs `cache:clear` and returns `back()`. Its gate is an OR of eight permissions (:44), so a user with only `currency_setup` can write `header_script`/`footer_script`, which the storefront prints raw. Port as one endpoint per settings page, with that page's permission and an allowlist of keys.
+1. Except Google Maps, generic settings forms still post `types[]` + values to `business_settings.update`, which lacks a complete allowlist, runs `cache:clear` and returns `back()`. Its gate is now an OR of seven permissions; a user with only `currency_setup` can still write `header_script`/`footer_script`. Google Maps has its own validated endpoint and the generic endpoint refuses its three keys. Port the remaining settings as one endpoint per page with its own permission and allowlist.
 2. No view here makes its own AJAX call; every `data-toggle="aizuploader"` posts to `/temp/aiz-uploader` (AizUploadController@show_uploader), which returns the modal's HTML.
 3. Write gates disagree with the buttons: ticket reply checks `reply_to_support_tickets` in the view only; product-query reply checks `reply_to_product_queries` in the view only; conversation reply likewise. The port gates the endpoint, not the button.
 4. The sidenav "Home Banners" link hardcodes `config('app.url').'/admin/website/custom-pages/edit/home?page=home'`, which misses `/temp` and lands on the WMS `/admin`.

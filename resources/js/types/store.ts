@@ -45,3 +45,17 @@ export interface StoreLanguage {
     code: string;
     name: string;
 }
+
+/** DriverResource: contact fields for a store driver account. */
+export interface StoreDriver {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    country: string | null;
+}
+
+export interface StoreCountry {
+    id: number;
+    name: string;
+}

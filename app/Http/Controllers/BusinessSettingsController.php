@@ -37,11 +37,11 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:facebook_comment', only: ['facebook_comment', 'facebook_comment_update']),
             new Middleware('permission:analytics_tools_configuration', only: ['google_analytics', 'google_analytics_update', 'facebook_pixel_update']),
             new Middleware('permission:google_recaptcha_configuration', only: ['google_recaptcha', 'google_recaptcha_update']),
-            new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
+            new Middleware('permission:google_map_setting', only: ['google_map']),
             new Middleware('permission:google_firebase_setting', only: ['google_firebase', 'google_firebase_update']),
             new Middleware('permission:shipping_configuration', only: ['shipping_configuration', 'shipping_configuration_update']),
-            // Posted from several pages (general settings, order configuration, google map, currencies, website header/footer/appearance/home page).
-            new Middleware('permission:general_settings|order_configuration|google_map_setting|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            // Posted from several pages (general settings, order configuration, currencies, website header/footer/appearance/home page).
+            new Middleware('permission:general_settings|order_configuration|currency_setup|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
     public function general_setting(Request $request)
@@ -168,29 +168,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         $business_settings = BusinessSetting::where('type', 'google_recaptcha')->first();
 
         if ($request->has('google_recaptcha')) {
-            $business_settings->value = 1;
-            $business_settings->save();
-        }
-        else{
-            $business_settings->value = 0;
-            $business_settings->save();
-        }
-
-        Artisan::call('cache:clear');
-
-        flash(translate("Settings updated successfully"))->success();
-        return back();
-    }
-
-    public function google_map_update(Request $request)
-    {
-        foreach ($request->types as $key => $type) {
-            $this->overWriteEnvFile($type, $request[$type]);
-        }
-
-        $business_settings = BusinessSetting::where('type', 'google_map')->first();
-
-        if ($request->has('google_map')) {
             $business_settings->value = 1;
             $business_settings->save();
         }
@@ -393,6 +370,9 @@ class BusinessSettingsController extends Controller implements HasMiddleware
 
     public function update(Request $request)
     {
+        abort_if(collect($request->input('types', []))->flatten()->intersect([
+            'google_map', 'google_map_longtitude', 'google_map_latitude',
+        ])->isNotEmpty(), 403);
 
         foreach ($request->types as $key => $type) {
             if($type == 'site_name'){
