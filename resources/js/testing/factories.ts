@@ -1,4 +1,17 @@
 import type {
+    StoreConversation,
+    StoreMessage,
+    StoreProductQuery,
+    StoreSupportTicket,
+    StoreTicketDetail,
+    StoreWebsiteAppearanceSettings,
+    StoreWebsiteFooterSettings,
+    StoreWebsiteHeaderSettings,
+    StoreWebsiteHomeSettings,
+    StoreWebsitePage,
+    StoreWebsitePageForm,
+} from '@/types/store';
+import type {
     StoreAttribute,
     StoreAttributeValue,
     StoreColor,
@@ -54,6 +67,7 @@ import type {
     StoreBrandDiscount,
     StoreOffersCatalog,
     StoreReview,
+    StoreTicketReply,
 } from '@/types/store';
 
 /**
@@ -630,4 +644,213 @@ export function storeBrandDiscount(
     overrides: Partial<StoreBrandDiscount> = {},
 ): StoreBrandDiscount {
     return { id: 3, name: 'Dates brand', logo_url: null, ...overrides };
+}
+
+export function storeConversation(
+    overrides: Partial<StoreConversation> = {},
+): StoreConversation {
+    return {
+        id: 41,
+        title: 'Delivery question',
+        sender: { id: 8, name: 'Customer' },
+        receiver: { id: 9, name: 'Store owner' },
+        sender_viewed: true,
+        receiver_viewed: false,
+        created_at: '2026-10-09T10:00:00+00:00',
+        ...overrides,
+    };
+}
+
+export function storeMessage(
+    overrides: Partial<StoreMessage> = {},
+): StoreMessage {
+    return {
+        id: 42,
+        message: 'Can you help?',
+        user: { id: 8, name: 'Customer' },
+        created_at: '2026-10-09T10:00:00+00:00',
+        ...overrides,
+    };
+}
+
+export function storeProductQuery(
+    overrides: Partial<StoreProductQuery> = {},
+): StoreProductQuery {
+    return {
+        id: 43,
+        user: { id: 8, name: 'Customer' },
+        product: { id: 10, name: 'Rice' },
+        question: 'Is this available?',
+        reply: null,
+        created_at: '2026-10-09T10:00:00+00:00',
+        ...overrides,
+    };
+}
+
+/** UploadResource: a stored PNG, as the uploads library lists it. */
+export function storeWebsiteHeaderSettings(
+    overrides: Partial<StoreWebsiteHeaderSettings> = {},
+): StoreWebsiteHeaderSettings {
+    return {
+        header_logo: '',
+        show_language_switcher: true,
+        show_currency_switcher: false,
+        header_stikcy: true,
+        topbar_banner: '',
+        topbar_banner_medium: '',
+        topbar_banner_small: '',
+        topbar_banner_link: '/offers',
+        helpline_number: '12345',
+        header_menu_labels: ['Offers'],
+        header_menu_links: ['/offers'],
+        ...overrides,
+    };
+}
+
+export function storeWebsiteHomeSettings(
+    overrides: Partial<StoreWebsiteHomeSettings> = {},
+): StoreWebsiteHomeSettings {
+    return {
+        home_slider_images: [''],
+        home_slider_links: ['/offers'],
+        cupon_background_color: '#123456',
+        cupon_title: 'Offers',
+        cupon_subtitle: 'Save today',
+        home_categories: ['17'],
+        ...overrides,
+    };
+}
+export function storeWebsitePage(
+    overrides: Partial<StoreWebsitePage> = {},
+): StoreWebsitePage {
+    return {
+        id: 44,
+        title: 'About us',
+        slug: 'about',
+        type: 'custom_page',
+        public_url: 'http://localhost/temp/about',
+        ...overrides,
+    };
+}
+export function storeSupportTicket(
+    overrides: Partial<StoreSupportTicket> = {},
+): StoreSupportTicket {
+    return {
+        id: 45,
+        code: '123456',
+        subject: 'Help',
+        status: 'pending',
+        viewed: false,
+        user: { id: 8, name: 'Customer' },
+        created_at: '2026-10-09T10:00:00+00:00',
+        last_reply_at: '2026-10-09T12:00:00+00:00',
+        ...overrides,
+    };
+}
+
+export function storeWebsiteFooterSettings(
+    overrides: Partial<StoreWebsiteFooterSettings> = {},
+): StoreWebsiteFooterSettings {
+    return {
+        ...{
+            footer_logo: '',
+            about_us_description: '<p>About us</p>',
+            play_store_link: '',
+            app_store_link: '',
+            contact_address: '',
+            contact_phone: '',
+            contact_email: '',
+            widget_one: '',
+            widget_one_labels: ['Help'],
+            widget_one_links: ['/help'],
+            frontend_copyright_text: '',
+            show_social_links: false,
+            facebook_link: '',
+            twitter_link: '',
+            instagram_link: '',
+            youtube_link: '',
+            linkedin_link: '',
+            seller_app_link: 'https://example.com/seller',
+            payment_method_images: '',
+            registration_tutorial_button: false,
+            registration_tutorial_text: '',
+            registration_tutorial_link: '',
+        },
+        ...overrides,
+    };
+}
+
+export function storeWebsiteAppearanceSettings(
+    overrides: Partial<StoreWebsiteAppearanceSettings> = {},
+): StoreWebsiteAppearanceSettings {
+    return {
+        ...{
+            website_name: 'Store',
+            site_motto: '',
+            site_icon: '',
+            base_color: '#112233',
+            base_hov_color: '#123',
+            login_page_image: '',
+            register_page_image: '',
+            seller_login_page_bg: '',
+            flash_deal_banner: '',
+            flash_deal_banner_small: '',
+            meta_title: '',
+            meta_description: '',
+            meta_keywords: '',
+            meta_image: '',
+            cookies_agreement_text: '',
+            show_cookies_agreement: false,
+            show_website_popup: false,
+            website_popup_content: '',
+            show_subscribe_form: false,
+        },
+        ...overrides,
+    };
+}
+
+export function storeWebsitePageForm(
+    overrides: Partial<StoreWebsitePageForm> = {},
+): StoreWebsitePageForm {
+    return {
+        title: 'About',
+        slug: 'about',
+        content: '<p>About us</p>',
+        meta_title: 'Meta',
+        meta_description: 'Description',
+        keywords: 'store',
+        meta_image: '',
+        ...overrides,
+    };
+}
+export function storeTicketDetail(
+    overrides: Partial<StoreTicketDetail> = {},
+): StoreTicketDetail {
+    return {
+        id: 1,
+        code: 123456,
+        subject: 'Help',
+        status: 'pending',
+        author: 'Customer',
+        created_at: '2026-10-09T10:00:00Z',
+        details_html: '<p>Safe customer detail</p>',
+        attachments: [
+            { id: 7, name: 'ticket.png', url: '/uploads/all/ticket.png' },
+        ],
+        ...overrides,
+    };
+}
+export function storeTicketReply(
+    overrides: Partial<StoreTicketReply> = {},
+): StoreTicketReply {
+    return {
+        id: 1,
+        author: 'Staff',
+        created_at: '2026-10-09T11:00:00Z',
+        reply_html: '<b>Safe reply</b>',
+        attachments: [
+            { id: 8, name: 'reply.png', url: '/uploads/all/reply.png' },
+        ],
+        ...overrides,
+    };
 }

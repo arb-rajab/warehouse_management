@@ -44,6 +44,9 @@ const ADMIN_WRITES_STILL_UNGATED = [
 
     // Self-service: the signed-in user's own profile and uploads.
     'ProfileController@update',
+    'UploadController@bulkDestroy',
+    'UploadController@destroy',
+    'UploadController@store',
 
     // Read-only AJAX helpers the product forms post to.
     'ProductController@fetch',
@@ -79,6 +82,10 @@ const ADMIN_READS_STILL_UNGATED = [
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
     'ProfileController@index',
+    'UploadController@browse',
+    'UploadController@create',
+    'UploadController@index',
+    'UploadController@previews',
 
     // Read-only AJAX helpers the product forms use.
     'ProductController@getDetails',

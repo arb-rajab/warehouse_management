@@ -43,4 +43,7 @@ return [
     'store_offers_catalog_exists' => 'Only one catalogue can be uploaded. Delete the existing catalogue first.',
     'store_brand_discount_admin_required' => 'An administrator account is required before setting brand discounts.',
     'store_product_import_admin_required' => 'An administrator account is required before importing products.',
+    'upload_refused' => 'This file type is not allowed.',
+    'custom_script_editing_unavailable' => 'Custom script editing is unavailable.',
+    'Manage Website Scripts' => 'Manage website scripts',
 ];

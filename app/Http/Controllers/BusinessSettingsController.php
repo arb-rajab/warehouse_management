@@ -28,7 +28,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:general_settings', only: ['general_setting']),
             new Middleware('permission:features_activation', only: ['updateSellerCommissionActivation']),
             new Middleware('permission:google_map_setting', only: ['google_map', 'google_map_update']),
-            new Middleware('permission:general_settings|google_map_setting|header_setup|footer_setup|website_appearance|edit_website_page', only: ['update']),
+            new Middleware('permission:general_settings|google_map_setting|footer_setup|website_appearance|edit_website_page', only: ['update']),
         ];
     }
     public function updateSellerCommissionActivation(\App\Http\Requests\Store\Admin\UpdateSellerCommissionActivationRequest $request): Response
@@ -158,6 +158,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     public function update(Request $request)
     {
         $migratedKeys = array_merge(...array_column(\App\Http\Controllers\Store\Admin\SettingsController::PAGES, 'keys'));
+        $migratedKeys = array_merge($migratedKeys, \App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script']);
         $types = $request->input('types', []);
         abort_unless(is_array($types), 422);
         $postedKeys = [];
@@ -218,6 +219,8 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     }
 
     public function vendor_commission_update(Request $request){
+        $types = $request->input('types', []);
+        abort_unless(is_array($types) && $types !== [] && count(array_filter($types, fn ($type) => is_string($type) && in_array($type, ['vendor_commission', 'minimum_seller_amount_withdraw'], true))) === count($types), 403);
         foreach ($request->types as $key => $type) {
             $business_settings = BusinessSetting::where('type', $type)->first();
             if($business_settings!=null){

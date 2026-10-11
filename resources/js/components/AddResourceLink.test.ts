@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
@@ -23,4 +24,15 @@ describe('AddResourceLink', () => {
 
         expect(wrapper.findComponent(Plus).exists()).toBe(true);
     });
+});
+
+it('uses a full page load for a remaining Blade action', () => {
+    const action = rowsCreate();
+    const wrapper = mount(AddResourceLink, {
+        props: { href: rowsCreate(), inertia: false, label: 'Add row' },
+        slots: { default: 'Add row' },
+    });
+    expect(wrapper.findComponent(Link).exists()).toBe(false);
+    expect(wrapper.get('a').attributes('href')).toBe(action.url);
+    expect(wrapper.text()).toContain('Add row');
 });

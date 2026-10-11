@@ -1,3 +1,5 @@
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import {
     exportMethod as productBulkExport,
@@ -41,7 +43,7 @@ import {
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
-import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
 import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
@@ -51,7 +53,6 @@ import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDe
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
 import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
-import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import {
     admin_products,
@@ -59,7 +60,7 @@ import {
     create as productsCreate,
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
-import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
@@ -108,7 +109,7 @@ import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
-import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import {
     create as driversCreate,
     index as driversIndex,
@@ -127,7 +128,6 @@ import {
 import {
     appearance,
     footer,
-    header,
     pages,
 } from '@/actions/App/Http/Controllers/WebsiteController';
 import type { StoreAccess } from '@/lib/storeAccess';
@@ -484,10 +484,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.homeBanners',
-        href: customPageEdit['/temp/admin/website/custom-pages/edit/{id}'](
-            { id: 'home' },
-            { query: { page: 'home' } },
-        ),
+        inertia: true,
+        href: homeEdit(),
         icon: Images,
         permission: 'edit_website_page',
     },
@@ -629,18 +627,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.tickets',
+                inertia: true,
                 href: supportTicketsIndex(),
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
+                inertia: true,
                 href: conversationsIndex(),
                 permission: 'view_all_product_conversations',
                 setting: 'conversation_system',
             },
             {
                 labelKey: 'store.nav.productQueries',
-                href: productQueriesIndex['/temp/admin/product-queries'](),
+                inertia: true,
+                href: productQueriesIndex(),
                 permission: 'view_all_product_queries',
                 setting: 'product_query_activation',
             },
@@ -653,6 +654,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.header',
+                inertia: true,
                 href: header(),
                 permission: 'header_setup',
                 setting: 'website_setup_header',

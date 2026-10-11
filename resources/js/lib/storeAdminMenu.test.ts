@@ -1,3 +1,8 @@
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import {
     index as customersIndex,
     archive as customersArchive,
@@ -7,7 +12,6 @@ import { index as representativePackagesIndex } from '@/actions/App/Http/Control
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import { describe, expect, it } from 'vitest';
-import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import {
@@ -127,6 +131,11 @@ describe('storeAdminMenu', () => {
                 colorsIndex.url(),
                 reviewsIndex.url(),
                 offersIndex.url(),
+                header.url(),
+                homeEdit.url(),
+                conversationsIndex.url(),
+                productQueriesIndex.url(),
+                supportTicketsIndex.url(),
                 staffIndex.url(),
                 rolesIndex.url(),
                 languagesIndex.url(),
@@ -149,12 +158,7 @@ describe('storeAdminMenu', () => {
             (link) => link.labelKey === 'store.nav.homeBanners',
         );
 
-        expect(homeBanners?.href.url).toBe(
-            customPageEdit['/temp/admin/website/custom-pages/edit/{id}'].url(
-                { id: 'home' },
-                { query: { page: 'home' } },
-            ),
-        );
+        expect(homeBanners?.href.url).toBe(homeEdit.url());
     });
 });
 

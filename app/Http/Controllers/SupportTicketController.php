@@ -40,18 +40,6 @@ class SupportTicketController extends Controller implements HasMiddleware
         return view('shop.frontend.user.support_ticket.index', compact('tickets'));
     }
 
-    public function admin_index(Request $request)
-    {
-        $sort_search =null;
-        $tickets = Ticket::orderBy('created_at', 'desc');
-        if ($request->has('search')){
-            $sort_search = $request->search;
-            $tickets = $tickets->where('code', 'like', '%'.$sort_search.'%');
-        }
-        $tickets = $tickets->paginate(15);
-        return view('shop.backend.support.support_tickets.index', compact('tickets', 'sort_search'));
-    }
-
     /**
      * Show the form for creating a new resource.
      *

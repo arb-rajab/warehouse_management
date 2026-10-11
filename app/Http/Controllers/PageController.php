@@ -101,6 +101,9 @@ class PageController extends Controller implements HasMiddleware
      */
    public function edit(Request $request, $id)
    {
+        if ($request->page === 'home') {
+            return redirect()->route('website.home.edit');
+        }
         $lang = $request->lang;
         $page_name = $request->page;
         $page = Page::where('slug', $id)->first();

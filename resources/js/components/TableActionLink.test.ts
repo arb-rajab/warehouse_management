@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
@@ -47,4 +48,15 @@ describe('TableActionLink', () => {
 
         expect(wrapper.get('button').text()).toBe('');
     });
+});
+
+it('uses a full page load for a remaining Blade action', () => {
+    const action = rowShow({ row: 'A' });
+    const wrapper = mount(TableActionLink, {
+        props: { href: rowShow({ row: 'A' }), inertia: false },
+        slots: { default: 'View' },
+    });
+    expect(wrapper.findComponent(Link).exists()).toBe(false);
+    expect(wrapper.get('a').attributes('href')).toBe(action.url);
+    expect(wrapper.text()).toContain('View');
 });

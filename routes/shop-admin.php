@@ -1,4 +1,7 @@
 <?php
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\Store\Admin\ProductQueryController;
+use App\Http\Controllers\Store\Admin\ConversationController;
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Store\Admin\CustomerNotificationController;
@@ -15,7 +18,6 @@ use App\Http\Controllers\CarrierController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\Store\Admin\CountryController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
@@ -37,11 +39,9 @@ use App\Http\Controllers\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
 use App\Http\Controllers\Store\Admin\ProductSearchController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\ProfileController;
 use App\Http\Controllers\Store\Admin\UploadController;
@@ -55,6 +55,9 @@ use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
 use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
+use App\Http\Controllers\Store\Admin\WebsiteHomeController;
+use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
@@ -390,11 +393,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/languages/{language}', [LanguageController::class, 'destroy'])->name('languages.destroy');
     Route::get('/languages/{language}', [LanguageController::class, 'show'])->name('languages.show');
 
-    // website setting
+    Route::post('/website/scripts/compatibility', [\App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
+
+    // Website coexistence: rich-text forms remain Blade.
+    Route::get('/website/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
+    Route::put('/website/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');
+    Route::get('/website/custom-pages/edit/home', [WebsiteHomeController::class, 'edit'])->name('website.home.edit');
+    Route::put('/website/home', [WebsiteHomeController::class, 'update'])->name('website.home.update');
     Route::group(['prefix' => 'website'], function () {
         Route::controller(WebsiteController::class)->group(function () {
             Route::get('/footer', 'footer')->name('website.footer');
-            Route::get('/header', 'header')->name('website.header');
+
             Route::get('/appearance', 'appearance')->name('website.appearance');
             Route::get('/pages', 'pages')->name('website.pages');
         });
@@ -559,11 +568,16 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/reviews/{review}/published', [ReviewController::class, 'updatePublished'])->name('reviews.published');
 
     //Support_Ticket
-    Route::controller(SupportTicketController::class)->group(function () {
-        Route::get('support_ticket/', 'admin_index')->name('support_ticket.admin_index');
-        Route::get('support_ticket/{id}/show', 'admin_show')->name('support_ticket.admin_show');
-        Route::post('support_ticket/reply', 'admin_store')->name('support_ticket.admin_store');
+    Route::get('support_ticket/', [AdminSupportTicketController::class, 'index'])->name('support_ticket.admin_index');
+    // Preserve encrypted identifiers in existing email links while binding the record.
+    Route::bind('supportTicket', function (string $value) {
+        try { $id = ctype_digit($value) ? $value : decrypt($value); }
+        catch (\Illuminate\Contracts\Encryption\DecryptException) { abort(404); }
+        abort_unless((is_int($id) && $id > 0) || (is_string($id) && ctype_digit($id)), 404);
+        return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
+    Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
+    Route::post('support_ticket/reply', [SupportTicketController::class, 'admin_store'])->name('support_ticket.admin_store');
 
     //Pickup_Points
     Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');
@@ -573,18 +587,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::put('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'update'])->name('pick_up_points.update');
     Route::delete('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'destroy'])->name('pick_up_points.destroy');
 
-    //conversation of seller customer
-    Route::controller(ConversationController::class)->group(function () {
-        Route::get('conversations', 'admin_index')->name('conversations.admin_index');
-        Route::get('conversations/{id}/show', 'admin_show')->name('conversations.admin_show');
-    });
+    // Back-office support; storefront conversation/message routes remain Blade.
+    Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.admin_index');
+    Route::get('conversations/{conversation}/show', [ConversationController::class, 'show'])->name('conversations.admin_show');
+    Route::post('conversations/{conversation}/reply', [ConversationController::class, 'reply'])->name('conversations.admin_reply');
+    Route::delete('conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.admin_destroy');
 
-    // product Queries show on Admin panel
-    Route::controller(ProductQueryController::class)->group(function () {
-        Route::get('/product-queries', 'index')->name('product_query.index');
-        Route::get('/product-queries/{id}', 'show')->name('product_query.show');
-        Route::put('/product-queries/{id}', 'reply')->name('product_query.reply');
-    });
+    Route::get('product-queries', [ProductQueryController::class, 'index'])->name('product_query.index');
+    Route::get('product-queries/{productQuery}', [ProductQueryController::class, 'show'])->name('product_query.show');
+    Route::put('product-queries/{productQuery}', [ProductQueryController::class, 'reply'])->name('product_query.reply');
 
     // Product attributes, values and colors
     Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
