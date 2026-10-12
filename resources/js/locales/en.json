@@ -267,6 +267,8 @@
         "empty": "No verification rounds yet.",
         "show": {
             "title": "Verification round #{id}",
+            "finish": "Finish round",
+            "finishing": "Finishing…",
             "backToList": "Back to rounds",
             "startedAt": "Started",
             "completedAt": "Completed",
@@ -709,6 +711,10 @@
             "reports": {
                 "heading": "Correct and incorrect reports",
                 "body": "Open a round to see every report in it. Each one is marked correct when what the worker found matches the system, or incorrect when it doesn't — for example an empty cell that's actually holding a pallet, or the wrong product in a slot. Use this list to spot and fix real-world discrepancies."
+            },
+            "finishing": {
+                "heading": "Finishing a round",
+                "body": "Open an in-progress round and use Finish round when the check should end. This releases its rows for pallet actions and new verification rounds. The worker can no longer add reports to it. Existing reports stay available, and incorrect reports can be accepted separately. You can finish a round even if some cells have not been checked. A finished round cannot be reopened."
             },
             "accepting": {
                 "heading": "Accepting what was reported",

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import { ArrowLeft, Download, SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
+    complete,
     exportReports,
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
@@ -20,9 +22,11 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
@@ -159,6 +163,20 @@ const actionError = usePageError('action');
             :title="t('cellVerificationRound.show.title', { id: round.id })"
         >
             <div class="flex items-center gap-2">
+                <Form
+                    v-if="!round.completed_at"
+                    :action="complete(round, { mergeQuery: {} })"
+                    :options="{ preserveScroll: true }"
+                    #default="{ processing }"
+                >
+                    <SubmitButton
+                        :label="t('cellVerificationRound.show.finish')"
+                        :processing-label="
+                            t('cellVerificationRound.show.finishing')
+                        "
+                        :processing="processing"
+                    />
+                </Form>
                 <a
                     :href="exportReports.url(round, { query: filterQuery() })"
                     :class="filterClearButtonClass"
@@ -177,6 +195,7 @@ const actionError = usePageError('action');
                         {{ activeFilterCount }}
                     </span>
                 </button>
+                <HelpLink :href="showHelp('cell-verification-rounds')" />
             </div>
         </PageHeader>
 
