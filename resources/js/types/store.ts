@@ -520,3 +520,36 @@ export interface StoreCustomerPackage {
     logo: string | null;
     logo_url: string;
 }
+
+export interface StoreCategory {
+    id: number;
+    name: string;
+    parent: StoreReferenceOption | null;
+    order_level: number;
+    level: number;
+    banner_url: string | null;
+    icon_url: string | null;
+    cover_image_url: string | null;
+    featured: boolean;
+    commision_rate: string;
+}
+export interface StoreCategoryForm {
+    id: number;
+    name: string;
+    parent_id: number;
+    order_level: number;
+    digital: boolean;
+    banner: string | null;
+    icon: string | null;
+    cover_image: string | null;
+    commision_rate: string;
+    slug: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    filtering_attributes: number[];
+}
+export interface StoreCategoryOptions {
+    parents: StoreReferenceOption[];
+    attributes: StoreReferenceOption[];
+    commissionEnabled: boolean;
+}

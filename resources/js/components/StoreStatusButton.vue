@@ -27,6 +27,7 @@ defineProps<{
             :options="{ preserveScroll: true }"
             #default="{ processing, errors }"
         >
+            <slot />
             <input type="hidden" name="status" :value="active ? 0 : 1" />
             <span class="inline-flex items-center gap-1">
                 <CircleCheck v-if="active" class="h-4 w-4" />

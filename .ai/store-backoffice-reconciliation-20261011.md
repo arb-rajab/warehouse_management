@@ -1243,3 +1243,131 @@ No push, PR, merge, deployment or production-data mutation is authorized. Full M
 migration verification and the full all-store browser suite were not rerun in
 this follow-up; no migrations were changed. No live gateway calls, production
 permission rehearsal or production-data mutation was performed.
+
+
+## Category administration migration (2026-10-12)
+
+User-authorized local-only work on `codex/category-admin-inertia` from fetched
+`origin/develop` at `03734ff6c3fe97435b08cf8d4c0644c792a09663` (PR #384),
+which includes PR #379's merge `a14f5dc160b84ccb691e79d167c982aa9adb90c7`.
+The starting checkout was clean. No push, PR, merge, deployment or production-data
+mutation was performed.
+
+### Prerequisites, status and consumer evidence
+
+All three category admin screens were Blade. The reconciliation prerequisite table
+has no category-specific dependency, feature-use or business-policy hold. Category
+forms use ordinary text/number/select/image fields, including a plain SEO textarea;
+no rich-text editor is needed. The seller/classified/editor/chart/map holds remain
+separate and unchanged. No checked-in approval claim was treated as authorization.
+
+Read-only GitHub checks: PR #379 head `29c9f384` passed all 14 checks; merge SAST
+run `38245990218` succeeded; deploy run `38245990290` and deployment `7013472103`
+succeeded. The newer fetched develop base also has successful SAST `38260207944`,
+deploy `38260208198` and deployment `7015964338`. Both deployment workflows found
+existing successful tests coverage and skipped `Test the merged commit`. These
+are observations of existing deployments, not requests or deployment approval.
+
+Before removal, category route names, controller actions, view names, models,
+translations, settings, image references, hierarchy utility, attribute pivot,
+public/mobile resources and seller consumers were traced. Only the root admin
+controller directly rendered the three replaced views; its remaining method was
+an empty unused show. The replaced featured endpoint was consumed only by the
+removed admin list's JavaScript. Navigation retains route names and points to the
+new controller. Public `categories.all`, HomeController rendering, shop-web,
+shop-seller, shop-api, V2 category/subcategory/home/filter/warehouse resources and
+controllers are unchanged. `shop.categories.child_category` is still used by
+seller, ordinary/digital product and classified forms, so it remains. The category
+PDF and bulk-download handler also remain.
+
+### Completed scope and retained behavior
+
+- Three `Store/Admin/Product/Categories` pages using StoreAdminLayout, shared
+  form/table/pagination/action components, canonical StoreUploadField, translation
+  tabs, shared featured status button and Wayfinder; English/Arabic labels and RTL.
+- Seven implemented route names and view/add/edit/delete gates preserved; explicit
+  bound edit/update/delete routes, PUT/PATCH updates and DELETE deletion. Removed
+  only the empty show and duplicate route registrations. Search remains on base
+  names, with descending ordering priority and validated page-size selection.
+- Dedicated store/update/filter/featured requests, narrow list and form resources,
+  schema-aware bounds, valid languages/attributes/parent references, refusal of
+  self/descendant/cyclic parents, and canonical image authorization. Existing valid
+  foreign images can round-trip without permitting replacement or unauthorized
+  previews. Shared preview rules are centralized for category, carrier and package
+  forms without changing their behavior.
+- Atomic category, translation, attribute-pivot, hierarchy and direct-product
+  updates/deletion. Ordered hierarchy locks serialize admin hierarchy changes;
+  validation runs again under those locks. Persistence failures roll back all
+  affected tables. Cache invalidation retains the existing featured cache behavior.
+- Base names change only for the default language; other translation edits still
+  update shared fields. Ordering, physical/digital type, commission setting/rate,
+  banner/icon/cover image, filtering attributes, slug generation/lowercasing, SEO
+  title/description and existing `top`/featured state remain as established.
+- Deletion retains immediate-child reparenting to the deleted row's parent,
+  clearing only direct product category references and removing only the selected
+  category's translations/pivot. No child cascade, classified-row cleanup or other
+  business-policy change was introduced. `CategoryUtility` bodies are unchanged.
+- Typed Category properties and CategoryTranslation relation; CategoryTranslation
+  and the deleted root handler leave both analysis exclusions. Category was already
+  analyzed. Utility/API and still-needed legacy exclusions remain. No casts,
+  dependency manifests/locks, permission definitions/grants, flags, public/seller/
+  mobile contracts, product/brand/editor migration or global upload policy change.
+
+**Inherited hierarchy issue retained:** `CategoryUtility::move_level_up` and
+`move_level_down` change levels by one and return after the first child branch.
+Moves across multiple levels therefore do not recalculate the whole subtree;
+deleting a row reparents all immediate children but adjusts only that branch's
+levels. Tests pin both move directions and deletion. Correcting this behavior is
+separate work requiring explicit scoped authorization; it does not block this
+presentation migration, and no correction approval was inferred.
+
+Current inventory: **64** backend Blade files (67 before category conversion),
+**40** direct literal consumers of `shop.backend.layouts.app`, **3** of the secondary
+layout, **0** of the blank shell; **1,047** `/temp` registrations and **435**
+`/temp/admin` registrations. No category-admin Blade screens remain. The guide's
+§5.1 filename inventory and §6 controller table are updated. Historical dated
+counts remain historical evidence. Retained grouped counts: catalogue/reviews/SKU
+12, sellers 13, trips 13, website settings 5, representative visits/maps 3, blog
+forms 2, general/map settings 2, classified/dashboard/newsletter/ticket/server
+screens 5, protected layouts/navigation/PDFs 9.
+
+### Verification and limits
+
+Existing dependencies were used with unchanged manifests and lockfiles. PHP 8.5.11
+and Composer were already provisioned outside PATH and selected through the cloud
+runtime. GD initially lacked WebP, which correctly refused canonical raster uploads.
+An isolated task runtime rebuilt GD with WebP through the managed proxy, using a
+read-only public CA mount; the extension/libraries are in task scratch space, not
+source changes. Composer platform checks passed. A stale `public/hot` marker had
+no running Vite process and was preserved outside the checkout for production-
+asset verification.
+
+Required `python3 .claude/scripts/pre_push_check.py`: all lint/format/type/test
+stages passed, with no verification stage skipped. Full Vitest: **2,096 tests in
+235 files**. Full Pest: **5,196 tests / 25,453 assertions**. PHPStan: zero errors.
+Focused category/model/permission/route/exclusion/guard/Blade-CSP and canonical
+upload/carrier/package checks: **316 tests / 1,987 assertions**. Focused category
+pages/fields/status/menu frontend checks: **27 tests in four files**. Production
+build and fresh Wayfinder generation passed. Final review removed two unused
+edit-query columns; the category suite passed again (**84 tests / 586 assertions**)
+and PHPStan again reported zero errors. Existing chunk-size and plugin-time build
+advisories remain.
+
+Selected HTTPS Chromium workflows: **5/5 passed**, one worker, zero retries,
+with CSP enforced and video settings enabled. The task selected installed system
+Chromium and FFmpeg; Playwright's bundled FFmpeg was absent. Browser checks cover
+canonical raster upload and all three category image pickers, parent-link
+navigation, category CRUD, type/order/attributes/commission/SEO round trips,
+English/Arabic translation tabs and locale switching, featured status, native
+cancel/accept deletion, RTL, dark contrast, native integer validation, refused
+write with retained name/order/SEO draft and no inserted category, sidebar Inertia
+visits, retained public category Blade and mixed Blade/Inertia staff workflows.
+Navigation waits use the rendered translation language and localized locale labels.
+Retained login/Blade third-party script and Permissions-Policy warnings are outside
+this migration; no globally clean browser-console claim is made.
+
+Local limits: MySQL migration/concurrency checks and the full browser suite were
+not run; no migrations changed. Production data/grants and external services were
+not exercised. Deferred source dispositions and unrelated owner decisions remain
+unchanged. Exact verification logs and temporary runtime/browser artifacts are in
+`/workspace/work/category-*`, outside the commit.

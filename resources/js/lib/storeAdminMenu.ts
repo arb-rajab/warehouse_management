@@ -28,7 +28,6 @@ import {
     seller_verification_form,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
-import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
@@ -45,6 +44,7 @@ import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Sto
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
 import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
+import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
 import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
@@ -231,6 +231,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.categories',
+                inertia: true,
                 href: categoriesIndex(),
                 permission: 'view_product_categories',
             },

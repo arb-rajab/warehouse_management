@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Store\Admin;
 
+use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterCarriersRequest;
 use App\Http\Requests\Store\Admin\StoreCarrierRequest;
 use App\Http\Requests\Store\Admin\UpdateCarrierRequest;
 use App\Http\Requests\Store\Admin\UpdateCarrierStatusRequest;
 use App\Http\Resources\Store\CarrierResource;
-use App\Http\Resources\Store\UploadResource;
 use App\Models\Carrier;
 use App\Models\CarrierRange;
 use App\Models\CarrierRangePrice;
@@ -25,6 +25,8 @@ use Inertia\Response;
 
 class CarrierController extends Controller implements HasMiddleware
 {
+    use ProvidesStoreUploadPreviews;
+
     private const array COLUMNS = ['id', 'name', 'transit_time', 'logo', 'free_shipping', 'status'];
 
     /** @return array<int, Middleware> */
@@ -67,7 +69,7 @@ class CarrierController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Setup/Carriers/Edit', [
             'carrier' => new CarrierResource($carrier),
             'zones' => $this->zones(),
-            'initialFiles' => $logo && ($request->user('store')->can('view_uploads') || $logo->user_id === $request->user('store')->id) && $request->user('store')->can('view', $logo) ? [new UploadResource($logo)] : [],
+            'initialFiles' => $this->uploadPreviews($request, $logo),
         ]);
     }
 

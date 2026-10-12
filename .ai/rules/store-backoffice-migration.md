@@ -13,11 +13,13 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
+Latest category follow-up: [category migration verification](#13-category-administration-follow-up-2026-10-12).
+Customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records this session's result and limits.
+historical evidence; §10 records reconciliation results and §§11–13 record
+subsequent module verification and limits.
 
 ## 1. Decision and scope
 
@@ -464,7 +466,8 @@ modules too:
 
 ## 4. Integrated status (2026-10-12)
 
-This reflects integrated code and the carrier follow-up in §11. The original
+This reflects integrated code and the carrier, customer-package and category
+follow-ups in §§11–13. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -479,7 +482,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; core brands/categories/products/digital-product conversion pending |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category administration complete (§13); core brands/products/digital-product conversion pending |
 | Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain Blade editor |
 | Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog/newsletter editor forms remain Blade; typed newsletter sending/recipient lookup integrated |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
@@ -535,8 +538,8 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **67 Blade files**, down from 73 after
-removing the three carrier screens and three customer-package admin screens.
+The current backend inventory contains **64 Blade files**, down from 73 after
+removing three screens each for carriers, customer packages and categories.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -548,7 +551,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
 - **marketing:** `marketing/newsletters/index.blade.php`.
-- **product:** `product/brands/edit.blade.php`, `product/brands/index.blade.php`, `product/categories/create.blade.php`, `product/categories/edit.blade.php`, `product/categories/index.blade.php`, `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/digital_products/index.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
+- **product:** `product/brands/edit.blade.php`, `product/brands/index.blade.php`, `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/digital_products/index.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/general_settings.blade.php`, `setup_configurations/google_configuration/google_map.blade.php`.
@@ -575,6 +578,7 @@ line numbers or count sibling snapshots.
 | `BrandDiscountController` | `brands_wise_product_discount`, `set_product_discount` | `Store/Admin/Product/BrandDiscounts/Index.vue` |
 | `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
 | `CarrierController` | `carriers.index`, `carriers.create`, `carriers.store`, `carriers.edit`, `carriers.update`, `carriers.destroy`, `carriers.update_status` | `Store/Admin/Setup/Carriers/Index.vue`, `Create.vue`, `Edit.vue`; public/API carrier controller remains separate |
+| `CategoryController` | `categories.index`, `categories.create`, `categories.store`, `categories.edit`, `categories.update`, `categories.destroy`, `categories.featured` | `Store/Admin/Product/Categories/Index.vue`, `Create.vue`, `Edit.vue`; public/seller/mobile category consumers and shared hierarchy utility retained |
 | `CityController` | `cities.index`, `cities.store`, `cities.update`, `cities.destroy`, `cities.edit`, `cities.status` | `Store/Admin/Setup/Cities/Index.vue`, `Store/Admin/Setup/Cities/Edit.vue` |
 | `ColorController` | `colors`, `colors.destroy`, `colors.edit`, `colors.store`, `colors.update` | `Store/Admin/Product/Colors/Index.vue`, `Store/Admin/Product/Colors/Edit.vue` |
 | `ConversationController` | `conversations.admin_index`, `conversations.admin_destroy`, `conversations.admin_reply`, `conversations.admin_show` | `Store/Admin/Support/Conversations/Index.vue`, `Store/Admin/Support/Conversations/Show.vue` |
@@ -984,3 +988,54 @@ flag, role grant or dependency was changed for this migration.
 
 Verification and limitations are recorded in the
 [customer package ledger entry](../store-backoffice-reconciliation-20261011.md#customer-package-administration-migration-2026-10-12).
+
+
+## 13. Category administration follow-up (2026-10-12)
+
+Category administration now uses `Store/Admin/Product/Categories` from fetched
+`develop` at `03734ff6c3fe97435b08cf8d4c0644c792a09663` on
+`codex/category-admin-inertia`. The exact base SHA is also recorded in the
+reconciliation ledger. PR #379's 14 head checks, merge SAST and existing deploy
+run `38245990290` passed; deployment `7013472103` reports success. That workflow
+reused an existing successful tests run and skipped `Test the merged commit`.
+All GitHub work was read-only; no deployment was requested.
+
+No category-specific dependency, feature-use or owner prerequisite appears in
+the reconciliation decision table. The inherited `CategoryUtility` level writers
+adjust by one and return after the first child branch, including on a move across
+multiple levels. This migration preserves those bodies and pins their existing
+behavior; correcting sibling/subtree level maintenance requires separate scoped
+authorization. Deletion still moves immediate children to the deleted category's
+parent and clears only that category's product references. It does not cascade
+children, product rows, classified rows or other legacy references.
+
+Completed: three Inertia screens, seven implemented route names and the existing
+view/add/edit/delete permission vocabulary; StoreAdminLayout, shared form/table/
+pagination/actions, translation tabs, status button, canonical upload picker and
+Wayfinder. Updates support PUT/PATCH; deletes use DELETE; the empty unused show
+and duplicate registrations are removed. Search remains on the base category name
+and ordering remains descending priority. Dedicated requests validate schema
+bounds, languages, parent references/cycles, attributes and image ownership.
+Category/translation/pivot/product and hierarchy writes use transactions, with
+ordered hierarchy locks and validation repeated under those locks. Existing
+foreign image IDs can round-trip without authorizing replacement or previews.
+Shared `ProvidesStoreUploadPreviews` centralizes the unchanged preview boundary
+for category, carrier and customer-package forms.
+
+Translated names, type, commission setting/rate, ordering, banner/icon/cover,
+filtering attributes, slug and SEO title/description remain. No model casts,
+public/seller/mobile contract, role grant, feature flag or upload normalization
+policy changed. CategoryTranslation is typed and removed from both analysis
+exclusions; Category was already analyzed. CategoryUtility and API exclusions
+remain. Only the three exclusively consumed admin Blade screens and the replaced
+root controller are removed. Shared `shop.categories.child_category`, seller/SKU
+partials, PDFs, shells, assets, legacy uploader and CSP handling remain.
+
+Current inventory: **64** backend Blade files; **40** direct literal consumers of
+the primary admin shell, **3** of its secondary layout, **0** of its blank shell;
+**1,047** `/temp` and **435** `/temp/admin` registrations. No category-admin Blade
+screens remain; the protected category PDF remains. Exact filenames are in §5.1.
+
+Verification results and runtime limits are recorded in the category section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No push, PR, merge, deployment or production-data mutation is authorized.

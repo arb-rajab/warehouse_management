@@ -42,6 +42,8 @@ import type {
     StoreZone,
     StoreCarrier,
     StoreCustomerPackage,
+    StoreCategory,
+    StoreCategoryForm,
     StorePickupPoint,
     StoreTax,
     StoreCurrency,
@@ -1064,6 +1066,44 @@ export function storeCustomerPackage(
         product_upload: 10,
         logo: '4',
         logo_url: '/uploads/gold.png',
+        ...overrides,
+    };
+}
+
+export function storeCategory(
+    overrides: Partial<StoreCategory> = {},
+): StoreCategory {
+    return {
+        id: 17,
+        name: 'Food',
+        parent: null,
+        level: 0,
+        order_level: 3,
+        banner_url: null,
+        icon_url: null,
+        cover_image_url: null,
+        featured: false,
+        commision_rate: '2.50',
+        ...overrides,
+    };
+}
+export function storeCategoryForm(
+    overrides: Partial<StoreCategoryForm> = {},
+): StoreCategoryForm {
+    return {
+        id: 17,
+        name: 'Food',
+        parent_id: 0,
+        order_level: 3,
+        digital: false,
+        banner: '4',
+        icon: null,
+        cover_image: null,
+        commision_rate: '2.50',
+        slug: 'food',
+        meta_title: 'Food SEO',
+        meta_description: 'Food description',
+        filtering_attributes: [2],
         ...overrides,
     };
 }

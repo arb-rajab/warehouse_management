@@ -147,7 +147,6 @@ parameters:
         - app/Http/Controllers/BusinessSettingsController.php
         - app/Http/Controllers/CartController.php
         - app/Http/Controllers/CartOfferedController.php
-        - app/Http/Controllers/CategoryController.php
         - app/Http/Controllers/CheckoutController.php
         - app/Http/Controllers/CommissionController.php
         - app/Http/Controllers/CompareController.php
@@ -344,7 +343,6 @@ parameters:
         - app/Models/BusinessSetting.php
         - app/Models/Cart.php
         - app/Models/CartOffered.php
-        - app/Models/CategoryTranslation.php
         - app/Models/Checkpoint.php
         - app/Models/City.php
         - app/Models/CityTranslation.php
