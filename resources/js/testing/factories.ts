@@ -41,6 +41,7 @@ import type {
     StoreCity,
     StoreZone,
     StoreCarrier,
+    StoreCustomerPackage,
     StorePickupPoint,
     StoreTax,
     StoreCurrency,
@@ -1047,6 +1048,22 @@ export function storeCarrier(
                 prices: { 11: '8', 12: '9' },
             },
         ],
+        ...overrides,
+    };
+}
+
+export function storeCustomerPackage(
+    overrides: Partial<StoreCustomerPackage> = {},
+): StoreCustomerPackage {
+    return {
+        id: 17,
+        name: 'Gold',
+        localized_name: 'Gold',
+        amount: '12.50',
+        formatted_amount: '€12.50',
+        product_upload: 10,
+        logo: '4',
+        logo_url: '/uploads/gold.png',
         ...overrides,
     };
 }

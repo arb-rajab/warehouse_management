@@ -29,7 +29,6 @@ import {
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
-import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
@@ -59,6 +58,7 @@ import {
     repIndex as representativesIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerPackageController';
 import {
     create as driversCreate,
     index as driversIndex,
@@ -335,6 +335,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.classifiedPackages',
                 href: customerPackagesIndex(),
+                inertia: true,
                 permission: 'view_classified_packages',
                 setting: 'classified_product',
             },
