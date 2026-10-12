@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\Store\Admin\CountryController;
@@ -53,4 +54,18 @@ test('a controller with dependency-injected constructor arguments keeps them alo
     // been lost during the conversion instead of just the middleware calls.
     $controller = app(ProductController::class);
     expect($controller)->toBeInstanceOf(ProductController::class);
+});
+
+test('the root settings controller keeps the gates of its remaining Blade and compatibility actions', function () {
+    $middleware = collect(BusinessSettingsController::middleware())
+        ->mapWithKeys(fn (Middleware $entry): array => [$entry->middleware => $entry->only]);
+
+    // general_setting moved to Store\Admin\GeneralSettingsController with its gate.
+    expect($middleware->all())->toBe([
+        'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
+        'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
+        'permission:features_activation' => ['updateSellerCommissionActivation'],
+        'permission:google_map_setting' => ['google_map'],
+        'permission:general_settings|footer_setup|website_appearance|edit_website_page' => ['update'],
+    ]);
 });

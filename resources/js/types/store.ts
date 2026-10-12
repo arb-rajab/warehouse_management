@@ -190,6 +190,15 @@ export interface StoreWebsiteHeaderSettings {
     header_menu_links: string[];
 }
 
+export type StoreGeneralSettingsImage =
+    'system_logo_white' | 'system_logo_black' | 'admin_login_background';
+
+/** Upload ids are the stored strings; timezone is config('app.timezone'). */
+export type StoreGeneralSettings = Record<StoreGeneralSettingsImage, string> & {
+    site_name: string;
+    timezone: string;
+};
+
 /** Narrow back-office support resources; message text is always escaped by Vue. */
 export interface StoreConversation {
     id: number;

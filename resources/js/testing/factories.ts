@@ -20,6 +20,7 @@ import type {
     StoreWebsiteAppearanceSettings,
     StoreWebsiteFooterSettings,
     StoreWebsiteHeaderSettings,
+    StoreGeneralSettings,
     StoreWebsiteHomeSettings,
     StoreWebsitePage,
     StoreWebsitePageForm,
@@ -712,6 +713,19 @@ export function storeProductQuery(
         question: 'Is this available?',
         reply: null,
         created_at: '2026-10-09T10:00:00+00:00',
+        ...overrides,
+    };
+}
+
+export function storeGeneralSettings(
+    overrides: Partial<StoreGeneralSettings> = {},
+): StoreGeneralSettings {
+    return {
+        site_name: 'Al Baraka',
+        timezone: 'UTC',
+        system_logo_white: '1',
+        system_logo_black: '',
+        admin_login_background: '',
         ...overrides,
     };
 }

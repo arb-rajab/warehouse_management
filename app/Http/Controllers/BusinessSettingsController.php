@@ -25,7 +25,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:seller_commission_configuration', only: ['vendor_commission', 'vendor_commission_update']),
             new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form', 'seller_verification_form_update']),
-            new Middleware('permission:general_settings', only: ['general_setting']),
             new Middleware('permission:features_activation', only: ['updateSellerCommissionActivation']),
             new Middleware('permission:google_map_setting', only: ['google_map']),
             new Middleware('permission:general_settings|footer_setup|website_appearance|edit_website_page', only: ['update']),
@@ -40,11 +39,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         \Illuminate\Support\Facades\Cache::forget('business_settings');
 
         return response('1');
-    }
-
-    public function general_setting(Request $request)
-    {
-        return view('shop.backend.setup_configurations.general_settings');
     }
 
     public function google_map(Request $request) {
@@ -135,7 +129,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
     public function update(Request $request)
     {
         $migratedKeys = array_merge(...array_column(\App\Http\Controllers\Store\Admin\SettingsController::PAGES, 'keys'));
-        $migratedKeys = array_merge($migratedKeys, \App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY']);
+        $migratedKeys = array_merge($migratedKeys, \App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest::KEYS, \App\Http\Requests\Store\Admin\UpdateGeneralSettingsRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY']);
         $types = $request->input('types', []);
         abort_unless(is_array($types), 422);
         $postedKeys = [];

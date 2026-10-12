@@ -22,7 +22,6 @@ import {
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import {
-    general_setting,
     google_map,
     seller_verification_form,
     vendor_commission,
@@ -63,6 +62,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { edit as generalSettingsEdit } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
@@ -715,7 +715,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.generalSettings',
-                href: general_setting(),
+                href: generalSettingsEdit(),
+                inertia: true,
                 permission: 'general_settings',
             },
             {

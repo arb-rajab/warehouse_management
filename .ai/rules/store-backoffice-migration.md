@@ -13,7 +13,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
+Latest setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
+Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
 Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
 Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
 Category follow-up: [category migration verification](#13-category-administration-follow-up-2026-10-12).
@@ -21,7 +22,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–16 record
+historical evidence; §10 records reconciliation results and §§11–17 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -470,7 +471,8 @@ modules too:
 ## 4. Integrated status (2026-10-12)
 
 This reflects integrated code and the carrier, customer-package, category,
-brand, digital-product and in-house/all-products list follow-ups in §§11–16. The original
+brand, digital-product, in-house/all-products list and general-settings
+follow-ups in §§11–17. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -481,7 +483,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
@@ -512,7 +514,15 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 - `StoreBooleanField` has one `name`/`value`/`disabled` API. Adapt callers.
 - Dedicated settings requests reject foreign/reserved keys before writing,
   including plain/localized forms. Generic settings cannot write migrated
-  reference, header/home, script, map or environment-controlled keys.
+  reference, header/home, general-settings, script, map or
+  environment-controlled keys. The general-settings keys
+  (`UpdateGeneralSettingsRequest::KEYS`, including `timezone`) are reserved
+  there since §17; the footer and appearance Blade forms keep the generic
+  writer and its four-permission gate unchanged.
+- The timezone is config-managed: `config('app.timezone')` is `'UTC'` in
+  `config/app.php`, and no settings screen stores it. The general settings
+  writer validates it against PHP's identifiers (plus the configured value)
+  and refuses any other value with a field error; nothing writes `.env`.
 - Website scripts retain the existing rendering, appearance permission and WAF
   behavior through the narrowly scoped compatibility endpoint. New script policy,
   `manage_website_scripts` activation and broad rich-text WAF exceptions are held.
@@ -546,11 +556,12 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **61 Blade files**, down from 73 after
+The current backend inventory contains **60 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
-two brand screens and the digital product list (§15). The in-house and
-all-products lists (§16) removed none: `product/products/index.blade.php` is
-shared with the retained seller product list.
+two brand screens, the digital product list (§15) and general settings (§17).
+The in-house and all-products lists (§16) removed none:
+`product/products/index.blade.php` is shared with the retained seller product
+list. The Google Map settings screen stays (§17).
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -565,7 +576,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
-- **setup_configurations:** `setup_configurations/general_settings.blade.php`, `setup_configurations/google_configuration/google_map.blade.php`.
+- **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
 - **support:** `support/support_tickets/show.blade.php`.
 - **system:** `system/server_status.blade.php`.
 - **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
@@ -605,7 +616,8 @@ line numbers or count sibling snapshots.
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
-| `GoogleMapController` | `google-map.update` | JSON / redirects / PDF as applicable |
+| `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
+| `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | JSON / redirects / PDF as applicable |
 | `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | Retained Blade newsletter editor; typed send and bounded JSON recipient search |
@@ -641,7 +653,10 @@ line numbers or count sibling snapshots.
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
 Visit details/day maps are served by retained root `VisitController`; trips and
-Google map settings also retain their Blade GET consumers. Website footer,
+Google map settings also retain their Blade GET consumers. Root
+`BusinessSettingsController` keeps the Google Map GET, the generic settings
+writer, the seller commission/verification screens and `env_key_update`, so it
+stays in both analysis exclusion lists. Website footer,
 appearance and custom pages, seller/classified screens use retained root handlers. Newsletters use a typed
 admin controller with their retained Blade editor. Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
@@ -1230,7 +1245,8 @@ No push, PR, merge, deployment or production-data mutation is authorized.
 The in-house (`products.admin`) and all-products (`products.all`) lists now use
 one Inertia page, `Store/Admin/Product/Products/Index`, with a `listType` of
 `admin` or `all`. Work is on `claude/migrate-admin-product-lists-2q0qog`,
-branched from `develop` at `2aafc21` (the PR #387 merge). The owner authorized
+branched from `develop` at `2aafc21` (the PR #387 merge), and merged as
+PR #388 at `046be2005c3019584483a44eecefddd39116a831`. The owner authorized
 this session's PR, its merge into `develop` and `[skip ci]` on both. The PR and
 its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
 `develop` deploy ran for them.
@@ -1388,5 +1404,101 @@ literal consumers of `shop.backend.layouts.app`, **3** of
 `shop.backend.layouts.layout` and **0** of the blank shell. Registrations are
 **1,049** under `/temp` and **437** under `/temp/admin`: six new action routes
 on 1,043/431. Verification is recorded in the product-list section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 17. Setup configuration settings follow-up (2026-10-12)
+
+General settings now use `Store/Admin/Setup/GeneralSettings/Index`. The Google
+Map settings screen stays Blade. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
+`develop` at `e3eb0f5` (the PR #390 merge, after PR #389 at `a14c659`). The
+owner authorized this session's PR (#391), its merge into `develop` and
+`[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
+no PR or merge SAST and no `develop` deploy ran for them.
+
+**Google Map settings: held, map decision.** The screen's enabled state loads a
+map script. `google_map.blade.php:105-107` includes
+`shop.frontend.partials.google_map` whenever `google_map == 1`, and that partial
+loads `https://maps.googleapis.com/maps/api/js?…&libraries=places` (`:117`) and
+builds a `google.maps.Map` (`:17`). The default-location inputs are `readonly`
+(`:81`, `:89`): only the map fills them. Map activation is an owner decision
+(§5), so the GET stays on root `BusinessSettingsController::google_map`, the
+view stays, and its sidebar entry stays a full load. The typed
+`google-map.update` writer is unchanged. `GoogleMapControllerTest` pins the
+script on the enabled screen and its absence on the disabled one.
+
+**General settings.**
+
+- **Routes and gate.** `general_setting.index` (GET `/general-setting`) and the
+  new `general_setting.update` (POST `/general-setting`) are on
+  `Store\Admin\GeneralSettingsController`, gated `general_settings`. Root
+  `general_setting` and its middleware entry are gone. The root controller
+  keeps its other actions and stays in both analysis exclusion lists.
+- **Typed writer.** `UpdateGeneralSettingsRequest` takes
+  `settings[site_name|timezone|system_logo_white|system_logo_black|admin_login_background]`
+  and nothing else. Foreign, reserved or environment keys, top-level or nested,
+  and the legacy `types[]` shape are 422s before any write. The site name is
+  nullable, at most 255 characters. Each logo is an image upload id through
+  `retainableImageUploadRule()`: own images, or library images with
+  `view_uploads`; an unchanged foreign logo round-trips without a preview.
+- **Storage, unchanged.** `UpdatesStoreSettings` writes the four keys as the
+  legacy writer did: the first row of each type, ids as strings, null when
+  cleared. Reads stay on `get_setting()`.
+- **Timezone, unchanged.** It comes from `config('app.timezone')`, which
+  `config/app.php:146` hardcodes as `'UTC'`. The legacy writer sent it only to
+  the refusing `overWriteEnvFile('APP_TIMEZONE')` and stored nothing. The page
+  lists `timezones()` (PHP's identifiers plus the configured value) with the
+  configured one selected. The writer requires a listed value, and refuses any
+  value other than the configured one with
+  `messages.store_timezone_environment_managed`, so the draft stays. It writes
+  no row and never calls the `.env` writer. Every legacy save used to log and
+  flash that refusal; the typed save does neither.
+- **Generic writer.** `business_settings.update` now also reserves
+  `UpdateGeneralSettingsRequest::KEYS` (§5). Its gate, its body and the
+  footer/appearance forms that post to it are unchanged. Its `site_name` and
+  `timezone` branches are now unreachable; `overWriteEnvFile()` stays, pinned by
+  `LegacyEnvFileProtectionTest`.
+- **Page.** `StoreAdminLayout` + `ResourceFormPage`, `FormField`, three
+  `StoreUploadField`s, the timezone select, Wayfinder and 9 `store.generalSettings.*`
+  keys in English and Arabic. The sidebar entry is an Inertia visit.
+
+**Consumers traced, all unchanged.**
+
+- `system_logo_white`: the Blade admin sidenav (`inc/admin_sidenav.blade.php:5-7`).
+- `system_logo_black`: the seller and delivery-boy login pages
+  (`shop/frontend/seller_login.blade.php:12-13`, `deliveryboy_login.blade.php:12-13`).
+- `admin_login_background`: no reader. The store login reads `login_page_image`.
+- `site_name`: the Blade admin and seller shell footers and sidenav alts, the
+  admin invoice PDF (`invoices/invoice.blade.php:88`), the invoice email
+  (`shop/emails/invoice.blade.php:80`) and the V2 `business-settings`
+  `PUBLIC_KEYS`. The V2 `general-settings` endpoint reads its own table.
+- Storefront header/footer logos and email headers read `header_logo` and
+  `footer_logo`, which this form never wrote.
+- `admin_sidenav` links by `route('general_setting.index')`, with no
+  `areActiveRoutes` entry; the name is kept.
+
+**Tests retargeted, none weakened.** The footer form (`website.footer`) stays
+Blade for its editor, extends the admin shell and has a single-image
+`aizuploader` (`footer_logo`).
+
+- `HandleStoreBladePagesTest` and `ReconstructedMigrationAuditTest` use
+  `/temp/admin/website/footer` as their Blade page.
+- `SettingsReconciliationTest` and `ReferenceSettingsIsolationTest` use the
+  appearance form's `website_name` as the permitted key, under
+  `website_appearance`. The first also covers the general-settings keys and the
+  four gate permissions still saving the footer and appearance forms.
+- `store-staff-coexistence.spec.ts` follows Website setup → Footer.
+  `store-legacy-uploader.spec.ts` scopes its upload, select and remove to
+  `footer_logo`. The legacy uploader keeps real browser coverage.
+- `LegacyControllerMiddlewareConversionTest` pins the root controller's five
+  remaining middleware entries. `RouteServiceProviderTest` used only `sellers`
+  and needed no change.
+
+Current inventory: **60** backend Blade files, **36** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are **1,050** under `/temp` and **438** under
+`/temp/admin`: one new POST on 1,049/437. Verification is recorded in the
+general-settings section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.
