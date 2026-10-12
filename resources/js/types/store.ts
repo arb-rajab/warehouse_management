@@ -553,6 +553,45 @@ export interface StoreDigitalProduct {
     public_url: string | null;
     download_token: string;
 }
+/** The list a product row action names (`list`): its URI segment. */
+export type StoreProductListType = 'admin' | 'all';
+/** The all-products list's legacy one-flag presets. */
+export type StoreProductListPreset =
+    'allProducts' | 'allDeleted' | 'allActive' | 'allForSale' | 'allFeatured';
+export interface StoreProductListRow {
+    id: number;
+    name: string;
+    ar_name: string;
+    thumbnail_url: string;
+    mat_id: string | null;
+    unit: string;
+    num_of_sale: number;
+    base_price: string;
+    profit: string;
+    /** Each variant's stock for a variant product, otherwise null. */
+    variant_stocks: { variant: string; qty: number }[] | null;
+    stock_quantity: number | null;
+    low_stock: boolean;
+    category: string | null;
+    for_sale: boolean;
+    published: boolean;
+    featured: boolean;
+    deleted_from_api: boolean;
+    public_url: string | null;
+}
+export interface StoreProductListFilters {
+    search: string | null;
+    category_id: number | null;
+    type: string | null;
+    active: boolean;
+    for_sale: boolean;
+    featured: boolean;
+    /** The all-products list only. */
+    deleted?: boolean;
+    user_id?: number | null;
+    preset?: StoreProductListPreset | null;
+    per_page: number;
+}
 export interface StoreCategoryForm {
     id: number;
     name: string;

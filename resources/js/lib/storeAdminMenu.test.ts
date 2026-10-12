@@ -129,6 +129,8 @@ describe('storeAdminMenu', () => {
                 '/temp/admin/carriers',
                 '/temp/admin/categories',
                 '/temp/admin/digitalproducts',
+                '/temp/admin/products/all',
+                '/temp/admin/products/admin',
                 '/temp/admin/brands',
                 '/temp/admin/customer_packages',
                 customerNotificationsIndex.url(),

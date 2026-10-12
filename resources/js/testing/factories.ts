@@ -45,6 +45,8 @@ import type {
     StoreCategory,
     StoreCategoryForm,
     StoreDigitalProduct,
+    StoreProductListFilters,
+    StoreProductListRow,
     StorePickupPoint,
     StoreTax,
     StoreCurrency,
@@ -1115,6 +1117,45 @@ export function storeDigitalProduct(
         featured: false,
         public_url: '/temp/product/recipe-e-book',
         download_token: 'encrypted-31',
+        ...overrides,
+    };
+}
+export function storeProductListRow(
+    overrides: Partial<StoreProductListRow> = {},
+): StoreProductListRow {
+    return {
+        id: 41,
+        name: 'Olive oil 1L',
+        ar_name: 'زيت زيتون',
+        thumbnail_url: '/assets/img/placeholder.jpg',
+        mat_id: '100027',
+        unit: 'Box(12)',
+        num_of_sale: 7,
+        base_price: '€12.50',
+        profit: '€1.25',
+        variant_stocks: null,
+        stock_quantity: 40,
+        low_stock: false,
+        category: 'Oils',
+        for_sale: true,
+        published: true,
+        featured: false,
+        deleted_from_api: false,
+        public_url: '/temp/product/olive-oil-1l',
+        ...overrides,
+    };
+}
+export function storeProductListFilters(
+    overrides: Partial<StoreProductListFilters> = {},
+): StoreProductListFilters {
+    return {
+        search: null,
+        category_id: null,
+        type: null,
+        active: false,
+        for_sale: false,
+        featured: false,
+        per_page: 20,
         ...overrides,
     };
 }

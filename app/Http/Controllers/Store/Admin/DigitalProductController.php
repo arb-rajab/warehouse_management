@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers\Store\Admin;
 
+use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterDigitalProductsRequest;
 use App\Http\Requests\Store\Admin\UpdateDigitalProductFlagRequest;
 use App\Http\Resources\Store\DigitalProductResource;
 use App\Models\Product;
-use App\Models\Shop;
 use App\Models\Upload;
-use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -32,6 +29,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {
+    use UpdatesStoreProductFlags;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -110,42 +109,19 @@ class DigitalProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * Unpublishing also unfeatures the product and empties its stock, and
-     * publishing restocks it to 1,000, as ProductController::updatePublished()
-     * does. A seller's product is refused publication outside its shop's
-     * package, before anything is written.
+     * Writes as ProductController::updatePublished() does, through the
+     * switch logic the product lists share (UpdatesStoreProductFlags).
      */
     public function updatePublished(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
-        $published = $request->boolean('status');
-        DB::transaction(function () use ($product, $published): void {
-            $product = $this->lockedDigitalProduct($product);
-            if ($published && $this->sellerPackageRefusesPublishing($product)) {
-                throw ValidationException::withMessages(['status' => __('messages.store_digital_product_package_limit')]);
-            }
-            $product->published = $published;
-            if (! $published) {
-                $product->setAttribute('featured', 0);
-            }
-            foreach ($product->stocks()->lockForUpdate()->get() as $stock) {
-                $stock->setAttribute('qty', $published ? 1000 : 0);
-                $stock->save();
-            }
-            $product->save();
-        });
-        $this->clearStorefrontCaches();
+        $this->updateProductPublished(Product::query()->digital(), $product, $request->boolean('status'));
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
 
     public function updateFeatured(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
-        DB::transaction(function () use ($request, $product): void {
-            $product = $this->lockedDigitalProduct($product);
-            $product->setAttribute('featured', (int) $request->boolean('status'));
-            $product->save();
-        });
-        $this->clearStorefrontCaches();
+        $this->updateProductFeatured(Product::query()->digital(), $product, $request->boolean('status'));
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -168,33 +144,6 @@ class DigitalProductController extends Controller implements HasMiddleware
      */
     private function lockedDigitalProduct(Product $product): Product
     {
-        return Product::query()->digital()->lockForUpdate()->findOrFail($product->id);
-    }
-
-    /**
-     * ProductController::updatePublished()'s seller-subscription check: with
-     * that addon active, a seller's shop needs a current package with room
-     * for another published product.
-     */
-    private function sellerPackageRefusesPublishing(Product $product): bool
-    {
-        if ($product->getAttribute('added_by') !== 'seller' || ! addon_is_activated('seller_subscription')) {
-            return false;
-        }
-        $shop = Shop::query()->without('user')->select(['id', 'package_invalid_at', 'product_upload_limit'])->firstWhere('user_id', $product->user_id);
-
-        return $shop?->package_invalid_at === null
-            || (int) Carbon::now()->diffInDays(Carbon::parse($shop->package_invalid_at), false) < 0
-            || $shop->product_upload_limit <= Product::query()->where('user_id', $product->user_id)->where('published', 1)->count();
-    }
-
-    /**
-     * The shared product switches clear the compiled views and the whole
-     * cache after a published or featured change; these keep doing so.
-     */
-    private function clearStorefrontCaches(): void
-    {
-        Artisan::call('view:clear');
-        Artisan::call('cache:clear');
+        return $this->lockedProduct(Product::query()->digital(), $product);
     }
 }

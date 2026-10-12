@@ -44,6 +44,7 @@ use App\Http\Controllers\Store\Admin\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Store\Admin\ProductController as StoreProductController;
 use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\ProfileController;
 use App\Http\Controllers\Store\Admin\UploadController;
@@ -105,11 +106,20 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
-    // Products
+    // Products: the in-house and all-products lists and their row actions
+    // are Inertia. The seller list, the create/edit forms (rich-text editor)
+    // and the jQuery endpoints the seller list posts to stay on the root
+    // ProductController's Blade.
+    Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
+    Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
+    Route::post('/products/{product}/published', [StoreProductController::class, 'updatePublished'])->name('products.list.published');
+    Route::post('/products/{product}/featured', [StoreProductController::class, 'updateFeatured'])->name('products.list.featured');
+    Route::post('/products/{product}/for-sale', [StoreProductController::class, 'updateForSale'])->name('products.list.for_sale');
+    Route::post('/products/{product}/duplicate', [StoreProductController::class, 'duplicate'])->name('products.list.duplicate');
+    Route::delete('/products/{product}', [StoreProductController::class, 'destroy'])->name('products.list.destroy');
+    Route::post('/products/bulk-delete', [StoreProductController::class, 'bulkDestroy'])->name('products.list.bulk_destroy');
     Route::controller(ProductController::class)->group(function () {
-        Route::get('/products/admin', 'admin_products')->name('products.admin');
         Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::get('/products/all', 'all_products')->name('products.all');
         Route::get('/products/create', 'create')->name('products.create');
         Route::post('/products/store/', 'store')->name('products.store');
         Route::get('/products/admin/{id}/edit', 'admin_product_edit')->name('products.admin.edit');

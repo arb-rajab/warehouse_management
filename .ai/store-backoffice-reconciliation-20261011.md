@@ -1556,3 +1556,181 @@ connected; repository files and installed sources were used instead.
 Not run: MySQL (locking/FK behaviour is verified on SQLite only), production
 data or role grants, S3 against a real bucket (faked disk only), and the full
 browser suite.
+
+## In-house and all-products list migration (2026-10-12)
+
+Work on `claude/migrate-admin-product-lists-2q0qog` from fetched `develop` at
+`2aafc217478cb8e401340554718587d05662da25` (the PR #387 merge). The branch had
+no commits beyond that base. For this session only, the owner authorized the
+pull request, its merge into `develop` with the merge method, and `[skip ci]`
+on every commit, the PR title and the merge commit. **No PR CI, no PR or merge
+SAST and no `develop` deploy ran for this PR or its merge**, so the checks below
+are the only verification. No other branch, deployment or production data was
+touched.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+Only the in-house and all-products lists convert. Seller administration remains
+decision-blocked (prerequisite table above), so `products.seller` and the
+shared `shop/backend/product/products/index.blade.php` stay. Product
+create/edit use the Blade rich-text editor, held by the Tiptap decision.
+
+- **In-house** (`app/Http/Controllers/ProductController.php:74-120`):
+  - scope `added_by = admin`, `auction_product = 0`, `wholesale_product = 0`
+    (`:83`) and `digital = 0` (`:117`);
+  - the unvalidated `type` sort `explode(',')` → `orderBy` (`:85-91`);
+  - a single-phrase search over `name`/`ar_name`/`barcodes` with ungrouped
+    `orWhere` (`:92-100`, barcode comment `:98`);
+  - `published`/`for_sale`/`featured` always matched to `has()` (`:102-106`),
+    so with nothing ticked only all-off products list;
+  - `category_id` (`:112-115`), then `created_at desc` and `paginate(15)`
+    (`:117`).
+- **All products** (`:164-254`):
+  - `user_id` (`:178-181`);
+  - a multi-word search over `name`/`ar_name`/`mat_id`/`barcodes`
+    (`:182-197`);
+  - the same sort (`:199-205`);
+  - `allProducts`, then the first of `allDeleted`/`allActive`/`allForSale`/
+    `allFeatured`, then exact matching of four switches, else
+    `deleted_from_api = false` (`:207-242`);
+  - category (`:245-248`), `paginate(15)` with **no order** (`:250`).
+
+  The task brief's "`created_at desc`" applies to the in-house list only.
+- **Barcodes.** The merged `Product::barcodes()` reads WMS
+  `wms_product_barcodes` (`app/Models/Product.php:168-171`).
+  `NewFetchProductsCommand.php:363-369` stores each `Mat_ID` in the store's
+  `product_barcodes` (Task BS-152), which `storeBarcodes()` reads
+  (`Product.php:816-819`).
+- **Blade actions** (`index.blade.php`):
+  - For Sale/Active/Featured switches post to `products.update_sale`,
+    `.published` and `.featured` (`:329-367`, `:469-543`).
+  - Today's deal is commented out (`:234`, `:319-328`).
+  - Approval shows only for `Seller` with `product_approve_by_admin`
+    (`:237`, `:348-358`).
+  - Duplicate (`:399`), delete (`:407`) and bulk delete (`:549-567`).
+  - The fetch button shows only on non-seller lists under `add_new_product`
+    (`:9-22`, `:569-597`).
+- **Handlers** (root controller):
+  - `updateSaleStatus` (`:824-851`) and `updatePublished` (`:638-674`) zero or
+    restock stock and unfeature. `updatePublished` checks the seller
+    subscription after writing stock, `updateFeatured` is at `:699-709`, and
+    each takes any id and answers `1`/`0`.
+  - `destroy` (`:557-581`) deletes translations, stocks, taxes, variations and
+    store barcodes, `Product::destroy`, then `Cart::where(...)->delete()`
+    (soft delete), untransacted. `bulk_product_delete` (`:583-592`) loops it
+    and answers `1`.
+  - `duplicate` (`:600-621`) does `replicate()` with a slug suffix plus stock
+    and tax copies, through `Product::find` (null → 500).
+  - `fetch` (`:774-821`) queues the `cron_jobs` row
+    `fetching-products-by-admin` (JSON `{success}`, 500 when busy). It is
+    ungated (`tests/Feature/LegacyAdminPermissionsTest.php:46`) and consumed
+    by `check:commands` (`app/Console/Commands/CheckForCommands.php:52-90`) →
+    `import:all-products-v2`.
+  - Gates are in `middleware()` (`:58-69`).
+- **Consumers:**
+  - `routes/shop-admin.php:110-127`;
+  - the seller list's same-name routes;
+  - `admin_sidenav` `areActiveRoutes` (`:96`, `:107`);
+  - `storeAdminMenu.ts` imported the root `admin_products`/`all_products`;
+  - root `store` redirects to `products.admin` (`:363`);
+  - `choice_options_script` is used by create/edit, and `sku_combinations*` by
+    the root and seller SKU helpers;
+  - seller panel `Seller\ProductController`, V2 product APIs, the storefront
+    `product` route and `products:sync` are separate;
+  - the `admin_product_edit`/`seller_product_edit` digital redirects without
+    `/temp` (`:388`, `:423`) are inherited debt.
+
+### Completed scope
+
+- **Backend.**
+  - `Store\Admin\ProductController` (`inHouse`, `all`, three switches,
+    duplicate, destroy, bulk destroy).
+  - `FilterInHouseProductsRequest`, `FilterAllProductsRequest` (shared
+    `FiltersStoreProductList`), `UpdateProductListFlagRequest`,
+    `ProductListActionRequest`, `BulkDeleteProductsRequest` (shared
+    `ValidatesStoreProductList`), the `StoreProductList` enum and
+    `ProductListResource`.
+  - `products.admin`/`.all` keep their URIs and gates.
+  - Six `products.list.*` routes take `list` and are list-scoped.
+- **Shared switch path.** `Concerns\UpdatesStoreProductFlags` now serves the
+  digital-product and product lists. The digital controller's own copy moved
+  into it, and `messages.store_digital_product_package_limit` became
+  `messages.store_product_package_limit` (same text). The root jQuery
+  endpoints, `products.fetch` and the seller list are unchanged.
+- **Frontend.**
+  - `Store/Admin/Product/Products/Index.vue` with StoreAdminLayout,
+    DataTable, Pagination (selector), StoreStatusButton, TableActionLink,
+    `confirmDelete`, `useStoreAccess()` and Wayfinder.
+  - Full-load create/edit/view links; `useHttp` fetch button.
+  - English/Arabic `store.products.*` (57 keys).
+  - Sidebar in-house/all entries are Inertia.
+- **Deliberate changes.**
+  - 20 per page with the selector.
+  - The `type` sort allowlist (6 values, 422 otherwise).
+  - Explicit `id` order for all-products.
+  - Grouped in-house search, and barcode search over both tables.
+  - Normalized GET booleans.
+  - List-scoped, transactional, locked writes.
+  - Bulk deletion authorizes every member under lock before deleting any.
+  - Caches clear once per request.
+- **Owner decisions recorded, behaviour unchanged:**
+  - product hard deletion (as for brands and digital products);
+  - duplicate and the fetch import as further writers of `products`;
+  - the published switch as a writer of `products.published`.
+- **Unchanged:** no dependency, manifest, lock, migration, permission
+  definition, role grant, flag, Blade view or public/seller/mobile contract
+  changed.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). The worker process restarted once mid-session; the working tree, build
+and generated actions were intact afterwards. Laravel Boost was not connected
+for most of the session, so repository files and installed sources were used.
+
+- **Generation and build.**
+  - `php artisan wayfinder:generate --skip-routes --with-form` generated
+    actions.
+  - `npm run build` failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`.
+    `python3 .claude/scripts/build_without_fonts.py` passed, and was rerun
+    before the browser runs.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,127 tests in 239 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,351 tests / 27,223 assertions**.
+- **Focused PHP checks.**
+  - `ProductControllerTest`: **56 tests / 979 assertions**.
+  - `DigitalProductControllerTest` after the shared-path refactor: 41 / 386.
+  - Middleware conversion, state-changing routes, admin permissions, route
+    provider, Blade CSP, reconstructed audit, temp-route reachability, shop
+    route access, exclusions, shared props, shell and seller authorization
+    suites: **70 tests / 357 assertions**.
+  - Mutating the in-house search grouping, the store-barcode match and the
+    destroy transaction failed four tests, as intended, before being reverted.
+- **Focused frontend checks.** Page and menu Vitest: **20 tests**. Scoped
+  ESLint/Prettier and `npm run types:check` passed.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one worker,
+  zero retries and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+  (Chromium 1194).
+  - The new `store-products.spec.ts` passed **2/2**. It covers:
+    - switch round trips and their persisted writes;
+    - native single and bulk delete cancel/accept;
+    - full-load hops into the Blade edit form and the Blade seller list;
+    - Inertia sidebar visits to both lists;
+    - RTL, and dark contrast of name, header, cell and preset link.
+  - With the brands, digital-products, categories, catalogue-forms,
+    staff/reference coexistence and legacy-uploader specs: **18/18**.
+  - Two first runs failed on spec authoring: the all list's first page held
+    other seeded products, and assets predated a new element id. Both were
+    corrected.
+- **Inventory.** **61** backend Blade files; **37**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,049** `/temp` and **437**
+  `/temp/admin` registrations, up from 1,043/431 by six action routes.
+
+Not run: MySQL (locking and foreign-key behaviour is verified on SQLite only),
+production data or role grants, the real Otajer import behind `products.fetch`,
+and the full browser suite. Because of `[skip ci]`, GitHub CI, SAST and deploy
+did not run for this PR or its merge.

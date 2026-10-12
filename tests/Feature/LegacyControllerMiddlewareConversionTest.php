@@ -44,7 +44,9 @@ test('a controller using the alternate $this->middleware($name, [\'only\' => [..
 test('a controller with dependency-injected constructor arguments keeps them alongside the converted middleware', function () {
     $middleware = ProductController::middleware();
 
-    expect($middleware)->toHaveCount(7);
+    // Seven until the in-house and all-products lists moved to
+    // Store\Admin\ProductController with their two list gates.
+    expect($middleware)->toHaveCount(5);
 
     // The constructor itself still wires up its services -- resolving the
     // controller out of the container is what would fail if that logic had

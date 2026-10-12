@@ -30,8 +30,6 @@ import {
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import {
-    admin_products,
-    all_products,
     create as productsCreate,
     seller_products,
 } from '@/actions/App/Http/Controllers/ProductController';
@@ -77,6 +75,10 @@ import {
     exportMethod as productBulkExport,
     index as productBulkImport,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import {
+    all as allProducts,
+    inHouse as inHouseProducts,
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     commission_history,
@@ -197,12 +199,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.allProducts',
-                href: all_products(),
+                inertia: true,
+                href: allProducts(),
                 permission: 'show_all_products',
             },
             {
                 labelKey: 'store.nav.inHouseProducts',
-                href: admin_products(),
+                inertia: true,
+                href: inHouseProducts(),
                 permission: 'show_in_house_products',
                 setting: 'In_House_Products_Section',
             },

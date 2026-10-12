@@ -13,14 +13,15 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
+Latest product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
+Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
 Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
 Category follow-up: [category migration verification](#13-category-administration-follow-up-2026-10-12).
 Customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–15 record
+historical evidence; §10 records reconciliation results and §§11–16 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -468,8 +469,8 @@ modules too:
 
 ## 4. Integrated status (2026-10-12)
 
-This reflects integrated code and the carrier, customer-package, category and
-brand and digital-product follow-ups in §§11–15. The original
+This reflects integrated code and the carrier, customer-package, category,
+brand, digital-product and in-house/all-products list follow-ups in §§11–16. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -484,12 +485,12 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15) with Blade create/edit retained for the editor; core products conversion pending |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade for the editor; the seller product list stays Blade with seller administration |
 | Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain Blade editor |
 | Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog/newsletter editor forms remain Blade; typed newsletter sending/recipient lookup integrated |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
-| Seller administration | Decision-blocked | Existing seller Blade screens remain; feature-use/removal decision is still required |
+| Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
@@ -526,6 +527,11 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   behavior. No frontend or Composer dependency manifests/locks change.
 - Tiptap, Chart.js and new Leaflet dependencies lack independently verified
   approval. Preserve existing Blade editor/chart/map assets.
+- Product list switches share one write path. The digital-product and
+  in-house/all-products lists publish and feature through
+  `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
+  The root `ProductController` jQuery endpoints stay unchanged for the Blade
+  seller list (§16).
 - Order tax changes are held: the established entry handlers stored raw product
   tax metadata and summed line prices for grand total. Percentage conversion and
   tax/shipping/coupon adjustments need a business decision.
@@ -542,7 +548,9 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 The current backend inventory contains **61 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
-two brand screens and the digital product list (§15).
+two brand screens and the digital product list (§15). The in-house and
+all-products lists (§16) removed none: `product/products/index.blade.php` is
+shared with the retained seller product list.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -608,6 +616,7 @@ line numbers or count sibling snapshots.
 | `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue` |
 | `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
 | `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
+| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`); `products.seller`, `products.create`/`store`, `products.admin.edit`/`seller.edit`/`update`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the form helpers stay on root `ProductController` for the Blade seller list and editor forms |
 | `ProductBulkUploadController` | `bulk_product_upload`, `pdf.download_brand`, `pdf.download_category`, `pdf.download_seller`, `product_bulk_export.index`, `product_bulk_upload.index` | `Store/Admin/Product/BulkUpload/Index.vue` |
 | `ProductQueryController` | `product_query.index`, `product_query.show`, `product_query.reply` | `Store/Admin/Support/ProductQueries/Index.vue`, `Store/Admin/Support/ProductQueries/Show.vue` |
 | `ProductSearchController` | `order_configuration.product-search`, `products.add-more-choice-option` | JSON / redirects / PDF as applicable |
@@ -1214,3 +1223,170 @@ registrations replace ten. Verification is recorded in the digital-product
 section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No push, PR, merge, deployment or production-data mutation is authorized.
+
+
+## 16. In-house and all-products lists follow-up (2026-10-12)
+
+The in-house (`products.admin`) and all-products (`products.all`) lists now use
+one Inertia page, `Store/Admin/Product/Products/Index`, with a `listType` of
+`admin` or `all`. Work is on `claude/migrate-admin-product-lists-2q0qog`,
+branched from `develop` at `2aafc21` (the PR #387 merge). The owner authorized
+this session's PR, its merge into `develop` and `[skip ci]` on both. The PR and
+its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
+`develop` deploy ran for them.
+
+**Still Blade.** The seller list (`products.seller`) stays Blade with seller
+administration (§4.1), so the shared `product/products/index.blade.php` stays
+and its seller branch is unchanged. Product create/edit stays Blade because it
+needs the rich-text editor (Tiptap approval pending, §5). The Vue page links to
+it with plain full-load `<a>` links built from Wayfinder `.url()`.
+
+**Routes and gates.** `products.admin` and `products.all` keep their URIs and
+their `show_in_house_products`/`show_all_products` gates on
+`Store\Admin\ProductController`. Six new row actions each send `list`, the list
+they came from, as a query parameter. Each action reaches only a product that
+list shows, which is a 404 otherwise, and returns to that list with its filters.
+
+- `products.list.published`, `.featured` and `.for_sale`, all gated by
+  `product_edit`, at `POST /products/{product}/…`.
+- `products.list.duplicate`, gated by `product_duplicate`, at
+  `POST /products/{product}/duplicate`.
+- `products.list.destroy`, gated by `product_delete`, at
+  `DELETE /products/{product}`.
+- `products.list.bulk_destroy`, gated by `product_delete`, at
+  `POST /products/bulk-delete`.
+
+The in-house list shows only `added_by = admin`, non-auction, non-wholesale,
+non-digital products. The all-products list shows every owner and digital
+product, but never an auction or wholesale product.
+
+The root `ProductController` keeps everything else for the Blade seller list
+and the editor forms, unchanged: the jQuery switches, approval, duplicate,
+destroy, `bulk-product-delete`, `products.fetch`, search and the SKU/form
+helpers. It loses only `admin_products`, `all_products` and their two
+middleware entries, and stays in both analysis exclusion lists.
+
+**Lists.** The legacy filters are kept, with their legacy query names, so the
+seller Blade list's preset links still work.
+
+- **In-house state filters.** `active`, `for_sale` and `featured` always match
+  exactly, ticked or not. With nothing ticked, the list shows only products that
+  are unpublished, off sale and unfeatured, as before; the page explains this.
+  The in-house list has no deleted filter, so its checkbox (a no-op) is gone.
+- **All-products presets.** `allProducts` drops every state filter. Otherwise
+  the first of `allDeleted`, `allActive`, `allForSale` or `allFeatured` applies
+  on its own. Otherwise any ticked switch matches all four switches, `deleted`
+  included, exactly. Otherwise retired (`deleted_from_api`) products are hidden.
+  The all-products list also keeps `user_id`.
+- **Search.** The in-house list matches one phrase. The all-products list
+  matches every word, and also matches `mat_id`.
+- **Category and sort.** Both lists filter by category. The legacy unvalidated
+  `type` (`column,direction`) sort is now limited to the six orders the Blade
+  select offered (rating, number of sales, base price); any other value is a 422.
+- **Default order.** In-house stays `created_at desc`, with an `id` tie-breaker.
+  All-products had no order at all, so it now orders explicitly by `id`.
+- **Page size.** Both move from 15 to 20 per page with the per-page selector,
+  the deliberate pilot change.
+- **Query booleans.** GET booleans are normalized, so legacy `on` values still
+  work but a literal `0` now means off.
+
+Two narrow search defect fixes:
+
+- The legacy in-house search `OR` was ungrouped, so an Arabic-name or barcode
+  match leaked past the list's own conditions; for example, a seller product
+  matching the Arabic name appeared in the in-house list.
+- The legacy search went through `Product::barcodes()`. Since the model merge,
+  that reads WMS `wms_product_barcodes`, while the Otajer import stores each
+  `Mat_ID` in the store's `product_barcodes`. Search now matches both tables,
+  so nothing it found before is lost.
+
+**Rows and actions.**
+
+- **Row payload.** `ProductListResource` sends:
+  - the synced `name` and `ar_name`, and the thumbnail through
+    `uploaded_asset()`;
+  - `mat_id` and the legacy unit string;
+  - the number of sales, and the base price and profit through
+    `single_price()`;
+  - the first stock row's quantity, or each variant's, with the legacy "low"
+    comparison;
+  - the translated category name, the four flags, and the storefront URL by
+    slug (null without a slug).
+- **Switches.** The digital-product and product lists now share one
+  published/featured write path, `Concerns\UpdatesStoreProductFlags`, with the
+  rules of §15:
+  - unpublishing also unfeatures the product and zeroes its stock, and
+    publishing sets stock to 1,000;
+  - the seller-subscription refusal happens before any write;
+  - published and featured run `view:clear` and `cache:clear`.
+
+  The new for-sale switch writes what `updateSaleStatus` wrote. Today's deal
+  (commented out of the Blade list) and seller approval (seller list only)
+  stay on the Blade seller list. The refusal message is now the shared
+  `messages.store_product_package_limit`.
+- **Fetch button.** It keeps the legacy JSON `products.fetch` endpoint, called
+  through `useHttp`, and is shown under `add_new_product`, as the Blade list
+  showed it.
+  - The endpoint stays ungated, as `LegacyAdminPermissionsTest` lists it.
+  - It queues the `cron_jobs` row that `check:commands` turns into
+    `import:all-products-v2`. That command is a second writer of `products`
+    beside `products:sync`, an owner decision left unchanged.
+- **Duplicate (second writer of `products`, unchanged).** It still copies the
+  `products` row with a random slug suffix, plus its stock and tax rows, but
+  not its translations, variations or barcodes. It now runs in a transaction,
+  only on a product the list shows. Creating `products` rows here conflicts with
+  shared-database.md's single-writer rule; changing it needs owner approval.
+
+**Deletion: owner decision pending, behaviour unchanged.** Single and bulk
+deletion still remove a product's translations, stock, taxes, variations and
+store barcodes, hard-delete the `products` row and soft-delete its cart lines.
+They now run in one transaction with the rows locked. Bulk deletion checks every
+member against the list, under lock, before deleting any, and answers 422
+otherwise.
+
+Pinned foreign-key outcomes:
+
+- a pallet still referencing a product fails the whole request atomically
+  (restrict);
+- store barcodes and variations do not block, because the handler deletes them
+  first, unlike brand (§14) and digital-product (§15) deletion;
+- WMS settings and barcodes cascade;
+- cell-log and verification-report references become null.
+
+Caches clear once per request instead of once per product.
+
+**Consumers traced.**
+
+- **Unchanged handlers and links.** Seller panel products
+  (`Seller\ProductController`), V2 product APIs, the storefront `product` route
+  by slug, `products:sync` and the root `store` redirect to `products.admin`
+  are untouched. That redirect now lands on the Inertia list in a full load.
+- **Inherited debt.** `admin_product_edit`/`seller_product_edit` still redirect
+  digital products to URLs without `/temp`.
+- **Route names.** No duplicate route names arise. `admin_sidenav`'s
+  `areActiveRoutes` names all resolve.
+- **Partials.** `choice_options_script` is used by the create/edit views.
+  `sku_combinations*` are rendered by the root and seller controllers' SKU
+  helpers. All of them stay.
+
+The sidebar's in-house and all-products entries are Inertia visits. The seller
+products entry is a full load.
+
+**Tests adapted in place, none weakened.**
+
+- `LegacyControllerMiddlewareConversionTest` counts five root middleware
+  entries instead of seven.
+- `LegacyStoreStateChangingRoutesTest` adds `products.list.destroy` and
+  `products.list.duplicate`.
+- The digital-product refusal test uses the renamed message key.
+
+`HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest` and
+`RouteServiceProviderTest` keep their general-settings/`sellers` examples.
+
+Current inventory: **61** backend Blade files (no file removed), **37** direct
+literal consumers of `shop.backend.layouts.app`, **3** of
+`shop.backend.layouts.layout` and **0** of the blank shell. Registrations are
+**1,049** under `/temp` and **437** under `/temp/admin`: six new action routes
+on 1,043/431. Verification is recorded in the product-list section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.

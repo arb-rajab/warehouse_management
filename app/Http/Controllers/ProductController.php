@@ -59,64 +59,11 @@ class ProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:add_new_product', only: ['create', 'store']),
-            new Middleware('permission:show_all_products', only: ['all_products']),
-            new Middleware('permission:show_in_house_products', only: ['admin_products']),
             new Middleware('permission:show_seller_products', only: ['seller_products']),
             new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate']),
             new Middleware('permission:product_delete', only: ['destroy', 'bulk_product_delete']),
         ];
-    }    /**
-     * Display a listing of the resource.
-     *
-     * @return Response
-     */
-    public function admin_products(Request $request)
-    {
-
-        $type = 'In House';
-        $col_name = null;
-        $query = null;
-        $sort_search = null;
-        $category_id = null;
-
-        $products = Product::where('added_by', 'admin')->where('auction_product', 0)->where('wholesale_product', 0);
-        $categories = Category::all();
-        if ($request->type != null) {
-            $var = explode(",", $request->type);
-            $col_name = $var[0];
-            $query = $var[1];
-            $products = $products->orderBy($col_name, $query);
-            $sort_type = $request->type;
-        }
-        if ($request->search != null) {
-            $sort_search = $request->search;
-            $products = $products
-                ->where('name', 'like', '%' . $sort_search . '%')
-                ->orWhere('ar_name', 'like', '%' . $sort_search . '%')
-                ->orWhereHas('barcodes', function ($q) use ($sort_search) {
-                    $q->where('barcode', 'like', '%' . $sort_search . '%'); // As we are already storing `mat_id` as a barcode, we can use barcodes to search products by mat_id
-                });
-        }
-
-        $isActive = $request->has('active');
-        $isForSale = $request->has('for_sale');
-        $isFeatured = $request->has('featured');
-
-        $products->where('published', $isActive)->where('for_sale', $isForSale)->where('featured', $isFeatured);
-
-
-
-
-
-        if ($request->category_id != null) {
-            $category_id = $request->category_id;
-            $products = $products->where('category_id', $category_id);
-        }
-
-        $products = $products->where('digital', 0)->orderBy('created_at', 'desc')->paginate(15);
-
-        return view('shop.backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'sort_search'));
     }
 
     /**
@@ -160,99 +107,6 @@ class ProductController extends Controller implements HasMiddleware
 
         return view('shop.backend.product.products.index', compact('products', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
     }
-
-    public function all_products(Request $request)
-    {
-
-        $categories = Category::all();
-        $col_name = null;
-        $query = null;
-        $seller_id = null;
-        $sort_search = null;
-        $category_id = null;
-
-
-
-
-        $products = Product::where('auction_product', 0)->where('wholesale_product', 0);
-        if ($request->has('user_id') && $request->user_id != null) {
-            $products = $products->where('user_id', $request->user_id);
-            $seller_id = $request->user_id;
-        }
-        if ($request->search != null) {
-            $sort_search = $request->search;
-
-            $products_query = $products->where(function ($q) use ($sort_search) {
-                foreach (explode(' ', trim($sort_search)) as $word) {
-                    $q->where(function ($innerQ) use ($word) {
-                        $innerQ->where('name', 'like', '%' . $word . '%')
-                            ->orWhere('ar_name', 'like', '%' . $word . '%')
-                            ->orWhere('mat_id', 'like', '%' . $word . '%')
-                            ->orWhereHas('barcodes', function ($barcodeQ) use ($word) {
-                                $barcodeQ->where('barcode', 'like', '%' . $word . '%');
-                            });
-                    });
-                }
-            });
-        }
-
-        if ($request->type != null) {
-            $var = explode(",", $request->type);
-            $col_name = $var[0];
-            $query = $var[1];
-            $products = $products->orderBy($col_name, $query);
-            $sort_type = $request->type;
-        }
-
-        $deleted = $request->has('deleted'); // Deleted from api but still exists in the store for historical reasons.
-        $isActive = $request->has('active');
-        $isForSale = $request->has('for_sale');
-        $isFeatured = $request->has('featured');
-
-        $allDeleted = $request->has('allDeleted');
-        $allActive = $request->has('allActive');
-        $allForSale = $request->has('allForSale');
-        $allFeatured = $request->has('allFeatured');
-
-        if (!$request->has('allProducts')) {
-            if ($allDeleted || $allActive || $allForSale || $allFeatured) {
-                if ($allDeleted) {
-                    $products = $products->where('deleted_from_api', true);
-                } elseif ($allActive) {
-                    $products = $products->where('published', true);
-                } elseif ($allForSale) {
-                    $products = $products->where('for_sale', true);
-                } elseif ($allFeatured) {
-                    $products = $products->where('featured', true);
-                }
-            } elseif ($deleted || $isActive || $isForSale || $isFeatured) {
-                $products->where('published', $isActive ?? false);
-
-                $products->where('for_sale', $isForSale ?? false);
-
-                $products->where('featured', $isFeatured ?? false);
-
-                $products->where('deleted_from_api', $deleted ?? false);
-            } else {
-                // Default view: hide products retired by the Otajer sync.
-                // They stay in the table for order history - use the
-                // "All Products" filter above to see them.
-                $products = $products->where('deleted_from_api', false);
-            }
-        }
-
-
-        if ($request->category_id != null) {
-            $category_id = $request->category_id;
-            $products = $products->where('category_id', $category_id);
-        }
-
-        $products = $products->paginate(15);
-        $type = 'All';
-
-        return view('shop.backend.product.products.index', compact('products', 'categories', 'category_id', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
-    }
-
 
     /**
      * Show the form for creating a new resource.
