@@ -21,7 +21,6 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { index as brandsIndex } from '@/actions/App/Http/Controllers/BrandController';
 import {
     general_setting,
     google_map,
@@ -41,6 +40,7 @@ import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/S
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
+import { index as brandsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
 import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
@@ -238,6 +238,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.brands',
+                inertia: true,
                 href: brandsIndex(),
                 permission: 'view_all_brands',
             },

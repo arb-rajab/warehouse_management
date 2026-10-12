@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string|null $logo_url
  * @property-read Brand $resource
  */
-class BrandDiscountResource extends JsonResource
+class BrandResource extends JsonResource
 {
     /** @return array<string, mixed> */
     public function toArray(Request $request): array

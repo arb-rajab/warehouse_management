@@ -50,7 +50,8 @@ import type {
     StoreCurrency,
     StoreProfile,
     ClassifiedProduct,
-    StoreBrandDiscount,
+    StoreBrand,
+    StoreBrandForm,
     StoreOffersCatalog,
     StoreReview,
     StoreTicketReply,
@@ -655,10 +656,21 @@ export function storeColor(overrides: Partial<StoreColor> = {}): StoreColor {
     return { id: 1, name: 'Red', code: '#ff0000', ...overrides };
 }
 
-export function storeBrandDiscount(
-    overrides: Partial<StoreBrandDiscount> = {},
-): StoreBrandDiscount {
+export function storeBrand(overrides: Partial<StoreBrand> = {}): StoreBrand {
     return { id: 3, name: 'Dates brand', logo_url: null, ...overrides };
+}
+
+export function storeBrandForm(
+    overrides: Partial<StoreBrandForm> = {},
+): StoreBrandForm {
+    return {
+        id: 3,
+        logo: null,
+        slug: 'dates-brand',
+        meta_title: 'Dates SEO title',
+        meta_description: 'Dates SEO description',
+        ...overrides,
+    };
 }
 
 export function storeConversation(

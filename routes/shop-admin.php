@@ -15,7 +15,7 @@ use App\Http\Controllers\Store\Admin\AttributeValueController;
 use App\Http\Controllers\Store\Admin\ColorController;
 use App\Http\Controllers\Store\Admin\BlogCategoryController;
 use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
-use App\Http\Controllers\BrandController;
+use App\Http\Controllers\Store\Admin\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\CarrierController;
 use App\Http\Controllers\Store\Admin\CategoryController;
@@ -95,11 +95,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/categories/featured', [CategoryController::class, 'updateFeatured'])->name('categories.featured');
 
     // Brand
-    Route::resource('brands', BrandController::class);
-    Route::controller(BrandController::class)->group(function () {
-        Route::get('/brands/edit/{id}', 'edit')->name('brands.edit');
-        Route::post('/brands/destroy/{id}', 'destroy')->name('brands.destroy');
-    });
+    Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
+    Route::get('/brands/edit/{brand}', [BrandController::class, 'edit'])->name('brands.edit');
+    Route::match(['PUT', 'PATCH'], '/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+    Route::delete('/brands/destroy/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
 
     // Brand-wide product discounts
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');

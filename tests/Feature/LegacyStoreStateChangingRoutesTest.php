@@ -154,14 +154,17 @@ test('a GET to a state-changing route is refused and changes nothing', function 
     $this->get("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 
-    $this->post("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));
+    $this->post("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
+    $this->assertDatabaseHas('brands', ['id' => $brandId]);
+
+    $this->delete("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));
     $this->assertDatabaseMissing('brands', ['id' => $brandId]);
 });
 
-test('a visitor who is not signed in cannot delete through the POST route either', function () {
+test('a visitor who is not signed in cannot delete through the DELETE route either', function () {
     $brandId = DB::table('brands')->insertGetId(['name' => 'Acme', 'slug' => 'acme']);
 
-    expect($this->post("/temp/admin/brands/destroy/$brandId")->getStatusCode())->toBeIn([302, 401, 403]);
+    expect($this->delete("/temp/admin/brands/destroy/$brandId")->getStatusCode())->toBeIn([302, 401, 403]);
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 });
 

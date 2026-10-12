@@ -143,7 +143,6 @@ parameters:
         - app/Http/Controllers/Auth/ResetPasswordController.php
         - app/Http/Controllers/Auth/VerificationController.php
         - app/Http/Controllers/BlogController.php
-        - app/Http/Controllers/BrandController.php
         - app/Http/Controllers/BusinessSettingsController.php
         - app/Http/Controllers/CartController.php
         - app/Http/Controllers/CartOfferedController.php
@@ -338,8 +337,6 @@ parameters:
         - app/Models/AttributeValue.php
         - app/Models/AuctionProductBid.php
         - app/Models/BlogCategory.php
-        - app/Models/Brand.php
-        - app/Models/BrandTranslation.php
         - app/Models/BusinessSetting.php
         - app/Models/Cart.php
         - app/Models/CartOffered.php
