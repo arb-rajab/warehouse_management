@@ -43,7 +43,7 @@ return [
     'store_offers_catalog_exists' => 'يمكن رفع كتالوج واحد فقط. احذف الكتالوج الحالي أولاً.',
     'store_brand_discount_admin_required' => 'يلزم وجود حساب مسؤول قبل تعيين خصومات العلامات التجارية.',
     'store_product_import_admin_required' => 'يلزم وجود حساب مسؤول قبل استيراد المنتجات.',
-    'store_digital_product_package_limit' => 'باقة متجر البائع لا تسمح بنشر منتج آخر.',
+    'store_product_package_limit' => 'باقة متجر البائع لا تسمح بنشر منتج آخر.',
     'upload_refused' => 'نوع هذا الملف غير مسموح به.',
     'custom_script_editing_unavailable' => 'تعديل البرامج النصية المخصصة غير متاح.',
     'Manage Website Scripts' => 'إدارة سكريبتات الموقع',

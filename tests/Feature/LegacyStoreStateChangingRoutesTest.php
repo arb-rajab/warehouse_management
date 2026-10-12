@@ -68,6 +68,8 @@ const STATE_CHANGING_STORE_ROUTES = [
     'pick_up_points.destroy',
     'products.destroy',
     'products.duplicate',
+    'products.list.destroy',
+    'products.list.duplicate',
     'purchase_history.destroy',
     'rep.packages.destroy',
     'roles.destroy',

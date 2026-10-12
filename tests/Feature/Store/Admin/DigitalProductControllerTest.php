@@ -237,7 +237,7 @@ test('publishing a seller digital product outside its shop package is refused be
     Cache::forget('addons');
     Artisan::shouldReceive('call')->never();
     $before = digitalProductAdminSnapshot();
-    $this->post(route('digitalproducts.published', $product), ['status' => 1])->assertSessionHasErrors(['status' => __('messages.store_digital_product_package_limit')]);
+    $this->post(route('digitalproducts.published', $product), ['status' => 1])->assertSessionHasErrors(['status' => __('messages.store_product_package_limit')]);
     expect(digitalProductAdminSnapshot())->toEqual($before);
     DB::table('shops')->where('user_id', $seller->id)->update(['package_invalid_at' => now()->addMonth()->toDateString(), 'product_upload_limit' => 5]);
     expectDigitalProductCachesCleared();
