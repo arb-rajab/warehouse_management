@@ -542,6 +542,7 @@
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
         "noBarcodes": "No barcodes added yet.",
+        "viewBarcode": "View barcode {barcode}",
         "downloadBarcode": "Download barcode {barcode}",
         "downloadAllBarcodes": "Download all",
         "downloadFailed": "Download failed. Please try again.",

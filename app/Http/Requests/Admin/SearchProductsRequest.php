@@ -17,6 +17,9 @@ class SearchProductsRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->productSearchRules();
+        return [
+            ...$this->productSearchRules(),
+            'include_inactive' => ['nullable', 'boolean'],
+        ];
     }
 }

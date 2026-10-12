@@ -917,6 +917,31 @@ test('the product search excludes a deactivated product the warehouse no longer 
     expect($response->json('meta.total'))->toBe(3);
 });
 
+test('the product search spans every deactivated product too when asked to include inactive ones', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+    // Noise: a product that doesn't match the search term.
+    Product::factory()->inactive()->create(['name' => 'Gadget']);
+
+    $response = $this->getJson('/admin/products/search?q=Widget&include_inactive=1');
+
+    $response->assertOk();
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())
+        ->toEqualCanonicalizing([$active->id, $inactiveInWarehouse->id, $inactiveElsewhere->id]);
+    expect($rows->firstWhere('id', $inactiveElsewhere->id)['active'])->toBeFalse();
+});
+
+test('the product search rejects a non-boolean include_inactive', function () {
+    actingAsAdmin();
+
+    $this->getJson('/admin/products/search?include_inactive=maybe')->assertUnprocessable();
+});
+
 test('the products index still lists a deactivated product with no pallets that the product search hides', function () {
     actingAsAdmin();
 
@@ -1795,6 +1820,50 @@ test('downloading all barcodes of a non-existent product returns a 404', functio
     actingAsAdmin();
 
     $this->get('/admin/products/999999/barcodes/download')->assertNotFound();
+});
+
+test('a barcode label can be previewed inline as the same SVG that is downloaded', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+
+    $response = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/preview");
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->getContent())
+        ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
+});
+
+test('previewing a barcode that belongs to another product returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherBarcode = ProductBarcode::factory()->create();
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$otherBarcode->id}/preview")->assertNotFound();
+});
+
+test('a barcode that cannot be rendered as Code 128 cannot be previewed', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/preview")->assertUnprocessable();
+});
+
+test('mobile app and unauthenticated users cannot preview a barcode', function () {
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+    $url = "/admin/products/{$product->id}/barcodes/{$barcode->id}/preview";
+
+    $this->get($url)->assertRedirect(route('login'));
+
+    actingAsMobilePanelUser();
+    $this->get($url)->assertForbidden();
 });
 
 test('a mobile app user cannot download barcodes', function () {

@@ -12,6 +12,7 @@ import {
     destroyBarcode,
     downloadAllBarcodes,
     downloadBarcode,
+    previewBarcode,
     exportQr as productExportQr,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
@@ -726,6 +727,35 @@ describe('Products Index', () => {
         expect(items).toHaveLength(2);
         expect(items[0].text()).toContain('1111111111111');
         expect(items[1].text()).toContain('2222222222222');
+    });
+
+    it('shows a barcode’s printable label inline when its view button is toggled', async () => {
+        const wrapper = mountPage([
+            product({
+                id: 42,
+                barcodes: [
+                    { id: 7, barcode: '1111111111111' },
+                    { id: 8, barcode: '2222222222222' },
+                ],
+            }),
+        ]);
+
+        await rowCells(wrapper)[3].get('button').trigger('click');
+        expect(wrapper.find('img').exists()).toBe(false);
+
+        const view = wrapper.get(
+            `button[aria-label="${t('products.viewBarcode', { barcode: '2222222222222' })}"]`,
+        );
+        await view.trigger('click');
+
+        const images = wrapper.findAll('img');
+        expect(images).toHaveLength(1);
+        expect(images[0].attributes('src')).toBe(
+            previewBarcode.url({ product: 42, barcode: 8 }),
+        );
+
+        await view.trigger('click');
+        expect(wrapper.find('img').exists()).toBe(false);
     });
 
     it('shows an empty-state message in the barcodes dialog when the product has none', async () => {
