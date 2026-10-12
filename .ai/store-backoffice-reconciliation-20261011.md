@@ -1025,3 +1025,113 @@ screenshots and traces remain enabled, and committed CI video settings remain.
 
 These fixes do not complete deferred modules or resolve owner decisions,
 production-data rehearsal, deployed role grants or inherited product defects.
+
+
+## Carrier administration migration (2026-10-12)
+
+User-authorized carrier-only implementation on `codex/carrier-admin-inertia`,
+created after fetching latest develop `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`
+(the merge of PR #377). The prior audit branch and existing work were preserved;
+carriers were confirmed unmigrated before changes. This follow-up authorizes a
+local commit only, not a push, PR, merge or deployment.
+
+### Implemented scope and preserved contracts
+
+- `routes/shop-admin.php` now registers the seven implemented carrier actions
+  explicitly, retaining names and the existing `manage_carriers` gate on every
+  action. The unused/broken resource `show` and duplicate destroy registration
+  are removed; `LegacyAdminPermissionsTest` drops only that obsolete exception.
+- Replaced root `CarrierController` / `CarrierRequest` with
+  `Store/Admin/CarrierController`, dedicated filter/store/update/status requests,
+  `Concerns/ValidatesStoreCarrier` and `Store/CarrierResource`. Only the three
+  carrier Blade screens are deleted. Narrow list payloads page/filter normally;
+  edit payloads retain range order, billing types and zone-keyed prices.
+- Nested list/matrix validation checks existing zones, aligned prices/bounds,
+  contiguous increasing ranges and decimal schema widths. Persisted range
+  boundaries remain lower-inclusive/upper-exclusive. Create, replace-all update
+  and delete are transactional; update/delete lock the carrier. Tests inject
+  mid-write/delete failure and prove the complete prior tariff survives.
+- `Carrier`, `CarrierRange`, `CarrierRangePrice` are typed and removed from both
+  analysis exclusion lists. The price-to-range relation explicitly selects the
+  actual `carrier_range_id`; relationship tests include unrelated records.
+  Separate API/model exclusions are retained unless cleaned here.
+- `StoreCarrierFormFields` and the three `Store/Admin/Setup/Carriers` pages reuse
+  canonical `StoreUploadField`, StoreAdminLayout, ResourceFormPage, DataTable,
+  Pagination and StoreStatusButton. English/Arabic labels and exact decimal
+  validation use existing dependencies. New logos obey canonical library/owner
+  authorization; unchanged legacy logos round-trip without authorizing foreign
+  replacement or exposing unauthorized previews.
+- Menu/shipping configuration now navigate to carriers through Inertia. The
+  reference browser test expects this. Staff coexistence and legacy-uploader
+  tests instead use retained general settings, with the latter scoped to its
+  `system_logo_white` picker, preview and removal control.
+- Shared `Helpers.php` and `Api/V2/CarrierController` and public/API carrier
+  registrations are unchanged. Tariff compatibility tests exercise existing
+  weight/price billing and both zones at lower/upper boundaries. The retained
+  helper lazily traverses relations, so those calculation tests explicitly use
+  production-style lazy-loading and restore the strict-mode flag afterward;
+  no helper behavior or global application strict-mode policy was changed.
+
+### Verification and runtime evidence
+
+Native PHP 8.5.11 and existing installed dependencies were used. No installer or
+Claude SessionStart hook was assumed to run. The available GD lacked WebP;
+a disposable Docker runtime built the same-version GD extension with WebP,
+using the managed proxy and read-only CA mount, and exported it with required
+libraries into the external local runtime. Native WebP availability and all
+upload tests then passed. Application manifests/locks are unchanged.
+
+- Required `python3 .claude/scripts/pre_push_check.py`: exit 0. ESLint,
+  Prettier, TypeScript, Pint and PHPStan passed; PHPStan reported zero errors.
+  Full Vitest: **2,069 tests in 231 files**. Full parallel Pest: **5,035 tests,
+  24,375 assertions**. No required-script step was skipped.
+- Focused carrier/controller/model/tariff/permission/exclusion/state-changing
+  checks: **89 tests passed**. Separate retained shell/CSP tests: **8 passed,
+  51 assertions**. Focused carrier/navigation Vue run: **35 passed in 6 files**.
+- Fresh `npm run build`: passed, including Wayfinder generation. The existing
+  large-chunk advisory remains a build warning, not a failed build.
+- HTTPS Playwright: **6/6 passed in four files**, Chromium via the installed
+  system executable, one worker, zero retries, enforced CSP and no server reuse.
+  Dedicated e2e databases and the committed HTTPS harness were used; system
+  ffmpeg was copied only into the workspace browser cache, so video, screenshot
+  and trace settings remained enabled. Coverage includes tariff round-tripping,
+  canonical logo selection, native delete confirmations, Arabic/RTL/native
+  validation/dark contrast, legacy uploader and mixed Blade/Inertia navigation.
+- Initial browser attempt failed because an existing Vite `public/hot` file
+  selected HTTP development assets blocked by enforced HTTPS CSP. Traces proved
+  this environment cause. The rerun temporarily hid that runtime file to use
+  the fresh production assets and restored it afterward. No CSP relaxation,
+  retry or assertion reduction was introduced. Owned browser servers stopped.
+- `git diff --check` and documentation link/inventory checks passed. Scratch
+  logs, runtime helpers and generated uploads are preserved externally under
+  `/workspace/work/carrier-admin-inertia-20261012/` and excluded from the commit.
+
+### Updated remaining inventory and boundaries
+
+Actual `/temp` route inventory is **1,053** registrations; **441** start with
+`/temp/admin`. Carrier admin has seven implemented actions. These counts are
+registrations, not migrated-module counts.
+
+Backend Blade files fell from **73 to 70**: blog 2, customer 4, dashboard 1,
+downloads 3, includes 2, invoice 1, layouts 3, newsletter 1, product 15,
+representative maps 3, sellers 13, setup configurations 2, support 1,
+server status 1, trips 13, website settings 5. The migration guide §5.1 is
+updated to the exact physical inventory.
+
+A direct literal inheritance/include scan finds **46** templates extending
+`shop.backend.layouts.app`, **3** extending `shop.backend.layouts.layout`
+(store error 503, deliveryboy login, seller login), and one include each for
+admin nav/sidenav. The blank layout has zero direct literal callers and remains
+protected by the retained-shell test contract. These counts describe direct
+Blade references, not every dynamic/runtime rendering path.
+
+Root/seller invoice controllers and migrated bulk-export controllers still
+consume invoice/download templates. `/temp/reviews` still consumes backend
+reviews; seller product controllers still consume backend SKU partials. Shared
+layouts/PDFs, legacy upload endpoints/assets, coexistence middleware and Blade
+CSP are preserved. General settings/map settings remain Blade. Customer packages,
+core catalogue, editor/chart/map activation, seller/classified feature usage and
+all recorded owner decisions remain in their previous dispositions. No role
+grants, dependencies, shipping calculations or brands/dashboard defect fixes
+were added. Production data/grants and external services were not exercised;
+this patch does not require them for its authorized local migration/commit.

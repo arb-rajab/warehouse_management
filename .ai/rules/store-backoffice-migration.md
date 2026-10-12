@@ -13,7 +13,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
+Latest carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
+PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
 historical evidence; §10 records this session's result and limits.
 
@@ -460,16 +461,19 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-11)
+## 4. Integrated status (2026-10-12)
 
-This records actual implementation, not final combined verification. All work
-uses a separate integration worktree based on `origin/develop` at
-`8e3f82b60b2b4dc951b97ccfed985a75e9e6be69`. Nothing has been pushed or deployed.
+This reflects integrated code and the carrier follow-up in §11. The original
+reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
+merged through PR #377. Carrier administration was then implemented separately
+from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
+Verification below distinguishes the original reconciliation from this follow-up.
 
 | Module/subset | State | Actual behavior / remaining work |
 | --- | --- | --- |
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
+| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
 | Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
@@ -530,7 +534,9 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-These files remain physically present. Hardening a Blade handler does not count
+The current backend inventory contains **70 Blade files**, down from 73 after
+removing only the three carrier screens. These files remain physically present.
+Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
 - **blog_system:** `blog_system/blog/create.blade.php`, `blog_system/blog/edit.blade.php`.
@@ -544,7 +550,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **product:** `product/brands/edit.blade.php`, `product/brands/index.blade.php`, `product/categories/create.blade.php`, `product/categories/edit.blade.php`, `product/categories/index.blade.php`, `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/digital_products/index.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
-- **setup_configurations:** `setup_configurations/carriers/create.blade.php`, `setup_configurations/carriers/edit.blade.php`, `setup_configurations/carriers/index.blade.php`, `setup_configurations/general_settings.blade.php`, `setup_configurations/google_configuration/google_map.blade.php`.
+- **setup_configurations:** `setup_configurations/general_settings.blade.php`, `setup_configurations/google_configuration/google_map.blade.php`.
 - **support:** `support/support_tickets/show.blade.php`.
 - **system:** `system/server_status.blade.php`.
 - **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
@@ -567,6 +573,7 @@ line numbers or count sibling snapshots.
 | `BlogController` | `blog.index`, `blog.store`, `blog.create`, `blog.update`, `blog.destroy`, `blog.edit`, `blog.change-status` | `Store/Admin/Blog/Posts/Index.vue`; create/edit → retained Blade forms |
 | `BrandDiscountController` | `brands_wise_product_discount`, `set_product_discount` | `Store/Admin/Product/BrandDiscounts/Index.vue` |
 | `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
+| `CarrierController` | `carriers.index`, `carriers.create`, `carriers.store`, `carriers.edit`, `carriers.update`, `carriers.destroy`, `carriers.update_status` | `Store/Admin/Setup/Carriers/Index.vue`, `Create.vue`, `Edit.vue`; public/API carrier controller remains separate |
 | `CityController` | `cities.index`, `cities.store`, `cities.update`, `cities.destroy`, `cities.edit`, `cities.status` | `Store/Admin/Setup/Cities/Index.vue`, `Store/Admin/Setup/Cities/Edit.vue` |
 | `ColorController` | `colors`, `colors.destroy`, `colors.edit`, `colors.store`, `colors.update` | `Store/Admin/Product/Colors/Index.vue`, `Store/Admin/Product/Colors/Edit.vue` |
 | `ConversationController` | `conversations.admin_index`, `conversations.admin_destroy`, `conversations.admin_reply`, `conversations.admin_show` | `Store/Admin/Support/Conversations/Index.vue`, `Store/Admin/Support/Conversations/Show.vue` |
@@ -868,3 +875,62 @@ payment, complete visual parity and unavailable baseline captures remain unverif
 Browser workflows do not establish globally clean console/network output.
 No push, PR, merge or deployment. Exact per-run logs and commands are in
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12).
+
+
+## 11. Carrier administration follow-up (2026-10-12)
+
+Authorized carrier-only implementation on `codex/carrier-admin-inertia`, from
+merged develop `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`. Before editing,
+actual root controller render calls and all three Blade screens were confirmed.
+The former missing `carriers.show` route had no consumer; its permission-ratchet
+exception and duplicate resource registrations were removed. Seven implemented
+admin actions retain their route names and `manage_carriers` gate. Public/API
+registrations and the separate `Api/V2/CarrierController` remain unchanged.
+
+- The selected `Store/Admin/CarrierController`, dedicated filter/store/update/
+  status requests and `CarrierResource` expose narrow paginated records and
+  explicit edit ranges/zone-price maps. Numeric zone keys serialize as an object
+  so Laravel cannot reindex prices against the wrong zone.
+- Create/update/delete transact the carrier, ranges and prices together. Updates
+  retain the established replace-all behavior, including removed ranges/zones,
+  billing changes and transitions to/from free shipping. Existing contiguous
+  ranges, inclusive lower/exclusive upper boundaries and decimal schema widths
+  are validated; shared shipping arithmetic is unchanged.
+- Canonical image-reference validation controls new logos. An unchanged existing
+  logo can round-trip without granting access to another owner's replacement;
+  previews respect library permission/ownership. No roles or grants change.
+- Carrier/CarrierRange/CarrierRangePrice were typed and removed from both analysis
+  exclusion lists. `CarrierRangePrice::carrier_ranges` explicitly uses the actual
+  `carrier_range_id` column; dedicated relationship tests include unrelated data.
+  Separate API and other legacy model exclusions remain.
+- Vue list/create/edit use existing StoreAdminLayout, ResourceFormPage, table,
+  pagination, status button and StoreUploadField. English/Arabic copy and exact
+  decimal client validation require no new dependencies. Menu/shipping links are
+  Inertia; their tests match actual destinations.
+- Coexistence and legacy-uploader browser fixtures now use retained general
+  settings; uploader interactions are scoped to `system_logo_white`. Carrier
+  browser coverage exercises paid tariff editing, canonical logo selection,
+  native delete confirms, Arabic/RTL and dark contrast through enforced HTTPS.
+
+Current inventory and consumer verification:
+
+- `resources/views/shop/backend`: **70** `.blade.php` files; setup configurations
+  now contain only general settings and Google-map settings. Other directory
+  counts and retained-module/owner-decision dispositions are unchanged.
+- Direct literal Blade inheritance/include scan: **46** templates extend
+  `shop.backend.layouts.app`; **3** extend `shop.backend.layouts.layout`
+  (store error 503, deliveryboy login, seller login). The primary shell still
+  includes admin nav and sidenav once each. The blank layout has no direct
+  literal inheritance/include caller and is retained by the shell contract.
+- Invoice and three export/download templates still have controller consumers;
+  `/temp/reviews`, seller SKU partials, public/seller/auth/email/uploader assets,
+  coexistence middleware and Blade CSP remain. No broad shell cleanup occurred.
+- Actual route inventory: **1,053** `/temp` registrations, **441** `/temp/admin`
+  registrations, seven carrier-admin actions; removed only the broken show and
+  duplicate resource registration. Counts are registrations, not module totals.
+
+Verification results are recorded in the
+[carrier ledger entry](../store-backoffice-reconciliation-20261011.md#carrier-administration-migration-2026-10-12).
+Manifests/locks, tariff helper/API implementation, role grants and unrelated
+brands/dashboard defects are unchanged. Commit authorization is local only;
+no push, PR, merge or deployment is authorized by this follow-up.

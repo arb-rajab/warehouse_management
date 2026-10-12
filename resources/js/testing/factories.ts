@@ -40,6 +40,7 @@ import type {
     StoreState,
     StoreCity,
     StoreZone,
+    StoreCarrier,
     StorePickupPoint,
     StoreTax,
     StoreCurrency,
@@ -1016,6 +1017,34 @@ export function storeOrder(overrides: Partial<StoreOrder> = {}): StoreOrder {
                 variation_qty: '[]',
                 unit: 'PerBox',
                 info: 'Notes',
+            },
+        ],
+        ...overrides,
+    };
+}
+
+export function storeCarrier(
+    overrides: Partial<StoreCarrier> = {},
+): StoreCarrier {
+    return {
+        id: 1,
+        name: 'Parcel',
+        transit_time: '2–3 days',
+        logo: 7,
+        free_shipping: false,
+        status: true,
+        ranges: [
+            {
+                billing_type: 'weight_based',
+                delimiter1: '0',
+                delimiter2: '10',
+                prices: { 11: '5', 12: '7' },
+            },
+            {
+                billing_type: 'weight_based',
+                delimiter1: '10',
+                delimiter2: '20',
+                prices: { 11: '8', 12: '9' },
             },
         ],
         ...overrides,
