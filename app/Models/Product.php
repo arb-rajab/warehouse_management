@@ -304,16 +304,51 @@ class Product extends Model
      * cell-state check needed.
      *
      * Shared by the admin products index's `inactive` filter
-     * (`Admin\ProductController::index()`) and the dashboard's
-     * inactive-in-warehouse count (`BuildsDashboardStats`), so the two
-     * "in the warehouse" definitions can never drift apart.
+     * (`Admin\ProductController::index()`), the dashboard's
+     * inactive-in-warehouse count (`BuildsDashboardStats`) and
+     * {@see self::activeOrInWarehouse()}, so the "in the warehouse"
+     * definitions can never drift apart.
      *
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
     protected function inWarehouse(EloquentBuilder $query): void
     {
-        $query->whereExists(Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id'));
+        $query->whereExists(self::palletOfProductSubquery());
+    }
+
+    /**
+     * Scope a query to the products a product search may return: every
+     * active product, plus an inactive (`published = 0`) one only while it
+     * is still {@see self::inWarehouse()} — deactivated stock staff still
+     * have to find, pull or reconcile, without the rest of the deactivated
+     * catalog cluttering the results.
+     *
+     * Applied by the mobile product listing (`Api\V1\ProductController::index()`)
+     * and the admin product filter search (`Admin\ProductController::search()`).
+     * The admin products index is deliberately exempt and keeps listing every
+     * product; lookups by id (`Api\V1\ProductController::show()`/`pallets()`)
+     * are too, so a QR label of a deactivated product still resolves.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function activeOrInWarehouse(EloquentBuilder $query): void
+    {
+        $query->where(fn (EloquentBuilder $visible) => $visible
+            ->where('products.published', true)
+            ->orWhereExists(self::palletOfProductSubquery()));
+    }
+
+    /**
+     * `select 1 from pallets where pallets.product_id = products.id`, the
+     * correlated subquery behind "the warehouse holds this product".
+     *
+     * @return EloquentBuilder<Pallet>
+     */
+    private static function palletOfProductSubquery(): EloquentBuilder
+    {
+        return Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id');
     }
 
     /**

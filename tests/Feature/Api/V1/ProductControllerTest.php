@@ -80,6 +80,7 @@ test('an unpublished product ships active as false', function () {
     actingAsMobileUser();
 
     $product = Product::factory()->create(['name' => 'Widget', 'published' => false]);
+    Pallet::factory()->create(['product_id' => $product->id]);
 
     $response = $this->getJson('/api/v1/products?product_status=inactive');
 
@@ -87,19 +88,41 @@ test('an unpublished product ships active as false', function () {
     expect(collect($response->json('data'))->firstWhere('id', $product->id)['active'])->toBeFalse();
 });
 
-test('the product listing excludes inactive products by default', function () {
+test('the product listing returns active products and the inactive ones the warehouse still holds by default', function () {
     actingAsMobileUser();
 
-    $active = Product::factory()->create(['name' => 'Active Widget']);
-    // Noise: an inactive product must not appear when no product_status filter is given.
-    $inactive = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+    $activeWithoutPallets = Product::factory()->create(['name' => 'Active Widget']);
+    $activeWithPallet = Product::factory()->create(['name' => 'Stocked Widget']);
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Inactive Stocked Widget']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+    // Noise: deactivated and no longer in the warehouse.
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
 
     $response = $this->getJson('/api/v1/products');
 
     $response->assertOk();
-    expect(collect($response->json('data'))->pluck('id'))
-        ->toContain($active->id)
-        ->not->toContain($inactive->id);
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())->toEqualCanonicalizing([$activeWithoutPallets->id, $activeWithPallet->id, $inactiveInWarehouse->id]);
+    expect($rows->firstWhere('id', $inactiveInWarehouse->id)['active'])->toBeFalse();
+    expect($rows->pluck('id'))->not->toContain($inactiveElsewhere->id);
+});
+
+test('the product listing drops an inactive product once its last pallet leaves the warehouse', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    // Noise: an active product stays listed throughout.
+    $active = Product::factory()->create(['name' => 'Active Widget']);
+
+    expect(collect($this->getJson('/api/v1/products')->json('data'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$product->id, $active->id]);
+
+    $pallet->delete();
+
+    expect(collect($this->getJson('/api/v1/products')->json('data'))->pluck('id')->all())
+        ->toBe([$active->id]);
 });
 
 test('the product listing paginates instead of returning everything at once', function () {
@@ -198,6 +221,9 @@ test('the product listing can be filtered by product_status=active, excluding an
 
     $activeProduct = Product::factory()->create(['name' => 'Active Widget']);
     Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+    // Noise: still in the warehouse, but inactive all the same.
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Inactive Stocked Widget']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
 
     $response = $this->getJson('/api/v1/products?product_status=active');
 
@@ -206,17 +232,23 @@ test('the product listing can be filtered by product_status=active, excluding an
     expect($response->json('data.0.id'))->toBe($activeProduct->id);
 });
 
-test('the product listing can be filtered by product_status=inactive, excluding an active product', function () {
+test('the product listing can be filtered by product_status=inactive, returning only inactive products the warehouse still holds', function () {
     actingAsMobileUser();
 
+    // Noise: an active product, with and without pallets.
     Product::factory()->create(['name' => 'Active Widget']);
-    $inactiveProduct = Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+    $activeWithPallet = Product::factory()->create(['name' => 'Stocked Widget']);
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
+    // Noise: deactivated and no longer in the warehouse.
+    Product::factory()->inactive()->create(['name' => 'Inactive Widget']);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Inactive Stocked Widget']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
 
     $response = $this->getJson('/api/v1/products?product_status=inactive');
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
-    expect($response->json('data.0.id'))->toBe($inactiveProduct->id);
+    expect($response->json('data.0.id'))->toBe($inactiveInWarehouse->id);
 });
 
 test('an invalid product_status is rejected on the product listing', function () {
@@ -260,6 +292,8 @@ test('an authenticated worker can fetch a single product by id', function () {
 test('fetching a deactivated product by id returns it normally with active false, not a 404', function () {
     actingAsMobileUser();
 
+    // No pallets either: a lookup by id is exempt from the listing's
+    // inactive-only-while-in-the-warehouse rule, so an old QR label resolves.
     $product = Product::factory()->inactive()->create(['name' => 'Widget']);
 
     $response = $this->getJson("/api/v1/products/{$product->id}");
@@ -364,6 +398,19 @@ test('the pallet listing returns an empty array for a product with no current st
     actingAsMobileUser();
 
     $product = Product::factory()->create();
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    expect($response->json())->toBe([]);
+});
+
+test('the pallet listing returns an empty array rather than a 404 for a deactivated product the warehouse no longer holds', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->inactive()->create();
+    // Noise: another product's pallet must not be listed.
+    Pallet::factory()->create();
 
     $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
 

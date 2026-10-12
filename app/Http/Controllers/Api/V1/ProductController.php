@@ -8,22 +8,30 @@ use App\Http\Resources\ProductPalletResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Pallet;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
 {
+    /**
+     * An inactive product is only ever listed while the warehouse still holds
+     * it (see Product::activeOrInWarehouse()): with no `product_status` that
+     * means every active product plus the inactive ones still in the
+     * warehouse, `product_status=active` keeps active products only, and
+     * `product_status=inactive` returns just the inactive ones still in the
+     * warehouse.
+     */
     public function index(FilterProductsRequest $request): AnonymousResourceCollection
     {
-        // Inactive products are excluded unless the caller explicitly opts in
-        // via product_status=inactive.
-        $productPublished = $request->productPublished() ?? true;
+        $productPublished = $request->productPublished();
 
         return ProductResource::collection(
             Product::query()
                 ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
                 ->with(Product::WITH_DERIVED_ATTRIBUTES)
                 ->searchByName($request->string('q')->value())
-                ->where('published', $productPublished)
+                ->activeOrInWarehouse()
+                ->when($productPublished !== null, fn (Builder $query) => $query->where('published', $productPublished))
                 ->orderBy('name')
                 ->paginate(20)
                 ->withQueryString()
@@ -34,7 +42,9 @@ class ProductController extends Controller
      * A deactivated product (`published = 0`) is returned normally rather than
      * 404ing — a QR label printed while it was active still needs to resolve
      * to "this product isn't sold anymore" (active: false) instead of looking
-     * like an unknown/broken label. Only a genuinely nonexistent id 404s.
+     * like an unknown/broken label. Only a genuinely nonexistent id 404s. That
+     * holds even when the warehouse no longer holds any of it: lookups by id
+     * are exempt from the listing's Product::activeOrInWarehouse() rule.
      */
     public function show(Product $product): ProductResource
     {
