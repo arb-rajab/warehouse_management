@@ -4,7 +4,6 @@ namespace App\Http\Requests\Concerns;
 
 use App\Models\Category;
 use Closure;
-use Illuminate\Validation\Rule;
 
 trait ValidatesStoreCategory
 {
@@ -44,9 +43,7 @@ trait ValidatesStoreCategory
             'filtering_attributes.*' => ['integer', 'distinct', 'exists:attributes,id'],
         ];
         foreach (['banner', 'icon', 'cover_image'] as $field) {
-            $value = $this->input($field);
-            $retained = (is_int($value) || is_string($value)) && $category?->$field !== null && (string) $value === (string) $category->$field;
-            $rules[$field] = ['nullable', 'integer', $retained ? Rule::exists('uploads', 'id')->where('type', 'image') : $this->imageUploadRule()];
+            $rules[$field] = ['nullable', 'integer', $this->retainableImageUploadRule($field, $category?->$field)];
         }
 
         return $rules;

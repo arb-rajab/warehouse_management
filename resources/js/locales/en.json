@@ -2182,6 +2182,19 @@
             "featured": "Featured",
             "search": "Search by name",
             "actions": "Actions"
+        },
+        "brands": {
+            "title": "Brands",
+            "create": "Add new brand",
+            "edit": "Edit brand",
+            "empty": "No brands found.",
+            "name": "Name",
+            "logo": "Logo (120×80)",
+            "metaTitle": "Meta title",
+            "metaDescription": "Meta description",
+            "slug": "Slug",
+            "search": "Search by name",
+            "actions": "Actions"
         }
     },
     "store.attributes.index.title": "Product attributes",

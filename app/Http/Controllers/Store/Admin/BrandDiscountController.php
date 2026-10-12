@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Store\Admin;
 
+use App\Http\Controllers\Concerns\ProvidesStoreBrandLogos;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterBrandDiscountsRequest;
 use App\Http\Requests\Store\Admin\UpdateBrandDiscountRequest;
-use App\Http\Resources\Store\BrandDiscountResource;
+use App\Http\Resources\Store\BrandResource;
 use App\Models\Brand;
 use App\Models\StoreUser;
-use App\Models\Upload;
 use App\Services\ProductService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -19,6 +19,8 @@ use Inertia\Response;
 
 class BrandDiscountController extends Controller implements HasMiddleware
 {
+    use ProvidesStoreBrandLogos;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -36,14 +38,10 @@ class BrandDiscountController extends Controller implements HasMiddleware
             ->with('brand_translations:id,brand_id,name,lang')
             ->when($search !== null && $search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
             ->orderBy('id')->paginate($perPage)->withQueryString();
-        $uploads = Upload::query()->select(['id', 'file_name', 'external_link'])->whereIn('id', $brands->getCollection()->pluck('logo')->filter())->get()->keyBy('id');
-        foreach ($brands as $brand) {
-            $logo = $uploads->get($brand->getAttribute('logo'));
-            $brand->setAttribute('logo_url', $brand->getAttribute('logo') === null ? null : ($logo === null ? static_asset('assets/img/placeholder.jpg') : ($logo->external_link === null ? my_asset($logo->file_name) : ($logo->file_name ?? $logo->external_link))));
-        }
+        $this->attachBrandLogoUrls($brands->getCollection());
 
         return Inertia::render('Store/Admin/Product/BrandDiscounts/Index', [
-            'brands' => $this->paginated(BrandDiscountResource::collection($brands)),
+            'brands' => $this->paginated(BrandResource::collection($brands)),
             'filters' => ['per_page' => $perPage, 'search' => $search],
         ]);
     }

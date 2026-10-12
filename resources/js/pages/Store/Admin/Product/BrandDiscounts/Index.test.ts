@@ -13,13 +13,9 @@ import StoreBrandDiscountFormFields from '@/components/StoreBrandDiscountFormFie
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import {
-    paginated,
-    storeBrandDiscount,
-    storeSharedProps,
-} from '@/testing/factories';
+import { paginated, storeBrand, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
-import type { StoreBrandDiscount } from '@/types/store';
+import type { StoreBrand } from '@/types/store';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock, formSlotPropsMock } = vi.hoisted(() => ({
@@ -48,10 +44,10 @@ function mountPage(permissions = ['view_all_brands', 'product_edit']) {
     return mount(Index, {
         props: {
             brands: paginated([
-                storeBrandDiscount({
+                storeBrand({
                     logo_url: 'https://example.com/logo.png',
                 }),
-                storeBrandDiscount({
+                storeBrand({
                     id: 4,
                     name: '<img src=x onerror=alert(1)>',
                     logo_url: null,
@@ -77,7 +73,7 @@ describe('Store brand discounts', () => {
                 .findComponent<
                     ComponentPublicInstance<{
                         columns: string[];
-                        rows: StoreBrandDiscount[];
+                        rows: StoreBrand[];
                         emptyMessage: string;
                     }>
                 >(DataTable)
