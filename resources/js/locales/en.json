@@ -1031,6 +1031,17 @@
             "representative": "Default representative",
             "representativeCheck": "Use a default representative"
         },
+        "generalSettings": {
+            "title": "General settings",
+            "siteName": "System name",
+            "logoWhite": "System logo – white",
+            "logoWhiteHint": "Used in the admin panel side menu.",
+            "logoBlack": "System logo – black",
+            "logoBlackHint": "Used on the seller and delivery boy login pages.",
+            "loginBackground": "Admin login page background",
+            "timezone": "System timezone",
+            "timezoneHint": "Set in the server configuration. Saving a different timezone is refused."
+        },
         "settings": {
             "save": "Save",
             "saving": "Saving…",

@@ -33,6 +33,7 @@ use App\Http\Controllers\DigitalProductController as LegacyDigitalProductControl
 use App\Http\Controllers\Store\Admin\DigitalProductController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
+use App\Http\Controllers\Store\Admin\GeneralSettingsController;
 use App\Http\Controllers\Store\Admin\LanguageController;
 use App\Http\Controllers\Store\Admin\SettingsController;
 use App\Http\Controllers\Store\Admin\NewsletterController;
@@ -333,7 +334,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(BusinessSettingsController::class)->group(function () {
         Route::post('/business-settings/update', 'update')->name('business_settings.update');
         Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
-        Route::get('/general-setting', 'general_setting')->name('general_setting.index');
 
         Route::get('/google-map', 'google_map')->name('google-map.index');
 
@@ -349,6 +349,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         // Order Configuration
     });
+
+    // General settings: a typed writer for the form's own keys only.
+    Route::get('/general-setting', [GeneralSettingsController::class, 'edit'])->name('general_setting.index');
+    Route::post('/general-setting', [GeneralSettingsController::class, 'update'])->name('general_setting.update');
 
     // Migrated plain settings: each write has its page permission and keys.
     Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');

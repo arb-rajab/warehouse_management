@@ -23,6 +23,22 @@ test('the Google Maps configuration retains its Blade picker until the map depen
         ->assertDontSee(route('business_settings.update'), false);
 });
 
+// The enabled screen's default-location form loads the Google Maps script
+// through shop.frontend.partials.google_map; map activation is an owner
+// decision, so this GET stays Blade.
+test('the enabled Google Maps screen loads the Google Maps script and the disabled one does not', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+
+    $this->get('/temp/admin/google-map')->assertOk()
+        ->assertSee('https://maps.googleapis.com/maps/api/js?key=', false)
+        ->assertSee('name="google_map_latitude"', false);
+
+    DB::table('business_settings')->where('type', 'google_map')->update(['value' => '0']);
+    $this->get('/temp/admin/google-map')->assertOk()
+        ->assertDontSee('maps.googleapis.com', false)
+        ->assertDontSee('name="google_map_latitude"', false);
+});
+
 test('the Google Maps configuration refuses unauthorized callers', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
 

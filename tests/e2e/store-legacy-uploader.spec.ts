@@ -6,13 +6,14 @@ test('retained Blade uploader uploads, selects and removes an attachment over th
     page,
 }) => {
     await loginAsStoreAdmin(page);
-    const response = await page.goto('/temp/admin/general-setting');
+    // The footer form keeps the legacy uploader until its editor is approved.
+    const response = await page.goto('/temp/admin/website/footer');
     expect(response?.headers()['content-security-policy']).toContain(
         "'unsafe-inline'",
     );
     await page
         .locator('[data-toggle="aizuploader"]', {
-            has: page.locator('input[name=system_logo_white]'),
+            has: page.locator('input[name=footer_logo]'),
         })
         .click();
     const modal = page.locator('#aizUploaderModal');
@@ -47,29 +48,27 @@ test('retained Blade uploader uploads, selects and removes an attachment over th
         .locator('.aiz-uploader-select[title="legacy-audit.png"]')
         .click();
     await modal.getByRole('button', { name: 'Add Files', exact: true }).click();
-    await expect(page.locator('input[name=system_logo_white]')).not.toHaveValue(
-        '',
-    );
+    await expect(page.locator('input[name=footer_logo]')).not.toHaveValue('');
     const selectedId = await page
-        .locator('input[name=system_logo_white]')
+        .locator('input[name=footer_logo]')
         .inputValue();
     await expect(
         page
-            .locator('input[name=system_logo_white]')
+            .locator('input[name=footer_logo]')
             .locator('..')
             .locator('..')
             .locator('.file-preview-item'),
     ).toHaveCount(1);
     await page
-        .locator('input[name=system_logo_white]')
+        .locator('input[name=footer_logo]')
         .locator('..')
         .locator('..')
         .locator('.remove-attachment')
         .click();
-    await expect(page.locator('input[name=system_logo_white]')).toHaveValue('');
+    await expect(page.locator('input[name=footer_logo]')).toHaveValue('');
     await expect(
         page
-            .locator('input[name=system_logo_white]')
+            .locator('input[name=footer_logo]')
             .locator('..')
             .locator('..')
             .locator('.file-preview-item'),
