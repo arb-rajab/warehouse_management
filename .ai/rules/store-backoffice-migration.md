@@ -13,13 +13,14 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
+Latest digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
+Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
 Category follow-up: [category migration verification](#13-category-administration-follow-up-2026-10-12).
 Customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–14 record
+historical evidence; §10 records reconciliation results and §§11–15 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -468,7 +469,7 @@ modules too:
 ## 4. Integrated status (2026-10-12)
 
 This reflects integrated code and the carrier, customer-package, category and
-brand follow-ups in §§11–14. The original
+brand and digital-product follow-ups in §§11–15. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -483,7 +484,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; core products/digital-product conversion pending |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15) with Blade create/edit retained for the editor; core products conversion pending |
 | Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain Blade editor |
 | Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog/newsletter editor forms remain Blade; typed newsletter sending/recipient lookup integrated |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
@@ -539,9 +540,9 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **62 Blade files**, down from 73 after
-removing three screens each for carriers, customer packages and categories, and
-the two brand screens.
+The current backend inventory contains **61 Blade files**, down from 73 after
+removing three screens each for carriers, customer packages and categories, the
+two brand screens and the digital product list (§15).
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -553,7 +554,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
 - **marketing:** `marketing/newsletters/index.blade.php`.
-- **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/digital_products/index.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
+- **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/general_settings.blade.php`, `setup_configurations/google_configuration/google_map.blade.php`.
@@ -592,6 +593,7 @@ line numbers or count sibling snapshots.
 | `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
 | `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
+| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`; download → file response; `digitalproducts.create`/`store`/`edit`/`update` → root `DigitalProductController` retained Blade forms (editor-blocked); seller, mobile and storefront download consumers separate |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
@@ -1109,5 +1111,106 @@ Current inventory: **62** backend Blade files; **38** direct literal consumers o
 the primary admin shell, **3** of its secondary layout, **0** of its blank shell;
 **1,043** `/temp` and **431** `/temp/admin` registrations. No brand-admin Blade
 screens remain. Verification is in the brand section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No push, PR, merge, deployment or production-data mutation is authorized.
+
+
+## 15. Digital product list follow-up (2026-10-12)
+
+The digital product list now uses `Store/Admin/Product/DigitalProducts/Index`,
+on `claude/digital-products-list-migration-6tpmmr` (PR #387), branched from
+`develop` at `f39b065d8b376d324a0ec965c333070ffe2cbf6f` (PR #385) and then
+merged with `develop` at `6de7128` once PR #386 (brands, §14) landed.
+The create and edit forms stay Blade: they use the Blade rich-text editor and
+the Tiptap dependency has no verified approval (§5).
+
+**Routes and handlers.** Ten registrations replace the resource plus three
+overrides. Every route name used by a consumer is kept; the empty, unused
+`digitalproducts.show` and the nameless resource `edit`/`destroy` duplicates
+are gone.
+
+- `Store\Admin\DigitalProductController`: `digitalproducts.index`,
+  `digitalproducts.destroy` (now `DELETE /digitalproducts/destroy/{product}`),
+  `digitalproducts.download` (still `GET /digitalproducts/download/{id}` with
+  the encrypted id) and three new typed switches, `digitalproducts.published`,
+  `.featured` and `.todays_deal` (`POST /digitalproducts/{product}/…`).
+- Root `DigitalProductController` keeps only `create`, `store`, `edit` and
+  `update`, bodies unchanged, so it stays in both analysis exclusion lists.
+  `digitalproducts.update` keeps PUT/PATCH on `/digitalproducts/{id}`; `store`
+  still redirects to the (now Inertia) list and `update` still goes back.
+- Gates are unchanged per action: `show_digital_products`,
+  `add_digital_product`, `edit_digital_product`, `delete_digital_product`,
+  `download_digital_product`. The Blade list showed edit, delete and download
+  under `add_digital_product`; the Vue list gates each on its route's own
+  permission, as §2.2 does for the sidebar.
+
+**List.** Ordering (`created_at desc`, plus `id` as a tie-breaker), base-name
+search and the `digital = 1` filter are kept; page size moves from 10 to the
+pilot's 20 with the selector. The narrow `DigitalProductResource` sends the
+translated name, author, thumbnail through `uploaded_asset()` (placeholder
+included, as the Blade did per row), the `number_format` price, the three
+flags, the public `product` URL by slug (null without a slug) and the
+encrypted download id. Create, edit and download are plain full-load `<a>`
+links built from Wayfinder `.url()`; the name links to the storefront page in
+a new tab.
+
+**Switches.** The shared `products.published`/`.featured`/`.todays_deal`
+endpoints (root `ProductController`, gated by `product_edit`) answer `1`/`0`
+for jQuery, take any product id and write stock before a possible refusal, so
+an Inertia visit cannot use them. They stay unchanged for the Blade product
+lists. The new endpoints keep the `product_edit` gate and the writes:
+unpublish also unfeatures and zeroes every stock row, publish sets stock to
+1,000, published/featured run `view:clear` and `cache:clear`, today's deal
+forgets `todays_deal_products`. Each locks the row in a transaction, accepts
+only digital products (404 otherwise) and redirects preserving the query. The
+seller-subscription refusal is kept, but now refuses (422 on `status`) before
+any write instead of after the stock update.
+
+**Deletion: owner decision pending, behaviour unchanged.** Deleting still
+removes the product's translations and stock rows and hard-deletes the
+`products` row, now in one transaction with the row locked, and only for a
+digital product. This is the same single-writer conflict as brand deletion
+(§14; `products` is WMS-owned, shared-database.md). A pallet referencing
+the product (`pallets.product_id` restrict) or a store barcode/variation
+(no-action FKs) makes the delete fail atomically with a server error; WMS
+settings/barcodes cascade and cell-log/verification references null. Tests pin
+both outcomes. Soft delete, a refusal with a validation error, or any other
+policy needs owner approval. The published switch likewise remains a second
+writer of `products.published`, which `products:sync` overwrites for feed
+products; that predates this change.
+
+**Download.** Gate `download_digital_product`; the encrypted-id contract is
+kept, since external bookmarks cannot be ruled out. Two narrow defect fixes:
+an undecryptable or non-integer id and a product whose upload is missing or
+whose local file is absent are 404s, not a 500 or an empty 200. The S3 branch
+is unchanged (a missing S3 object still fails in the driver).
+`seller.digitalproducts.download`, the mobile `purchased-products/download`
+and the storefront `digital-products.download` are separate controllers and
+untouched.
+
+**Consumers traced.** Only the root `index` rendered the removed list view;
+`create`/`edit` views, `shop.categories.child_category`, PDFs, shells, the
+legacy uploader and `HandleStoreBladePages`/`store.blade_csp` remain. The Blade
+sidebar's `areActiveRoutes(['digitalproducts.index', …])` names still resolve.
+`ProductController::admin_product_edit`/`seller_product_edit` still redirect a
+digital product to `admin/digitalproducts/{id}/edit` and
+`digitalproducts/{id}/edit` without `/temp`, which already missed the store
+(inherited debt, unchanged).
+
+**Tests retargeted, none weakened.** PR #386 moved `HandleStoreBladePagesTest`,
+`ReconstructedMigrationAuditTest` and `RouteServiceProviderTest` (plus the
+`RouteServiceProvider` docblock) from brand routes to the then-Blade digital
+product routes. With digital products converted, they now use the retained
+general settings page (`/temp/admin/general-setting`) and the `sellers`
+resource/`sellers.destroy` override as the duplicate-name example.
+`LegacyStoreStateChangingRoutesTest` already accepts DELETE for
+`digitalproducts.destroy`.
+
+Current inventory: **61** backend Blade files (62 after §14), **37** direct
+literal consumers of `shop.backend.layouts.app`, **3** of
+`shop.backend.layouts.layout`, **0** of the blank shell; **1,043** `/temp` and
+**431** `/temp/admin` registrations, unchanged by this module because ten
+registrations replace ten. Verification is recorded in the digital-product
+section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No push, PR, merge, deployment or production-data mutation is authorized.

@@ -541,6 +541,18 @@ export interface StoreCategory {
     featured: boolean;
     commision_rate: string;
 }
+export interface StoreDigitalProduct {
+    id: number;
+    name: string;
+    added_by: string | null;
+    thumbnail_url: string;
+    unit_price: string;
+    todays_deal: boolean;
+    published: boolean;
+    featured: boolean;
+    public_url: string | null;
+    download_token: string;
+}
 export interface StoreCategoryForm {
     id: number;
     name: string;

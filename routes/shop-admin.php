@@ -29,7 +29,8 @@ use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\CustomerController;
 use App\Http\Controllers\Store\Admin\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
-use App\Http\Controllers\DigitalProductController;
+use App\Http\Controllers\DigitalProductController as LegacyDigitalProductController;
+use App\Http\Controllers\Store\Admin\DigitalProductController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\LanguageController;
@@ -137,13 +138,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/offers/destroy/{catalog}', [OffersCatalogController::class, 'destroy'])->name('offers.destroy');
     Route::post('/products/add-more-choice-option', [ProductSearchController::class, 'attributeValues'])->name('products.add-more-choice-option');
 
-    // Digital Product
-    Route::resource('digitalproducts', DigitalProductController::class);
-    Route::controller(DigitalProductController::class)->group(function () {
-        Route::get('/digitalproducts/edit/{id}', 'edit')->name('digitalproducts.edit');
-        Route::post('/digitalproducts/destroy/{id}', 'destroy')->name('digitalproducts.destroy');
-        Route::get('/digitalproducts/download/{id}', 'download')->name('digitalproducts.download');
-    });
+    // Digital products: the list and its row actions are Inertia; the create
+    // and edit forms stay Blade for their rich-text editor.
+    Route::get('/digitalproducts', [DigitalProductController::class, 'index'])->name('digitalproducts.index');
+    Route::get('/digitalproducts/create', [LegacyDigitalProductController::class, 'create'])->name('digitalproducts.create');
+    Route::post('/digitalproducts', [LegacyDigitalProductController::class, 'store'])->name('digitalproducts.store');
+    Route::get('/digitalproducts/edit/{id}', [LegacyDigitalProductController::class, 'edit'])->name('digitalproducts.edit');
+    Route::match(['PUT', 'PATCH'], '/digitalproducts/{id}', [LegacyDigitalProductController::class, 'update'])->name('digitalproducts.update');
+    Route::delete('/digitalproducts/destroy/{product}', [DigitalProductController::class, 'destroy'])->name('digitalproducts.destroy');
+    Route::get('/digitalproducts/download/{id}', [DigitalProductController::class, 'download'])->name('digitalproducts.download');
+    Route::post('/digitalproducts/{product}/published', [DigitalProductController::class, 'updatePublished'])->name('digitalproducts.published');
+    Route::post('/digitalproducts/{product}/featured', [DigitalProductController::class, 'updateFeatured'])->name('digitalproducts.featured');
+    Route::post('/digitalproducts/{product}/todays-deal', [DigitalProductController::class, 'updateTodaysDeal'])->name('digitalproducts.todays_deal');
 
     // Bulk import/export; downloads remain server-rendered PDFs.
     Route::get('/product-bulk-export', [ProductBulkUploadController::class, 'export'])->name('product_bulk_export.index');

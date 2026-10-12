@@ -1439,3 +1439,120 @@ build passed and was used for browser runs. Fresh Wayfinder generation passed.
 Limits: MySQL, production schema/data, deployed grants and external services were
 not exercised; the full browser suite was not run. Brand-discount has no browser
 spec. Production may differ from the inspected schema sources for `order_level`.
+
+## Digital product list migration (2026-10-12)
+
+Work on `claude/digital-products-list-migration-6tpmmr` (PR #387) from fetched
+`origin/develop` at `f39b065d8b376d324a0ec965c333070ffe2cbf6f` (PR #385). The
+designated branch had no commits beyond that base. PR #386 (brands) was then
+merged into `develop` (`6de7128`), and `develop` was merged into this branch to
+resolve the resulting conflicts. Push and PR were authorized by the user; no
+merge, deployment or production-data mutation was performed.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+Only the list converts. The create/edit forms use the Blade rich-text editor,
+held by the Tiptap dependency decision in the table above. No other
+digital-product dependency, feature-use or business-policy hold exists.
+
+- **Index** (`app/Http/Controllers/DigitalProductController.php:43-53`):
+  `orderBy('created_at', 'desc')`, `name like %search%` when present,
+  `digital = 1`, `paginate(10)`. The view linked each name to the public
+  `product` route by slug (`index.blade.php:48`) and showed edit, delete and
+  download under `@can('add_digital_product')` (`:73-87`), while the routes
+  gate `edit_`, `delete_` and `download_digital_product` (controller `:31-35`).
+- **Switches** (`index.blade.php:120,137,154`) posted to `products.todays_deal`,
+  `.published`, `.featured` (`routes/shop-admin.php:117-120`), root
+  `ProductController::updateTodaysDeal/updatePublished/updateFeatured`
+  (`:629-709`), gated `product_edit` (`:65`). They return `1`/`0` with no
+  redirect, accept any product id, and `updatePublished` writes stock before its
+  seller-subscription refusal. Not usable from Inertia; left unchanged for the
+  Blade product lists.
+- **Destroy** (`:250-261`): translations, stocks, then `Product::destroy`,
+  untransacted; `POST /digitalproducts/destroy/{id}` (`routes/shop-admin.php:144`)
+  for any product id.
+- **Download** (`:264-276`): `decrypt($request->id)`, `Upload::findOrFail`, S3
+  download or `public/` file, else no return value (empty 200); a bad ciphertext
+  is a 500. Only consumer of the encrypted id in the repo: the removed list.
+- **Consumers:** seller `shop-seller.php:48-55` runs `Seller\DigitalProductController`
+  (group namespace); `shop-api.php:64` runs `Api\V2\DigitalProductController`;
+  `shop-web.php:286` runs `PurchaseHistoryController::download`
+  (`shop-web.php:20` imports the root class unused). Blade create/edit use
+  `digitalproducts.store`/`.update`/`.edit`; the Blade sidebar uses
+  `areActiveRoutes` on `.index`/`.create`/`.edit`; `storeAdminMenu.ts` imported
+  the root `index`. `ProductController.php:388,423` redirect digital products
+  to URLs without `/temp` (inherited debt, unchanged).
+
+### Completed scope
+
+- `Store\Admin\DigitalProductController` (index, destroy, download, three
+  switches), `FilterDigitalProductsRequest`, `UpdateDigitalProductFlagRequest`,
+  `DigitalProductResource`; ten explicit registrations keep every consumed
+  route name; the root controller keeps only create/store/edit/update.
+- `Store/Admin/Product/DigitalProducts/Index.vue` with StoreAdminLayout,
+  DataTable, Pagination with selector, StoreStatusButton, TableActionLink,
+  `confirmDelete`, `useStoreAccess()` and Wayfinder; create/edit/download are
+  full-load `<a>` links. English/Arabic `store.digitalProducts.*` keys and one
+  `messages.store_digital_product_package_limit` backend string. Sidebar entry
+  is an Inertia visit. Only `digital_products/index.blade.php` was removed.
+- Deletion and switches run in transactions with the row locked and accept
+  only digital products. Download keeps the encrypted id and returns 404 for an
+  undecryptable/non-integer id, a missing upload or an absent local file.
+- Owner decisions recorded, behaviour unchanged: product hard deletion (shared
+  with brand deletion in PR #386) and the published switch as a second writer
+  of `products.published`.
+- No dependency, manifest, lock, migration, permission definition, role grant,
+  public/seller/mobile contract or shared ProductController change.
+
+### Merge with PR #386
+
+PR #386 had retargeted `HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest`
+and `RouteServiceProviderTest` (plus the provider docblock) from brands to the
+then-Blade digital product routes. The merge keeps this branch's targets:
+general settings and the `sellers` resource, which remain Blade and
+resource-registered. Locale files keep both `store.brands` and
+`store.digitalProducts`; the menu test lists both Inertia URLs. The migration
+guide keeps the brand follow-up as §14 and renumbers this one §15.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0); `composer.lock` and all manifests are unchanged. Laravel Boost was not
+connected; repository files and installed sources were used instead.
+
+- `php artisan wayfinder:generate --skip-routes --with-form`: generated.
+- `python3 .claude/scripts/pre_push_check.py` on the final tree: every stage
+  passed, none skipped. ESLint, Prettier and vue-tsc clean; Vitest **2,105 tests
+  in 236 files**; Pint passed; PHPStan **0 errors**; Pest **5,237 tests / 25,839
+  assertions** (41 in `DigitalProductControllerTest`). `git diff --check` clean.
+- Focused: `DigitalProductControllerTest` 41 tests / 386 assertions; route
+  provider, Blade-page CSP, reconstructed audit, state-changing routes, admin
+  permissions, temp-route reachability, middleware conversion, seller product
+  authorization, store API, exclusions, shared props, shop route access and
+  admin panel suites 94 tests; page and menu Vitest 20 tests. Mutating the
+  destroy transaction and the seller-package refusal failed three tests, as
+  intended, before being reverted.
+- Production build: `npm run build` fails only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  the manifest contains the new page.
+- Playwright over local HTTPS with CSP enforced, one worker, zero retries,
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` (Chromium
+  1194; Playwright 1.62.1): the new `store-digital-products.spec.ts` 2/2, and
+  with the catalogue-forms, categories, legacy-uploader, reference-coexistence
+  and staff-coexistence specs **13/13**. Covered: switch round trips and their
+  persisted writes, native delete cancel/accept, full-load (non-Inertia) hops
+  into the retained Blade create/edit, RTL, dark contrast of link, header and
+  cell text, and the sidebar Inertia visit.
+
+- After merging `develop` (`6de7128`, PR #386): fresh Wayfinder generation,
+  `build_without_fonts.py` build (`npm run build` again failed only on
+  `fonts.bunny.net`), and `pre_push_check.py` with every stage passing and none
+  skipped: Vitest **2,118 tests in 238 files**, PHPStan **0 errors**, Pest
+  **5,295 tests / 26,244 assertions**. Digital-product, brand, route-provider,
+  Blade-CSP, audit and state-changing-route suites: **129 tests**. Playwright
+  under the same settings, adding #386's `store-brands.spec.ts`: **16/16**.
+  Registrations after the merge: **1,043** `/temp`, **431** `/temp/admin`.
+
+Not run: MySQL (locking/FK behaviour is verified on SQLite only), production
+data or role grants, S3 against a real bucket (faked disk only), and the full
+browser suite.

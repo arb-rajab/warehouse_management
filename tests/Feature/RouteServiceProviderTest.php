@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
-use App\Http\Controllers\DigitalProductController;
+use App\Http\Controllers\SellerController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -54,11 +54,11 @@ test('duplicated store route names resolve to the route the legacy app gave them
 
 test('the routes that lost a duplicated name are still registered', function () {
     $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v2/brands'));
-    $resourceDestroy = Route::getRoutes()->match(Request::create('/temp/admin/digitalproducts/5', 'DELETE'));
+    $resourceDestroy = Route::getRoutes()->match(Request::create('/temp/admin/sellers/5', 'DELETE'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
         ->and($apiBrands->getName())->toBeNull()
-        ->and($resourceDestroy->getActionName())->toBe(DigitalProductController::class.'@destroy')
+        ->and($resourceDestroy->getActionName())->toBe(SellerController::class.'@destroy')
         ->and($resourceDestroy->getName())->toBeNull();
 });
 
