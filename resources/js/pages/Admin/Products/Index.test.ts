@@ -10,6 +10,8 @@ import {
     updateMinimumPallets,
     storeBarcode,
     destroyBarcode,
+    downloadAllBarcodes,
+    downloadBarcode,
     exportQr as productExportQr,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
@@ -732,6 +734,128 @@ describe('Products Index', () => {
         await rowCells(wrapper)[3].get('button').trigger('click');
 
         expect(wrapper.text()).toContain(t('products.noBarcodes'));
+    });
+
+    describe('downloading barcodes', () => {
+        const fetchMock = vi.fn();
+        const clickSpy = vi
+            .spyOn(HTMLAnchorElement.prototype, 'click')
+            .mockImplementation(() => {});
+
+        function mountWithBarcodes() {
+            return mountPage([
+                product({
+                    id: 42,
+                    barcodes: [
+                        { id: 7, barcode: '1111111111111' },
+                        { id: 8, barcode: '2222222222222' },
+                    ],
+                }),
+            ]);
+        }
+
+        function fileResponse(): Response {
+            return new Response('<svg/>', {
+                status: 200,
+                headers: {
+                    'Content-Disposition':
+                        'attachment; filename="product-42-barcode-7.svg"',
+                },
+            });
+        }
+
+        beforeEach(() => {
+            fetchMock.mockReset();
+            clickSpy.mockClear();
+            vi.stubGlobal('fetch', fetchMock);
+            URL.createObjectURL = vi.fn(() => 'blob:test');
+            URL.revokeObjectURL = vi.fn();
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it('offers one download button per barcode, each fetching that barcode’s route', async () => {
+            fetchMock.mockResolvedValue(fileResponse());
+            const wrapper = mountWithBarcodes();
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            const second = wrapper.get(
+                `button[aria-label="${t('products.downloadBarcode', { barcode: '2222222222222' })}"]`,
+            );
+            await second.trigger('click');
+            await flushPromises();
+
+            expect(fetchMock).toHaveBeenCalledOnce();
+            expect(fetchMock.mock.calls[0][0]).toBe(
+                downloadBarcode.url({ product: 42, barcode: 8 }),
+            );
+            expect(clickSpy).toHaveBeenCalledOnce();
+        });
+
+        it('offers a Download all button fetching the product’s ZIP route', async () => {
+            fetchMock.mockResolvedValue(fileResponse());
+            const wrapper = mountWithBarcodes();
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            const all = wrapper
+                .findAll('button')
+                .find((button) =>
+                    button.text().includes(t('products.downloadAllBarcodes')),
+                )!;
+            await all.trigger('click');
+            await flushPromises();
+
+            expect(fetchMock.mock.calls[0][0]).toBe(
+                downloadAllBarcodes.url(42),
+            );
+            expect(clickSpy).toHaveBeenCalledOnce();
+        });
+
+        it('shows an error and downloads nothing when the server rejects the request', async () => {
+            fetchMock.mockResolvedValue(new Response('no', { status: 422 }));
+            const wrapper = mountWithBarcodes();
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            await wrapper
+                .get(
+                    `button[aria-label="${t('products.downloadBarcode', { barcode: '1111111111111' })}"]`,
+                )
+                .trigger('click');
+            await flushPromises();
+
+            expect(wrapper.text()).toContain(t('products.downloadFailed'));
+            expect(clickSpy).not.toHaveBeenCalled();
+        });
+
+        it('shows an error when the network request itself fails', async () => {
+            fetchMock.mockRejectedValue(new TypeError('offline'));
+            const wrapper = mountWithBarcodes();
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            await wrapper
+                .findAll('button')
+                .find((button) =>
+                    button.text().includes(t('products.downloadAllBarcodes')),
+                )!
+                .trigger('click');
+            await flushPromises();
+
+            expect(wrapper.text()).toContain(t('products.downloadFailed'));
+        });
+
+        it('offers no download actions for a product without barcodes', async () => {
+            const wrapper = mountPage([product({ barcodes: [] })]);
+            await rowCells(wrapper)[3].get('button').trigger('click');
+
+            expect(wrapper.text()).not.toContain(
+                t('products.downloadAllBarcodes'),
+            );
+            expect(
+                wrapper.find('[aria-label^="Download barcode"]').exists(),
+            ).toBe(false);
+        });
     });
 
     it('posts a new barcode to the product’s route, preserving the current page and filters', async () => {

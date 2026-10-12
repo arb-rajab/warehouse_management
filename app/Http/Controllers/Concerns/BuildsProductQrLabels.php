@@ -32,6 +32,9 @@ trait BuildsProductQrLabels
 
     private const int BARCODE_QUIET_ZONE_MODULES = 10;
 
+    /** Narrowest a bar module may print, in label pixels, before the label widens. */
+    private const int BARCODE_MIN_MODULE_PX = 2;
+
     /**
      * Bar/space widths (in modules) of every Code 128 symbol, indexed by
      * symbol value. The last entry (106) is the 13-module stop pattern.
@@ -133,27 +136,60 @@ trait BuildsProductQrLabels
     }
 
     /**
-     * $width/$height are Setting::current()'s qr_code_width/qr_code_height:
-     * the label's total box. The barcode always spans the full width; the
-     * large id and name below it yield to $height like every other label —
-     * the name is wrapped and truncated with an ellipsis, then dropped, when
-     * it doesn't fit.
+     * The product-id label: the product's id encoded and printed beneath its
+     * barcode, with its name below.
      */
     private function productQrLabelImage(Product $product, int $width, int $height): string
     {
+        return $this->productLabelImage(
+            $product,
+            (string) $product->id,
+            __('messages.qr_label_product_id', ['id' => $product->id]),
+            $width,
+            $height,
+        );
+    }
+
+    /**
+     * The label for one of the product's own stored barcodes (the value a
+     * supplier or scanner assigned, see ProductBarcode): that exact value is
+     * encoded and printed beneath its bars, with the product's name below.
+     *
+     * @throws InvalidArgumentException when the value is not printable ASCII
+     */
+    private function productBarcodeLabelImage(Product $product, string $barcode, int $width, int $height): string
+    {
+        return $this->productLabelImage($product, $barcode, $barcode, $width, $height);
+    }
+
+    /**
+     * $width/$height are Setting::current()'s qr_code_width/qr_code_height:
+     * the label's total box. The barcode always spans the full width; the
+     * large caption and name below it yield to $height like every other
+     * label — the name is wrapped and truncated with an ellipsis, then
+     * dropped, when it doesn't fit.
+     *
+     * Code 128 grows with every character, so a long value would squeeze its
+     * bars below what a scanner resolves: the canvas widens instead until each
+     * module is at least BARCODE_MIN_MODULE_PX wide.
+     */
+    private function productLabelImage(Product $product, string $encoded, string $caption, int $width, int $height): string
+    {
         $padding = self::LABEL_PADDING;
+        $modulesWidth = array_sum($this->code128BModules($encoded)) + 2 * self::BARCODE_QUIET_ZONE_MODULES;
+        $width = max($width, (int) ceil($modulesWidth * self::BARCODE_MIN_MODULE_PX) + $padding * 2);
         $centerX = (int) ($width / 2);
         $textMaxWidth = $width - $padding * 2;
         $maxTextY = $height - 16;
         $barcodeHeight = max(60, (int) round($width * 0.3));
         $barcodeBottom = $padding + $barcodeHeight;
 
-        $barsMarkup = $this->code128BBarsMarkup((string) $product->id, (float) $width - $padding * 2, $barcodeHeight);
+        $barsMarkup = $this->code128BBarsMarkup($encoded, (float) $width - $padding * 2, $barcodeHeight);
 
         $idFontSize = self::PRODUCT_LABEL_ID_FONT_SIZE;
         $idLineHeight = (int) round($idFontSize * 1.2);
         $idY = $barcodeBottom + 12 + (int) round($idFontSize * 0.8);
-        $idLines = $this->clampLinesToHeight([__('messages.qr_label_product_id', ['id' => $product->id])], $idY, $idLineHeight, $maxTextY);
+        $idLines = $this->clampLinesToHeight($this->wrapLabelText($caption, $textMaxWidth, $idFontSize), $idY, $idLineHeight, $maxTextY);
         $idMarkup = $this->textLinesMarkup($idLines, $centerX, $idY, $idLineHeight, $idFontSize, '#111111', 'ltr', bold: true);
         $contentBottom = $idLines !== [] ? $idY : $barcodeBottom;
 

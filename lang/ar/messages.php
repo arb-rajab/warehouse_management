@@ -29,6 +29,8 @@ return [
     'cell_changed_since_verification_report' => 'تغيّر هذا الموقع منذ جرده، لذا لم يعد بالإمكان تطبيق الحالة المُبلغ عنها.',
     'verification_report_accepted_note' => 'تم الاعتماد من تقرير الجرد رقم :id',
     'qr_label_product_id' => 'المعرف: :id',
+    'barcode_not_printable' => 'لا يمكن عرض الباركود :barcode كملصق Code 128.',
+    'product_has_no_barcodes' => 'لا توجد باركودات لهذا المنتج لتنزيلها.',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
     'pallet_moved' => 'تم نقل هذه المنصة النقالة منذ تحميلها. يرجى التحديث والمحاولة مرة أخرى.',
     'verification_round_scope_empty' => 'لا توجد ممرات لتغطيها جولة الجرد هذه.',
