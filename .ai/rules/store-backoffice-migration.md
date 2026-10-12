@@ -1413,8 +1413,8 @@ No deployment or production-data mutation is authorized.
 General settings now use `Store/Admin/Setup/GeneralSettings/Index`. The Google
 Map settings screen stays Blade. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
 `develop` at `e3eb0f5` (the PR #390 merge, after PR #389 at `a14c659`). The
-owner authorized this session's PR, its merge into `develop` and `[skip ci]` on
-both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
+owner authorized this session's PR (#391), its merge into `develop` and
+`[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
 no PR or merge SAST and no `develop` deploy ran for them.
 
 **Google Map settings: held, map decision.** The screen's enabled state loads a

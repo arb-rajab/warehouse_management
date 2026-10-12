@@ -1742,7 +1742,7 @@ Work on `ccr-b39fe4ad-n2p9xs` from fetched `develop` at
 `e3eb0f5315b4f66c25e9db176316b9655759e047` (the PR #390 merge, after the
 PR #389 merge `a14c6595b4c72ced24dc43a0d24ba5ccaff43723`). The branch had no
 commits beyond that base. For this session only, the owner authorized
-the pull request, its merge into `develop` with the merge method, and
+the pull request (#391), its merge into `develop` with the merge method, and
 `[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
 PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
 checks below are the only verification. No other branch, deployment or
