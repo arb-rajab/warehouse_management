@@ -1561,7 +1561,8 @@ browser suite.
 
 Work on `claude/migrate-admin-product-lists-2q0qog` from fetched `develop` at
 `2aafc217478cb8e401340554718587d05662da25` (the PR #387 merge). The branch had
-no commits beyond that base. For this session only, the owner authorized the
+no commits beyond that base. It merged into `develop` as PR #388, merge commit
+`046be2005c3019584483a44eecefddd39116a831`. For this session only, the owner authorized the
 pull request, its merge into `develop` with the merge method, and `[skip ci]`
 on every commit, the PR title and the merge commit. **No PR CI, no PR or merge
 SAST and no `develop` deploy ran for this PR or its merge**, so the checks below
@@ -1732,5 +1733,126 @@ for most of the session, so repository files and installed sources were used.
 
 Not run: MySQL (locking and foreign-key behaviour is verified on SQLite only),
 production data or role grants, the real Otajer import behind `products.fetch`,
+and the full browser suite. Because of `[skip ci]`, GitHub CI, SAST and deploy
+did not run for this PR or its merge.
+
+## General settings migration and Google Map hold (2026-10-12)
+
+Work on `ccr-b39fe4ad-n2p9xs` from fetched `develop` at
+`e3eb0f5315b4f66c25e9db176316b9655759e047` (the PR #390 merge, after the
+PR #389 merge `a14c6595b4c72ced24dc43a0d24ba5ccaff43723`). The branch had no
+commits beyond that base. For this session only, the owner authorized
+the pull request, its merge into `develop` with the merge method, and
+`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
+checks below are the only verification. No other branch, deployment or
+production data was touched.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Google Map settings held (map decision).**
+  `setup_configurations/google_configuration/google_map.blade.php:105-107`
+  includes `shop.frontend.partials.google_map` when `google_map == 1`; the
+  partial loads `https://maps.googleapis.com/maps/api/js?…&libraries=places`
+  (`:117`) and creates a `google.maps.Map` (`:17`). The default-location inputs
+  are `readonly` (`:81`, `:89`) and only the map fills them. The brief required
+  stopping here, so only general settings converted.
+- **General settings handler.** `BusinessSettingsController.php:28` (gate),
+  `:45-48` (view), route `routes/shop-admin.php:336`. The form posted `types[]`
+  to the generic writer (`:135-191`), gated
+  `general_settings|footer_setup|website_appearance|edit_website_page` (`:31`).
+- **Timezone.** Displayed from `app_timezone()` = `config('app.timezone')`
+  (`app/Http/Helpers.php:1022`), hardcoded `'UTC'` (`config/app.php:146`);
+  options from `timezones()` (`Helpers.php:1011`). The writer sent it only to
+  `overWriteEnvFile('APP_TIMEZONE')` (`:149-150`), which refuses, logs and
+  flashes; no `timezone` row was ever stored. `site_name` also went to the
+  refusing `overWriteEnvFile('APP_NAME')` (`:146-147`) and then to its row.
+- **Readers.** `system_logo_white`: `inc/admin_sidenav.blade.php:5-7`.
+  `system_logo_black`: `shop/frontend/seller_login.blade.php:12-13`,
+  `deliveryboy_login.blade.php:12-13`. `admin_login_background`: none (the
+  store login reads `login_page_image`, `shop/auth/login.blade.php:162`).
+  `site_name`: `shop/backend/layouts/app.blade.php:74`,
+  `shop/seller/layouts/app.blade.php:85`, `admin_sidenav.blade.php:7,10`,
+  `seller_sidenav.blade.php:7,10`, `invoices/invoice.blade.php:88` (PDF),
+  `shop/emails/invoice.blade.php:80` (mail),
+  `Api/V2/BusinessSettingController.php:17` (`PUBLIC_KEYS`). `get_setting()`
+  (`Helpers.php:1131-1157`) reads the first row of a type.
+- **Tests that used general settings as the Blade example.**
+  `HandleStoreBladePagesTest.php:29,31,37,60`,
+  `ReconstructedMigrationAuditTest.php:43`,
+  `SettingsReconciliationTest.php:10-17` (`site_name` as the permitted key),
+  `ReferenceSettingsIsolationTest.php:11-14`,
+  `store-staff-coexistence.spec.ts:43-66`, `store-legacy-uploader.spec.ts:9-72`.
+  `RouteServiceProviderTest.php:57` uses only `sellers`.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\GeneralSettingsController` (`edit`, `update`),
+  `UpdateGeneralSettingsRequest` (`KEYS`, `IMAGES`), reusing
+  `UpdatesStoreSettings`, `ProvidesStoreUploadPreviews`,
+  `ValidatesWebsiteSettings::refuseUnexpectedSettingInput()` and
+  `ValidatesStoreUploadReference::retainableImageUploadRule()`. New route
+  `general_setting.update`; `general_setting.index` keeps its name, URI and
+  gate. The generic writer reserves `UpdateGeneralSettingsRequest::KEYS`.
+  `messages.store_timezone_environment_managed` in English and Arabic.
+- **Frontend.** `Store/Admin/Setup/GeneralSettings/Index.vue`, the
+  `StoreGeneralSettings` types and fixture, 9 `store.generalSettings.*` keys
+  per locale, and the sidebar entry as an Inertia visit.
+- **Removed.** `general_settings.blade.php` and root `general_setting` with its
+  middleware entry. No other view, partial or shell was removed.
+- **Deliberate changes.** Validation (schema width, upload ownership, timezone
+  identifiers), refusal of a timezone other than the configured one with a
+  field error, and no `.env` refusal log or flash on a normal save.
+- **Unchanged.** No dependency, manifest, lock, migration, permission
+  definition, role grant, feature flag, `.env` write, stored format or
+  public/seller/mobile/mail/PDF contract changed.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost was not connected, so repository files and installed
+sources were used.
+
+- **Generation and build.**
+  - `php artisan wayfinder:generate --skip-routes --with-form` generated
+    `GeneralSettingsController` actions.
+  - `npm run build` failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`
+    (the proxy answers 403). `python3 .claude/scripts/build_without_fonts.py`
+    passed, and its manifest served the Pest and browser runs.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,139 tests in 240 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,423 tests / 27,585 assertions**.
+- **Focused PHP checks.**
+  - `GeneralSettingsControllerTest`: **36 tests / 215 assertions**.
+  - Blade CSP, reconstructed audit, settings reconciliation and isolation,
+    Google Map, middleware conversion, admin permissions, state-changing
+    routes, route provider, `.env` protection, temp-route reachability, shop
+    route access, storefront renders and data exposure: **372 tests / 1,233
+    assertions**.
+  - Mutations failed tests as intended before being reverted: dropping the
+    foreign-input refusal (2 failures), dropping the configured-timezone
+    refusal (2) and un-reserving the keys in the generic writer (10).
+- **Focused frontend checks.** Page and menu Vitest: **18 tests**. Scoped
+  ESLint/Prettier and `npm run types:check` passed.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one worker,
+  zero retries and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - The new `store-setup-settings.spec.ts` passed **3/3**: the name and a
+    canonical logo pick survive a reload and reach the Blade admin shell, the
+    timezone stays `UTC` and unstored, a refused timezone keeps the draft in
+    Arabic RTL with dark contrast, and the sidebar visit is Inertia.
+  - With the retargeted coexistence and legacy-uploader specs and the brands,
+    digital-products, products and categories specs: **16/16** in 7 files.
+  - The first run failed on spec authoring: it asserted no `'unsafe-inline'`
+    anywhere in the policy, but `style-src` carries it on every page. The
+    assertion now reads `script-src` only.
+- **Inventory.** **60** backend Blade files; **36**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,050** `/temp` and **438**
+  `/temp/admin` registrations, up from 1,049/437 by one POST.
+
+Not run: MySQL, production data or role grants, the real Google Maps script,
 and the full browser suite. Because of `[skip ci]`, GitHub CI, SAST and deploy
 did not run for this PR or its merge.
