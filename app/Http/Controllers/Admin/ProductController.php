@@ -183,6 +183,11 @@ class ProductController extends Controller
     }
 
     /**
+     * The admin product filter's searchable catalog: an inactive product is
+     * only offered while the warehouse still holds it (see
+     * Product::activeOrInWarehouse()). Unlike index(), the products page
+     * itself, which lists every product.
+     *
      * @return array<string, mixed>
      */
     public function search(SearchProductsRequest $request): array
@@ -191,6 +196,7 @@ class ProductController extends Controller
             Product::query()
                 ->select(['id', 'name', 'ar_name', 'published'])
                 ->searchByName($request->string('q')->value())
+                ->activeOrInWarehouse()
                 ->orderBy('name')
                 ->paginate(20)
                 ->withQueryString()

@@ -878,13 +878,15 @@ test('an authenticated admin can search products with every property the filter 
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the product search includes deactivated products and flags their active state', function () {
+test('the product search includes deactivated products the warehouse still holds and flags their active state', function () {
     actingAsAdmin();
 
     $active = Product::factory()->create(['name' => 'Widget Blue']);
     $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactive->id]);
     // Noise: a product that doesn't match the search term must not be returned.
     $unrelated = Product::factory()->inactive()->create(['name' => 'Gadget']);
+    Pallet::factory()->create(['product_id' => $unrelated->id]);
 
     $response = $this->getJson('/admin/products/search?q=Widget');
 
@@ -894,6 +896,43 @@ test('the product search includes deactivated products and flags their active st
     expect($rows->firstWhere('id', $active->id)['active'])->toBeTrue();
     expect($rows->firstWhere('id', $inactive->id)['active'])->toBeFalse();
     expect($rows->pluck('id'))->not->toContain($unrelated->id);
+});
+
+test('the product search excludes a deactivated product the warehouse no longer holds, keeping active products with or without pallets', function () {
+    actingAsAdmin();
+
+    $activeWithoutPallets = Product::factory()->create(['name' => 'Widget Blue']);
+    $activeWithPallet = Product::factory()->create(['name' => 'Widget Green']);
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+
+    $response = $this->getJson('/admin/products/search');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$activeWithoutPallets->id, $activeWithPallet->id, $inactiveInWarehouse->id])
+        ->not->toContain($inactiveElsewhere->id);
+    expect($response->json('meta.total'))->toBe(3);
+});
+
+test('the products index still lists a deactivated product with no pallets that the product search hides', function () {
+    actingAsAdmin();
+
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+    // Noise: an active product both endpoints return.
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+
+    $this->get('/admin/products')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $active->id)
+            ->where('products.data.1.id', $inactiveElsewhere->id)
+            ->where('products.data.1.active', false)
+    );
+
+    expect(collect($this->getJson('/admin/products/search')->json('data'))->pluck('id')->all())
+        ->toBe([$active->id]);
 });
 
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
