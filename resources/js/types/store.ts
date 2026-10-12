@@ -70,6 +70,19 @@ export interface StoreCity extends StoreReferenceOption {
 export interface StoreZone extends StoreReferenceOption {
     status: boolean;
 }
+export interface StoreCarrierRange {
+    billing_type: 'weight_based' | 'price_based';
+    delimiter1: string;
+    delimiter2: string;
+    prices: Record<string, string>;
+}
+export interface StoreCarrier extends StoreReferenceOption {
+    transit_time: string;
+    logo: number | null;
+    free_shipping: boolean;
+    status: boolean;
+    ranges?: StoreCarrierRange[];
+}
 export interface StorePickupPoint extends StoreReferenceOption {
     address: string;
     phone: string;

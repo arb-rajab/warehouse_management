@@ -17,7 +17,7 @@ use App\Http\Controllers\Store\Admin\BlogCategoryController;
 use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
-use App\Http\Controllers\CarrierController;
+use App\Http\Controllers\Store\Admin\CarrierController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
@@ -614,11 +614,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/states/{state}/status', [StateController::class, 'updateStatus'])->name('states.status');
 
     // Carriers
-    Route::resource('carriers', CarrierController::class);
-    Route::controller(CarrierController::class)->group(function () {
-        Route::post('/carriers/destroy/{id}', 'destroy')->name('carriers.destroy');
-        Route::post('/carriers/update_status', 'updateStatus')->name('carriers.update_status');
-    });
+    Route::get('/carriers', [CarrierController::class, 'index'])->name('carriers.index');
+    Route::get('/carriers/create', [CarrierController::class, 'create'])->name('carriers.create');
+    Route::post('/carriers', [CarrierController::class, 'store'])->name('carriers.store');
+    Route::post('/carriers/update_status', [CarrierController::class, 'updateStatus'])->name('carriers.update_status');
+    Route::get('/carriers/{carrier}/edit', [CarrierController::class, 'edit'])->name('carriers.edit');
+    Route::match(['PUT', 'PATCH'], '/carriers/{carrier}', [CarrierController::class, 'update'])->name('carriers.update');
+    Route::delete('/carriers/{carrier}', [CarrierController::class, 'destroy'])->name('carriers.destroy');
 
     // Zones
     Route::get('/zones', [ZoneController::class, 'index'])->name('zones.index');

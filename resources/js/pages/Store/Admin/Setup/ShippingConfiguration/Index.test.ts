@@ -1,7 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
+import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
 import {
     index,
@@ -121,7 +121,7 @@ describe('Shipping configuration', () => {
             });
         }
     });
-    it('uses Inertia for cities and a full load for the Blade carrier screen', () => {
+    it('uses Inertia for both cities and carriers', () => {
         const wrapper = mountPage();
         expect(
             wrapper
@@ -132,7 +132,14 @@ describe('Shipping configuration', () => {
                         JSON.stringify(citiesIndex()),
                 ),
         ).toBe(true);
-        expect(wrapper.get(`a[href="${carriersIndex.url()}"]`).text()).toBe(
+        const carrierLink = wrapper
+            .findAllComponents(Link)
+            .find(
+                (link) =>
+                    JSON.stringify(link.props('href')) ===
+                    JSON.stringify(carriersIndex()),
+            );
+        expect(carrierLink?.text()).toBe(
             t('store.shippingConfiguration.carriers'),
         );
     });

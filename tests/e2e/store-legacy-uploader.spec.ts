@@ -6,11 +6,15 @@ test('retained Blade uploader uploads, selects and removes an attachment over th
     page,
 }) => {
     await loginAsStoreAdmin(page);
-    const response = await page.goto('/temp/admin/carriers/create');
+    const response = await page.goto('/temp/admin/general-setting');
     expect(response?.headers()['content-security-policy']).toContain(
         "'unsafe-inline'",
     );
-    await page.locator('[data-toggle="aizuploader"]').click();
+    await page
+        .locator('[data-toggle="aizuploader"]', {
+            has: page.locator('input[name=system_logo_white]'),
+        })
+        .click();
     const modal = page.locator('#aizUploaderModal');
     await expect(modal).toBeVisible();
     await modal.getByRole('link', { name: 'Upload New' }).click();
@@ -43,12 +47,33 @@ test('retained Blade uploader uploads, selects and removes an attachment over th
         .locator('.aiz-uploader-select[title="legacy-audit.png"]')
         .click();
     await modal.getByRole('button', { name: 'Add Files', exact: true }).click();
-    await expect(page.locator('input[name=logo]')).not.toHaveValue('');
-    const selectedId = await page.locator('input[name=logo]').inputValue();
-    await expect(page.locator('.file-preview-item')).toHaveCount(1);
-    await page.locator('.remove-attachment').click();
-    await expect(page.locator('input[name=logo]')).toHaveValue('');
-    await expect(page.locator('.file-preview-item')).toHaveCount(0);
+    await expect(page.locator('input[name=system_logo_white]')).not.toHaveValue(
+        '',
+    );
+    const selectedId = await page
+        .locator('input[name=system_logo_white]')
+        .inputValue();
+    await expect(
+        page
+            .locator('input[name=system_logo_white]')
+            .locator('..')
+            .locator('..')
+            .locator('.file-preview-item'),
+    ).toHaveCount(1);
+    await page
+        .locator('input[name=system_logo_white]')
+        .locator('..')
+        .locator('..')
+        .locator('.remove-attachment')
+        .click();
+    await expect(page.locator('input[name=system_logo_white]')).toHaveValue('');
+    await expect(
+        page
+            .locator('input[name=system_logo_white]')
+            .locator('..')
+            .locator('..')
+            .locator('.file-preview-item'),
+    ).toHaveCount(0);
     const csrf = await page
         .locator('meta[name="csrf-token"]')
         .getAttribute('content');

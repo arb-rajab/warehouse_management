@@ -126,6 +126,7 @@ describe('storeAdminMenu', () => {
                 '/temp/admin/states',
                 '/temp/admin/cities',
                 '/temp/admin/zones',
+                '/temp/admin/carriers',
                 customerNotificationsIndex.url(),
                 in_house_sale_report.url(),
                 seller_sale_report.url(),

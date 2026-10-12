@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
+import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
 import { update } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import FieldError from '@/components/FieldError.vue';
@@ -142,11 +142,11 @@ const methods = [
                     class="block underline"
                     >{{ t('store.shippingConfiguration.cities') }}</Link
                 >
-                <a
+                <Link
                     v-if="access.can('manage_carriers')"
-                    :href="carriersIndex.url()"
+                    :href="carriersIndex()"
                     class="block underline"
-                    >{{ t('store.shippingConfiguration.carriers') }}</a
+                    >{{ t('store.shippingConfiguration.carriers') }}</Link
                 >
             </section>
         </div>

@@ -2,6 +2,7 @@
 
 use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Carrier;
 use App\Models\Cart;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
@@ -705,4 +706,24 @@ function createStoreReferenceData(): array
 function uploadedFile(string $name, string $contents): UploadedFile
 {
     return UploadedFile::fake()->createWithContent($name, $contents);
+}
+
+/** @return array{carrier: Carrier, zone: int, otherZone: int, payload: array<string, mixed>} */
+function createStoreCarrierTariff(): array
+{
+    $zone = DB::table('zones')->insertGetId(['name' => 'Europe', 'status' => 1]);
+    $otherZone = DB::table('zones')->insertGetId(['name' => 'North', 'status' => 1]);
+    $id = DB::table('carriers')->insertGetId(['name' => 'Parcel', 'transit_time' => '2–3 days', 'logo' => null, 'free_shipping' => 0, 'status' => 1]);
+    foreach ([[0, 10, 5, 7], [10, 20, 8, 9]] as [$lower, $upper, $price, $otherPrice]) {
+        $range = DB::table('carrier_ranges')->insertGetId(['carrier_id' => $id, 'billing_type' => 'weight_based', 'delimiter1' => $lower, 'delimiter2' => $upper]);
+        foreach ([$zone => $price, $otherZone => $otherPrice] as $zoneId => $amount) {
+            DB::table('carrier_range_prices')->insert(['carrier_id' => $id, 'carrier_range_id' => $range, 'zone_id' => $zoneId, 'price' => $amount]);
+        }
+    }
+
+    return ['carrier' => Carrier::findOrFail($id), 'zone' => $zone, 'otherZone' => $otherZone, 'payload' => [
+        'carrier_name' => 'Parcel', 'transit_time' => '2–3 days', 'logo' => null, 'shipping_type' => 0,
+        'billing_type' => 'weight_based', 'delimiter1' => ['0', '10'], 'delimiter2' => ['10', '20'],
+        'zones' => [$zone, $otherZone], 'carrier_price' => [$zone => ['5', '8'], $otherZone => ['7', '9']],
+    ]];
 }

@@ -28,7 +28,6 @@ import {
     seller_verification_form,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
-import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
@@ -46,6 +45,7 @@ import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/A
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
 import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
 import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
@@ -856,6 +856,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.shippingCarriers',
+                        inertia: true,
                         href: carriersIndex(),
                         permission: 'manage_carriers',
                     },

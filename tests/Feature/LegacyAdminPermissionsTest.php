@@ -71,8 +71,6 @@ const ADMIN_READS_STILL_UNGATED = [
     // Read-only AJAX helpers the product forms use.
     'ProductController@getDetails',
 
-    // The controller has no such method, so the request errors out.
-    'CarrierController@show',
 ];
 
 /**

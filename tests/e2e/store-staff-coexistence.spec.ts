@@ -39,7 +39,7 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     page,
 }) => {
     seedStoreFixtures(String.raw`
-        foreach (['Setup_configuration_section', 'Setup_Shipping_section'] as $key) {
+        foreach (['Setup_configuration_section'] as $key) {
             Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $key], ['value' => '1']);
         }
     `);
@@ -55,14 +55,15 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
         .click();
     const response = page.waitForResponse(
         (response) =>
-            new URL(response.url()).pathname === '/temp/admin/carriers' &&
+            new URL(response.url()).pathname ===
+                '/temp/admin/general-setting' &&
             response.request().isNavigationRequest(),
     );
     await navigation
-        .getByRole('link', { name: 'Shipping carriers', exact: true })
+        .getByRole('link', { name: 'General settings', exact: true })
         .click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/temp\/admin\/carriers$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/general-setting$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');
