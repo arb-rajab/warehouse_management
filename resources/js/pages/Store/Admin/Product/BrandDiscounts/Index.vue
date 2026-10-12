@@ -19,10 +19,10 @@ import { filterApplyButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
-import type { StoreBrandDiscount } from '@/types/store';
+import type { StoreBrand } from '@/types/store';
 
 const props = defineProps<{
-    brands: Paginated<StoreBrandDiscount>;
+    brands: Paginated<StoreBrand>;
     filters: { per_page: number; search: string | null };
 }>();
 const access = useStoreAccess();

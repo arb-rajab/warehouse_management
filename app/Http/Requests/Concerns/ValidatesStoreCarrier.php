@@ -15,13 +15,11 @@ trait ValidatesStoreCarrier
     protected function carrierRules(?Carrier $carrier = null): array
     {
         $paid = Rule::excludeIf($this->boolean('shipping_type'));
-        $logo = $this->input('logo');
-        $retainedLogo = (is_int($logo) || is_string($logo)) && $carrier?->logo !== null && (string) $logo === (string) $carrier->logo;
 
         return [
             'carrier_name' => ['required', 'string', 'max:255'],
             'transit_time' => ['required', 'string', 'max:255'],
-            'logo' => ['nullable', 'integer', $retainedLogo ? Rule::exists('uploads', 'id')->where('type', 'image') : $this->imageUploadRule()],
+            'logo' => ['nullable', 'integer', $this->retainableImageUploadRule('logo', $carrier?->logo)],
             'shipping_type' => ['required', 'boolean'],
             'billing_type' => [$paid, 'required', Rule::in(['weight_based', 'price_based'])],
             'delimiter1' => [$paid, 'required', 'array', 'list', 'min:1'],

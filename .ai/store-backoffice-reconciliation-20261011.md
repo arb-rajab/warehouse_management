@@ -1371,3 +1371,71 @@ not run; no migrations changed. Production data/grants and external services wer
 not exercised. Deferred source dispositions and unrelated owner decisions remain
 unchanged. Exact verification logs and temporary runtime/browser artifacts are in
 `/workspace/work/category-*`, outside the commit.
+
+## Brand administration migration (2026-10-12)
+
+User-authorized local-only work on `ccr-deb0d484-n8nxxo` from fetched
+`origin/develop` at `f39b065d8b376d324a0ec965c333070ffe2cbf6f` (PR #385 merge).
+The starting checkout was clean and equal to that commit. No push, PR, merge,
+deployment or production-data mutation was performed.
+
+### Prerequisites and consumer evidence
+
+Both brand admin screens were Blade. The prerequisite table has no brand-specific
+dependency, feature-use or business-policy hold, and the forms need no editor.
+Before removal, routes, root controller, views, models, translations, image
+references, permissions, API/seller/public consumers and tests were traced. Only
+the root admin controller rendered the two views; its `create`/`show` were empty
+and unused. The sidebar link uses the route name; `admin_sidenav`'s
+`areActiveRoutes(['brands.create', ...])` tolerates the removed name. Public
+`brands.all`, HomeController/SearchController/CustomerProductController slug
+lookups, storefront/seller/customer selects, `Api/V2/BrandController` (index/top),
+`FilterController::brands`, seller/bulk-upload readers, ImportBrands `serial` writer,
+NewFetchProducts `serial` lookup, offer/campaign brand pickers and the brand PDF
+download are unchanged. `HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest`
+and `RouteServiceProviderTest` used brand admin URLs as retained-Blade or
+resource-duplicate examples; they now use the still-Blade digital-product routes.
+`LegacyStoreStateChangingRoutesTest` keeps both brand cases, adapted to DELETE.
+
+**`brands.order_level`:** absent from `create_brands_table`, the legacy-columns
+migration (only `serial` is added), legacy `shop.sql` 6.5.0, all 70 legacy
+`sqlupdates/v*.sql` (`v42.sql` adds `order_level` to `categories` only) and all
+107 legacy migrations at `arb-rajab/albaraka-holland@75531338fa8190891c6e334620e461f6c79fe5be`
+(read-only sparse clone outside this repository). The legacy repository's own
+admin view and controller have the identical read/write. The converted screens
+omit the field; ordering stays by name and no schema/replacement field was added.
+Production schema was not available for inspection.
+
+### Completed scope and retained behavior
+
+See §14 of the [migration guide](rules/store-backoffice-migration.md). Brand
+deletion still hard-deletes the brand's `products` rows (now transactional); that
+conflicts with the shared-database single-writer rule and is recorded as an owner
+decision, not changed.
+
+### Verification and limits
+
+Existing dependencies were used; manifests and lockfiles are unchanged. PHP 8.5,
+Composer dev tools, Wayfinder and assets came from this session's setup.
+`npm run build` failed only on fetching the remote `fonts.bunny.net` font
+(`ENOTFOUND`); the documented `.claude/scripts/build_without_fonts.py` production
+build passed and was used for browser runs. Fresh Wayfinder generation passed.
+
+- `python3 .claude/scripts/pre_push_check.py`: ESLint, Prettier, vue-tsc, full
+  Vitest (**2,109 tests in 237 files**), Pint, PHPStan (zero errors) and full Pest
+  (**5,254 tests / 25,858 assertions**) passed; no stage skipped.
+- Focused brand/discount/route/state-changing/Blade-CSP/audit/legacy panel and
+  permission/model checks: **124 tests / 675 assertions**; refactored upload rule
+  plus category/carrier/package, exclusion, shell, shared-props, guard-isolation,
+  storefront, API, campaign and bulk-upload checks: **396 tests / 2,610 assertions**.
+- HTTPS Chromium (installed `/opt/pw-browsers` build), enforced CSP, one worker,
+  zero retries, fresh e2e databases: brand spec **3/3**, then brand, catalogue
+  forms, categories, carriers, customer packages, staff/reference coexistence and
+  legacy uploader **18/18**. After the inline-add remount fix the brand spec passed
+  **3/3** again. Two first-run failures were spec-authoring errors (a fixture used
+  `firstOrNew` on a model without fillable attributes; a slug assertion read the
+  preserved live input instead of the saved value) and were corrected.
+
+Limits: MySQL, production schema/data, deployed grants and external services were
+not exercised; the full browser suite was not run. Brand-discount has no browser
+spec. Production may differ from the inspected schema sources for `order_level`.

@@ -162,10 +162,18 @@ export interface StoreReview {
     customer: { id: number; name: string; email: string };
 }
 
-export interface StoreBrandDiscount {
+export interface StoreBrand {
     id: number;
     name: string;
     logo_url: string | null;
+}
+
+export interface StoreBrandForm {
+    id: number;
+    logo: string | null;
+    slug: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
 }
 
 export interface StoreWebsiteHeaderSettings {
