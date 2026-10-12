@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
-import { columnNumberOptions } from '@/lib/filters';
+import { columnNumberOptions, selectedCountLabel } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { RowFilterOption } from '@/types/admin';
 
@@ -16,7 +17,7 @@ const props = defineProps<{
     maxColumnNumber: number;
 }>();
 
-const rowId = defineModel<string>('rowId', { required: true });
+const rowIds = defineModel<string[]>('rowIds', { required: true });
 const columnNumber = defineModel<string>('columnNumber', { required: true });
 
 const columnNumbers = columnNumberOptions(props.maxColumnNumber);
@@ -24,12 +25,18 @@ const columnNumbers = columnNumberOptions(props.maxColumnNumber);
 
 <template>
     <div>
-        <FilterSelect
+        <FilterMultiSelect
             :id="`${idPrefix}-row`"
-            v-model="rowId"
+            v-model="rowIds"
             :label="t('cellLog.filters.row')"
             :all-label="t('cellLog.filters.all')"
-            :options="rows.map((row) => ({ value: row.id, label: row.letter }))"
+            :selected-count-label="selectedCountLabel"
+            :options="
+                rows.map((row) => ({
+                    value: String(row.id),
+                    label: row.letter,
+                }))
+            "
         />
 
         <FilterSelect

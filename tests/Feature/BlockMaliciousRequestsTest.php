@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\BlockMaliciousRequests;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
@@ -173,4 +174,62 @@ test('a clean request with an ordinary user agent and query string passes', func
     $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
 
     expect($response->getContent())->toBe('ok');
+});
+
+test('the shipped config skips only the credential input keys', function () {
+    expect(config('waf.skip_input_keys'))->toBe(['password', 'password_confirmation', 'current_password']);
+});
+
+test('a password holding a command substitution payload is not treated as an attack', function () {
+    // Production Password::defaults() requires symbols, so a password-manager
+    // value carrying a backtick or "$(...)" is ordinary input — scanning it
+    // produced a bare 403 before routing, with no error the form could show.
+    $request = Request::create('/admin/login', 'POST', [
+        'email' => 'admin@example.com',
+        'password' => 'x`id`$(whoami)y',
+    ]);
+
+    $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+
+    expect($response->getContent())->toBe('ok');
+});
+
+test('a skipped key is matched case-insensitively and inside a nested key path', function () {
+    $request = Request::create('/admin/users', 'POST', [
+        'users' => [['Password' => 'x`id`y']],
+    ]);
+
+    $response = (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+
+    expect($response->getContent())->toBe('ok');
+});
+
+test('skipping the password value still leaves every other field on the request inspected', function () {
+    $request = Request::create('/admin/login', 'POST', [
+        'email' => "admin@example.com' union select 1",
+        'password' => 'x`id`y',
+    ]);
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('skipping is limited to the configured keys', function () {
+    config(['waf.skip_input_keys' => ['current_password']]);
+
+    $request = Request::create('/admin/login', 'POST', ['password' => 'x`id`y']);
+
+    (new BlockMaliciousRequests)->handle($request, fn ($req) => new Response('ok'));
+})->throws(HttpException::class);
+
+test('an admin can log in through the full middleware stack with a symbol-heavy password', function () {
+    $password = 'Str`ong`$(pass)word!9';
+    $admin = User::factory()->create(['password' => $password]);
+
+    $response = $this->post('/admin/login', [
+        'email' => $admin->email,
+        'password' => $password,
+    ]);
+
+    $response->assertRedirect(route('admin.dashboard'));
+    $this->assertAuthenticatedAs($admin);
 });

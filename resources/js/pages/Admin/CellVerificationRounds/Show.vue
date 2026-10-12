@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowLeft, Check, Download, SlidersHorizontal, X } from '@lucide/vue';
+import { ArrowLeft, Download, SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
     exportReports,
@@ -9,11 +9,15 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
@@ -22,16 +26,18 @@ import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import { snapshotProductLabel } from '@/lib/cellVerificationReportDisplay';
+import {
+    acceptReport,
+    canAcceptReport,
+    snapshotProductLabel,
+} from '@/lib/cellVerificationReportDisplay';
 import { formatDateTime } from '@/lib/date';
 import {
     countActive,
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
-    filterApplyButtonClass,
     filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -40,6 +46,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatRowLetters, formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
 import type {
     CellVerificationReport,
     CellVerificationReportFilterOptions,
@@ -58,7 +65,7 @@ const props = defineProps<{
 
 const filters = reactive({
     cell_id: props.filters.cell_id?.toString() ?? '',
-    row_id: props.filters.row_id?.toString() ?? '',
+    row_id: (props.filters.row_id ?? []).map(String),
     column_number: props.filters.column_number?.toString() ?? '',
     product_id: (props.filters.product_id ?? []).map(String),
     is_correct:
@@ -81,7 +88,7 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
-        filters.row_id !== '' || filters.column_number !== '',
+        filters.row_id.length > 0 || filters.column_number !== '',
         filters.product_id.length > 0,
         filters.is_correct !== '',
         dateRangeActive(filters),
@@ -96,8 +103,7 @@ function filterQuery(): QueryParams {
         : { ...rest, is_correct: is_correct === 'true' };
 }
 
-const showUrl = () =>
-    showCellVerificationRound({ cellVerificationRound: props.round.id }).url;
+const showUrl = () => showCellVerificationRound(props.round).url;
 
 function applyFilters(): void {
     router.get(showUrl(), filterQuery(), {
@@ -109,7 +115,7 @@ function applyFilters(): void {
 
 function clearFilters(): void {
     filters.cell_id = '';
-    filters.row_id = '';
+    filters.row_id = [];
     filters.column_number = '';
     filters.product_id = [];
     filters.is_correct = '';
@@ -141,21 +147,20 @@ function onPerPageChange(perPage: number): void {
     filters.per_page = perPage;
     applyFilters();
 }
+
+const actionError = usePageError('action');
 </script>
 
 <template>
-    <Head :title="`${t('cellVerificationRound.title')} #${round.id}`" />
+    <Head :title="t('cellVerificationRound.show.title', { id: round.id })" />
 
     <AdminLayout>
-        <PageHeader :title="`${t('cellVerificationRound.title')} #${round.id}`">
+        <PageHeader
+            :title="t('cellVerificationRound.show.title', { id: round.id })"
+        >
             <div class="flex items-center gap-2">
                 <a
-                    :href="
-                        exportReports(
-                            { cellVerificationRound: round.id },
-                            { query: filterQuery() },
-                        ).url
-                    "
+                    :href="exportReports.url(round, { query: filterQuery() })"
                     :class="filterClearButtonClass"
                 >
                     <Download class="h-4 w-4" />
@@ -167,7 +172,7 @@ function onPerPageChange(perPage: number): void {
                     @click="filtersOpen = true"
                 >
                     <SlidersHorizontal class="h-4 w-4" />
-                    {{ t('cellVerificationReport.filters.title') }}
+                    {{ t('common.filters.title') }}
                     <span v-if="activeFilterCount > 0" :class="countBadgeClass">
                         {{ activeFilterCount }}
                     </span>
@@ -176,7 +181,7 @@ function onPerPageChange(perPage: number): void {
         </PageHeader>
 
         <TableLink
-            :href="cellVerificationRoundsIndex().url"
+            :href="cellVerificationRoundsIndex()"
             class="mb-4 inline-flex"
         >
             <ArrowLeft class="h-3.5 w-3.5 shrink-0 rtl:rotate-180" />
@@ -191,12 +196,10 @@ function onPerPageChange(perPage: number): void {
                     {{ t('cellVerificationRound.columns.user') }}
                 </div>
                 <div class="font-medium">
-                    <TableLink
-                        v-if="round.user"
-                        :href="showUser({ id: round.user.id })"
-                    >
+                    <TableLink v-if="round.user" :href="showUser(round.user)">
                         {{ round.user.name }}
                     </TableLink>
+                    <template v-else>—</template>
                 </div>
             </div>
             <div>
@@ -229,12 +232,18 @@ function onPerPageChange(perPage: number): void {
             </div>
         </div>
 
+        <ActionErrorBanner :message="actionError" />
+
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellVerificationReport.filters.title')"
-            :close-label="t('cellVerificationReport.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-verification-report-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{
@@ -246,7 +255,7 @@ function onPerPageChange(perPage: number): void {
                     <LocationFilterFields
                         id-prefix="filter"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
+                        v-model:row-ids="filters.row_id"
                         v-model:column-number="filters.column_number"
                         :rows="filterOptions.rows"
                         :max-column-number="filterOptions.maxColumnNumber"
@@ -324,22 +333,16 @@ function onPerPageChange(perPage: number): void {
                         />
                     </div>
                 </div>
-
-                <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationReport.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationReport.filters.clear') }}
-                    </button>
-                </div>
             </form>
+
+            <template #footer>
+                <FilterDialogFooter
+                    form-id="cell-verification-report-filter-form"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
+                    @clear="clearFilters"
+                />
+            </template>
         </FilterDialog>
 
         <DataTable
@@ -364,7 +367,19 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink :href="showRow({ letter: row.cell.row_letter })">
+                    <TableLink
+                        :href="
+                            showRow(
+                                { letter: row.cell.row_letter },
+                                {
+                                    query: {
+                                        cell_number: row.cell.cell_number,
+                                        flat_number: row.cell.flat_number,
+                                    },
+                                },
+                            )
+                        "
+                    >
                         {{
                             formatSlot(
                                 row.cell.row_letter,
@@ -377,6 +392,15 @@ function onPerPageChange(perPage: number): void {
                 <td class="px-4 py-2">
                     <CellVerificationCorrectnessBadge
                         :is-correct="row.is_correct"
+                    />
+                    <CellVerificationAcceptedNote
+                        v-if="row.accepted_at"
+                        :accepted-at="row.accepted_at"
+                        :accepted-by="row.accepted_by"
+                    />
+                    <CellVerificationAcceptButton
+                        v-else-if="canAcceptReport(row)"
+                        @click="acceptReport(row)"
                     />
                 </td>
                 <td class="px-4 py-2">

@@ -3,7 +3,6 @@
 use App\Models\CellStatusLog;
 use App\Models\CellStatusLogFlag;
 use App\Models\User;
-use Illuminate\Support\Facades\Schema;
 
 test('deleting a cell status log cascades to delete its flags, leaving another logs flags untouched', function () {
     $log = CellStatusLog::factory()->create();
@@ -33,8 +32,7 @@ test('deleting the user who acknowledged a flag nulls its acknowledged_by, leavi
     expect($fresh->acknowledged_at)->not->toBeNull();
 });
 
-test('cell_status_log_flags has an index on cell_status_log_id', function () {
-    $indexes = collect(Schema::getIndexes('cell_status_log_flags'));
-
-    expect($indexes->contains(fn (array $index) => $index['columns'] === ['cell_status_log_id']))->toBeTrue();
-});
+// The explicit index this migration adds on cell_status_log_id is dropped by
+// 2026_09_21_000000_drop_redundant_foreign_key_indexes on databases where
+// something else already covers the column (MySQL, when genuinely
+// redundant) — see DropRedundantForeignKeyIndexesTest for that coverage.

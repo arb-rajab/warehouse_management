@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
+import { SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import CellStatusLogRowCells from '@/components/CellStatusLogRowCells.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -26,9 +29,6 @@ import {
     createdDateRangeExclusivity,
     dateRangeActive,
     exclusivePair,
-    filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -53,7 +53,7 @@ const props = defineProps<{
 const filters = reactive({
     product_id: (props.filters.product_id ?? []).map(String),
     pallet_id: props.filters.pallet_id?.toString() ?? '',
-    row_id: props.filters.row_id?.toString() ?? '',
+    row_id: (props.filters.row_id ?? []).map(String),
     column_number: props.filters.column_number?.toString() ?? '',
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -87,7 +87,7 @@ const filtersOpen = ref(false);
 const activeFilterCount = computed(() =>
     countActive([
         filters.product_id.length > 0,
-        filters.row_id !== '',
+        filters.row_id.length > 0,
         filters.column_number !== '',
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -100,7 +100,7 @@ const activeFilterCount = computed(() =>
 );
 
 const cellColumnFiltered = computed(
-    () => filters.row_id !== '' || filters.column_number !== '',
+    () => filters.row_id.length > 0 || filters.column_number !== '',
 );
 const productColumnFiltered = computed(() => filters.product_id.length > 0);
 const actionColumnFiltered = computed(() => filters.action.length > 0);
@@ -142,7 +142,7 @@ const { openFilterKey } = useColumnFilterPopover(
 function clearFilters(): void {
     filters.product_id = [];
     filters.pallet_id = '';
-    filters.row_id = '';
+    filters.row_id = [];
     filters.column_number = '';
     filters.user_id = [];
     filters.action = [];
@@ -188,25 +188,32 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
     <AdminLayout>
         <PageHeader :title="t('cellLog.title')">
-            <button
-                type="button"
-                :class="filterTriggerButtonClass"
-                @click="filtersOpen = true"
-            >
-                <SlidersHorizontal class="h-4 w-4" />
-                {{ t('cellLog.filters.title') }}
-                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('cell-logs')" />
+                <button
+                    type="button"
+                    :class="filterTriggerButtonClass"
+                    @click="filtersOpen = true"
+                >
+                    <SlidersHorizontal class="h-4 w-4" />
+                    {{ t('common.filters.title') }}
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
+                        {{ activeFilterCount }}
+                    </span>
+                </button>
+            </div>
         </PageHeader>
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellLog.filters.title')"
-            :close-label="t('cellLog.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-status-logs-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
@@ -214,7 +221,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     <LocationFilterFields
                         id-prefix="filter"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
+                        v-model:row-ids="filters.row_id"
                         v-model:column-number="filters.column_number"
                         :rows="filterOptions.rows"
                         :max-column-number="filterOptions.maxColumnNumber"
@@ -295,22 +302,16 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                         />
                     </div>
                 </div>
-
-                <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.clear') }}
-                    </button>
-                </div>
             </form>
+
+            <template #footer>
+                <FilterDialogFooter
+                    form-id="cell-status-logs-filter-form"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
+                    @clear="clearFilters"
+                />
+            </template>
         </FilterDialog>
 
         <div
@@ -326,7 +327,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                 @click="clearFilters"
             >
                 <X class="h-3.5 w-3.5 shrink-0" />
-                {{ t('cellLog.filters.clear') }}
+                {{ t('common.filters.clear') }}
             </button>
         </div>
 
@@ -385,7 +386,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     v-if="key === 'location'"
                     id-prefix="popover-filter"
                     class="space-y-3"
-                    v-model:row-id="filters.row_id"
+                    v-model:row-ids="filters.row_id"
                     v-model:column-number="filters.column_number"
                     :rows="filterOptions.rows"
                     :max-column-number="filterOptions.maxColumnNumber"

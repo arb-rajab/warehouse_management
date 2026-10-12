@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CellState;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,9 +12,14 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 
 /**
  * A row in this app's `products` table.
@@ -25,7 +31,9 @@ use Illuminate\Support\Collection;
  * .ai/rules/shared-database.md. That command is the single writer, so there is
  * no per-request create/update/delete of a `Product` anywhere in this codebase
  * and there should not be. The remaining columns are inherited from the store's
- * original schema and are never read here.
+ * original schema and are never read here, except by the legacy store under
+ * /temp: ProductPolicy reads `user_id`, the seller who owns the product, which
+ * add_legacy_columns_to_store_tables adds in a form Larastan can't read.
  *
  * `image_url` and `boxes_count` are not columns on it: the first resolves
  * through the store-owned `uploads` table, the second through this app's own
@@ -37,10 +45,13 @@ use Illuminate\Support\Collection;
  * @property string $ar_name
  * @property int|null $thumbnail_img
  * @property bool $published
+ * @property int|null $user_id
  * @property-read string|null $image_url
  * @property-read int $boxes_count
+ * @property-read int|null $minimum_pallets
  * @property-read Upload|null $thumbnailUpload
  * @property-read ProductSetting|null $setting
+ * @property-read Collection<int, ProductBarcode> $barcodes
  */
 #[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]
 class Product extends Model
@@ -64,7 +75,7 @@ class Product extends Model
      */
     public const array WITH_DERIVED_ATTRIBUTES = [
         'thumbnailUpload:id,file_name,external_link',
-        'setting:product_id,boxes_count',
+        'setting:product_id,boxes_count,minimum_pallets',
     ];
 
     /**
@@ -147,6 +158,18 @@ class Product extends Model
     }
 
     /**
+     * Ordered oldest-first (by id) so the admin products screen lists a
+     * product's barcodes in the order they were added, deterministically —
+     * see ProductController::index()'s column-scoped eager load.
+     *
+     * @return HasMany<ProductBarcode, $this>
+     */
+    public function barcodes(): HasMany
+    {
+        return $this->hasMany(ProductBarcode::class)->orderBy('id');
+    }
+
+    /**
      * @return Attribute<string|null, never>
      */
     protected function imageUrl(): Attribute
@@ -166,9 +189,24 @@ class Product extends Model
     }
 
     /**
+     * How many pallets of this product should be in the warehouse at
+     * minimum, or `null` when nobody has configured one. Unlike
+     * {@see self::boxesCount()} there is no fallback default: "not
+     * configured" must never be treated as "always below the minimum" — a
+     * product only counts as low-stock once an admin has actually set a
+     * threshold for it (see Admin\ProductController::updateMinimumPallets()).
+     *
+     * @return Attribute<int|null, never>
+     */
+    protected function minimumPallets(): Attribute
+    {
+        return Attribute::make(get: fn (): ?int => $this->setting->minimum_pallets ?? null);
+    }
+
+    /**
      * The id/name list used to populate the mobile app's product filter dropdown.
      *
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     public static function filterOptions(): Collection
     {
@@ -182,7 +220,7 @@ class Product extends Model
      * see Admin\ProductController::search()).
      *
      * @param  list<int>  $ids
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     public static function selectedOptions(array $ids = []): Collection
     {
@@ -207,12 +245,12 @@ class Product extends Model
      * see .ai/rules/shared-database.md.
      *
      * @param  EloquentBuilder<Product>  $query
-     * @return Collection<int, array{id: int, name: string, ar_name: string}>
+     * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
      */
     private static function optionLabels(EloquentBuilder $query): Collection
     {
         return $query
-            ->select(['id', 'name', 'ar_name'])
+            ->select(['id', 'name', 'ar_name', 'published'])
             ->orderBy('name')
             ->get()
             // toBase() before map(): Eloquent's map() is declared as returning
@@ -223,6 +261,7 @@ class Product extends Model
                 'id' => $product->id,
                 'name' => $product->name,
                 'ar_name' => $product->ar_name,
+                'active' => $product->published,
             ]);
     }
 
@@ -243,12 +282,123 @@ class Product extends Model
      * product whose `ar_name` the store left empty. Matching both columns
      * costs nothing here: an empty `ar_name` cannot match a non-empty word.
      *
+     * A term that is entirely digits also matches products whose numeric
+     * `id` contains it as a substring (see
+     * `applyNameSearch()`/`searchTermAsProductId()`) — additive to, never a
+     * replacement for, the name match.
+     *
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
     protected function searchByName(EloquentBuilder $query, ?string $term): void
     {
         self::applyNameSearch($query->getQuery(), $term);
+    }
+
+    /**
+     * Scope a query to products that currently have at least one pallet
+     * somewhere in the warehouse. `pallets.cell_id` is non-nullable and
+     * unique (see Pallet's docblock), so every pallet row is inherently "in
+     * a cell" — this reduces to "has at least one pallet row", with no
+     * cell-state check needed.
+     *
+     * Shared by the admin products index's `inactive` filter
+     * (`Admin\ProductController::index()`) and the dashboard's
+     * inactive-in-warehouse count (`BuildsDashboardStats`), so the two
+     * "in the warehouse" definitions can never drift apart.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function inWarehouse(EloquentBuilder $query): void
+    {
+        $query->whereExists(Pallet::query()->selectRaw('1')->whereColumn('pallets.product_id', 'products.id'));
+    }
+
+    /**
+     * Scope a query to products with at least one pallet matching the admin
+     * products index's occupancy filters (state/expired/expires_within_days) —
+     * e.g. `state=full` only returns products that actually have a full
+     * pallet. A no-op when none of those filters is set. Unlike
+     * {@see withOccupancyCounts()}, which only feeds the displayed per-column
+     * counts, this restricts which products appear, and it doesn't pin a cell
+     * state: it means "matches everything the user filtered by," not
+     * "matches one column."
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function matchingOccupancyFilters(EloquentBuilder $query, Request $request): void
+    {
+        if (! $request->filled('state') && ! $request->boolean('expired') && ! $request->filled('expires_within_days')) {
+            return;
+        }
+
+        $query->whereExists(
+            Pallet::query()
+                ->selectRaw('1')
+                ->whereColumn('pallets.product_id', 'products.id')
+                ->matchingOccupancyFilters($request),
+        );
+    }
+
+    /**
+     * Add the admin products index's per-column pallet counts — full,
+     * opened, expired and expiring within `$expiringSoonDays` — each narrowed
+     * by the request's occupancy filters, as correlated scalar subquery
+     * selects (the same idiom `CellStatusLog::sorted()` uses to sort by a
+     * related pallet's column).
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function withOccupancyCounts(EloquentBuilder $query, Request $request, int $expiringSoonDays): void
+    {
+        $today = today();
+        $matchingPalletsCount = fn (?CellState $cellState = null): EloquentBuilder => Pallet::query()
+            ->selectRaw('count(*)')
+            ->whereColumn('pallets.product_id', 'products.id')
+            ->matchingOccupancyFilters($request, $cellState);
+
+        $query->addSelect([
+            'full_cells_count' => $matchingPalletsCount(CellState::Full),
+            'opened_cells_count' => $matchingPalletsCount(CellState::Opened),
+            'expired_cells_count' => $matchingPalletsCount()->where('expiration_date', '<', $today),
+            'expiring_soon_count' => $matchingPalletsCount()->where('expiration_date', '<=', $today->copy()->addDays($expiringSoonDays)),
+        ]);
+    }
+
+    /**
+     * Scope a query to products with at least one cell-log entry matching the
+     * admin products index's Activity filters (user/action/date range/
+     * created-within-days, plus the occupancy `state` on the log's cell). A
+     * no-op when none of the Activity filters is set — `state` alone is an
+     * occupancy filter, see {@see matchingOccupancyFilters()}.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function matchingHistoryFilters(EloquentBuilder $query, Request $request): void
+    {
+        $historyFiltersActive = $request->filled('user_id')
+            || $request->filled('action')
+            || $request->filled('date_from')
+            || $request->filled('date_to')
+            || $request->filled('created_within_days');
+
+        if (! $historyFiltersActive) {
+            return;
+        }
+
+        $query->whereExists(
+            CellStatusLog::query()
+                ->whereColumn('cell_status_logs.product_id', 'products.id')
+                ->matchingHistoryFilters($request)
+                ->when(
+                    $request->filled('state'),
+                    fn (EloquentBuilder $logQuery) => $logQuery->whereHas('cell', fn (EloquentBuilder $cellQuery) => $cellQuery->where('state', $request->string('state')->value())),
+                ),
+        );
     }
 
     /**
@@ -270,6 +420,15 @@ class Product extends Model
             return;
         }
 
+        // A term that is nothing but digits is also treated as a (possibly
+        // partial) product id: warehouse staff frequently remember only part
+        // of the numeric id (e.g. off a printed label) rather than the whole
+        // thing or the name. This is additive — it never narrows the existing
+        // name match, only OR's an `id LIKE '%digits%'` match onto it, so a
+        // term with no digit-only reading leaves the query exactly as it was
+        // before this existed.
+        $productIdFragment = self::searchTermAsProductId($term);
+
         // Query\Builder::getConnection() is declared as ConnectionInterface,
         // which has no getDriverName() — only the concrete Connection does. A
         // connection that is neither falls back to LIKE, which is the safe
@@ -282,59 +441,176 @@ class Product extends Model
             $connection instanceof Connection ? $connection->getDriverName() : '',
         );
 
-        if ($plan['full_text_expression'] !== null) {
-            $query->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
+        if ($productIdFragment === null) {
+            self::applyNameMatch($query, $plan);
+
+            return;
         }
 
-        // The per-word grouping is load-bearing. A flat `orWhere()` chain would
-        // bind the OR across word boundaries too, turning "every word matches"
-        // into "any word matches" — so each word gets its own nested group, and
-        // the groups are still ANDed together (and ANDed with the MATCH above).
-        foreach ($plan['like_words'] as $word) {
-            $query->where(function (QueryBuilder $matchesEitherName) use ($word): void {
+        $query->where(function (QueryBuilder $group) use ($plan, $productIdFragment): void {
+            self::applyNameMatch($group, $plan);
+            $group->orWhere('id', 'like', "%{$productIdFragment}%");
+        });
+    }
+
+    /**
+     * Apply just the name-matching half of the search (FULLTEXT-or-LIKE, or
+     * plain LIKE where the driver/term rules FULLTEXT out) — the same
+     * condition `applyNameSearch()` always applied before it also learned to
+     * match by id. Split out so the id-less path keeps compiling to exactly
+     * the SQL it always did, with no extra wrapping group.
+     *
+     * @param  array{full_text_expression: string|null, like_words: list<string>}  $plan
+     */
+    private static function applyNameMatch(QueryBuilder $query, array $plan): void
+    {
+        // No FULLTEXT expression at all — either this driver can't compile
+        // MATCH, or the term has no indexable word — so the LIKE-AND-of-words
+        // group is the whole name condition, exactly as it always was on
+        // sqlite.
+        if ($plan['full_text_expression'] === null) {
+            self::applyLikeWords($query, $plan['like_words']);
+
+            return;
+        }
+
+        // Otherwise a product matches this driver's search if it satisfies
+        // *either* strategy: the FULLTEXT expression (prefix matching, but
+        // gapless past the length/stopword/punctuation exclusions below) or
+        // the same LIKE-AND-of-words group sqlite would run (infix matching
+        // over every word, with no exclusions). OR'ing the two whole
+        // strategies — rather than routing each word to exactly one of them —
+        // is what makes the combined search a superset of the LIKE search:
+        // "idget" only ever matches "Widget" through this LIKE branch, never
+        // through FULLTEXT, whichever branch a given word's own FULLTEXT
+        // eligibility would have picked.
+        $query->where(function (QueryBuilder $group) use ($plan): void {
+            $group->whereFullText(self::SEARCHABLE_NAME_COLUMNS, $plan['full_text_expression'], ['mode' => 'boolean']);
+            $group->orWhere(function (QueryBuilder $likeGroup) use ($plan): void {
+                self::applyLikeWords($likeGroup, $plan['like_words']);
+            });
+        });
+    }
+
+    /**
+     * Parse a search term as a product id fragment: the whole trimmed term
+     * must be nothing but digits, so "42" matches but "42 widgets", "-42" and
+     * "4.2" do not — those are names/decimals, not an id lookup. The digits
+     * are returned as-is (not cast to int) so a leading zero the admin typed
+     * (e.g. "007") stays part of the substring pattern rather than being
+     * silently dropped.
+     */
+    private static function searchTermAsProductId(string $term): ?string
+    {
+        $trimmed = trim($term);
+
+        if ($trimmed === '' || ! ctype_digit($trimmed)) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    /**
+     * AND together one `LIKE '%word%'` group per word, each word matching
+     * *either* store name column.
+     *
+     * The per-word grouping is load-bearing. A flat `orWhere()` chain would
+     * bind the OR across word boundaries too, turning "every word matches"
+     * into "any word matches" — so each word gets its own nested group, and
+     * the groups are still ANDed together.
+     *
+     * The word is escaped before it is wrapped in `%...%`, so a literal `%`
+     * or `_` the user typed is matched as a literal character rather than as
+     * a wildcard (`%` would otherwise match every product; `a_b` would match
+     * "aXb"). Both drivers need an explicit `ESCAPE` clause for this to take
+     * effect — sqlite recognizes no escape character at all without one, so
+     * this uses `whereRaw()`/`orWhereRaw()` rather than the plain `like`
+     * operator.
+     *
+     * @param  list<string>  $words
+     */
+    private static function applyLikeWords(QueryBuilder $query, array $words): void
+    {
+        foreach ($words as $word) {
+            $pattern = '%'.self::escapeLikeWildcards($word).'%';
+
+            $query->where(function (QueryBuilder $matchesEitherName) use ($pattern): void {
                 $matchesEitherName
-                    ->where('name', 'like', '%'.$word.'%')
-                    ->orWhere('ar_name', 'like', '%'.$word.'%');
+                    ->whereRaw('`name` like ? escape ?', [$pattern, '\\'])
+                    ->orWhereRaw('`ar_name` like ? escape ?', [$pattern, '\\']);
             });
         }
     }
 
     /**
-     * Split a search term into the words MySQL's FULLTEXT index can answer and
-     * the words it cannot, which stay on `LIKE`.
+     * Escape the LIKE wildcard characters (`%`, `_`) and the escape character
+     * itself (`\`) in a raw search word, so it can be safely wrapped in
+     * `%...%` and matched literally via `LIKE ... ESCAPE '\'`.
+     */
+    private static function escapeLikeWildcards(string $word): string
+    {
+        return addcslashes($word, '\\%_');
+    }
+
+    /**
+     * Build the FULLTEXT half of the search: a single boolean-mode expression
+     * covering only the term's *indexable* words, or `null` when it has none.
      *
-     * `MATCH (name, ar_name) AGAINST ('+w1* +w2*' IN BOOLEAN MODE)` reproduces
-     * the contract exactly on the words it covers: MySQL treats the two indexed
-     * columns as one document, so each `+word` must appear in *either* of them
-     * (the across-columns OR) and every `+word` must appear (the per-word AND).
-     * Matching is case-insensitive under the columns' collation, as `LIKE` was.
+     * `MATCH (name, ar_name) AGAINST ('+w1* +w2*' IN BOOLEAN MODE)` requires
+     * every included word (the per-word AND) in *either* indexed column (the
+     * across-columns OR, since MySQL treats them as one document). Matching is
+     * case-insensitive under the columns' collation, as `LIKE` is.
      *
-     * Three kinds of word are deliberately routed to `LIKE` instead, because
-     * boolean mode would silently return *nothing* for them rather than fewer
-     * rows:
+     * `isFullTextIndexable()` excludes three kinds of word, because boolean
+     * mode would silently return *nothing* for them rather than fewer rows —
+     * and unlike the old routing, an excluded word here costs nothing: it is
+     * still covered by the LIKE-AND-of-every-word group `applyNameSearch()`
+     * ORs against this expression, over every word regardless of exclusion:
      *
      * - **Anything but letters and digits.** MySQL's default parser splits a
      *   word on every other character, so `+Wid-get*` could never match the
-     *   product literally named "Wid-get". Routing these to `LIKE` is also what
-     *   makes the expression injection-proof: it is built solely from
-     *   alphanumeric words plus the `+` and `*` this method adds, so a term
-     *   containing boolean operators (`-`, `"`, `~`, `(`) cannot reach the
-     *   parser and invert or break the query.
+     *   product literally named "Wid-get". Excluding these also keeps this
+     *   expression injection-proof: it is built solely from alphanumeric words
+     *   plus the `+` and `*` this method adds, so a term containing boolean
+     *   operators (`-`, `"`, `~`, `(`) cannot reach the parser and invert or
+     *   break the query.
      * - **Words shorter than `innodb_ft_min_token_size`.** Such words are not
      *   in the index at all. This matters most for the admin's type-ahead
      *   dropdown, where a one- or two-letter term is the common case.
      * - **InnoDB's default stopwords.** `+for*` matches nothing, which would
-     *   lose every result for a term like "Case for Phone".
+     *   lose every result for a term like "Case for Phone" through this
+     *   expression alone.
      *
-     * The one deliberate change to the old `LIKE` behaviour is that an indexed
-     * word now matches by *prefix* rather than as an infix: "Widg" still finds
-     * "Widgets", but "idget" no longer finds "Widget". Boolean mode has no
-     * leading wildcard, and a term typed into a type-ahead is a prefix in
-     * practice.
+     * The one respect in which the combined search still differs from a pure
+     * `LIKE`: an indexable word matches by *prefix* through this expression
+     * ("Widg" finds "Widgets") in addition to matching as an infix through the
+     * LIKE branch — so the combined search is a strict superset of `LIKE`
+     * alone, never narrower.
+     *
+     * @param  list<string>  $words
+     */
+    private static function fullTextExpression(array $words): ?string
+    {
+        $indexedWords = array_values(array_filter(array_map(
+            static fn (string $word): ?string => self::isFullTextIndexable($word) ? '+'.$word.'*' : null,
+            $words,
+        )));
+
+        return $indexedWords === [] ? null : implode(' ', $indexedWords);
+    }
+
+    /**
+     * Plan the two search strategies `applyNameSearch()` OR's together on
+     * mysql/mariadb: the FULLTEXT expression from
+     * {@see self::fullTextExpression()}, and the full list of words for the
+     * LIKE-AND-of-every-word group. On every other driver — sqlite, the test
+     * connection — there is no FULLTEXT support at all, so every word goes
+     * only to the LIKE group, which becomes the whole search.
      *
      * @param  string  $driver  the connection's driver — sqlite (the test
      *                          connection) has no `MATCH ... AGAINST` at all,
-     *                          so every word stays on `LIKE` there
+     *                          so the FULLTEXT half is skipped there
      * @return array{full_text_expression: string|null, like_words: list<string>}
      */
     private static function nameSearchPlan(string $term, string $driver): array
@@ -346,31 +622,211 @@ class Product extends Model
             return ['full_text_expression' => null, 'like_words' => $words];
         }
 
-        $indexedWords = [];
-        $likeWords = [];
-
-        foreach ($words as $word) {
-            if (self::isFullTextIndexable($word)) {
-                $indexedWords[] = '+'.$word.'*';
-            } else {
-                $likeWords[] = $word;
-            }
-        }
-
         return [
-            'full_text_expression' => $indexedWords === [] ? null : implode(' ', $indexedWords),
-            'like_words' => $likeWords,
+            'full_text_expression' => self::fullTextExpression($words),
+            'like_words' => $words,
         ];
     }
 
     /**
      * Whether boolean-mode `MATCH ... AGAINST` can answer this word at all —
-     * see the three exclusions documented on {@see self::nameSearchPlan()}.
+     * see the three exclusions documented on {@see self::fullTextExpression()}.
      */
     private static function isFullTextIndexable(string $word): bool
     {
         return preg_match('/^[\p{L}\p{N}]+$/u', $word) === 1
             && mb_strlen($word) >= self::FULL_TEXT_MIN_WORD_LENGTH
             && ! in_array(mb_strtolower($word), self::FULL_TEXT_STOPWORDS, true);
+    }
+
+    // --- Merged from the legacy store's App\Models\Product (see
+    // .ai/rules/legacy-albaraka-holland.md section 2). The store's own writers
+    // (NewFetchProductsCommand, the legacy ProductController, the Excel
+    // imports) mass-assign far more columns than #[Fillable] above allows;
+    // reconciling that — "pick one writer" — is deferred to the DB-merge
+    // phase the audit already tracks, not decided here.
+
+    /**
+     * The legacy callers pass `$request->lang` straight through, which is
+     * null when the request has none: like the legacy model's loose
+     * `$lang == false`, any empty language means the app's locale.
+     */
+    public function getTranslation(string $field = '', string|false|null $lang = false): mixed
+    {
+        $lang = $lang ?: App::getLocale();
+        $translation = $this->product_translations->where('lang', $lang)->first();
+
+        return $translation !== null ? $translation->$field : $this->$field;
+    }
+
+    /**
+     * @return HasMany<ProductTranslation, $this>
+     */
+    public function product_translations(): HasMany
+    {
+        return $this->hasMany(ProductTranslation::class);
+    }
+
+    /**
+     * @return BelongsTo<Category, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * @return BelongsTo<Brand, $this>
+     */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    /**
+     * @return BelongsTo<ProductCollection, $this>
+     */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(ProductCollection::class);
+    }
+
+    /**
+     * @return BelongsTo<StoreUser, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
+    }
+
+    /**
+     * @return HasMany<OrderDetail, $this>
+     */
+    public function orderDetails(): HasMany
+    {
+        return $this->hasMany(OrderDetail::class);
+    }
+
+    /**
+     * Whether this customer may review the product: they received it, and have
+     * not reviewed it yet. A review is the customer's own word on what they
+     * bought, so the storefront and the app both ask this before saving one.
+     */
+    public function isReviewableBy(int $userId): bool
+    {
+        $received = $this->orderDetails()
+            ->where('delivery_status', 'delivered')
+            ->whereHas('order', fn ($order) => $order->where('user_id', $userId))
+            ->exists();
+
+        return $received && ! Review::where('user_id', $userId)->where('product_id', $this->id)->exists();
+    }
+
+    /**
+     * @return HasMany<Review, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->where('status', 1);
+    }
+
+    /**
+     * @return HasMany<Wishlist, $this>
+     */
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * @return HasMany<ProductStock, $this>
+     */
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
+    /**
+     * @return HasMany<ProductTax, $this>
+     */
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(ProductTax::class);
+    }
+
+    /**
+     * @return HasOne<FlashDealProduct, $this>
+     */
+    public function flash_deal_product(): HasOne
+    {
+        return $this->hasOne(FlashDealProduct::class);
+    }
+
+    /**
+     * @return BelongsToMany<Offer, $this>
+     */
+    public function offers(): BelongsToMany
+    {
+        return $this->belongsToMany(Offer::class, 'offer_products', 'product_id', 'offer_id')
+            ->wherePivot('is_base_product', 1);
+    }
+
+    /**
+     * @return HasMany<AuctionProductBid, $this>
+     */
+    public function bids(): HasMany
+    {
+        return $this->hasMany(AuctionProductBid::class);
+    }
+
+    /**
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function physical(EloquentBuilder $query): void
+    {
+        $query->where('digital', 0);
+    }
+
+    /**
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function digital(EloquentBuilder $query): void
+    {
+        $query->where('digital', 1);
+    }
+
+    /**
+     * @return HasMany<ProductVariation, $this>
+     */
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class);
+    }
+
+    /**
+     * The store's own barcodes (table `product_barcodes`), distinct from this
+     * app's {@see self::barcodes()} (table `wms_product_barcodes`) — same
+     * name would otherwise collide, see StoreProductBarcode's docblock.
+     *
+     * @return HasMany<StoreProductBarcode, $this>
+     */
+    public function storeBarcodes(): HasMany
+    {
+        return $this->hasMany(StoreProductBarcode::class);
+    }
+
+    public function profit(): float
+    {
+        return (float) ($this->unit_price * $this->collection?->amount ?? 0) / 100;
+    }
+
+    /**
+     * @return MorphMany<UserPageView, $this>
+     */
+    public function views(): MorphMany
+    {
+        return $this->morphMany(UserPageView::class, 'viewable');
     }
 }

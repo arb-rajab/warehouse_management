@@ -41,8 +41,10 @@ class CellStatusLogSeeder extends Seeder
             $this->log($cells->random(), CellLogAction::Emptied, $fromState, CellState::Empty, $products, $users);
         }
 
-        foreach (range(1, 20) as $i) {
-            $this->logTransfer($cells, $products, $users);
+        if ($cells->count() >= 2) {
+            foreach (range(1, 20) as $i) {
+                $this->logTransfer($cells, $products, $users);
+            }
         }
 
         $this->seedSuspiciousActivity($cells, $products);

@@ -33,4 +33,19 @@ return new class extends Migration
             $table->index('batch');
         });
     }
+
+    /**
+     * Reverse the migrations.
+     *
+     * Without this, `Migrator::runMigration()`'s `method_exists()` check
+     * silently skips the rollback while still deleting the migration's
+     * repository row, so the table survives and the next `migrate` fails with
+     * "table already exists".
+     */
+    public function down(): void
+    {
+        $historyItem = new HealthCheckResultHistoryItem;
+
+        Schema::connection($historyItem->getConnectionName())->dropIfExists($historyItem->getTable());
+    }
 };

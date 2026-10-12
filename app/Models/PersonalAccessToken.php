@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
 
 /**
@@ -20,4 +21,21 @@ use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
 class PersonalAccessToken extends SanctumPersonalAccessToken
 {
     protected $table = 'wms_personal_access_tokens';
+
+    /**
+     * Whether the token is past `sanctum.expiration` or its own `expires_at`.
+     *
+     * The same test Sanctum's guard applies to a bearer token. The store's
+     * "who owns this token" endpoints look a token up themselves with
+     * findToken(), which does not apply it, so they ask here.
+     */
+    public function isExpired(): bool
+    {
+        $lifetimeMinutes = (int) config('sanctum.expiration');
+        $createdAt = $this->getAttribute('created_at');
+        $expiresAt = $this->getAttribute('expires_at');
+
+        return ($lifetimeMinutes > 0 && $createdAt !== null && Carbon::parse($createdAt)->lte(now()->subMinutes($lifetimeMinutes)))
+            || ($expiresAt !== null && Carbon::parse($expiresAt)->isPast());
+    }
 }

@@ -28,3 +28,13 @@ test('a malformed version is rejected and leaves the existing requirement untouc
 
     expect(MobileAppVersionRequirement::minimumVersion())->toBe('1.0.0');
 });
+
+test('running the command invalidates a previously cached minimum version', function () {
+    MobileAppVersionRequirement::factory()->create(['minimum_version' => '1.0.0']);
+    expect(MobileAppVersionRequirement::minimumVersion())->toBe('1.0.0'); // warms the cache
+
+    $this->artisan('app:set-minimum-app-version', ['version' => '2.0.0'])
+        ->assertExitCode(0);
+
+    expect(MobileAppVersionRequirement::minimumVersion())->toBe('2.0.0');
+});

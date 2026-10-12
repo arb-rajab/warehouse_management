@@ -7,7 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { t } from '@/lib/i18n';
 
-const props = defineProps<{
+defineProps<{
     honeypot: {
         enabled: boolean;
         nameFieldName: string;
@@ -42,22 +42,22 @@ const props = defineProps<{
                 class="space-y-4"
             >
                 <div
-                    v-if="props.honeypot.enabled"
+                    v-if="honeypot.enabled"
                     style="display: none"
                     aria-hidden="true"
                 >
                     <input
-                        :id="props.honeypot.nameFieldName"
-                        :name="props.honeypot.nameFieldName"
+                        :id="honeypot.nameFieldName"
+                        :name="honeypot.nameFieldName"
                         type="text"
                         value=""
                         autocomplete="nope"
                         tabindex="-1"
                     />
                     <input
-                        :name="props.honeypot.validFromFieldName"
+                        :name="honeypot.validFromFieldName"
                         type="text"
-                        :value="props.honeypot.encryptedValidFrom"
+                        :value="honeypot.encryptedValidFrom"
                         autocomplete="off"
                         tabindex="-1"
                     />

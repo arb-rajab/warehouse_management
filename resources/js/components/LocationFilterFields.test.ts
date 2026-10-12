@@ -7,22 +7,24 @@ const rows = [
     { id: 2, letter: 'B' },
 ];
 
-describe('LocationFilterFields', () => {
-    it('renders a row select and a column select, prefixed by idPrefix', () => {
-        const wrapper = mount(LocationFilterFields, {
-            props: {
-                idPrefix: 'filter',
-                rows,
-                maxColumnNumber: 3,
-                rowId: '',
-                columnNumber: '',
-            },
-        });
+function mountFields(rowIds: string[] = [], columnNumber = '') {
+    return mount(LocationFilterFields, {
+        props: {
+            idPrefix: 'filter',
+            rows,
+            maxColumnNumber: 3,
+            rowIds,
+            columnNumber,
+        },
+    });
+}
 
-        const selects = wrapper.findAll('select');
-        expect(selects).toHaveLength(2);
-        expect(selects[0].attributes('id')).toBe('filter-row');
-        expect(selects[1].attributes('id')).toBe('filter-column');
+describe('LocationFilterFields', () => {
+    it('renders a row multi-select button and a column select, prefixed by idPrefix', () => {
+        const wrapper = mountFields();
+
+        expect(wrapper.get('button').attributes('id')).toBe('filter-row');
+        expect(wrapper.get('select').attributes('id')).toBe('filter-column');
 
         const labels = wrapper.findAll('label');
         expect(labels[0].text()).toBe('Row');
@@ -31,23 +33,17 @@ describe('LocationFilterFields', () => {
         expect(labels[1].attributes('for')).toBe('filter-column');
     });
 
-    it('renders the row options from the rows prop, and column options from 1..maxColumnNumber', () => {
-        const wrapper = mount(LocationFilterFields, {
-            props: {
-                idPrefix: 'filter',
-                rows,
-                maxColumnNumber: 3,
-                rowId: '',
-                columnNumber: '',
-            },
-        });
+    it('renders the row options from the rows prop, and column options from 1..maxColumnNumber', async () => {
+        const wrapper = mountFields();
 
-        const [rowSelect, columnSelect] = wrapper.findAll('select');
+        await wrapper.get('button').trigger('click');
 
-        expect(
-            rowSelect.findAll('option').map((option) => option.text()),
-        ).toEqual(['All', 'A', 'B']);
+        const rowOptions = wrapper
+            .get('[role="listbox"]')
+            .findAll('[role="option"]');
+        expect(rowOptions.map((option) => option.text())).toEqual(['A', 'B']);
 
+        const columnSelect = wrapper.get('select');
         expect(
             columnSelect.findAll('option').map((option) => option.text()),
         ).toEqual(['All', '1', '2', '3']);
@@ -59,67 +55,61 @@ describe('LocationFilterFields', () => {
                 idPrefix: 'column-filter',
                 rows,
                 maxColumnNumber: 3,
-                rowId: '',
+                rowIds: [],
                 columnNumber: '',
             },
         });
 
-        const selects = wrapper.findAll('select');
-        expect(selects[0].attributes('id')).toBe('column-filter-row');
-        expect(selects[1].attributes('id')).toBe('column-filter-column');
+        expect(wrapper.get('button').attributes('id')).toBe(
+            'column-filter-row',
+        );
+        expect(wrapper.get('select').attributes('id')).toBe(
+            'column-filter-column',
+        );
     });
 
-    it('emits update:rowId when the row select changes', async () => {
-        const wrapper = mount(LocationFilterFields, {
-            props: {
-                idPrefix: 'filter',
-                rows,
-                maxColumnNumber: 3,
-                rowId: '',
-                columnNumber: '',
-            },
-        });
+    it('emits update:rowIds with the added row when a row checkbox is checked', async () => {
+        const wrapper = mountFields();
 
-        await wrapper.findAll('select')[0].setValue('2');
+        await wrapper.get('button').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[1].setValue(true);
 
-        // The row select's options bind numeric `row.id` values, so Vue's
-        // native-select v-model preserves the actual type instead of the
-        // declared `string` model (same convention as FilterNumberField,
-        // see js.md).
-        expect(wrapper.emitted('update:rowId')?.[0]).toEqual([2]);
+        expect(wrapper.emitted('update:rowIds')?.[0]).toEqual([['2']]);
+    });
+
+    it('supports selecting multiple rows at once', async () => {
+        const wrapper = mountFields(['1']);
+
+        await wrapper.get('button').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[1].setValue(true);
+
+        expect(wrapper.emitted('update:rowIds')?.[0]).toEqual([['1', '2']]);
     });
 
     it('emits update:columnNumber when the column select changes', async () => {
-        const wrapper = mount(LocationFilterFields, {
-            props: {
-                idPrefix: 'filter',
-                rows,
-                maxColumnNumber: 3,
-                rowId: '',
-                columnNumber: '',
-            },
-        });
+        const wrapper = mountFields();
 
-        await wrapper.findAll('select')[1].setValue('2');
+        await wrapper.get('select').setValue('2');
 
         // The column select's options bind numeric values (1..maxColumnNumber),
-        // so the emitted value is a number too — see the note above.
+        // so the emitted value is a number too (same convention as
+        // FilterNumberField, see js.md).
         expect(wrapper.emitted('update:columnNumber')?.[0]).toEqual([2]);
     });
 
-    it('selects the options matching rowId and columnNumber', () => {
-        const wrapper = mount(LocationFilterFields, {
-            props: {
-                idPrefix: 'filter',
-                rows,
-                maxColumnNumber: 3,
-                rowId: '2',
-                columnNumber: '3',
-            },
-        });
+    it('checks the checkboxes matching rowIds and selects the option matching columnNumber', async () => {
+        const wrapper = mountFields(['2'], '3');
 
-        const [rowSelect, columnSelect] = wrapper.findAll('select');
-        expect((rowSelect.element as HTMLSelectElement).value).toBe('2');
+        await wrapper.get('button').trigger('click');
+
+        const checkboxes = wrapper.findAll('input[type="checkbox"]');
+        expect(
+            checkboxes.map(
+                (checkbox) => (checkbox.element as HTMLInputElement).checked,
+            ),
+        ).toEqual([false, true]);
+
+        const columnSelect = wrapper.get('select');
         expect((columnSelect.element as HTMLSelectElement).value).toBe('3');
     });
 });

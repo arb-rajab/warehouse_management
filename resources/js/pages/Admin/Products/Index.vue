@@ -1,45 +1,58 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
-import { computed, reactive, ref } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Barcode, Plus, SlidersHorizontal, X } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
-import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
+    destroyBarcode,
+    exportQr,
     index as productsIndex,
+    storeBarcode,
     updateBoxCount,
+    updateMinimumPallets,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellLogActivityFilterFields from '@/components/CellLogActivityFilterFields.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
+import FilterCheckbox from '@/components/FilterCheckbox.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
-import LocationFilterFields from '@/components/LocationFilterFields.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
+import ProductSelect from '@/components/ProductSelect.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { confirmDelete } from '@/lib/confirm';
 import {
     countActive,
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
+    fieldLabelClass,
     filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
+    plainFieldInputClass,
     selectedCountLabel,
     toggleSort,
     useColumnFilterPopover,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { firstError } from '@/lib/pageErrors';
 import { productName } from '@/lib/productName';
 import type {
     Paginated,
+    ProductFilterOption,
     ProductFilters,
     ProductIndexFilterOptions,
     ProductSummary,
@@ -48,20 +61,18 @@ import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
     products: Paginated<ProductSummary>;
-    today: string;
-    weekStart: string;
     expiringSoonDays: number;
     filters: ProductFilters;
     filterOptions: ProductIndexFilterOptions;
 }>();
 
 const filters = reactive({
-    row_id: props.filters.row_id?.toString() ?? '',
-    column_number: props.filters.column_number?.toString() ?? '',
     state: props.filters.state ?? '',
     expired: props.filters.expired ?? false,
     expires_within_days: props.filters.expires_within_days?.toString() ?? '',
     inactive: props.filters.inactive ?? false,
+    hide_inactive: props.filters.hide_inactive ?? false,
+    low_stock: props.filters.low_stock ?? false,
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -80,12 +91,12 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
-        filters.row_id !== '',
-        filters.column_number !== '',
         filters.state !== '',
         filters.expired,
         filters.expires_within_days !== '',
         filters.inactive,
+        filters.hide_inactive,
+        filters.low_stock,
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -94,55 +105,49 @@ const activeFilterCount = computed(() =>
 );
 
 /**
- * `inactive` filters to the store admin's `published = 0` products — it
- * restricts which product rows appear, like `product_id`, rather than
- * narrowing what counts as full/opened/expired for a shown row. So it marks
- * the product column filtered, not the occupancy columns (see
- * .ai/rules/products.md — `inactive` is unrelated to cell occupancy).
+ * `inactive`/`low_stock` both restrict which product rows appear, like
+ * `product_id`, rather than narrowing what counts as full/opened/expired for
+ * a shown row. So they mark the product column filtered, not the occupancy
+ * columns (see .ai/rules/products.md — `inactive` is unrelated to cell
+ * occupancy, and `low_stock` is a stock-level check, not an occupancy one).
  */
 const productColumnFiltered = computed(
-    () => filters.product_id.length > 0 || filters.inactive,
+    () =>
+        filters.product_id.length > 0 ||
+        filters.inactive ||
+        filters.hide_inactive ||
+        filters.low_stock,
 );
 
 /**
- * Row/column/state narrow every occupancy-derived column identically on the
- * backend (see `ProductController::occupancyCountSubquery()`/
- * `applyHistoryLogFilters()`), so the Full/Opened/Expired/Expiring-soon
+ * State narrows every occupancy-derived column identically on the backend
+ * (see `Product::withOccupancyCounts()`/`matchingHistoryFilters()`), so
+ * the Full/Opened/Expired/Expiring-soon
  * columns are always marked filtered together.
  */
 const occupancyColumnsFiltered = computed(
     () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
         filters.state !== '' ||
         filters.expired ||
         filters.expires_within_days !== '',
 );
 
-const activityColumnsFiltered = computed(
-    () =>
-        filters.row_id !== '' ||
-        filters.column_number !== '' ||
-        filters.state !== '' ||
-        filters.user_id.length > 0 ||
-        filters.action.length > 0 ||
-        dateRangeActive(filters),
-);
-
 /**
- * `expired`/`inactive` are only ever included when checked — sending the
- * unchecked `false` would still be a non-empty query value the backend
- * treats as "filled" (see FilterProductsRequest), so each must be omitted
- * rather than sent as literal `false`. Mirrors Cells/Index.vue's
+ * `expired`/`inactive`/`low_stock` are only ever included when checked —
+ * sending the unchecked `false` would still be a non-empty query value the
+ * backend treats as "filled" (see FilterProductsRequest), so each must be
+ * omitted rather than sent as literal `false`. Mirrors Cells/Index.vue's
  * `highlightQuery()`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
-    const { expired, inactive, ...rest } = filters;
+    const { expired, inactive, hide_inactive, low_stock, ...rest } = filters;
 
     return {
         ...rest,
         ...(expired ? { expired: true } : {}),
         ...(inactive ? { inactive: true } : {}),
+        ...(hide_inactive ? { hide_inactive: true } : {}),
+        ...(low_stock ? { low_stock: true } : {}),
     };
 }
 
@@ -154,6 +159,25 @@ function applyFilters(): void {
     filtersOpen.value = false;
 }
 
+/**
+ * The always-visible toolbar search — a faster path to the same
+ * `filters.product_id` the column-filter popover's multi-select already
+ * writes to, not a second filter param. Resets to empty once the request is
+ * sent: it's a quick jump into a single product, not a persistent display of
+ * the current filter (the "Product" column's filter icon shows that).
+ */
+const quickSearchProduct = ref<ProductFilterOption | null>(null);
+
+watch(quickSearchProduct, (product) => {
+    if (!product) {
+        return;
+    }
+
+    filters.product_id = [String(product.id)];
+    applyFilters();
+    quickSearchProduct.value = null;
+});
+
 const { openFilterKey } = useColumnFilterPopover(
     filters,
     filtersOpen,
@@ -161,12 +185,12 @@ const { openFilterKey } = useColumnFilterPopover(
 );
 
 function clearFilters(): void {
-    filters.row_id = '';
-    filters.column_number = '';
     filters.state = '';
     filters.expired = false;
     filters.expires_within_days = '';
     filters.inactive = false;
+    filters.hide_inactive = false;
+    filters.low_stock = false;
     filters.product_id = [];
     filters.user_id = [];
     filters.action = [];
@@ -192,62 +216,22 @@ function onSort(key: string): void {
     applyFilters();
 }
 
-/**
- * The row/column location filters currently applied, carried into every
- * per-product drill-down link below so the destination page stays scoped
- * the same way the table row was computed.
- */
-function locationQuery(): QueryParams {
-    const query: QueryParams = {};
-
-    if (filters.row_id !== '') {
-        query.row_id = Number(filters.row_id);
-    }
-
-    if (filters.column_number !== '') {
-        query.column_number = Number(filters.column_number);
-    }
-
-    return query;
-}
-
 function occupancyHref(
     product: ProductSummary,
     overrides: QueryParams,
 ): string {
     return cellsIndex.url({
-        query: { ...locationQuery(), product_id: [product.id], ...overrides },
+        query: { product_id: [product.id], ...overrides },
     });
 }
 
 /**
- * The user/action filters currently applied, carried into the activity
- * drill-down links below alongside a fixed date range — `date_from`/
- * `date_to` deliberately override rather than merge with the page's own
- * date filter, since "today"/"this week" are each a specific window.
+ * Shared by the box-count, minimum-pallets and barcode requests: keep the row
+ * in view and the page's filter state intact across the redirect. Dialogs
+ * close (or clear their input) only on success, so a failed request leaves the
+ * input in place with the server's message beside it.
  */
-function activityHref(
-    product: ProductSummary,
-    dateFrom: string,
-    dateTo: string,
-): string {
-    const query: QueryParams = {
-        ...locationQuery(),
-        product_id: [product.id],
-        date_from: dateFrom,
-        date_to: dateTo,
-    };
-
-    if (filters.user_id.length > 0) {
-        query.user_id = filters.user_id.map(Number);
-    }
-
-    if (filters.action.length > 0) {
-        query.action = filters.action;
-    }
-
-    return cellLogsIndex.url({ query });
-}
+const mutationOptions = { preserveScroll: true, preserveState: true };
 
 const boxCountDialogProduct = ref<ProductSummary | null>(null);
 const boxCountDraft = ref('');
@@ -270,31 +254,65 @@ function openBoxCountDialog(product: ProductSummary): void {
     boxCountDialogProduct.value = product;
 }
 
+const minimumPalletsDialogProduct = ref<ProductSummary | null>(null);
+const minimumPalletsDraft = ref('');
+
 /**
- * Saves a product's pallet capacity. `preserveScroll`/`preserveState` keep
- * the row in view and the page filter state intact across the redirect.
- * Client-side validation mirrors the server rule so an invalid draft is
- * rejected without a round trip.
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
  */
-function submitBoxCount(): void {
-    const product = boxCountDialogProduct.value;
+const minimumPalletsDialogOpen = computed({
+    get: () => minimumPalletsDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            minimumPalletsDialogProduct.value = null;
+        }
+    },
+});
 
-    if (product === null || boxCountDraft.value === '') {
-        return;
-    }
+function openMinimumPalletsDialog(product: ProductSummary): void {
+    minimumPalletsDraft.value =
+        product.minimum_pallets === null ? '' : String(product.minimum_pallets);
+    minimumPalletsDialogProduct.value = product;
+}
 
-    const boxesCount = Number(boxCountDraft.value);
-
-    if (!Number.isInteger(boxesCount) || boxesCount < 1) {
-        return;
-    }
-
-    router.patch(
-        updateBoxCount(product.id).url,
-        { boxes_count: boxesCount },
-        { preserveScroll: true, preserveState: true },
+function isLowStock(product: ProductSummary): boolean {
+    return (
+        product.minimum_pallets !== null &&
+        product.pallets_count < product.minimum_pallets
     );
-    boxCountDialogProduct.value = null;
+}
+
+const barcodesDialogProduct = ref<ProductSummary | null>(null);
+
+/**
+ * Writable computed so FilterDialog's v-model:open can set it to false
+ * (X button, backdrop click) without needing a separate watcher.
+ */
+const barcodesDialogOpen = computed({
+    get: () => barcodesDialogProduct.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            barcodesDialogProduct.value = null;
+        }
+    },
+});
+
+function openBarcodesDialog(product: ProductSummary): void {
+    barcodesDialogProduct.value = product;
+}
+
+/**
+ * Unlike the single-value box-count/minimum-pallets dialogs (which close on
+ * submit), this dialog manages a list and stays open across additions/
+ * removals — so after each mutation it re-points itself at the freshest copy
+ * of the product from the now-updated `products` prop, rather than closing.
+ */
+function refreshBarcodesDialogProduct(): void {
+    const productId = barcodesDialogProduct.value?.id;
+
+    barcodesDialogProduct.value =
+        props.products.data.find((product) => product.id === productId) ?? null;
 }
 </script>
 
@@ -303,39 +321,57 @@ function submitBoxCount(): void {
 
     <AdminLayout>
         <PageHeader :title="t('products.title')">
-            <button
-                type="button"
-                :class="filterTriggerButtonClass"
-                @click="filtersOpen = true"
-            >
-                <SlidersHorizontal class="h-4 w-4" />
-                {{ t('cellLog.filters.title') }}
-                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <div class="flex items-end gap-2">
+                <ProductSelect
+                    id="products-quick-search"
+                    class="w-64"
+                    v-model="quickSearchProduct"
+                    :label="t('products.quickSearch.label')"
+                    :placeholder="t('products.quickSearch.placeholder')"
+                />
+                <FilterCheckbox
+                    id="products-quick-inactive"
+                    v-model="filters.inactive"
+                    :label="t('products.filters.inactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
+                    id="products-quick-hide-inactive"
+                    v-model="filters.hide_inactive"
+                    :label="t('products.filters.hideInactive')"
+                    @update:model-value="applyFilters"
+                />
+                <FilterCheckbox
+                    id="products-quick-low-stock"
+                    v-model="filters.low_stock"
+                    :label="t('products.filters.lowStock')"
+                    @update:model-value="applyFilters"
+                />
+                <HelpLink :href="showHelp('products')" />
+                <button
+                    type="button"
+                    :class="filterTriggerButtonClass"
+                    @click="filtersOpen = true"
+                >
+                    <SlidersHorizontal class="h-4 w-4" />
+                    {{ t('common.filters.title') }}
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
+                        {{ activeFilterCount }}
+                    </span>
+                </button>
+            </div>
         </PageHeader>
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellLog.filters.title')"
-            :close-label="t('cellLog.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
-                <div>
-                    <h3 :class="sectionHeadingClass">
-                        {{ t('cellLog.filters.sections.location') }}
-                    </h3>
-                    <LocationFilterFields
-                        id-prefix="filter"
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        v-model:row-id="filters.row_id"
-                        v-model:column-number="filters.column_number"
-                        :rows="filterOptions.rows"
-                        :max-column-number="filterOptions.maxColumnNumber"
-                    />
-                </div>
-
+            <form
+                id="products-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div :class="filterSectionClass">
                     <h3 :class="sectionHeadingClass">
                         {{ t('products.filters.sections.occupancy') }}
@@ -391,49 +427,192 @@ function submitBoxCount(): void {
                         />
                     </div>
                 </div>
-
-                <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellLog.filters.clear') }}
-                    </button>
-                </div>
             </form>
+
+            <template #footer>
+                <FilterDialogFooter
+                    form-id="products-filter-form"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
+                    @clear="clearFilters"
+                />
+            </template>
         </FilterDialog>
 
         <FilterDialog
             v-model:open="boxCountDialogOpen"
             :title="t('products.columns.boxesPerPallet')"
-            :close-label="t('cellLog.filters.close')"
+            :close-label="t('common.close')"
         >
-            <form class="space-y-4" @submit.prevent="submitBoxCount">
+            <Form
+                v-if="boxCountDialogProduct"
+                :action="
+                    updateBoxCount(boxCountDialogProduct, { mergeQuery: {} })
+                "
+                :options="mutationOptions"
+                class="space-y-4"
+                #default="{ errors, processing }"
+                @success="boxCountDialogProduct = null"
+            >
+                <ActionErrorBanner :message="firstError(errors)" />
                 <FilterNumberField
                     id="products-box-count"
                     v-model="boxCountDraft"
+                    name="boxes_count"
+                    required
                     :label="
                         t('products.boxesPerPalletLabel', {
-                            product: boxCountDialogProduct
-                                ? productName(
-                                      boxCountDialogProduct.name,
-                                      boxCountDialogProduct.ar_name,
-                                  )
-                                : '',
+                            product: productName(
+                                boxCountDialogProduct.name,
+                                boxCountDialogProduct.ar_name,
+                            ),
                         })
                     "
                 />
-                <button type="submit" :class="filterApplyButtonClass">
-                    <Check class="h-4 w-4 shrink-0" />
-                    {{ t('expiringWindow.apply') }}
-                </button>
-            </form>
+                <SubmitButton
+                    :label="t('expiringWindow.apply')"
+                    :processing-label="t('products.saving')"
+                    :processing="processing"
+                />
+            </Form>
+        </FilterDialog>
+
+        <FilterDialog
+            v-model:open="minimumPalletsDialogOpen"
+            :title="t('products.columns.minimumPallets')"
+            :close-label="t('common.close')"
+        >
+            <Form
+                v-if="minimumPalletsDialogProduct"
+                :action="
+                    updateMinimumPallets(minimumPalletsDialogProduct, {
+                        mergeQuery: {},
+                    })
+                "
+                :options="mutationOptions"
+                class="space-y-4"
+                #default="{ errors, processing }"
+                @success="minimumPalletsDialogProduct = null"
+            >
+                <ActionErrorBanner :message="firstError(errors)" />
+                <FilterNumberField
+                    id="products-minimum-pallets"
+                    v-model="minimumPalletsDraft"
+                    name="minimum_pallets"
+                    :label="
+                        t('products.minimumPalletsLabel', {
+                            product: productName(
+                                minimumPalletsDialogProduct.name,
+                                minimumPalletsDialogProduct.ar_name,
+                            ),
+                        })
+                    "
+                    :placeholder="t('products.minimumPalletsPlaceholder')"
+                />
+                <SubmitButton
+                    :label="t('expiringWindow.apply')"
+                    :processing-label="t('products.saving')"
+                    :processing="processing"
+                />
+            </Form>
+        </FilterDialog>
+
+        <FilterDialog
+            v-model:open="barcodesDialogOpen"
+            :title="t('products.columns.barcodes')"
+            :close-label="t('common.close')"
+        >
+            <template v-if="barcodesDialogProduct">
+                <Form
+                    :action="
+                        storeBarcode(barcodesDialogProduct, { mergeQuery: {} })
+                    "
+                    :options="mutationOptions"
+                    reset-on-success
+                    #default="{ errors, processing }"
+                    @success="refreshBarcodesDialogProduct()"
+                >
+                    <ActionErrorBanner :message="firstError(errors)" />
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <label
+                                for="products-new-barcode"
+                                :class="fieldLabelClass"
+                            >
+                                {{
+                                    t('products.barcodesLabel', {
+                                        product: productName(
+                                            barcodesDialogProduct.name,
+                                            barcodesDialogProduct.ar_name,
+                                        ),
+                                    })
+                                }}
+                            </label>
+                            <input
+                                id="products-new-barcode"
+                                type="text"
+                                name="barcode"
+                                required
+                                :placeholder="
+                                    t('products.newBarcodePlaceholder')
+                                "
+                                :class="plainFieldInputClass"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            :disabled="processing"
+                            :class="filterApplyButtonClass"
+                        >
+                            <Plus class="h-4 w-4 shrink-0" />
+                            {{ t('products.addBarcode') }}
+                        </button>
+                    </div>
+                </Form>
+
+                <p
+                    v-if="barcodesDialogProduct.barcodes.length === 0"
+                    class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
+                >
+                    {{ t('products.noBarcodes') }}
+                </p>
+                <ul
+                    v-else
+                    class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
+                >
+                    <li
+                        v-for="barcode in barcodesDialogProduct.barcodes"
+                        :key="barcode.id"
+                        class="flex items-center justify-between gap-2 py-2 text-sm"
+                    >
+                        {{ barcode.barcode }}
+                        <Link
+                            :href="
+                                destroyBarcode(
+                                    {
+                                        product: barcodesDialogProduct,
+                                        barcode,
+                                    },
+                                    { mergeQuery: {} },
+                                )
+                            "
+                            as="button"
+                            preserve-scroll
+                            preserve-state
+                            :aria-label="
+                                t('products.removeBarcode', {
+                                    barcode: barcode.barcode,
+                                })
+                            "
+                            :on-before="() => confirmDelete(barcode.barcode)"
+                            :on-success="refreshBarcodesDialogProduct"
+                            class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        >
+                            <X class="h-4 w-4" />
+                        </Link>
+                    </li>
+                </ul>
+            </template>
         </FilterDialog>
 
         <DataTable
@@ -446,6 +625,12 @@ function submitBoxCount(): void {
                 },
                 {
                     label: t('products.columns.boxesPerPallet'),
+                },
+                {
+                    label: t('products.columns.minimumPallets'),
+                },
+                {
+                    label: t('products.columns.barcodes'),
                 },
                 {
                     label: t('products.columns.full'),
@@ -477,17 +662,7 @@ function submitBoxCount(): void {
                     filterIconAlwaysVisible: false,
                 },
                 {
-                    label: t('products.columns.activityToday'),
-                    sortKey: 'activity_today_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
-                },
-                {
-                    label: t('products.columns.activityWeek'),
-                    sortKey: 'activity_week_count',
-                    filtered: activityColumnsFiltered,
-                    filterKey: 'activity',
-                    filterIconAlwaysVisible: false,
+                    label: t('products.columns.qr'),
                 },
             ]"
             :rows="products.data"
@@ -527,30 +702,6 @@ function submitBoxCount(): void {
                         :expiring-soon-days="expiringSoonDays"
                     />
                 </div>
-
-                <div v-else-if="key === 'activity'" class="space-y-3">
-                    <CellLogActivityFilterFields
-                        id-prefix="popover-filter"
-                        v-model:action="filters.action"
-                        v-model:user-id="filters.user_id"
-                        :actions="filterOptions.actions"
-                        :users="filterOptions.users"
-                    />
-
-                    <DateRangeFilterFields
-                        from-id="popover-filter-date-from"
-                        to-id="popover-filter-date-to"
-                        within-days-id="popover-filter-created-within-days"
-                        :from-label="t('cellLog.filters.from')"
-                        :to-label="t('cellLog.filters.to')"
-                        :within-days-label="t('cellLog.filters.withinDays')"
-                        v-model:from="filters.date_from"
-                        v-model:to="filters.date_to"
-                        v-model:within-days="filters.created_within_days"
-                        :range-disabled="dateRangeDisabled"
-                        :days-disabled="createdWithinDaysDisabled"
-                    />
-                </div>
             </template>
 
             <template #row="{ row: product }">
@@ -565,6 +716,7 @@ function submitBoxCount(): void {
                             class="h-8 w-8 shrink-0 rounded object-cover"
                         />
                         {{ productName(product.name, product.ar_name) }}
+                        <ProductActiveBadge :active="product.active" />
                     </div>
                 </td>
                 <td class="px-4 py-2">
@@ -582,6 +734,45 @@ function submitBoxCount(): void {
                         @click="openBoxCountDialog(product)"
                     >
                         {{ product.boxes_count }}
+                    </button>
+                </td>
+                <td class="px-4 py-2">
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.minimumPalletsLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :class="[
+                            filterTriggerButtonClass,
+                            isLowStock(product)
+                                ? 'text-red-600 dark:text-red-400'
+                                : '',
+                        ]"
+                        @click="openMinimumPalletsDialog(product)"
+                    >
+                        {{ product.minimum_pallets ?? '—' }}
+                    </button>
+                </td>
+                <td class="px-4 py-2">
+                    <button
+                        type="button"
+                        :aria-label="
+                            t('products.barcodesLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :class="filterTriggerButtonClass"
+                        @click="openBarcodesDialog(product)"
+                    >
+                        {{ product.barcodes.length }}
                     </button>
                 </td>
                 <td class="px-4 py-2">
@@ -617,14 +808,21 @@ function submitBoxCount(): void {
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, today, today)">
-                        {{ product.activity_today_count }}
-                    </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <TableLink :href="activityHref(product, weekStart, today)">
-                        {{ product.activity_week_count }}
-                    </TableLink>
+                    <a
+                        :href="exportQr.url(product)"
+                        :aria-label="
+                            t('products.exportQrLabel', {
+                                product: productName(
+                                    product.name,
+                                    product.ar_name,
+                                ),
+                            })
+                        "
+                        :title="t('products.columns.qr')"
+                        class="inline-flex text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                    >
+                        <Barcode class="h-4 w-4" />
+                    </a>
                 </td>
             </template>
         </DataTable>

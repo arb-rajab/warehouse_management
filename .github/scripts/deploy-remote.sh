@@ -236,8 +236,15 @@ fi
 # nothing when neither lockfile moved, so carry the previous release's trees
 # over instead. Hardlinks make that near-free on disk; both tools replace files
 # rather than editing in place, so the copies never diverge.
+#
+# composer.json is compared too, not only the lock: its `autoload` (a `files`
+# entry, a psr-4 root) and `extra.laravel.dont-discover` are baked into
+# vendor/composer at install time and can change while the lock does not. A
+# reused vendor/ then boots without the new autoload file, and every artisan
+# command dies on its first call to a function it defines.
 reuse_dependencies=0
 if [ -n "$previous_release" ] \
+    && cmp -s "$RELEASE_DIR/composer.json" "$previous_release/composer.json" \
     && cmp -s "$RELEASE_DIR/composer.lock" "$previous_release/composer.lock" \
     && cmp -s "$RELEASE_DIR/package-lock.json" "$previous_release/package-lock.json"; then
     reuse_dependencies=1
@@ -278,8 +285,21 @@ else
     (cd "$RELEASE_DIR" && npm ci)
 fi
 
+# The Vite Wayfinder plugin shells out to a bare `php`, which on this host is
+# the account's default PHP and not necessarily the one this app is pinned to.
+# Put $PHP_BINARY first on PATH for the build, and run the generator once
+# beforehand: the plugin reports only "Command failed", whereas run directly its
+# real error reaches the deploy log.
+php_shim_dir="$(mktemp -d)"
+printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$PHP_BINARY" > "$php_shim_dir/php"
+chmod +x "$php_shim_dir/php"
+
+log "Generating Wayfinder types"
+(cd "$RELEASE_DIR" && PATH="$php_shim_dir:$PATH" "$PHP_BINARY" artisan wayfinder:generate --skip-routes --with-form)
+
 log "Building frontend assets"
-(cd "$RELEASE_DIR" && npm run build)
+(cd "$RELEASE_DIR" && PATH="$php_shim_dir:$PATH" npm run build)
+rm -rf "$php_shim_dir"
 
 # --------------------------------------------------------------------------
 # The live window -- everything below is covered by maintenance mode

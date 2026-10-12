@@ -47,11 +47,35 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * Rolling back `rename_users_table_to_wms_users` and
+     * `rename_colliding_tables_to_wms_prefix` first (they run later, so their
+     * `down()` fires before this one's during a full rollback) un-prefixes
+     * these tables back to their legacy names wherever this app owns them —
+     * everywhere except a production database, where the guard on those
+     * migrations' `down()` leaves the `wms_` names in place because the
+     * legacy names belong to the store app. Dropping only the `wms_` name
+     * here would then silently no-op and orphan the legacy-named table, so
+     * each table is dropped under whichever name it currently holds.
      */
     public function down(): void
     {
-        Schema::dropIfExists('wms_users');
-        Schema::dropIfExists('wms_password_reset_tokens');
-        Schema::dropIfExists('wms_sessions');
+        $this->dropRenamable('wms_users', 'users');
+        $this->dropRenamable('wms_password_reset_tokens', 'password_reset_tokens');
+        $this->dropRenamable('wms_sessions', 'sessions');
+    }
+
+    /**
+     * Drops the `wms_`-prefixed table if it still exists under that name,
+     * otherwise falls back to the legacy name a rename migration's `down()`
+     * may have already restored it to.
+     */
+    private function dropRenamable(string $prefixed, string $legacy): void
+    {
+        if (Schema::hasTable($prefixed)) {
+            Schema::drop($prefixed);
+        } else {
+            Schema::dropIfExists($legacy);
+        }
     }
 };

@@ -100,48 +100,65 @@ whose `ar_name` the store left empty. Matching both costs nothing: an empty
 `ar_name` cannot match a non-empty word. Rendering being locale-dependent is
 not a reason to revisit this — don't "align" the two.
 
-The matching itself is a MySQL FULLTEXT search, added by
+The matching itself combines a MySQL FULLTEXT search, added by
 `add_fulltext_index_to_products_table` over `(name, ar_name)` — the one index
-`Product::SEARCHABLE_NAME_COLUMNS` names. Five things it depends on, all
-covered by tests:
+`Product::SEARCHABLE_NAME_COLUMNS` names — with the same `LIKE` search sqlite
+runs alone. Five things it depends on, all covered by tests:
 
+- **The two strategies are OR'd as whole strategies, not partitioned per
+  word.** `Product::applyNameSearch()` builds a `MATCH (name, ar_name) AGAINST
+  ('+w1* +w2*' IN BOOLEAN MODE)` expression from the term's *indexable* words
+  (see below) and, independently, a `LIKE`-AND-of-every-word group identical to
+  the sqlite path — the same words, including the ones excluded from the
+  FULLTEXT expression. When an expression exists, the query is `WHERE
+  (fulltext_expression) OR (like_and_group)`; a product matches if *either*
+  strategy would, so the combined search is a strict superset of `LIKE` alone.
+  When the term has no indexable word at all (every word excluded, or the
+  driver has no FULLTEXT support), the query reduces to just the LIKE group,
+  with no OR wrapper — the same shape sqlite always produces.
 - **One `MATCH` over both columns, not one per column.** MySQL treats the two
-  indexed columns as a single document, so `MATCH (name, ar_name) AGAINST
-  ('+w1* +w2*' IN BOOLEAN MODE)` *is* the old contract: each `+word` may land
-  in either column (the across-columns OR) and every `+word` must land
-  somewhere (the per-word AND). Boolean mode is required — natural-language
-  mode ranks rather than requires, so "every word matches" would silently
-  become "any word matches", the same failure a flat `orWhere()` chain used to
-  cause. MySQL resolves a `MATCH` only against an index covering *exactly* the
-  clause's column list, so the index and that constant must change together or
-  every search fails with errno 1191.
-- **Three kinds of word deliberately stay on `LIKE`**, ANDed onto the `MATCH`:
-  anything but letters and digits (MySQL's parser splits a word on every other
-  character, so `+Wid-get*` could never match "Wid-get"), words shorter than
-  `innodb_ft_min_token_size` (`Product::FULL_TEXT_MIN_WORD_LENGTH`), and
-  InnoDB's default stopwords. Boolean mode returns *nothing* for those rather
-  than returning more, and the admin type-ahead sends one- and two-letter terms
-  constantly. Don't "simplify" these back into the `MATCH`.
-- **That routing is also what makes the expression injection-proof.** It is
-  built solely from alphanumeric words plus the `+` and `*` the scope adds, so
-  a term containing boolean operators (`-`, `"`, `~`, `(`) can never reach the
-  parser to invert or break the query.
+  indexed columns as a single document, so each `+word` in the expression may
+  land in either column (the across-columns OR) and every included `+word`
+  must land somewhere (the per-word AND). Boolean mode is required —
+  natural-language mode ranks rather than requires, so "every word matches"
+  would silently become "any word matches", the same failure a flat
+  `orWhere()` chain used to cause. MySQL resolves a `MATCH` only against an
+  index covering *exactly* the clause's column list, so the index and that
+  constant must change together or every search fails with errno 1191.
+- **Three kinds of word are excluded from the FULLTEXT expression** — but,
+  unlike the old per-word routing, this costs nothing: every word, excluded or
+  not, still goes through the OR'd LIKE group. The exclusions exist only
+  because boolean mode would otherwise silently return *nothing at all* for
+  the whole expression rather than fewer rows: anything but letters and digits
+  (MySQL's parser splits a word on every other character, so `+Wid-get*` could
+  never match "Wid-get"), words shorter than `innodb_ft_min_token_size`
+  (`Product::FULL_TEXT_MIN_WORD_LENGTH`), and InnoDB's default stopwords. Don't
+  "simplify" these exclusions away — they protect the FULLTEXT branch only, the
+  LIKE branch never needs them.
+- **The exclusion list is also what makes the expression injection-proof.** It
+  is built solely from alphanumeric words plus the `+` and `*` the scope adds,
+  so a term containing boolean operators (`-`, `"`, `~`, `(`) can never reach
+  the parser to invert or break the query — such a term simply has no
+  indexable word, so the query falls back to the LIKE-only shape.
 - **sqlite keeps a full `LIKE` path, and it is not optional.** Laravel's base
   query grammar throws outright on `whereFullText()`, and its base *schema*
   grammar throws on `compileFullText()` rather than leaving it unimplemented —
   so an unguarded `fullText()` breaks `migrate` itself, not just the search.
   CI and the test connection are sqlite, so both the migration and
-  `Product::applyNameSearch()` guard on the driver. The MySQL path is pinned by
-  asserting compiled SQL and bindings against the `mysql` grammar (Laravel
-  resolves a query grammar without touching PDO, so `toSql()` needs no server).
+  `Product::applyNameSearch()` guard on the driver — on sqlite there is no
+  FULLTEXT expression, ever, so the LIKE group is the whole search, same as it
+  always was. The MySQL path is pinned by asserting compiled SQL and bindings
+  against the `mysql` grammar (Laravel resolves a query grammar without
+  touching PDO, so `toSql()` needs no server).
 - **An empty `ar_name` matches nothing**, which is what keeps a product the
   store never translated out of an English term's results through that column.
 
-One deliberate behaviour change came with the index: an indexed word now
-matches by **prefix**, not as an infix. "Widg" still finds "Widgets"; "idget"
-no longer finds "Widget". Boolean mode has no leading wildcard, and a term
-typed into a type-ahead is a prefix in practice. Words on the `LIKE` fallback
-above are unaffected and still match as infixes.
+FULLTEXT still contributes one thing `LIKE` alone cannot: an indexable word
+matches by **prefix** through the FULLTEXT branch ("Widg" finds "Widgets") in
+addition to matching as an **infix** through the OR'd LIKE branch ("idget"
+finds "Widget", the gap a purely FULLTEXT search would have had). The combined
+search is therefore never narrower than sqlite's `LIKE`-only search, only ever
+wider.
 
 `Api\V1\CellController::index()` shares this via
 `Product::applyNameSearch($productQuery->getQuery(), ...)` rather than a second
@@ -287,6 +304,11 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`
+- `wms_product_barcodes.product_id`
+- `product_barcodes.product_id`
+- `product_variations.product_id`
+- `carts_offered.product_id` (no constraint, as in the store's schema)
+- `offer_products.product_id` (no constraint, as in the store's schema)
 
 `uploads.id` is the same signed `int(11)`. sqlite reports both types as
 `integer`, so the test connection cannot catch a regression here —
@@ -298,18 +320,26 @@ table, but it is a schema change against every FK above plus a production data
 migration, and no test here can verify it (CI is sqlite, which ignores foreign
 key types entirely). Treat it as its own piece of work, not a drive-by.
 
-### `published`: the store admin's active/inactive toggle, not an occupancy signal
+### `published`: the store admin's active/inactive toggle, not an occupancy signal — but the admin `inactive` filter also requires occupancy
 
 `products.published` (`int(11) NOT NULL DEFAULT 1`) is the store admin's
 active/inactive kill switch for a product, arriving here through `products:sync`
 and entirely independent of whether it currently occupies any cell in this
-warehouse. `Admin\ProductController::index()`'s
-`inactive` filter (`?inactive=true`) is `published = 0` — do not redefine
-"inactive" as "occupies zero cells" (e.g. `whereDoesntHave('pallets')`): a
-product can be `published = 0` while pallets of it still sit in cells (the
-store deactivated it after it was already stocked), and a freshly `published
-= 1` product legitimately has zero pallets before its first delivery. The two
-concepts don't imply each other in either direction.
+warehouse: a product can be `published = 0` while pallets of it still sit in
+cells (the store deactivated it after it was already stocked), and a freshly
+`published = 1` product legitimately has zero pallets before its first
+delivery. The two concepts don't imply each other in either direction at the
+column level.
+
+`Admin\ProductController::index()`'s `inactive` filter (`?inactive=true`),
+however, is deliberately narrower than bare `published = 0` — it also applies
+`Product::inWarehouse()` (see `.ai/rules/products.md`), so it only surfaces
+deactivated products that still have at least one pallet somewhere in the
+warehouse. This was an explicit, later product decision (the filter exists to
+find actionable deactivated stock, not every deactivated catalog row) and
+does not change what the raw `published` column itself means — see the
+paragraph above. The dashboard's `inactive_in_warehouse` count
+(`BuildsDashboardStats`) shares the same scope, so the two stay in agreement.
 
 ### `image_url` and `boxes_count` are not columns — both are derived
 

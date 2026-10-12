@@ -32,9 +32,20 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * `rename_colliding_tables_to_wms_prefix` runs later, so its `down()`
+     * fires before this one during a full rollback and un-prefixes this table
+     * back to `personal_access_tokens` wherever this app owns it. Dropping
+     * only `wms_personal_access_tokens` would then silently no-op and orphan
+     * the legacy-named table, so it is dropped under whichever name it
+     * currently holds.
      */
     public function down(): void
     {
-        Schema::dropIfExists('wms_personal_access_tokens');
+        if (Schema::hasTable('wms_personal_access_tokens')) {
+            Schema::drop('wms_personal_access_tokens');
+        } else {
+            Schema::dropIfExists('personal_access_tokens');
+        }
     }
 };

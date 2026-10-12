@@ -1,12 +1,14 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
+import { paginated } from '@/testing/factories';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import { i18n } from './i18n';
 import { useProductSearch } from './useProductSearch';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
+    onFinish?: () => void;
 }
 
 const { getMock } = vi.hoisted(() => ({
@@ -17,26 +19,15 @@ vi.mock('@inertiajs/vue3', () => ({
     useHttp: () => ({ get: getMock }),
 }));
 
-function page(
-    data: ProductFilterOption[],
-    { currentPage = 1, lastPage = 1 } = {},
-): Paginated<ProductFilterOption> {
-    return {
-        data,
-        meta: {
-            current_page: currentPage,
-            last_page: lastPage,
-            per_page: 20,
-            total: data.length,
-            from: data.length ? 1 : null,
-            to: data.length,
-            links: [],
-        },
-    };
+function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
+    // A real request always calls onFinish after onSuccess (or after
+    // onError), regardless of outcome.
+    getMock.mock.calls[index][1]?.onSuccess?.(response);
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
-function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
-    getMock.mock.calls[index][1]?.onSuccess?.(response);
+function finishCall(index: number) {
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
 function scrollElement({
@@ -95,12 +86,36 @@ describe('useProductSearch', () => {
         const wrapper = mountSearch();
 
         wrapper.vm.fetchFirstPageIfEmpty();
-        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
+        resolveCall(
+            0,
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ]),
+        );
         await wrapper.vm.$nextTick();
 
         wrapper.vm.fetchFirstPageIfEmpty();
 
         expect(getMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears loading once a failed request finishes, without ever calling onSuccess', async () => {
+        const wrapper = mountSearch();
+
+        wrapper.vm.fetchFirstPageIfEmpty();
+        expect(wrapper.vm.loading).toBe(true);
+
+        // A failed request (session expiry, 500, network blip) never calls
+        // onSuccess, only onFinish — loading must still clear so the
+        // dropdown can recover instead of spinning forever.
+        finishCall(0);
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.loading).toBe(false);
+
+        // The recovery paths gated on `loading` work again afterward.
+        wrapper.vm.fetchFirstPageIfEmpty();
+        expect(getMock).toHaveBeenCalledTimes(2);
     });
 
     it('replaces results and remembers names on a fetched page', async () => {
@@ -109,16 +124,16 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.results).toEqual([
-            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-            { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
         ]);
         expect(wrapper.vm.namesById.get(1)).toBe('Widgets');
         expect(wrapper.vm.namesById.get(2)).toBe('Gadgets');
@@ -128,7 +143,7 @@ describe('useProductSearch', () => {
         const wrapper = mountSearch();
 
         wrapper.vm.rememberNames([
-            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا' },
+            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا', active: true },
         ]);
 
         expect(wrapper.vm.namesById.get(5)).toBe('Preselected');
@@ -166,15 +181,29 @@ describe('useProductSearch', () => {
         // Resolve the newer ("new") request first, then the stale ("old") one.
         resolveCall(
             1,
-            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+            paginated([
+                {
+                    id: 2,
+                    name: 'New product',
+                    ar_name: 'منتج جديد',
+                    active: true,
+                },
+            ]),
         );
         resolveCall(
             0,
-            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+            paginated([
+                {
+                    id: 1,
+                    name: 'Old product',
+                    ar_name: 'منتج قديم',
+                    active: true,
+                },
+            ]),
         );
 
         expect(wrapper.vm.results).toEqual([
-            { id: 2, name: 'New product', ar_name: 'منتج جديد' },
+            { id: 2, name: 'New product', ar_name: 'منتج جديد', active: true },
         ]);
     });
 
@@ -184,10 +213,14 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -203,26 +236,34 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
         wrapper.vm.onOptionsScroll(scrollElement());
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.results).toEqual([
-            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-            { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
         ]);
     });
 
@@ -232,10 +273,14 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 1,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 1,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -250,10 +295,14 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -274,10 +323,14 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -297,9 +350,9 @@ describe('useProductSearch', () => {
         wrapper.vm.fetchFirstPageIfEmpty();
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -316,7 +369,7 @@ describe('useProductSearch', () => {
         const wrapper = mountSearch();
 
         wrapper.vm.rememberNames([
-            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا' },
+            { id: 5, name: 'Preselected', ar_name: 'محدد مسبقا', active: true },
         ]);
 
         expect(wrapper.vm.namesById.get(5)).toBe('محدد مسبقا');

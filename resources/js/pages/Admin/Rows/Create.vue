@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-    index,
+    index as rowsIndex,
     store,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
@@ -14,7 +14,7 @@ import { t } from '@/lib/i18n';
         :action="store()"
         :submit-label="t('rows.create.submit')"
         :submitting-label="t('rows.create.submitting')"
-        :cancel-href="index()"
+        :cancel-href="rowsIndex()"
         #default="{ errors }"
     >
         <RowFormFields :errors="errors" />

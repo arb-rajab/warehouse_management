@@ -49,8 +49,8 @@ test('deleting a pallet directly invalidates the dashboard stats cache', functio
 test('updating a pallet\'s expiration date directly (bypassing PalletActionService, e.g. the admin edit action) invalidates the dashboard stats cache', function () {
     actingAsMobileUser();
 
-    // Outside the 7-day window (until 2026-08-20), so it doesn't count yet.
-    $pallet = Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+    // Outside the 1-month window (until 2026-09-13), so it doesn't count yet.
+    $pallet = Pallet::factory()->create(['expiration_date' => '2026-10-01']);
 
     $before = $this->getJson('/api/v1/dashboard');
     $before->assertOk();
@@ -91,15 +91,15 @@ test('updating a pallet via the real admin edit endpoint invalidates the dashboa
     actingAsAdmin();
 
     $product = Product::factory()->create();
-    // Outside the 7-day window (until 2026-08-20), so it doesn't count yet.
-    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-09-12', 'remaining_boxes' => 5]);
+    // Outside the 1-month window (until 2026-09-13), so it doesn't count yet.
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-10-01', 'remaining_boxes' => 5]);
 
     $before = $this->get('/admin');
     $before->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.expiring.windows.0.count', 0)
     );
 
-    $this->put("/admin/pallets/{$pallet->id}/update", [
+    $this->put("/admin/pallets/{$pallet->id}", [
         'product_id' => $product->id,
         'expiration_date' => '2026-08-20',
         'remaining_boxes' => 5,

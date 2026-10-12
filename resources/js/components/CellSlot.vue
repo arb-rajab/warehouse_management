@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import {
-    Ban,
-    CalendarPlus,
-    CalendarX,
-    PackageSearch,
-    QrCode,
-} from '@lucide/vue';
+import { Ban, CalendarPlus, CalendarX, QrCode } from '@lucide/vue';
 import { computed } from 'vue';
-import { exportQr } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { exportQrCode } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -19,11 +13,12 @@ const props = withDefaults(
         cell: Cell | null;
         label: string;
         highlighted: boolean;
+        dimmed?: boolean;
         pulsing?: boolean;
         toggleable?: boolean;
         manageable?: boolean;
     }>(),
-    { pulsing: false, toggleable: false, manageable: false },
+    { dimmed: false, pulsing: false, toggleable: false, manageable: false },
 );
 
 const emit = defineEmits<{
@@ -45,10 +40,32 @@ const borderClass = computed(() => {
         : 'border-2 border-red-500 dark:border-red-600';
 });
 
+/**
+ * An inactive cell already reads as de-emphasized via its own opacity, so a
+ * non-matching highlight filter doesn't pile a second, weaker opacity on top
+ * of it — it would just look identical to the inactive-only case while
+ * fighting the same CSS property.
+ */
+const fadeClass = computed(() => {
+    if (props.cell && !props.cell.is_active) {
+        return 'opacity-60';
+    }
+
+    return props.dimmed ? 'opacity-40 grayscale' : '';
+});
+
 const toggleActiveLabel = computed(() =>
     props.cell?.is_active
         ? t('cells.toggleActive.deactivateLabel')
         : t('cells.toggleActive.reactivateLabel'),
+);
+
+const isManageable = computed(
+    () => props.manageable && Boolean(props.cell?.is_active),
+);
+
+const manageActionsLabel = computed(() =>
+    t('cells.palletActions.triggerLabel'),
 );
 
 function onToggleActive(): void {
@@ -58,7 +75,7 @@ function onToggleActive(): void {
 }
 
 function onManagePallet(): void {
-    if (props.cell) {
+    if (isManageable.value && props.cell) {
         emit('manage-pallet', props.cell);
     }
 }
@@ -72,14 +89,21 @@ function onManagePallet(): void {
         :class="[
             cell ? CELL_STATE_COLOR[cell.state].backgroundClass : '',
             borderClass,
-            cell && !cell.is_active ? 'opacity-60' : '',
+            fadeClass,
             highlighted
                 ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-neutral-950'
                 : '',
             pulsing
                 ? 'animate-pulse ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-neutral-950'
                 : '',
+            isManageable ? 'cursor-pointer' : '',
         ]"
+        :role="isManageable ? 'button' : undefined"
+        :tabindex="isManageable ? 0 : undefined"
+        :title="isManageable ? manageActionsLabel : undefined"
+        :aria-label="isManageable ? manageActionsLabel : undefined"
+        @click="onManagePallet"
+        @keydown.enter.space.self.prevent="onManagePallet"
     >
         <span
             class="flex items-center gap-1 font-medium text-gray-500 dark:text-neutral-400"
@@ -87,7 +111,8 @@ function onManagePallet(): void {
             <component
                 :is="stateIcon"
                 v-if="stateIcon"
-                class="h-3 w-3 shrink-0"
+                class="h-4 w-4 shrink-0"
+                stroke-width="2.5"
             />
             {{ label }}
         </span>
@@ -97,7 +122,7 @@ function onManagePallet(): void {
             :title="t('cells.inactiveBadge')"
             class="absolute start-1 top-1 flex items-center gap-0.5 rounded bg-red-600 px-1 py-0.5 text-[10px] font-semibold text-white"
         >
-            <Ban class="h-2.5 w-2.5 shrink-0" />
+            <Ban class="h-3 w-3 shrink-0" stroke-width="2.5" />
         </span>
 
         <button
@@ -105,31 +130,24 @@ function onManagePallet(): void {
             type="button"
             :title="toggleActiveLabel"
             :aria-label="toggleActiveLabel"
-            class="absolute end-6 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
-            @click="onToggleActive"
+            class="absolute end-7 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
+            @click.stop="onToggleActive"
         >
-            <Ban class="h-3.5 w-3.5" />
+            <Ban class="h-5 w-5" stroke-width="2.5" />
         </button>
 
         <a
             v-if="cell"
-            :href="exportQr.url(cell.id)"
+            :href="exportQrCode.url(cell)"
             :title="t('rows.show.reprintQr')"
             class="absolute end-1 top-1"
+            @click.stop
         >
-            <QrCode class="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
+            <QrCode
+                class="h-5 w-5 text-gray-400 dark:text-neutral-500"
+                stroke-width="2.5"
+            />
         </a>
-
-        <button
-            v-if="cell && manageable && cell.is_active"
-            type="button"
-            :title="t('cells.palletActions.triggerLabel')"
-            :aria-label="t('cells.palletActions.triggerLabel')"
-            class="absolute end-1 bottom-1 cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
-            @click="onManagePallet"
-        >
-            <PackageSearch class="h-3.5 w-3.5" />
-        </button>
 
         <template v-if="cell?.pallet">
             <img

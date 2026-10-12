@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CellState;
 use App\Http\Requests\Concerns\FiltersByDateRange;
 use App\Http\Requests\Concerns\FiltersByLogAction;
 use App\Http\Requests\Concerns\FiltersByProductIds;
-use App\Http\Requests\Concerns\FiltersByRowAndColumn;
 use App\Http\Requests\Concerns\FiltersByUserIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
@@ -13,13 +13,13 @@ use App\Http\Requests\Concerns\NormalizesExpiredFilter;
 use App\Http\Requests\Concerns\SortsByDirection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FilterProductsRequest extends FormRequest
 {
     use FiltersByDateRange;
     use FiltersByLogAction;
     use FiltersByProductIds;
-    use FiltersByRowAndColumn;
     use FiltersByUserIds;
     use FiltersPerPage;
     use NormalizesBooleanFilters;
@@ -30,6 +30,8 @@ class FilterProductsRequest extends FormRequest
     {
         $this->normalizeExpiredFilter();
         $this->normalizeBooleanFilter('inactive');
+        $this->normalizeBooleanFilter('low_stock');
+        $this->normalizeBooleanFilter('hide_inactive');
     }
 
     /**
@@ -40,19 +42,20 @@ class FilterProductsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            ...$this->rowAndColumnFilterRules(),
             // No `empty` option here (unlike the cells map) — an empty cell
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
-            'state' => ['nullable', 'string', 'in:full,opened'],
+            'state' => ['nullable', 'string', Rule::enum(CellState::class)->only([CellState::Full, CellState::Opened])],
             'expired' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'inactive' => ['nullable', 'boolean'],
+            'low_stock' => ['nullable', 'boolean'],
+            'hide_inactive' => ['nullable', 'boolean'],
             ...$this->productIdsFilterRules(),
             ...$this->userIdsFilterRules(),
             ...$this->logActionFilterRules(),
             ...$this->dateRangeFilterRules(),
-            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count,activity_today_count,activity_week_count'],
+            'sort_by' => ['nullable', 'in:name,full_cells_count,opened_cells_count,expired_cells_count,expiring_soon_count'],
             ...$this->sortDirectionRules(),
             ...$this->perPageRules(),
         ];

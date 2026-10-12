@@ -21,10 +21,23 @@ test('a user can log in with correct credentials and receives a token plus every
         'id' => $user->id,
         'name' => 'Bob Mobile',
         'email' => 'bob@example.com',
+        'is_admin' => false,
     ]);
     expect(array_keys($response->json()))->toEqualCanonicalizing(['token', 'user']);
 
     $this->assertDatabaseCount('wms_personal_access_tokens', 1);
+});
+
+test('an admin logging in through the mobile api receives is_admin true', function () {
+    $user = User::factory()->create(['password' => 'correct-password']);
+
+    $response = $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'correct-password',
+    ]);
+
+    $response->assertOk();
+    expect($response->json('user.is_admin'))->toBeTrue();
 });
 
 test('logging in with the wrong password is rejected', function () {
@@ -35,7 +48,7 @@ test('logging in with the wrong password is rejected', function () {
         'password' => 'wrong-password',
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -52,8 +65,8 @@ test('logging in with an unknown email is rejected with the same message as a wr
         'password' => 'wrong-password',
     ]);
 
-    $unknownEmailResponse->assertStatus(422);
-    $wrongPasswordResponse->assertStatus(422);
+    $unknownEmailResponse->assertUnprocessable();
+    $wrongPasswordResponse->assertUnprocessable();
     expect($unknownEmailResponse->json('errors.email.0'))
         ->toBe($wrongPasswordResponse->json('errors.email.0'));
 
@@ -66,7 +79,7 @@ test('logging in with an overly long email or password is rejected', function ()
         'password' => str_repeat('a', 256),
     ]);
 
-    $response->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
+    $response->assertUnprocessable()->assertJsonValidationErrors(['email', 'password']);
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -77,7 +90,7 @@ test('login attempts are throttled after too many failures', function () {
         $this->postJson('/api/v1/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
-        ])->assertStatus(422);
+        ])->assertUnprocessable();
     }
 
     $response = $this->postJson('/api/v1/login', [
@@ -85,7 +98,7 @@ test('login attempts are throttled after too many failures', function () {
         'password' => 'wrong-password',
     ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -97,7 +110,7 @@ test('login attempts against one email are throttled even when spread across man
             ->postJson('/api/v1/login', [
                 'email' => $user->email,
                 'password' => 'wrong-password',
-            ])->assertStatus(422);
+            ])->assertUnprocessable();
     }
 
     $response = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
@@ -106,7 +119,7 @@ test('login attempts against one email are throttled even when spread across man
             'password' => 'wrong-password',
         ]);
 
-    $response->assertStatus(429);
+    $response->assertTooManyRequests();
     $this->assertDatabaseCount('wms_personal_access_tokens', 0);
 });
 
@@ -128,4 +141,97 @@ test('an unauthenticated caller cannot log out and other users tokens are untouc
 
     $response->assertUnauthorized();
     $this->assertDatabaseCount('wms_personal_access_tokens', 1);
+});
+
+test('an authenticated worker can fetch their own user, matching the shape login returns', function () {
+    $user = User::factory()->mobileUser()->create([
+        'name' => 'Bob Mobile',
+        'email' => 'bob@example.com',
+    ]);
+    actingAsMobileUser($user);
+
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertOk();
+    expect($response->json())->toEqual([
+        'id' => $user->id,
+        'name' => 'Bob Mobile',
+        'email' => 'bob@example.com',
+        'is_admin' => false,
+    ]);
+});
+
+test('an admin fetching their own user gets is_admin true', function () {
+    $admin = User::factory()->create();
+    actingAsMobileUser($admin);
+
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertOk();
+    expect($response->json('is_admin'))->toBeTrue();
+});
+
+test('GET /user reflects a role change without requiring a fresh login', function () {
+    $user = User::factory()->mobileUser()->create();
+    actingAsMobileUser($user);
+
+    $this->getJson('/api/v1/user')->assertOk()->assertJson(['is_admin' => false]);
+
+    $user->syncRoles(['admin']);
+
+    $this->getJson('/api/v1/user')->assertOk()->assertJson(['is_admin' => true]);
+});
+
+test('an unauthenticated caller cannot fetch the signed-in user', function () {
+    $response = $this->getJson('/api/v1/user');
+
+    $response->assertUnauthorized();
+});
+
+test('the mobile api deliberately does not enforce must_change_password', function () {
+    // A settled product decision, not an oversight: EnsurePasswordHasBeenChanged
+    // is registered on the `web` group only, and there is no API route to change
+    // a password. Enforcing the flag on api/v1/* would need a mobile
+    // change-password endpoint to escape to, and the mobile client lives outside
+    // this repository — until it can call one, enforcement would lock every
+    // flagged worker out of the app. This test exists so lifting the exemption
+    // is a deliberate change rather than a silent one; see the docblock of
+    // app/Http/Middleware/EnsurePasswordHasBeenChanged.php.
+    $user = User::factory()->mobileUser()->create([
+        'password' => 'temporary-password',
+        'must_change_password' => true,
+    ]);
+
+    $response = $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'temporary-password',
+    ]);
+
+    $response->assertOk();
+
+    $this->withToken($response->json('token'))->getJson('/api/v1/products')->assertOk();
+
+    expect($user->refresh()->must_change_password)->toBeTrue();
+});
+
+test('a login issues a token scoped to the mobile abilities, not the wildcard', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+    // Noise: another user's token, which must not be the one inspected.
+    User::factory()->mobileUser()->create()->createToken('noise', ['*']);
+
+    $this->postJson('/api/v1/login', ['email' => $user->email, 'password' => 'correct-password'])->assertOk();
+
+    $token = $user->tokens()->sole();
+
+    expect($token->abilities)->toBe(['warehouse:use'])
+        ->and($token->can('*'))->toBeFalse()
+        ->and($token->can('warehouse:use'))->toBeTrue();
+});
+
+test('the token a login issues still opens the mobile api routes', function () {
+    $user = User::factory()->mobileUser()->create(['password' => 'correct-password']);
+
+    $token = $this->postJson('/api/v1/login', ['email' => $user->email, 'password' => 'correct-password'])->json('token');
+
+    $this->withToken($token)->getJson('/api/v1/user')->assertOk()->assertJsonPath('id', $user->id);
 });

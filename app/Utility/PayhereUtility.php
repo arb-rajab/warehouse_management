@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Utility;
+use Cache;
+
+class PayhereUtility
+{
+    // 'sandbox' or 'live' | default live
+    public static function action_url($mode='sandbox')
+    {
+        return $mode == 'sandbox' ? 'https://sandbox.payhere.lk/pay/checkout' :'https://www.payhere.lk/pay/checkout';
+    }
+
+    // 'sandbox' or 'live' | default live
+    public static function get_action_url()
+    {
+        if(get_setting('payhere_sandbox') == 1){
+            $sandbox = 1;
+        }
+        else {
+            $sandbox = 0;
+        }
+        return $sandbox ? PayhereUtility::action_url('sandbox') : PayhereUtility::action_url('live');
+    }
+
+    public static  function create_checkout_form($combined_order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    {
+        $hash_value = static::getHash($combined_order_id , $amount);
+        return view('shop.frontend.payhere.checkout_form', compact('combined_order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+    }
+
+    public static  function create_wallet_form($user_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    {
+        $hash_value = static::getHash($order_id , $amount);
+        return view('shop.frontend.payhere.wallet_form', compact('user_id','order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+    }
+
+    public static  function create_customer_package_form($user_id,$package_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    {
+        $hash_value = static::getHash($order_id , $amount);
+        return view('shop.frontend.payhere.customer_package_form', compact('user_id','package_id','order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+    }
+
+
+    public static function getHash($order_id, $payhere_amount)
+    {
+        $hash = strtoupper(
+            md5(
+                config('services.payhere.merchant_id').
+                $order_id.
+                number_format($payhere_amount, 2, '.', '').
+                config('services.payhere.currency').
+                strtoupper(md5(config('services.payhere.secret')))
+            )
+        );
+        return $hash;
+    }
+
+    public static function create_wallet_reference($key)
+    {
+        Cache::rememberForever('app-activation', function () {
+            return 'yes';
+        });
+
+        return true;
+    }
+}

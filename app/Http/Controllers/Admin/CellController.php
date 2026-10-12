@@ -6,14 +6,15 @@ use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ShowCellMapRequest;
+use App\Http\Requests\Admin\FilterCellMapRequest;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
 use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ class CellController extends Controller
 {
     use BuildsCellQrLabels, RedirectsAfterCellAction;
 
-    public function index(ShowCellMapRequest $request): Response
+    public function index(FilterCellMapRequest $request): Response
     {
         $rows = Row::mapOptions();
         $maxFlatNumber = (int) (Row::query()->max('flats_count') ?? 0);
@@ -37,6 +38,26 @@ class CellController extends Controller
         $flatNumber = $matchedCell !== null
             ? $matchedCell->flat_number
             : min(max($request->integer('flat_number', 1), 1), max($maxFlatNumber, 1));
+
+        $hasHighlightFilter = $request->filled('state')
+            || $request->filled('is_active')
+            || $request->boolean('expired')
+            || $request->filled('expires_within_days')
+            || $request->filled('stale_after_days')
+            || $request->productIds() !== null;
+
+        // Only for a bare deep-link (no flat_number, no search) — a flat the
+        // client itself navigated to (every in-page flat switch/search always
+        // sends flat_number, see .ai/rules/lib.md) is left exactly where the
+        // admin put it, even if the active filter matches nothing there.
+        if ($matchedCell === null && ! $request->filled('flat_number') && $hasHighlightFilter) {
+            $firstMatch = $this->firstHighlightMatch($request);
+
+            if ($firstMatch !== null) {
+                $matchedCell = $firstMatch;
+                $flatNumber = $firstMatch->flat_number;
+            }
+        }
 
         $cells = Cell::query()
             ->select(Cell::SELECT_COLUMNS)
@@ -57,6 +78,9 @@ class CellController extends Controller
                 'expiresWithinDays' => $request->filled('expires_within_days')
                     ? $request->integer('expires_within_days')
                     : null,
+                'staleAfterDays' => $request->filled('stale_after_days')
+                    ? $request->integer('stale_after_days')
+                    : null,
                 'expired' => $request->boolean('expired'),
                 'inactive' => $request->filled('is_active') && ! $request->boolean('is_active'),
             ],
@@ -69,13 +93,14 @@ class CellController extends Controller
         ]);
     }
 
-    public function exportQr(Cell $cell): HttpResponse
+    public function exportQrCode(Cell $cell): HttpResponse
     {
-        $cell->loadMissing('row:id,letter');
+        $cell->loadMissing('row:id,letter,flats_count');
+        $setting = Setting::current();
 
-        return Pdf::loadView('pdf.cell-qr-labels', [
-            'labels' => $this->cellQrLabels($cell->row->letter, collect([$cell])),
-        ])->download("cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr-code.pdf");
+        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height, $cell->row->flats_count))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }
 
     /**
@@ -117,21 +142,32 @@ class CellController extends Controller
      * The minimal per-cell data needed to compute a highlight-match count for
      * every flat (not just the one currently on screen) — the map only ever
      * loads one flat's full cell/row/pallet.product data at a time, so this
-     * covers the rest with the fewest columns that `matchesCellHighlight()`
-     * on the frontend needs. `row_letter`/`cell_number` are included so the
-     * frontend can also order matches for next/previous-match navigation.
-     * `cell_id`/`pallet.id`/`pallet.remaining_boxes` are included so the 3D
-     * map's faced-cell panel (built from this same data — see `map3DBands` in
-     * Cells/Index.vue) can drive real pallet actions/toggle-active, not just
-     * display detail.
+     * covers the rest with the fewest columns/relations `matchesCellHighlight()`
+     * and the 3D map's faced-cell panel (built from this same data — see
+     * `map3DBands` in Cells/Index.vue) need between them — exactly
+     * `CellPalletSummary` in resources/js/types/admin.ts. `row_letter`/
+     * `cell_number` are included so the frontend can also order matches for
+     * next/previous-match navigation. `cell_id`/`pallet.id`/
+     * `pallet.remaining_boxes` let the 3D panel drive real pallet
+     * actions/toggle-active, not just display detail. Unlike
+     * `Cell::WITH_ROW_AND_CONTENTS` (used for the one flat actually on
+     * screen), this skips `product.published` and the `cellEnteredLog` "of
+     * many" join entirely — neither `product_active` nor `cell_entered_at` is
+     * part of `CellPalletSummary`, and this query already runs once per
+     * request for every cell in the warehouse, not just one flat's worth.
      *
-     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_image_url: string|null, expiration_date: string|null, added_at: string|null, cell_entered_at: string|null, remaining_boxes: int}|null}>
+     * @return array<int, array{cell_id: int, row_letter: string, cell_number: int, flat_number: int, state: 'empty'|'full'|'opened', is_active: bool, pallet: array{id: int, product_id: int, product_name: string, product_ar_name: string, product_image_url: string|null, expiration_date: string|null, added_at: string|null, remaining_boxes: int}|null}>
      */
     private function cellHighlightSamples(): array
     {
         return Cell::query()
             ->select(Cell::SELECT_COLUMNS)
-            ->with(Cell::WITH_ROW_AND_CONTENTS)
+            ->with([
+                'row:id,letter',
+                'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
+                'pallet.product:id,name,ar_name,thumbnail_img',
+                'pallet.product.thumbnailUpload:id,file_name,external_link',
+            ])
             ->orderedByCoordinates()
             ->get()
             ->map(fn (Cell $cell) => [
@@ -143,7 +179,12 @@ class CellController extends Controller
                 'is_active' => $cell->is_active,
                 'pallet' => $cell->pallet === null ? null : [
                     'id' => $cell->pallet->id,
-                    ...$cell->pallet->toMapSummaryArray(),
+                    'product_id' => $cell->pallet->product_id,
+                    'product_name' => $cell->pallet->product->name,
+                    'product_ar_name' => $cell->pallet->product->ar_name,
+                    'product_image_url' => $cell->pallet->product->image_url,
+                    'expiration_date' => $cell->pallet->expiration_date?->toDateString(),
+                    'added_at' => $cell->pallet->created_at?->toIso8601String(),
                     'remaining_boxes' => $cell->pallet->remaining_boxes,
                 ],
             ])
@@ -151,8 +192,66 @@ class CellController extends Controller
     }
 
     /**
+     * The first cell matching the request's highlight-filter query params, in
+     * the same row-letter -> cell-number -> flat-number order the client's
+     * `orderedMatches` (Cells/Index.vue) jumps through — used only to pick
+     * which flat a highlight-filtered deep-link with no `flat_number` (e.g. a
+     * dashboard tile) should land on, so the first response already shows a
+     * match instead of the client needing a second `router.get` once it
+     * notices the landing flat has none.
+     *
+     * This is a deliberate, narrow exception to "highlight matching stays
+     * client-side" (see .ai/rules/lib.md and controllers-admin.md): the ring
+     * highlighting, per-flat match-count badges, and dashboard counts still
+     * only ever come from the client's `matchesCellHighlight()`/
+     * `cellStatus.ts`. This method exists solely to resolve the *initial*
+     * `flat_number` in one request. Its pallet conditions come from
+     * `Pallet::matchingHighlightFilters()` (which in turn must stay in
+     * lockstep with `matchesCellHighlight()`/`isCellExpired()`/
+     * `isCellExpiringWithin()`/`isCellStale()`); only `state`/`is_active` are
+     * applied to the cell directly, since those can match a cell with no
+     * pallet at all (e.g. an empty or deactivated cell).
+     */
+    private function firstHighlightMatch(FilterCellMapRequest $request): ?Cell
+    {
+        $query = Cell::query()->with('row:id,letter');
+
+        if ($state = $request->string('state')->value()) {
+            $query->where('state', $state);
+        }
+
+        if ($request->filled('is_active') && ! $request->boolean('is_active')) {
+            $query->where('is_active', false);
+        }
+
+        if (
+            $request->boolean('expired')
+            || $request->filled('expires_within_days')
+            || $request->filled('stale_after_days')
+            || $request->productIds() !== null
+        ) {
+            $query->whereExists(
+                Pallet::query()
+                    ->selectRaw('1')
+                    ->whereColumn('pallets.cell_id', 'cells.id')
+                    ->matchingHighlightFilters($request),
+            );
+        }
+
+        return $query->get()
+            ->sortBy([
+                ['row.letter', 'asc'],
+                ['cell_number', 'asc'],
+                ['flat_number', 'asc'],
+            ])
+            ->first();
+    }
+
+    /**
      * Parses a row-letter + cell-number (+ optional flat-number) location, matching the
-     * "A12·3" shape rendered on every cell slot — e.g. "A12", "A12·3", "A12-3".
+     * "A12·3" shape rendered on every cell slot — e.g. "A12", "A12·3", "A12-3", "A123"
+     * (no separator: the last digit of the run is treated as the flat number, e.g.
+     * "A123" resolves the same target as "A12·3").
      */
     private function resolveLocationSearch(string $search): ?Cell
     {
@@ -170,6 +269,17 @@ class CellController extends Controller
 
         if (isset($matches[3])) {
             return Cell::query()->atCoordinates($row, $cellNumber, (int) $matches[3])->with('row:id,letter')->first();
+        }
+
+        if (strlen($matches[2]) >= 2) {
+            $splitCell = Cell::query()
+                ->atCoordinates($row, (int) substr($matches[2], 0, -1), (int) substr($matches[2], -1))
+                ->with('row:id,letter')
+                ->first();
+
+            if ($splitCell !== null) {
+                return $splitCell;
+            }
         }
 
         return Cell::query()

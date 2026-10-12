@@ -1,0 +1,146 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\CouponRequest;
+use App\Models\Coupon;
+use App\Models\Product;
+use App\Models\StoreUser;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+class CouponController extends Controller implements HasMiddleware
+{
+    /**
+     * Get the middleware that should be assigned to the controller.
+     *
+     * See Auth\LoginController::middleware()'s docblock for why this
+     * replaces the constructor-based $this->middleware() call.
+     *
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_all_coupons', only: ['index', 'show']),
+            new Middleware('permission:add_coupon', only: ['create', 'store', 'get_coupon_form']),
+            new Middleware('permission:edit_coupon', only: ['edit', 'update', 'get_coupon_form_edit']),
+            new Middleware('permission:delete_coupon', only: ['destroy']),
+        ];
+    }
+    /**
+     * Display a listing of the resource.
+     *
+     * @return Response
+     */
+    public function index()
+    {
+        $coupons = Coupon::where('user_id', StoreUser::where('user_type', 'admin')->first()->id)->orderBy('id','desc')->get();
+        return view('shop.backend.marketing.coupons.index', compact('coupons'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return Response
+     */
+    public function create()
+    {
+        return view('shop.backend.marketing.coupons.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  Request  $request
+     * @return Response
+     */
+    public function store(CouponRequest $request)
+    {
+        $user_id = StoreUser::where('user_type', 'admin')->first()->id;
+        Coupon::create($request->validated() + [
+            'user_id' => $user_id,
+        ]);
+        flash(translate('Coupon has been saved successfully'))->success();
+        return redirect()->route('coupon.index');
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return Response
+     */
+    public function show($id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return Response
+     */
+    public function edit($id)
+    {
+        $coupon = Coupon::findOrFail(decrypt($id));
+        return view('shop.backend.marketing.coupons.edit', compact('coupon'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  Request  $request
+     * @param  int  $id
+     * @return Response
+     */
+    public function update(CouponRequest $request, Coupon $coupon)
+    {
+        $coupon->update($request->validated());
+        flash(translate('Coupon has been updated successfully'))->success();
+        return redirect()->route('coupon.index');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return Response
+     */
+    public function destroy($id)
+    {
+        Coupon::destroy($id);
+        flash(translate('Coupon has been deleted successfully'))->success();
+        return redirect()->route('coupon.index');
+    }
+
+    public function get_coupon_form(Request $request)
+    {
+        if($request->coupon_type == "product_base") {
+            $admin_id = StoreUser::where('user_type', 'admin')->first()->id;
+            $products = filter_products(Product::where('user_id', $admin_id))->get();
+            return view('shop.partials.coupons.product_base_coupon', compact('products'));
+        }
+        elseif($request->coupon_type == "cart_base"){
+            return view('shop.partials.coupons.cart_base_coupon');
+        }
+    }
+
+    public function get_coupon_form_edit(Request $request)
+    {
+        if($request->coupon_type == "product_base") {
+            $coupon = Coupon::findOrFail($request->id);
+            $admin_id = StoreUser::where('user_type', 'admin')->first()->id;
+            $products = filter_products(Product::where('user_id', $admin_id))->get();
+            return view('shop.partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
+        }
+        elseif($request->coupon_type == "cart_base"){
+            $coupon = Coupon::findOrFail($request->id);
+            return view('shop.partials.coupons.cart_base_coupon_edit',compact('coupon'));
+        }
+    }
+
+}

@@ -16,10 +16,10 @@ trait FiltersPerPage
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    protected function perPageRules(): array
+    protected function perPageRules(string $key = 'per_page'): array
     {
         return [
-            'per_page' => ['nullable', 'integer', Rule::in(PerPageOptions::VALUES)],
+            $key => ['nullable', 'integer', Rule::in(PerPageOptions::VALUES)],
         ];
     }
 }

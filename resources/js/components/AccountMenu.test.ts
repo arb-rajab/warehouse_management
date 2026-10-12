@@ -1,5 +1,7 @@
+import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import AccountMenu from './AccountMenu.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -61,6 +63,31 @@ describe('AccountMenu', () => {
 
         expect(wrapper.text()).toContain('English');
         expect(wrapper.text()).toContain('Arabic');
+    });
+
+    it('links to the settings page inside the panel', async () => {
+        const wrapper = mountMenu();
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
+
+        const settingsLink = wrapper
+            .findAll('a')
+            .find((el) => el.attributes('href') === settingsEdit.url());
+
+        expect(settingsLink).toBeTruthy();
+    });
+
+    it('gives the settings link a Wayfinder route object', async () => {
+        const wrapper = mountMenu();
+        await wrapper.get('button[aria-label="Account"]').trigger('click');
+
+        const settingsLink = wrapper
+            .findAllComponents(Link)
+            .find((link) => link.attributes('href') === settingsEdit.url());
+
+        expect(settingsLink?.props('href')).toEqual({
+            url: settingsEdit.url(),
+            method: 'get',
+        });
     });
 
     it('links the logout action to the /logout route and closes the menu on click', async () => {

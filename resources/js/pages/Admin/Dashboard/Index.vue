@@ -6,18 +6,25 @@ import {
     CalendarX,
     Check,
     CircleDashed,
+    Clock,
     PackageOpen,
+    PackageX,
     SlidersHorizontal,
+    TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
+import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
@@ -28,11 +35,31 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { ProductFilterOptions } from '@/types/admin';
+import type { MatchingPallet, ProductFilterOptions } from '@/types/admin';
 
-interface ExpiringWindow {
+interface ExpiringMonthWindow {
+    months: number;
     days: number;
     until: string;
+    count: number;
+}
+
+interface ExpiringDayWindow {
+    days: number;
+    until: string;
+    count: number;
+}
+
+interface StaleDayWindow {
+    days: number;
+    count: number;
+}
+
+interface LowStockStats {
+    count: number;
+}
+
+interface InactiveInWarehouseStats {
     count: number;
 }
 
@@ -41,9 +68,12 @@ const props = defineProps<{
         occupancy: { empty: number; full: number; opened: number };
         expiring: {
             expired: number;
-            windows: ExpiringWindow[];
-            custom: ExpiringWindow;
+            windows: ExpiringMonthWindow[];
+            custom: ExpiringDayWindow;
         };
+        stale: StaleDayWindow;
+        low_stock: LowStockStats;
+        inactive_in_warehouse: InactiveInWarehouseStats;
         activity_today: {
             stored: number;
             opened: number;
@@ -59,6 +89,7 @@ const props = defineProps<{
     };
     today: string;
     weekStart: string;
+    productPallets: MatchingPallet[];
     filters: { product_id: number[] | null };
     filterOptions: ProductFilterOptions;
 }>();
@@ -108,16 +139,46 @@ function submitCustomExpiringDays(): void {
         {
             product_id: props.filters.product_id ?? [],
             expiring_days: Number(customExpiringDaysDraft.value),
+            stale_days: props.stats.stale.days,
         },
         { preserveState: true, replace: true },
     );
     customExpiringDaysDialogOpen.value = false;
 }
 
+const customStaleDaysDialogOpen = ref(false);
+const customStaleDaysDraft = ref(String(props.stats.stale.days));
+
+function openCustomStaleDaysDialog(): void {
+    customStaleDaysDraft.value = String(props.stats.stale.days);
+    customStaleDaysDialogOpen.value = true;
+}
+
+function submitCustomStaleDays(): void {
+    if (customStaleDaysDraft.value === '') {
+        return;
+    }
+
+    router.get(
+        dashboardIndex().url,
+        {
+            product_id: props.filters.product_id ?? [],
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: Number(customStaleDaysDraft.value),
+        },
+        { preserveState: true, replace: true },
+    );
+    customStaleDaysDialogOpen.value = false;
+}
+
 function onProductIdsChange(ids: string[]): void {
     router.get(
         dashboardIndex().url,
-        { product_id: ids, expiring_days: props.stats.expiring.custom.days },
+        {
+            product_id: ids,
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: props.stats.stale.days,
+        },
         { preserveState: true, replace: true },
     );
 }
@@ -129,6 +190,7 @@ function onProductIdsChange(ids: string[]): void {
     <AdminLayout>
         <PageHeader :title="t('dashboard.title')">
             <div class="flex items-center gap-4">
+                <HelpLink :href="showHelp('dashboard')" />
                 <FilterProductSelect
                     id="dashboard-product"
                     :model-value="productIdStrings"
@@ -141,6 +203,26 @@ function onProductIdsChange(ids: string[]): void {
             </div>
         </PageHeader>
 
+        <section
+            v-if="filters.product_id"
+            id="dashboard-product-pallets"
+            class="mb-8"
+        >
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.productPallets.title') }}
+            </h2>
+            <MatchingPalletsTable
+                :pallets="productPallets"
+                :empty-message="t('dashboard.productPallets.empty')"
+            />
+            <Link
+                :href="palletsIndex({ query: productQuery })"
+                :class="['mt-3', filterTriggerButtonClass]"
+            >
+                {{ t('dashboard.productPallets.viewAll') }}
+            </Link>
+        </section>
+
         <section class="mb-8">
             <h2 :class="sectionHeadingClass">
                 {{ t('dashboard.occupancy.title') }}
@@ -148,23 +230,32 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.empty')"
-                    :value="props.stats.occupancy.empty"
-                    :href="cellsIndex().url"
-                    :query="{ state: 'empty', ...productQuery }"
+                    :value="stats.occupancy.empty"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'empty', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.empty.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.full')"
-                    :value="props.stats.occupancy.full"
-                    :href="cellsIndex().url"
-                    :query="{ state: 'full', ...productQuery }"
+                    :value="stats.occupancy.full"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'full', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.full.icon"
                 />
                 <DashboardStatTile
                     :label="t('dashboard.occupancy.opened')"
-                    :value="props.stats.occupancy.opened"
-                    :href="cellsIndex().url"
-                    :query="{ state: 'opened', ...productQuery }"
+                    :value="stats.occupancy.opened"
+                    :href="
+                        palletsIndex({
+                            query: { state: 'opened', ...productQuery },
+                        })
+                    "
                     :icon="CELL_STATE_COLOR.opened.icon"
                 />
             </div>
@@ -177,95 +268,208 @@ function onProductIdsChange(ids: string[]): void {
             <div :class="tileGridClass">
                 <DashboardStatTile
                     :label="t('dashboard.expiring.expired')"
-                    :value="props.stats.expiring.expired"
-                    :href="cellsIndex().url"
-                    :query="{
-                        expired: true,
-                        ...productQuery,
-                    }"
+                    :value="stats.expiring.expired"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expired: true,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="danger"
                     :icon="CalendarX"
                 />
                 <DashboardStatTile
-                    v-for="window in props.stats.expiring.windows"
-                    :key="window.days"
-                    :label="t('dashboard.expiring.soon', { days: window.days })"
+                    v-for="window in stats.expiring.windows"
+                    :key="window.months"
+                    :label="
+                        t('dashboard.expiring.soonMonths', {
+                            months: window.months,
+                        })
+                    "
                     :value="window.count"
-                    :href="cellsIndex().url"
-                    :query="{
-                        expires_within_days: window.days,
-                        ...productQuery,
-                    }"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: window.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     tone="warning"
                     :icon="CalendarX"
                 />
-                <div
-                    class="rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
+                <DashboardStatTile
+                    :label="
+                        t('dashboard.expiring.soon', {
+                            days: stats.expiring.custom.days,
+                        })
+                    "
+                    :value="stats.expiring.custom.count"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                expires_within_days: stats.expiring.custom.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
+                    tone="warning"
+                    :icon="CalendarX"
                 >
-                    <Link
-                        :href="cellsIndex().url"
-                        :data="{
-                            expires_within_days:
-                                props.stats.expiring.custom.days,
-                            ...productQuery,
-                        }"
-                        method="get"
-                        class="block"
-                    >
-                        <div
-                            class="flex items-center gap-2 text-amber-600 dark:text-amber-400"
+                    <template #footer>
+                        <button
+                            type="button"
+                            :class="['mt-2', filterTriggerButtonClass]"
+                            @click="openCustomExpiringDaysDialog"
                         >
-                            <CalendarX class="h-5 w-5 shrink-0" />
-                            <div class="text-2xl font-semibold">
-                                {{ props.stats.expiring.custom.count }}
-                            </div>
-                        </div>
-                        <div
-                            class="mt-1 text-sm text-gray-500 dark:text-neutral-400"
-                        >
-                            {{
-                                t('dashboard.expiring.soon', {
-                                    days: props.stats.expiring.custom.days,
-                                })
-                            }}
-                        </div>
-                    </Link>
-                    <button
-                        type="button"
-                        :class="['mt-2', filterTriggerButtonClass]"
-                        @click="openCustomExpiringDaysDialog"
-                    >
-                        <SlidersHorizontal class="h-4 w-4" />
-                        {{ t('expiringWindow.label') }}
-                    </button>
+                            <SlidersHorizontal class="h-4 w-4" />
+                            {{ t('expiringWindow.label') }}
+                        </button>
 
-                    <FilterDialog
-                        v-model:open="customExpiringDaysDialogOpen"
-                        :title="t('expiringWindow.label')"
-                        :close-label="t('cellLog.filters.close')"
-                    >
-                        <form
-                            class="space-y-4"
-                            @submit.prevent="submitCustomExpiringDays"
+                        <FilterDialog
+                            v-model:open="customExpiringDaysDialogOpen"
+                            :title="t('expiringWindow.label')"
+                            :close-label="t('common.filters.close')"
                         >
-                            <FilterNumberField
-                                id="dashboard-custom-expiring-days"
-                                v-model="customExpiringDaysDraft"
-                                :label="t('cellHighlight.expiresWithinDays')"
-                                :placeholder="
-                                    t('expiringWindow.customPlaceholder')
-                                "
-                            />
-                            <button
-                                type="submit"
-                                :class="filterApplyButtonClass"
+                            <form
+                                id="dashboard-custom-expiring-days-form"
+                                class="space-y-4"
+                                @submit.prevent="submitCustomExpiringDays"
                             >
-                                <Check class="h-4 w-4 shrink-0" />
-                                {{ t('expiringWindow.apply') }}
-                            </button>
-                        </form>
-                    </FilterDialog>
-                </div>
+                                <FilterNumberField
+                                    id="dashboard-custom-expiring-days"
+                                    v-model="customExpiringDaysDraft"
+                                    :label="
+                                        t('cellHighlight.expiresWithinDays')
+                                    "
+                                    :placeholder="
+                                        t('expiringWindow.customPlaceholder')
+                                    "
+                                />
+                            </form>
+
+                            <template #footer>
+                                <button
+                                    type="submit"
+                                    form="dashboard-custom-expiring-days-form"
+                                    :class="filterApplyButtonClass"
+                                >
+                                    <Check class="h-4 w-4 shrink-0" />
+                                    {{ t('expiringWindow.apply') }}
+                                </button>
+                            </template>
+                        </FilterDialog>
+                    </template>
+                </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.stale.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="
+                        t('dashboard.stale.soon', {
+                            days: stats.stale.days,
+                        })
+                    "
+                    :value="stats.stale.count"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                stale_after_days: stats.stale.days,
+                                ...productQuery,
+                            },
+                        })
+                    "
+                    tone="warning"
+                    :icon="Clock"
+                >
+                    <template #footer>
+                        <button
+                            type="button"
+                            :class="['mt-2', filterTriggerButtonClass]"
+                            @click="openCustomStaleDaysDialog"
+                        >
+                            <SlidersHorizontal class="h-4 w-4" />
+                            {{ t('staleWindow.label') }}
+                        </button>
+
+                        <FilterDialog
+                            v-model:open="customStaleDaysDialogOpen"
+                            :title="t('staleWindow.label')"
+                            :close-label="t('common.filters.close')"
+                        >
+                            <form
+                                id="dashboard-custom-stale-days-form"
+                                class="space-y-4"
+                                @submit.prevent="submitCustomStaleDays"
+                            >
+                                <FilterNumberField
+                                    id="dashboard-custom-stale-days"
+                                    v-model="customStaleDaysDraft"
+                                    :label="t('cellHighlight.staleAfterDays')"
+                                    :placeholder="
+                                        t('staleWindow.customPlaceholder')
+                                    "
+                                />
+                            </form>
+
+                            <template #footer>
+                                <button
+                                    type="submit"
+                                    form="dashboard-custom-stale-days-form"
+                                    :class="filterApplyButtonClass"
+                                >
+                                    <Check class="h-4 w-4 shrink-0" />
+                                    {{ t('staleWindow.apply') }}
+                                </button>
+                            </template>
+                        </FilterDialog>
+                    </template>
+                </DashboardStatTile>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.lowStock.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.lowStock.count')"
+                    :value="stats.low_stock.count"
+                    :href="
+                        productsIndex({
+                            query: { low_stock: true, ...productQuery },
+                        })
+                    "
+                    tone="danger"
+                    :icon="TriangleAlert"
+                />
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.inactiveInWarehouse.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.inactiveInWarehouse.count')"
+                    :value="stats.inactive_in_warehouse.count"
+                    :href="
+                        productsIndex({
+                            query: { inactive: true, ...productQuery },
+                        })
+                    "
+                    tone="warning"
+                    :icon="PackageX"
+                />
             </div>
         </section>
 
@@ -278,14 +482,17 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_today[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: props.today,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
+                    :value="stats.activity_today[action.key]"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: today,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>
@@ -300,14 +507,17 @@ function onProductIdsChange(ids: string[]): void {
                     v-for="action in ACTIVITY_ACTIONS"
                     :key="action.key"
                     :label="t(`cellLog.actions.${action.key}`)"
-                    :value="props.stats.activity_week[action.key]"
-                    :href="cellLogsIndex().url"
-                    :query="{
-                        action: action.filterAction,
-                        date_from: props.weekStart,
-                        date_to: props.today,
-                        ...productQuery,
-                    }"
+                    :value="stats.activity_week[action.key]"
+                    :href="
+                        cellLogsIndex({
+                            query: {
+                                action: action.filterAction,
+                                date_from: weekStart,
+                                date_to: today,
+                                ...productQuery,
+                            },
+                        })
+                    "
                     :icon="action.icon"
                 />
             </div>

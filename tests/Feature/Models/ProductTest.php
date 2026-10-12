@@ -1,8 +1,16 @@
 <?php
 
+use App\Enums\CellState;
+use App\Models\Cell;
+use App\Models\CellStatusLog;
+use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 test('a product can be created with its fillable attributes', function () {
@@ -69,8 +77,8 @@ test('filterOptions emits both store name columns raw, in the order the frontend
     $bravo = Product::factory()->create(['name' => 'Bravo', 'ar_name' => '']);
 
     expect(Product::filterOptions()->all())->toBe([
-        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
-        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => ''],
+        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
+        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => '', 'active' => true],
     ]);
 });
 
@@ -83,9 +91,18 @@ test('filterOptions emits the same raw columns under the Arabic locale', functio
     app()->setLocale('ar');
 
     expect(Product::filterOptions()->all())->toBe([
-        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
-        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => 'برافو'],
+        ['id' => $alpha->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
+        ['id' => $bravo->id, 'name' => 'Bravo', 'ar_name' => 'برافو', 'active' => true],
     ]);
+});
+
+test('selectedOptions flags an inactive product as not active, alongside an active one', function () {
+    $active = Product::factory()->create(['name' => 'Alpha', 'ar_name' => 'ألفا']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Bravo', 'ar_name' => 'برافو']);
+    Product::factory()->create(['name' => 'Unselected']);
+
+    expect(Product::selectedOptions([$active->id, $inactive->id])->pluck('active', 'id')->all())
+        ->toBe([$active->id => true, $inactive->id => false]);
 });
 
 test('selectedOptions emits both raw name columns, excluding an unselected product', function () {
@@ -95,7 +112,7 @@ test('selectedOptions emits both raw name columns, excluding an unselected produ
     app()->setLocale('ar');
 
     expect(Product::selectedOptions([$selected->id])->all())->toBe([
-        ['id' => $selected->id, 'name' => 'Alpha', 'ar_name' => 'ألفا'],
+        ['id' => $selected->id, 'name' => 'Alpha', 'ar_name' => 'ألفا', 'active' => true],
     ]);
 });
 
@@ -144,6 +161,28 @@ test('searchByName ignores an empty ar_name rather than matching every product t
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
 
+test('searchByName treats a literal % in the term as a literal character, not a wildcard', function () {
+    // Unescaped, `LIKE '%%%'` matches every row — a search term containing a
+    // raw `%` must not silently become "match everything".
+    $matching = Product::factory()->create(['name' => 'Widgets 50% Off', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('50%')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName treats a literal _ in the term as a literal character, not a single-character wildcard', function () {
+    $matching = Product::factory()->create(['name' => 'a_b Widget', 'ar_name' => 'ودجات']);
+    // Noise: would match "a_b" via the unescaped `_` single-character wildcard
+    // (`_` matching any one character), but must not match once escaped.
+    Product::factory()->create(['name' => 'aXb Widget', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName('a_b')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
 test('searchByName matches every product when the term is null or blank', function () {
     Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
     Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
@@ -174,6 +213,85 @@ test('searchByName matches a multi-word term whose words split across name and a
     expect($results->pluck('id')->all())->toBe([$matching->id]);
 });
 
+test('searchByName also matches a product whose id equals the term, even though the term matches no name', function () {
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName((string) $matching->id)->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName also matches a product whose id merely contains the term, not just equals it', function () {
+    // `id` isn't in Product::$fillable (it's not meant for per-request
+    // create/update — see the class docblock), so these go through DB::table
+    // directly, the same way CreateProductsTableTest does, to pin exact,
+    // multi-digit ids for the substring assertion below.
+    DB::table('products')->insert([
+        'id' => 12345,
+        'name' => 'Widgets',
+        'ar_name' => 'ودجات',
+        'published' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    // Noise: an id that does not contain "234" anywhere, proving the match is
+    // a real substring check rather than, say, a LIKE-escaping bug that
+    // matches everything.
+    DB::table('products')->insert([
+        'id' => 6789,
+        'name' => 'Gadgets',
+        'ar_name' => 'أدوات',
+        'published' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $results = Product::query()->searchByName('234')->get();
+
+    expect($results->pluck('id')->all())->toBe([12345]);
+});
+
+test('searchByName tolerates surrounding whitespace when the term is a product id', function () {
+    // ar_name is pinned on both rows (rather than left at the factory
+    // default, which embeds a random 1-999999 number) so the noise product
+    // can never accidentally LIKE-match the id being searched for.
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $results = Product::query()->searchByName(' '.$matching->id.' ')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('searchByName returns nothing for a digits-only term matching neither an id nor a name', function () {
+    Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+    Product::factory()->create(['name' => 'Gadgets', 'ar_name' => 'أدوات']);
+
+    $nonExistentId = Product::max('id') + 1000;
+
+    expect(Product::query()->searchByName((string) $nonExistentId)->count())->toBe(0);
+});
+
+test('searchByName does not treat a negative number or a decimal as a product id lookup', function () {
+    Product::factory()->create(['name' => 'Widgets']);
+
+    expect(Product::query()->searchByName('-1')->count())->toBe(0);
+    expect(Product::query()->searchByName('1.5')->count())->toBe(0);
+});
+
+test('searchByName does not treat a multi-word term as a product id lookup even when one word is numeric', function () {
+    // Regression: a term like "42 Widgets" must still go through ordinary
+    // name matching (and only match a product actually named that), not
+    // short-circuit into an id lookup on "42".
+    $matching = Product::factory()->create(['name' => '42 Widgets']);
+    Product::factory()->create(['name' => 'Gadgets']);
+
+    $results = Product::query()->searchByName('42 Widgets')->get();
+
+    expect($results->pluck('id')->all())->toBe([$matching->id]);
+});
+
 /**
  * The MySQL/MariaDB half of the search cannot be executed here — CI and the
  * local test connection are sqlite (phpunit.xml), which has no
@@ -190,64 +308,149 @@ function mysqlProductSearch(?string $term): Builder
     return Product::on('mysql')->searchByName($term);
 }
 
-test('searchByName matches through the fulltext index on mysql, requiring every word', function () {
+test('searchByName matches through the fulltext index OR the like-and-of-words group on mysql', function () {
     $query = mysqlProductSearch('Widget Blue');
 
     // One MATCH over both indexed columns: MySQL treats them as a single
     // document, so `+word` is the across-columns OR and the repeated `+` is
-    // the per-word AND — the same contract the LIKE chain encoded.
-    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode)');
-    expect($query->getBindings())->toBe(['+Widget* +Blue*']);
+    // the per-word AND. It is OR'd against the same LIKE-AND-of-every-word
+    // group the sqlite path runs (each word its own group, matching either
+    // name column, the groups ANDed together) — either strategy matching is
+    // enough, so the whole thing sits behind one outer group.
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?) and (`name` like ? escape ? or `ar_name` like ? escape ?)))'
+    );
+    expect($query->getBindings())->toBe([
+        '+Widget* +Blue*',
+        '%Widget%', '\\', '%Widget%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
 });
 
 test('searchByName matches an Arabic term through the fulltext index on mysql', function () {
     $query = mysqlProductSearch('ودجة زرقاء');
 
-    expect($query->getBindings())->toBe(['+ودجة* +زرقاء*']);
+    expect($query->getBindings())->toBe([
+        '+ودجة* +زرقاء*',
+        '%ودجة%', '\\', '%ودجة%', '\\',
+        '%زرقاء%', '\\', '%زرقاء%', '\\',
+    ]);
 });
 
-test('searchByName keeps a word shorter than the minimum token size on LIKE', function () {
+test('searchByName also runs a word shorter than the minimum token size through LIKE on mysql', function () {
     // `innodb_ft_min_token_size` (3 by default) leaves such a word out of the
-    // index entirely, so `+ab*` would match nothing at all rather than
-    // matching more loosely. The admin's type-ahead dropdown sends one- and
-    // two-letter terms constantly, so this is the common case, not an edge one.
+    // FULLTEXT expression entirely — `+ab*` would match nothing at all rather
+    // than matching more loosely — but every word, including this one, still
+    // goes through the LIKE-AND-of-words group. The admin's type-ahead
+    // dropdown sends one- and two-letter terms constantly, so this is the
+    // common case, not an edge one.
     $query = mysqlProductSearch('ab Widget');
 
-    expect($query->toSql())->toBe('select * from `products` where match (`name`, `ar_name`) against (? in boolean mode) and (`name` like ? or `ar_name` like ?)');
-    expect($query->getBindings())->toBe(['+Widget*', '%ab%', '%ab%']);
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?) and (`name` like ? escape ? or `ar_name` like ? escape ?)))'
+    );
+    expect($query->getBindings())->toBe([
+        '+Widget*',
+        '%ab%', '\\', '%ab%', '\\',
+        '%Widget%', '\\', '%Widget%', '\\',
+    ]);
 });
 
-test('searchByName keeps an InnoDB stopword on LIKE', function () {
-    // Boolean mode strips stopwords from the query, so `+for*` matches
-    // nothing — a term like "Case for Phone" would lose every result.
+test('searchByName also runs an InnoDB stopword through LIKE on mysql', function () {
+    // Boolean mode strips stopwords from the FULLTEXT expression, so `+for*`
+    // would match nothing there — a term like "Case for Phone" would lose
+    // every result through that branch alone — but the LIKE branch still
+    // requires it like any other word.
     $query = mysqlProductSearch('Case for Phone');
 
-    expect($query->getBindings())->toBe(['+Case* +Phone*', '%for%', '%for%']);
+    expect($query->getBindings())->toBe([
+        '+Case* +Phone*',
+        '%Case%', '\\', '%Case%', '\\',
+        '%for%', '\\', '%for%', '\\',
+        '%Phone%', '\\', '%Phone%', '\\',
+    ]);
 });
 
-test('searchByName keeps a word carrying punctuation on LIKE', function () {
+test('searchByName also runs a word carrying punctuation through LIKE on mysql', function () {
     // MySQL's default parser splits a word on every non-alphanumeric
     // character, so `+Wid-get*` could never match the product literally named
-    // "Wid-get".
+    // "Wid-get" — but the LIKE branch matches it as a plain infix.
     $query = mysqlProductSearch('Wid-get Blue');
 
-    expect($query->getBindings())->toBe(['+Blue*', '%Wid-get%', '%Wid-get%']);
+    expect($query->getBindings())->toBe([
+        '+Blue*',
+        '%Wid-get%', '\\', '%Wid-get%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
+});
+
+test('searchByName matches a term that is only an infix of the stored name, via the LIKE branch on mysql', function () {
+    // The gap this combined search closes: boolean-mode FULLTEXT only matches
+    // by prefix, so "idget" alone could never find "Widget" through MATCH.
+    // "idget" is otherwise a perfectly indexable word (alphanumeric, long
+    // enough, not a stopword), so it still lands in the FULLTEXT expression —
+    // it just cannot match there. The OR'd LIKE branch matches it as an infix
+    // instead, the same way sqlite always would.
+    $query = mysqlProductSearch('idget');
+
+    expect($query->toSql())->toBe(
+        'select * from `products` where (match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?)))'
+    );
+    expect($query->getBindings())->toBe(['+idget*', '%idget%', '\\', '%idget%', '\\']);
 });
 
 test('searchByName never lets boolean-mode operators reach the fulltext parser', function () {
     // The expression is built only from alphanumeric words plus the `+` and
     // `*` the scope adds itself, so a term of operators cannot invert the
     // query (`-word` excludes in boolean mode) or break its syntax — every
-    // such word falls through to an exact LIKE instead.
+    // such word is excluded from the FULLTEXT expression, leaving only the
+    // LIKE-AND-of-words group (no indexable word at all, so no outer OR
+    // group either — same shape as the non-mysql path).
     $query = mysqlProductSearch('-Widget "Blue"');
 
     expect($query->toSql())->not->toContain('match');
-    expect($query->getBindings())->toBe(['%-Widget%', '%-Widget%', '%"Blue"%', '%"Blue"%']);
+    expect($query->getBindings())->toBe([
+        '%-Widget%', '\\', '%-Widget%', '\\',
+        '%"Blue"%', '\\', '%"Blue"%', '\\',
+    ]);
 });
 
 test('searchByName adds no condition at all for a blank term on mysql', function () {
     expect(mysqlProductSearch(null)->toSql())->toBe('select * from `products`');
     expect(mysqlProductSearch('   ')->toSql())->toBe('select * from `products`');
+});
+
+test('searchByName ORs a partial id match onto the name condition on mysql when the term is digits-only', function () {
+    // "123" is long enough to also be an indexable FULLTEXT word (unlike "42"
+    // in the shorter-than-minimum-token test below), so this exercises the id
+    // OR sitting alongside the full FULLTEXT-or-LIKE group, not just LIKE.
+    $query = mysqlProductSearch('123');
+
+    // The whole name-match condition (itself the FULLTEXT-or-LIKE group) sits
+    // in one nested group, OR'd against `id LIKE '%123%'` — so an id match
+    // never has to satisfy any word condition, and vice versa, and a term
+    // that's only part of the real id still matches it.
+    expect($query->toSql())->toBe(
+        'select * from `products` where ((match (`name`, `ar_name`) against (? in boolean mode) or '
+        .'((`name` like ? escape ? or `ar_name` like ? escape ?))) or `id` like ?)'
+    );
+    expect($query->getBindings())->toBe(['+123*', '%123%', '\\', '%123%', '\\', '%123%']);
+});
+
+test('searchByName ORs a partial id match onto a LIKE-only name condition on mysql when the term is too short to be indexable', function () {
+    // "42" is shorter than FULL_TEXT_MIN_WORD_LENGTH, so it never enters the
+    // FULLTEXT expression — `applyNameMatch()` takes the plain-LIKE branch,
+    // with no extra wrapping group around it, and the id OR sits directly
+    // beside that.
+    $query = mysqlProductSearch('42');
+
+    expect($query->toSql())->toBe(
+        'select * from `products` where ((`name` like ? escape ? or `ar_name` like ? escape ?) or `id` like ?)'
+    );
+    expect($query->getBindings())->toBe(['%42%', '\\', '%42%', '\\', '%42%']);
 });
 
 test('searchByName stays on LIKE for a connection whose grammar has no fulltext support', function () {
@@ -258,7 +461,10 @@ test('searchByName stays on LIKE for a connection whose grammar has no fulltext 
 
     expect(DB::connection()->getDriverName())->toBe('sqlite');
     expect($query->toSql())->not->toContain('match');
-    expect($query->getBindings())->toBe(['%Widget%', '%Widget%', '%Blue%', '%Blue%']);
+    expect($query->getBindings())->toBe([
+        '%Widget%', '\\', '%Widget%', '\\',
+        '%Blue%', '\\', '%Blue%', '\\',
+    ]);
 });
 
 test('image_url resolves through the thumbnail upload, with noise from another product', function () {
@@ -311,6 +517,48 @@ test('boxes_count falls back to its default for a product this app has never con
         ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
 });
 
+test('minimum_pallets reads the wms-owned settings row, with noise from another product', function () {
+    $product = Product::factory()->minimumPallets(10)->create();
+    Product::factory()->minimumPallets(3)->create();
+
+    expect($product->fresh()->minimum_pallets)->toBe(10);
+});
+
+test('minimum_pallets is null for a product nobody has configured a threshold for', function () {
+    // Unlike boxes_count, there is no fallback default: "not configured" must
+    // stay null rather than resolving to some assumed minimum.
+    $product = Product::factory()->create();
+
+    expect($product->fresh()->minimum_pallets)->toBeNull();
+});
+
+test('minimum_pallets stays null even for a product this app has never configured any settings for at all', function () {
+    $product = Product::factory()->unconfigured()->create();
+
+    expect($product->fresh())
+        ->setting->toBeNull()
+        ->minimum_pallets->toBeNull();
+});
+
+test('barcodes returns every barcode attached to the product, excluding another product\'s', function () {
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+
+    // Noise: a barcode belonging to a different product.
+    $otherProduct = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '3333333333333']);
+
+    expect($product->barcodes->pluck('barcode')->sort()->values()->all())
+        ->toBe(['1111111111111', '2222222222222']);
+});
+
+test('barcodes is empty for a product nobody has added one to', function () {
+    $product = Product::factory()->create();
+
+    expect($product->barcodes)->toBeEmpty();
+});
+
 test('published defaults to true and casts the store\'s int(11) column to a boolean', function () {
     $product = Product::factory()->create();
 
@@ -322,4 +570,128 @@ test('the inactive factory state sets published to false, with noise from a defa
     Product::factory()->create();
 
     expect($inactive->fresh()->published)->toBeFalse();
+});
+
+test('inWarehouse matches a product with at least one pallet, excluding a product with none', function () {
+    $inWarehouse = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $inWarehouse->id]);
+
+    // Noise: a product with zero pallets must not match.
+    Product::factory()->create();
+
+    $results = Product::query()->inWarehouse()->get();
+
+    expect($results->pluck('id')->all())->toBe([$inWarehouse->id]);
+});
+
+test('inWarehouse matches a product with more than one pallet', function () {
+    $product = Product::factory()->create();
+    Pallet::factory()->count(2)->create(['product_id' => $product->id]);
+
+    expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$product->id]);
+});
+
+test('matchingOccupancyFilters is a no-op when no occupancy filter is set, keeping a product with no pallets', function () {
+    $withPallet = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $withPallet->id]);
+    $withoutPallets = Product::factory()->create();
+
+    $results = Product::query()->matchingOccupancyFilters(Request::create('/', 'GET'))->pluck('id')->sort()->values()->all();
+
+    expect($results)->toBe(collect([$withPallet->id, $withoutPallets->id])->sort()->values()->all());
+});
+
+test('matchingOccupancyFilters keeps only products with a pallet matching the state filter, excluding an opened-only product and one with no pallets', function () {
+    $full = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $full->id]);
+    // Noise: only an opened pallet, and no pallets at all.
+    $openedOnly = Product::factory()->create();
+    Pallet::factory()->opened()->create(['product_id' => $openedOnly->id]);
+    Product::factory()->create();
+
+    $results = Product::query()->matchingOccupancyFilters(Request::create('/', 'GET', ['state' => 'full']))->pluck('id')->all();
+
+    expect($results)->toBe([$full->id]);
+});
+
+test('withOccupancyCounts counts each product\'s own full, opened, expired and expiring-soon pallets, excluding another product\'s', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-20']);
+    Pallet::factory()->opened()->create(['product_id' => $product->id, 'expiration_date' => '2026-12-01']);
+    // Noise: another product's pallets must not leak into these counts.
+    $other = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $other->id, 'expiration_date' => '2026-08-01']);
+
+    $counted = Product::query()
+        ->select('id')
+        ->withOccupancyCounts(Request::create('/', 'GET'), 7)
+        ->findOrFail($product->id);
+
+    expect($counted->full_cells_count)->toBe(2)
+        ->and($counted->opened_cells_count)->toBe(1)
+        ->and($counted->expired_cells_count)->toBe(1)
+        // The products page's window is on-or-before today + N, so the
+        // already-expired pallet counts here too.
+        ->and($counted->expiring_soon_count)->toBe(2);
+
+    Carbon::setTestNow();
+});
+
+test('withOccupancyCounts narrows every count by the request\'s occupancy filters', function () {
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id]);
+    Pallet::factory()->opened()->create(['product_id' => $product->id]);
+
+    $counted = Product::query()
+        ->select('id')
+        ->withOccupancyCounts(Request::create('/', 'GET', ['state' => 'opened']), 7)
+        ->findOrFail($product->id);
+
+    expect($counted->full_cells_count)->toBe(0)
+        ->and($counted->opened_cells_count)->toBe(1);
+});
+
+test('matchingHistoryFilters is a no-op when no activity filter is set, even with a state filter', function () {
+    $logged = Product::factory()->create();
+    CellStatusLog::factory()->create(['product_id' => $logged->id]);
+    $neverLogged = Product::factory()->create();
+
+    $results = Product::query()->matchingHistoryFilters(Request::create('/', 'GET', ['state' => 'full']))->pluck('id')->sort()->values()->all();
+
+    expect($results)->toBe(collect([$logged->id, $neverLogged->id])->sort()->values()->all());
+});
+
+test('matchingHistoryFilters keeps only products with a log by the filtered user, excluding another user\'s product', function () {
+    $user = User::factory()->create();
+    $matching = Product::factory()->create();
+    CellStatusLog::factory()->create(['product_id' => $matching->id, 'user_id' => $user->id]);
+    // Noise: a product only someone else logged.
+    CellStatusLog::factory()->create();
+
+    $results = Product::query()->matchingHistoryFilters(Request::create('/', 'GET', ['user_id' => [$user->id]]))->pluck('id')->all();
+
+    expect($results)->toBe([$matching->id]);
+});
+
+test('matchingHistoryFilters narrows the matching logs to cells in the filtered state, excluding a log on a cell in another state', function () {
+    $user = User::factory()->create();
+    $matching = Product::factory()->create();
+    CellStatusLog::factory()->create([
+        'product_id' => $matching->id,
+        'user_id' => $user->id,
+        'cell_id' => Cell::factory()->create(['state' => CellState::Full])->id,
+    ]);
+    // Noise: the same user's log, but on an empty cell.
+    $excluded = Product::factory()->create();
+    CellStatusLog::factory()->create([
+        'product_id' => $excluded->id,
+        'user_id' => $user->id,
+        'cell_id' => Cell::factory()->create(['state' => CellState::Empty])->id,
+    ]);
+
+    $request = Request::create('/', 'GET', ['user_id' => [$user->id], 'state' => 'full']);
+
+    expect(Product::query()->matchingHistoryFilters($request)->pluck('id')->all())->toBe([$matching->id]);
 });

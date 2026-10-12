@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Cell;
+use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
-use ArPHP\I18N\Arabic;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -60,13 +60,13 @@ test('the row list respects a per_page query parameter', function () {
     $response->assertInertia(fn (Assert $page) => $page->where('filters.per_page', 10));
 });
 
-test('an out-of-range per_page value falls back to the default page size', function () {
+test('the row list rejects a per_page value outside the allowed options', function () {
     actingAsAdmin();
     Row::factory()->count(25)->create();
 
     $response = $this->get('/admin/rows?per_page=999');
 
-    assertInertiaPaginates($response, 'rows', 20, 25, 'Admin/Rows/Index');
+    $response->assertSessionHasErrors('per_page');
 });
 
 test('a mobile app user cannot view the row list', function () {
@@ -176,6 +176,50 @@ test('creating a row with an invalid flats_count is rejected and nothing changes
 
     $response->assertSessionHasErrors('flats_count');
     $this->assertDatabaseCount('rows', 0);
+});
+
+test('creating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row with a flats_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => Row::MAX_DIMENSION + 1,
+    ]);
+
+    $response->assertSessionHasErrors('flats_count');
+    $this->assertDatabaseCount('rows', 0);
+    $this->assertDatabaseCount('cells', 0);
+});
+
+test('creating a row at exactly the operational maximum dimensions succeeds', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION,
+        'flats_count' => 1,
+    ]);
+
+    $row = Row::query()->where('letter', 'Z')->first();
+
+    $response->assertRedirect(route('admin.rows.show', $row));
+    expect($row)->not->toBeNull();
+    expect($row->cells()->count())->toBe(Row::MAX_DIMENSION);
 });
 
 test('creating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
@@ -302,6 +346,61 @@ test('a rows cell grid has no pre-selected products for the highlight filter, si
     );
 });
 
+test('a rows cell grid links the requested cell as linkedCell when cell_number and flat_number are given', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=2&flat_number=1");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', [
+            'row_letter' => 'Z',
+            'cell_number' => 2,
+            'flat_number' => 1,
+        ])
+    );
+});
+
+test('a rows cell grid has no linkedCell absent cell_number/flat_number', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z']);
+
+    $response = $this->get("/admin/rows/{$row->letter}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', null)
+    );
+});
+
+test('a rows cell grid has no linkedCell when only cell_number is given', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=1");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('linkedCell', null)
+    );
+});
+
+test('requesting a rows cell grid with an out-of-range cell_number is rejected', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=3&flat_number=1");
+
+    $response->assertSessionHasErrors('cell_number');
+});
+
+test('requesting a rows cell grid with an out-of-range flat_number is rejected', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
+
+    $response = $this->get("/admin/rows/{$row->letter}?cell_number=1&flat_number=3");
+
+    $response->assertSessionHasErrors('flat_number');
+});
+
 test('a mobile app user cannot view a rows cell grid', function () {
     actingAsMobilePanelUser();
     $row = Row::factory()->create(['letter' => 'Z']);
@@ -365,6 +464,7 @@ test('viewing the edit page for a non-existent row returns a 404', function () {
 test('renaming a rows letter always succeeds', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Y',
@@ -374,6 +474,7 @@ test('renaming a rows letter always succeeds', function () {
 
     $response->assertRedirect(route('admin.rows.show', $row->fresh()));
     expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
 });
 
 test('renaming a row normalizes a lowercase letter to uppercase', function () {
@@ -406,6 +507,44 @@ test('renaming a row to a letter that already exists is rejected and nothing cha
     expect($otherRow->fresh()->letter)->toBe('Y');
 });
 
+test('renaming a row holding a pallet leaves its cells and the pallet untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+});
+
+test('renaming a row holding history but no pallet leaves its cells untouched', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cellIds = $row->cells()->pluck('id');
+    $cell = $row->cells()->first();
+    $log = CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Y',
+        'cells_count' => $row->cells_count,
+        'flats_count' => $row->flats_count,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    expect($row->fresh()->letter)->toBe('Y');
+    expect($row->cells()->pluck('id'))->toEqual($cellIds);
+    expect($log->fresh()->cell_id)->toBe($cell->id);
+});
+
 test('resizing a row with no pallets regenerates its cells', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
@@ -432,10 +571,31 @@ test('resizing a row that has a pallet is rejected and nothing changes', functio
         'flats_count' => 5,
     ]);
 
+    $response->assertRedirect(route('admin.rows.edit', $row));
     $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('resizing a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 5,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.edit', $row));
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
+    expect($row->fresh()->cells_count)->toBe(2);
+    expect($row->fresh()->flats_count)->toBe(1);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
 });
 
 test('resizing a row with invalid dimensions and an existing pallet reports the dimension error, not the pallet block', function () {
@@ -467,6 +627,20 @@ test('updating a row with an invalid flats_count is rejected and nothing changes
 
     $response->assertSessionHasErrors('flats_count');
     expect($row->fresh()->flats_count)->toBe(1);
+});
+
+test('updating a row with a cells_count over the operational maximum is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => Row::MAX_DIMENSION + 1,
+        'flats_count' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('cells_count');
+    expect($row->fresh()->cells_count)->toBe(2);
 });
 
 test('updating a row with a letter longer than 2 characters is rejected and nothing changes', function () {
@@ -553,9 +727,37 @@ test('deleting a row that has a pallet is rejected and nothing changes', functio
 
     $response = $this->delete("/admin/rows/{$row->letter}");
 
+    $response->assertRedirect(route('admin.rows.index'));
     $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
     $this->assertDatabaseHas('rows', ['id' => $row->id]);
     expect($row->cells()->count())->toBe(2);
+});
+
+test('deleting a row that has history but no pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    CellStatusLog::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}");
+
+    $response->assertRedirect(route('admin.rows.index'));
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_history')]);
+    $this->assertDatabaseHas('rows', ['id' => $row->id]);
+    expect($row->cells()->count())->toBe(2);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
+});
+
+test('a rejected row deletion redirects back with the current page preserved', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->delete("/admin/rows/{$row->letter}?page=2");
+
+    $response->assertRedirect(route('admin.rows.index', ['page' => 2]));
+    $response->assertSessionHasErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
 });
 
 test('a mobile app user cannot delete a row and nothing changes', function () {
@@ -594,44 +796,96 @@ test('an authenticated user can export QR codes for every cell in a row', functi
 
     $response->assertOk();
     $response->assertHeader('content-type', 'application/pdf');
-    // A PDF with 4 real QR codes drawn is meaningfully larger than one with just
-    // labels (~1.1KB) — regression guard for the QR silently failing to render
-    // (dompdf doesn't support inline <svg>, only an <img> referencing an image source).
-    expect(strlen($response->getContent()))->toBeGreaterThan(2500);
 
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    foreach ($row->cells()->orderedByCoordinates()->get() as $cell) {
-        expect($pdfText)->toContain(Cell::slotLabel($row->letter, $cell->cell_number, $cell->flat_number));
+    $pdf = (new PdfParser)->parseContent($response->getContent());
+    // Each cell gets its own page (see resources/views/pdf/qr-labels.blade.php) —
+    // a row of 2x2=4 cells must produce exactly 4 pages, not one page holding a grid.
+    //
+    // The slot label itself is drawn inside each page's embedded label SVG (see
+    // BuildsCellQrLabels::cellQrLabelImage()) rather than as plain PDF text, so
+    // it isn't asserted here via PdfParser::getText() — CellControllerTest
+    // covers that SVG's content directly against the single-cell export, which
+    // the row-wide PDF sheet now embeds verbatim (see cellQrLabels()).
+    expect($pdf->getPages())->toHaveCount(4);
+
+    // Regression guard for the QR silently missing from every page while the
+    // label text still drew: dompdf draws an SVG label straight into the page
+    // content stream as vector operators, and the QR is the only shape in it
+    // filled with the even-odd rule (its finder squares are rings) — PDF's
+    // `f*` operator. A QR referenced as a nested `<image>` instead of inlined
+    // (see BuildsQrLabels::qrSvgInnerMarkup()) left no `f*` on any page, just
+    // the plain `f` background fill and the text. PDF byte size can't tell
+    // the two apart: the broken 4-page PDF was already over 2.5KB.
+    foreach ($pdf->getPages() as $page) {
+        expect($page->get('Contents')->getContent())->toMatch('/^f\*$/m');
     }
 });
 
-test('exporting QR codes for a row in Arabic renders properly shaped RTL description text', function () {
-    app()->setLocale('ar');
+test('the row QR export still succeeds for a row spanning lowest/middle/highest levels', function () {
+    // Regression guard for BuildsCellQrLabels::cellQrLabels()'s $flatsCount
+    // argument (added alongside RowController::exportQrCodes()'s call site):
+    // a wrong type/value there would error before dompdf ever renders a page.
+    // The level arrow itself is drawn by the exact same cellQrLabelImage()
+    // the single-cell export uses (see CellControllerTest for its
+    // lowest/middle/highest/single-level coverage) — dompdf embeds the SVG
+    // as raw vector path/fill operators rather than a re-parseable image, so
+    // the arrow's own geometry isn't re-asserted here.
     actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
+
+    $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
+
+    $response->assertOk();
+    $pdf = (new PdfParser)->parseContent($response->getContent());
+    expect($pdf->getPages())->toHaveCount(3);
+});
+
+test('the row QR export still succeeds and produces one page per cell with a configured QR code size other than the default', function () {
+    // The PDF page size comes from an `@page { size: $qrWidth $qrHeight }` CSS
+    // rule in resources/views/pdf/qr-labels.blade.php (dompdf converts the CSS
+    // px values into PDF points internally, so the exact PDF-point MediaBox
+    // isn't asserted here). This test proves the request still succeeds
+    // end-to-end at a non-default size, still yielding one page per cell.
+    //
+    // 900x950 (width close to height) is a deliberate regression guard: each
+    // page's embedded label SVG (cellQrLabelImage(), same one the single-cell
+    // export uses) guarantees the QR shrinks to leave room for the slot label
+    // within $qrHeight — without that guarantee, a $qrWidth close to $qrHeight
+    // left dompdf silently overflowing each label onto a second page, doubling
+    // 4 cells into 8 pages (see CellControllerTest for that shrink guarantee's
+    // own coverage).
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 900, 'qr_code_height' => 950]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
 
     $response = $this->get("/admin/rows/{$row->letter}/export-qr-codes");
 
     $response->assertOk();
     $response->assertHeader('content-type', 'application/pdf');
 
-    $rawDescription = __('messages.qr_label_description', [
-        'row' => $row->letter,
-        'cell' => $cell->cell_number,
-        'flat' => $cell->flat_number,
-    ]);
-    // Mirrors BuildsCellQrLabels::shapeArabicForPdf() — dompdf has no Arabic
-    // shaping/bidi engine of its own, so the trait pre-shapes the string into
-    // joined presentation-form glyphs in final display order before dompdf
-    // ever sees it.
-    $shapedDescription = (new Arabic)->utf8Glyphs($rawDescription, max_chars: 1000, hindo: false, forcertl: true);
+    $pdf = (new PdfParser)->parseContent($response->getContent());
+    expect($pdf->getPages())->toHaveCount(4);
+});
 
-    $pdfText = (new PdfParser)->parseContent($response->getContent())->getText();
-    expect($pdfText)->toContain($shapedDescription);
-    // Regression guard: the un-shaped translation string must never reach the
-    // PDF verbatim — that produces disconnected, logical-order Arabic letters.
-    expect($pdfText)->not->toContain($rawDescription);
+test('the qr-labels Blade view sizes the PDF page from the configured QR settings and embeds each label image verbatim', function () {
+    // Renders the exact view RowController::exportQrCodes() feeds to
+    // Pdf::loadView(), bypassing the PDF conversion step. Each entry's
+    // labelImage is whatever BuildsCellQrLabels::cellQrLabels() produced (the
+    // same SVG the single-cell export returns, base64-encoded) — this view has
+    // no sizing/layout logic of its own left to duplicate that, it just embeds
+    // the image as-is, so this test only proves the page size and the <img>
+    // wiring, not the label's own content (see CellControllerTest for that).
+    $html = view('pdf.qr-labels', [
+        'labels' => [[
+            'label' => 'Z1·1',
+            'labelImage' => 'data:image/svg+xml;base64,Zm9v',
+        ]],
+        'qrWidth' => 400,
+        'qrHeight' => 500,
+    ])->render();
+
+    expect($html)->toContain('size: 400px 500px;');
+    expect($html)->toContain('<img src="data:image/svg+xml;base64,Zm9v" alt="Z1·1">');
 });
 
 test('a mobile app user cannot export QR codes for a row', function () {

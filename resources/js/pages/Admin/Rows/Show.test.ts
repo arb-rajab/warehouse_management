@@ -1,27 +1,37 @@
-import { mount } from '@vue/test-utils';
+import { Form } from '@inertiajs/vue3';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toggleActive } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { open as openPallet } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import {
+    show as rowShow,
+    edit as rowEdit,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { Cell, CellMapRow, Row } from '@/types/admin';
+import type { Cell, CellMapRow, CellSlotLocation, Row } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, formSubmitMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
-    routerPostMock: vi.fn(),
+    formSubmitMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
         Link: createLinkStub(),
+        useForm: createUseFormStub(formSubmitMock),
         usePage: usePageMock,
-        router: { get: routerGetMock, post: routerPostMock },
+        router: { get: routerGetMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -32,8 +42,8 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 const products = [
-    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
 ];
 
 function pallet(
@@ -60,16 +70,19 @@ function mountPage(
         today?: string;
         rows?: CellMapRow[];
         errors?: Record<string, string>;
+        linkedCell?: CellSlotLocation | null;
+        attachTo?: Element;
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/rows/A',
+        url: rowShow.url({ row: 'A' }),
         props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
     const shownRow = row(rowOverrides);
 
     return mount(Show, {
+        attachTo: overrides.attachTo,
         props: {
             row: shownRow,
             rows: overrides.rows ?? [
@@ -83,6 +96,7 @@ function mountPage(
             cells,
             today: overrides.today ?? '2026-08-13',
             filterOptions: { products },
+            linkedCell: overrides.linkedCell ?? null,
         },
     });
 }
@@ -106,7 +120,8 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 
 describe('Rows Show', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        resetMocks({ usePageMock, routerGetMock, formSubmitMock });
+        Element.prototype.scrollIntoView = vi.fn();
     });
 
     it('renders the title with the row letter', () => {
@@ -137,7 +152,7 @@ describe('Rows Show', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.show.editRow')));
-        expect(editLink?.attributes('href')).toBe('/admin/rows/B/edit');
+        expect(editLink?.attributes('href')).toBe(rowEdit.url({ row: 'B' }));
     });
 
     it('renders a column header for every cell number, ascending', () => {
@@ -294,6 +309,102 @@ describe('Rows Show', () => {
         );
     });
 
+    it('greys out cells not matching the active highlight filter, leaving matches undimmed', async () => {
+        const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+            cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+        ]);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-state').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'opacity-40',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+    });
+
+    it('does not grey out any cell when no highlight filter is active', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+        ]);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+    });
+
+    it('scrolls the first matching cell into view and pulses it when a highlight filter is applied', async () => {
+        // document.querySelector only finds the matched slot once the
+        // rendered tree is actually attached to the document.
+        const wrapper = mountPage(
+            { cells_count: 2, flats_count: 1 },
+            [
+                cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+                cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+            ],
+            { attachTo: document.body },
+        );
+
+        try {
+            await openHighlightFilters(wrapper);
+            await wrapper.get('#highlight-state').trigger('click');
+            await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
+
+            expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+                'ring-emerald-500',
+            );
+            expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+        } finally {
+            wrapper.unmount();
+        }
+    });
+
+    it('scrolls the linked cell into view and pulses it on load, without pulsing other cells', async () => {
+        const wrapper = mountPage(
+            { cells_count: 2, flats_count: 1 },
+            [
+                cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+                cell({ cell_number: 2, flat_number: 1, state: 'opened' }),
+            ],
+            {
+                attachTo: document.body,
+                linkedCell: {
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                },
+            },
+        );
+
+        try {
+            await flushPromises();
+
+            expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+                'ring-emerald-500',
+            );
+            expect(
+                slot(wrapper, formatSlot('A', 1, 1))?.classes(),
+            ).not.toContain('ring-emerald-500');
+            expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+        } finally {
+            wrapper.unmount();
+        }
+    });
+
+    it('does not pulse any cell when no cell is linked', () => {
+        const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
+            cell({ cell_number: 1, flat_number: 1, state: 'full' }),
+        ]);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'ring-emerald-500',
+        );
+    });
+
     it('highlights only cells expiring within the given number of days', async () => {
         const wrapper = mountPage({ cells_count: 2, flats_count: 1 }, [
             cell({
@@ -417,7 +528,7 @@ describe('Rows Show', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find((button) => button.text() === t('cellLog.filters.clear'));
+            .find((button) => button.text() === t('common.filters.clear'));
         await clearButton?.trigger('click');
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
@@ -428,7 +539,7 @@ describe('Rows Show', () => {
         );
     });
 
-    it('opens the toggle-active dialog for the clicked cell and posts the toggle on submit', async () => {
+    it('opens the toggle-active dialog for the clicked cell and posts the toggle through its form', async () => {
         const wrapper = mountPage({ cells_count: 1, flats_count: 1 }, [
             cell({
                 id: 42,
@@ -450,13 +561,14 @@ describe('Rows Show', () => {
         const dialog = wrapper.get('[role="dialog"]');
         expect(dialog.text()).toContain(formatSlot('A', 1, 1));
 
-        await dialog.get('textarea').setValue('Sensor malfunction');
-        await dialog.get('form').trigger('submit');
-
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/cells/42/toggle-active',
-            { note: 'Sensor malfunction', return_to: 'row' },
-            expect.objectContaining({ preserveScroll: true }),
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual({
+            url: toggleActive.url({ cell: 42 }),
+            method: 'post',
+        });
+        expect(form.props('options')).toEqual({ preserveScroll: true });
+        expect(dialog.get('input[name="return_to"]').attributes('value')).toBe(
+            'row',
         );
     });
 
@@ -494,9 +606,9 @@ describe('Rows Show', () => {
         await dialog.get('#pallet-action-boxes-count').setValue('3');
         await dialog.get('form').trigger('submit');
 
-        expect(routerPostMock).toHaveBeenCalledWith(
-            '/admin/pallets/9/open',
-            expect.objectContaining({ boxes_count: 3 }),
+        expect(formSubmitMock).toHaveBeenCalledWith(
+            { url: openPallet.url({ pallet: 9 }), method: 'post' },
+            expect.objectContaining({ boxes_count: 3, return_to: 'row' }),
             expect.objectContaining({ preserveScroll: true }),
         );
     });

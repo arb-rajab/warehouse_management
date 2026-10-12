@@ -4,8 +4,12 @@ use App\Enums\CellLogAction;
 use App\Enums\CellLogFlagReason;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
+use App\Models\CellStatusLogFlag;
+use App\Models\Product;
 use App\Models\User;
+use App\Services\DashboardStatsCache;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 afterEach(function () {
     Carbon::setTestNow();
@@ -223,4 +227,61 @@ test('a single log entry can accumulate multiple flags at once', function () {
         CellLogFlagReason::OffHours,
         CellLogFlagReason::QuickFlip,
     ]);
+});
+
+/**
+ * The log's parent records, created up front: their own observers (product
+ * settings, for one) flush the cache too, and these tests prime the cache
+ * after them so only the log's own flush is under test.
+ *
+ * @return array{cell_id: int, product_id: int, user_id: int}
+ */
+function cellStatusLogParents(): array
+{
+    return [
+        'cell_id' => Cell::factory()->create()->id,
+        'product_id' => Product::factory()->create()->id,
+        'user_id' => User::factory()->create()->id,
+    ];
+}
+
+test('the dashboard stats cache is only flushed once the transaction that wrote the log commits', function () {
+    Carbon::setTestNow('2026-08-01 12:00:00');
+    $parents = cellStatusLogParents();
+    DashboardStatsCache::remember(['probe'], fn (): array => ['version' => 'before']);
+
+    $cachedMidTransaction = null;
+
+    DB::transaction(function () use ($parents, &$cachedMidTransaction) {
+        CellStatusLog::factory()->create($parents);
+
+        // A dashboard request racing the transaction still reads the cached
+        // stats instead of recomputing (and re-caching) pre-commit data.
+        $cachedMidTransaction = DashboardStatsCache::remember(['probe'], fn (): array => ['version' => 'mid-transaction']);
+    });
+
+    expect($cachedMidTransaction)->toBe(['version' => 'before'])
+        ->and(DashboardStatsCache::remember(['probe'], fn (): array => ['version' => 'after']))->toBe(['version' => 'after']);
+});
+
+test('a rolled-back log leaves the dashboard stats cache and the flags table exactly as they were', function () {
+    Carbon::setTestNow('2026-08-01 03:00:00');
+    $parents = cellStatusLogParents();
+    DashboardStatsCache::remember(['probe'], fn (): array => ['version' => 'before']);
+
+    try {
+        DB::transaction(function () use ($parents) {
+            // Off hours, so the observer does write a flag inside the transaction.
+            $log = CellStatusLog::factory()->create($parents);
+            expect($log->flags()->count())->toBe(1);
+
+            throw new RuntimeException('the pallet action failed after logging');
+        });
+    } catch (RuntimeException) {
+        // Expected: the surrounding action rolled back.
+    }
+
+    expect(CellStatusLog::query()->count())->toBe(0)
+        ->and(CellStatusLogFlag::query()->count())->toBe(0)
+        ->and(DashboardStatsCache::remember(['probe'], fn (): array => ['version' => 'after']))->toBe(['version' => 'before']);
 });

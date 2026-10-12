@@ -1,10 +1,12 @@
 import { mount } from '@vue/test-utils';
 import * as THREE from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { image as productImage } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import { CELL_STATE_COLOR } from '@/lib/cellStateColor';
 import { i18n, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import {
+    BOX_SIZE,
     boundsForWarehouse,
     cellWorldZ,
     EYE_HEIGHT,
@@ -15,7 +17,11 @@ import {
     WALK_SPEED,
     YAW_DRAG_SENSITIVITY,
 } from '@/lib/mapWalker';
-import type { CellMap3DBand, CellMap3DItem } from '@/types/admin';
+import type {
+    CellMap3DBand,
+    CellMap3DItem,
+    CellPalletSummary,
+} from '@/types/admin';
 import CellMap3D from './CellMap3D.vue';
 import CellSlot from './CellSlot.vue';
 
@@ -119,6 +125,7 @@ vi.mock('three', () => {
         x = 0;
         y = 0;
         z = 0;
+        rotation: { axis: 'x' | 'y'; angle: number } | null = null;
 
         makeTranslation(x: number, y: number, z: number) {
             this.x = x;
@@ -127,14 +134,56 @@ vi.mock('three', () => {
 
             return this;
         }
+
+        makeRotationX(angle: number) {
+            this.rotation = { axis: 'x', angle };
+
+            return this;
+        }
+
+        makeRotationY(angle: number) {
+            this.rotation = { axis: 'y', angle };
+
+            return this;
+        }
+
+        setPosition(x: number, y: number, z: number) {
+            return this.makeTranslation(x, y, z);
+        }
     }
 
+    /**
+     * Models three's real `InstancedMesh` bounding-sphere semantics, because
+     * they are what makes instances disappear / stop being clickable:
+     * `computeBoundingSphere()` unions ONLY the first `count` instance
+     * matrices, the result is cached on the mesh, and NOTHING in three
+     * invalidates it — not `setMatrixAt`, not assigning `count`. Both
+     * consumers (the renderer's frustum test below, and
+     * `InstancedMesh.raycast`, mirrored by `sphereGatedCellHits`) do
+     * `if (this.boundingSphere === null) this.computeBoundingSphere()`, so a
+     * sphere computed on the first frame is the one used forever unless the
+     * component clears it. Instances are unioned as points (a real box's
+     * extent would only grow the sphere), which keeps this conservative:
+     * anything it reports as out of bounds is out of bounds for real three
+     * too.
+     */
     class InstancedMesh extends Object3D {
         geometry: unknown;
         material: unknown;
         count: number;
         instanceMatrix = { needsUpdate: false };
         matrices: Matrix4[];
+        frustumCulled = true;
+        boundingSphere: {
+            x: number;
+            y: number;
+            z: number;
+            radius: number;
+        } | null = null;
+        drawnInLastFrame = false;
+        instanceColor: { needsUpdate: boolean } | null = null;
+        colors: (Color | undefined)[] = [];
+        dispose = vi.fn();
 
         constructor(geometry: unknown, material: unknown, count: number) {
             super();
@@ -157,6 +206,62 @@ vi.mock('three', () => {
                 target.y = matrix.y;
                 target.z = matrix.z;
             }
+        }
+
+        setColorAt(index: number, color: Color) {
+            if (!this.instanceColor) {
+                this.instanceColor = { needsUpdate: false };
+            }
+
+            this.colors[index] = color;
+        }
+
+        getColorAt(index: number, target: Color) {
+            const color = this.colors[index];
+
+            if (color) {
+                target.value = color.value;
+            }
+        }
+
+        computeBoundingSphere() {
+            const sphere = { x: 0, y: 0, z: 0, radius: -1 };
+
+            for (let index = 0; index < this.count; index += 1) {
+                const matrix = this.matrices[index];
+
+                if (!matrix) {
+                    continue;
+                }
+
+                if (sphere.radius < 0) {
+                    sphere.x = matrix.x;
+                    sphere.y = matrix.y;
+                    sphere.z = matrix.z;
+                    sphere.radius = 0;
+
+                    continue;
+                }
+
+                const distance = Math.hypot(
+                    matrix.x - sphere.x,
+                    matrix.y - sphere.y,
+                    matrix.z - sphere.z,
+                );
+
+                if (distance <= sphere.radius) {
+                    continue;
+                }
+
+                const grownRadius = (sphere.radius + distance) / 2;
+                const ratio = (grownRadius - sphere.radius) / distance;
+                sphere.x += (matrix.x - sphere.x) * ratio;
+                sphere.y += (matrix.y - sphere.y) * ratio;
+                sphere.z += (matrix.z - sphere.z) * ratio;
+                sphere.radius = grownRadius;
+            }
+
+            this.boundingSphere = sphere;
         }
     }
 
@@ -206,6 +311,38 @@ vi.mock('three', () => {
         }
     }
 
+    class MeshBasicMaterial {
+        alphaTest: unknown;
+        visible: unknown;
+        map: unknown = null;
+        needsUpdate = false;
+        dispose = vi.fn();
+
+        constructor(options?: {
+            alphaTest?: unknown;
+            visible?: unknown;
+            map?: unknown;
+        }) {
+            this.alphaTest = options?.alphaTest;
+            this.visible = options?.visible ?? true;
+            this.map = options?.map ?? null;
+        }
+    }
+
+    /** Records each load so a test decides whether (and with what image) it succeeds — a load no test resolves stands in for a failed/CORS-blocked one. */
+    class TextureLoader {
+        load = vi.fn((url: string, onLoad: (texture: unknown) => void) => {
+            registry.textureLoads.push({ url, onLoad });
+        });
+    }
+
+    class CanvasTexture {
+        colorSpace: unknown;
+        dispose = vi.fn();
+
+        constructor(public image: unknown) {}
+    }
+
     class PerspectiveCamera extends Object3D {
         fov: number;
         aspect: number;
@@ -228,7 +365,37 @@ vi.mock('three', () => {
         domElement = document.createElement('canvas');
         setSize = vi.fn();
         dispose = vi.fn();
-        render = vi.fn();
+
+        /**
+         * Stands in for `WebGLRenderer.projectObject` → `Frustum
+         * .intersectsObject`: an object whose `frustumCulled` is left at
+         * three's `true` default is drawn only if its (lazily computed, then
+         * cached) bounding sphere intersects the view frustum. The frustum
+         * itself is stood in for by "the camera sees the whole warehouse", so
+         * the only thing that culls a mesh here is an empty cached sphere —
+         * which is exactly the stale-sphere failure this models. Recording it
+         * per frame lets a test assert that a state's boxes are still drawn
+         * after a cell moves into that state.
+         */
+        render = vi.fn((scene: Object3D) => {
+            scene.traverse((object) => {
+                if (!(object instanceof InstancedMesh)) {
+                    return;
+                }
+
+                if (!object.frustumCulled) {
+                    object.drawnInLastFrame = true;
+
+                    return;
+                }
+
+                if (object.boundingSphere === null) {
+                    object.computeBoundingSphere();
+                }
+
+                object.drawnInLastFrame = object.boundingSphere!.radius >= 0;
+            });
+        });
 
         constructor() {
             registry.renderers.push(this);
@@ -242,6 +409,10 @@ vi.mock('three', () => {
         lineSegments: LineSegments[];
         instancedMeshes: InstancedMesh[];
         raycasters: Raycaster[];
+        textureLoads: Array<{
+            url: string;
+            onLoad: (texture: unknown) => void;
+        }>;
     } = {
         cameras: [],
         renderers: [],
@@ -249,6 +420,7 @@ vi.mock('three', () => {
         lineSegments: [],
         instancedMeshes: [],
         raycasters: [],
+        textureLoads: [],
     };
 
     return {
@@ -268,7 +440,11 @@ vi.mock('three', () => {
         PlaneGeometry,
         EdgesGeometry,
         MeshStandardMaterial,
+        MeshBasicMaterial,
         LineBasicMaterial,
+        TextureLoader,
+        CanvasTexture,
+        SRGBColorSpace: 'srgb',
         Vector2,
         Raycaster,
     };
@@ -288,6 +464,7 @@ type Registry = {
     meshes: Array<{
         name: string;
         position: { x: number; y: number; z: number };
+        rotation: { x: number; y: number; z: number };
         material: { color: unknown; dispose: ReturnType<typeof vi.fn> };
         userData: Record<string, unknown>;
     }>;
@@ -301,16 +478,30 @@ type Registry = {
         name: string;
         count: number;
         matrices: Array<{ x: number; y: number; z: number }>;
+        colors: Array<{ value: unknown } | undefined>;
         material: {
             color: unknown;
             transparent: unknown;
             opacity: unknown;
             dispose: ReturnType<typeof vi.fn>;
         };
+        frustumCulled: boolean;
+        boundingSphere: {
+            x: number;
+            y: number;
+            z: number;
+            radius: number;
+        } | null;
+        drawnInLastFrame: boolean;
+        computeBoundingSphere: () => void;
     }>;
     raycasters: Array<{
         setFromCamera: ReturnType<typeof vi.fn>;
         intersectObjects: ReturnType<typeof vi.fn>;
+    }>;
+    textureLoads: Array<{
+        url: string;
+        onLoad: (texture: unknown) => void;
     }>;
 };
 
@@ -360,6 +551,72 @@ function cellBoxMesh(
     }
 
     throw new Error(`No cell-box instance found for cell ${cellNumber}`);
+}
+
+type MockInstancedMesh = Registry['instancedMeshes'][number];
+
+/**
+ * Mirrors three's `InstancedMesh.raycast` gate for a ray aimed at the centre of
+ * the given cell's box: `raycast()` opens with
+ * `if (this.boundingSphere === null) this.computeBoundingSphere();` followed by
+ * `if (raycaster.ray.intersectsSphere(_sphere) === false) return;`, so a mesh
+ * whose cached sphere no longer covers an instance yields NO intersection for
+ * it however solid the box is. Tests that need those real semantics stub
+ * `intersectObjects` with this instead of asserting a hit up front with
+ * `mockReturnValue([cellBoxMesh(n)])`. Real three unions each instance's *box*
+ * sphere, so its sphere is strictly larger than the point union modelled here;
+ * the epsilon keeps a box sitting exactly on the modelled hull from missing on
+ * float noise alone.
+ */
+function sphereGatedCellHits(
+    meshes: MockInstancedMesh[],
+    rowIndex: number,
+    cellNumber: number,
+    flatNumber = 1,
+): Array<{ object: unknown; instanceId: number }> {
+    const target = {
+        x: rowWorldX(rowIndex),
+        y: flatWorldY(flatNumber),
+        z: cellWorldZ(cellNumber),
+    };
+    const hits: Array<{ object: unknown; instanceId: number }> = [];
+
+    for (const mesh of meshes) {
+        if (mesh.boundingSphere === null) {
+            mesh.computeBoundingSphere();
+        }
+
+        const sphere = mesh.boundingSphere;
+
+        if (!sphere || sphere.radius < 0) {
+            continue;
+        }
+
+        const distanceFromSphereCenter = Math.hypot(
+            target.x - sphere.x,
+            target.y - sphere.y,
+            target.z - sphere.z,
+        );
+
+        if (distanceFromSphereCenter > sphere.radius + 1e-9) {
+            continue;
+        }
+
+        const instanceId = mesh.matrices.findIndex(
+            (matrix, index) =>
+                index < mesh.count &&
+                matrix &&
+                matrix.x === target.x &&
+                matrix.y === target.y &&
+                matrix.z === target.z,
+        );
+
+        if (instanceId !== -1) {
+            hits.push({ object: mesh, instanceId });
+        }
+    }
+
+    return hits;
 }
 
 /** jsdom's default getBoundingClientRect is all zeros, which selectAtScreenPoint treats as "not laid out yet" and bails on — stub a real size so click-to-select's NDC math runs. */
@@ -440,6 +697,7 @@ function item(overrides: Partial<CellMap3DItem> = {}): CellMap3DItem {
         state: 'empty',
         isActive: true,
         highlighted: false,
+        dimmed: false,
         pulsing: false,
         pallet: null,
         ...overrides,
@@ -463,6 +721,10 @@ beforeEach(() => {
     registry().lineSegments = [];
     registry().instancedMeshes = [];
     registry().raycasters = [];
+    registry().textureLoads = [];
+
+    // jsdom has no 2D canvas; the aisle floor markers skip drawing without one.
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     vi.stubGlobal('requestAnimationFrame', (cb: (time: number) => void) => {
         rafCallback = cb;
@@ -801,6 +1063,92 @@ describe('CellMap3D', () => {
         expect(lastCamera().position).toEqual({ x: 0, y: EYE_HEIGHT, z: 0 });
     });
 
+    describe('orbit mode focus', () => {
+        type OrbitVm = {
+            focusCell: (r: string, c: number, f: number) => void;
+            resetView: () => void;
+            setCameraMode: (mode: 'walk' | 'orbit') => void;
+        };
+
+        function mountOrbiting() {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            const vm = wrapper.vm as unknown as OrbitVm;
+            vm.setCameraMode('orbit');
+            rafCallback?.(0);
+
+            return { wrapper, vm };
+        }
+
+        it('re-aims the orbit camera at the focused cell instead of moving the walk position', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            rafCallback?.(16);
+
+            const focusedLookAt = lastCamera().lookAt.mock.calls.at(-1);
+            expect(focusedLookAt).not.toEqual(overviewLookAt);
+            expect(focusedLookAt).toEqual([
+                rowWorldX(2),
+                flatWorldY(1),
+                cellWorldZ(3),
+            ]);
+
+            vm.focusCell('A', 1, 1);
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual([
+                rowWorldX(0),
+                flatWorldY(1),
+                cellWorldZ(1),
+            ]);
+        });
+
+        it('returns to the whole-warehouse overview on resetView and on re-entering orbit', () => {
+            const { vm } = mountOrbiting();
+            const overviewLookAt = lastCamera().lookAt.mock.calls.at(-1);
+
+            vm.focusCell('C', 3, 1);
+            vm.resetView();
+            rafCallback?.(16);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            vm.setCameraMode('orbit');
+            rafCallback?.(32);
+
+            expect(lastCamera().lookAt.mock.calls.at(-1)).toEqual(
+                overviewLookAt,
+            );
+        });
+
+        it('does not move the walk camera while orbiting, and keeps its position when returning to walk', () => {
+            const { vm } = mountOrbiting();
+
+            vm.focusCell('C', 3, 1);
+            vm.setCameraMode('walk');
+            rafCallback?.(16);
+
+            expect(lastCamera().position).toEqual({
+                x: 0,
+                y: EYE_HEIGHT,
+                z: 0,
+            });
+        });
+    });
+
     /** Cell boxes are one `THREE.InstancedMesh` per state (see CellMap3D.vue), not one mesh per cell. */
     function cellBoxInstancedMeshes() {
         return registry().instancedMeshes.filter(
@@ -857,6 +1205,70 @@ describe('CellMap3D', () => {
             (line) => line.material.color,
         );
         expect(new Set(outlineColors).size).toBe(2); // highlight vs pulse use distinct colors
+    });
+
+    it('tints a non-matching (dimmed) cell differently from a normal one within the same state mesh', () => {
+        mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [
+                            item({ cellNumber: 1, state: 'full' }),
+                            item({
+                                cellNumber: 2,
+                                state: 'full',
+                                dimmed: true,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const fullMesh = cellBoxInstancedMeshes().find(
+            (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+        );
+
+        expect(fullMesh?.colors[0]?.value).not.toBe(fullMesh?.colors[1]?.value);
+    });
+
+    it("updates an instance's tint in place when dimmed flips without a state change", async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [
+                            item({
+                                cellNumber: 1,
+                                state: 'full',
+                                dimmed: true,
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const fullMesh = () =>
+            cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+            );
+        const dimmedTint = fullMesh()?.colors[0]?.value;
+
+        await wrapper.setProps({
+            bands: [
+                band({
+                    letter: 'A',
+                    items: [
+                        item({ cellNumber: 1, state: 'full', dimmed: false }),
+                    ],
+                }),
+            ],
+        });
+
+        expect(fullMesh()?.colors[0]?.value).not.toBe(dimmedTint);
     });
 
     it('outlines an inactive cell, but highlighted/pulsing take priority over the inactive outline', () => {
@@ -1033,6 +1445,107 @@ describe('CellMap3D', () => {
         expect(openedMesh?.count).toBe(1);
     });
 
+    it('keeps drawing a state whose first cell arrives from a state-only update, instead of leaving it culled by the empty bounding sphere cached on the first frame', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({ items: [item({ cellNumber: 1, state: 'full' })] }),
+                ],
+            },
+        });
+        const openedMesh = () =>
+            cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.opened.hex,
+            );
+
+        // First frame: the renderer computes and caches every mesh's bounding
+        // sphere. "opened" holds no cells yet, so its sphere is empty and the
+        // mesh is correctly skipped for this frame.
+        rafCallback?.(0);
+        expect(openedMesh()?.drawnInLastFrame).toBe(false);
+
+        // A state-only change (an admin opening a pallet) moves the cell into
+        // the "opened" mesh through the in-place fast path, without rebuilding
+        // the group — so nothing but an explicit invalidation can refresh that
+        // cached sphere.
+        await wrapper.setProps({
+            bands: [
+                band({ items: [item({ cellNumber: 1, state: 'opened' })] }),
+            ],
+        });
+        rafCallback?.(16);
+
+        expect(openedMesh()?.count).toBe(1);
+        expect(openedMesh()?.drawnInLastFrame).toBe(true);
+    });
+
+    it('still hit-tests a cell that moved into a state whose bounding sphere was cached around a different row', async () => {
+        const wrapper = mount(CellMap3D, {
+            props: {
+                bands: [
+                    band({
+                        letter: 'A',
+                        items: [item({ cellNumber: 1, state: 'opened' })],
+                    }),
+                    band({
+                        letter: 'B',
+                        items: [item({ cellNumber: 5, state: 'full' })],
+                    }),
+                ],
+            },
+        });
+        stubViewportRect(wrapper);
+
+        // First frame caches the "opened" sphere around row A's lone opened
+        // cell — the only opened cell in the warehouse so far.
+        rafCallback?.(0);
+        await wrapper.vm.$nextTick();
+
+        // Row B's cell is opened too now, again via the state-only fast path.
+        await wrapper.setProps({
+            bands: [
+                band({
+                    letter: 'A',
+                    items: [item({ cellNumber: 1, state: 'opened' })],
+                }),
+                band({
+                    letter: 'B',
+                    items: [item({ cellNumber: 5, state: 'opened' })],
+                }),
+            ],
+        });
+
+        // Unlike the other click-to-select tests, the hit isn't assumed here:
+        // the raycast is gated by the mesh's cached bounding sphere exactly as
+        // three gates it, so a stale sphere means the click lands on nothing
+        // and clears the selection instead of selecting row B's cell.
+        lastRaycaster().intersectObjects.mockImplementation(
+            (meshes: MockInstancedMesh[]) => sphereGatedCellHits(meshes, 1, 5),
+        );
+
+        const element = wrapper.get('[data-testid="map-3d-viewport"]').element;
+        element.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                pointerId: 1,
+                clientX: 50,
+                clientY: 50,
+            }),
+        );
+        element.dispatchEvent(
+            new PointerEvent('pointerup', {
+                pointerId: 1,
+                clientX: 50,
+                clientY: 50,
+            }),
+        );
+        rafCallback?.(16);
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper.get('[data-testid="map-3d-faced-cell"]').text(),
+        ).toContain(formatSlot('B', 5, 1));
+    });
+
     it('updates an outline in place — same instance, new color — rather than creating a new one when a cell switches from highlighted to pulsing', async () => {
         const wrapper = mount(CellMap3D, {
             props: {
@@ -1137,6 +1650,435 @@ describe('CellMap3D', () => {
         wrapper.unmount();
 
         expect(renderer.dispose).toHaveBeenCalled();
+    });
+
+    describe('product images on pallets', () => {
+        type FakeTexture = ReturnType<typeof fakeTexture>;
+
+        type ProductImageMesh = {
+            count: number;
+            matrices: Array<{
+                x: number;
+                y: number;
+                z: number;
+                rotation: { axis: 'x' | 'y'; angle: number } | null;
+            }>;
+            colors: Array<{ value: unknown } | undefined>;
+            geometry: { dispose: ReturnType<typeof vi.fn> };
+            material: {
+                alphaTest: unknown;
+                visible: unknown;
+                map: unknown;
+                needsUpdate: boolean;
+                dispose: ReturnType<typeof vi.fn>;
+            };
+            dispose: ReturnType<typeof vi.fn>;
+        };
+
+        /** Image meshes still in the scene — replaced ones are disposed, but the mock's registry never forgets them. */
+        function liveProductImageMeshes(): ProductImageMesh[] {
+            return (
+                registry().instancedMeshes.filter(
+                    (mesh) => mesh.name === 'product-image',
+                ) as unknown as ProductImageMesh[]
+            ).filter((mesh) => mesh.dispose.mock.calls.length === 0);
+        }
+
+        function meshShowing(texture: FakeTexture): ProductImageMesh {
+            const mesh = liveProductImageMeshes().find(
+                (candidate) => candidate.material.map === texture,
+            );
+
+            if (!mesh) {
+                throw new Error(
+                    'No live product-image mesh shows that texture',
+                );
+            }
+
+            return mesh;
+        }
+
+        /** A pallet of product `productId`, whose image (if it has one) lives on the store's host — never loaded directly by the 3D map. */
+        function palletWithImage(
+            productId: number,
+            hasImage = true,
+        ): CellPalletSummary {
+            return {
+                id: productId * 100,
+                product_id: productId,
+                product_name: 'Widgets',
+                product_ar_name: 'ودجات',
+                product_image_url: hasImage
+                    ? `https://store.example.com/uploads/${productId}.png`
+                    : null,
+                expiration_date: null,
+                added_at: null,
+                remaining_boxes: 5,
+            };
+        }
+
+        function fakeTexture(width: number, height: number) {
+            const vector = () => ({
+                x: 1,
+                y: 1,
+                set(x: number, y: number) {
+                    this.x = x;
+                    this.y = y;
+                },
+            });
+
+            return {
+                image: { width, height },
+                colorSpace: '',
+                repeat: vector(),
+                offset: vector(),
+                dispose: vi.fn(),
+            };
+        }
+
+        /** Resolves the pending load of product `productId`'s image (via this app's `products.image` route) with a fake image of the given size. */
+        function loadTexture(productId: number, width = 100, height = 100) {
+            const url = productImage.url(productId);
+            const load = registry().textureLoads.find(
+                (entry) => entry.url === url,
+            );
+
+            if (!load) {
+                throw new Error(`No texture load was started for ${url}`);
+            }
+
+            const texture = fakeTexture(width, height);
+            load.onLoad(texture);
+
+            return texture;
+        }
+
+        it("draws a pallet's product image on its box's four sides and top, just outside each face", () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const mesh = meshShowing(loadTexture(1));
+            const center = {
+                x: rowWorldX(0),
+                y: flatWorldY(1),
+                z: cellWorldZ(1),
+            };
+            const expectedFaces = [
+                { axis: 'y', angle: 0, normal: [0, 0, 1] },
+                { axis: 'y', angle: Math.PI, normal: [0, 0, -1] },
+                { axis: 'y', angle: Math.PI / 2, normal: [1, 0, 0] },
+                { axis: 'y', angle: -Math.PI / 2, normal: [-1, 0, 0] },
+                { axis: 'x', angle: -Math.PI / 2, normal: [0, 1, 0] },
+            ];
+
+            expect(mesh.count).toBe(expectedFaces.length);
+
+            expectedFaces.forEach((face, index) => {
+                const matrix = mesh.matrices[index];
+                const offset = [
+                    matrix.x - center.x,
+                    matrix.y - center.y,
+                    matrix.z - center.z,
+                ];
+
+                expect(matrix.rotation).toEqual({
+                    axis: face.axis,
+                    angle: face.angle,
+                });
+
+                offset.forEach((component, axisIndex) => {
+                    const outward = component * face.normal[axisIndex];
+
+                    if (face.normal[axisIndex] === 0) {
+                        expect(component).toBeCloseTo(0);
+                    } else {
+                        // Outside the box face, inside the 1.05× outline.
+                        expect(outward).toBeGreaterThan(BOX_SIZE / 2);
+                        expect(outward).toBeLessThan((BOX_SIZE * 1.05) / 2);
+                    }
+                });
+            });
+        });
+
+        it("loads each product image once through this app's own image route and groups its pallets into one mesh, skipping pallets without an image and empty cells", () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                                item({
+                                    cellNumber: 2,
+                                    state: 'opened',
+                                    pallet: palletWithImage(1),
+                                }),
+                                item({
+                                    cellNumber: 3,
+                                    state: 'full',
+                                    pallet: palletWithImage(3, false),
+                                }),
+                                item({ cellNumber: 4, state: 'empty' }),
+                            ],
+                        }),
+                        band({
+                            letter: 'B',
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(2),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            // Same-origin route, not the store's (CORS-less) image host.
+            expect(registry().textureLoads.map((load) => load.url)).toEqual([
+                productImage.url({ product: 1 }),
+                productImage.url({ product: 2 }),
+            ]);
+            expect(liveProductImageMeshes()).toHaveLength(2);
+
+            const aMesh = meshShowing(loadTexture(1));
+            const bMesh = meshShowing(loadTexture(2));
+
+            expect(aMesh.count).toBe(10);
+            expect(aMesh.matrices[0].z - cellWorldZ(1)).toBeGreaterThan(0);
+            expect(aMesh.matrices[0].z).toBeLessThan(cellWorldZ(2));
+            expect(aMesh.matrices[5].z).toBeGreaterThan(cellWorldZ(2));
+            expect(aMesh.matrices[5].z).toBeLessThan(cellWorldZ(3));
+            expect(bMesh.count).toBe(5);
+            expect(bMesh.matrices[0].x).toBe(rowWorldX(1));
+        });
+
+        it('keeps an image hidden until it loads, then shows it in sRGB cropped to a centred square — and a load that never succeeds stays hidden', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(4),
+                                }),
+                                item({
+                                    cellNumber: 2,
+                                    state: 'full',
+                                    pallet: palletWithImage(5),
+                                }),
+                                item({
+                                    cellNumber: 3,
+                                    state: 'full',
+                                    pallet: palletWithImage(6),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const materials = liveProductImageMeshes().map(
+                (mesh) => mesh.material,
+            );
+            expect(materials).toHaveLength(3);
+            materials.forEach((material) => {
+                expect(material.visible).toBe(false);
+                expect(material.map).toBeNull();
+                expect(material.alphaTest).toBeGreaterThan(0);
+            });
+
+            const wide = loadTexture(4, 200, 100);
+            const tall = loadTexture(5, 100, 200);
+            const wideMaterial = meshShowing(wide).material;
+
+            expect(wideMaterial.visible).toBe(true);
+            expect(wideMaterial.needsUpdate).toBe(true);
+            expect(wide.colorSpace).toBe('srgb');
+            expect([wide.repeat.x, wide.repeat.y]).toEqual([0.5, 1]);
+            expect([wide.offset.x, wide.offset.y]).toEqual([0.25, 0]);
+            expect(meshShowing(tall).material.visible).toBe(true);
+            expect([tall.repeat.x, tall.repeat.y]).toEqual([1, 0.5]);
+            expect([tall.offset.x, tall.offset.y]).toEqual([0, 0.25]);
+
+            const blockedMaterials = liveProductImageMeshes()
+                .map((mesh) => mesh.material)
+                .filter((material) => material.map === null);
+            expect(blockedMaterials).toHaveLength(1);
+            expect(blockedMaterials[0].visible).toBe(false);
+        });
+
+        it("rebuilds the panels on an in-place update, matching each box's dimmed tint, without reloading or disposing the image", async () => {
+            const bandsWithDimmed = (dimmedCellTwo: boolean) => [
+                band({
+                    items: [
+                        item({
+                            cellNumber: 1,
+                            state: 'full',
+                            pallet: palletWithImage(1),
+                        }),
+                        item({
+                            cellNumber: 2,
+                            state: 'full',
+                            dimmed: dimmedCellTwo,
+                            pallet: palletWithImage(1),
+                        }),
+                    ],
+                }),
+            ];
+            const wrapper = mount(CellMap3D, {
+                props: { bands: bandsWithDimmed(false) },
+            });
+            const texture = loadTexture(1);
+            const meshBefore = meshShowing(texture);
+            const cellBoxMeshCountBefore = cellBoxInstancedMeshes().length;
+
+            await wrapper.setProps({ bands: bandsWithDimmed(true) });
+
+            // Same set of cells → the in-place fast path, not a full rebuild.
+            expect(cellBoxInstancedMeshes()).toHaveLength(
+                cellBoxMeshCountBefore,
+            );
+            expect(meshBefore.dispose).toHaveBeenCalled();
+            expect(registry().textureLoads).toHaveLength(1);
+            expect(meshBefore.material.dispose).not.toHaveBeenCalled();
+
+            const meshAfter = meshShowing(texture);
+            const fullBoxes = cellBoxInstancedMeshes().find(
+                (mesh) => mesh.material.color === CELL_STATE_COLOR.full.hex,
+            );
+            const boxTint = (cellNumber: number) =>
+                fullBoxes?.colors[cellBoxMesh(cellNumber).instanceId]?.value;
+
+            expect(meshAfter).not.toBe(meshBefore);
+            expect(meshAfter.material.visible).toBe(true);
+            expect(boxTint(1)).not.toBe(boxTint(2));
+            [0, 1, 2, 3, 4].forEach((face) => {
+                expect(meshAfter.colors[face]?.value).toBe(boxTint(1));
+                expect(meshAfter.colors[5 + face]?.value).toBe(boxTint(2));
+            });
+        });
+
+        it('disposes a texture that finishes loading after unmount instead of tracking it', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            wrapper.unmount();
+            const texture = loadTexture(1);
+
+            expect(texture.dispose).toHaveBeenCalledTimes(1);
+            expect(texture.colorSpace).toBe('');
+        });
+
+        it('does not dispose a texture that finishes loading while still mounted', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            const texture = loadTexture(1);
+
+            expect(texture.dispose).not.toHaveBeenCalled();
+        });
+
+        it("swaps a cell's image when its pallet's product changes in place", async () => {
+            const bandsWithImage = (productId: number) => [
+                band({
+                    items: [
+                        item({
+                            cellNumber: 1,
+                            state: 'full',
+                            pallet: palletWithImage(productId),
+                        }),
+                        item({ cellNumber: 2, state: 'empty' }),
+                    ],
+                }),
+            ];
+            const wrapper = mount(CellMap3D, {
+                props: { bands: bandsWithImage(1) },
+            });
+            loadTexture(1);
+
+            await wrapper.setProps({ bands: bandsWithImage(7) });
+
+            expect(registry().textureLoads.map((load) => load.url)).toEqual([
+                productImage.url(1),
+                productImage.url(7),
+            ]);
+            expect(liveProductImageMeshes()).toHaveLength(1);
+            expect(meshShowing(loadTexture(7)).count).toBe(5);
+        });
+
+        it('disposes the image panels, their materials, loaded textures and the panel geometry on unmount', () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            items: [
+                                item({
+                                    cellNumber: 1,
+                                    state: 'full',
+                                    pallet: palletWithImage(1),
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+            const texture = loadTexture(1);
+            const mesh = meshShowing(texture);
+
+            wrapper.unmount();
+
+            expect(mesh.dispose).toHaveBeenCalled();
+            expect(mesh.material.dispose).toHaveBeenCalled();
+            expect(mesh.geometry.dispose).toHaveBeenCalled();
+            expect(texture.dispose).toHaveBeenCalled();
+        });
     });
 
     describe('location indicator', () => {
@@ -1278,6 +2220,24 @@ describe('CellMap3D', () => {
             expect(
                 wrapper.find('[data-testid="map-3d-faced-cell"]').exists(),
             ).toBe(false);
+        });
+
+        it("passes the faced item's dimmed flag straight through to the faced-cell panel", async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1, dimmed: true })],
+                        }),
+                    ],
+                },
+            });
+
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.getComponent(CellSlot).props('dimmed')).toBe(true);
         });
 
         it('faces a cell behind you after dragging to turn 180°', async () => {
@@ -2160,7 +3120,7 @@ describe('CellMap3D', () => {
             });
         }
 
-        it('shows one label per row while walking, and none while orbiting', async () => {
+        it('shows one label per row while walking and while orbiting', async () => {
             const wrapper = mount(CellMap3D, {
                 props: {
                     bands: [band({ letter: 'A' }), band({ letter: 'B' })],
@@ -2185,8 +3145,48 @@ describe('CellMap3D', () => {
             await wrapper.vm.$nextTick();
 
             expect(
-                wrapper.findAll('[data-testid="map-3d-row-label"]'),
-            ).toHaveLength(0);
+                wrapper
+                    .findAll('[data-testid="map-3d-row-label"]')
+                    .map((label) => label.text())
+                    .sort(),
+            ).toEqual(['A', 'B']);
+        });
+
+        it('keeps every row label visible from the top view', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+            stubViewportClientSize(wrapper);
+            const vm = wrapper.vm as unknown as {
+                setCameraMode: (mode: 'walk' | 'orbit') => void;
+            };
+            vm.setCameraMode('orbit');
+            const viewport = wrapper.get(
+                '[data-testid="map-3d-viewport"]',
+            ).element;
+
+            // Drag the orbit pitch to its maximum — the closest to straight down.
+            viewport.dispatchEvent(
+                new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
+            );
+            viewport.dispatchEvent(
+                new MouseEvent('pointermove', { clientX: 0, clientY: -4000 }),
+            );
+            rafCallback?.(0);
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper
+                    .findAll('[data-testid="map-3d-row-label"]')
+                    .map((label) => label.text())
+                    .sort(),
+            ).toEqual(['A', 'B', 'C']);
         });
 
         it('hides a row label once you turn to face away from it', async () => {
@@ -2247,6 +3247,199 @@ describe('CellMap3D', () => {
             } else {
                 expect(after.exists()).toBe(false);
             }
+        });
+    });
+
+    describe('aisle floor markers', () => {
+        interface FakeContext {
+            canvas: HTMLCanvasElement;
+            fillText: ReturnType<typeof vi.fn>;
+            clearRect: ReturnType<typeof vi.fn>;
+        }
+        let contexts: FakeContext[] = [];
+
+        beforeEach(() => {
+            contexts = [];
+            vi.spyOn(
+                HTMLCanvasElement.prototype,
+                'getContext',
+            ).mockImplementation(function (this: HTMLCanvasElement) {
+                const context = {
+                    canvas: this,
+                    fillText: vi.fn(),
+                    clearRect: vi.fn(),
+                } as FakeContext;
+                contexts.push(context);
+
+                return context as unknown as CanvasRenderingContext2D;
+            } as unknown as typeof HTMLCanvasElement.prototype.getContext);
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        function aisleMarkers() {
+            return registry().meshes.filter(
+                (mesh) => mesh.name === 'aisle-marker',
+            );
+        }
+
+        function drawnTexts(context: FakeContext): string[] {
+            return context.fillText.mock.calls.map((call) => call[0] as string);
+        }
+
+        it('lays one marker per aisle, between and outside the rows', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({ letter: 'A' }),
+                        band({ letter: 'B' }),
+                        band({ letter: 'C' }),
+                    ],
+                },
+            });
+
+            expect(aisleMarkers().map((marker) => marker.position.x)).toEqual([
+                rowWorldX(0) - 2,
+                rowWorldX(1) - 2,
+                rowWorldX(2) - 2,
+                rowWorldX(3) - 2,
+            ]);
+        });
+
+        it('prints each adjacent row letter beside every column number', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+
+            // Aisle 0 has only row A beside it, aisle 1 sits between A and B,
+            // aisle 2 has only row B beside it.
+            expect(contexts.map(drawnTexts)).toEqual([
+                ['1', '', 'A', '2', '', 'A'],
+                ['1', 'A', 'B', '2', 'A', 'B'],
+                ['1', 'B', '', '2', 'B', ''],
+            ]);
+        });
+
+        it("numbers columns up to the warehouse maximum, not each row's own count", () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: [item({ cellNumber: 1 })],
+                        }),
+                        band({
+                            letter: 'B',
+                            items: [
+                                item({ cellNumber: 1 }),
+                                item({ cellNumber: 2 }),
+                                item({ cellNumber: 3 }),
+                            ],
+                        }),
+                    ],
+                },
+            });
+
+            expect(
+                drawnTexts(contexts[1]).filter((text) => /^\d+$/.test(text)),
+            ).toEqual(['1', '2', '3']);
+        });
+
+        it('splits a long aisle into textures that stay under the size cap', () => {
+            mount(CellMap3D, {
+                props: {
+                    bands: [
+                        band({
+                            letter: 'A',
+                            items: Array.from({ length: 40 }, (_, index) =>
+                                item({ cellNumber: index + 1 }),
+                            ),
+                        }),
+                    ],
+                },
+            });
+
+            // Two aisles (either side of the single row), two segments each.
+            expect(aisleMarkers()).toHaveLength(4);
+            expect(
+                contexts.every((context) => context.canvas.height <= 4096),
+            ).toBe(true);
+            expect(
+                contexts
+                    .slice(0, 2)
+                    .flatMap(drawnTexts)
+                    .filter((text) => /^\d+$/.test(text)),
+            ).toHaveLength(40);
+        });
+
+        it('turns the markers and swaps their letters for the walk view, and restores both in the top view', async () => {
+            const wrapper = mount(CellMap3D, {
+                props: {
+                    bands: [band({ letter: 'A' }), band({ letter: 'B' })],
+                },
+            });
+            const setCameraMode = (
+                wrapper.vm as unknown as {
+                    setCameraMode: (mode: 'walk' | 'orbit') => void;
+                }
+            ).setCameraMode;
+            const letterXs = (context: FakeContext) =>
+                context.fillText.mock.calls
+                    .filter((call) => ['A', 'B'].includes(call[0] as string))
+                    .slice(0, 2)
+                    .map((call) => [call[0], call[1]]);
+            const width = contexts[1].canvas.width;
+
+            // Walk is the default: the marker is turned half a turn and the
+            // lower row's letter sits on the right, where -X appears on screen.
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
+            expect(letterXs(contexts[1])).toEqual([
+                ['A', width * 0.88],
+                ['B', width * 0.12],
+            ]);
+
+            setCameraMode('orbit');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual([
+                0, 0, 0,
+            ]);
+            const topViewCalls = contexts[1].fillText.mock.calls.slice(-6);
+            expect(topViewCalls.map((call) => [call[0], call[1]])).toEqual([
+                ['1', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+                ['2', width / 2],
+                ['A', width * 0.12],
+                ['B', width * 0.88],
+            ]);
+
+            setCameraMode('walk');
+            expect(aisleMarkers().map((marker) => marker.rotation.z)).toEqual(
+                Array(3).fill(Math.PI),
+            );
+        });
+
+        it('adds no markers when there are no cells', () => {
+            mount(CellMap3D, {
+                props: { bands: [band({ letter: 'A', items: [] })] },
+            });
+
+            expect(aisleMarkers()).toHaveLength(0);
+        });
+
+        it('adds no markers when a 2D canvas is unavailable', () => {
+            vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(
+                null,
+            );
+
+            mount(CellMap3D, { props: { bands: [band({ letter: 'A' })] } });
+
+            expect(aisleMarkers()).toHaveLength(0);
         });
     });
 

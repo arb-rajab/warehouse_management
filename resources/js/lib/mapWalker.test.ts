@@ -47,6 +47,7 @@ import {
     stepPitch,
     stepPosition,
     stepYaw,
+    orbitWorldPointToScreenPercent,
     worldPointToScreenPercent,
 } from './mapWalker';
 
@@ -187,6 +188,115 @@ describe('stepPosition', () => {
         );
 
         expect(next).toEqual({ x: 1, y: 2, z: 2 });
+    });
+
+    describe('movement is relative to the camera yaw', () => {
+        // Wider than `bounds`, and centered away from the edges, so these
+        // yaw-rotated moves (which can go negative on either axis) aren't
+        // clipped by `stepPosition`'s own bounds-clamping — that's a
+        // different concern this block isn't testing.
+        const wideBounds = {
+            minX: -20,
+            maxX: 20,
+            minY: 0,
+            maxY: 10,
+            minZ: -20,
+            maxZ: 20,
+        };
+        const origin = { x: 0, y: 1, z: 0 };
+
+        it('walks forward along world Z at yaw 0 (facing +Z)', () => {
+            const next = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                0,
+            );
+
+            expect(next.x).toBeCloseTo(0);
+            expect(next.z).toBeCloseTo(4);
+        });
+
+        it('walks forward along world -X once turned 90 degrees to face that way', () => {
+            const next = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                90,
+            );
+
+            expect(next.x).toBeCloseTo(-4);
+            expect(next.z).toBeCloseTo(0);
+        });
+
+        it('strafes right perpendicular to an arbitrary yaw, matching the yaw-0 "screen-right is world -X" convention', () => {
+            const atYawZero = stepPosition(
+                origin,
+                new Set(['right']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                0,
+            );
+            expect(atYawZero.x).toBeCloseTo(-4);
+            expect(atYawZero.z).toBeCloseTo(0);
+
+            const atYaw90 = stepPosition(
+                origin,
+                new Set(['right']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                90,
+            );
+            expect(atYaw90.x).toBeCloseTo(0);
+            expect(atYaw90.z).toBeCloseTo(-4);
+        });
+
+        it('rotates forward/backward and left/right together at an arbitrary yaw (45 degrees)', () => {
+            const forward = stepPosition(
+                origin,
+                new Set(['forward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                45,
+            );
+            const backward = stepPosition(
+                origin,
+                new Set(['backward']),
+                1,
+                wideBounds,
+                4,
+                new Set<string>(),
+                45,
+            );
+
+            expect(forward.x).toBeCloseTo(-backward.x);
+            expect(forward.z).toBeCloseTo(-backward.z);
+            expect(Math.hypot(forward.x, forward.z)).toBeCloseTo(4);
+        });
+
+        it('defaults to yaw 0 (fixed +Z forward) when yawDegrees is omitted, for backward compatibility', () => {
+            const next = stepPosition(
+                { x: 0, y: 1, z: 0 },
+                new Set(['forward', 'right']),
+                1,
+                bounds,
+                4,
+            );
+
+            expect(next).toEqual({ x: -4, y: 1, z: 4 });
+        });
     });
 
     describe('with collision (occupiedCellKeys)', () => {
@@ -766,6 +876,16 @@ describe('orbitDistanceFromPinch', () => {
         expect(orbitDistanceFromPinch(15, 0, 50, range)).toBe(15);
     });
 
+    it('is a no-op guard against division by zero when fingers pinch fully together', () => {
+        expect(
+            orbitDistanceFromPinch(40, 200, 0, {
+                ...range,
+                minDistance: 6,
+                maxDistance: 150,
+            }),
+        ).toBe(40);
+    });
+
     it('clamps to the range', () => {
         expect(
             orbitDistanceFromPinch(range.minDistance, 200, 1000, range),
@@ -995,5 +1115,48 @@ describe('miniMapHeadingDegrees', () => {
         expect(strafedRightLeftPercent).toBeGreaterThan(centerLeftPercent);
         expect(miniMapHeadingDegrees(10)).toBeGreaterThan(0);
         expect(miniMapHeadingDegrees(10)).toBeLessThan(90);
+    });
+});
+
+describe('orbitWorldPointToScreenPercent', () => {
+    it('centers the target the camera looks at', () => {
+        const result = orbitWorldPointToScreenPercent(
+            { x: 0, y: 40, z: 10 },
+            { x: 0, y: 0, z: 0 },
+            1,
+            { x: 0, y: 0, z: 0 },
+        );
+
+        expect(result.leftPercent).toBeCloseTo(50);
+        expect(result.topPercent).toBeCloseTo(50);
+        expect(result.visible).toBe(true);
+    });
+
+    it('places a point further along +Z lower on screen when looking down from the +Z side', () => {
+        const target = { x: 0, y: 0, z: 0 };
+        const camera = { x: 0, y: 40, z: 10 };
+        const near = orbitWorldPointToScreenPercent(camera, target, 1, {
+            x: 0,
+            y: 0,
+            z: 5,
+        });
+        const far = orbitWorldPointToScreenPercent(camera, target, 1, {
+            x: 0,
+            y: 0,
+            z: -5,
+        });
+
+        expect(near.topPercent).toBeGreaterThan(far.topPercent);
+    });
+
+    it('hides a point behind the camera', () => {
+        expect(
+            orbitWorldPointToScreenPercent(
+                { x: 0, y: 40, z: 10 },
+                { x: 0, y: 0, z: 0 },
+                1,
+                { x: 0, y: 80, z: 20 },
+            ).visible,
+        ).toBe(false);
     });
 });

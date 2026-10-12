@@ -6,7 +6,7 @@ import {
     PackageSearch,
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import DataTable from './DataTable.vue';
 
@@ -24,12 +24,30 @@ function mountTable(rows: TestRow[], extraProps: Record<string, unknown> = {}) {
 }
 
 describe('DataTable', () => {
+    it('uses a logical text-align utility so RTL locales flip alignment', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        expect(wrapper.find('table').classes()).toContain('text-start');
+    });
+
     it('renders a header cell for every column', () => {
         const wrapper = mountTable([{ id: 1, letter: 'A' }]);
 
         expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual(
             columns,
         );
+    });
+
+    it('renders a header cell for each column even when two columns share the same label', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }], {
+            columns: ['Date', 'Cells', 'Date'],
+        });
+
+        expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual([
+            'Date',
+            'Cells',
+            'Date',
+        ]);
     });
 
     it('renders one body row per row and exposes the row to the slot', () => {
@@ -232,6 +250,24 @@ describe('DataTable', () => {
         expect(wrapper.find('.filter-slot').text()).toBe('filters for cells');
     });
 
+    it('wraps the table in a horizontally scrollable container so wide content can be scrolled to instead of squeezed', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const table = wrapper.get('table');
+        expect(table.classes()).toContain('min-w-full');
+        expect(table.classes()).not.toContain('w-full');
+
+        const scrollContainer = table.element.parentElement;
+        expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(
+            true,
+        );
+
+        const clippingWrapper = scrollContainer?.parentElement;
+        expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
+            true,
+        );
+    });
+
     it('renders the popover outside the overflow-hidden table wrapper, so a short table cannot clip it', async () => {
         const openFilterKey = ref<string | null>(null);
         const wrapper = mountTableWithFilterSlot(
@@ -246,6 +282,41 @@ describe('DataTable', () => {
             .get('.filter-slot')
             .element.closest('.overflow-hidden');
         expect(clippedAncestor).toBeNull();
+    });
+
+    it('positions the popover using the physical `left` CSS property, not the logical `insetInlineStart`', async () => {
+        // `insetInlineStart` resolves to `right` under `dir="rtl"`, so
+        // assigning it the same physical-left-based offset used in LTR
+        // silently reinterprets that offset as a distance from the *right*
+        // edge instead, throwing the popover far from its trigger (or off
+        // the page's physical left edge for a trigger near the table's
+        // visual right side). `positionPopover` computes the offset from
+        // `getBoundingClientRect().left`, which is always physical, so it
+        // must land on the physical `left` property in both directions.
+        const openFilterKey = ref<string | null>(null);
+        const wrapper = mountTableWithFilterSlot(
+            [{ label: 'Cells', filterKey: 'cells' }],
+            openFilterKey,
+        );
+
+        const trigger = wrapper.get('button[title]').element;
+        const outer = wrapper.element as HTMLElement;
+        vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+            left: 900,
+            bottom: 40,
+        } as DOMRect);
+        vi.spyOn(outer, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            top: 0,
+        } as DOMRect);
+
+        await wrapper.get('button[title]').trigger('click');
+        await wrapper.setProps({ openFilterKey: openFilterKey.value });
+
+        const popover = wrapper.get('.filter-slot').element
+            .parentElement as HTMLElement;
+        expect(popover.style.left).toBe('800px');
+        expect(popover.style.getPropertyValue('inset-inline-start')).toBe('');
     });
 
     it('closes the popover when its icon is clicked again', async () => {
@@ -335,5 +406,50 @@ describe('DataTable', () => {
         expect(openFilterKeyModel.value).toBe(null);
 
         wrapper.unmount();
+    });
+
+    it('recognizes a click on any trigger sharing an open filterKey as inside, not just the last one registered', () => {
+        const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+        const updates: (string | null)[] = [];
+
+        const wrapper = mount(DataTable<TestRow>, {
+            props: {
+                columns: [
+                    { label: 'Full', filterKey: 'occupancy' },
+                    { label: 'Opened', filterKey: 'occupancy' },
+                ],
+                rows: [{ id: 1, letter: 'A' }],
+                emptyMessage: 'No rows yet.',
+                openFilterKey: 'occupancy',
+                'onUpdate:openFilterKey': (value: string | null) => {
+                    updates.push(value);
+                },
+            },
+            slots: {
+                row: `<td>{{ params.row.letter }}</td>`,
+                'column-filter': `<div class="filter-slot">filters for {{ params.filterKey }}</div>`,
+            },
+        });
+
+        // Grab DataTable's own document-level click listener directly — the
+        // outside-click detection it drives runs from a native `click`
+        // listener registered in `onMounted`, so calling it here exercises
+        // the exact same containment check a real click bubbling to
+        // `document` would trigger, without racing Vue's own (unrelated,
+        // async) v-model prop propagation.
+        const clickHandler = addEventListenerSpy.mock.calls.find(
+            ([type]) => type === 'click',
+        )?.[1] as (event: MouseEvent) => void;
+
+        const buttons = wrapper.findAll('button[title]');
+        expect(buttons).toHaveLength(2);
+
+        // A click landing on the FIRST (non-last-registered) of the two
+        // triggers sharing the 'occupancy' filterKey — with only the
+        // last-registered sibling tracked, this would fail the containment
+        // check and incorrectly close the popover it's a part of.
+        clickHandler({ target: buttons[0].element } as unknown as MouseEvent);
+
+        expect(updates).toEqual([]);
     });
 });

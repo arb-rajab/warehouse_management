@@ -27,8 +27,7 @@ export function hasUnacknowledgedFlags(log: CellStatusLog): boolean {
  */
 export function acknowledgeFlags(log: CellStatusLog, returnTo?: 'user'): void {
     router.post(
-        acknowledgeFlagsAction({ cellStatusLog: log.id }, { mergeQuery: {} })
-            .url,
+        acknowledgeFlagsAction(log, { mergeQuery: {} }).url,
         { return_to: returnTo ?? null },
         { preserveScroll: true },
     );

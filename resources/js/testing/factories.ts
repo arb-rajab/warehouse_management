@@ -1,23 +1,37 @@
 import type {
     Cell,
+    CellPallet,
+    CellWithLocation,
     CellStatusLog,
     CellVerificationReport,
     CellVerificationRound,
+    MatchingPallet,
     Paginated,
     Row,
+    Setting,
     User,
 } from '@/types/admin';
+import type {
+    PermissionGroup,
+    StaffMember,
+    StoreRole,
+    StoreSharedProps,
+} from '@/types/store';
 
 /**
  * Shared `Paginated<T>` test fixture — every page test that mounts a paginated
  * table built this `meta` shape independently before this existed.
  */
-export function paginated<T>(data: T[], perPage = 20): Paginated<T> {
+export function paginated<T>(
+    data: T[],
+    perPage = 20,
+    { currentPage = 1, lastPage = 1 } = {},
+): Paginated<T> {
     return {
         data,
         meta: {
-            current_page: 1,
-            last_page: 1,
+            current_page: currentPage,
+            last_page: lastPage,
             per_page: perPage,
             total: data.length,
             from: data.length ? 1 : null,
@@ -46,6 +60,36 @@ export function cell(overrides: Partial<Cell> = {}): Cell {
         state: 'empty',
         is_active: true,
         pallet: null,
+        ...overrides,
+    };
+}
+
+export function cellWithLocation(
+    overrides: Partial<CellWithLocation> = {},
+): CellWithLocation {
+    return { ...cell(), row_letter: 'A', ...overrides };
+}
+
+export function cellPallet(overrides: Partial<CellPallet> = {}): CellPallet {
+    return {
+        id: 42,
+        product_id: 1,
+        product_name: 'Widgets',
+        product_ar_name: 'ودجات',
+        product_image_url: null,
+        expiration_date: '2026-12-01',
+        added_at: '2026-01-01',
+        is_stale: false,
+        remaining_boxes: 10,
+        ...overrides,
+    };
+}
+
+export function setting(overrides: Partial<Setting> = {}): Setting {
+    return {
+        qr_code_width: 240,
+        qr_code_height: 240,
+        allowed_open_levels: [1],
         ...overrides,
     };
 }
@@ -94,6 +138,9 @@ export function cellVerificationReport(
         },
         note: null,
         user: { id: 7, name: 'Jane Doe' },
+        round_completed: true,
+        accepted_at: null,
+        accepted_by: null,
         created_at: '2026-08-01T10:00:00Z',
         ...overrides,
     };
@@ -112,6 +159,27 @@ export function cellVerificationRound(
             { id: 2, letter: 'B' },
         ],
         user: { id: 7, name: 'Jane Doe' },
+        ...overrides,
+    };
+}
+
+export function matchingPallet(
+    overrides: Partial<MatchingPallet> = {},
+): MatchingPallet {
+    return {
+        id: 1,
+        state: 'full',
+        expiration_date: '2026-09-01',
+        added_at: '2026-08-01T10:00:00Z',
+        remaining_boxes: 10,
+        product: {
+            id: 10,
+            name: 'Widgets',
+            ar_name: 'ودجات',
+            image_url: null,
+            boxes_count: 10,
+        },
+        location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         ...overrides,
     };
 }
@@ -140,6 +208,51 @@ export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         duration_seconds: 3600,
         flagged: false,
         flags: [],
+        ...overrides,
+    };
+}
+
+/** The store back office's shared `store` prop, for its layout and pages. */
+export function storeSharedProps(
+    overrides: Partial<StoreSharedProps> = {},
+): StoreSharedProps {
+    return {
+        rtl: false,
+        permissions: [],
+        isSuperAdmin: false,
+        isRaizerAdmin: false,
+        settings: {},
+        ...overrides,
+    };
+}
+
+export function storeRole(overrides: Partial<StoreRole> = {}): StoreRole {
+    return { id: 3, name: 'Clerk', ...overrides };
+}
+
+export function staffMember(overrides: Partial<StaffMember> = {}): StaffMember {
+    return {
+        id: 11,
+        user_id: 21,
+        name: 'Sam Staff',
+        email: 'sam@example.com',
+        phone: '0612345678',
+        role: storeRole(),
+        is_super_admin: false,
+        ...overrides,
+    };
+}
+
+export function permissionGroup(
+    overrides: Partial<PermissionGroup> = {},
+): PermissionGroup {
+    return {
+        section: 'staff',
+        label: 'Staff',
+        permissions: [
+            { id: 1, label: 'View All Staffs' },
+            { id: 2, label: 'Add Staff' },
+        ],
         ...overrides,
     };
 }

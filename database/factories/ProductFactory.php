@@ -60,6 +60,18 @@ class ProductFactory extends Factory
     }
 
     /**
+     * A product with a configured warehouse-stock minimum, or `null` to leave
+     * it unconfigured — the default for every product otherwise, so this is
+     * only needed to opt a specific product into low-stock consideration.
+     */
+    public function minimumPallets(?int $count): static
+    {
+        return $this->afterCreating(
+            fn (Product $product) => $product->setting()->updateOrCreate([], ['minimum_pallets' => $count])
+        );
+    }
+
+    /**
      * A product resolving to exactly this image URL, or to none.
      *
      * Backed by an upload's `external_link`, which `Upload::url()` returns

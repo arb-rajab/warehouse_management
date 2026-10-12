@@ -35,9 +35,14 @@ return [
     | are able to authenticate the request, Sanctum will use the bearer
     | token that's present on an incoming request for authentication.
     |
+    | Left empty on purpose: both the warehouse API (`auth:sanctum`) and the
+    | legacy store's (`auth:store_api`) are token-only, and a listed session
+    | guard would authenticate any browser session ahead of the token, past
+    | the provider check that keeps each API to its own user model.
+    |
     */
 
-    'guard' => ['web'],
+    'guard' => [],
 
     /*
     |--------------------------------------------------------------------------
@@ -50,7 +55,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => 60 * 24 * 30,
 
     /*
     |--------------------------------------------------------------------------

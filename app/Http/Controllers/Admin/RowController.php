@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreRowRequest;
-use App\Http\Requests\UpdateRowRequest;
+use App\Http\Requests\Admin\FilterRowsRequest;
+use App\Http\Requests\Admin\ShowRowRequest;
+use App\Http\Requests\Admin\StoreRowRequest;
+use App\Http\Requests\Admin\UpdateRowRequest;
 use App\Http\Resources\CellResource;
 use App\Http\Resources\RowResource;
 use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +26,7 @@ class RowController extends Controller
 {
     use BuildsCellQrLabels;
 
-    public function index(Request $request): Response
+    public function index(FilterRowsRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
 
@@ -46,13 +49,16 @@ class RowController extends Controller
 
     public function store(StoreRowRequest $request): RedirectResponse
     {
-        $row = Row::create($request->validated());
+        $row = DB::transaction(fn () => Row::create($request->validated()));
 
         return redirect()->route('admin.rows.show', $row);
     }
 
-    public function show(Row $row): Response
+    public function show(ShowRowRequest $request, Row $row): Response
     {
+        $cellNumber = $request->integer('cell_number') ?: null;
+        $flatNumber = $request->integer('flat_number') ?: null;
+
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row->loadHasPallets()),
             'rows' => Row::mapOptions(),
@@ -67,6 +73,11 @@ class RowController extends Controller
             'filterOptions' => [
                 'products' => Product::selectedOptions(),
             ],
+            'linkedCell' => $cellNumber !== null && $flatNumber !== null ? [
+                'row_letter' => $row->letter,
+                'cell_number' => $cellNumber,
+                'flat_number' => $flatNumber,
+            ] : null,
         ]);
     }
 
@@ -79,18 +90,22 @@ class RowController extends Controller
 
     public function exportQrCodes(Row $row): HttpResponse
     {
-        // No upper bound on cells_count/flats_count is enforced, so an unusually
-        // large row could still take a while to render even with SVG-rendered QRs
-        // (see BuildsCellQrLabels) — buy headroom beyond PHP's default 30s limit.
+        // cells_count/flats_count can each be as large as Row::MAX_DIMENSION, so a
+        // maximally-sized row could still take a while to render even with
+        // SVG-rendered QRs (see BuildsCellQrLabels) — buy headroom beyond PHP's
+        // default 30s limit.
         set_time_limit(300);
 
         $cells = $row->cells()
             ->select(['id', 'cell_number', 'flat_number'])
             ->orderedByCoordinates()
             ->get();
+        $setting = Setting::current();
 
-        return Pdf::loadView('pdf.cell-qr-labels', [
-            'labels' => $this->cellQrLabels($row->letter, $cells),
+        return Pdf::loadView('pdf.qr-labels', [
+            'labels' => $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count),
+            'qrWidth' => $setting->qr_code_width,
+            'qrHeight' => $setting->qr_code_height,
         ])->download("row-{$row->letter}-qr-codes.pdf");
     }
 
@@ -102,8 +117,16 @@ class RowController extends Controller
             $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
                 || $validated['flats_count'] !== $row->flats_count;
 
-            if ($dimensionsChanging && $this->lockedRowHasPallets($row)) {
-                return back()->withErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
+            if ($dimensionsChanging) {
+                $blockReason = $this->lockedRowBlockReason(
+                    $row,
+                    'messages.row_cannot_resize_has_pallets',
+                    'messages.row_cannot_resize_has_history',
+                );
+
+                if ($blockReason !== null) {
+                    return redirect()->route('admin.rows.edit', $row)->withErrors(['cells_count' => $blockReason]);
+                }
             }
 
             $row->update($validated);
@@ -115,20 +138,41 @@ class RowController extends Controller
     public function destroy(Request $request, Row $row): RedirectResponse
     {
         return DB::transaction(function () use ($request, $row) {
-            if ($this->lockedRowHasPallets($row)) {
-                return back()->withErrors(['row' => __('messages.row_cannot_delete_has_pallets')]);
+            $blockReason = $this->lockedRowBlockReason(
+                $row,
+                'messages.row_cannot_delete_has_pallets',
+                'messages.row_cannot_delete_has_history',
+            );
+
+            if ($blockReason !== null) {
+                return $this->redirectPreservingQuery('admin.rows.index', $request)->withErrors(['row' => $blockReason]);
             }
 
             $row->delete();
 
-            return redirect()->route('admin.rows.index', $request->query());
+            return $this->redirectPreservingQuery('admin.rows.index', $request);
         });
     }
 
-    private function lockedRowHasPallets(Row $row): bool
+    /**
+     * Locks the row's cells for the remainder of the transaction, then
+     * returns the translated block message when the row currently has
+     * pallets or has history (past status logs/verification reports) that
+     * would otherwise fail on the `restrictOnDelete` constraints once the
+     * cells are deleted/regenerated — null when neither blocks the action.
+     */
+    private function lockedRowBlockReason(Row $row, string $palletsMessageKey, string $historyMessageKey): ?string
     {
         $row->cells()->lockForUpdate()->get();
 
-        return $row->hasPallets();
+        if ($row->hasPallets()) {
+            return __($palletsMessageKey);
+        }
+
+        if ($row->hasHistory()) {
+            return __($historyMessageKey);
+        }
+
+        return null;
     }
 }

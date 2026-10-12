@@ -6,6 +6,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Row;
 use App\Services\DashboardStatsCache;
+use Illuminate\Support\Facades\DB;
 
 class RowObserver
 {
@@ -22,8 +23,15 @@ class RowObserver
     /**
      * Handle the Row "updated" event by regenerating its cells when the layout changed.
      *
-     * Callers must guarantee the row has no pallets before changing its dimensions,
-     * since regenerating cells discards the previous ones.
+     * Callers must guarantee the row has no pallets and no history (see
+     * Row::hasPallets()/hasHistory()) before changing its dimensions, since
+     * regenerating cells discards the previous ones — deleting a cell with
+     * status logs or verification reports against it fails the
+     * `restrictOnDelete` constraint on those tables.
+     *
+     * The delete and the regeneration run in one transaction (a savepoint when,
+     * as from RowController, the caller already holds one), so a failed insert
+     * can't leave the row with no cells at all.
      */
     public function updated(Row $row): void
     {
@@ -31,17 +39,20 @@ class RowObserver
             return;
         }
 
-        $row->cells()->delete();
+        DB::transaction(function () use ($row) {
+            $row->cells()->delete();
 
-        $this->generateCells($row);
+            $this->generateCells($row);
+        });
 
         DashboardStatsCache::flush();
     }
 
     /**
-     * Handle the Row "deleted" event — its cells (all Empty; deletion is
-     * blocked while any hold a pallet, see RowController::destroy) go with it,
-     * which changes the dashboard's occupancy.empty count.
+     * Handle the Row "deleted" event — its cells (all Empty and history-free;
+     * deletion is blocked while any hold a pallet or have status log/
+     * verification history, see RowController::destroy) go with it, which
+     * changes the dashboard's occupancy.empty count.
      */
     public function deleted(Row $row): void
     {

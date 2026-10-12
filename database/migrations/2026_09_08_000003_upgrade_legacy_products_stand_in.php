@@ -60,22 +60,22 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      *
-     * Lossy: the restored columns come back empty, since `image_url` values
-     * were never carried anywhere. Guarded on the environment rather than on
-     * `hasColumn()`, which cannot tell the store's table from a stand-in — a
-     * rollback must never add columns to the store's `products`.
+     * Deliberately not reversible. `up()`'s no-op branch (no `image_url`
+     * column — a fresh install, or the store's own table) and its "did the
+     * work" branch end in the exact same shape: `thumbnail_img` present,
+     * `image_url` and `boxes_count` absent. There is nothing left in the
+     * schema at `down()` time that tells those two cases apart, unlike
+     * `add_ar_name_to_products_stand_in`'s single added column. Guessing
+     * "did the work" would re-add `image_url`/`boxes_count` and drop
+     * `thumbnail_img` on a fresh install too, breaking every product read on
+     * a partial rollback (`migrate:rollback --step=3`) even though `up()`
+     * never touched that database. A full rollback drops the whole stand-in
+     * a few migrations later regardless (`create_products_table`'s `down()`),
+     * so nothing here needs undoing on its own.
      */
     public function down(): void
     {
-        if (app()->isProduction() || Schema::hasColumn('products', 'image_url')) {
-            return;
-        }
-
-        Schema::table('products', function (Blueprint $table) {
-            $table->string('image_url')->nullable()->after('name');
-            $table->unsignedInteger('boxes_count')->default(1)->after('image_url');
-            $table->dropColumn('thumbnail_img');
-        });
+        //
     }
 
     /**

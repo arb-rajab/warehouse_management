@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Address;
+use App\Models\StoreUser;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Cart extends Model
+{
+
+    use SoftDeletes;
+
+    protected $fillable = ['address_id', 'price', 'tax', 'shipping_cost', 'shipping_type', 'discount', 'product_referral_code', 'coupon_code', 'by_rep', 'for_customer', 'coupon_applied', 'quantity', 'user_id', 'temp_user_id', 'owner_id', 'product_id', 'variation', 'variation_qty', 'item_notes', 'rep_price','is_price_changed', 'is_admin_notified'];
+
+
+    public function user()
+    {
+        return $this->belongsTo(StoreUser::class);
+    }
+
+    public function rep_customer()
+    {
+        return $this->belongsTo(StoreUser::class, 'for_customer', 'id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+}

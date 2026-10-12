@@ -104,6 +104,31 @@ test('the expected_expiration_date and reported_expiration_date attributes are c
     expect($fresh->reported_expiration_date)->toBeInstanceOf(CarbonImmutable::class);
 });
 
+test('a verification report belongs to the user who accepted it', function () {
+    $acceptedBy = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $report = CellVerificationReport::factory()->accepted()->create(['accepted_by' => $acceptedBy->id]);
+
+    expect($report->acceptedBy->id)->toBe($acceptedBy->id);
+    expect($report->acceptedBy->id)->not->toBe($otherUser->id);
+});
+
+test('a verification report has no accepting user or accepted_at until it is accepted', function () {
+    $report = CellVerificationReport::factory()->incorrect()->create();
+
+    expect($report->fresh()->acceptedBy)->toBeNull();
+    expect($report->fresh()->accepted_at)->toBeNull();
+});
+
+test('the accepted_at attribute is cast to a datetime', function () {
+    $report = CellVerificationReport::factory()->accepted()->create(['accepted_at' => '2026-09-01 10:30:00']);
+
+    $fresh = $report->fresh();
+
+    expect($fresh->accepted_at)->toBeInstanceOf(CarbonImmutable::class);
+    expect($fresh->accepted_at->toDateTimeString())->toBe('2026-09-01 10:30:00');
+});
+
 test('the filtered scope can filter by cell_id, excluding another cells report', function () {
     $cell = Cell::factory()->create();
     $matching = CellVerificationReport::factory()->create(['cell_id' => $cell->id]);
@@ -199,12 +224,30 @@ test('the filtered scope can filter by row and column, excluding reports on anot
     CellVerificationReport::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]); // noise: same row, other column
     CellVerificationReport::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
 
-    $request = Request::create('/', 'GET', ['row_id' => $row->id, 'column_number' => 1]);
+    $request = Request::create('/', 'GET', ['row_id' => [$row->id], 'column_number' => 1]);
 
     $results = CellVerificationReport::query()->filtered($request)->get();
 
     expect($results)->toHaveCount(1);
     expect($results->first()->id)->toBe($matching->id);
+});
+
+test('the filtered scope can filter by multiple rows, excluding reports on a remaining row', function () {
+    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $matchingA = CellVerificationReport::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+    $matchingB = CellVerificationReport::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+    CellVerificationReport::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
+
+    $request = Request::create('/', 'GET', ['row_id' => [$rowA->id, $rowB->id]]);
+
+    $results = CellVerificationReport::query()->filtered($request)->get();
+
+    expect($results->pluck('id')->sort()->values()->all())->toEqual(
+        collect([$matchingA->id, $matchingB->id])->sort()->values()->all()
+    );
 });
 
 test('the filtered scope combines multiple filters with AND, not OR', function () {

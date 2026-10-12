@@ -4,9 +4,14 @@ use App\Enums\CellLogAction;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Row;
+use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
@@ -16,7 +21,7 @@ test('an authenticated admin can view the products index with every property the
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -25,6 +30,7 @@ test('an authenticated admin can view the products index with every property the
         'cell_id' => $cell->id,
         'expiration_date' => '2027-06-01',
     ]);
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
 
     $response = $this->get('/admin/products');
 
@@ -38,21 +44,50 @@ test('an authenticated admin can view the products index with every property the
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
+                ->where('barcodes', [['id' => $barcode->id, 'barcode' => '1234567890123']])
             )
-            ->where('today', '2026-08-13')
-            ->where('weekStart', '2026-08-10')
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
-            ->has('filterOptions.actions', 8)
+            ->has('filterOptions.actions', 9)
     );
 
     Carbon::setTestNow();
+});
+
+test('the products index ships an empty barcodes list for a product nobody has added one to', function () {
+    actingAsAdmin();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.barcodes', [])
+    );
+});
+
+test('the products index orders a product\'s barcodes by id, oldest first', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    // Inserted in this order so a plain alphabetical/numeric sort of the
+    // barcode text itself would produce the opposite order — proving the
+    // ordering is by id (insertion order), not by the barcode value.
+    $olderBarcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+    $newerBarcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.barcodes', [
+            ['id' => $olderBarcode->id, 'barcode' => '2222222222222'],
+            ['id' => $newerBarcode->id, 'barcode' => '1111111111111'],
+        ])
+    );
 });
 
 test('the products index ships both raw name columns under the Arabic panel locale too', function () {
@@ -64,7 +99,7 @@ test('the products index ships both raw name columns under the Arabic panel loca
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(24)->minimumPallets(5)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -86,12 +121,13 @@ test('the products index ships both raw name columns under the Arabic panel loca
                 ->where('image_url', 'https://cdn.example.com/widgets.png')
                 ->where('active', true)
                 ->where('boxes_count', 24)
+                ->where('minimum_pallets', 5)
+                ->where('pallets_count', 1)
                 ->where('full_cells_count', 1)
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('activity_today_count', 0)
-                ->where('activity_week_count', 0)
+                ->where('barcodes', [])
             )
     );
 
@@ -129,7 +165,7 @@ test('the products index hydrates the product filter chips with both raw name co
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true])
     );
 });
 
@@ -202,39 +238,6 @@ test('the products index splits the occupancy count into full and opened columns
     );
 });
 
-test('the products index counts only cells in the filtered row toward full/opened counts, not the product\'s cells elsewhere', function () {
-    actingAsAdmin();
-    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowA->cells()->first()->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $rowB->cells()->first()->id]);
-
-    $response = $this->get("/admin/products?row_id={$rowA->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
-test('the products index counts only cells in the filtered column toward full/opened counts', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 1]);
-    $columnOneCell = $row->cells()->where('cell_number', 1)->first();
-    $columnTwoCell = $row->cells()->where('cell_number', 2)->first();
-
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnOneCell->id]);
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $columnTwoCell->id]);
-
-    $response = $this->get('/admin/products?column_number=1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
-    );
-});
-
 test('the state filter zeroes out the opened count while leaving the full count intact', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
@@ -246,6 +249,104 @@ test('the state filter zeroes out the opened count while leaving the full count 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.full_cells_count', 1)
             ->where('products.data.0.opened_cells_count', 0)
+    );
+});
+
+test('the state filter excludes a product with no pallet in that state, instead of just zeroing its count', function () {
+    actingAsAdmin();
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id]);
+
+    // Noise: only has an opened pallet, so it must not appear under state=full.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->opened()->create(['product_id' => $excluded->id]);
+
+    $response = $this->get('/admin/products?state=full');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+});
+
+test('the expired filter excludes a product with no expired pallet', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id, 'expiration_date' => '2026-08-01']);
+
+    // Noise: only has a not-yet-expired pallet.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $excluded->id, 'expiration_date' => '2026-09-01']);
+
+    $response = $this->get('/admin/products?expired=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('expired=false applies no expired filter, the same as the cells map', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $expired = Product::factory()->create(['name' => 'A expired']);
+    Pallet::factory()->create(['product_id' => $expired->id, 'expiration_date' => '2026-08-01']);
+
+    $notExpired = Product::factory()->create(['name' => 'B not expired']);
+    Pallet::factory()->create(['product_id' => $notExpired->id, 'expiration_date' => '2026-09-01']);
+
+    $response = $this->get('/admin/products?expired=false');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $expired->id)
+            ->where('products.data.0.full_cells_count', 1)
+            ->where('products.data.1.id', $notExpired->id)
+            ->where('products.data.1.full_cells_count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the expires_within_days filter excludes a product with no pallet expiring within that window', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    actingAsAdmin();
+
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id, 'expiration_date' => '2026-08-20']);
+
+    // Noise: only has a pallet expiring well outside the requested window.
+    $excluded = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $excluded->id, 'expiration_date' => '2026-12-01']);
+
+    $response = $this->get('/admin/products?expires_within_days=7');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('a product with zero pallets is excluded once any occupancy filter is active', function () {
+    actingAsAdmin();
+    $matching = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $matching->id]);
+
+    // Noise: no pallets at all, so it must not appear under any occupancy filter.
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products?state=full');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $matching->id)
     );
 });
 
@@ -301,19 +402,43 @@ test('the expired filter narrows the full/opened/expiring-soon counts to already
     Carbon::setTestNow();
 });
 
-test('the inactive filter narrows the products index to the store admin\'s deactivated products, regardless of cell occupancy', function () {
+test('the expired/expiring-soon pallet subqueries compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column — date()/strftime() around it
+    // makes the comparison a function of the column, which the index added
+    // for it cannot satisfy on MySQL. See .ai/rules/shared-database.md.
+    Carbon::setTestNow('2026-08-15 12:00:00');
     actingAsAdmin();
 
-    // Deactivated but still occupying a cell — proves `inactive` reads
-    // `published`, not occupancy (see .ai/rules/shared-database.md).
-    $inactive = Product::factory()->inactive()->create();
-    Pallet::factory()->create(['product_id' => $inactive->id]);
+    $product = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
 
-    // Active but with zero pallets — would look "inactive" under an
-    // occupancy-based definition, and must NOT be matched.
-    $activeNoPallets = Product::factory()->create();
+    DB::enableQueryLog();
+    $this->get('/admin/products?expired=true&expires_within_days=7')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
 
-    // Noise: another active product that also occupies a cell.
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
+
+    Carbon::setTestNow();
+});
+
+test('the inactive filter narrows the products index to the store admin\'s deactivated products that still occupy the warehouse, excluding a deactivated product with no pallets', function () {
+    actingAsAdmin();
+
+    // Deactivated and still occupying a cell — the only case the filter matches.
+    $inactiveInWarehouse = Product::factory()->inactive()->create();
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+
+    // Noise: deactivated but never stocked — must NOT be matched, since it
+    // isn't actionable warehouse-side (nothing there to pull or reconcile).
+    Product::factory()->inactive()->create();
+
+    // Noise: active but with zero pallets.
+    Product::factory()->create();
+
+    // Noise: active product that occupies a cell.
     $activeWithPallet = Product::factory()->create();
     Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
 
@@ -321,7 +446,7 @@ test('the inactive filter narrows the products index to the store admin\'s deact
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 1)
-            ->where('products.data.0.id', $inactive->id)
+            ->where('products.data.0.id', $inactiveInWarehouse->id)
             ->where('products.data.0.active', false)
     );
 });
@@ -337,6 +462,230 @@ test('the inactive filter is omitted (all products shown) when not sent', functi
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 2)
     );
+});
+
+test('the products index includes inactive products by default, flagging each row\'s active state', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Alpha Widgets']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Zulu Widgets']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $active->id)
+            ->where('products.data.0.active', true)
+            ->where('products.data.1.id', $inactive->id)
+            ->where('products.data.1.active', false)
+    );
+});
+
+test('the hide_inactive filter excludes inactive products, keeping active ones, and is echoed back in the filters', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create();
+    Product::factory()->inactive()->count(2)->create();
+
+    $response = $this->get('/admin/products?hide_inactive=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $active->id)
+            ->where('filters.hide_inactive', true)
+    );
+});
+
+test('the hide_inactive filter rejects a non-boolean value', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/products?hide_inactive=maybe')->assertSessionHasErrors('hide_inactive');
+});
+
+test('pallets_count counts every pallet of the product regardless of cell state, unlike the occupancy columns', function () {
+    actingAsAdmin();
+    // Fixed names pin the default name-ascending order, so products.data.0 is
+    // always $product — random factory names let $other sort first about
+    // half the time.
+    $product = Product::factory()->create(['name' => 'Alpha Widgets']);
+    Pallet::factory()->create(['product_id' => $product->id]);
+    Pallet::factory()->opened()->create(['product_id' => $product->id]);
+
+    // Noise: another product's pallets must not be counted here.
+    $other = Product::factory()->create(['name' => 'Zulu Widgets']);
+    Pallet::factory()->create(['product_id' => $other->id]);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.pallets_count', 2)
+    );
+});
+
+test('minimum_pallets is null in the index response for a product nobody has configured a threshold for', function () {
+    actingAsAdmin();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.minimum_pallets', null)
+    );
+});
+
+test('the low_stock filter narrows the products index to products below their configured minimum, excluding a fully-stocked product', function () {
+    actingAsAdmin();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at (not below) its minimum, so it must not be matched.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products?low_stock=true');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)
+            ->where('products.data.0.id', $low->id)
+    );
+});
+
+test('the low_stock filter is omitted (all products shown) when not sent', function () {
+    actingAsAdmin();
+
+    Product::factory()->minimumPallets(5)->create();
+    Product::factory()->create();
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+    );
+});
+
+test('an authenticated admin can set a minimum pallets threshold for a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->minimumPallets(9)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseHas('wms_product_settings', [
+        'product_id' => $product->id,
+        'minimum_pallets' => 10,
+    ]);
+    expect($otherProduct->fresh()->minimum_pallets)->toBe(9);
+});
+
+test('an authenticated admin can clear a product\'s minimum pallets threshold by sending null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(10)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => null]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    expect($product->fresh()->minimum_pallets)->toBeNull();
+});
+
+test('setting a minimum pallets threshold redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets?page=2&inactive=1", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('setting a minimum pallets threshold creates the settings row for a product that has never had one, without dropping its box count to the database default', function () {
+    actingAsAdmin();
+
+    // The store can add a product at any time without this app knowing.
+    $product = Product::factory()->unconfigured()->create();
+    expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
+
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    // Regression: wms_product_settings.boxes_count has its own DB-level
+    // default of 1, divorced from Product::DEFAULT_BOXES_COUNT (50) — an
+    // insert that omits boxes_count would silently show 1 instead of the 50
+    // the product displayed before this row existed.
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(Product::DEFAULT_BOXES_COUNT);
+    $this->assertDatabaseCount('wms_product_settings', 1);
+});
+
+test('setting a minimum pallets threshold on a product with an already-configured box count leaves that box count untouched', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(24)->create();
+
+    $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 15]);
+
+    expect($product->fresh())
+        ->minimum_pallets->toBe(15)
+        ->boxes_count->toBe(24);
+});
+
+test('the minimum pallets threshold, when sent, must be a whole number of at least one', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    foreach ([0, -3, 'many'] as $invalid) {
+        $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => $invalid]);
+
+        $response->assertSessionHasErrors('minimum_pallets');
+    }
+
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('omitting the minimum_pallets field entirely is rejected, unlike sending an explicit null', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", []);
+
+    $response->assertSessionHasErrors('minimum_pallets');
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('a mobile app user cannot set a minimum pallets threshold', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertForbidden();
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('an unauthenticated caller cannot set a minimum pallets threshold', function () {
+    $product = Product::factory()->minimumPallets(6)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
+
+    $response->assertRedirect(route('login'));
+    expect($product->fresh()->minimum_pallets)->toBe(6);
+});
+
+test('setting a minimum pallets threshold for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->put('/admin/products/999999/minimum-pallets', ['minimum_pallets' => 10]);
+
+    $response->assertNotFound();
 });
 
 test('the expiring-soon count defaults to a 45-day window when expires_within_days is not filled in', function () {
@@ -370,64 +719,6 @@ test('the expiring-soon count and window use expires_within_days when it is fill
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.expiring_soon_count', 1)
             ->where('expiringSoonDays', 7)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the products index counts today\'s and this week\'s activity separately', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-08-11 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id]), '2026-07-01 09:00:00');
-
-    $response = $this->get('/admin/products');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 2)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the action filter narrows today\'s and this week\'s activity counts', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Opened]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'action' => CellLogAction::Emptied]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?action[]=opened');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the state filter alone narrows today\'s and this week\'s activity counts, without needing a row/column filter too', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-
-    $product = Product::factory()->create();
-    $fullPallet = Pallet::factory()->create(['product_id' => $product->id]);
-    $openedPallet = Pallet::factory()->opened()->create(['product_id' => $product->id]);
-
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $fullPallet->cell_id]), '2026-08-13 09:00:00');
-    backdate(CellStatusLog::factory()->create(['product_id' => $product->id, 'cell_id' => $openedPallet->cell_id]), '2026-08-13 08:00:00');
-
-    $response = $this->get('/admin/products?state=full');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.activity_today_count', 1)
-            ->where('products.data.0.activity_week_count', 1)
     );
 
     Carbon::setTestNow();
@@ -581,9 +872,28 @@ test('an authenticated admin can search products with every property the filter 
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
     expect(collect($response->json('data'))->pluck('name'))->toContain('Gadget');
     expect($otherProduct->id)->not->toBeNull();
+});
+
+test('the product search includes deactivated products and flags their active state', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+    $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    // Noise: a product that doesn't match the search term must not be returned.
+    $unrelated = Product::factory()->inactive()->create(['name' => 'Gadget']);
+
+    $response = $this->getJson('/admin/products/search?q=Widget');
+
+    $response->assertOk();
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())->toEqualCanonicalizing([$active->id, $inactive->id]);
+    expect($rows->firstWhere('id', $active->id)['active'])->toBeTrue();
+    expect($rows->firstWhere('id', $inactive->id)['active'])->toBeFalse();
+    expect($rows->pluck('id'))->not->toContain($unrelated->id);
 });
 
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
@@ -600,6 +910,7 @@ test('the product search options carry both raw name columns under the Arabic pa
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => 'ودجة',
+        'active' => true,
     ]);
 });
 
@@ -615,6 +926,7 @@ test('a searched product the store never translated carries an empty ar_name, no
         'id' => $product->id,
         'name' => 'Widget',
         'ar_name' => '',
+        'active' => true,
     ]);
 });
 
@@ -628,6 +940,16 @@ test('the product search paginates instead of returning every product at once', 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(20);
     expect($response->json('meta.total'))->toBe(25);
+});
+
+test('the product search keeps the caller\'s query string on its pagination links', function () {
+    actingAsAdmin();
+
+    Product::factory()->count(25)->sequence(fn ($sequence) => ['name' => "Widget {$sequence->index}"])->create();
+    // Noise: a product the search excludes must not count towards the second page.
+    Product::factory()->create(['name' => 'Unrelated Gadgets']);
+
+    assertNextLinkKeepsQuery($this->getJson('/admin/products/search?q=Widget'), 'q=Widget');
 });
 
 test('the product search filters by name, excluding a non-matching product', function () {
@@ -655,7 +977,7 @@ test('the product search filters by the store\'s Arabic name, excluding a non-ma
     expect($response->json('data'))->toHaveCount(1);
     // Searching matches either column, and the option carries both raw — the
     // locale only decides which of them the frontend renders.
-    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+    expect($response->json('data.0'))->toEqual(['id' => $matching->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true]);
 });
 
 test('the product search matches a multi-word term split across the two name columns', function () {
@@ -666,6 +988,19 @@ test('the product search matches a multi-word term split across the two name col
     Product::factory()->create(['name' => 'Small Widget', 'ar_name' => 'ودجة صغيرة']);
 
     $response = $this->getJson('/admin/products/search?q='.urlencode('Widget زرقاء'));
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the product search matches a product by its numeric id, excluding a non-matching product', function () {
+    actingAsAdmin();
+
+    $matching = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات', 'published' => true]);
+    Product::factory()->create(['name' => 'Unrelated Gadgets', 'ar_name' => 'أدوات', 'published' => true]);
+
+    $response = $this->getJson('/admin/products/search?q='.$matching->id);
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
@@ -704,7 +1039,7 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     $product = Product::factory()->boxesCount(6)->create();
     $otherProduct = Product::factory()->boxesCount(9)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index'));
     $this->assertDatabaseHas('wms_product_settings', [
@@ -714,6 +1049,16 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     expect($otherProduct->fresh()->boxes_count)->toBe(9);
 });
 
+test('setting a box count redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->boxesCount(6)->create();
+
+    $response = $this->put("/admin/products/{$product->id}/box-count?page=2&inactive=1", ['boxes_count' => 30]);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
 test('setting a box count creates the settings row for a product that has never had one', function () {
     actingAsAdmin();
 
@@ -721,7 +1066,7 @@ test('setting a box count creates the settings row for a product that has never 
     $product = Product::factory()->unconfigured()->create();
     expect($product->fresh()->boxes_count)->toBe(Product::DEFAULT_BOXES_COUNT);
 
-    $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
+    $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 15]);
 
     expect($product->fresh()->boxes_count)->toBe(15);
     $this->assertDatabaseCount('wms_product_settings', 1);
@@ -733,12 +1078,12 @@ test('the box count must be a whole number of at least one', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
     foreach ([0, -3, 'many'] as $invalid) {
-        $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
+        $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => $invalid]);
 
         $response->assertSessionHasErrors('boxes_count');
     }
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", []);
+    $response = $this->put("/admin/products/{$product->id}/box-count", []);
     $response->assertSessionHasErrors('boxes_count');
 
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -749,7 +1094,7 @@ test('a mobile app user cannot set a box count', function () {
 
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertForbidden();
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -758,7 +1103,7 @@ test('a mobile app user cannot set a box count', function () {
 test('an unauthenticated caller cannot set a box count', function () {
     $product = Product::factory()->boxesCount(6)->create();
 
-    $response = $this->patch("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
+    $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('login'));
     expect($product->fresh()->boxes_count)->toBe(6);
@@ -767,7 +1112,508 @@ test('an unauthenticated caller cannot set a box count', function () {
 test('setting a box count for a non-existent product returns a 404', function () {
     actingAsAdmin();
 
-    $response = $this->patch('/admin/products/999999/box-count', ['boxes_count' => 30]);
+    $response = $this->put('/admin/products/999999/box-count', ['boxes_count' => 30]);
 
     $response->assertNotFound();
+});
+
+test('an authenticated admin can add a barcode to a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseHas('wms_product_barcodes', [
+        'product_id' => $product->id,
+        'barcode' => '1234567890123',
+    ]);
+});
+
+test('adding a barcode trims surrounding whitespace', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123  ']);
+
+    $this->assertDatabaseHas('wms_product_barcodes', [
+        'product_id' => $product->id,
+        'barcode' => '1234567890123',
+    ]);
+});
+
+test('adding a barcode redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes?page=2&inactive=1", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('a product can have more than one barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '9876543210987']);
+
+    expect($product->fresh()->barcodes()->pluck('barcode')->sort()->values()->all())
+        ->toBe(['1234567890123', '9876543210987']);
+});
+
+test('a barcode is required and cannot be blank', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a barcode is checked for uniqueness after trimming surrounding whitespace', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123 ']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 1);
+});
+
+test('a barcode must be unique across every product, not just the one it is being added to', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '1234567890123']);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 1);
+});
+
+test('a mobile app user cannot add a barcode', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertForbidden();
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('an unauthenticated caller cannot add a barcode', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('adding a barcode to a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/products/999999/barcodes', ['barcode' => '1234567890123']);
+
+    $response->assertNotFound();
+});
+
+test('an authenticated admin can remove a barcode from a product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertRedirect(route('admin.products.index'));
+    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('removing a barcode redirects back with the current page and filters preserved', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}?page=2&inactive=1");
+
+    $response->assertRedirect(route('admin.products.index', ['page' => 2, 'inactive' => 1]));
+});
+
+test('removing a barcode that belongs to a different product returns a 404, leaving it intact', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $otherProduct->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertNotFound();
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id, 'product_id' => $otherProduct->id]);
+});
+
+test('a mobile app user cannot remove a barcode', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertForbidden();
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('an unauthenticated caller cannot remove a barcode', function () {
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
+
+    $response->assertRedirect(route('login'));
+    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+});
+
+test('removing a non-existent barcode returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->delete("/admin/products/{$product->id}/barcodes/999999");
+
+    $response->assertNotFound();
+});
+
+test('an authenticated admin can export a Code 128 barcode label for a product, with only the active locale name', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['id' => 1, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'image/svg+xml');
+    $response->assertHeader('content-disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
+
+    $svg = $response->getContent();
+    // Code 128-B of "1": start B (211214), '1' (123122), checksum
+    // (104 + 17) % 103 = 18 (223211), stop (2331112) — 13 bars in total —
+    // drawn as one path of 13 subpaths, with no QR matrix left behind.
+    expect(substr_count($svg, 'M'))->toBe(13)
+        ->and($svg)->toContain('<path fill="#000000" d="M')
+        ->and($svg)->not->toContain('fill-rule="evenodd"')
+        ->and($svg)->not->toContain('<image');
+    expect($svg)->toContain('Widgets');
+    expect($svg)->not->toContain('ودجات');
+    expect($svg)->toContain("ID: {$product->id}");
+    // One <text> for the id, one for the (short, unwrapped) name.
+    expect(substr_count($svg, '<text'))->toBe(2);
+});
+
+test('a product barcode label shows the Arabic name only when the locale is Arabic', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
+
+    $svg = $response->getContent();
+    expect($svg)->toContain('ودجات')
+        ->and($svg)->not->toContain('Widgets')
+        ->and($svg)->toContain('direction="rtl"');
+});
+
+test('a product barcode label falls back to the base name when the Arabic locale has no translation', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $response = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr");
+
+    expect($response->getContent())->toContain('Widgets');
+});
+
+test('a product barcode label draws the id and name in enlarged type', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>ID: '.$product->id.'<\/text>/')
+        ->and($svg)->toMatch('/<text[^>]*font-size="28"[^>]*>Widgets<\/text>/');
+});
+
+test('a product barcode export uses the configured width instead of the default', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 400, 'qr_code_height' => 500]);
+    $product = Product::factory()->create(['name' => 'Widgets', 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
+        ->and($svg)->toContain('<g transform="translate(20,20)">');
+});
+
+test('a product with a long name has its barcode label text wrapped, up to the configured height', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 380]);
+
+    $longName = trim(str_repeat('Widget Component ', 11));
+    $product = Product::factory()->create(['name' => $longName, 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect(substr_count($svg, '<text'))->toBeGreaterThan(2);
+    expect($svg)->toContain('…');
+    // The id is drawn and budget-clamped before the name, so truncating a
+    // long name never costs the id its own line.
+    expect($svg)->toContain("ID: {$product->id}");
+
+    preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
+    expect((int) $matches[1])->toBeLessThanOrEqual(380);
+});
+
+test('a multi-digit product id encodes to a longer barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['id' => 4821, 'name' => 'Widgets', 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    // start + 4 digits + checksum = 6 symbols x 3 bars, + the 4-bar stop.
+    expect(substr_count($svg, 'M'))->toBe(22);
+});
+
+test('a mobile app user cannot export a products QR code', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertForbidden();
+});
+
+test('an unauthenticated caller cannot export a products QR code', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr");
+
+    $response->assertRedirect(route('login'));
+});
+
+test('exporting a QR code for a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin/products/999999/export-qr');
+
+    $response->assertNotFound();
+});
+
+/**
+ * Encoded bytes of a solid-color JPEG, or a fully transparent PNG, of the given size.
+ */
+function productImageFixtureBytes(int $width, int $height, string $format): string
+{
+    $image = imagecreatetruecolor($width, $height);
+    ob_start();
+
+    if ($format === 'png') {
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        imagepng($image);
+    } else {
+        imagefill($image, 0, 0, imagecolorallocate($image, 200, 30, 30));
+        imagejpeg($image);
+    }
+
+    return (string) ob_get_clean();
+}
+
+test('the product image route re-serves the store image as a downscaled png from this apps origin', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'image/png');
+    expect($response->headers->get('Cache-Control'))
+        ->toContain('private')
+        ->toContain('max-age=86400');
+
+    $size = getimagesizefromstring((string) $response->getContent());
+
+    expect($size)->not->toBeFalse()
+        ->and([$size[0], $size[1], $size[2]])->toBe([256, 128, IMAGETYPE_PNG]);
+    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://cdn.example.com/widgets.jpg');
+});
+
+test('the product image route never upscales a small image and keeps its transparency', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(64, 32, 'png'), 200, ['Content-Type' => 'image/png']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertOk();
+    $image = imagecreatefromstring((string) $response->getContent());
+
+    expect($image)->not->toBeFalse()
+        ->and([imagesx($image), imagesy($image)])->toBe([64, 32])
+        ->and((imagecolorat($image, 10, 10) >> 24) & 0x7F)->toBe(127);
+});
+
+test('the product image route returns a 404 for a product with no image, without calling the store', function () {
+    actingAsAdmin();
+    Http::fake();
+    $product = Product::factory()->imageUrl(null)->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertNotFound();
+    Http::assertNothingSent();
+});
+
+test('the product image route reports a bad gateway when the store image host errors', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response('', 500)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertStatus(502);
+});
+
+test('the product image route reports a bad gateway when the store image host is unreachable', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::failedConnection()]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertStatus(502);
+});
+
+test('the product image route never re-serves a store response that is not a raster image', function () {
+    actingAsAdmin();
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+    Http::fake([
+        'cdn.example.com/*' => Http::response($svg, 200, ['Content-Type' => 'image/svg+xml']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.svg')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    // Not a substring check: in testing the 502 body is Laravel's debug page,
+    // whose stack-frame source excerpts include this very test file.
+    $response->assertStatus(502);
+    expect($response->headers->get('Content-Type'))->not->toContain('svg')
+        ->and($response->getContent())->not->toBe($svg);
+});
+
+test('the product image route refuses a host that is not allowlisted without calling it', function (string $url) {
+    actingAsAdmin();
+    Http::fake();
+    $product = Product::factory()->imageUrl($url)->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+
+    Http::assertNothingSent();
+})->with([
+    'internal address' => ['https://169.254.169.254/latest/meta-data'],
+    'another host' => ['https://evil.example.org/widgets.png'],
+    'plain http' => ['http://cdn.example.com/widgets.png'],
+    'a custom port' => ['https://cdn.example.com:8443/widgets.png'],
+    'a lookalike host' => ['https://cdn.example.com.evil.org/widgets.png'],
+]);
+
+test('the product image route allows the asset base urls host', function () {
+    actingAsAdmin();
+    config(['store.asset_base_url' => 'https://assets.example.net']);
+    Http::fake(['assets.example.net/*' => Http::response(productImageFixtureBytes(32, 32, 'png'), 200)]);
+    $product = Product::factory()->imageUrl('https://assets.example.net/uploads/widget.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertOk();
+});
+
+test('the product image route does not follow redirects and refuses a redirecting host', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response('', 302, ['Location' => 'http://127.0.0.1/admin'])]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($request) => $request->url() === 'https://cdn.example.com/widgets.png');
+});
+
+test('the product image route refuses an oversized response body', function () {
+    actingAsAdmin();
+    Http::fake(['cdn.example.com/*' => Http::response(str_repeat('a', 5 * 1024 * 1024 + 1), 200)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+});
+
+test('the product image route refuses an image that declares an enormous canvas', function () {
+    actingAsAdmin();
+    // Rewrites the IHDR width and height (bytes 16-23) of a 1x1 PNG to 20000x20000.
+    $tiny = productImageFixtureBytes(1, 1, 'png');
+    $png = substr($tiny, 0, 16).pack('N2', 20000, 20000).substr($tiny, 24);
+    Http::fake(['cdn.example.com/*' => Http::response($png, 200)]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
+});
+
+test('a mobile app user cannot fetch a products image', function () {
+    actingAsMobilePanelUser();
+    Http::fake();
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertForbidden();
+    Http::assertNothingSent();
+});
+
+test('an unauthenticated caller cannot fetch a products image', function () {
+    Http::fake();
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
+
+    $response = $this->get("/admin/products/{$product->id}/image");
+
+    $response->assertRedirect(route('login'));
+    Http::assertNothingSent();
+});
+
+test('fetching the image of a non-existent product returns a 404', function () {
+    actingAsAdmin();
+    Http::fake();
+
+    $response = $this->get('/admin/products/999999/image');
+
+    $response->assertNotFound();
+    Http::assertNothingSent();
 });

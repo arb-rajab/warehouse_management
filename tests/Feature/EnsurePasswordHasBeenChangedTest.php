@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsurePasswordHasBeenChanged;
+use App\Models\StoreUser;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 test('a user with must_change_password set is redirected to the change-password page when visiting the admin panel', function () {
     $user = User::factory()->create(['must_change_password' => true]);
@@ -74,4 +78,30 @@ test('a freshly created user instance relying on the schema default, never re-fe
     $response = $this->actingAs($user)->get('/admin');
 
     $response->assertOk();
+});
+
+test('a StoreUser passes through untouched, since must_change_password is a WMS-only column', function () {
+    // Under /temp, App\Http\Middleware\UseStoreAuthGuard makes the
+    // authenticated user a StoreUser, not App\Models\User — a model with no
+    // must_change_password column at all, so accessing it under this app's
+    // strict-attributes mode would throw MissingAttributeException rather
+    // than returning null. This is a direct middleware-instantiation test
+    // (see TelescopeAccessTest's own pattern) rather than a real /temp
+    // route, since satisfying every other legacy role/verification
+    // middleware isn't this middleware's own concern.
+    $storeUser = StoreUser::create([
+        'name' => 'Store Customer', 'email' => 'store-customer@example.com', 'phone' => '5555555555',
+    ]);
+
+    $request = Request::create('/temp/dashboard');
+    $request->setUserResolver(fn () => $storeUser);
+
+    $called = false;
+    (new EnsurePasswordHasBeenChanged)->handle($request, function () use (&$called) {
+        $called = true;
+
+        return new Response('ok');
+    });
+
+    expect($called)->toBeTrue();
 });

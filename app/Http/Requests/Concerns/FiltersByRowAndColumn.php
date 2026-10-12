@@ -15,7 +15,8 @@ trait FiltersByRowAndColumn
     protected function rowAndColumnFilterRules(): array
     {
         return [
-            'row_id' => ['nullable', 'integer', 'exists:rows,id'],
+            'row_id' => ['nullable', 'array'],
+            'row_id.*' => ['integer', 'exists:rows,id'],
             'column_number' => ['nullable', 'integer', 'min:1'],
         ];
     }

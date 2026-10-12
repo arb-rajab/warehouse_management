@@ -9,24 +9,41 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
-        "barryvdh/laravel-dompdf": "*",
+        "php": "^8.5",
+        "barryvdh/laravel-dompdf": "^3.1",
         "bepsvpt/secure-headers": "^9.1",
         "dedoc/scramble": "^0.13.39",
+        "enshrined/svg-sanitize": "^0.22",
+        "genealabs/laravel-sign-in-with-apple": "^13.0",
+        "genealabs/laravel-socialiter": "^13.0",
+        "giggsey/libphonenumber-for-php": "^9.0",
+        "google/apiclient": "^2.18",
+        "guzzlehttp/guzzle": "^7.8",
         "inertiajs/inertia-laravel": "^3.0",
-        "khaled.alshamaa/ar-php": "*",
+        "intervention/image": "^2.5",
+        "iyzico/iyzipay-php": "^2.0.61",
+        "khaled.alshamaa/ar-php": "^7.0",
+        "laracasts/flash": "^3.2.5",
         "laravel/framework": "^13.17",
         "laravel/pulse": "^1.8",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.24.3",
         "laravel/telescope": "^5.22",
         "laravel/tinker": "^3.0",
+        "laravel/ui": "^4.6.3",
         "laravel/wayfinder": "^0.1.14",
-        "league/csv": "*",
-        "simplesoftwareio/simple-qrcode": "*",
+        "league/csv": "^9.28",
+        "league/flysystem-aws-s3-v3": "^3.0",
+        "maatwebsite/excel": "^4.0",
+        "niklasravnsborg/laravel-pdf": "^4.0",
+        "setasign/fpdf": "^1.8",
+        "setasign/fpdi": "^2.6",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-health": "^1.40",
         "spatie/laravel-honeypot": "^4.7",
-        "spatie/laravel-permission": "^8.3"
+        "spatie/laravel-permission": "^8.3",
+        "tecnickcom/tcpdf": "^6.8"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
@@ -48,7 +65,10 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/Http/Helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -120,7 +140,10 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "genealabs/laravel-sign-in-with-apple",
+                "genealabs/laravel-socialiter"
+            ]
         }
     },
     "config": {

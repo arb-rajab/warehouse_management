@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -32,23 +35,23 @@ test('the dashboard shows expired and per-window expiring-soon pallet counts, ex
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.expiring.expired', 1)
             ->has('stats.expiring.windows', 4)
-            ->where('stats.expiring.windows.0.days', 7)
-            ->where('stats.expiring.windows.0.until', '2026-08-20')
+            ->where('stats.expiring.windows.0.months', 1)
+            ->where('stats.expiring.windows.0.until', '2026-09-13')
             ->where('stats.expiring.windows.0.count', 1)
-            ->where('stats.expiring.windows.2.days', 30)
-            ->where('stats.expiring.windows.2.until', '2026-09-12')
+            ->where('stats.expiring.windows.2.months', 4)
+            ->where('stats.expiring.windows.2.until', '2026-12-13')
             ->where('stats.expiring.windows.2.count', 2)
     );
 
     Carbon::setTestNow();
 });
 
-test('the 7-day window includes a pallet expiring exactly 7 days out and excludes one expiring 8 days out', function () {
+test('the 1-month window includes a pallet expiring exactly 1 month out and excludes one expiring a day later', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
-    Pallet::factory()->create(['expiration_date' => '2026-08-20']);
-    Pallet::factory()->create(['expiration_date' => '2026-08-21']);
+    Pallet::factory()->create(['expiration_date' => '2026-09-13']);
+    Pallet::factory()->create(['expiration_date' => '2026-09-14']);
 
     $response = $this->get('/admin');
 
@@ -59,7 +62,7 @@ test('the 7-day window includes a pallet expiring exactly 7 days out and exclude
     Carbon::setTestNow();
 });
 
-test('the expired count excludes a pallet expiring today, but the 7-day window includes it', function () {
+test('the expired count excludes a pallet expiring today, but the 1-month window includes it', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
@@ -102,7 +105,7 @@ test('a caller-chosen expiring_days widens or narrows the custom expiring-soon w
         fn (Assert $page) => $page->where('stats.expiring.custom.days', 7)
             ->where('stats.expiring.custom.until', '2026-08-20')
             ->where('stats.expiring.custom.count', 0)
-            ->where('stats.expiring.windows.0.days', 7)
+            ->where('stats.expiring.windows.0.months', 1)
     );
 
     $wide = $this->get('/admin?expiring_days=30');
@@ -115,7 +118,7 @@ test('a caller-chosen expiring_days widens or narrows the custom expiring-soon w
     Carbon::setTestNow();
 });
 
-test('the custom expiring-soon window defaults to 45 days, distinct from the 7-day fixed window', function () {
+test('the custom expiring-soon window defaults to 45 days, distinct from the 1-month fixed window', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
 
@@ -135,6 +138,142 @@ test('an invalid expiring_days is rejected', function () {
     $response = $this->get('/admin?expiring_days=0');
 
     $response->assertInvalid(['expiring_days']);
+});
+
+test('a caller-chosen stale_days raises or lowers the pallet-age bar for the stale pallet count', function () {
+    actingAsAdmin();
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    $this->seedStaleWindowFixture();
+
+    // A higher bar (45 days old) excludes the 30-day-old fixture pallet.
+    $stricter = $this->get('/admin?stale_days=45');
+    $stricter->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 45)
+            ->where('stats.stale.count', 0)
+    );
+
+    // A lower bar (20 days old) includes it.
+    $looser = $this->get('/admin?stale_days=20');
+    $looser->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 20)
+            ->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the stale pallet count defaults to 21 days when no stale_days is given', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $this->seedStaleWindowFixture();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.days', 21)
+            ->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('an invalid stale_days is rejected', function () {
+    actingAsAdmin();
+
+    $response = $this->get('/admin?stale_days=0');
+
+    $response->assertInvalid(['stale_days']);
+});
+
+test('a product filter narrows the stale pallet count to that product, excluding other products', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+
+    $matchingProduct = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    Pallet::factory()->stale()->create(['product_id' => $matchingProduct->id]);
+    Pallet::factory()->stale()->create(['product_id' => $otherProduct->id]);
+
+    $response = $this->get("/admin?product_id[]={$matchingProduct->id}&stale_days=25");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the dashboard counts products below their configured minimum pallets, excluding a fully-stocked product and one with no threshold', function () {
+    actingAsAdmin();
+
+    $low = Product::factory()->minimumPallets(5)->create();
+    Pallet::factory()->create(['product_id' => $low->id]);
+
+    // Noise: at its minimum, so it must not count as low-stock.
+    $atMinimum = Product::factory()->minimumPallets(2)->create();
+    Pallet::factory()->count(2)->create(['product_id' => $atMinimum->id]);
+
+    // Noise: no threshold configured at all, however few pallets it has.
+    Product::factory()->create();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
+    );
+});
+
+test('a product filter narrows the low-stock count to that product, excluding other low-stock products', function () {
+    actingAsAdmin();
+
+    $matchingProduct = Product::factory()->minimumPallets(5)->create();
+    $otherProduct = Product::factory()->minimumPallets(5)->create();
+
+    $response = $this->get("/admin?product_id[]={$matchingProduct->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)
+    );
+
+    expect($otherProduct->id)->not->toBeNull();
+});
+
+test('the dashboard counts inactive products with pallets in the warehouse, excluding an inactive product with no pallets and an active product with pallets', function () {
+    actingAsAdmin();
+
+    $inactiveInWarehouse = Product::factory()->create(['published' => false]);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+
+    // Noise: inactive but never stocked, so it must not count as "in the warehouse".
+    Product::factory()->create(['published' => false]);
+
+    // Noise: active with stock, so it must not count as "inactive".
+    $activeProduct = Product::factory()->create(['published' => true]);
+    Pallet::factory()->create(['product_id' => $activeProduct->id]);
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.inactive_in_warehouse.count', 1)
+    );
+});
+
+test('a product filter narrows the inactive-in-warehouse count to that product, excluding other inactive products', function () {
+    actingAsAdmin();
+
+    $matchingProduct = Product::factory()->create(['published' => false]);
+    Pallet::factory()->create(['product_id' => $matchingProduct->id]);
+
+    $otherProduct = Product::factory()->create(['published' => false]);
+    Pallet::factory()->create(['product_id' => $otherProduct->id]);
+
+    $response = $this->get("/admin?product_id[]={$matchingProduct->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.inactive_in_warehouse.count', 1)
+    );
+
+    expect($otherProduct->id)->not->toBeNull();
 });
 
 test("the dashboard counts today's and this week's activity per action, merging transfers, and excludes entries outside each window", function () {
@@ -180,6 +319,64 @@ test('a product filter narrows occupancy (empty forced to zero), expiring, and a
     expect($matchingPallet->product_id)->toBe($matchingProduct->id);
 
     Carbon::setTestNow();
+});
+
+test('the dashboard lists no pallets when no product is selected', function () {
+    actingAsAdmin();
+    Pallet::factory()->create();
+
+    $response = $this->get('/admin');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('productPallets', 0)
+    );
+});
+
+test('selecting a product lists its pallets in exactly the pallets page order, excluding other products', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 5]);
+    $cell = fn (int $flat) => $row->cells()->where('flat_number', $flat)->first()->id;
+
+    $noExpiration = Pallet::factory()->for($product)->create(['cell_id' => $cell(1), 'expiration_date' => null, 'created_at' => '2026-08-03 00:00:00']);
+    $createdLater = Pallet::factory()->for($product)->create(['cell_id' => $cell(2), 'expiration_date' => '2026-09-05', 'created_at' => '2026-08-02 00:00:00']);
+    $createdEarlier = Pallet::factory()->for($product)->create(['cell_id' => $cell(3), 'expiration_date' => '2026-09-05', 'created_at' => '2026-08-01 00:00:00']);
+    $earliest = Pallet::factory()->for($product)->create(['cell_id' => $cell(4), 'expiration_date' => '2026-09-01', 'created_at' => '2026-08-05 00:00:00']);
+    $otherProductPallet = Pallet::factory()->create(['cell_id' => $cell(5), 'expiration_date' => '2026-08-01']);
+
+    $expectedOrder = [$earliest->id, $createdEarlier->id, $createdLater->id, $noExpiration->id];
+
+    $dashboardIds = null;
+    $this->get("/admin?product_id[]={$product->id}")->assertOk()->assertInertia(
+        function (Assert $page) use (&$dashboardIds) {
+            $page->has('productPallets', 4);
+            $dashboardIds = array_column($page->toArray()['props']['productPallets'], 'id');
+        }
+    );
+
+    $palletsPageIds = null;
+    $this->get("/admin/pallets?product_id[]={$product->id}")->assertOk()->assertInertia(
+        function (Assert $page) use (&$palletsPageIds) {
+            $palletsPageIds = array_column($page->toArray()['props']['pallets']['data'], 'id');
+        }
+    );
+
+    expect($dashboardIds)->toBe($expectedOrder)
+        ->and($dashboardIds)->toBe($palletsPageIds)
+        ->and($dashboardIds)->not->toContain($otherProductPallet->id);
+});
+
+test('the selected-product pallet list is capped at the limit instead of returning every pallet', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT + 1]);
+    $row->cells->each(fn ($cell) => Pallet::factory()->for($product)->create(['cell_id' => $cell->id]));
+
+    $response = $this->get("/admin?product_id[]={$product->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('productPallets', DashboardController::SELECTED_PRODUCT_PALLETS_LIMIT)
+    );
 });
 
 test('the dashboard has no pre-selected products for the product filter when nothing is selected', function () {
@@ -233,4 +430,23 @@ test('an unauthenticated caller is redirected to login when visiting the dashboa
     $response = $this->get('/admin');
 
     $response->assertRedirect(route('login'));
+});
+
+test('the expired and expiring-soon pallet queries compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column (see the migration adding its
+    // index) — wrapping it in date()/strftime() makes the comparison a
+    // function of the column rather than the column itself, which MySQL
+    // cannot satisfy with a plain index on that column. See
+    // .ai/rules/shared-database.md and the index migration.
+    actingAsAdmin();
+    Pallet::factory()->create(['expiration_date' => now()->addDays(3)]);
+
+    DB::enableQueryLog();
+    $this->get('/admin')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
 });

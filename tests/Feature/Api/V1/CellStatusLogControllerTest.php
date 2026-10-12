@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -108,7 +109,8 @@ test('the cell log listing includes the flagged boolean for an admin caller, but
     // forListing() deliberately never eager-loads WITH_FLAG_DETAILS on this
     // endpoint (only the admin panel's own listing does), so `flags` stays
     // absent for every viewer via whenLoaded() — only `flagged` itself
-    // (computed via the exists() fallback) actually varies by viewer here.
+    // (computed off the withCount('flags') alias added for an admin caller)
+    // actually varies by viewer here.
     actingAsAdminMobileUser();
     $log = CellStatusLog::factory()->create();
     CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id]);
@@ -118,6 +120,26 @@ test('the cell log listing includes the flagged boolean for an admin caller, but
     $response->assertOk();
     expect($response->json('data.0.flagged'))->toBeTrue();
     expect($response->json('data.0'))->not->toHaveKey('flags');
+});
+
+test('the cell log listing computes flagged for an admin caller without an exists query per row', function () {
+    actingAsAdminMobileUser();
+    CellStatusLog::factory()->count(10)->create()->each(
+        fn (CellStatusLog $log) => CellStatusLogFlag::factory()->create(['cell_status_log_id' => $log->id])
+    );
+
+    DB::enableQueryLog();
+    $response = $this->getJson('/api/v1/cell-logs');
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('flagged')->unique()->all())->toBe([true]);
+    // The eager-loaded WITH_DETAILS relations plus withCount('flags') and
+    // pagination put this in the low teens regardless of row count; a
+    // per-row exists() fallback would add one query per row on top of that
+    // (21+ for these 10 rows), so 15 comfortably separates the two.
+    expect($queryCount)->toBeLessThan(15);
 });
 
 test('the flagged filter is ignored for a worker, so it cannot be used to reveal which entries are flagged', function () {
@@ -200,6 +222,13 @@ test('the cell log listing paginates instead of returning everything at once', f
     $response = $this->getJson('/api/v1/cell-logs');
 
     assertJsonListingPaginates($response, total: 25);
+});
+
+test('the cell log listing keeps the caller\'s query string on its pagination links', function () {
+    actingAsMobileUser();
+    $this->seedPaginationOverflowFixture(perPage: 20);
+
+    assertNextLinkKeepsQuery($this->getJson('/api/v1/cell-logs?client=mobile'), 'client=mobile');
 });
 
 test('next_log_at is found even when the next log for the same pallet falls on a different page', function () {
@@ -364,11 +393,27 @@ test('the cell log listing can be filtered by row, excluding entries for other r
     actingAsMobileUser();
     ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
-    $response = $this->getJson("/api/v1/cell-logs?row_id={$row->id}");
+    $response = $this->getJson("/api/v1/cell-logs?row_id[]={$row->id}");
 
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.id'))->toBe($matching->id);
+});
+
+test('the cell log listing can be filtered by multiple rows at once, excluding entries for the remaining row', function () {
+    actingAsMobileUser();
+    [
+        'rowA' => $rowA,
+        'rowB' => $rowB,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleRowFilterFixture();
+
+    $response = $this->getJson("/api/v1/cell-logs?row_id[]={$rowA->id}&row_id[]={$rowB->id}");
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+    expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$matchingB->id, $matchingA->id]);
 });
 
 test('the cell log listing can be filtered by column number, excluding entries for other columns', function () {

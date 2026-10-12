@@ -6,6 +6,7 @@ use Closure;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -27,12 +28,19 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
+#[Table('wms_users')]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
-    protected $table = 'wms_users';
+    /**
+     * The spatie guard this model's roles and permissions live under, pinned
+     * so it isn't derived from config/auth.php's guard list (`web` and
+     * `sanctum` both name this model's provider). StoreUser's is `store`;
+     * see .ai/rules/legacy-albaraka-holland.md, "Auth guards".
+     */
+    protected string $guard_name = 'web';
 
     /**
      * Get the attributes that should be cast.
@@ -51,6 +59,20 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    /**
+     * Whether this user has ever performed an action that left a permanent
+     * record. `cell_status_logs.user_id`, `cell_verification_rounds.user_id`
+     * and `cell_verification_reports.user_id` are all `restrictOnDelete`, so
+     * a user with any of these can never be deleted — see
+     * UserController::destroy().
+     */
+    public function hasHistory(): bool
+    {
+        return CellStatusLog::query()->where('user_id', $this->id)->exists()
+            || CellVerificationRound::query()->where('user_id', $this->id)->exists()
+            || CellVerificationReport::query()->where('user_id', $this->id)->exists();
     }
 
     /**

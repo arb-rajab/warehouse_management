@@ -1,0 +1,175 @@
+import { Form } from '@inertiajs/vue3';
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
+import SettingFormFields from '@/components/SettingFormFields.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
+import { t } from '@/lib/i18n';
+import { cmToPx } from '@/lib/qrCodeSize';
+import { setting } from '@/testing/factories';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import Edit from './Edit.vue';
+
+const { formSlotPropsMock, usePageMock, routerPostMock } = vi.hoisted(() => ({
+    formSlotPropsMock: vi.fn(() => ({ errors: {}, processing: false })),
+    usePageMock: vi.fn(),
+    routerPostMock: vi.fn(),
+}));
+
+vi.mock('@inertiajs/vue3', async () => {
+    const { createFormStub, createLinkStub, headStub } =
+        await import('@/testing/inertiaStubs');
+
+    return {
+        Head: headStub,
+        Form: createFormStub(formSlotPropsMock),
+        Link: createLinkStub(),
+        usePage: usePageMock,
+        router: { post: routerPostMock },
+    };
+});
+
+function mountPage(
+    overrides: Partial<{
+        qr_code_width: number;
+        qr_code_height: number;
+        allowed_open_levels: number[];
+    }> = {},
+    highestLevel = 3,
+) {
+    usePageMock.mockReturnValue({
+        url: settingsEdit.url(),
+        props: defaultAuthProps(),
+    });
+
+    return mount(Edit, {
+        props: { setting: setting(overrides), highestLevel },
+    });
+}
+
+describe('Settings Edit', () => {
+    beforeEach(() => {
+        resetMocks({ formSlotPropsMock, usePageMock, routerPostMock });
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
+    });
+
+    it('renders the page title', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('settings.edit.title'));
+    });
+
+    it('submits the form to the settings update route', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('form').attributes('data-action-url')).toBe(
+            settingsEdit.url(),
+        );
+    });
+
+    it('passes the current QR code size to the form fields', () => {
+        const wrapper = mountPage({
+            qr_code_width: 300,
+            qr_code_height: 350,
+        });
+
+        expect(wrapper.findComponent(SettingFormFields).props()).toMatchObject({
+            qrCodeWidth: 300,
+            qrCodeHeight: 350,
+        });
+    });
+
+    it('offers one level per level of the tallest row and passes the allowed ones', () => {
+        const wrapper = mountPage({ allowed_open_levels: [1, 4] }, 4);
+
+        expect(wrapper.findComponent(SettingFormFields).props()).toMatchObject({
+            levels: [1, 2, 3, 4],
+            allowedOpenLevels: [1, 4],
+        });
+        expect(
+            wrapper.findAll('input[name="allowed_open_levels[]"]'),
+        ).toHaveLength(4);
+    });
+
+    it('keeps the allowed open levels when converting the entered cm values', () => {
+        const wrapper = mountPage();
+
+        const transform = wrapper.findComponent(Form).props('transform') as (
+            data: Record<string, unknown>,
+        ) => Record<string, unknown>;
+
+        expect(
+            transform({
+                qr_code_width: '10',
+                qr_code_height: '12.5',
+                allowed_open_levels: ['1', '2'],
+            }),
+        ).toMatchObject({ allowed_open_levels: ['1', '2'] });
+    });
+
+    it('converts the entered cm values to pixel integers before submitting', () => {
+        const wrapper = mountPage();
+
+        const transform = wrapper.findComponent(Form).props('transform') as (
+            data: Record<string, unknown>,
+        ) => Record<string, unknown>;
+
+        expect(
+            transform({ qr_code_width: '10', qr_code_height: '12.5' }),
+        ).toEqual({
+            qr_code_width: cmToPx(10),
+            qr_code_height: cmToPx(12.5),
+        });
+    });
+
+    it('forwards validation errors to the form fields', () => {
+        formSlotPropsMock.mockReturnValue({
+            errors: { qr_code_width: 'The qr code width field is required.' },
+            processing: false,
+        });
+
+        const wrapper = mountPage();
+
+        expect(
+            wrapper.findComponent(SettingFormFields).props('errors'),
+        ).toEqual({
+            qr_code_width: 'The qr code width field is required.',
+        });
+    });
+
+    it('shows the submitting label and disables the button while processing', () => {
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+
+        const wrapper = mountPage();
+
+        expect(wrapper.findComponent(SubmitButton).props('processing')).toBe(
+            true,
+        );
+        expect(wrapper.get('form button').text()).toBe(
+            t('settings.edit.submitting'),
+        );
+        expect(wrapper.get('form button').attributes('disabled')).toBeDefined();
+    });
+
+    it('shows the default submit label while not processing', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('form button').text()).toBe(
+            t('settings.edit.submit'),
+        );
+    });
+
+    it('renders a help link to the settings help topic', () => {
+        const wrapper = mountPage();
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find(
+                (a) =>
+                    a.attributes('href') ===
+                    helpShow.url({ topic: 'settings' }),
+            );
+        expect(helpLink).toBeTruthy();
+    });
+});

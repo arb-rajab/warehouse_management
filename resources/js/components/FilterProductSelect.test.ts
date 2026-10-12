@@ -1,12 +1,14 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
+import { paginated } from '@/testing/factories';
 import type { Paginated, ProductFilterOption } from '@/types/admin';
 import FilterProductSelect from './FilterProductSelect.vue';
 import ProductOptionLabel from './ProductOptionLabel.vue';
 
 interface HttpGetOptions {
     onSuccess?: (response: Paginated<ProductFilterOption>) => void;
+    onFinish?: () => void;
 }
 
 const { getMock } = vi.hoisted(() => ({
@@ -17,26 +19,11 @@ vi.mock('@inertiajs/vue3', () => ({
     useHttp: () => ({ get: getMock }),
 }));
 
-function page(
-    data: ProductFilterOption[],
-    { currentPage = 1, lastPage = 1 } = {},
-): Paginated<ProductFilterOption> {
-    return {
-        data,
-        meta: {
-            current_page: currentPage,
-            last_page: lastPage,
-            per_page: 20,
-            total: data.length,
-            from: data.length ? 1 : null,
-            to: data.length,
-            links: [],
-        },
-    };
-}
-
 function resolveCall(index: number, response: Paginated<ProductFilterOption>) {
+    // A real request always calls onFinish after onSuccess (or after
+    // onError), regardless of outcome.
     getMock.mock.calls[index][1]?.onSuccess?.(response);
+    getMock.mock.calls[index][1]?.onFinish?.();
 }
 
 function mountSelect(
@@ -78,9 +65,17 @@ describe('FilterProductSelect', () => {
         expect(wrapper.get('button').text()).toBe('All');
     });
 
+    it('uses a logical text-align utility on the trigger so RTL locales flip alignment', () => {
+        const wrapper = mountSelect();
+
+        expect(wrapper.get('button').classes()).toContain('text-start');
+    });
+
     it("resolves a single selection's label from the `selected` prop without fetching", async () => {
         const wrapper = mountSelect({
-            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
+            selected: [
+                { id: 99, name: 'Widget', ar_name: 'ودجة', active: true },
+            ],
             modelValue: ['99'],
         });
 
@@ -91,13 +86,74 @@ describe('FilterProductSelect', () => {
     it('shows the selected count label when more than one is selected', () => {
         const wrapper = mountSelect({
             selected: [
-                { id: 1, name: 'Widget', ar_name: 'ودجة' },
-                { id: 2, name: 'Gadget', ar_name: 'أداة' },
+                { id: 1, name: 'Widget', ar_name: 'ودجة', active: true },
+                { id: 2, name: 'Gadget', ar_name: 'أداة', active: true },
             ],
             modelValue: ['1', '2'],
         });
 
         expect(wrapper.get('button').text()).toBe('2 selected');
+    });
+
+    it('caps the panel width to the room available so it cannot overflow past the viewport edge it grows toward', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 200,
+            right: 208,
+            bottom: 40,
+            width: 8,
+        } as DOMRect);
+        container.style.direction = 'rtl';
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.style.maxWidth).toBe('192px');
+    });
+
+    it('positions the panel as a fixed overlay anchored under the trigger, so it can escape a scrolling ancestor instead of being clipped by it', async () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024);
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            right: 300,
+            bottom: 250,
+            width: 200,
+        } as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+
+        const panel = wrapper.get('[role="listbox"]').element
+            .parentElement as HTMLElement;
+        expect(panel.className).toContain('fixed');
+        expect(panel.style.top).toBe('254px');
+        expect(panel.style.insetInlineStart).toBe('100px');
+        expect(panel.style.minWidth).toBe('200px');
+    });
+
+    it('re-anchors the panel when its scrolling ancestor scrolls while open, and stops tracking once closed', async () => {
+        const wrapper = mountSelect();
+        const container = wrapper.get<HTMLElement>('.relative').element;
+        const rect = { left: 100, right: 300, bottom: 250, width: 200 };
+        const getRectSpy = vi
+            .spyOn(container, 'getBoundingClientRect')
+            .mockReturnValue(rect as DOMRect);
+
+        await wrapper.get('button').trigger('click');
+        const callsAfterOpen = getRectSpy.mock.calls.length;
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBeGreaterThan(callsAfterOpen);
+
+        const callsAfterResize = getRectSpy.mock.calls.length;
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+
+        window.dispatchEvent(new Event('resize'));
+        expect(getRectSpy.mock.calls.length).toBe(callsAfterResize);
     });
 
     it('renders the search input and fetches the first page when opened', async () => {
@@ -125,9 +181,9 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -143,7 +199,7 @@ describe('FilterProductSelect', () => {
         const wrapper = mountSelect();
         await wrapper.get('button').trigger('click');
 
-        resolveCall(0, page([]));
+        resolveCall(0, paginated([]));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.text()).toContain(t('cellLog.filters.noProductsFound'));
@@ -174,10 +230,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -202,10 +262,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -218,10 +282,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -248,10 +316,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             1,
-            page([{ id: 2, name: 'Gadgets', ar_name: 'أدوات' }], {
-                currentPage: 2,
-                lastPage: 2,
-            }),
+            paginated(
+                [{ id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true }],
+                20,
+                {
+                    currentPage: 2,
+                    lastPage: 2,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -264,10 +336,14 @@ describe('FilterProductSelect', () => {
 
         resolveCall(
             0,
-            page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }], {
-                currentPage: 1,
-                lastPage: 1,
-            }),
+            paginated(
+                [{ id: 1, name: 'Widgets', ar_name: 'ودجات', active: true }],
+                20,
+                {
+                    currentPage: 1,
+                    lastPage: 1,
+                },
+            ),
         );
         await wrapper.vm.$nextTick();
 
@@ -307,12 +383,26 @@ describe('FilterProductSelect', () => {
         // Resolve the newer ("new") request first, then the stale ("old") one.
         resolveCall(
             2,
-            page([{ id: 2, name: 'New product', ar_name: 'منتج جديد' }]),
+            paginated([
+                {
+                    id: 2,
+                    name: 'New product',
+                    ar_name: 'منتج جديد',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
         resolveCall(
             1,
-            page([{ id: 1, name: 'Old product', ar_name: 'منتج قديم' }]),
+            paginated([
+                {
+                    id: 1,
+                    name: 'Old product',
+                    ar_name: 'منتج قديم',
+                    active: true,
+                },
+            ]),
         );
         await wrapper.vm.$nextTick();
 
@@ -328,7 +418,12 @@ describe('FilterProductSelect', () => {
 
         expect(wrapper.get('button').text()).toBe('All');
 
-        resolveCall(0, page([{ id: 1, name: 'Widgets', ar_name: 'ودجات' }]));
+        resolveCall(
+            0,
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ]),
+        );
         await wrapper.vm.$nextTick();
 
         expect(wrapper.get('button').text()).toBe('Widgets');
@@ -352,9 +447,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -377,7 +472,8 @@ describe('FilterProductSelect', () => {
         expect(options[0].text()).toContain('ودجات');
         // The store never translated this one, so it falls back to the base
         // name rather than rendering the empty `ar_name`.
-        expect(options[1].text()).toBe('Gadgets');
+        expect(options[1].text()).toContain('Gadgets');
+        expect(options[1].text()).not.toContain('ودجات');
     });
 
     it('leads each option with its base name when the locale is English', async () => {
@@ -386,9 +482,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -408,11 +504,13 @@ describe('FilterProductSelect', () => {
         i18n.global.locale.value = 'ar';
 
         const translated = mountSelect({
-            selected: [{ id: 99, name: 'Widget', ar_name: 'ودجة' }],
+            selected: [
+                { id: 99, name: 'Widget', ar_name: 'ودجة', active: true },
+            ],
             modelValue: ['99'],
         });
         const untranslated = mountSelect({
-            selected: [{ id: 98, name: 'Gadget', ar_name: '' }],
+            selected: [{ id: 98, name: 'Gadget', ar_name: '', active: true }],
             modelValue: ['98'],
         });
 
@@ -426,9 +524,9 @@ describe('FilterProductSelect', () => {
         await wrapper.get('button').trigger('click');
         resolveCall(
             0,
-            page([
-                { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-                { id: 2, name: 'Gadgets', ar_name: '' },
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: '', active: true },
             ]),
         );
         await wrapper.vm.$nextTick();
@@ -438,8 +536,133 @@ describe('FilterProductSelect', () => {
                 .findAllComponents(ProductOptionLabel)
                 .map((label) => label.props('product')),
         ).toEqual([
-            { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-            { id: 2, name: 'Gadgets', ar_name: '' },
+            { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            { id: 2, name: 'Gadgets', ar_name: '', active: true },
         ]);
+    });
+
+    it('keeps a selected product pinned and checked after a new search replaces the results', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            paginated([
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).toContain(t('cellLog.filters.selected'));
+
+        const checkboxes = wrapper.findAll<HTMLInputElement>(
+            'input[type="checkbox"]',
+        );
+        expect(checkboxes).toHaveLength(2);
+        expect(checkboxes[0].element.checked).toBe(true);
+        expect(checkboxes[1].element.checked).toBe(false);
+
+        const names = wrapper
+            .findAll('[data-testid="product-option-name"]')
+            .map((el) => el.text());
+        expect(names).toEqual(['Widgets', 'Gadgets']);
+    });
+
+    it('separates each option row from the next with a divider', async () => {
+        const wrapper = mountSelect();
+        await wrapper.get('button').trigger('click');
+
+        resolveCall(
+            0,
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAll('[role="option"]');
+        expect(options[0].element.parentElement?.className).toContain(
+            'divide-y',
+        );
+    });
+
+    it('does not duplicate a selected product that also appears in the current search results', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(
+            0,
+            paginated([
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ]),
+        );
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-testid="product-option-name"]'),
+        ).toHaveLength(2);
+    });
+
+    it('lets an admin unselect a pinned product directly, without re-searching for it', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+            ],
+            modelValue: ['1'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, paginated([]));
+        await wrapper.vm.$nextTick();
+
+        const checkbox = wrapper.get('input[type="checkbox"]');
+        await checkbox.setValue(false);
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
+    });
+
+    it('deselects every selected product with one click and hides the button when none are selected', async () => {
+        const wrapper = mountSelect({
+            selected: [
+                { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+                { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
+            ],
+            modelValue: ['1', '2'],
+        });
+
+        await wrapper.get('button').trigger('click');
+        resolveCall(0, paginated([]));
+        await wrapper.vm.$nextTick();
+
+        const deselectAll = wrapper.get(
+            '[data-testid="deselect-all-products"]',
+        );
+        expect(deselectAll.text()).toBe(t('cellLog.filters.deselectAll'));
+
+        await deselectAll.trigger('click');
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[[]]]);
+
+        const empty = mountSelect();
+        await empty.get('button').trigger('click');
+        resolveCall(1, paginated([]));
+        await empty.vm.$nextTick();
+
+        expect(
+            empty.find('[data-testid="deselect-all-products"]').exists(),
+        ).toBe(false);
     });
 });

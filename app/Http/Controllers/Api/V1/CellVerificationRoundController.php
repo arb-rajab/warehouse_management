@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\IndexCellVerificationRoundsRequest;
+use App\Http\Requests\Api\V1\FilterCellVerificationRoundsRequest;
 use App\Http\Requests\Api\V1\StoreCellVerificationRoundRequest;
 use App\Http\Resources\CellVerificationRoundResource;
 use App\Models\CellVerificationReport;
@@ -24,7 +24,7 @@ class CellVerificationRoundController extends Controller
      * List the authenticated user's own verification rounds, most recent
      * first, so the mobile app can offer resuming an unfinished one.
      */
-    public function index(IndexCellVerificationRoundsRequest $request): AnonymousResourceCollection
+    public function index(FilterCellVerificationRoundsRequest $request): AnonymousResourceCollection
     {
         /** @var User $user */
         $user = $request->user();
@@ -36,6 +36,7 @@ class CellVerificationRoundController extends Controller
             ->withCount('reports')
             ->when($request->boolean('only_unfinished'), fn (Builder $query) => $query->unfinished())
             ->latest('created_at')
+            ->latest('id')
             ->paginate(20)
             ->withQueryString();
 
@@ -69,6 +70,7 @@ class CellVerificationRoundController extends Controller
      * warehouse-wide round holds everything until it is finished.
      */
     #[DocumentedResponse(409, description: 'One or more of the requested rows are already covered by another unfinished round (`error_code`: `rows_already_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(422, description: 'The round would cover no rows, or a requested row no longer exists (`error_code`: `verification_round_scope_empty` / `verification_round_rows_not_found`).', type: 'array{message: string, error_code: string}')]
     public function store(StoreCellVerificationRoundRequest $request): JsonResponse
     {
         /** @var User $user */

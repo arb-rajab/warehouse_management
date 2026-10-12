@@ -78,3 +78,18 @@ Use the `actingAsAdmin()` helper in `tests/Pest.php` instead of writing `$this->
 The factories that quietly create a row: `Pallet::factory()` and `CellVerificationReport::factory()` when given no `cell_id`, and `Cell::factory()` with no `row_id` (see `CellFactory`'s `Row::withoutEvents(...)`).
 
 Pick one convention per test: either hardcode the letters *and* give every factory an explicit `cell_id`/`row_id` so none of them creates a row, or let the factories draw every letter. Only hardcode a letter when an assertion actually reads it — `expect($response->json('rows'))` needs 'A', a row that exists purely as noise does not.
+
+## When changing a shared threshold constant, grep for the literal values it produces — not just its symbol name
+Changing a day/month-count constant (e.g. `BuildsDashboardStats::EXPIRING_WINDOW_DAYS` → `EXPIRING_WINDOW_MONTHS`) only surfaces call sites that reference the constant or its wrapping method by name. Other tests can depend on the *old boundary it produced* purely through a hardcoded date/day literal and a comment ("outside the 7-day window") — with no symbol to grep for. `PalletObserverTest` hardcoded `expiration_date => '2026-09-12'` as "outside the 7-day window (until 2026-08-20)"; moving to 1/2/4/6-month windows made `2026-09-12` fall *inside* the new 1-month window (until `2026-09-13`), flipping two assertions from `0` to `1` — caught only in CI, not by grepping `EXPIRING_WINDOW_DAYS`/`expiringWindow()`. Before finishing a threshold-boundary change, also grep the affected date range's literal dates/day-counts (not just the constant/method name) across `tests/` to find fixtures that silently assumed the old boundary.
+
+## Use the named status assertions
+Write `assertConflict()`, `assertUnprocessable()`, `assertTooManyRequests()`, `assertMethodNotAllowed()`, `assertForbidden()`, `assertNotFound()` and so on, not `assertStatus(409)` etc. Fall back to `assertStatus(N)` only for a code with no named helper (426, 502). Both styles were in use, sometimes in the same file.
+
+## Model tests live in tests/Feature/Models
+Every model test, including a legacy store model's relation tests (`OrderRelationsTest`, `ProductRelationsTest`, `StoreUserRelationsTest`, `UploadRelationsTest`), goes in `tests/Feature/Models/`, not the `tests/Feature` root.
+
+## pint.json and phpstan.neon exclude the same files
+`StaticAnalysisExclusionsTest` fails when the legacy exclusion lists (`pint.json` `notPath`, `phpstan.neon` `excludePaths`) differ or name a file that no longer exists. When a legacy file is converted, deleted or renamed, edit both lists in the same change.
+
+## Store back-office tests: one refused-callers dataset, shared staff helpers
+A converted store back-office module's controller test (`tests/Feature/Store/Admin/*ControllerTest.php`) proves each action refuses a guest, a customer and a staff member without the permission through the `refused store admin callers` dataset. `actingAsRefusedStoreCaller($caller)` signs in as the caller, and `assertStoreCallerRefused($response, $caller)` checks the answer for each: a redirect to `shop.login`, a 404 from `IsAdmin`, a 403. A write adds its own DB-unchanged assertion beside it. `createStoreStaff(...$permissions)` and `createStaffRow($user, $role)` build the staff accounts. All four helpers are in tests/Pest.php, not file-local: Pest functions are global, so two test files defining the same helper is a fatal redeclare. Move a module's cases out of the `Legacy*Test` files when it converts (staff's came from LegacyAdminOwnershipTest, LegacyAdminPanelTest and LegacyPaginationTest).

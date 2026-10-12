@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
 
@@ -95,7 +96,7 @@ test('an authenticated admin can view the cell log with every property the table
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
-            ->has('filterOptions.actions', 8)
+            ->has('filterOptions.actions', 9)
     );
 
     Carbon::setTestNow();
@@ -149,7 +150,7 @@ test('the cell log hydrates the product filter chips with both raw name columns'
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات'])
+            ->where('filterOptions.products.0', ['id' => $selected->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'active' => true])
     );
 });
 
@@ -373,11 +374,29 @@ test('the cell log can be filtered by row, excluding entries for other rows', fu
     actingAsAdmin();
     ['row' => $row, 'matching' => $matching] = $this->seedRowFilterFixture();
 
-    $response = $this->get("/admin/cell-logs?row_id={$row->id}");
+    $response = $this->get("/admin/cell-logs?row_id[]={$row->id}");
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('logs.data', 1)
             ->where('logs.data.0.id', $matching->id)
+    );
+});
+
+test('the cell log can be filtered by multiple rows at once, excluding entries for the remaining row', function () {
+    actingAsAdmin();
+    [
+        'rowA' => $rowA,
+        'rowB' => $rowB,
+        'matchingA' => $matchingA,
+        'matchingB' => $matchingB,
+    ] = $this->seedMultipleRowFilterFixture();
+
+    $response = $this->get("/admin/cell-logs?row_id[]={$rowA->id}&row_id[]={$rowB->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 2)
+            ->where('logs.data.0.id', $matchingB->id)
+            ->where('logs.data.1.id', $matchingA->id)
     );
 });
 
@@ -515,6 +534,24 @@ test('the cell log can be filtered by expires_within_days, excluding pallets exp
     );
 
     Carbon::setTestNow();
+});
+
+test('the pallet expiration filters compare expiration_date directly, without wrapping it in a date() function', function () {
+    // expiration_date is already a DATE column — date()/strftime() around it
+    // makes the comparison a function of the column, which the index added
+    // for it cannot satisfy on MySQL. See .ai/rules/shared-database.md.
+    actingAsAdmin();
+    ['matching' => $matching] = $this->seedPalletExpirationRangeFixture();
+
+    DB::enableQueryLog();
+    $this->get('/admin/cell-logs?expiration_date_from=2026-06-01&expiration_date_to=2026-06-30')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query')->implode(' | ');
+    DB::disableQueryLog();
+
+    expect($matching)->not->toBeNull();
+    expect($queries)->toContain('"expiration_date"')
+        ->and($queries)->not->toContain('date("expiration_date")')
+        ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
 });
 
 test('filtering the cell log by expires_within_days together with an expiration date range is rejected', function () {

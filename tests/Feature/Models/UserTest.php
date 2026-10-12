@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\CellStatusLog;
+use App\Models\CellVerificationReport;
+use App\Models\CellVerificationRound;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +33,35 @@ test('filterOptions returns every user ordered by name, carrying only id and nam
 
 test('filterOptions returns an empty collection when there are no users', function () {
     expect(User::filterOptions())->toBeEmpty();
+});
+
+test('hasHistory is false for a user with no recorded activity', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    CellStatusLog::factory()->create(['user_id' => $otherUser->id]);
+
+    expect($user->hasHistory())->toBeFalse();
+});
+
+test('hasHistory is true for a user with a cell status log', function () {
+    $user = User::factory()->create();
+    CellStatusLog::factory()->create(['user_id' => $user->id]);
+
+    expect($user->hasHistory())->toBeTrue();
+});
+
+test('hasHistory is true for a user with a verification round', function () {
+    $user = User::factory()->create();
+    CellVerificationRound::factory()->create(['user_id' => $user->id]);
+
+    expect($user->hasHistory())->toBeTrue();
+});
+
+test('hasHistory is true for a user with a verification report', function () {
+    $user = User::factory()->create();
+    CellVerificationReport::factory()->create(['user_id' => $user->id]);
+
+    expect($user->hasHistory())->toBeTrue();
 });
 
 test('the email_verified_at attribute is cast to a datetime', function () {

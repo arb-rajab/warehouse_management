@@ -25,7 +25,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'is_admin' => $this->when(
                 $this->resource->relationLoaded('roles'),
-                fn () => $this->resource->hasRole('admin'),
+                fn () => $this->resource->isAdmin(),
             ),
         ];
     }

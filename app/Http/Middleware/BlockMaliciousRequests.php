@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -115,13 +116,25 @@ class BlockMaliciousRequests
      * moment any value contains a byte that is not valid UTF-8 — the old
      * "?: ''" fallback then dropped the whole body from the subject, so a
      * single stray byte disabled every body and query check on the request.
+     *
+     * The values of config('waf.skip_input_keys') are left out (their key names
+     * are not): a password is the one field a user is meant to fill with
+     * unpredictable symbols, and scanning it turned a legitimate credential
+     * containing a backtick into a bare 403. Every other field on those same
+     * requests is still inspected.
      */
     protected function inputValues(Request $request): string
     {
+        $skippedKeys = $this->skippedInputKeys();
+
         $parts = [];
 
         foreach (Arr::dot($request->all()) as $key => $value) {
             $parts[] = (string) $key;
+
+            if (in_array(Str::lower(Str::afterLast((string) $key, '.')), $skippedKeys, true)) {
+                continue;
+            }
 
             if (is_scalar($value)) {
                 $parts[] = (string) $value;
@@ -135,6 +148,25 @@ class BlockMaliciousRequests
         }
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * The input keys whose values are exempt from the signature checks.
+     *
+     * Lower-cased so config entries stay case-insensitive, matching how
+     * inputValues() compares the last segment of each dotted input key.
+     *
+     * @return list<string>
+     */
+    protected function skippedInputKeys(): array
+    {
+        /** @var array<int, string> $keys */
+        $keys = config('waf.skip_input_keys', []);
+
+        return array_values(array_map(
+            fn (string $key): string => Str::lower($key),
+            $keys,
+        ));
     }
 
     /**

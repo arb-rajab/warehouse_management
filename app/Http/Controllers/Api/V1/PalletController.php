@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\PalletActionService;
 use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class PalletController extends Controller
 {
@@ -55,24 +56,26 @@ class PalletController extends Controller
     }
 
     #[DocumentedResponse(409, description: 'Only a full pallet can be opened (`error_code`: `pallet_not_full`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet\'s level is not one of the levels where opening is allowed (`error_code`: `open_level_not_allowed`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    public function open(OpenPalletRequest $request, Pallet $pallet): PalletResource|JsonResponse
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    public function open(OpenPalletRequest $request, Pallet $pallet): PalletResource|Response
     {
         /** @var User $user */
         $user = $request->user();
 
         $result = $this->palletActions->open(
             $pallet,
-            $request->integer('boxes_count'),
+            $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
         );
 
         if ($result['emptied']) {
-            return response()->json(null, 204);
+            return response()->noContent();
         }
 
         return new PalletResource($result['pallet']->load(self::EAGER_LOAD));
@@ -82,7 +85,8 @@ class PalletController extends Controller
     #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    public function removeBoxes(RemovePalletBoxesRequest $request, Pallet $pallet): PalletResource|JsonResponse
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    public function removeBoxes(RemovePalletBoxesRequest $request, Pallet $pallet): PalletResource|Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -96,7 +100,7 @@ class PalletController extends Controller
         );
 
         if ($result['emptied']) {
-            return response()->json(null, 204);
+            return response()->noContent();
         }
 
         return new PalletResource($result['pallet']->load(self::EAGER_LOAD));
@@ -104,19 +108,22 @@ class PalletController extends Controller
 
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    public function empty(EmptyPalletRequest $request, Pallet $pallet): JsonResponse
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    public function empty(EmptyPalletRequest $request, Pallet $pallet): Response
     {
         /** @var User $user */
         $user = $request->user();
 
         $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 
     #[DocumentedResponse(409, description: 'The destination slot is not empty (`error_code`: `destination_not_empty`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The source or destination cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The destination is the cell the pallet is already in (`error_code`: `pallet_already_at_location`).', type: 'array{message: string, error_code: string}')]
     public function transfer(TransferPalletRequest $request, Pallet $pallet): PalletResource
     {
         /** @var User $user */

@@ -244,12 +244,30 @@ test('the filtered scope can filter by row and column, excluding logs on another
     CellStatusLog::factory()->create(['cell_id' => $row->cells()->where('cell_number', 2)->first()->id]); // noise: same row, other column
     CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: other row
 
-    $request = Request::create('/', 'GET', ['row_id' => $row->id, 'column_number' => 1]);
+    $request = Request::create('/', 'GET', ['row_id' => [$row->id], 'column_number' => 1]);
 
     $results = CellStatusLog::query()->filtered($request)->get();
 
     expect($results)->toHaveCount(1);
     expect($results->first()->id)->toBe($matching->id);
+});
+
+test('the filtered scope can filter by multiple rows at once, excluding logs on a remaining row', function () {
+    $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $matchingA = CellStatusLog::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+    $matchingB = CellStatusLog::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->first()->id]); // noise: remaining row
+
+    $request = Request::create('/', 'GET', ['row_id' => [$rowA->id, $rowB->id]]);
+
+    $results = CellStatusLog::query()->filtered($request)->get();
+
+    expect($results->pluck('id')->sort()->values()->all())->toEqual(
+        collect([$matchingA->id, $matchingB->id])->sort()->values()->all()
+    );
 });
 
 test('the filtered scope can filter by multiple actions at once, excluding the remaining action', function () {
@@ -264,6 +282,23 @@ test('the filtered scope can filter by multiple actions at once, excluding the r
     expect($results->pluck('id')->sort()->values()->all())->toEqual(
         collect([$stored->id, $opened->id])->sort()->values()->all()
     );
+});
+
+test('the matchingHistoryFilters scope filters by user and action only, ignoring the listing-only filters like product_id', function () {
+    $user = User::factory()->create();
+    $matching = CellStatusLog::factory()->create(['user_id' => $user->id, 'action' => CellLogAction::Opened]);
+    // Noise: the same user's log for a different action, and another user's log.
+    CellStatusLog::factory()->create(['user_id' => $user->id, 'action' => CellLogAction::Emptied]);
+    CellStatusLog::factory()->create(['action' => CellLogAction::Opened]);
+
+    $request = Request::create('/', 'GET', [
+        'user_id' => [$user->id],
+        'action' => ['opened'],
+        // A product_id that matches nothing above: filtered() would apply it, this scope must not.
+        'product_id' => [Product::factory()->create()->id],
+    ]);
+
+    expect(CellStatusLog::query()->matchingHistoryFilters($request)->pluck('id')->all())->toBe([$matching->id]);
 });
 
 test('the sorted scope defaults to created_at descending when no sort params are given', function () {

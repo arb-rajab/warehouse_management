@@ -43,6 +43,16 @@ export interface Row {
 }
 
 /**
+ * The persisted, admin-editable size every QR-label export uses — see
+ * App\Models\Setting.
+ */
+export interface Setting {
+    qr_code_width: number;
+    qr_code_height: number;
+    allowed_open_levels: number[];
+}
+
+/**
  * The `filters` prop shape for an admin listing whose only server-driven
  * state is its page size — Rows/Index.vue, Users/Index.vue.
  * A listing with its own filters/sort embeds `per_page` directly into its
@@ -141,6 +151,7 @@ export interface ProductFilterOption {
     name: string;
     /** The store's raw Arabic name — see `CellPallet.product_ar_name`. */
     ar_name: string;
+    active: boolean;
 }
 
 /**
@@ -156,6 +167,7 @@ export interface CellHighlightSeed {
     state: Cell['state'] | null;
     productIds: number[];
     expiresWithinDays: number | null;
+    staleAfterDays: number | null;
     expired: boolean;
     inactive: boolean;
 }
@@ -219,6 +231,7 @@ export interface CellMap3DItem {
     state: Cell['state'];
     isActive: boolean;
     highlighted: boolean;
+    dimmed: boolean;
     pulsing: boolean;
     pallet: CellPalletSummary | null;
 }
@@ -236,7 +249,8 @@ export type CellLogAction =
     | 'transferred_out'
     | 'transferred_in'
     | 'deactivated'
-    | 'reactivated';
+    | 'reactivated'
+    | 'product_changed';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 
@@ -274,7 +288,7 @@ export type CellStatusLogSortBy = 'created_at' | 'expiration_date';
 export interface CellStatusLogFilters {
     product_id?: number[];
     pallet_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     user_id?: number[];
     action?: CellLogAction[];
@@ -296,6 +310,11 @@ export interface CellStatusLogFilterOptions
     actions: CellLogAction[];
 }
 
+export interface ProductBarcode {
+    id: number;
+    barcode: string;
+}
+
 export interface ProductSummary {
     id: number;
     /** The store's raw base name — see `CellPallet.product_name`. */
@@ -310,12 +329,20 @@ export interface ProductSummary {
      * falls back to 1 for a product nobody has configured yet.
      */
     boxes_count: number;
+    /**
+     * How many pallets of this product should be in the warehouse at
+     * minimum, or `null` when nobody has configured one — such a product
+     * never counts as low-stock, whatever `pallets_count` is.
+     */
+    minimum_pallets: number | null;
+    /** How many pallets of this product are currently in the warehouse, across every cell state — not just full/opened. */
+    pallets_count: number;
     full_cells_count: number;
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
-    activity_today_count: number;
-    activity_week_count: number;
+    /** Barcodes attached to this product, oldest first. Stored in this app's own `wms_product_barcodes`. */
+    barcodes: ProductBarcode[];
 }
 
 export type ProductSortBy =
@@ -323,17 +350,15 @@ export type ProductSortBy =
     | 'full_cells_count'
     | 'opened_cells_count'
     | 'expired_cells_count'
-    | 'expiring_soon_count'
-    | 'activity_today_count'
-    | 'activity_week_count';
+    | 'expiring_soon_count';
 
 export interface ProductFilters {
-    row_id?: number;
-    column_number?: number;
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;
     inactive?: boolean;
+    hide_inactive?: boolean;
+    low_stock?: boolean;
     product_id?: number[];
     user_id?: number[];
     action?: CellLogAction[];
@@ -346,6 +371,38 @@ export interface ProductFilters {
 }
 
 export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
+
+/**
+ * One row of the "matching pallets" admin list (Admin\PalletController::index) —
+ * the dashboard's map-linking stat tiles land here instead of jumping straight
+ * to the cell map. Carries the full `ProductDetails` (the list spans every
+ * product, unlike the cell map's per-flat `CellPallet`) plus `added_at`, the
+ * list's sort tiebreaker after `expiration_date`.
+ */
+export interface MatchingPallet {
+    id: number;
+    state: Cell['state'];
+    expiration_date: string | null;
+    added_at: string | null;
+    remaining_boxes: number;
+    product: ProductDetails;
+    location: CellSlotLocation;
+}
+
+/**
+ * The same highlight-filter query params `CellHighlightSeed` seeds the cell
+ * map from — this list accepts and means exactly the same shape so a
+ * dashboard tile's query works unchanged on either page.
+ */
+export interface MatchingPalletFilters {
+    state?: Cell['state'];
+    is_active?: boolean;
+    expired?: boolean;
+    expires_within_days?: number;
+    stale_after_days?: number;
+    product_id?: number[];
+    per_page?: number;
+}
 
 export interface CellVerificationSnapshot {
     cell_state: Cell['state'] | null;
@@ -363,6 +420,11 @@ export interface CellVerificationReport {
     reported: CellVerificationSnapshot;
     note: string | null;
     user: UserSummary;
+    /** Whether the report's round is finished — absent where the round isn't loaded (the mobile report response). */
+    round_completed?: boolean;
+    /** Set once an admin accepted the reported state; the discrepancy itself stays as reported. */
+    accepted_at: string | null;
+    accepted_by: UserSummary | null;
     created_at: string;
 }
 
@@ -402,7 +464,7 @@ export interface CellVerificationRoundFilterOptions {
  */
 export interface CellVerificationReportFilters {
     cell_id?: number;
-    row_id?: number;
+    row_id?: number[];
     column_number?: number;
     product_id?: number[];
     is_correct?: boolean;

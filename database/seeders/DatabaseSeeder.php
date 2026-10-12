@@ -4,14 +4,24 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     *
+     * Refuses to run in production: this chain creates known-password admin
+     * accounts (test@example.com / password for the warehouse panel,
+     * store-admin@example.com / password for the store back office) and demo
+     * pallet/warehouse data, none of which belongs in live data.
      */
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new RuntimeException('Refusing to run database seeders in production.');
+        }
+
         User::factory()->create([
             'name' => 'Test User',
             'email' => User::query()->where('email', 'test@example.com')->exists()
@@ -26,6 +36,9 @@ class DatabaseSeeder extends Seeder
             CellStatusLogSeeder::class,
             CellVerificationRoundSeeder::class,
             CellVerificationReportSeeder::class,
+            PageSeeder::class,
+            StoreRoleSeeder::class,
+            StoreUserSeeder::class,
         ]);
     }
 }

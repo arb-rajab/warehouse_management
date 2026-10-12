@@ -228,22 +228,6 @@ class CellStatusLog extends Model
     }
 
     /**
-     * The string values of the `action` filter field on a request — shared by
-     * this model's own `filtered()` scope and by `ProductController`'s
-     * separate cell-log history filter, so the two `action` filters can't
-     * silently drift out of sync.
-     *
-     * @return list<string>
-     */
-    public static function actionValuesFromRequest(Request $request, string $field = 'action'): array
-    {
-        return array_values(array_map(
-            fn (CellLogAction $action): string => $action->value,
-            $request->enums($field, CellLogAction::class),
-        ));
-    }
-
-    /**
      * Scope a query by the product/pallet/row/column/user/action/date-range filters
      * shared by the admin and mobile API listings. Reads straight off the request
      * (not `$request->validated()`) so an absent filter is skipped rather than
@@ -258,23 +242,38 @@ class CellStatusLog extends Model
             ->when($request->filled('product_id'), fn (Builder $q) => $q->whereIn('product_id', array_map('intval', $request->array('product_id'))))
             ->when($request->filled('product_published'), fn (Builder $q) => $q->whereHas('product', fn (Builder $q2) => $q2->where('published', $request->boolean('product_published'))))
             ->when($request->filled('pallet_id'), fn (Builder $q) => $q->where('pallet_id', $request->integer('pallet_id')))
-            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
-            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', static::actionValuesFromRequest($request)))
-            ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
-            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
-            ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))))
+            ->matchingHistoryFilters($request)
             ->when($request->filled('expiration_date_from') || $request->filled('expiration_date_to') || $request->filled('expires_within_days'), fn (Builder $q) => $q->whereHas('pallet', function (Builder $palletQuery) use ($request) {
                 $palletQuery
-                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->whereDate('expiration_date', '>=', $request->date('expiration_date_from')))
-                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', $request->date('expiration_date_to')))
-                    ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereDate('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))));
+                    ->when($request->filled('expiration_date_from'), fn (Builder $q) => $q->where('expiration_date', '>=', $request->date('expiration_date_from')->startOfDay()))
+                    ->when($request->filled('expiration_date_to'), fn (Builder $q) => $q->where('expiration_date', '<=', $request->date('expiration_date_to')))
+                    ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->where('expiration_date', '<=', now()->addDays($request->integer('expires_within_days'))));
             }))
             ->when($request->filled('row_id') || $request->filled('column_number'), fn (Builder $q) => $q->whereHas('cell', function (Builder $cellQuery) use ($request) {
                 $cellQuery
-                    ->when($request->filled('row_id'), fn (Builder $q) => $q->where('row_id', $request->integer('row_id')))
+                    ->when($request->filled('row_id'), fn (Builder $q) => $q->whereIn('row_id', array_map('intval', $request->array('row_id'))))
                     ->when($request->filled('column_number'), fn (Builder $q) => $q->where('cell_number', $request->integer('column_number')));
             }))
             ->when($request->boolean('flagged'), fn (Builder $q) => $q->whereHas('flags'));
+    }
+
+    /**
+     * Scope a query by the "who did what, when" filters (user/action/date
+     * range/created-within-days) — the part of {@see filtered()} that the
+     * admin products index's Activity filters also apply, via
+     * `Product::matchingHistoryFilters()`, to pick which products appear.
+     *
+     * @param  Builder<CellStatusLog>  $query
+     */
+    #[Scope]
+    protected function matchingHistoryFilters(Builder $query, Request $request): void
+    {
+        $query
+            ->when($request->filled('user_id'), fn (Builder $q) => $q->whereIn('user_id', array_map('intval', $request->array('user_id'))))
+            ->when($request->filled('action'), fn (Builder $q) => $q->whereIn('action', array_map(fn (CellLogAction $action): string => $action->value, $request->enums('action', CellLogAction::class))))
+            ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->date('date_from')))
+            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->date('date_to')))
+            ->when($request->filled('created_within_days'), fn (Builder $q) => $q->whereDate('created_at', '>=', now()->subDays($request->integer('created_within_days'))));
     }
 
     /**

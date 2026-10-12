@@ -8,24 +8,25 @@ use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can add a pallet to an empty slot', function () {
     actingAsMobileUser();
 
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
-    $cell = $row->cells()->where('cell_number', 1)->first();
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 2)->first();
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => $expirationDate,
     ]);
@@ -53,7 +54,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
         'location' => [
             'row_letter' => 'Z',
             'cell_number' => 1,
-            'flat_number' => 1,
+            'flat_number' => 2,
         ],
     ]);
 
@@ -65,17 +66,17 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
 test('an authenticated worker can add a pallet to an empty slot with no expiration date', function () {
     actingAsMobileUser();
 
-    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 2]);
     $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(10)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('flat_number', 2)->first();
 
     $response = $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => null,
     ]);
@@ -103,7 +104,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
         'location' => [
             'row_letter' => 'Z',
             'cell_number' => 1,
-            'flat_number' => 1,
+            'flat_number' => 2,
         ],
     ]);
 
@@ -134,14 +135,14 @@ test('a submitted expiration_date carrying a time component is normalized to a b
 test('adding a pallet logs the status change, with an optional note', function () {
     $user = actingAsMobileUser();
 
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
     $product = Product::factory()->boxesCount(8)->create();
 
     $this->postJson('/api/v1/pallets', [
         'row_letter' => $row->letter,
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
         'note' => 'Arrived on the morning truck.',
@@ -196,7 +197,7 @@ test('adding a pallet to a non-empty slot is rejected and nothing changes', func
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_not_empty');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_not_empty');
 
     $this->assertDatabaseCount('pallets', 1);
     expect($cell->refresh()->state)->toBe(CellState::Full);
@@ -216,7 +217,7 @@ test('adding a pallet with an unknown row letter is rejected and nothing changes
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('pallets', 0);
 });
 
@@ -233,7 +234,7 @@ test('adding a pallet with an overly long row letter is rejected and nothing cha
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(422)->assertJsonValidationErrors('row_letter');
+    $response->assertUnprocessable()->assertJsonValidationErrors('row_letter');
     $this->assertDatabaseCount('pallets', 0);
 });
 
@@ -251,7 +252,7 @@ test('adding a pallet with out-of-range coordinates is rejected and nothing chan
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('pallets', 0);
 });
 
@@ -268,7 +269,7 @@ test('adding a pallet with an unknown product is rejected and nothing changes', 
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('pallets', 0);
 });
 
@@ -286,7 +287,7 @@ test('adding a pallet with a past expiration date is rejected and nothing change
         'expiration_date' => now()->subDay()->toDateString(),
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('pallets', 0);
 });
 
@@ -304,6 +305,37 @@ test('an unauthenticated caller cannot add a pallet and nothing changes', functi
 
     $response->assertUnauthorized();
     $this->assertDatabaseCount('pallets', 0);
+});
+
+test('adding a pallet to a first-level cell opens it automatically', function () {
+    $user = actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertCreated()->assertJsonPath('state', 'opened');
+
+    $pallet = Pallet::query()->sole();
+    expect($cell->refresh()->state)->toBe(CellState::Opened);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $cell->id,
+        'action' => CellLogAction::Stored->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'product_id' => $product->id,
+        'pallet_id' => $pallet->id,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('an authenticated worker can view a pallet with every property the app reads', function () {
@@ -374,7 +406,7 @@ test('an authenticated worker can open a full pallet, removing boxes at the same
     actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 3,
@@ -391,13 +423,13 @@ test('opening a pallet with a boxes_count equal to what remains is rejected and 
     actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 5,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    $response->assertConflict()->assertJsonPath('error_code', 'insufficient_boxes_remaining');
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(5);
     $this->assertDatabaseCount('cell_status_logs', 0);
@@ -407,7 +439,7 @@ test('opening a pallet with a boxes_count equal to what remains, with confirm_em
     $user = actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -435,7 +467,7 @@ test('opening a pallet logs the status change, with an optional note', function 
     $user = actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 4,
@@ -459,7 +491,7 @@ test('opening a pallet without a note logs a null note', function () {
     actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 1,
@@ -468,28 +500,38 @@ test('opening a pallet without a note logs a null note', function () {
     expect(CellStatusLog::query()->where('cell_id', $pallet->cell_id)->sole()->note)->toBeNull();
 });
 
-test('opening a pallet without a boxes_count is rejected', function () {
-    actingAsMobileUser();
+test('opening a pallet without a boxes_count just opens it, leaving remaining_boxes untouched', function () {
+    $user = actingAsMobileUser();
 
-    $pallet = Pallet::factory()->create();
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open");
 
-    $response->assertStatus(422)->assertJsonValidationErrors('boxes_count');
-    expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
+    $response->assertOk()->assertJsonPath('state', 'opened');
+    $response->assertJsonPath('remaining_boxes', 10);
+    expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
+    expect($pallet->refresh()->remaining_boxes)->toBe(10);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'action' => CellLogAction::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 10,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('opening a pallet with more boxes than remain is rejected and nothing changes', function () {
     actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 6,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    $response->assertConflict()->assertJsonPath('error_code', 'insufficient_boxes_remaining');
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(5);
     $this->assertDatabaseCount('cell_status_logs', 0);
@@ -499,7 +541,7 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
     $user = actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
     $cell = $pallet->cell;
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
@@ -529,7 +571,7 @@ test('opening a pallet with confirm_empty but a sufficient boxes_count still jus
     actingAsMobileUser();
 
     $product = Product::factory()->boxesCount(5)->create();
-    $pallet = Pallet::factory()->create(['product_id' => $product->id]);
+    $pallet = Pallet::factory()->onLevel()->create(['product_id' => $product->id]);
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/open", [
         'boxes_count' => 3,
@@ -551,7 +593,7 @@ test('opening an already-opened pallet is rejected and nothing changes', functio
         'boxes_count' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'pallet_not_full');
+    $response->assertConflict()->assertJsonPath('error_code', 'pallet_not_full');
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
     expect($pallet->refresh()->remaining_boxes)->toBe($pallet->product->boxes_count);
 });
@@ -603,7 +645,7 @@ test('removing a boxes_count equal to what remains from an opened pallet is reje
         'boxes_count' => 2,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    $response->assertConflict()->assertJsonPath('error_code', 'insufficient_boxes_remaining');
     expect($pallet->refresh()->remaining_boxes)->toBe(2);
     $this->assertDatabaseCount('cell_status_logs', 0);
 });
@@ -671,7 +713,7 @@ test('removing boxes from a full (not yet opened) pallet is rejected and nothing
         'boxes_count' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'pallet_not_opened');
+    $response->assertConflict()->assertJsonPath('error_code', 'pallet_not_opened');
     expect($pallet->refresh()->remaining_boxes)->toBe($pallet->product->boxes_count);
     $this->assertDatabaseCount('cell_status_logs', 0);
 });
@@ -687,7 +729,7 @@ test('removing more boxes than remain is rejected and nothing changes', function
         'boxes_count' => 4,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'insufficient_boxes_remaining');
+    $response->assertConflict()->assertJsonPath('error_code', 'insufficient_boxes_remaining');
     expect($pallet->refresh()->remaining_boxes)->toBe(3);
     $this->assertDatabaseCount('cell_status_logs', 0);
 });
@@ -747,7 +789,7 @@ test('removing boxes without a boxes_count is rejected', function () {
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes");
 
-    $response->assertStatus(422)->assertJsonValidationErrors('boxes_count');
+    $response->assertUnprocessable()->assertJsonValidationErrors('boxes_count');
 });
 
 test('removing boxes from an unknown pallet returns 404', function () {
@@ -860,13 +902,13 @@ test('an authenticated worker can transfer a full pallet to an empty slot', func
     $product = Product::factory()->boxesCount(10)->create();
     $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'product_id' => $product->id, 'remaining_boxes' => 7]);
 
-    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
-    $destinationCell = $destinationRow->cells()->first();
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('flat_number', 2)->first();
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
         'to_row_letter' => $destinationRow->letter,
         'to_cell_number' => 1,
-        'to_flat_number' => 1,
+        'to_flat_number' => 2,
         'note' => 'Consolidating widgets onto row B.',
     ]);
 
@@ -875,7 +917,7 @@ test('an authenticated worker can transfer a full pallet to an empty slot', func
     expect($response->json('location'))->toEqual([
         'row_letter' => 'B',
         'cell_number' => 1,
-        'flat_number' => 1,
+        'flat_number' => 2,
     ]);
 
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
@@ -940,7 +982,28 @@ test('transferring an opened pallet leaves the destination opened, not full', fu
     $sourceCell = $sourceRow->cells()->first();
     $pallet = Pallet::factory()->opened()->create(['cell_id' => $sourceCell->id]);
 
-    $destinationRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $destinationRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('flat_number', 2)->first();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 2,
+    ]);
+
+    $response->assertOk()->assertJsonPath('state', 'opened');
+    expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
+    expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
+});
+
+test('transferring a full pallet into a first-level destination opens it, without changing the source log\'s prior state', function () {
+    $user = actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $sourceCell = $sourceRow->cells()->where('flat_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 7]);
+
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
     $destinationCell = $destinationRow->cells()->first();
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
@@ -952,6 +1015,27 @@ test('transferring an opened pallet leaves the destination opened, not full', fu
     $response->assertOk()->assertJsonPath('state', 'opened');
     expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $sourceCell->id,
+        'related_cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredOut->value,
+        'from_state' => CellState::Full->value,
+        'to_state' => CellState::Empty->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $user->id,
+    ]);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+        'from_state' => CellState::Empty->value,
+        'to_state' => CellState::Opened->value,
+        'pallet_id' => $pallet->id,
+        'boxes_count' => 7,
+        'user_id' => $user->id,
+    ]);
 });
 
 test('transferring to a non-empty destination is rejected and nothing changes', function () {
@@ -971,7 +1055,7 @@ test('transferring to a non-empty destination is rejected and nothing changes', 
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'destination_not_empty');
+    $response->assertConflict()->assertJsonPath('error_code', 'destination_not_empty');
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
     expect($sourceCell->refresh()->state)->toBe(CellState::Full);
@@ -993,7 +1077,7 @@ test('transferring a pallet to its own current slot is rejected and nothing chan
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('cell_status_logs', 0);
     expect($cell->refresh()->state)->toBe(CellState::Full);
 });
@@ -1011,7 +1095,7 @@ test('transferring to out-of-range destination coordinates is rejected and nothi
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(422);
+    $response->assertUnprocessable();
     $this->assertDatabaseCount('cell_status_logs', 0);
 });
 
@@ -1028,7 +1112,7 @@ test('transferring to an unknown destination row letter is rejected and nothing 
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(422)->assertJsonValidationErrors('to_row_letter');
+    $response->assertUnprocessable()->assertJsonValidationErrors('to_row_letter');
     $this->assertDatabaseCount('cell_status_logs', 0);
     expect($pallet->refresh()->cell_id)->toBe($cell->id);
 });
@@ -1099,8 +1183,6 @@ test('storing and then quickly emptying a pallet in the same cell flags the empt
     $emptiedLog = CellStatusLog::query()->where('action', CellLogAction::Emptied->value)->sole();
 
     expect($emptiedLog->flags()->where('reason', CellLogFlagReason::QuickFlip->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('performing a pallet action outside working hours flags it as off-hours', function () {
@@ -1121,8 +1203,6 @@ test('performing a pallet action outside working hours flags it as off-hours', f
     $log = CellStatusLog::query()->sole();
 
     expect($log->flags()->where('reason', CellLogFlagReason::OffHours->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('performing many pallet actions quickly as the same user flags rapid actions past the configured threshold', function () {
@@ -1152,8 +1232,6 @@ test('performing many pallet actions quickly as the same user flags rapid action
     expect($logs[9]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeFalse();
     expect($logs[10]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
     expect($logs[11]->flags()->where('reason', CellLogFlagReason::RapidActions->value)->exists())->toBeTrue();
-
-    Carbon::setTestNow();
 });
 
 test('adding a pallet to an inactive slot is rejected and nothing changes', function () {
@@ -1172,7 +1250,7 @@ test('adding a pallet to an inactive slot is rejected and nothing changes', func
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     $this->assertDatabaseCount('pallets', 0);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
@@ -1188,7 +1266,7 @@ test('opening a pallet in an inactive cell is rejected and nothing changes', fun
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
@@ -1204,7 +1282,7 @@ test('removing boxes from a pallet in an inactive cell is rejected and nothing c
         'boxes_count' => 3,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
 });
@@ -1217,7 +1295,7 @@ test('emptying a pallet in an inactive cell is rejected and nothing changes', fu
 
     $response = $this->postJson("/api/v1/pallets/{$pallet->id}/empty");
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     $this->assertDatabaseHas('pallets', ['id' => $pallet->id]);
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
@@ -1239,7 +1317,7 @@ test('transferring a pallet out of an inactive source cell is rejected and nothi
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
@@ -1261,7 +1339,7 @@ test('transferring a pallet into an inactive destination cell is rejected and no
         'to_flat_number' => 1,
     ]);
 
-    $response->assertStatus(409)->assertJsonPath('error_code', 'slot_inactive');
+    $response->assertConflict()->assertJsonPath('error_code', 'slot_inactive');
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
 });
@@ -1382,7 +1460,7 @@ test('transferring a pallet into a row under an unfinished verification round is
 test('a pallet action in a row covered only by a completed round is allowed', function () {
     actingAsMobileUser();
 
-    $pallet = Pallet::factory()->create(['remaining_boxes' => 10]);
+    $pallet = Pallet::factory()->onLevel()->create(['remaining_boxes' => 10]);
     // Letter left to the factory: the pallet's own row is generated by one too,
     // and a hardcoded letter here can collide with whatever that one drew.
     $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
@@ -1396,4 +1474,82 @@ test('a pallet action in a row covered only by a completed round is allowed', fu
 
     $response->assertOk();
     expect($pallet->refresh()->remaining_boxes)->toBe(7);
+});
+
+test('opening a pallet on a level that is not allowed is rejected, with nothing changed, while an allowed level still opens', function () {
+    actingAsMobileUser();
+
+    $disallowed = Pallet::factory()->onLevel(2)->create();
+    $allowed = Pallet::factory()->onLevel(1)->create();
+
+    $response = $this->postJson("/api/v1/pallets/{$disallowed->id}/open");
+
+    $response->assertConflict()
+        ->assertJsonPath('error_code', 'open_level_not_allowed')
+        ->assertJsonPath('message', __('messages.open_level_not_allowed'));
+    expect($disallowed->cell->refresh()->state)->toBe(CellState::Full);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+
+    $this->postJson("/api/v1/pallets/{$allowed->id}/open")->assertOk()->assertJsonPath('state', 'opened');
+    expect($disallowed->cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('opening is allowed on exactly the levels the settings list, and no others', function () {
+    actingAsMobileUser();
+    Setting::factory()->create(['allowed_open_levels' => [2, 3]]);
+
+    $levelOne = Pallet::factory()->onLevel(1)->create();
+    $levelTwo = Pallet::factory()->onLevel(2)->create();
+    $levelFour = Pallet::factory()->onLevel(4)->create();
+
+    $this->postJson("/api/v1/pallets/{$levelOne->id}/open")->assertConflict()->assertJsonPath('error_code', 'open_level_not_allowed');
+    $this->postJson("/api/v1/pallets/{$levelFour->id}/open")->assertConflict()->assertJsonPath('error_code', 'open_level_not_allowed');
+    $this->postJson("/api/v1/pallets/{$levelTwo->id}/open")->assertOk();
+
+    expect($levelOne->cell->refresh()->state)->toBe(CellState::Full);
+    expect($levelFour->cell->refresh()->state)->toBe(CellState::Full);
+    expect($levelTwo->cell->refresh()->state)->toBe(CellState::Opened);
+});
+
+test('a pallet stored on the first level is left full, not opened automatically, when level 1 is not allowed', function () {
+    actingAsMobileUser();
+    Setting::factory()->create(['allowed_open_levels' => [2]]);
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->postJson('/api/v1/pallets', [
+        'row_letter' => $row->letter,
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    $response->assertCreated()->assertJsonPath('state', 'full');
+    expect($cell->refresh()->state)->toBe(CellState::Full);
+
+    $this->postJson('/api/v1/pallets/'.Pallet::query()->sole()->id.'/open')
+        ->assertConflict()
+        ->assertJsonPath('error_code', 'open_level_not_allowed');
+});
+
+test('transferring a full pallet into a first-level destination keeps it full when level 1 is not allowed', function () {
+    actingAsMobileUser();
+    Setting::factory()->create(['allowed_open_levels' => [2]]);
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->where('flat_number', 2)->first()->id]);
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $destinationCell = $destinationRow->cells()->first();
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => $destinationRow->letter,
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ]);
+
+    $response->assertOk()->assertJsonPath('state', 'full');
+    expect($destinationCell->refresh()->state)->toBe(CellState::Full);
 });

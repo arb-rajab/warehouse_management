@@ -7,6 +7,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -52,7 +53,7 @@ test('the factory default expiration_date has no time component', function () {
     // must format it down to a bare date, or the raw stored value carries
     // that random time — which SQLite (unlike MySQL's DATE column) keeps
     // verbatim, breaking `expiration_date <= $until` boundary comparisons
-    // like BuildsDashboardStats::expiringWindow()'s.
+    // like BuildsDashboardStats::expiringWindowCounts()'s.
     $pallet = Pallet::factory()->create();
 
     $raw = DB::table('pallets')->where('id', $pallet->id)->value('expiration_date');
@@ -220,4 +221,93 @@ test('cellEnteredLog moves to the newest transferred_in log once the pallet is t
     expect($pallet->fresh()->cell_entered_at->toIso8601String())->toBe('2026-08-05T10:00:00+00:00');
 
     Carbon::setTestNow();
+});
+
+test('matchingHighlightFilters matches expires_within_days from today through the window only, excluding an already-expired and a later pallet', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    $expiringSoon = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+    $expiresToday = Pallet::factory()->create(['expiration_date' => '2026-08-15']);
+    // Noise: already past due, and well beyond the window.
+    Pallet::factory()->create(['expiration_date' => '2026-08-01']);
+    Pallet::factory()->create(['expiration_date' => '2026-12-01']);
+
+    $request = Request::create('/', 'GET', ['expires_within_days' => 7]);
+
+    expect(Pallet::query()->matchingHighlightFilters($request)->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$expiringSoon->id, $expiresToday->id])->sort()->values()->all());
+
+    Carbon::setTestNow();
+});
+
+test('matchingHighlightFilters filters by the pallet cell state and inactive flag, excluding a pallet in another cell', function () {
+    $opened = Pallet::factory()->opened()->create();
+    // Noise: a full pallet.
+    Pallet::factory()->create();
+    $inactive = Pallet::factory()->create();
+    $inactive->cell->update(['is_active' => false]);
+
+    expect(Pallet::query()->matchingHighlightFilters(Request::create('/', 'GET', ['state' => 'opened']))->pluck('id')->all())
+        ->toBe([$opened->id])
+        ->and(Pallet::query()->matchingHighlightFilters(Request::create('/', 'GET', ['is_active' => '0']))->pluck('id')->all())
+        ->toBe([$inactive->id]);
+});
+
+test('matchingHighlightFilters filters by product, excluding another product\'s pallet', function () {
+    $matching = Pallet::factory()->create();
+    // Noise: another product's pallet.
+    Pallet::factory()->create();
+
+    $request = Request::create('/', 'GET', ['product_id' => [$matching->product_id]]);
+
+    expect(Pallet::query()->matchingHighlightFilters($request)->pluck('id')->all())->toBe([$matching->id]);
+});
+
+test('matchingOccupancyFilters matches expires_within_days as on-or-before the window end, including an already-expired pallet but excluding a later one', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    $expiringSoon = Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+    $alreadyExpired = Pallet::factory()->create(['expiration_date' => '2026-08-01']);
+    // Noise: well beyond the window, and no expiration date at all.
+    Pallet::factory()->create(['expiration_date' => '2026-12-01']);
+    Pallet::factory()->create(['expiration_date' => null]);
+
+    $request = Request::create('/', 'GET', ['expires_within_days' => 7]);
+
+    expect(Pallet::query()->matchingOccupancyFilters($request)->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$expiringSoon->id, $alreadyExpired->id])->sort()->values()->all());
+
+    Carbon::setTestNow();
+});
+
+test('matchingOccupancyFilters filters by expired, excluding a pallet not yet expired', function () {
+    Carbon::setTestNow('2026-08-15 12:00:00');
+    $expired = Pallet::factory()->create(['expiration_date' => '2026-08-01']);
+    // Noise: expires later.
+    Pallet::factory()->create(['expiration_date' => '2026-09-01']);
+
+    $request = Request::create('/', 'GET', ['expired' => 'true']);
+
+    expect(Pallet::query()->matchingOccupancyFilters($request)->pluck('id')->all())->toBe([$expired->id]);
+
+    Carbon::setTestNow();
+});
+
+test('matchingOccupancyFilters filters by the requested cell state, excluding a pallet in a cell of another state', function () {
+    $full = Pallet::factory()->create();
+    // Noise: an opened pallet.
+    Pallet::factory()->opened()->create();
+
+    $request = Request::create('/', 'GET', ['state' => 'full']);
+
+    expect(Pallet::query()->matchingOccupancyFilters($request)->pluck('id')->all())->toBe([$full->id]);
+});
+
+test('matchingOccupancyFilters pins the given cell state on top of the request filters, excluding a pallet in another state', function () {
+    $opened = Pallet::factory()->opened()->create();
+    // Noise: a full pallet.
+    Pallet::factory()->create();
+
+    $request = Request::create('/', 'GET');
+
+    expect(Pallet::query()->matchingOccupancyFilters($request, CellState::Opened)->pluck('id')->all())->toBe([$opened->id])
+        ->and(Pallet::query()->matchingOccupancyFilters($request)->count())->toBe(2);
 });

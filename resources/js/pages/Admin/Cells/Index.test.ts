@@ -1,10 +1,13 @@
+import { Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import CellMap3D from '@/components/CellMap3D.vue';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { paginated } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
     Cell,
     CellHighlightSample,
@@ -56,11 +59,14 @@ vi.mock('@/components/CellMap3D.vue', async () => {
 });
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(() => ({ errors: {}, processing: false })),
         Link: createLinkStub(),
+        useForm: createUseFormStub(vi.fn()),
         usePage: usePageMock,
         router: { get: routerGetMock },
         useHttp: () => ({
@@ -73,8 +79,8 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 const products = [
-    { id: 1, name: 'Widgets', ar_name: 'ودجات' },
-    { id: 2, name: 'Gadgets', ar_name: 'أدوات' },
+    { id: 1, name: 'Widgets', ar_name: 'ودجات', active: true },
+    { id: 2, name: 'Gadgets', ar_name: 'أدوات', active: true },
 ];
 
 function row(overrides: Partial<CellMapRow> = {}): CellMapRow {
@@ -142,7 +148,7 @@ function mountPage(
     } = {},
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/cells',
+        url: cellsIndex.url(),
         props: defaultAuthProps({ errors: overrides.errors ?? {} }),
     });
 
@@ -157,6 +163,7 @@ function mountPage(
                 state: null,
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             },
@@ -187,16 +194,38 @@ function slot(wrapper: ReturnType<typeof mountPage>, label: string) {
 
 describe('Cells Index (warehouse map)', () => {
     beforeEach(() => {
-        routerGetMock.mockClear();
-        cellMap3DFocusCell.mockClear();
-        cellMap3DResetView.mockClear();
-        cellMap3DSetCameraMode.mockClear();
+        resetMocks({
+            routerGetMock,
+            cellMap3DFocusCell,
+            cellMap3DResetView,
+            cellMap3DSetCameraMode,
+        });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([], []);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('cells.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('cells.title'));
     });
 
     it('shows the empty message when there are no rows', () => {
         const wrapper = mountPage([], []);
 
         expect(wrapper.text()).toContain(t('cells.empty'));
+    });
+
+    it('links the help icon to the cells help page', () => {
+        const wrapper = mountPage([], []);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'cells' }),
+        );
     });
 
     it('does not show an action error banner absent an action error', () => {
@@ -282,6 +311,51 @@ describe('Cells Index (warehouse map)', () => {
         expect(wrapper.get('[role="dialog"]').text()).toContain(
             formatSlot('A', 1, 1),
         );
+    });
+
+    async function firePointer(
+        element: Element,
+        type: string,
+        clientX: number,
+        clientY: number,
+    ): Promise<void> {
+        // jsdom has no PointerEvent; a MouseEvent carries the same coordinates.
+        element.dispatchEvent(
+            new MouseEvent(type, { clientX, clientY, bubbles: true }),
+        );
+        await flushPromises();
+    }
+
+    it('does not open the pallet-actions dialog when the click follows a map drag, but does for a plain tap', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ id: 9 }),
+                }),
+            ],
+        );
+        const viewport = wrapper.get('[data-testid="map-viewport"]');
+        const manageButton = wrapper.get(
+            `[title="${t('cells.palletActions.triggerLabel')}"]`,
+        );
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointermove', 180, 100);
+        await firePointer(viewport.element, 'pointerup', 180, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        await firePointer(viewport.element, 'pointerdown', 100, 100);
+        await firePointer(viewport.element, 'pointerup', 100, 100);
+        await manageButton.trigger('click');
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
     });
 
     it('opens the toggle-active dialog when a 2D cell slot emits toggle-active', async () => {
@@ -372,6 +446,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -397,6 +472,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -437,6 +513,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -474,6 +551,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'opened',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -493,6 +571,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -551,6 +630,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -584,11 +664,66 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('automatically jumps to the first match when a highlight filter is applied, without clicking next', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 2 }),
+                }),
+            ],
+            {
+                cellHighlightSamples: [
+                    highlightSample({
+                        row_letter: 'A',
+                        cell_number: 1,
+                        flat_number: 1,
+                        state: 'full',
+                        pallet: pallet({ product_id: 1 }),
+                    }),
+                    highlightSample({
+                        row_letter: 'A',
+                        cell_number: 2,
+                        flat_number: 1,
+                        state: 'full',
+                        pallet: pallet({ product_id: 2 }),
+                    }),
+                ],
+            },
+        );
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+        await flushPromises();
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-emerald-500',
+        );
+        expect(wrapper.get('[data-testid="match-position"]').text()).toBe(
+            t('cells.filters.matchPosition', { current: 1, total: 1 }),
+        );
+    });
+
     it('reloads onto the matching flat when the next match is on a different flat, keeping the highlight filters in the query', async () => {
         const seed: CellHighlightSeed = {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -621,7 +756,7 @@ describe('Cells Index (warehouse map)', () => {
         await next();
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A1·2', state: 'full' },
             { preserveState: true, replace: true },
         );
@@ -636,7 +771,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2 },
             { preserveState: true, replace: true },
         );
@@ -647,6 +782,7 @@ describe('Cells Index (warehouse map)', () => {
             state: 'full',
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -683,6 +819,7 @@ describe('Cells Index (warehouse map)', () => {
             state: null,
             productIds: [],
             expiresWithinDays: 7,
+            staleAfterDays: null,
             expired: false,
             inactive: false,
         };
@@ -715,11 +852,50 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('pre-highlights cells by a stale-after-days seed from the dashboard link', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: 30,
+            expired: false,
+            inactive: false,
+        };
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ added_at: '2026-06-01T10:00:00Z' }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ added_at: '2026-08-10T10:00:00Z' }),
+                }),
+            ],
+            { today: '2026-08-13', initialHighlight: seed },
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
     it('pre-highlights only already-expired cells from an expired seed, not future ones', () => {
         const seed: CellHighlightSeed = {
             state: null,
             productIds: [],
             expiresWithinDays: null,
+            staleAfterDays: null,
             expired: true,
             inactive: false,
         };
@@ -752,12 +928,86 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('jumps to the first matching flat on mount when a highlight filter deep-links here with no matches on the landing flat', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: null,
+            expired: true,
+            inactive: false,
+        };
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            maxFlatNumber: 3,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 2,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-01' }),
+                }),
+            ],
+        });
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellsIndex.url(),
+            { flat_number: 2, search: 'A1·2', expired: true },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('does not reload on mount when the landing flat already has a highlight match', () => {
+        const seed: CellHighlightSeed = {
+            state: null,
+            productIds: [],
+            expiresWithinDays: null,
+            staleAfterDays: null,
+            expired: true,
+            inactive: false,
+        };
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            initialHighlight: seed,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ expiration_date: '2026-08-01' }),
+                }),
+            ],
+        });
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+    });
+
+    it('does not reload on mount when there is no highlight filter at all', () => {
+        mountPage([row({ letter: 'A', cells_count: 1 })], [], {
+            flatNumber: 1,
+            cellHighlightSamples: [
+                highlightSample({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 2,
+                    state: 'full',
+                }),
+            ],
+        });
+
+        expect(routerGetMock).not.toHaveBeenCalled();
+    });
+
     it('keeps the active highlight filters in the query when switching flats', async () => {
         const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
             initialHighlight: {
                 state: null,
                 productIds: [1, 2],
                 expiresWithinDays: 7,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             },
@@ -766,11 +1016,35 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 2,
                 product_id: ['1', '2'],
                 expires_within_days: 7,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('keeps a stale-after-days highlight filter in the query when switching flats', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], [], {
+            initialHighlight: {
+                state: null,
+                productIds: [],
+                expiresWithinDays: null,
+                staleAfterDays: 30,
+                expired: false,
+                inactive: false,
+            },
+        });
+
+        await wrapper.findAll('[data-testid="flat-tab"]')[1].trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellsIndex.url(),
+            {
+                flat_number: 2,
+                stale_after_days: 30,
             },
             { preserveState: true, replace: true },
         );
@@ -782,6 +1056,7 @@ describe('Cells Index (warehouse map)', () => {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: true,
                 inactive: false,
             },
@@ -791,7 +1066,7 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             {
                 flat_number: 1,
                 search: 'A1',
@@ -813,6 +1088,70 @@ describe('Cells Index (warehouse map)', () => {
         );
         expect(wrapper.find('#highlight-product').exists()).toBe(true);
         expect(wrapper.find('#highlight-stale-after-days').exists()).toBe(true);
+    });
+
+    it('shows the product filter above the map without opening the highlight filter dialog', () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(wrapper.find('#toolbar-product').exists()).toBe(true);
+    });
+
+    it('highlights matching cells when a product is selected from the toolbar filter, without opening the highlight dialog', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({
+                        id: 2,
+                        product_id: 2,
+                        product_name: 'Gadgets',
+                        product_ar_name: 'أدوات',
+                    }),
+                }),
+            ],
+        );
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
+            'ring-blue-500',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
+            'ring-blue-500',
+        );
+    });
+
+    it('keeps the toolbar product filter and the dialog product filter in sync', async () => {
+        const wrapper = mountPage([row()], []);
+
+        await wrapper.get('#toolbar-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+
+        expect(
+            (
+                wrapper.findAll('[role="listbox"] input[type="checkbox"]')[0]
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
     });
 
     it('highlights only cells matching the selected product', async () => {
@@ -855,6 +1194,52 @@ describe('Cells Index (warehouse map)', () => {
         );
     });
 
+    it('greys out cells not matching the active highlight filter, leaving matches undimmed', async () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 2 })],
+            [
+                cell({
+                    row_letter: 'A',
+                    cell_number: 1,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 1 }),
+                }),
+                cell({
+                    row_letter: 'A',
+                    cell_number: 2,
+                    flat_number: 1,
+                    state: 'full',
+                    pallet: pallet({ product_id: 2 }),
+                }),
+            ],
+        );
+
+        await openHighlightFilters(wrapper);
+        await wrapper.get('#highlight-product').trigger('click');
+        await wrapper
+            .findAll('[role="listbox"] input[type="checkbox"]')[0]
+            .setValue(true);
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+        expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
+            'opacity-40',
+        );
+    });
+
+    it('does not grey out any cell when no highlight filter is active', () => {
+        const wrapper = mountPage(
+            [row({ letter: 'A', cells_count: 1 })],
+            [cell({ row_letter: 'A', cell_number: 1, flat_number: 1 })],
+        );
+
+        expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
+            'opacity-40',
+        );
+    });
+
     it('submits a search and reloads with the query, preserving the current flat', async () => {
         const wrapper = mountPage([row()], [], { flatNumber: 2 });
 
@@ -862,9 +1247,17 @@ describe('Cells Index (warehouse map)', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cells',
+            cellsIndex.url(),
             { flat_number: 2, search: 'A12·3' },
             { preserveState: true, replace: true },
+        );
+    });
+
+    it('caps the search input length, mirroring the backend FilterCellMapRequest max:100 rule', () => {
+        const wrapper = mountPage([row()], []);
+
+        expect(wrapper.get('input[type="text"]').attributes('maxlength')).toBe(
+            '100',
         );
     });
 
@@ -1117,6 +1510,140 @@ describe('Cells Index (warehouse map)', () => {
         expect(bandLabelAtEnd(wrapper)).toBe(true);
     });
 
+    it('keeps the map content shrink-wrapped to its own width instead of filling the viewport', () => {
+        // A block-level flex container defaults width:auto to filling its
+        // parent (viewportEl) rather than shrink-wrapping its cells, which
+        // would make getBoundingClientRect()/offsetWidth report the
+        // viewport's width instead of the map's real cell-grid width —
+        // silently breaking fitMapToView's zoom-to-fit (it would only ever
+        // fit the row/column count, never the cells within a row) and the
+        // pan-bounds clamp. w-max is what keeps that measurement accurate.
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        expect(
+            wrapper.get('[data-testid="map-viewport"] > div').classes(),
+        ).toContain('w-max');
+    });
+
+    it('shrinks the map to fit entirely inside the viewport via the fit-to-view button', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return { width: 700, height: 600 } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
+                }
+
+                return { width: 0, height: 0 } as DOMRect;
+            });
+
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+
+        expect(wrapper.get('[data-testid="zoom-percent"]').text()).toContain(
+            '70%',
+        );
+
+        getBoundingClientRectSpy.mockRestore();
+    });
+
+    it('resets pan to (0,0), fitting re-pans to keep the map flush at the top-left, and rotation leaves pan untouched', async () => {
+        const wrapper = mountPage([row({ letter: 'A', cells_count: 2 })], []);
+        // centerLabelInViewport() looks up its target via `document.querySelector`,
+        // so the mounted tree needs to be attached to the document for that to
+        // find anything (vue-test-utils mounts detached by default).
+        document.body.appendChild(wrapper.element);
+
+        const getBoundingClientRectSpy = vi
+            .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+            .mockImplementation(function (this: HTMLElement) {
+                if (this.getAttribute('data-testid') === 'map-viewport') {
+                    return {
+                        left: 0,
+                        top: 0,
+                        width: 700,
+                        height: 600,
+                    } as DOMRect;
+                }
+
+                if (
+                    this ===
+                    wrapper.get('[data-testid="map-viewport"] > div').element
+                ) {
+                    return { width: 1000, height: 800 } as DOMRect;
+                }
+
+                if (
+                    this.getAttribute('data-slot-label') ===
+                    formatSlot('A', 1, 1)
+                ) {
+                    return {
+                        left: 500,
+                        top: 400,
+                        width: 100,
+                        height: 80,
+                    } as DOMRect;
+                }
+
+                return { left: 0, top: 0, width: 0, height: 0 } as DOMRect;
+            });
+
+        const transform = () =>
+            wrapper
+                .get('[data-testid="map-viewport"] > div')
+                .attributes('style');
+
+        await wrapper
+            .get(`[title="${t('cells.map.resetView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(0px, 0px)');
+
+        // Content is 1000x800 against a 700x600 container: zoomToFit shrinks
+        // to 70% (700/1000, the binding width ratio), and — since CSS scale()
+        // pivots around the content box's own center, not its top-left corner
+        // — fitMapToView must also pan to counteract that drift so cell A1
+        // (the content's own top-left) stays flush at the viewport's
+        // top-left: (1000/2)*(0.7-1) = -150, (800/2)*(0.7-1) = -120. That's
+        // neither (0,0) (pan is still needed to counter the scale pivot) nor
+        // a pan toward A1's mocked slot-label position (confirming this
+        // isn't centerLabelInViewport's A1-centering, just the content's own
+        // corner staying put).
+        await wrapper
+            .get(`[title="${t('cells.map.fitToView')}"]`)
+            .trigger('click');
+        expect(transform()).toContain('translate(-150px, -120px)');
+        expect(transform()).toContain('scale(0.7)');
+
+        // Rotation no longer re-centers on A1 or resets pan: the map stays put.
+        await wrapper
+            .get(`[title="${t('cells.map.rotateRight')}"]`)
+            .trigger('click');
+        await flushPromises();
+        expect(transform()).toContain('translate(-150px, -120px)');
+        expect(transform()).toContain('scale(0.7)');
+
+        getBoundingClientRectSpy.mockRestore();
+        wrapper.element.remove();
+    });
+
+    it('wraps the map content with no padding around the cells', () => {
+        const wrapper = mountPage([row()], []);
+        const classes = wrapper
+            .get('[data-testid="map-viewport"] > div')
+            .classes();
+
+        expect(classes.filter((c) => /^p[xytrbl]?-/.test(c))).toEqual([]);
+    });
+
     it('zooms via a wheel event on the map viewport', async () => {
         const wrapper = mountPage([row()], []);
 
@@ -1166,6 +1693,30 @@ describe('Cells Index (warehouse map)', () => {
         expect(
             wrapper.get('[data-testid="map-section"]').classes(),
         ).not.toContain('fixed');
+    });
+
+    it('exposes the full screen map as a modal dialog only while in full screen', async () => {
+        const wrapper = mountPage([row()], []);
+        const section = () => wrapper.get('[data-testid="map-section"]');
+
+        expect(section().attributes('role')).toBeUndefined();
+        expect(section().attributes('aria-modal')).toBeUndefined();
+
+        await wrapper
+            .get(`[title="${t('cells.map.fullscreen')}"]`)
+            .trigger('click');
+
+        expect(section().attributes('role')).toBe('dialog');
+        expect(section().attributes('aria-modal')).toBe('true');
+        expect(section().attributes('aria-label')).toBe(
+            t('cells.map.fullscreen'),
+        );
+
+        await wrapper
+            .get(`[title="${t('cells.map.exitFullscreen')}"]`)
+            .trigger('click');
+
+        expect(section().attributes('role')).toBeUndefined();
     });
 
     it('exits full screen mode when Escape is pressed', async () => {
@@ -1291,11 +1842,85 @@ describe('Cells Index (warehouse map)', () => {
             ).toBe('false');
         });
 
+        it('keeps the orbit toggle pressed and working when 3D is re-selected while already orbiting', async () => {
+            const wrapper = mountPage([row()], []);
+            const toggle = () =>
+                wrapper.get('[data-testid="camera-mode-orbit"]');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await toggle().trigger('click');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+
+            cellMap3DSetCameraMode.mockClear();
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenCalledWith('walk');
+            expect(toggle().attributes('aria-pressed')).toBe('false');
+
+            await toggle().trigger('click');
+
+            expect(cellMap3DSetCameraMode).toHaveBeenLastCalledWith('orbit');
+            expect(toggle().attributes('aria-pressed')).toBe('true');
+        });
+
+        it('steps next/previous match through only the filtered pallets while in 3D orbit mode', async () => {
+            const seed: CellHighlightSeed = {
+                state: null,
+                productIds: [7],
+                expiresWithinDays: null,
+                staleAfterDays: null,
+                expired: false,
+                inactive: false,
+            };
+            const matching = (cellNumber: number, productId: number) =>
+                highlightSample({
+                    cell_number: cellNumber,
+                    pallet: pallet({ product_id: productId }),
+                });
+            const wrapper = mountPage(
+                [row({ letter: 'A', cells_count: 5 })],
+                [],
+                {
+                    initialHighlight: seed,
+                    cellHighlightSamples: [
+                        matching(1, 99),
+                        matching(2, 7),
+                        matching(3, 99),
+                        matching(4, 7),
+                        matching(5, 99),
+                    ],
+                },
+            );
+
+            await wrapper.get('[data-testid="view-mode-3d"]').trigger('click');
+            await wrapper
+                .get('[data-testid="camera-mode-orbit"]')
+                .trigger('click');
+            cellMap3DFocusCell.mockClear();
+
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper.get('[data-testid="next-match"]').trigger('click');
+            await wrapper
+                .get('[data-testid="previous-match"]')
+                .trigger('click');
+
+            expect(cellMap3DFocusCell.mock.calls).toEqual([
+                ['A', 2, 1],
+                ['A', 4, 1],
+                ['A', 2, 1],
+            ]);
+        });
+
         it("passes every flat's cells to the 3D view with highlight/pulse flags applied", async () => {
             const seed: CellHighlightSeed = {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             };
@@ -1339,6 +1964,7 @@ describe('Cells Index (warehouse map)', () => {
                             state: 'full',
                             isActive: true,
                             highlighted: true,
+                            dimmed: false,
                             pulsing: false,
                             pallet: null,
                         },
@@ -1349,6 +1975,7 @@ describe('Cells Index (warehouse map)', () => {
                             state: 'empty',
                             isActive: true,
                             highlighted: false,
+                            dimmed: true,
                             pulsing: false,
                             pallet: null,
                         },
@@ -1427,6 +2054,7 @@ describe('Cells Index (warehouse map)', () => {
                 state: 'full',
                 productIds: [],
                 expiresWithinDays: null,
+                staleAfterDays: null,
                 expired: false,
                 inactive: false,
             };

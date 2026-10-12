@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
     Ban,
     Box,
@@ -13,13 +13,13 @@ import {
     Orbit,
     RotateCcw,
     RotateCw,
+    Scan,
     Search,
     ZoomIn,
     ZoomOut,
 } from '@lucide/vue';
 import {
     computed,
-    nextTick,
     onBeforeUnmount,
     onMounted,
     reactive,
@@ -27,10 +27,13 @@ import {
     watch,
 } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellMap3D from '@/components/CellMap3D.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
@@ -38,6 +41,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     countActiveCellHighlightFilters,
     emptyCellHighlightFilters,
+    isCellDimmedByHighlight,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import type { CellHighlightFiltersValue } from '@/lib/cellHighlight';
@@ -45,6 +49,7 @@ import {
     columnNumberOptions,
     countBadgeClass,
     mapToolbarButtonClass,
+    selectedCountLabel,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -53,7 +58,10 @@ import {
     mapOrientation,
     useMapViewport,
     viewportTransform,
+    zoomToFit,
 } from '@/lib/mapViewport';
+import { usePageError } from '@/lib/pageErrors';
+import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
     CellHighlightSample,
@@ -95,12 +103,20 @@ const highlightFilters = reactive<CellHighlightFiltersValue>({
         props.initialHighlight.expiresWithinDays !== null
             ? String(props.initialHighlight.expiresWithinDays)
             : '',
+    staleAfterDays:
+        props.initialHighlight.staleAfterDays !== null
+            ? String(props.initialHighlight.staleAfterDays)
+            : '',
     expired: props.initialHighlight.expired,
     inactive: props.initialHighlight.inactive,
 });
 
 function highlighted(cell: CellWithLocation | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
+}
+
+function dimmed(cell: CellWithLocation | null): boolean {
+    return isCellDimmedByHighlight(cell, highlightFilters, props.today);
 }
 
 const hasActiveHighlight = computed(
@@ -168,8 +184,42 @@ const orderedMatches = computed(() =>
 
 const focusedMatchIndex = ref<number | null>(null);
 
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * (in `orderedMatches` order) instead of leaving the admin to hunt for one
+ * via the next/previous-match buttons — falls back to clearing focus when
+ * the new filters match nothing.
+ */
 watch(highlightFilters, () => {
+    if (orderedMatches.value.length > 0) {
+        focusMatchAt(0);
+
+        return;
+    }
+
     focusedMatchIndex.value = null;
+});
+
+/**
+ * A highlight filter can also arrive already applied — the dashboard's
+ * "expired pallets"/expiring-window/occupancy tiles deep-link here with a
+ * highlight filter but no `flat_number`, so the page loads on flat 1
+ * regardless of where the matches actually are. If flat 1 (or whatever
+ * flat the request landed on) has none of the seeded filter's matches,
+ * jump to the first one on mount the same way a live filter change does —
+ * otherwise the admin lands on a flat that looks like the filter matched
+ * nothing. Left alone when the landing flat already has a match, so this
+ * never fires for a plain flat-number deep link with no highlight seed.
+ */
+onMounted(() => {
+    if (
+        orderedMatches.value.length > 0 &&
+        !matchingSamples.value.some(
+            (sample) => sample.flat_number === props.flatNumber,
+        )
+    ) {
+        focusMatchAt(0);
+    }
 });
 
 /**
@@ -255,6 +305,10 @@ function highlightQuery(): Record<string, FormDataConvertible> {
 
     if (highlightFilters.expiresWithinDays !== '') {
         query.expires_within_days = Number(highlightFilters.expiresWithinDays);
+    }
+
+    if (highlightFilters.staleAfterDays !== '') {
+        query.stale_after_days = Number(highlightFilters.staleAfterDays);
     }
 
     if (highlightFilters.expired) {
@@ -441,9 +495,7 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 
 const viewport = useMapViewport();
 const viewportTransformStyle = computed(() =>
@@ -453,20 +505,78 @@ const viewportZoomPercent = computed(() =>
     Math.round(viewport.state.zoom * 100),
 );
 const viewportEl = ref<HTMLElement | null>(null);
+const mapContentEl = ref<HTMLElement | null>(null);
+
+/**
+ * Keeps the viewport's pan bounds (see `useMapViewport`'s `setBounds()`) in
+ * sync with the container/content elements' real layout sizes, so panning
+ * stays clamped to the map's actual extent instead of allowing an infinite
+ * empty canvas. Re-observes whenever the elements themselves change (view
+ * mode toggling the 2D map's `v-if` off and back on) rather than assuming
+ * they're stable for the page's lifetime; `ResizeObserver` itself picks up
+ * later size changes (fullscreen toggle, window resize) without rewatching.
+ *
+ * `ResizeObserver` isn't defined in the Vitest/jsdom environment (see
+ * CellMap3D.test.ts, which stubs it explicitly) — guarded so Index.test.ts
+ * mounts without stubbing it too; pan simply stays unbounded there, same as
+ * before this feature, since `setBounds()` is never called.
+ */
+let viewportBoundsObserver: ResizeObserver | null = null;
+
+function updateViewportBounds(): void {
+    const container = viewportEl.value;
+    const content = mapContentEl.value;
+
+    if (!container || !content) {
+        return;
+    }
+
+    viewport.setBounds(
+        { width: container.clientWidth, height: container.clientHeight },
+        { width: content.offsetWidth, height: content.offsetHeight },
+    );
+}
+
+if (typeof ResizeObserver !== 'undefined') {
+    watch(
+        [viewportEl, mapContentEl],
+        ([container, content]) => {
+            viewportBoundsObserver?.disconnect();
+            viewportBoundsObserver = null;
+
+            if (!container || !content) {
+                return;
+            }
+
+            viewportBoundsObserver = new ResizeObserver(updateViewportBounds);
+            viewportBoundsObserver.observe(container);
+            viewportBoundsObserver.observe(content);
+            updateViewportBounds();
+        },
+        { immediate: true },
+    );
+}
+
+onBeforeUnmount(() => {
+    viewportBoundsObserver?.disconnect();
+});
 
 const viewMode = ref<'2d' | '3d'>('2d');
 const map3DRef = ref<InstanceType<typeof CellMap3D> | null>(null);
 
 function setViewMode(mode: '2d' | '3d'): void {
-    viewMode.value = mode;
-
     // A fresh CellMap3D always mounts in walk mode (it owns cameraMode
     // internally and doesn't persist across unmounts) — resetting the
-    // mirror here keeps this toggle button's pressed-state from showing a
-    // stale "orbit" left over from a previous time in the 3D view.
-    if (mode === '3d') {
+    // mirror here keeps the orbit toggle's pressed-state from showing a
+    // stale "orbit" left over from a previous time in the 3D view. Only
+    // when actually entering 3D: re-selecting 3D while already in it
+    // doesn't remount the child, so resetting then would desync the toggle
+    // from a camera that is still orbiting (and make the next tap a no-op).
+    if (mode === '3d' && viewMode.value !== '3d') {
         cameraDisplayMode.value = 'walk';
     }
+
+    viewMode.value = mode;
 }
 
 /**
@@ -483,8 +593,7 @@ function toggleCameraMode(): void {
     );
 }
 
-const pulsingLabel = ref<string | null>(null);
-let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+const { pulsingLabel, pulse } = usePulse();
 
 /**
  * Every flat's cells, reshaped for the 3D view (CellMap3D.vue), which renders
@@ -519,6 +628,11 @@ const map3DBands = computed<CellMap3DBand[]>(() => {
                 highlightFilters,
                 props.today,
             ),
+            dimmed: isCellDimmedByHighlight(
+                sample,
+                highlightFilters,
+                props.today,
+            ),
             pulsing: pulsingLabel.value === label,
             pallet: sample.pallet,
         });
@@ -542,18 +656,13 @@ function pulseAndCenterLabel(
     cellNumber: number,
     flatNumber: number,
 ): void {
-    pulsingLabel.value = label;
+    pulse(label);
 
     if (viewMode.value === '3d') {
         map3DRef.value?.focusCell(rowLetter, cellNumber, flatNumber);
     } else {
         centerLabelInViewport(label);
     }
-
-    clearTimeout(pulseTimeout);
-    pulseTimeout = setTimeout(() => {
-        pulsingLabel.value = null;
-    }, 1500);
 }
 
 function centerLabelInViewport(label: string): void {
@@ -577,58 +686,62 @@ function centerLabelInViewport(label: string): void {
     );
 }
 
-/**
- * Cell A1 (the first cell of the first row) is the map's fixed orientation anchor —
- * rotating or resetting the view always re-centers on it so it stays reachable no
- * matter how the letter/number axes have been swapped.
- */
-function centerFirstCellInViewport(): void {
-    const firstRow = props.rows[0];
-
-    if (!firstRow) {
-        return;
-    }
-
-    centerLabelInViewport(formatSlot(firstRow.letter, 1, props.flatNumber));
-}
-
-/**
- * Rotate/reset recenter without an in-flight CSS transition to measure against. The pan
- * transition normally animates panX/panY changes, but `centerFirstCellInViewport()` reads
- * live layout via `getBoundingClientRect()` right after the DOM patches — if that transition
- * is still interpolating from the pre-rotation pan, the measurement is of a moving target,
- * so the computed offset drifts further off with every rotation until the map is panned
- * entirely outside the viewport. Suppressing the transition for this one synchronous
- * measure-then-set makes the geometry read exact; it's restored afterwards so drag/zoom
- * keep animating normally.
- */
-const suppressPanTransition = ref(false);
-
-async function recenterInstantly(mutate: () => void): Promise<void> {
-    suppressPanTransition.value = true;
-    mutate();
-    await nextTick();
-    centerFirstCellInViewport();
-    await nextTick();
-    suppressPanTransition.value = false;
-}
-
-async function rotateLeftAndRecenter(): Promise<void> {
-    await recenterInstantly(() => viewport.rotateLeft());
-}
-
-async function rotateRightAndRecenter(): Promise<void> {
-    await recenterInstantly(() => viewport.rotateRight());
-}
-
-async function resetViewAndRecenter(): Promise<void> {
+function resetView(): void {
     if (viewMode.value === '3d') {
         map3DRef.value?.resetView();
 
         return;
     }
 
-    await recenterInstantly(() => viewport.reset());
+    viewport.reset();
+}
+
+/**
+ * Shrinks the map so as much of it fits inside the viewport as possible with
+ * no scrolling/panning needed, measuring the content's unscaled size
+ * (dividing its current, already-scaled bounding box by the current zoom)
+ * against the viewport container's size, then re-pans so cell A1 (the
+ * content's own top-left corner) stays flush with the viewport's top-left —
+ * the same anchor reset-view and the unfitted 100% view already use — rather
+ * than drifting to whatever the scale pivot leaves it at. Repanning is
+ * required even though this keeps the same corner anchored: CSS `scale()`
+ * pivots around `transform-origin: center` — the content box's own center —
+ * so once the box is significantly bigger than the viewport, that pivot
+ * point sits far outside it, and shrinking around it without repanning slides
+ * the top-left corner away from (0,0) instead of leaving it in place. Any
+ * leftover slack (a non-constraining axis, or `ZOOM_MIN` preventing the map
+ * from shrinking enough to show every cell when it is very wide/tall) falls
+ * on the trailing edges only, never splits around the content, so no blank
+ * space ever surrounds the map's leading edges (see js-lib.md).
+ */
+function fitMapToView(): void {
+    const container = viewportEl.value;
+    const content = mapContentEl.value;
+
+    if (!container || !content) {
+        return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    const currentZoom = viewport.state.zoom;
+    const contentWidth = contentRect.width / currentZoom;
+    const contentHeight = contentRect.height / currentZoom;
+
+    const fittedZoom = zoomToFit(
+        { width: contentWidth, height: contentHeight },
+        { width: containerRect.width, height: containerRect.height },
+    );
+
+    viewport.setZoom(fittedZoom);
+    viewport.panBy(
+        (contentWidth * fittedZoom) / 2 -
+            contentWidth / 2 -
+            viewport.state.panX,
+        (contentHeight * fittedZoom) / 2 -
+            contentHeight / 2 -
+            viewport.state.panY,
+    );
 }
 
 watch(
@@ -659,6 +772,7 @@ watch(
     <AdminLayout>
         <PageHeader :title="t('cells.title')">
             <div class="flex items-center gap-4">
+                <HelpLink :href="showHelp('cells')" />
                 <div v-if="hasActiveHighlight" class="flex items-center gap-2">
                     <span
                         data-testid="total-match-count"
@@ -722,6 +836,11 @@ watch(
         <template v-else>
             <div
                 data-testid="map-section"
+                :role="isMapFullscreen ? 'dialog' : undefined"
+                :aria-modal="isMapFullscreen ? 'true' : undefined"
+                :aria-label="
+                    isMapFullscreen ? t('cells.map.fullscreen') : undefined
+                "
                 :class="
                     isMapFullscreen
                         ? 'fixed inset-0 z-50 flex flex-col overflow-auto bg-white p-4 dark:bg-neutral-950'
@@ -740,6 +859,7 @@ watch(
                                 v-model="searchQuery"
                                 type="text"
                                 :placeholder="t('cells.search.placeholder')"
+                                maxlength="100"
                                 class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
                             />
                             <button
@@ -758,6 +878,14 @@ watch(
                         >
                             {{ t('cells.search.notFound') }}
                         </span>
+                        <FilterProductSelect
+                            id="toolbar-product"
+                            v-model="highlightFilters.productIds"
+                            :label="t('cellLog.filters.product')"
+                            :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
+                            :selected="filterOptions.products"
+                        />
                     </div>
 
                     <div v-if="viewMode === '2d'" class="flex flex-wrap gap-2">
@@ -861,7 +989,7 @@ watch(
                             type="button"
                             :title="t('cells.map.rotateLeft')"
                             :class="mapToolbarButtonClass"
-                            @click="rotateLeftAndRecenter"
+                            @click="viewport.rotateLeft"
                         >
                             <RotateCcw class="h-4 w-4" />
                         </button>
@@ -869,16 +997,24 @@ watch(
                             type="button"
                             :title="t('cells.map.rotateRight')"
                             :class="mapToolbarButtonClass"
-                            @click="rotateRightAndRecenter"
+                            @click="viewport.rotateRight"
                         >
                             <RotateCw class="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            :title="t('cells.map.fitToView')"
+                            :class="mapToolbarButtonClass"
+                            @click="fitMapToView"
+                        >
+                            <Scan class="h-4 w-4" />
                         </button>
                     </template>
                     <button
                         type="button"
                         :title="t('cells.map.resetView')"
                         :class="mapToolbarButtonClass"
-                        @click="resetViewAndRecenter"
+                        @click="resetView"
                     >
                         <LocateFixed class="h-4 w-4" />
                     </button>
@@ -897,9 +1033,37 @@ watch(
                     </button>
                 </div>
 
+                <!--
+                    Pinned dir="ltr" regardless of the direction of the page.
+                    Every cell physical position is already driven explicitly
+                    by JS (mapOrientation, via bandsAsColumns/reverseNumbers/
+                    bandLabelAtEnd, swapped by the rotate buttons instead of a
+                    CSS transform) — cell A1 belongs in the same physical spot
+                    no matter the UI language. Under dir="rtl" (Arabic) the
+                    browser was additionally auto-mirroring every flex-row/
+                    flex-col band and item list on top of that, fighting the
+                    JS-driven layout.
+
+                    That auto-mirroring is also why the `w-max` on mapContentEl
+                    (needed so its own getBoundingClientRect()/offsetWidth
+                    reports the real cell-grid width of the map instead of the
+                    width of viewportEl — a block container width:auto fills
+                    the parent, unlike height:auto — which is what the
+                    zoom-to-fit in fitMapToView and the pan clamp in
+                    updateViewportBounds both read) broke panning in RTL: that
+                    measurement math assumes the un-transformed box of
+                    mapContentEl starts flush with the *physical* top-left of
+                    viewportEl, which only held by coincidence while both were
+                    the same width — the un-transformed edge of a block box is
+                    really the *inline-start* edge of its containing block,
+                    physically the right edge under dir="rtl". Pinning
+                    dir="ltr" fixes both: it stops the mirroring, and keeps
+                    "inline-start" physically the left edge.
+                -->
                 <div
                     v-if="viewMode === '2d'"
                     ref="viewportEl"
+                    dir="ltr"
                     data-testid="map-viewport"
                     class="relative cursor-grab touch-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50 select-none active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-950"
                     :class="isMapFullscreen ? 'min-h-0 flex-1' : 'h-[32rem]'"
@@ -909,17 +1073,14 @@ watch(
                     @pointerup="viewport.onPointerUp"
                     @pointercancel="viewport.onPointerUp"
                     @pointerleave="viewport.onPointerUp"
+                    @click.capture="viewport.onClickCapture"
                 >
                     <div
-                        class="flex gap-6 p-2 ease-out"
-                        :class="[
-                            orientation.bandsAsColumns
-                                ? 'flex-row'
-                                : 'flex-col',
-                            suppressPanTransition
-                                ? ''
-                                : 'transition-transform duration-150',
-                        ]"
+                        ref="mapContentEl"
+                        class="flex w-max gap-6 transition-transform duration-150 ease-out"
+                        :class="
+                            orientation.bandsAsColumns ? 'flex-row' : 'flex-col'
+                        "
                         :style="{
                             transform: viewportTransformStyle,
                             transformOrigin: 'center',
@@ -984,6 +1145,7 @@ watch(
                                         :cell="item.cell"
                                         :label="item.label"
                                         :highlighted="highlighted(item.cell)"
+                                        :dimmed="dimmed(item.cell)"
                                         :pulsing="pulsingLabel === item.label"
                                         toggleable
                                         manageable

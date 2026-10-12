@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/vue3';
-import { Check, SlidersHorizontal, X } from '@lucide/vue';
+import { SlidersHorizontal } from '@lucide/vue';
 import { computed, reactive, ref } from 'vue';
 import {
     index as cellVerificationRoundsIndex,
     show as showCellVerificationRound,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import DataTable from '@/components/DataTable.vue';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableLink from '@/components/TableLink.vue';
@@ -24,9 +27,6 @@ import {
     countBadgeClass,
     createdDateRangeExclusivity,
     dateRangeActive,
-    filterApplyButtonClass,
-    filterClearButtonClass,
-    filterFooterClass,
     filterSectionClass,
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
@@ -127,28 +127,35 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('cellVerificationRound.title')">
-            <button
-                type="button"
-                :class="filterTriggerButtonClass"
-                @click="filtersOpen = true"
-            >
-                <SlidersHorizontal class="h-4 w-4" />
-                {{ t('cellVerificationRound.filters.title') }}
-                <span v-if="activeFilterCount > 0" :class="countBadgeClass">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('cell-verification-rounds')" />
+                <button
+                    type="button"
+                    :class="filterTriggerButtonClass"
+                    @click="filtersOpen = true"
+                >
+                    <SlidersHorizontal class="h-4 w-4" />
+                    {{ t('common.filters.title') }}
+                    <span v-if="activeFilterCount > 0" :class="countBadgeClass">
+                        {{ activeFilterCount }}
+                    </span>
+                </button>
+            </div>
         </PageHeader>
 
         <FilterDialog
             v-model:open="filtersOpen"
-            :title="t('cellVerificationRound.filters.title')"
-            :close-label="t('cellVerificationRound.filters.close')"
+            :title="t('common.filters.title')"
+            :close-label="t('common.filters.close')"
         >
-            <form class="space-y-6" @submit.prevent="applyFilters">
+            <form
+                id="cell-verification-rounds-filter-form"
+                class="space-y-6"
+                @submit.prevent="applyFilters"
+            >
                 <div>
                     <h3 :class="sectionHeadingClass">
-                        {{ t('cellVerificationRound.filters.title') }}
+                        {{ t('common.filters.title') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <FilterMultiSelect
@@ -210,22 +217,16 @@ function onPerPageChange(perPage: number): void {
                         :days-disabled="createdWithinDaysDisabled"
                     />
                 </div>
-
-                <div :class="filterFooterClass">
-                    <button type="submit" :class="filterApplyButtonClass">
-                        <Check class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationRound.filters.apply') }}
-                    </button>
-                    <button
-                        type="button"
-                        :class="filterClearButtonClass"
-                        @click="clearFilters"
-                    >
-                        <X class="h-4 w-4 shrink-0" />
-                        {{ t('cellVerificationRound.filters.clear') }}
-                    </button>
-                </div>
             </form>
+
+            <template #footer>
+                <FilterDialogFooter
+                    form-id="cell-verification-rounds-filter-form"
+                    :apply-label="t('common.filters.apply')"
+                    :clear-label="t('common.filters.clear')"
+                    @clear="clearFilters"
+                />
+            </template>
         </FilterDialog>
 
         <DataTable
@@ -250,23 +251,15 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <TableLink
-                        :href="
-                            showCellVerificationRound({
-                                cellVerificationRound: row.id,
-                            }).url
-                        "
-                    >
+                    <TableLink :href="showCellVerificationRound(row)">
                         #{{ row.id }}
                     </TableLink>
                 </td>
                 <td class="px-4 py-2">
-                    <TableLink
-                        v-if="row.user"
-                        :href="showUser({ id: row.user.id })"
-                    >
+                    <TableLink v-if="row.user" :href="showUser(row.user)">
                         {{ row.user.name }}
                     </TableLink>
+                    <template v-else>—</template>
                 </td>
                 <td class="px-4 py-2">{{ formatDateTime(row.started_at) }}</td>
                 <td class="px-4 py-2">

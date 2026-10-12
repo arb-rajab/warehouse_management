@@ -3,87 +3,101 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Cell;
-use ArPHP\I18N\Arabic;
 use Illuminate\Support\Collection;
-use Illuminate\Support\HtmlString;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
- * Shared QR-label building for the row-wide and single-cell QR-export PDFs —
- * used by both Admin\RowController and Admin\CellController so the printed
- * label text and QR payload stay in lockstep.
+ * Shared QR-label building for the row-wide QR-export PDF sheet and the
+ * single-cell QR-export image — used by both Admin\RowController and
+ * Admin\CellController so the printed/exported label text and QR payload
+ * stay in lockstep.
  */
 trait BuildsCellQrLabels
 {
+    use BuildsQrLabels;
+
     /**
+     * $qrWidth/$qrHeight come from Setting::current(), resolved once by the
+     * caller (RowController::exportQrCodes) rather than re-queried per cell
+     * here — a row can hold Row::MAX_DIMENSION² cells.
+     *
+     * The multi-label PDF sheet (see resources/views/pdf/qr-labels.blade.php)
+     * gives every cell its own page, sized via `@page { size: $qrWidth
+     * $qrHeight }` to exactly the admin-configured dimensions, and each page
+     * embeds exactly the same label image cellQrLabelImage() produces for the
+     * single-cell download — same QR, same expanded slot label, no separate
+     * description line. Reusing that one label-rendering method rather than
+     * re-deriving similar layout here keeps the row-wide PDF sheet and the
+     * single-cell export permanently in lockstep: any future change to
+     * qrLabelImage()'s padding/font-sizing/QR-shrink behavior applies to both
+     * automatically, and the sheet can't silently drift from what a worker
+     * gets from the single-cell button. That's also why this call site is
+     * safe to wire up without a stricter bound than the one
+     * UpdateSettingRequest/Setting already enforce.
+     *
      * @param  Collection<int, Cell>  $cells
-     * @return array<int, array{label: string, description: string, qrImage: string}>
+     * @return array<int, array{label: string, labelImage: string}>
      */
-    private function cellQrLabels(string $rowLetter, Collection $cells): array
+    private function cellQrLabels(string $rowLetter, Collection $cells, int $qrWidth, int $qrHeight, int $flatsCount): array
     {
         return $cells
             ->map(fn (Cell $cell) => [
                 'label' => Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
-                // Spelled out below the compact label — "A1·2" alone doesn't tell a
-                // worker which digit is the cell and which is the flat once the
-                // sticker is torn off the sheet and stuck on a shelf with no app
-                // around it for context.
-                'description' => $this->shapeArabicForPdf(__('messages.qr_label_description', [
-                    'row' => $rowLetter,
-                    'cell' => $cell->cell_number,
-                    'flat' => $cell->flat_number,
-                ])),
-                // The mobile app's custom URL scheme, encoded directly — no web
-                // redirect page in between. Only the app itself can open this link.
-                'qrImage' => $this->qrImageDataUri("warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}"),
+                'labelImage' => 'data:image/svg+xml;base64,'.base64_encode(
+                    $this->cellQrLabelImage($rowLetter, $cell, $qrWidth, $qrHeight, $flatsCount)
+                ),
             ])
             ->all();
     }
 
     /**
-     * dompdf's text layout has no Arabic contextual shaping or bidi reordering
-     * (see FIXME RTL markers throughout dompdf's FrameReflower/Style code) — it
-     * only draws each character's isolated-form glyph in logical (storage)
-     * order, which renders Arabic as disconnected letters read left-to-right.
-     * `utf8Glyphs()` pre-shapes the string into joined presentation-form
-     * glyphs already reordered into final left-to-right *display* order, so a
-     * naive LTR-drawing engine like dompdf's still renders it correctly. The
-     * font referenced in cell-qr-labels.blade.php must carry glyphs for the
-     * Arabic Presentation Forms-B block (U+FE70-FEFF) that produces.
+     * One standalone SVG label (see qrLabelImage()) — QR plus the slot label
+     * expanded to fill the space a description line would otherwise leave
+     * blank, plus a same-height level-arrow beside it — for downloading/
+     * printing just this cell, and (base64-encoded, see cellQrLabels()) for
+     * embedding as-is into the row-wide PDF sheet.
      *
-     * $hindo is false to keep Western digits, matching how the same
-     * translation string renders un-shaped in the Vue/Inertia UI.
+     * $flatsCount (the row's total level count) drives the arrow direction
+     * — see cellLevelArrowDirection().
      */
-    private function shapeArabicForPdf(string $text): string
+    private function cellQrLabelImage(string $rowLetter, Cell $cell, int $qrWidth, int $qrHeight, int $flatsCount): string
     {
-        if (! app()->isLocale('ar')) {
-            return $text;
-        }
-
-        return (new Arabic)->utf8Glyphs($text, max_chars: 1000, hindo: false, forcertl: true);
+        return $this->qrLabelImage(
+            $this->cellDeepLink($rowLetter, $cell),
+            Cell::slotLabel($rowLetter, $cell->cell_number, $cell->flat_number),
+            null,
+            app()->isLocale('ar') ? 'rtl' : 'ltr',
+            $qrWidth,
+            $qrHeight,
+            expandPrimaryText: true,
+            primaryArrow: $this->cellLevelArrowDirection($cell->flat_number, $flatsCount),
+        );
     }
 
     /**
-     * dompdf doesn't render inline `<svg>` markup (its SVG support only
-     * covers rasterizing an SVG *source* referenced by an `<img>` tag), so
-     * the QR is embedded as a base64 SVG data URI rather than inlined.
-     *
-     * SVG (not PNG) is used deliberately: bacon-qr-code's PNG backend renders
-     * through Imagick, drawing each QR module as a separate composite call —
-     * roughly 1.5-2.5s per code — while its SVG backend is plain string
-     * building, ~10x faster. That difference is the gap between a row export
-     * finishing in a few seconds and one timing out for any row of
-     * non-trivial size.
+     * 'up' when this cell sits on its row's highest flat_number, 'down' when
+     * it sits on the lowest, and 'horizontal' for every level in between.
+     * flat_number runs 1..$flatsCount (see RowObserver::updated()), so 1 is
+     * always the lowest level and $flatsCount the highest. A row with only
+     * one level ($flatsCount < 2) is simultaneously its own highest and
+     * lowest cell — there's no up/down direction to indicate, so it falls
+     * back to 'horizontal' the same way an actual mid-level cell does.
      */
-    private function qrImageDataUri(string $data): string
+    private function cellLevelArrowDirection(int $flatNumber, int $flatsCount): string
     {
-        // simplesoftwareio/simple-qrcode's generate() docblock omits the leading
-        // backslash on its Illuminate\Support\HtmlString return type, so Larastan
-        // resolves it relative to the vendor's own namespace into a nonexistent
-        // class — override with the real type generate() actually returns here.
-        /** @var HtmlString|string $svg */
-        $svg = QrCode::format('svg')->size(200)->generate($data);
+        return match (true) {
+            $flatsCount < 2 => 'horizontal',
+            $flatNumber === $flatsCount => 'up',
+            $flatNumber === 1 => 'down',
+            default => 'horizontal',
+        };
+    }
 
-        return 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+    /**
+     * The mobile app's custom URL scheme, encoded directly — no web redirect
+     * page in between. Only the app itself can open this link.
+     */
+    private function cellDeepLink(string $rowLetter, Cell $cell): string
+    {
+        return "warehouseapp://cell?row={$rowLetter}&cell={$cell->cell_number}&flat={$cell->flat_number}";
     }
 }

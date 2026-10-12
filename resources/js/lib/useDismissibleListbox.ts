@@ -6,14 +6,17 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
  * navigation mechanics shared by every dropdown-style filter listbox
  * (FilterMultiSelect.vue, FilterProductSelect.vue). `optionCount` is a
  * getter rather than a fixed number since FilterProductSelect's option
- * count changes as search results load in.
+ * count changes as search results load in; it defaults to `() => 0` for a
+ * caller that only wants the dismiss (open/click-outside/Escape) behavior
+ * and has no option list to navigate — AccountMenu.vue is one such
+ * degenerate caller, using just `open`/`containerRef`.
  *
  * The caller owns opening the listbox (a plain `open.value = !open.value`,
  * or something more involved like FilterProductSelect's fetch-on-open) and
  * rendering `containerRef`/`setOptionRef` onto its template; this composable
  * only owns the shared dismiss/navigate behavior.
  */
-export function useDismissibleListbox(optionCount: () => number) {
+export function useDismissibleListbox(optionCount: () => number = () => 0) {
     const open = ref(false);
     const containerRef = ref<HTMLElement | null>(null);
     const optionRefs = ref<(HTMLInputElement | null)[]>([]);
@@ -69,6 +72,85 @@ export function useDismissibleListbox(optionCount: () => number) {
     });
 
     return { open, containerRef, optionRefs, setOptionRef, onOptionKeydown };
+}
+
+/**
+ * Caps a dropdown panel's max-width so it can't grow past the viewport edge
+ * it expands toward, and computes the `top`/`insetInlineStart`/`minWidth`
+ * needed to anchor a panel under its trigger — shared by the two panels
+ * that anchor at their trigger's inline-start and size to content beyond
+ * that (FilterMultiSelect.vue, FilterProductSelect.vue, both
+ * `w-max max-w-xs min-w-full`). ProductSelect.vue's panel doesn't need
+ * this: it's plain `w-full`, bounded by its own on-page container, so it
+ * can't overflow regardless of where its trigger sits.
+ *
+ * The start-edge anchor keeps the panel's *start* edge correctly aligned
+ * with the trigger in either direction, but its *end* edge is
+ * unconstrained: it grows in the inline-end direction (physically left
+ * under `dir="rtl"`, right under `dir="ltr"`) up to `max-w-xs` regardless of
+ * how much room is actually left on that side. For a trigger near that
+ * physical edge (e.g. a `PageHeader` slot, which sits at the page's
+ * physical left in RTL by `justify-between`), the panel overflows past the
+ * page edge — reproduced with Playwright against the real compiled CSS: a
+ * trigger 208px from a 412px-wide viewport's left edge rendered the panel
+ * 68px past x=0.
+ *
+ * Call `recompute()` synchronously when opening the panel (before Vue
+ * renders it), then bind the returned `panelMaxWidthPx` into the panel's
+ * `:style`, e.g. `:style="{ maxWidth: `${panelMaxWidthPx}px` }"`. This
+ * shrinks the panel instead of flipping it to the other side — acceptable
+ * here since every panel's content already wraps (`break-words`/`min-w-0`).
+ *
+ * `panelPosition` (`top`/`insetInlineStart`/`minWidth` in px) is the extra
+ * piece FilterProductSelect.vue's panel needs because it's `position: fixed`
+ * rather than the plain in-flow `absolute` FilterMultiSelect.vue's panel
+ * uses (see FilterProductSelect.vue's own comment for why: its option list
+ * is long enough to get clipped by FilterDialog's `overflow-y-auto` content
+ * area, which an in-flow `absolute` child can't escape but a `fixed` one
+ * can — nothing in FilterDialog's ancestor chain sets
+ * `transform`/`filter`/`perspective`, so no ancestor establishes a
+ * containing block for `fixed` descendants; only the viewport clips them).
+ * `fixed` positioning doesn't get a static-parent anchor for free the way
+ * `absolute` does, hence computing `top`/`insetInlineStart` here alongside
+ * the max-width math that already walks the same trigger rect.
+ * FilterMultiSelect.vue's panel ignores this field and stays plain
+ * `absolute`; its option lists are short enough that clipping has never
+ * been observed in practice. If that changes, switch it to the same
+ * `fixed`-position pattern rather than re-deriving this math.
+ */
+export function usePanelMaxWidth(
+    containerRef: Ref<HTMLElement | null>,
+    maxWidthPx = 320,
+) {
+    const panelMaxWidthPx = ref(maxWidthPx);
+    const panelPosition = ref({ top: 0, insetInlineStart: 0, minWidth: 0 });
+    const edgeMarginPx = 16;
+    const gapPx = 4;
+
+    function recompute(): void {
+        const el = containerRef.value;
+
+        if (!el) {
+            return;
+        }
+
+        const rect = el.getBoundingClientRect();
+        const isRtl = getComputedStyle(el).direction === 'rtl';
+        const availablePx = isRtl
+            ? rect.right - edgeMarginPx
+            : window.innerWidth - rect.left - edgeMarginPx;
+
+        panelMaxWidthPx.value = Math.max(Math.min(maxWidthPx, availablePx), 0);
+        panelPosition.value = {
+            top: rect.bottom + gapPx,
+            insetInlineStart: isRtl
+                ? window.innerWidth - rect.right
+                : rect.left,
+            minWidth: rect.width,
+        };
+    }
+
+    return { panelMaxWidthPx, panelPosition, recompute };
 }
 
 /**

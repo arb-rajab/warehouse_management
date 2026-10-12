@@ -1,6 +1,17 @@
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { accept as acceptReport } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
+import {
+    index as cellVerificationRoundsIndex,
+    exportReports,
+    show as cellVerificationRoundShow,
+} from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
+import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
+import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDateTime } from '@/lib/date';
@@ -21,9 +32,10 @@ import type {
 } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock } = vi.hoisted(() => ({
+const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerPostMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
@@ -33,7 +45,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { get: routerGetMock },
+        router: { get: routerGetMock, post: routerPostMock },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -49,17 +61,18 @@ const filterOptions: CellVerificationReportFilterOptions = {
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
-    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات' }],
+    products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات', active: true }],
 };
 
 function mountPage(
     round: CellVerificationRound,
     reports: CellVerificationReport[],
     filters: CellVerificationReportFilters = {},
+    pageProps: Record<string, unknown> = {},
 ) {
     usePageMock.mockReturnValue({
         url: `/admin/cell-verification-rounds/${round.id}`,
-        props: defaultAuthProps(),
+        props: defaultAuthProps(pageProps),
     });
 
     return mount(Show, {
@@ -72,22 +85,24 @@ async function openFilters(
 ): Promise<void> {
     const trigger = wrapper
         .findAll('button')
-        .find((button) =>
-            button.text().includes(t('cellVerificationReport.filters.title')),
-        );
+        .find((button) => button.text().includes(t('common.filters.title')));
     await trigger?.trigger('click');
 }
 
 describe('CellVerificationRounds Show', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerGetMock });
+        resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        vi.unstubAllGlobals();
     });
 
     it('renders the round id in the page heading', () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), []);
 
+        expect(t('cellVerificationRound.show.title', { id: 42 })).toBe(
+            'Verification round #42',
+        );
         expect(wrapper.get('h1').text()).toBe(
-            `${t('cellVerificationRound.title')} #42`,
+            t('cellVerificationRound.show.title', { id: 42 }),
         );
     });
 
@@ -100,7 +115,7 @@ describe('CellVerificationRounds Show', () => {
                 a.text().includes(t('cellVerificationRound.show.backToList')),
             );
         expect(backLink?.attributes('href')).toBe(
-            '/admin/cell-verification-rounds',
+            cellVerificationRoundsIndex.url(),
         );
     });
 
@@ -112,11 +127,11 @@ describe('CellVerificationRounds Show', () => {
 
         const link = wrapper
             .findAll('a')
-            .find((a) => a.attributes('href') === '/admin/users/7');
+            .find((a) => a.attributes('href') === userShow.url({ user: 7 }));
         expect(link?.text()).toContain('Jane Doe');
     });
 
-    it('shows no worker link when the round has none', () => {
+    it('shows an em-dash for the worker summary field when the round has none', () => {
         const wrapper = mountPage(
             cellVerificationRound({ user: undefined }),
             [],
@@ -125,6 +140,13 @@ describe('CellVerificationRounds Show', () => {
         expect(
             wrapper.findAll('a').some((a) => a.text().includes('Jane Doe')),
         ).toBe(false);
+
+        const label = wrapper
+            .findAll('div')
+            .find((div) =>
+                div.text().includes(t('cellVerificationRound.columns.user')),
+            );
+        expect(label?.text()).toContain('—');
     });
 
     it('shows the formatted started_at timestamp', () => {
@@ -198,7 +220,9 @@ describe('CellVerificationRounds Show', () => {
             .find((a) => a.text().includes(t('cellVerificationReport.export')));
         const href = exportLink?.attributes('href') ?? '';
 
-        expect(href).toContain('/admin/cell-verification-rounds/42/export');
+        expect(href).toContain(
+            exportReports.url({ cellVerificationRound: 42 }),
+        );
         expect(href).toContain('product_id');
     });
 
@@ -235,7 +259,7 @@ describe('CellVerificationRounds Show', () => {
         await openFilters(wrapper);
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
-            t('cellVerificationReport.filters.title'),
+            t('common.filters.title'),
         );
         expect(wrapper.find('#filter-row').exists()).toBe(true);
         expect(wrapper.find('#filter-column').exists()).toBe(true);
@@ -265,12 +289,9 @@ describe('CellVerificationRounds Show', () => {
         await openFilters(wrapper);
 
         const applyButton = wrapper
-            .get('form')
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationReport.filters.apply')),
+                button.text().includes(t('common.filters.apply')),
             );
         expect(applyButton?.findComponent(Check).exists()).toBe(true);
 
@@ -285,16 +306,14 @@ describe('CellVerificationRounds Show', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationReport.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.find('span').exists()).toBe(false);
     });
 
     it('shows a filter count badge for each distinct active filter', () => {
         const wrapper = mountPage(cellVerificationRound(), [], {
-            row_id: 1,
+            row_id: [1],
             product_id: [10],
             is_correct: false,
             date_from: '2026-08-01',
@@ -303,9 +322,7 @@ describe('CellVerificationRounds Show', () => {
         const trigger = wrapper
             .findAll('button')
             .find((button) =>
-                button
-                    .text()
-                    .includes(t('cellVerificationReport.filters.title')),
+                button.text().includes(t('common.filters.title')),
             );
         expect(trigger?.get('span').text()).toBe('4');
     });
@@ -314,12 +331,13 @@ describe('CellVerificationRounds Show', () => {
         const wrapper = mountPage(cellVerificationRound(), []);
         await openFilters(wrapper);
 
+        await wrapper.get('#filter-row').trigger('click');
         expect(
             wrapper
-                .get('#filter-row')
-                .findAll('option')
+                .get('[role="listbox"]')
+                .findAll('[role="option"]')
                 .map((o) => o.text()),
-        ).toEqual([t('cellVerificationReport.filters.all'), 'A', 'B']);
+        ).toEqual(['A', 'B']);
         expect(
             wrapper
                 .get('#filter-column')
@@ -375,7 +393,12 @@ describe('CellVerificationRounds Show', () => {
         ]);
 
         const link = rowCells(wrapper)[0].get('a');
-        expect(link.attributes('href')).toBe('/admin/rows/A');
+        expect(link.attributes('href')).toBe(
+            rowShow.url(
+                { row: 'A' },
+                { query: { cell_number: '3', flat_number: '2' } },
+            ),
+        );
         expect(link.text()).toContain(formatSlot('A', 3, 2));
     });
 
@@ -388,9 +411,150 @@ describe('CellVerificationRounds Show', () => {
         expect(rowCells(wrapper, 0)[1].text()).toBe(
             t('cellVerificationReport.correct'),
         );
-        expect(rowCells(wrapper, 1)[1].text()).toBe(
+        expect(rowCells(wrapper, 1)[1].get('span').text()).toBe(
             t('cellVerificationReport.incorrect'),
         );
+    });
+
+    it('offers to accept only an unaccepted incorrect report once the round is completed', () => {
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: '2026-08-01T11:00:00Z' }),
+            [
+                cellVerificationReport({ id: 1, is_correct: true }),
+                cellVerificationReport({ id: 2, is_correct: false }),
+                cellVerificationReport({
+                    id: 3,
+                    is_correct: false,
+                    accepted_at: '2026-08-02T09:00:00Z',
+                    accepted_by: { id: 9, name: 'Zoe Admin' },
+                }),
+            ],
+        );
+
+        expect(
+            rowCells(wrapper, 0)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(false);
+        expect(
+            rowCells(wrapper, 1)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(true);
+        expect(rowCells(wrapper, 1)[1].text()).toContain(
+            t('cellVerificationReport.accept'),
+        );
+        expect(
+            rowCells(wrapper, 2)[1]
+                .findComponent(CellVerificationAcceptButton)
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('does not offer to accept while the reports round is still in progress', () => {
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: null }),
+            [
+                cellVerificationReport({
+                    is_correct: false,
+                    round_completed: false,
+                }),
+            ],
+        );
+
+        expect(
+            wrapper.findComponent(CellVerificationAcceptButton).exists(),
+        ).toBe(false);
+    });
+
+    it('keeps an accepted report marked incorrect and shows when and by whom it was accepted', () => {
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({
+                is_correct: false,
+                accepted_at: '2026-08-02T09:00:00Z',
+                accepted_by: { id: 9, name: 'Zoe Admin' },
+            }),
+        ]);
+
+        const cell = rowCells(wrapper)[1];
+        expect(cell.get('span').text()).toBe(
+            t('cellVerificationReport.incorrect'),
+        );
+        const note = cell.getComponent(CellVerificationAcceptedNote);
+        expect(note.props()).toEqual({
+            acceptedAt: '2026-08-02T09:00:00Z',
+            acceptedBy: { id: 9, name: 'Zoe Admin' },
+        });
+        expect(note.text()).toContain(formatDateTime('2026-08-02T09:00:00Z'));
+    });
+
+    it('asks for confirmation naming the slot, then posts the accept action for that report', async () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({
+                id: 5,
+                is_correct: false,
+                cell: { row_letter: 'B', cell_number: 4, flat_number: 1 },
+            }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            t('cellVerificationReport.acceptConfirm', {
+                slot: formatSlot('B', 4, 1),
+            }),
+        );
+        // No return_to: the backend's default redirect is back to this round.
+        expect(routerPostMock).toHaveBeenCalledWith(
+            acceptReport.url({ cellVerificationReport: 5 }),
+            { return_to: null },
+            { preserveScroll: true },
+        );
+    });
+
+    it('does not accept the report when the confirmation is cancelled', async () => {
+        vi.stubGlobal('confirm', () => false);
+        const wrapper = mountPage(cellVerificationRound(), [
+            cellVerificationReport({ is_correct: false }),
+        ]);
+
+        await wrapper
+            .getComponent(CellVerificationAcceptButton)
+            .trigger('click');
+
+        expect(routerPostMock).not.toHaveBeenCalled();
+    });
+
+    it('shows why an accept was refused in the action error banner', () => {
+        const wrapper = mountPage(
+            cellVerificationRound(),
+            [],
+            {},
+            {
+                errors: {
+                    action: 'This slot has changed since it was verified.',
+                },
+            },
+        );
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'This slot has changed since it was verified.',
+        );
+    });
+
+    it('renders no action error banner when nothing was refused', () => {
+        const wrapper = mountPage(
+            cellVerificationRound(),
+            [],
+            {},
+            { errors: {} },
+        );
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
     it('renders the expected and reported cell state as a translated label', () => {
@@ -481,7 +645,8 @@ describe('CellVerificationRounds Show', () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), []);
         await openFilters(wrapper);
 
-        await wrapper.get('#filter-row').setValue('1');
+        await wrapper.get('#filter-row').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
         await wrapper.get('#filter-column').setValue('2');
         await wrapper.get('#filter-correctness').setValue('true');
         await wrapper.get('#filter-date-from').setValue('2026-08-01');
@@ -489,9 +654,9 @@ describe('CellVerificationRounds Show', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({
-                row_id: 1,
+                row_id: ['1'],
                 column_number: 2,
                 is_correct: true,
                 date_from: '2026-08-01',
@@ -510,7 +675,7 @@ describe('CellVerificationRounds Show', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({ product_id: ['10'] }),
             { preserveState: true, replace: true },
         );
@@ -524,7 +689,7 @@ describe('CellVerificationRounds Show', () => {
         await wrapper.get('form').trigger('submit');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({ created_within_days: 7 }),
             { preserveState: true, replace: true },
         );
@@ -558,7 +723,7 @@ describe('CellVerificationRounds Show', () => {
 
     it('resets every filter field and reloads the unfiltered list when Clear is clicked', async () => {
         const wrapper = mountPage(cellVerificationRound({ id: 42 }), [], {
-            row_id: 1,
+            row_id: [1],
             product_id: [10],
             is_correct: true,
             date_from: '2026-08-01',
@@ -567,21 +732,18 @@ describe('CellVerificationRounds Show', () => {
 
         const clearButton = wrapper
             .findAll('button')
-            .find(
-                (button) =>
-                    button.text() === t('cellVerificationReport.filters.clear'),
-            );
+            .find((button) => button.text() === t('common.filters.clear'));
         expect(clearButton?.findComponent(X).exists()).toBe(true);
         await clearButton?.trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             { per_page: 20 },
             { preserveState: true, replace: true },
         );
-        expect(
-            (wrapper.get('#filter-row').element as HTMLSelectElement).value,
-        ).toBe('');
+        expect(wrapper.get('#filter-row').text()).toBe(
+            t('cellVerificationReport.filters.all'),
+        );
         expect(wrapper.get('#filter-product').text()).toBe(
             t('cellVerificationReport.filters.all'),
         );
@@ -602,7 +764,7 @@ describe('CellVerificationRounds Show', () => {
         await whenHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({ sort_direction: 'asc' }),
             { preserveState: true, replace: true },
         );
@@ -621,7 +783,7 @@ describe('CellVerificationRounds Show', () => {
         await whenHeader?.get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({ sort_direction: 'desc' }),
             { preserveState: true, replace: true },
         );
@@ -643,7 +805,7 @@ describe('CellVerificationRounds Show', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/cell-verification-rounds/42',
+            cellVerificationRoundShow.url({ cellVerificationRound: 42 }),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );

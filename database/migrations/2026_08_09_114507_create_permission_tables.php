@@ -121,6 +121,13 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * `rename_colliding_tables_to_wms_prefix` runs later, so its `down()`
+     * fires before this one during a full rollback and un-prefixes these
+     * tables back to their legacy (Spatie default) names wherever this app
+     * owns them. Dropping only the configured `wms_` name would then silently
+     * no-op and orphan the legacy-named table, so each table is dropped under
+     * whichever name it currently holds.
      */
     public function down(): void
     {
@@ -128,10 +135,24 @@ return new class extends Migration
 
         throw_if(empty($tableNames), 'Error: config/permission.php not found and defaults could not be merged. Please publish the package configuration before proceeding, or drop the tables manually.');
 
-        Schema::dropIfExists($tableNames['role_has_permissions']);
-        Schema::dropIfExists($tableNames['model_has_roles']);
-        Schema::dropIfExists($tableNames['model_has_permissions']);
-        Schema::dropIfExists($tableNames['roles']);
-        Schema::dropIfExists($tableNames['permissions']);
+        $this->dropRenamable($tableNames['role_has_permissions'], 'role_has_permissions');
+        $this->dropRenamable($tableNames['model_has_roles'], 'model_has_roles');
+        $this->dropRenamable($tableNames['model_has_permissions'], 'model_has_permissions');
+        $this->dropRenamable($tableNames['roles'], 'roles');
+        $this->dropRenamable($tableNames['permissions'], 'permissions');
+    }
+
+    /**
+     * Drops the configured (`wms_`-prefixed) table if it still exists under
+     * that name, otherwise falls back to the legacy name a rename
+     * migration's `down()` may have already restored it to.
+     */
+    private function dropRenamable(string $configured, string $legacy): void
+    {
+        if (Schema::hasTable($configured)) {
+            Schema::drop($configured);
+        } else {
+            Schema::dropIfExists($legacy);
+        }
     }
 };

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Pencil } from '@lucide/vue';
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
@@ -12,13 +12,17 @@ import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import {
     emptyCellHighlightFilters,
+    isCellDimmedByHighlight,
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
+import { usePageError } from '@/lib/pageErrors';
+import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
     CellMapRow,
+    CellSlotLocation,
     ProductFilterOptions,
     Row,
 } from '@/types/admin';
@@ -29,12 +33,17 @@ const props = defineProps<{
     cells: Cell[];
     today: string;
     filterOptions: ProductFilterOptions;
+    linkedCell: CellSlotLocation | null;
 }>();
 
 const highlightFilters = reactive(emptyCellHighlightFilters());
 
 function highlighted(cell: Cell | null): boolean {
     return matchesCellHighlight(cell, highlightFilters, props.today);
+}
+
+function dimmed(cell: Cell | null): boolean {
+    return isCellDimmedByHighlight(cell, highlightFilters, props.today);
 }
 
 const grid = computed(() => {
@@ -72,6 +81,75 @@ function slotLabel(cellIndex: number, flatNumber: number): string {
     return formatSlot(props.row.letter, cellIndex + 1, flatNumber);
 }
 
+/**
+ * The label of the first cell matching the active highlight filters, in the
+ * same order the grid renders them (left to right by cell number, then top
+ * to bottom within a column) — what applying a filter jumps to.
+ */
+function firstHighlightMatchLabel(): string | null {
+    for (const [cellIndex, column] of grid.value.entries()) {
+        for (const entry of column) {
+            if (highlighted(entry.cell)) {
+                return slotLabel(cellIndex, entry.flatNumber);
+            }
+        }
+    }
+
+    return null;
+}
+
+const { pulsingLabel, pulse } = usePulse();
+
+/**
+ * Scrolls the given slot into view and briefly pulses it — this page has no
+ * camera/viewport to recenter (unlike the Cells map), so "jump to a cell"
+ * here means this instead. Shared by the highlight-filter jump below and by
+ * the initial `linkedCell` deep-link (e.g. from a cell-status-log or
+ * verification-report row linking to the exact cell it refers to).
+ */
+function pulseAndScrollTo(label: string): void {
+    pulse(label);
+    document.querySelector(`[data-slot-label="${label}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+    });
+}
+
+/**
+ * Applying/changing a highlight filter jumps straight to its first match
+ * instead of leaving the admin to scroll the grid manually.
+ */
+watch(highlightFilters, () => {
+    const label = firstHighlightMatchLabel();
+
+    if (!label) {
+        return;
+    }
+
+    pulseAndScrollTo(label);
+});
+
+/**
+ * `linkedCell` only ever arrives once, on the initial full-page load (a
+ * cell-status-log/verification-report link deep-linking to a specific cell)
+ * — never as a reactive change afterwards — so this jumps to it once the
+ * grid has actually painted, rather than watching for prop changes that
+ * never come.
+ */
+onMounted(() => {
+    if (!props.linkedCell) {
+        return;
+    }
+
+    pulseAndScrollTo(
+        slotLabel(
+            props.linkedCell.cell_number - 1,
+            props.linkedCell.flat_number,
+        ),
+    );
+});
+
 function openToggleActiveDialog(cell: Cell | null, label: string): void {
     if (!cell) {
         return;
@@ -96,23 +174,21 @@ function openPalletActionsDialog(cell: Cell | null, label: string): void {
     palletActionsDialogOpen.value = true;
 }
 
-const palletActionError = computed(
-    () => (usePage().props.errors as Partial<Record<'action', string>>)?.action,
-);
+const palletActionError = usePageError('action');
 </script>
 
 <template>
-    <Head :title="t('rows.show.title', { letter: props.row.letter })" />
+    <Head :title="t('rows.show.title', { letter: row.letter })" />
 
     <AdminLayout>
-        <PageHeader :title="t('rows.show.title', { letter: props.row.letter })">
+        <PageHeader :title="t('rows.show.title', { letter: row.letter })">
             <div class="flex items-center gap-4">
                 <CellHighlightFilters
                     :model-value="highlightFilters"
                     :products="filterOptions.products"
                 />
                 <Link
-                    :href="edit(props.row)"
+                    :href="edit(row)"
                     class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
                 >
                     <Pencil class="h-3.5 w-3.5" />
@@ -163,6 +239,11 @@ const palletActionError = computed(
                             :cell="entry.cell"
                             :label="slotLabel(cellIndex, entry.flatNumber)"
                             :highlighted="highlighted(entry.cell)"
+                            :dimmed="dimmed(entry.cell)"
+                            :pulsing="
+                                pulsingLabel ===
+                                slotLabel(cellIndex, entry.flatNumber)
+                            "
                             toggleable
                             manageable
                             @toggle-active="

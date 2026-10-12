@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreCellVerificationReportRequest;
 use App\Http\Resources\CellVerificationReportResource;
+use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\User;
 use App\Services\CellVerificationService;
@@ -14,17 +15,6 @@ use Illuminate\Support\Facades\Gate;
 
 class CellVerificationReportController extends Controller
 {
-    private const array EAGER_LOAD = [
-        'cell.row:id,letter',
-        'expectedProduct:id,name,ar_name,thumbnail_img,published',
-        'expectedProduct.thumbnailUpload:id,file_name,external_link',
-        'expectedProduct.setting:product_id,boxes_count',
-        'reportedProduct:id,name,ar_name,thumbnail_img,published',
-        'reportedProduct.thumbnailUpload:id,file_name,external_link',
-        'reportedProduct.setting:product_id,boxes_count',
-        'user:id,name',
-    ];
-
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
     #[DocumentedResponse(403, description: 'The verification round belongs to another user.', type: 'array{message: string}')]
@@ -48,7 +38,7 @@ class CellVerificationReportController extends Controller
             'note' => $request->input('note'),
         ]);
 
-        return (new CellVerificationReportResource($report->load(self::EAGER_LOAD)))
+        return (new CellVerificationReportResource($report->load(CellVerificationReport::WITH_DETAILS)))
             ->response()
             ->setStatusCode(201);
     }

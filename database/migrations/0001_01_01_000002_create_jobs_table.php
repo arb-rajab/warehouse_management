@@ -55,11 +55,32 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * `rename_colliding_tables_to_wms_prefix` runs later, so its `down()`
+     * fires before this one during a full rollback and un-prefixes these
+     * tables back to their legacy names wherever this app owns them. Dropping
+     * only the `wms_` name here would then silently no-op and orphan the
+     * legacy-named table, so each table is dropped under whichever name it
+     * currently holds.
      */
     public function down(): void
     {
-        Schema::dropIfExists('wms_jobs');
-        Schema::dropIfExists('wms_job_batches');
-        Schema::dropIfExists('wms_failed_jobs');
+        $this->dropRenamable('wms_jobs', 'jobs');
+        $this->dropRenamable('wms_job_batches', 'job_batches');
+        $this->dropRenamable('wms_failed_jobs', 'failed_jobs');
+    }
+
+    /**
+     * Drops the `wms_`-prefixed table if it still exists under that name,
+     * otherwise falls back to the legacy name a rename migration's `down()`
+     * may have already restored it to.
+     */
+    private function dropRenamable(string $prefixed, string $legacy): void
+    {
+        if (Schema::hasTable($prefixed)) {
+            Schema::drop($prefixed);
+        } else {
+            Schema::dropIfExists($legacy);
+        }
     }
 };

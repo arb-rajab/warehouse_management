@@ -26,7 +26,10 @@ import { productName } from '@/lib/productName';
  *
  * Deliberately multi-root: these are sibling `<td>`s inside DataTable's own
  * `<tr>`, so neither a wrapper element nor the `class="contents"` trick the
- * filter-field groups use would be valid HTML here.
+ * filter-field groups use would be valid HTML here. Vue 3 fragments make this
+ * work; the one cost is that a multi-root component has no attribute
+ * fallthrough target, so callers must not pass `class`/`style` or any other
+ * non-prop attribute to this tag — style the `<td>`s here instead.
  */
 const props = defineProps<{
     log: DisplayCellStatusLog;
@@ -36,7 +39,7 @@ const props = defineProps<{
     returnTo?: 'user';
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     'view-pallet-history': [palletId: number];
 }>();
 
@@ -46,7 +49,19 @@ const pair = computed(() => transferPair(props.log));
 <template>
     <td class="px-4 py-2">
         <div class="flex items-center gap-1">
-            <TableLink :href="showRow({ letter: pair.from.row_letter })">
+            <TableLink
+                :href="
+                    showRow(
+                        { letter: pair.from.row_letter },
+                        {
+                            query: {
+                                cell_number: pair.from.cell_number,
+                                flat_number: pair.from.flat_number,
+                            },
+                        },
+                    )
+                "
+            >
                 {{
                     formatSlot(
                         pair.from.row_letter,
@@ -59,7 +74,19 @@ const pair = computed(() => transferPair(props.log));
                 <ArrowRight
                     class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-neutral-500"
                 />
-                <TableLink :href="showRow({ letter: pair.to.row_letter })">
+                <TableLink
+                    :href="
+                        showRow(
+                            { letter: pair.to.row_letter },
+                            {
+                                query: {
+                                    cell_number: pair.to.cell_number,
+                                    flat_number: pair.to.flat_number,
+                                },
+                            },
+                        )
+                    "
+                >
                     {{
                         formatSlot(
                             pair.to.row_letter,
@@ -124,7 +151,7 @@ const pair = computed(() => transferPair(props.log));
                 type="button"
                 class="inline-flex cursor-pointer items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
                 :title="t('cellLog.columns.viewPalletHistory')"
-                @click="$emit('view-pallet-history', log.pallet.id)"
+                @click="emit('view-pallet-history', log.pallet.id)"
             >
                 #{{ log.pallet.id }}
                 <History class="h-3 w-3 shrink-0" />
@@ -152,7 +179,7 @@ const pair = computed(() => transferPair(props.log));
         {{ log.note ?? '—' }}
     </td>
     <td v-if="showUserColumn" class="px-4 py-2">
-        <TableLink :href="showUser({ id: log.user.id })">
+        <TableLink :href="showUser(log.user)">
             {{ log.user.name }}
         </TableLink>
     </td>

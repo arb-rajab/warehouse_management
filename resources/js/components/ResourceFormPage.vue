@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { UrlMethodPair } from '@inertiajs/core';
+import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
+import type { Component } from 'vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { t } from '@/lib/i18n';
-import SubmitButton from './SubmitButton.vue';
 
 withDefaults(
     defineProps<{
@@ -12,9 +14,29 @@ withDefaults(
         submitLabel: string;
         submittingLabel: string;
         cancelHref?: string | UrlMethodPair;
+        /**
+         * Forwarded to the underlying Inertia `<Form>` — lets a caller convert
+         * form values (e.g. Settings/Edit.vue converting cm back to the pixel
+         * integers the backend expects) before they're submitted.
+         */
+        transform?: (
+            data: Record<string, FormDataConvertible>,
+        ) => Record<string, FormDataConvertible>;
+        /**
+         * The page shell: WMS's AdminLayout, or StoreAdminLayout for the
+         * store back office's forms.
+         */
+        layout?: Component;
+        /**
+         * Let the form use the page's full width, for a form that lays its
+         * fields out in a grid (the store role form's permission checkboxes).
+         */
+        wide?: boolean;
     }>(),
     {
-        cancelHref: undefined,
+        transform: (data: Record<string, FormDataConvertible>) => data,
+        layout: () => AdminLayout,
+        wide: false,
     },
 );
 </script>
@@ -22,12 +44,15 @@ withDefaults(
 <template>
     <Head :title="title" />
 
-    <AdminLayout>
-        <h1 class="mb-6 text-xl font-semibold">{{ title }}</h1>
+    <component :is="layout">
+        <PageHeader :title="title">
+            <slot name="header-actions" />
+        </PageHeader>
 
-        <div class="max-w-sm">
+        <div :class="wide ? 'max-w-none' : 'max-w-sm'">
             <Form
                 :action="action"
+                :transform="transform"
                 #default="{ errors, processing }"
                 class="space-y-4"
             >
@@ -50,5 +75,5 @@ withDefaults(
                 </div>
             </Form>
         </div>
-    </AdminLayout>
+    </component>
 </template>

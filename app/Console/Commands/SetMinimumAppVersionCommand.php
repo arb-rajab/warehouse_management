@@ -6,6 +6,7 @@ use App\Models\MobileAppVersionRequirement;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 #[Signature('app:set-minimum-app-version {version : The minimum supported mobile app version, e.g. 1.4.0}')]
 #[Description('Reject mobile API requests from any app build older than this version')]
@@ -32,6 +33,8 @@ class SetMinimumAppVersionCommand extends Command
 
         $requirement->minimum_version = $version;
         $requirement->save();
+
+        Cache::forget(MobileAppVersionRequirement::MINIMUM_VERSION_CACHE_KEY);
 
         $this->components->info("Minimum app version set to {$version}. Older clients will now be rejected.");
 

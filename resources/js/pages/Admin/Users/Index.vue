@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Eye, Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
+import { Eye, Pencil, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     create,
     destroy,
@@ -9,14 +10,18 @@ import {
     index as usersIndex,
     show,
 } from '@/actions/App/Http/Controllers/Admin/UserController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
+import { usePageError } from '@/lib/pageErrors';
 import type { Paginated, PerPageFilters, User } from '@/types/admin';
 
 const props = defineProps<{
@@ -25,6 +30,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+
+const deleteError = usePageError('user');
 
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 
@@ -42,11 +49,16 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('users.index.title')">
-            <AddResourceLink
-                :href="create()"
-                :label="t('users.index.addUser')"
-            />
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('users')" />
+                <AddResourceLink
+                    :href="create()"
+                    :label="t('users.index.addUser')"
+                />
+            </div>
         </PageHeader>
+
+        <ActionErrorBanner :message="deleteError" />
 
         <DataTable
             :columns="[
@@ -66,24 +78,7 @@ function onPerPageChange(perPage: number): void {
                 </td>
                 <td class="px-4 py-2">{{ user.email }}</td>
                 <td class="px-4 py-2">
-                    <span
-                        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        :class="
-                            user.is_admin
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                : 'bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-neutral-400'
-                        "
-                    >
-                        <ShieldCheck
-                            v-if="user.is_admin"
-                            class="h-3 w-3 shrink-0"
-                        />
-                        {{
-                            user.is_admin
-                                ? t('users.index.roleAdmin')
-                                : t('users.index.roleMobile')
-                        }}
-                    </span>
+                    <UserRoleBadge :is-admin="user.is_admin" />
                 </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">

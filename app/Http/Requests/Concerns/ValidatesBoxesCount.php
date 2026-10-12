@@ -22,6 +22,20 @@ trait ValidatesBoxesCount
     }
 
     /**
+     * The boxes_count field's rules for a request where removing boxes is
+     * optional (opening a pallet) — a pallet can transition Full→Opened
+     * without removing any boxes at all.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    protected function optionalBoxesCountRules(): array
+    {
+        return [
+            'boxes_count' => ['nullable', 'integer', 'min:1'],
+        ];
+    }
+
+    /**
      * The confirm_empty field's rules, for requests that merge it with other rules.
      * When boxes_count meets or exceeds what remains on the pallet, the caller
      * re-sends the same request with this set to empty the pallet instead of

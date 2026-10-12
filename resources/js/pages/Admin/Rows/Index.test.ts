@@ -1,6 +1,14 @@
+import { Head } from '@inertiajs/vue3';
 import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import {
+    index as rowsIndex,
+    create as rowsCreate,
+    show as rowShow,
+    exportQrCodes as rowExportQrCodes,
+} from '@/actions/App/Http/Controllers/Admin/RowController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated, row } from '@/testing/factories';
@@ -31,7 +39,7 @@ function mountPage(
     perPage = 20,
 ) {
     usePageMock.mockReturnValue({
-        url: '/admin/rows',
+        url: rowsIndex.url(),
         props: defaultAuthProps({ errors }),
     });
 
@@ -43,6 +51,15 @@ function mountPage(
 describe('Rows Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock, routerGetMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('rows.index.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('rows.index.title'));
     });
 
     it('renders every column header', () => {
@@ -69,7 +86,18 @@ describe('Rows Index', () => {
         const addLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('rows.index.addRow'));
-        expect(addLink?.attributes('href')).toBe('/admin/rows/create');
+        expect(addLink?.attributes('href')).toBe(rowsCreate.url());
+    });
+
+    it('links the help icon to the rows help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'rows' }),
+        );
     });
 
     it('renders the letter, cell count, and flat count for a row', () => {
@@ -89,7 +117,7 @@ describe('Rows Index', () => {
         const viewLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.index.view')));
-        expect(viewLink?.attributes('href')).toBe('/admin/rows/C');
+        expect(viewLink?.attributes('href')).toBe(rowShow.url({ row: 'C' }));
     });
 
     it("links a row's export action to its QR-codes PDF download", () => {
@@ -99,7 +127,7 @@ describe('Rows Index', () => {
             .findAll('a')
             .find((a) => a.text().includes(t('rows.index.exportQrCodes')));
         expect(exportLink?.attributes('href')).toBe(
-            '/admin/rows/C/export-qr-codes',
+            rowExportQrCodes.url({ row: 'C' }),
         );
     });
 
@@ -109,7 +137,9 @@ describe('Rows Index', () => {
         const deleteButton = wrapper
             .findAll('button')
             .find((b) => b.text().includes(t('rows.index.delete')));
-        expect(deleteButton?.attributes('href')).toBe('/admin/rows/D');
+        expect(deleteButton?.attributes('href')).toBe(
+            rowShow.url({ row: 'D' }),
+        );
         expect(wrapper.text()).not.toContain(t('rows.index.hasPallets'));
     });
 
@@ -154,7 +184,7 @@ describe('Rows Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/rows',
+            rowsIndex.url(),
             { per_page: 50 },
             { preserveState: true, replace: true },
         );

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Eye, QrCode, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     create,
     destroy,
@@ -12,6 +13,7 @@ import {
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -19,6 +21,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
+import { usePageError } from '@/lib/pageErrors';
 import type { Paginated, PerPageFilters, Row } from '@/types/admin';
 
 const props = defineProps<{
@@ -26,9 +29,7 @@ const props = defineProps<{
     filters: PerPageFilters;
 }>();
 
-const deleteError = computed(
-    () => (usePage().props.errors as Partial<Record<'row', string>>)?.row,
-);
+const deleteError = usePageError('row');
 
 const currentPerPage = computed(() => props.filters.per_page ?? 20);
 
@@ -46,7 +47,13 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('rows.index.title')">
-            <AddResourceLink :href="create()" :label="t('rows.index.addRow')" />
+            <div class="flex items-center gap-2">
+                <HelpLink :href="showHelp('rows')" />
+                <AddResourceLink
+                    :href="create()"
+                    :label="t('rows.index.addRow')"
+                />
+            </div>
         </PageHeader>
 
         <ActionErrorBanner :message="deleteError" />

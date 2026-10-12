@@ -1,4 +1,4 @@
-import { i18n, t } from './i18n';
+import { i18n, t } from '@/lib/i18n';
 
 const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -70,11 +70,13 @@ export function formatDuration(seconds: number): string {
     const second = t('common.duration.second');
 
     if (days > 0) {
-        return `${days}${day} ${hours}${hour}`;
+        return hours > 0 ? `${days}${day} ${hours}${hour}` : `${days}${day}`;
     }
 
     if (hours > 0) {
-        return `${hours}${hour} ${minutes}${minute}`;
+        return minutes > 0
+            ? `${hours}${hour} ${minutes}${minute}`
+            : `${hours}${hour}`;
     }
 
     if (minutes > 0) {

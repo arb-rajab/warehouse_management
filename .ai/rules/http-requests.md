@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'app/Http/Requests/StoreRowRequest.php,app/Http/Requests/UpdateRowRequest.php'
+  - 'app/Http/Requests/Admin/StoreRowRequest.php,app/Http/Requests/Admin/UpdateRowRequest.php'
 ---
 
 # Http Requests

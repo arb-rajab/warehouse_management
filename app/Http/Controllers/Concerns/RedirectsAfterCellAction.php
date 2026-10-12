@@ -32,6 +32,6 @@ trait RedirectsAfterCellAction
             return redirect()->route('admin.rows.show', $cell->loadMissing('row:id,letter')->row->letter);
         }
 
-        return redirect()->route('admin.cells.index', $request->query());
+        return $this->redirectPreservingQuery('admin.cells.index', $request);
     }
 }

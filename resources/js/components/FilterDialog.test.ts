@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import FilterDialog from './FilterDialog.vue';
 
@@ -131,6 +131,33 @@ describe('FilterDialog', () => {
         outsideButton.remove();
     });
 
+    it('restores focus without scrolling the page, so a scroll position set while the dialog was open survives closing it', async () => {
+        const outsideButton = document.createElement('button');
+        document.body.appendChild(outsideButton);
+        outsideButton.focus();
+        const focusSpy = vi.spyOn(outsideButton, 'focus');
+
+        const wrapper = mount(FilterDialog, {
+            attachTo: document.body,
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: false,
+                'onUpdate:open': () => {},
+            },
+            slots: { default: '<input id="first-field" />' },
+        });
+
+        await wrapper.setProps({ open: true });
+        await nextTick();
+        await wrapper.setProps({ open: false });
+
+        expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+
+        wrapper.unmount();
+        outsideButton.remove();
+    });
+
     it('wraps Tab from the last focusable element back to the first', async () => {
         const wrapper = mount(FilterDialog, {
             attachTo: document.body,
@@ -179,6 +206,69 @@ describe('FilterDialog', () => {
         );
 
         expect(document.activeElement).toBe(field);
+
+        wrapper.unmount();
+    });
+
+    it('renders the footer slot outside the scrollable content area', () => {
+        const wrapper = mount(FilterDialog, {
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: true,
+                'onUpdate:open': () => {},
+            },
+            slots: {
+                default: '<p>Filter fields</p>',
+                footer: '<button type="button">Apply</button>',
+            },
+        });
+
+        const content = wrapper
+            .get('p')
+            .element.closest('.overflow-y-auto') as HTMLElement;
+        const footerButton = wrapper
+            .findAll('button')
+            .find((button) => button.text() === 'Apply')?.element;
+
+        expect(content).not.toBeNull();
+        expect(footerButton).toBeDefined();
+        expect(content.contains(footerButton as HTMLElement)).toBe(false);
+    });
+
+    it('does not render a footer section when no footer slot is provided', () => {
+        const wrapper = mountDialog(true);
+
+        expect(wrapper.get('[role="dialog"]').element.children).toHaveLength(2);
+    });
+
+    it('includes the footer slot in the Tab focus trap', async () => {
+        const wrapper = mount(FilterDialog, {
+            attachTo: document.body,
+            props: {
+                title: 'Filters',
+                closeLabel: 'Close',
+                open: true,
+                'onUpdate:open': () => {},
+            },
+            slots: {
+                default: '<input id="only-field" />',
+                footer: '<button id="footer-apply" type="button">Apply</button>',
+            },
+        });
+        await nextTick();
+
+        const footerButton = document.getElementById(
+            'footer-apply',
+        ) as HTMLElement;
+
+        footerButton.focus();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+
+        const closeButton = wrapper.get('[aria-label="Close"]')
+            .element as HTMLElement;
+
+        expect(document.activeElement).toBe(closeButton);
 
         wrapper.unmount();
     });

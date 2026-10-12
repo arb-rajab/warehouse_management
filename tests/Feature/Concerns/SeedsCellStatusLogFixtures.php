@@ -84,6 +84,22 @@ trait SeedsCellStatusLogFixtures
     }
 
     /**
+     * @return array{rowA: Row, rowB: Row, matchingA: CellStatusLog, matchingB: CellStatusLog}
+     */
+    public function seedMultipleRowFilterFixture(): array
+    {
+        $rowA = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+        $rowB = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+        $thirdRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+        $matchingA = CellStatusLog::factory()->create(['cell_id' => $rowA->cells()->first()->id]);
+        $matchingB = CellStatusLog::factory()->create(['cell_id' => $rowB->cells()->first()->id]);
+        CellStatusLog::factory()->create(['cell_id' => $thirdRow->cells()->first()->id]);
+
+        return compact('rowA', 'rowB', 'matchingA', 'matchingB');
+    }
+
+    /**
      * @return array{matching: CellStatusLog}
      */
     public function seedColumnFilterFixture(): array
@@ -256,13 +272,24 @@ trait SeedsCellStatusLogFixtures
     public function seedExpiringWindowsFixture(): void
     {
         Pallet::factory()->create(['expiration_date' => '2026-08-12']);
-        Pallet::factory()->create(['expiration_date' => '2026-08-16']);
-        Pallet::factory()->create(['expiration_date' => '2026-09-12']);
+        Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+        Pallet::factory()->create(['expiration_date' => '2026-11-01']);
     }
 
     public function seedCustomExpiringWindowFixture(): void
     {
         Pallet::factory()->create(['expiration_date' => '2026-08-25']);
+    }
+
+    /**
+     * @return array{matching: Pallet}
+     */
+    public function seedStaleWindowFixture(): array
+    {
+        $matching = Pallet::factory()->stale()->create();
+        Pallet::factory()->create();
+
+        return compact('matching');
     }
 
     public function seedActivityWindowsFixture(): void

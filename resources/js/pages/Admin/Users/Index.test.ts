@@ -1,6 +1,14 @@
+import { Head } from '@inertiajs/vue3';
 import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import {
+    index as usersIndex,
+    create as usersCreate,
+    show as userShow,
+    edit as userEdit,
+} from '@/actions/App/Http/Controllers/Admin/UserController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated, user } from '@/testing/factories';
@@ -27,7 +35,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountPage(users: User[], currentUserId = 7, perPage = 20) {
     usePageMock.mockReturnValue({
-        url: '/admin/users',
+        url: usersIndex.url(),
         props: defaultAuthProps({
             auth: { user: { name: 'Current User', id: currentUserId } },
         }),
@@ -41,6 +49,15 @@ function mountPage(users: User[], currentUserId = 7, perPage = 20) {
 describe('Users Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock, routerGetMock });
+    });
+
+    it('renders the page title in the Head and the PageHeader', () => {
+        const wrapper = mountPage([]);
+
+        expect(wrapper.getComponent(Head).props('title')).toBe(
+            t('users.index.title'),
+        );
+        expect(wrapper.get('h1').text()).toBe(t('users.index.title'));
     });
 
     it('renders every column header', () => {
@@ -67,7 +84,18 @@ describe('Users Index', () => {
         const addLink = wrapper
             .findAll('a')
             .find((a) => a.text() === t('users.index.addUser'));
-        expect(addLink?.attributes('href')).toBe('/admin/users/create');
+        expect(addLink?.attributes('href')).toBe(usersCreate.url());
+    });
+
+    it('links the help icon to the users help page', () => {
+        const wrapper = mountPage([]);
+
+        const helpLink = wrapper
+            .findAll('a')
+            .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
+        expect(helpLink?.attributes('href')).toBe(
+            helpShow.url({ topic: 'users' }),
+        );
     });
 
     it('renders the name and email for a user', () => {
@@ -102,7 +130,7 @@ describe('Users Index', () => {
         const viewLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('users.index.view')));
-        expect(viewLink?.attributes('href')).toBe('/admin/users/5');
+        expect(viewLink?.attributes('href')).toBe(userShow.url({ user: 5 }));
     });
 
     it("links a user's edit action to their edit page", () => {
@@ -111,7 +139,7 @@ describe('Users Index', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('users.index.edit')));
-        expect(editLink?.attributes('href')).toBe('/admin/users/5/edit');
+        expect(editLink?.attributes('href')).toBe(userEdit.url({ user: 5 }));
     });
 
     it('shows a delete action for a user that is not the current user', () => {
@@ -120,7 +148,9 @@ describe('Users Index', () => {
         const deleteButton = wrapper
             .findAll('button')
             .find((b) => b.text().includes(t('users.index.delete')));
-        expect(deleteButton?.attributes('href')).toBe('/admin/users/5');
+        expect(deleteButton?.attributes('href')).toBe(
+            userShow.url({ user: 5 }),
+        );
     });
 
     it('hides the delete action for the currently signed-in user', () => {
@@ -146,7 +176,7 @@ describe('Users Index', () => {
         await wrapper.get('select').setValue('50');
 
         expect(routerGetMock).toHaveBeenCalledWith(
-            '/admin/users',
+            usersIndex.url(),
             { per_page: 50 },
             { preserveState: true, replace: true },
         );

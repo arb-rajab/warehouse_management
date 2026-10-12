@@ -123,8 +123,8 @@ return [
 
     'middleware' => [
         'web',
-        Authorize::class,
         RestrictToAllowedIps::class.':pulse.allowed_ips',
+        Authorize::class,
     ],
 
     /*

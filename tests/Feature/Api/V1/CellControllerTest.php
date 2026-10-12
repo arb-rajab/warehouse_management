@@ -205,6 +205,14 @@ test('a row cell listing paginates instead of returning everything at once', fun
     assertJsonListingPaginates($response, total: 25);
 });
 
+test('a row cell listing keeps the caller\'s query string on its pagination links', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 25, 'flats_count' => 1]);
+
+    assertNextLinkKeepsQuery($this->getJson("/api/v1/rows/{$row->letter}/cells?stale_after_days=5"), 'stale_after_days=5');
+});
+
 test('an unauthenticated caller cannot list a row cells', function () {
     $row = Row::factory()->create();
 
@@ -248,6 +256,18 @@ test('an authenticated worker can look up a cell by its coordinates with every p
             'remaining_boxes' => $pallet->remaining_boxes,
         ],
     ]);
+});
+
+test('a cell lookup resolves the flat number too, not just the cell number', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 2, 'flats_count' => 3]);
+    $flatTwo = $row->cells()->where('cell_number', 2)->where('flat_number', 2)->first();
+    $flatThree = $row->cells()->where('cell_number', 2)->where('flat_number', 3)->first();
+
+    $this->getJson("/api/v1/rows/{$row->letter}/cells/2/flats/2")->assertOk()->assertJsonPath('id', $flatTwo->id);
+    $this->getJson("/api/v1/rows/{$row->letter}/cells/2/flats/3")->assertOk()->assertJsonPath('id', $flatThree->id);
+    $this->getJson("/api/v1/rows/{$row->letter}/cells/2/flats/4")->assertNotFound();
 });
 
 test('a cell lookup computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {

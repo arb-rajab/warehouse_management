@@ -31,6 +31,17 @@ test('the telescope route middleware is IP-restricted via telescope.allowed_ips'
     expect(config('telescope.middleware'))->toContain('App\Http\Middleware\RestrictToAllowedIps:telescope.allowed_ips');
 });
 
+test('current_password is hidden from telescope alongside the csrf token', function () {
+    // Telescope's own defaults already hide password/password_confirmation
+    // (vendor/laravel/telescope/src/Telescope.php), but not current_password,
+    // which UpdatePasswordRequest uses — without this it would land in
+    // plaintext in database/telescope.sqlite for any failed (or, in local,
+    // successful) password-change request.
+    expect(Telescope::$hiddenRequestParameters)
+        ->toContain('_token')
+        ->toContain('current_password');
+});
+
 test('Telescope::check() still enforces the viewTelescope gate in the local environment', function () {
     // The vendor default ORs the gate with app()->environment('local'), which
     // opens Telescope to any visitor — authenticated or not — on every local

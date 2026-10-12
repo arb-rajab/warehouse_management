@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { StoreSharedProps } from '@/types/store';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -18,6 +19,8 @@ declare module '@inertiajs/core' {
             name: string;
             locale: string;
             auth: Auth;
+            /** Present on the store back office's pages only. */
+            store?: StoreSharedProps;
             [key: string]: unknown;
         };
     }
