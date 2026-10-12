@@ -509,3 +509,14 @@ export interface StoreOrder {
     created_at: string | null;
     details?: StoreOrderLine[];
 }
+
+export interface StoreCustomerPackage {
+    id: number;
+    name: string | null;
+    localized_name: string | null;
+    amount: string;
+    formatted_amount: string;
+    product_upload: number;
+    logo: string | null;
+    logo_url: string;
+}

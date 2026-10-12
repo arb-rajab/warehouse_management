@@ -13,7 +13,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
+Latest customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
+Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
 historical evidence; §10 records this session's result and limits.
@@ -477,7 +478,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments and visit list implemented; customer packages pending; classifieds decision-blocked |
+| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
 | Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; core brands/categories/products/digital-product conversion pending |
 | Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain Blade editor |
 | Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog/newsletter editor forms remain Blade; typed newsletter sending/recipient lookup integrated |
@@ -491,7 +492,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 `1c005f6efdddee958ba8d739afd35eb0935007bd` records the prerequisite review.
 Feature flags and checked-in owner-approval claims do not establish seller or
 classified feature-use approval. Keep the existing seller area and customer
-classified-product controllers/routes/views. Customer packages are not converted.
+classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
 
 Union permission definitions while retaining per-action gates. Idempotent
 definition migrations do not assign permissions to existing roles and do not
@@ -534,13 +535,13 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **70 Blade files**, down from 73 after
-removing only the three carrier screens. These files remain physically present.
-Hardening a Blade handler does not count
+The current backend inventory contains **67 Blade files**, down from 73 after
+removing the three carrier screens and three customer-package admin screens.
+These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
 - **blog_system:** `blog_system/blog/create.blade.php`, `blog_system/blog/edit.blade.php`.
-- **customer:** `customer/classified_products/index.blade.php`, `customer/customer_packages/create.blade.php`, `customer/customer_packages/edit.blade.php`, `customer/customer_packages/index.blade.php`.
+- **customer:** `customer/classified_products/index.blade.php`.
 - **(root):** `dashboard.blade.php`.
 - **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
@@ -581,6 +582,7 @@ line numbers or count sibling snapshots.
 | `CouponController` | `coupon.index`, `coupon.store`, `coupon.create`, `coupon.product-options`, `coupon.update`, `coupon.destroy`, `coupon.edit` | `Store/Admin/Marketing/Coupons/Index.vue`, `Store/Admin/Marketing/Coupons/Create.vue`, `Store/Admin/Marketing/Coupons/Edit.vue` |
 | `CurrencyController` | `currency.index`, `currency.create`, `currency.settings.update`, `currency.store`, `currency.edit`, `currency.update_status`, `your_currency.update` | `Store/Admin/Setup/Currencies/Index.vue` |
 | `CustomerController` | `bulk-customer-delete`, `change_password`, `customers.important`, `customers.not_important`, `customers.store`, `customers.whatsapp_contact`, `customers.page-views`, `customers.index`, `customers.archive`, `customers.create`, `download.trade_license`, `customers.login`, `customers.restore`, `customers.sendAgreement`, `customers.verify`, `customers.update`, `customers.destroy`, `customers.change_activity_status`, `customers.edit`, `customers.update_customer_notes`, `update_password`, `customers.ban`, `representatives.index`, `representatives.create`, `representatives.store` | `Store/Admin/Customers/Customers/Index.vue`, `Store/Admin/Customers/Customers/Create.vue`, `Store/Admin/Customers/Customers/Edit.vue`, `Store/Admin/Customers/Customers/Views.vue` |
+| `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
 | `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
@@ -934,3 +936,51 @@ Verification results are recorded in the
 Manifests/locks, tariff helper/API implementation, role grants and unrelated
 brands/dashboard defects are unchanged. Commit authorization is local only;
 no push, PR, merge or deployment is authorized by this follow-up.
+
+
+## 12. Customer package administration follow-up (2026-10-12)
+
+Authorized local-only migration on `codex/customer-package-admin`, based on
+latest fetched develop `71de5cad28d33561ed832acc80d02cc822191e87` (PR #378).
+The package list/create/edit were confirmed Blade before migration. Neither the
+migration guide nor the reconciliation prerequisite table identifies a specific
+package dependency or business-policy decision. Classified-product activation
+and seller feature-use decisions remain separate and unresolved; no feature
+flag, role grant or dependency was changed for this migration.
+
+- Six implemented route names remain, with bound packages and DELETE for
+  destruction. Both PUT and PATCH still update. The empty, unused show action
+  and duplicate resource registrations are removed after a consumer search.
+- The established `view_classified_packages`, `edit_classified_package` and
+  `delete_classified_package` gates remain. Create/store were already edit-gated;
+  the new Add control matches that actual gate instead of the old Blade-only
+  `add_classified_package` affordance. No backend privilege is expanded.
+- `Store/Admin/CustomerPackageController`, dedicated requests and a narrow
+  resource use the established paginated Inertia pattern. The three pages reuse
+  StoreAdminLayout, ResourceFormPage, DataTable, Pagination, language tabs,
+  canonical StoreUploadField and Wayfinder. All new UI copy is English/Arabic.
+- Server validation enforces the translation name width (50), nonnegative
+  decimal(20,2) prices, nonnegative signed-integer upload limits, selected
+  languages and canonical image-reference ownership/library permissions.
+  Unchanged valid foreign logos round-trip, with previews still policy-gated.
+- Create/update transact the base package and translation together; update and
+  delete lock the package. Updating a nondefault translation leaves the base
+  name intact while updating shared price/benefits, as before. Delete removes
+  translations and package atomically, preserving existing payment history,
+  customer assignments and remaining uploads, including legacy dangling IDs.
+- The root CustomerPackageController remains for `purchase_package` and
+  `purchase_payment_done`, with those bodies unchanged. Public Blade packages,
+  customer products/dashboard, VoguePay, shared purchase helper, payment
+  adapters, GatewayPaymentService, seller consumers and V2 API contracts remain.
+  CustomerPackage/CustomerPackageTranslation are typed and removed from both
+  analysis exclusion lists; the still-legacy root/API/payment model exclusions
+  remain. No casts alter legacy amount/benefit values.
+- Current backend inventory: **67 Blade files**, **43** literal consumers of
+  `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+  direct literal consumers of the blank layout. Shells, their nav includes,
+  three downloads, invoice, seller SKU partials, uploader assets and CSP remain.
+  Actual route registrations: **1,050** under `/temp`, **438** under
+  `/temp/admin`, six customer-package admin actions. Counts are registrations.
+
+Verification and limitations are recorded in the
+[customer package ledger entry](../store-backoffice-reconciliation-20261011.md#customer-package-administration-migration-2026-10-12).

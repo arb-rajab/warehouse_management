@@ -2139,6 +2139,17 @@
             "increasing": "The upper bound must be greater than the lower bound.",
             "selectZone": "Select at least one shipping zone.",
             "search": "Search carriers"
+        },
+        "customerPackages": {
+            "title": "Customer packages",
+            "create": "Add customer package",
+            "edit": "Edit customer package",
+            "name": "Package name",
+            "amount": "Amount",
+            "uploads": "Product upload limit",
+            "logo": "Package logo",
+            "actions": "Actions",
+            "empty": "No customer packages found."
         }
     },
     "store.attributes.index.title": "Product attributes",

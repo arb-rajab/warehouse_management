@@ -27,7 +27,7 @@ use App\Http\Controllers\Store\Admin\CurrencyController;
 use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
 use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\CustomerController;
-use App\Http\Controllers\CustomerPackageController;
+use App\Http\Controllers\Store\Admin\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
@@ -587,12 +587,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::put('/colors/update/{color}', [ColorController::class, 'update'])->name('colors.update');
     Route::delete('/colors/destroy/{color}', [ColorController::class, 'destroy'])->name('colors.destroy');
 
-    //Customer Package
-    Route::resource('customer_packages', CustomerPackageController::class);
-    Route::controller(CustomerPackageController::class)->group(function () {
-        Route::get('/customer_packages/edit/{id}', 'edit')->name('customer_packages.edit');
-        Route::post('/customer_packages/destroy/{id}', 'destroy')->name('customer_packages.destroy');
-    });
+    // Customer package administration; purchase and API controllers remain separate.
+    Route::get('/customer_packages', [CustomerPackageController::class, 'index'])->name('customer_packages.index');
+    Route::get('/customer_packages/create', [CustomerPackageController::class, 'create'])->name('customer_packages.create');
+    Route::post('/customer_packages', [CustomerPackageController::class, 'store'])->name('customer_packages.store');
+    Route::get('/customer_packages/edit/{customerPackage}', [CustomerPackageController::class, 'edit'])->name('customer_packages.edit');
+    Route::match(['PUT', 'PATCH'], '/customer_packages/{customerPackage}', [CustomerPackageController::class, 'update'])->name('customer_packages.update');
+    Route::delete('/customer_packages/destroy/{customerPackage}', [CustomerPackageController::class, 'destroy'])->name('customer_packages.destroy');
 
     //Classified Products
     Route::controller(CustomerProductController::class)->group(function () {

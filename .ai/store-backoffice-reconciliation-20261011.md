@@ -1135,3 +1135,111 @@ all recorded owner decisions remain in their previous dispositions. No role
 grants, dependencies, shipping calculations or brands/dashboard defect fixes
 were added. Production data/grants and external services were not exercised;
 this patch does not require them for its authorized local migration/commit.
+
+
+## Customer package administration migration (2026-10-12)
+
+User-authorized local-only follow-up on `codex/customer-package-admin` from
+fetched develop `71de5cad28d33561ed832acc80d02cc822191e87`, the merge of PR #378.
+GitHub was checked read-only: all 14 PR-head checks passed; merge SAST succeeded;
+deploy run `38240427292` and deployment `7012504913` succeeded for `develop`.
+The merge tree and PR head tree both equal
+`070e6a5634cef666120c0844f5fc2f2ff804433c`. The existing-tests gate passed, so
+`Test the merged commit` was skipped by that workflow; no new deployment was
+requested. Existing deployment status is evidence, not authorization to deploy.
+
+### Prerequisite and consumer findings
+
+All three admin package screens were still Blade. The pending-package entries
+in the integrated inventory describe implementation gaps; the deferred-source
+prerequisite table contains no package-specific approval/dependency hold. Its
+classified feature-use hold targets `CustomerProductController` and proposed
+`ClassifiedProductController` activation. This request expressly authorizes
+customer-package administration while preserving the classified-product route,
+feature flag, public/seller/mobile contracts and pricing/benefits. No dependency,
+role grant, global upload policy or business-policy approval was inferred.
+
+Before removal, references to the package route names, root controller/model,
+three Blade names, uploads and payment helpers were traced through application,
+routes, resources and tests. The only direct consumers of the three deleted
+admin views were the replaced root admin actions. The root controller still has
+the customer purchase route; its two purchase method bodies are byte-identical
+to develop and it remains in both legacy analysis exclusion lists. HomeController,
+public customer package/product/dashboard views, VoguePay, Helpers.php,
+GatewayPaymentService, payment adapters, StoreUser relations and V2 controller/
+resource/route registrations retain their established contracts. Shared uploader
+assets, seller/public/auth/email shells, PDFs and Blade CSP remain in use.
+
+### Completed scope
+
+- Six implemented admin route names preserved; bound models, canonical DELETE,
+  PUT/PATCH updates and explicit redirects. Removed only empty/unused show and
+  duplicate registrations; public `customer_packages.purchase` remains root.
+- Preserved view/edit/delete gates. Create/store remain `edit_classified_package`
+  gated. The new Add button follows that route gate; the old Blade Add-only gate
+  never authorized its caller to create. No permission vocabulary/grants changed.
+- Inertia list/create/edit under `Store/Admin/Customers/Packages`, shared layout,
+  form/table/pagination/actions, StoreLanguageTabs, StoreUploadField, Wayfinder,
+  English/Arabic copy and sidebar Inertia navigation.
+- Narrow paginated records and scoped translations; schema-aware validation for
+  names, amounts, product-upload benefits, languages and canonical image
+  references. Nondefault translation updates preserve the base name and update
+  shared fields, matching the retained behavior. Existing valid foreign logos
+  may round-trip; no foreign replacement or unauthorized preview is granted.
+- Atomic package/translation create/update/delete; locking on update/delete.
+  Deletion retains existing customer assignments, benefit balances and payment
+  history, including legacy dangling IDs. No purchase/payment arithmetic changed.
+- Typed CustomerPackage and CustomerPackageTranslation, with dedicated relation/
+  translation tests and both analysis exclusions removed. Legacy root, API and
+  CustomerPackagePayment exclusions remain. No new casts change legacy payloads.
+
+Current inventory: **67** backend Blade files (70 before this follow-up), **43**
+literal inheritance/include consumers of `shop.backend.layouts.app`, **3** of
+`shop.backend.layouts.layout`, **0** direct literal consumers of the blank shell.
+There are **1,050** `/temp` registrations and **438** `/temp/admin` registrations.
+Only `customer/classified_products/index.blade.php` remains in backend/customer.
+The guide's current inventory and controller table are updated; earlier dated
+carrier/reconciliation counts remain historical evidence.
+
+### Verification runtime and limits
+
+Existing vendor/node_modules were used without installs or lockfile changes.
+PHP/Composer were absent from PATH, so the already-provisioned PHP 8.5.11 Docker
+image and Composer image were exported to `/workspace/work/package-runtime`.
+GD WebP support was built in an isolated runtime image using the managed proxy
+and a read-only CA mount; application dependency manifests were untouched.
+Platform checks passed. Wayfinder needed a 1 GiB runtime memory limit. Parallel
+Pint initially could not bind loopback under restricted execution; network-enabled
+execution of the same command passed. A stale `public/hot` marker pointed at an
+absent Vite server and was preserved outside the checkout so production assets
+could be tested with strict CSP. No active Vite process was found.
+
+Focused backend/controller/model/permission/exclusion/purchase/payment/shell
+checks: **167 passed, 749 assertions**. Focused frontend package/form/menu checks:
+**21 passed in three files**. Production build passed with Wayfinder generation;
+existing chunk-size and optional font-fallback advisories remain. HTTPS Chromium
+browser checks: **5/5 passed**, one worker, zero retries, including package CRUD,
+canonical raster upload/logo selection, shared price/benefit round trips,
+English/Arabic translation tabs, sidebar Inertia visits, native delete
+cancel/accept, Arabic RTL, dark contrast, native validation, authoritative error
+round trips with draft retention and no persisted refused write. Retained legacy
+uploader and mixed Blade/Inertia staff navigation also passed. Video capture was
+disabled only in an external local config because the bundled FFmpeg was absent;
+screenshots/traces and committed CI video settings remain. Existing dashboard
+lazy-load failures and third-party/Permissions-Policy console warnings do not
+establish a globally clean browser console and remain outside package scope.
+
+The required `python3 .claude/scripts/pre_push_check.py` completed with exit 0
+under supported network-enabled execution: ESLint, Prettier, TypeScript, Pint,
+PHPStan (zero errors), **2,079 Vitest tests in 233 files** and **5,102 Pest tests
+with 24,807 assertions** passed. No step was skipped. Fresh `npm run build`
+and `composer check-platform-reqs` passed; `git diff --check`, protected-method
+body comparison and local documentation link/inventory checks passed. All 67
+current guide inventory entries match physical files, with no missing or stale
+entries. Exact local logs are under `/workspace/work/package-*.log`; they are
+external verification evidence and are not commit candidates.
+
+No push, PR, merge, deployment or production-data mutation is authorized. Full MySQL
+migration verification and the full all-store browser suite were not rerun in
+this follow-up; no migrations were changed. No live gateway calls, production
+permission rehearsal or production-data mutation was performed.
