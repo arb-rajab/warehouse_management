@@ -11,8 +11,145 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
 use League\Csv\Reader;
+
+test('an admin can finish another workers round and persist its completion without changing its reports or ownership', function () {
+    actingAsAdmin();
+    $worker = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $noiseRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
+    $noiseRound = CellVerificationRound::factory()->covering($noiseRow)->create();
+    $report = CellVerificationReport::factory()->create([
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $row->cells()->sole()->id,
+        'user_id' => $worker->id,
+        'is_correct' => false,
+    ]);
+    $originalReport = $report->fresh()->getAttributes();
+    $this->travelTo('2026-10-12 10:00:00');
+
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete?is_correct=0&page=2")
+        ->assertRedirect("/admin/cell-verification-rounds/{$round->id}?is_correct=0&page=2");
+
+    expect($round->fresh()->completed_at->toDateTimeString())->toBe('2026-10-12 10:00:00')
+        ->and($round->fresh()->user_id)->toBe($worker->id)
+        ->and($round->rows()->pluck('rows.id')->all())->toBe([$row->id])
+        ->and($report->fresh()->getAttributes())->toBe($originalReport)
+        ->and($noiseRound->fresh()->completed_at)->toBeNull()
+        ->and(Row::query()->whereKey($row->id)->underActiveVerification()->exists())->toBeFalse()
+        ->and(Row::query()->whereKey($noiseRow->id)->underActiveVerification()->exists())->toBeTrue();
+
+    $this->get("/admin/cell-verification-rounds/{$round->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('round.completed_at', $round->fresh()->completed_at->toIso8601String())
+            ->where('round.reports_count', 1)
+    );
+});
+
+test('an admin can finish an unchecked round and its rows become available for pallet actions and new rounds', function () {
+    actingAsAdmin();
+    $worker = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $cell = $row->cells()->sole();
+    $product = Product::factory()->boxesCount(10)->create();
+    $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
+    $payload = ['product_id' => $product->id, 'expiration_date' => '2027-01-01'];
+
+    $this->post("/admin/cells/{$cell->id}/pallet", $payload)
+        ->assertSessionHasErrors('action');
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeFalse();
+
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertRedirect();
+    expect($round->fresh()->isCompleted())->toBeTrue()
+        ->and($round->reports()->count())->toBe(0);
+
+    $this->post("/admin/cells/{$cell->id}/pallet", $payload)->assertSessionHasNoErrors();
+    expect(Pallet::query()->where('cell_id', $cell->id)->exists())->toBeTrue();
+
+    actingAsMobileUser($worker);
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$row->id]])->assertCreated();
+    expect(CellVerificationRound::query()->unfinished()->count())->toBe(1);
+});
+
+test('repeated admin and worker completion requests retain the first completion timestamp and cannot reopen the round', function () {
+    actingAsAdmin();
+    $worker = User::factory()->mobileUser()->create();
+    $round = CellVerificationRound::factory()->for($worker)->create();
+    $this->travelTo('2026-10-12 10:00:00');
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertRedirect();
+
+    $this->travelTo('2026-10-12 11:00:00');
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete", ['completed_at' => null, 'user_id' => 999999])
+        ->assertRedirect();
+    actingAsMobileUser($worker);
+    $this->postJson("/api/v1/cell-verification-rounds/{$round->id}/complete")->assertOk();
+
+    expect($round->fresh()->completed_at->toDateTimeString())->toBe('2026-10-12 10:00:00')
+        ->and($round->fresh()->user_id)->toBe($worker->id);
+});
+
+test('a worker cannot add reports after an admin finishes the round', function () {
+    actingAsAdmin();
+    $worker = User::factory()->mobileUser()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertRedirect();
+    $completedAt = $round->fresh()->completed_at;
+
+    actingAsMobileUser($worker);
+    $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $row->cells()->sole()->id,
+        'is_correct' => true,
+    ])->assertConflict()->assertJson(['error_code' => 'verification_round_completed']);
+
+    expect($round->reports()->count())->toBe(0)
+        ->and($round->fresh()->completed_at->eq($completedAt))->toBeTrue();
+});
+
+test('a non-admin cannot finish even their own round through the admin action and nothing changes', function () {
+    $worker = actingAsMobilePanelUser();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
+
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertForbidden();
+
+    expect($round->fresh()->completed_at)->toBeNull()
+        ->and(Row::query()->whereKey($row->id)->underActiveVerification()->exists())->toBeTrue();
+});
+
+test('a guest cannot finish a round through the admin action and nothing changes', function () {
+    $round = CellVerificationRound::factory()->create();
+
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertRedirect(route('login'));
+
+    expect($round->fresh()->completed_at)->toBeNull();
+});
+
+test('admin completion of a missing round returns a 404 and does not change another round', function () {
+    actingAsAdmin();
+    $round = CellVerificationRound::factory()->create();
+
+    $this->post('/admin/cell-verification-rounds/999999/complete')->assertNotFound();
+
+    expect($round->fresh()->completed_at)->toBeNull();
+});
+
+test('admin completion rolls back the timestamp and keeps the row frozen if persistence fails', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->covering($row)->create();
+    Event::listen('eloquent.updated: '.CellVerificationRound::class, function (): void {
+        throw new RuntimeException('Completion persistence failed');
+    });
+
+    $this->post("/admin/cell-verification-rounds/{$round->id}/complete")->assertServerError();
+
+    expect($round->fresh()->completed_at)->toBeNull()
+        ->and(Row::query()->whereKey($row->id)->underActiveVerification()->exists())->toBeTrue();
+});
 
 test('an authenticated admin can view the cell verification rounds list with every property the table renders', function () {
     $admin = actingAsAdmin();
