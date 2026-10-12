@@ -2182,6 +2182,26 @@
             "featured": "Featured",
             "search": "Search by name",
             "actions": "Actions"
+        },
+        "digitalProducts": {
+            "title": "Digital products",
+            "create": "Add digital product",
+            "search": "Search by name",
+            "searching": "Searching…",
+            "empty": "No digital products found.",
+            "name": "Name",
+            "addedBy": "Added by",
+            "addedByAdmin": "Admin",
+            "addedBySeller": "Seller",
+            "photo": "Photo",
+            "basePrice": "Base price",
+            "todaysDeal": "Today's deal",
+            "published": "Published",
+            "featured": "Featured",
+            "actions": "Actions",
+            "edit": "Edit",
+            "delete": "Delete",
+            "download": "Download"
         }
     },
     "store.attributes.index.title": "Product attributes",

@@ -2182,6 +2182,26 @@
             "featured": "مميز",
             "search": "البحث بالاسم",
             "actions": "الإجراءات"
+        },
+        "digitalProducts": {
+            "title": "المنتجات الرقمية",
+            "create": "إضافة منتج رقمي",
+            "search": "البحث بالاسم",
+            "searching": "جارٍ البحث…",
+            "empty": "لم يتم العثور على منتجات رقمية.",
+            "name": "الاسم",
+            "addedBy": "أضيف بواسطة",
+            "addedByAdmin": "المسؤول",
+            "addedBySeller": "البائع",
+            "photo": "الصورة",
+            "basePrice": "السعر الأساسي",
+            "todaysDeal": "صفقة اليوم",
+            "published": "منشور",
+            "featured": "مميز",
+            "actions": "الإجراءات",
+            "edit": "تعديل",
+            "delete": "حذف",
+            "download": "تنزيل"
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

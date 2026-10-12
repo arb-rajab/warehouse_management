@@ -44,6 +44,7 @@ import type {
     StoreCustomerPackage,
     StoreCategory,
     StoreCategoryForm,
+    StoreDigitalProduct,
     StorePickupPoint,
     StoreTax,
     StoreCurrency,
@@ -1084,6 +1085,24 @@ export function storeCategory(
         cover_image_url: null,
         featured: false,
         commision_rate: '2.50',
+        ...overrides,
+    };
+}
+
+export function storeDigitalProduct(
+    overrides: Partial<StoreDigitalProduct> = {},
+): StoreDigitalProduct {
+    return {
+        id: 31,
+        name: 'Recipe e-book',
+        added_by: 'admin',
+        thumbnail_url: '/assets/img/placeholder.jpg',
+        unit_price: '1,250.50',
+        todays_deal: false,
+        published: true,
+        featured: false,
+        public_url: '/temp/product/recipe-e-book',
+        download_token: 'encrypted-31',
         ...overrides,
     };
 }
