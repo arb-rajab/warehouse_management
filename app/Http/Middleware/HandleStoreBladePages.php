@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  * while the back office moves to Inertia one module at a time
  * (.ai/rules/store-backoffice-migration.md §2.6). A response is a Blade page
  * when it renders a view other than Inertia's root view, which is the only
- * view that carries a `page`.
+ * view named `app`. A CMS or policy Blade view can also carry `page` data.
  *
  * - An Inertia visit that lands on a Blade page (a link the menu still marks
  *   as Inertia, or a converted form whose redirect goes to an unconverted
@@ -53,6 +53,6 @@ class HandleStoreBladePages
     {
         $view = $response instanceof IlluminateResponse ? $response->getOriginalContent() : null;
 
-        return $view instanceof View && ! array_key_exists('page', $view->getData());
+        return $view instanceof View && $view->name() !== 'app';
     }
 }

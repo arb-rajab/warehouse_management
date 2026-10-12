@@ -19,7 +19,9 @@ async function contrastAgainstEffectiveBackground(
             const canvas = document.createElement('canvas');
             canvas.width = 1;
             canvas.height = 1;
-            const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+            const ctx = canvas.getContext('2d', {
+                willReadFrequently: true,
+            }) as CanvasRenderingContext2D;
             ctx.fillStyle = cssColor;
             ctx.fillRect(0, 0, 1, 1);
 
@@ -64,9 +66,9 @@ test('the cell log transfer arrow icon has readable contrast against the page ba
 
     // 3:1 is WCAG's non-text (graphical object) contrast minimum, not the
     // 4.5:1 used for the text checks elsewhere in this suite.
-    expect(await contrastAgainstEffectiveBackground(arrow)).toBeGreaterThanOrEqual(
-        3,
-    );
+    await expect
+        .poll(() => contrastAgainstEffectiveBackground(arrow))
+        .toBeGreaterThanOrEqual(3);
 });
 
 test('the cell log state-change arrow has readable contrast against the page background in dark mode', async ({
@@ -80,7 +82,7 @@ test('the cell log state-change arrow has readable contrast against the page bac
     const arrow = page.locator('tbody tr').first().getByText('→');
     await expect(arrow).toBeVisible();
 
-    expect(await contrastAgainstEffectiveBackground(arrow)).toBeGreaterThanOrEqual(
-        4.5,
-    );
+    await expect
+        .poll(() => contrastAgainstEffectiveBackground(arrow))
+        .toBeGreaterThanOrEqual(4.5);
 });

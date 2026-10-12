@@ -181,7 +181,7 @@
                                                             @endif
                                                         </td>
                                                         <td class="border-top-0 border-bottom">
-                                                            {{ $orderDetail->variation }}
+                                                            {{ $orderDetail->entry_unit ?? $orderDetail->variation }}
                                                         </td>
                                                         <td class="border-top-0 border-bottom">
                                                             {{ $orderDetail->quantity }}

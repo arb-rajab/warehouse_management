@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\AppTranslation;
 use App\Models\Upload;
 use App\Services\TripService;
 use Illuminate\Http\UploadedFile;
@@ -38,22 +37,4 @@ test('a driver\'s photos and CMR are stored by what they are, and a file that is
             ->and($stored)->toHaveCount(2)
             ->and(collect($stored)->every(fn (string $name) => preg_match('/^[A-Za-z0-9]{40}\.(png|pdf)$/', $name) === 1))->toBeTrue();
     });
-});
-
-test('importing the English app translations reads the uploaded file and writes its keys', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->post(route('app-translations.import'), [
-        'lang_file' => UploadedFile::fake()->createWithContent('en.json', json_encode(['Hello' => 'Hello there', 'Bye' => 'Goodbye'])),
-    ])->assertRedirect();
-
-    expect(AppTranslation::where('lang', 'en')->pluck('lang_value', 'lang_key')->all())->toBe(['Hello' => 'Hello there', 'Bye' => 'Goodbye']);
-});
-
-test('importing app translations with no file changes nothing and does not fail', function () {
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->post(route('app-translations.import'))->assertRedirect();
-
-    expect(AppTranslation::count())->toBe(0);
 });

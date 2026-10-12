@@ -167,3 +167,12 @@ describe('Pagination', () => {
         expect(items[3].querySelector('svg.lucide-chevron-left')).toBeNull();
     });
 });
+
+it('JSON pagination emits a URL instead of making an Inertia visit', async () => {
+    const wrapper = mount(Pagination, {
+        props: { links: [link(), link(), link(), link()], async: true },
+    });
+    expect(wrapper.find('a').exists()).toBe(false);
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.emitted('navigate')).toEqual([[link().url]]);
+});

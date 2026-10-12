@@ -51,6 +51,7 @@ export function createFormStub(
             transform: { type: Function, default: undefined },
             options: { type: Object, default: undefined },
             resetOnSuccess: Boolean,
+            onBefore: { type: Function, default: undefined },
         },
         setup(props, { slots }) {
             return () =>
@@ -107,4 +108,38 @@ export function createUseFormStub(
 
         return form;
     };
+}
+
+/** Standalone Inertia 3 HTTP state, for file-manager tests without a booted app. */
+export function createUseHttpStub<T extends object, R = unknown>(
+    data: T,
+    response: R | null = null,
+) {
+    const state = reactive({
+        ...data,
+        errors: {} as Record<string, string>,
+        processing: false,
+        progress: null as { percentage: number } | null,
+        response,
+    });
+
+    return Object.assign(state, {
+        get: async (url: string) => {
+            void url;
+
+            return state.response;
+        },
+        post: async (url: string) => {
+            void url;
+
+            // Inertia 3 resolves validation failures without a response.
+            return state.response as typeof state.response | undefined;
+        },
+        delete: async (url: string) => {
+            void url;
+
+            return state.response;
+        },
+        cancel: () => {},
+    });
 }

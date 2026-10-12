@@ -18,14 +18,13 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
-use App\Http\Controllers\DynamicPopupController;
 use App\Http\Controllers\FollowSellerController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\Store\LanguageController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\OffersCatalogController;
+use App\Http\Controllers\Store\OffersCatalogDownloadController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Payment\AamarpayController;
 use App\Http\Controllers\Payment\BkashController;
@@ -118,7 +117,6 @@ Route::controller(VerificationController::class)->group(function () {
 Route::controller(CustomerController::class)->group(function () {
 // Activate the customer account after he agrees on the terms sent by email
     Route::get('/terms-activation/{code}', 'account_activation')->name('terms.activation');
-    Route::post('/customers/terms/sendMail/{id}', 'terms_agreements')->name('customers.sendAgreement')->middleware('admin'); // send the email
 
 });
 
@@ -177,6 +175,7 @@ Route::controller(HomeController::class)->group(function () {
 
 // Language Switch
 Route::post('/language', [LanguageController::class, 'changeLanguage'])->name('language.change');
+Route::get('translation-check/{check}', [LanguageController::class, 'getTranslation']);
 
 // Currency Switch
 Route::post('/currency', [CurrencyController::class, 'changeCurrency'])->name('currency.change');
@@ -186,9 +185,6 @@ Route::get('/sitemap.xml', function() {
     return base_path('sitemap.xml');
 });
 
-Route::controller(DynamicPopupController::class)->group(function () {
-    //
-});
 Route::controller(CartOfferedController::class)->group(function () {
     Route::post('/cart-offered/postpone', 'postpone')->name('cart-offered.postpone');
     Route::post('/cart-offered/removeOffersFromCart', 'removeOffersFromCart')->name('cart-offered.removeOffersFromCart');
@@ -347,7 +343,6 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
 });
 
 
-Route::get('translation-check/{check}', [LanguageController::class, 'get_translation']);
 
 
 Route::group(['middleware' => ['auth']], function() {
@@ -481,8 +476,4 @@ Route::controller(PageController::class)->group(function () {
 //     Route::get('/my_connections/show/{user_id}', 'my_connections')->name('show.connections')->middleware('auth');
 // });
 
-Route::controller(OffersCatalogController::class)->group(function () {
-
-    Route::get('/offers/download', 'download')->name('offers.download');
-
-});
+Route::get('/offers/download', OffersCatalogDownloadController::class)->name('offers.download');

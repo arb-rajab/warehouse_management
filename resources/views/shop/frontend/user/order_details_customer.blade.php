@@ -166,7 +166,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        {{ $orderDetail->variation }}
+                                        {{ $orderDetail->entry_unit ?? $orderDetail->variation }}
                                     </td>
 
                                     <!-- Variation Qty  -->

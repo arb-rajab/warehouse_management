@@ -14,11 +14,6 @@ use Illuminate\Support\Facades\DB;
  * three controllers each carried a copy; MultipartUploadService is the one place
  * now. Each test points the public path at a scratch directory.
  */
-function uploadedFile(string $name, string $contents): UploadedFile
-{
-    return UploadedFile::fake()->createWithContent($name, $contents);
-}
-
 test('an image is stored under a random name with the extension its content has, and recorded', function () {
     $customer = createStoreUser('customer');
 
@@ -254,3 +249,25 @@ test('the seller API answers a refused file with a 422 and an accepted one with 
         expect(storedUploadFiles($publicPath))->toHaveCount(1);
     });
 });
+
+test('raster normalisation ignores opt-out and resizes both orientations to 1500', function (int $width, int $height, int $expectedWidth, int $expectedHeight) {
+    DB::table('business_settings')->insert(['type' => 'disable_image_optimization', 'value' => '1']);
+    $owner = createStoreUser('customer');
+    withScratchPublicPath(function (string $publicPath) use ($owner, $width, $height, $expectedWidth, $expectedHeight) {
+        $upload = app(MultipartUploadService::class)->store(UploadedFile::fake()->image('photo.jpg', $width, $height), $owner->id, normalizeRaster: true);
+        $image = getimagesize($publicPath.'/'.$upload->file_name);
+        expect($upload->extension)->toBe('webp')->and($image['mime'])->toBe('image/webp')
+            ->and($image[0])->toBe($expectedWidth)->and($image[1])->toBe($expectedHeight)
+            ->and($upload->file_size)->toBe(filesize($publicPath.'/'.$upload->file_name));
+    });
+})->with(['landscape' => [2000, 1000, 1500, 750], 'portrait' => [1000, 2000, 750, 1500], 'square' => [2000, 2000, 1500, 1500], 'small' => [80, 60, 80, 60]]);
+
+test('a pixel bomb or undecodable raster is refused instead of stored raw', function (bool $oversized) {
+    $owner = createStoreUser('customer');
+    $contents = tinyPng();
+    $contents = $oversized ? substr_replace($contents, pack('NN', 10000, 5000), 16, 8) : substr($contents, 0, 33);
+    withScratchPublicPath(function (string $publicPath) use ($owner, $contents) {
+        expect(app(MultipartUploadService::class)->store(uploadedFile('bomb.png', $contents), $owner->id, normalizeRaster: true))->toBeNull()
+            ->and(Upload::count())->toBe(0)->and(storedUploadFiles($publicPath))->toBe([]);
+    });
+})->with([true, false]);

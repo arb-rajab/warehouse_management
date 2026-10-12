@@ -77,11 +77,15 @@
                             alt="{{ __('Truck image of') }} {{ $truck->name }}"
                             loading="lazy">
                         <div class="card-body d-flex flex-column">
+                            @if ($truck->lastTrip())
                             <a href="{{ route('trips.show', $truck->lastTrip()->id) }}">
+                            @endif
                                 <h2 class="card-title h5 mb-3">
                                     {{ $truck->name }}
                                 </h2>
+                            @if ($truck->lastTrip())
                             </a>
+                            @endif
                             @if($truck->lastTrip() && $truck->lastTrip()->checkpoints->isNotEmpty())
                             <h6 class="mb-3">
                                 {{ $truck->lastTrip()->driver?->name }}
@@ -128,6 +132,8 @@
                                         <i class="las la-check"></i>
                                     </button>
                                 </div>
+                                @if ($truck->lastTrip())
+                                @can('delete_trip')
                                 <div class="col-auto">
                                     <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete"
                                         data-method="post" data-href="{{ route('trips.destroy', ['id' => $truck->lastTrip()->id]) }}"
@@ -135,6 +141,8 @@
                                         <i class="las la-trash"></i>
                                     </a>
                                 </div>
+                                @endcan
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -159,11 +167,9 @@
 @include('shop.modals.delete_modal')
 @endsection
 
-@section('style')
-@include('shop.backend.trips.inc.styles')
-@endsection
 
 @section('script')
+@include('shop.backend.trips.inc.map-popups')
 @include('shop.backend.trips.inc.scripts')
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -180,12 +186,10 @@
         popupAnchor: [1, -34]
     });
 
-    // Check if markersData is empty or null
-    if (!markersData || markersData.length === 0) {
-        map = L.map('map').setView([52.3676, 4.9041], 7); // Default to Netherlands
-    } else {
-        map = L.map('map').setView([parseFloat(markersData[0].latitude), parseFloat(markersData[0].longitude)], 8);
-    }
+    var firstPoint = (markersData || []).map(function(marker) {
+        return tripMapCoordinates(marker.latitude, marker.longitude);
+    }).find(function(point) { return point !== null; });
+    var map = L.map('map').setView(firstPoint || [0, 0], firstPoint ? 8 : 2);
 
     // Add the base OSM tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -233,30 +237,30 @@
 
     // Add markers to the map
     markersData.forEach(function(markerData) {
-        var lat = parseFloat(markerData.latitude);
-        var lng = parseFloat(markerData.longitude);
+        var coordinates = tripMapCoordinates(markerData.latitude, markerData.longitude);
 
         // Validate the coordinates
-        if (isNaN(lat) || isNaN(lng)) {
+        if (coordinates === null) {
             console.warn("Invalid coordinates for marker:", markerData);
             return;
         }
 
         // Adjust position if needed
+        var lat = coordinates[0];
+        var lng = coordinates[1];
         var adjustedPosition = adjustMarkerPosition(lat, lng);
 
         // Create a Leaflet marker
         var marker = L.marker(adjustedPosition).addTo(map)
-            .bindPopup(
-                "<b>" + markerData.label + "</b><br>" + // customer name
-                "<b>Order Code:</b> " + markerData.order_code + "<br>" +
-                "<b>Customer ID:</b> " + markerData.user_id + "<br>" +
-                "<b>Post Code:</b> " + markerData.postal_code + "<br>" +
-                "<b>Phone:</b> " + markerData.phone + "<br>" +
-                "<b>Shipping Address:</b> " + markerData.shipping_address + "<br>" +
-                "<b>Otajer ID:</b> " + markerData.otajer_id + "<br>" +
-                '<button class="btn btn-danger btn-sm mark-delivered" data-order-id="' + markerData.order_id + '">Mark as Delivered</button>'
-            );
+            .bindPopup(tripMapPopup([
+                [null, markerData.label],
+                [@json(translate('Order Code')), markerData.order_code],
+                [@json(translate('Customer ID')), markerData.user_id],
+                [@json(translate('Post Code')), markerData.postal_code],
+                [@json(translate('Phone')), markerData.phone],
+                [@json(translate('Shipping Address')), markerData.shipping_address],
+                [@json(translate('Otajer ID')), markerData.otajer_id]
+            ], markerData.order_id));
 
         // Store custom data in the marker options
         marker.options.data = markerData;

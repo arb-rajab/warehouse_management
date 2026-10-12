@@ -1,5 +1,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+@include('shop.backend.trips.inc.map-popups')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize the map
@@ -18,9 +19,10 @@
             fetch(`{{ route('trips.user-coordinates', ['id' => '__ID__']) }}`.replace('__ID__', id) + `?type=${type}`) // Your route URL here
                 .then(response => response.json())
                 .then(data => {
-                    if (data && data.latitude && data.longitude) {
+                    const coordinates = data ? tripMapCoordinates(data.latitude, data.longitude) : null;
+                    if (coordinates !== null) {
                         // Add a marker to the map
-                        addMarker(data.latitude, data.longitude, type || "User",
+                        addMarker(coordinates[0], coordinates[1], type || "User",
                             `${type || "User"}'s checkpoint`);
                     } else {
                         console.error("Invalid data:", data);
@@ -32,7 +34,7 @@
         // Function to add a marker to the map
         function addMarker(lat, lng, rank, label) {
             var marker = L.marker([lat, lng]).addTo(map)
-                .bindPopup("Rank: " + rank + "<br>Notes: " + label);
+                .bindPopup(tripMapPopup([[@json(translate('Rank')), rank], [@json(translate('Notes')), label]]));
 
             // Store the marker
             markers.push(marker);
@@ -52,16 +54,11 @@
             markers = []; // Clear the markers array
         }
 
-        // Check initial values of select elements on page load
-        var userSelect = document.querySelector('.user-id-input');
-        if (userSelect && userSelect.value) {
-            fetchCoordinates(userSelect.value);
-        }
-
-        var orderSelect = document.querySelector('.order-id-input');
-        if (orderSelect && orderSelect.value) {
-            fetchCoordinates(orderSelect.value, 'order');
-        }
+        document.querySelectorAll('.user-id-input, .order-id-input').forEach(function(select) {
+            if (select.value) {
+                fetchCoordinates(select.value, select.classList.contains('order-id-input') ? 'order' : null);
+            }
+        });
 
         // Add event listeners for changes on select elements
         document.addEventListener('change', function(event) {

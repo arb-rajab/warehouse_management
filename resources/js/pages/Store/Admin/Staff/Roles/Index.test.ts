@@ -95,6 +95,7 @@ describe('Store roles Index', () => {
     it('links the add button to the create page for a user who may add roles', () => {
         expect(mountPage([]).getComponent(AddResourceLink).props()).toEqual({
             href: rolesCreate(),
+            inertia: true,
             label: t('store.roles.index.addRole'),
         });
         expect(

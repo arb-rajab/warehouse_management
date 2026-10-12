@@ -94,7 +94,7 @@ class ChatController extends Controller
         $array['sender'] = $user->name;
 
         if ($seller_user->type == 'admin') {
-            $array['link'] = route('conversations.admin_show', encrypt($conversation->id));
+            $array['link'] = route('conversations.admin_show', $conversation->id);
         } else {
             $array['link'] = route('conversations.show', encrypt($conversation->id));
         }

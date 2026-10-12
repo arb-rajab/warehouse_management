@@ -124,9 +124,6 @@
 
 @endsection
 
-@section('style')
-    @include('shop.backend.trips.inc.styles')
-@endsection
 
 @section('script')
     @include('shop.backend.trips.inc.scripts')

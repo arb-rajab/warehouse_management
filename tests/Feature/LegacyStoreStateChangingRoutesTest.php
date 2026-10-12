@@ -86,7 +86,6 @@ const STATE_CHANGING_STORE_ROUTES = [
     'subscriber.destroy',
     'tax.destroy',
     'trips.destroy',
-    'trucks.destroy',
     'uploaded-files.destroy',
     'zones.destroy',
 ];
@@ -186,10 +185,7 @@ test('every link to a state-changing route is marked to submit as a POST', funct
     // The links that open a confirmation modal carry no mark; the modal's own button does.
     $modalButtons = [
         'resources/views/shop/frontend/partials/account_delete_modal.blade.php' => ['id="account_delete_link"'],
-        'resources/views/shop/backend/customer/customers/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
-        'resources/views/shop/backend/customer/customers/archive.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
         'resources/views/shop/backend/sellers/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
-        'resources/views/shop/backend/representatives/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
     ];
     $openedByModal = ['customers.ban', 'sellers.ban', 'account_delete'];
     $offenders = [];

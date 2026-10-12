@@ -24,7 +24,7 @@ class BrandController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_all_brands', only: ['index', 'brandsWiseProductDiscount', 'show']),
+            new Middleware('permission:view_all_brands', only: ['index', 'show']),
             new Middleware('permission:add_brand', only: ['create', 'store']),
             new Middleware('permission:edit_brand', only: ['edit', 'update']),
             new Middleware('permission:delete_brand', only: ['destroy']),
@@ -164,14 +164,4 @@ class BrandController extends Controller implements HasMiddleware
 
     }
 
-    public function brandsWiseProductDiscount(Request $request){
-        $sort_search =null;
-        $brands = Brand::query();
-        if ($request->has('search')){
-            $sort_search = $request->search;
-            $brands = $brands->where('name', 'like', '%'.$sort_search.'%');
-        }
-        $brands = $brands->paginate(15);
-        return view('shop.backend.product.brand_wise_discount.set_discount', compact('brands', 'sort_search'));
-    }
 }

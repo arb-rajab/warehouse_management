@@ -2,10 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\Store\AdminNotificationResource;
 use App\Models\BusinessSetting;
+use App\Models\Conversation;
 use App\Models\Language;
 use App\Models\Role;
+use App\Models\Shop;
+use App\Models\StoreUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -133,8 +138,39 @@ class HandleInertiaRequests extends Middleware
                 'isSuperAdmin' => (bool) $request->user('store')?->hasRole(Role::SUPER_ADMIN, 'store'),
                 'isRaizerAdmin' => (bool) $request->user('store')?->raizer_admin,
                 'settings' => $this->storeMenuSettings(),
+                'counts' => $this->storeCounts($request),
+                'notifications' => $this->storeNotifications($request),
             ],
         ];
+    }
+
+    /** @return array<string, int> */
+    private function storeCounts(Request $request): array
+    {
+        $user = $request->user('store');
+
+        return [
+            'sellers' => $user?->can('view_all_seller') ? Shop::query()->where('verification_status', 0)->whereNotNull('verification_info')->count() : 0,
+            'tickets' => $user?->can('view_all_support_tickets') ? DB::table('tickets')->where('viewed', 0)->count() : 0,
+            'conversations' => $user?->can('view_all_product_conversations') ? Conversation::query()->where('receiver_id', $user->id)->where('receiver_viewed', 0)->count() : 0,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function storeNotifications(Request $request): array
+    {
+        $user = $request->user('store');
+        if (! $user instanceof StoreUser || ! in_array($user->user_type, ['admin', 'staff', 'accountant'], true)) {
+            return ['unread_count' => 0, 'items' => []];
+        }
+
+        return ['unread_count' => $user->unreadNotifications()->count(),
+            'items' => $user->unreadNotifications()->select(['id', 'type', 'data', 'created_at'])->orderByDesc('created_at')->orderBy('id')->limit(20)->get()->map(function ($notification) use ($request): array {
+                $item = (new AdminNotificationResource($notification))->toArray($request);
+
+                return ['id' => $item['id'], 'kind' => $item['kind'], 'order_code' => $item['order_code'],
+                    'status' => $item['status'], 'user_name' => $item['customer_name'], 'message' => $item['message'], 'created_at' => $item['created_at']];
+            })->all()];
     }
 
     /**

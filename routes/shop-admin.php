@@ -1,60 +1,73 @@
 <?php
+use App\Http\Controllers\Store\Admin\DashboardController;
+use App\Http\Controllers\Store\Admin\OrderEntryController;
+use App\Http\Controllers\Store\Admin\CampaignProductController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\Store\Admin\ProductQueryController;
+use App\Http\Controllers\Store\Admin\ConversationController;
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\AizUploadController;
-use App\Http\Controllers\AttributeController;
-use App\Http\Controllers\BlogCategoryController;
-use App\Http\Controllers\BlogController;
+use App\Http\Controllers\Store\Admin\AttributeController;
+use App\Http\Controllers\Store\Admin\BrandDiscountController;
+use App\Http\Controllers\Store\Admin\AttributeValueController;
+use App\Http\Controllers\Store\Admin\ColorController;
+use App\Http\Controllers\Store\Admin\BlogCategoryController;
+use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\CarrierController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CityController;
+use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\ConversationController;
-use App\Http\Controllers\CountryController;
-use App\Http\Controllers\CouponController;
-use App\Http\Controllers\CurrencyController;
-use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\Store\Admin\CountryController;
+use App\Http\Controllers\Store\Admin\CouponController;
+use App\Http\Controllers\Store\Admin\CurrencyController;
+use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
+use App\Http\Controllers\Store\Admin\OrderConfigurationController;
+use App\Http\Controllers\Store\Admin\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
-use App\Http\Controllers\DynamicPopupController;
-use App\Http\Controllers\FeatureOrderController;
-use App\Http\Controllers\FeatureOrderTripController;
-use App\Http\Controllers\FlashDealController;
-use App\Http\Controllers\LanguageController;
-use App\Http\Controllers\NewsletterController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\OfferController;
-use App\Http\Controllers\OffersCatalogController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PageController;
+use App\Http\Controllers\Store\Admin\DynamicPopupController;
+use App\Http\Controllers\Store\Admin\FlashDealController;
+use App\Http\Controllers\Store\Admin\LanguageController;
+use App\Http\Controllers\Store\Admin\SettingsController;
+use App\Http\Controllers\Store\Admin\NewsletterController;
+use App\Http\Controllers\Store\Admin\NotificationController;
+use App\Http\Controllers\Store\Admin\OfferController;
+use App\Http\Controllers\Store\Admin\OffersCatalogController;
+use App\Http\Controllers\Store\Admin\ProductSearchController;
+use App\Http\Controllers\Store\Admin\OrderController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\PickupPointController;
-use App\Http\Controllers\ProductBulkUploadController;
+use App\Http\Controllers\Store\Admin\PickupPointController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProductQueryController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\RepresentativePackageController;
-use App\Http\Controllers\RepresentativePaymentAdminController;
-use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\Store\Admin\ReportController;
+use App\Http\Controllers\Store\Admin\ProfileController;
+use App\Http\Controllers\Store\Admin\UploadController;
+use App\Http\Controllers\Store\Admin\ProductBulkUploadController;
+use App\Http\Controllers\Store\Admin\ReviewController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
-use App\Http\Controllers\StateController;
+use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\RepresentativePackageController;
+use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
+use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
-use App\Http\Controllers\SubscriberController;
+use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
+use App\Http\Controllers\Store\Admin\WebsiteHomeController;
+use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
+use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\TaxController;
-use App\Http\Controllers\Trip\DriverController;
+use App\Http\Controllers\Store\Admin\TaxController;
+use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Trip\TripController;
-use App\Http\Controllers\Trip\TruckController;
+use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\VisitController;
 use App\Http\Controllers\WebsiteController;
-use App\Http\Controllers\ZoneController;
+use App\Http\Controllers\Store\Admin\ZoneController;
 use Aws\Middleware;
 
 /*
@@ -71,8 +84,6 @@ use Aws\Middleware;
 Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
-
-
     // category
     Route::resource('categories', CategoryController::class);
     Route::controller(CategoryController::class)->group(function () {
@@ -86,10 +97,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(BrandController::class)->group(function () {
         Route::get('/brands/edit/{id}', 'edit')->name('brands.edit');
         Route::post('/brands/destroy/{id}', 'destroy')->name('brands.destroy');
-
-        // brand-wise discount set
-        Route::get('/brands-wise-product-discount', 'brandsWiseProductDiscount')->name('brands_wise_product_discount');
     });
+
+    // Brand-wide product discounts
+    Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
+    Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
     // Products
     Route::controller(ProductController::class)->group(function () {
@@ -116,16 +128,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
         Route::post('/products/sku_combination_edit', 'sku_combination_edit')->name('products.sku_combination_edit');
-        Route::post('/products/add-more-choice-option', 'add_more_choice_option')->name('products.add-more-choice-option');
-        Route::post('/set-product-discount', 'setProductDiscount')->name('set_product_discount');
     });
 
-    Route::controller(OffersCatalogController::class)->group(function () {
-        Route::get('/offers/index', 'index')->name('offers.index');
-        Route::post('/offers/store', 'store')->name('offers.store');
-        Route::get('/offers/download', 'download')->name('offers.download');
-        Route::post('/offers/destroy/{destroy}', 'destroy')->name('offers.destroy');
-    });
+    Route::get('/offers/index', [OffersCatalogController::class, 'index'])->name('offers.index');
+    Route::post('/offers/store', [OffersCatalogController::class, 'store'])->name('offers.store');
+    Route::get('/offers/download', [OffersCatalogController::class, 'download'])->name('offers.download');
+    Route::delete('/offers/destroy/{catalog}', [OffersCatalogController::class, 'destroy'])->name('offers.destroy');
+    Route::post('/products/add-more-choice-option', [ProductSearchController::class, 'attributeValues'])->name('products.add-more-choice-option');
 
     // Digital Product
     Route::resource('digitalproducts', DigitalProductController::class);
@@ -135,21 +144,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/digitalproducts/download/{id}', 'download')->name('digitalproducts.download');
     });
 
-    Route::controller(ProductBulkUploadController::class)->group(function () {
-        //Product Export
-        Route::get('/product-bulk-export', 'export')->name('product_bulk_export.index');
-
-        //Product Bulk Upload
-        Route::get('/product-bulk-upload/index', 'index')->name('product_bulk_upload.index');
-        Route::post('/bulk-product-upload', 'bulk_upload')->name('bulk_product_upload');
-        Route::get('/product-csv-download/{type}', 'import_product')->name('product_csv.download');
-        Route::get('/vendor-product-csv-download/{id}', 'import_vendor_product')->name('import_vendor_product.download');
-        Route::group(['prefix' => 'bulk-upload/download'], function () {
-            Route::get('/category', 'pdf_download_category')->name('pdf.download_category');
-            Route::get('/brand', 'pdf_download_brand')->name('pdf.download_brand');
-            Route::get('/seller', 'pdf_download_seller')->name('pdf.download_seller');
-        });
-    });
+    // Bulk import/export; downloads remain server-rendered PDFs.
+    Route::get('/product-bulk-export', [ProductBulkUploadController::class, 'export'])->name('product_bulk_export.index');
+    Route::get('/product-bulk-upload/index', [ProductBulkUploadController::class, 'index'])->name('product_bulk_upload.index');
+    Route::post('/bulk-product-upload', [ProductBulkUploadController::class, 'bulkUpload'])->name('bulk_product_upload');
+    Route::get('/bulk-upload/download/category', [ProductBulkUploadController::class, 'pdfDownloadCategory'])->name('pdf.download_category');
+    Route::get('/bulk-upload/download/brand', [ProductBulkUploadController::class, 'pdfDownloadBrand'])->name('pdf.download_brand');
+    Route::get('/bulk-upload/download/seller', [ProductBulkUploadController::class, 'pdfDownloadSeller'])->name('pdf.download_seller');
 
     // Seller
     Route::resource('sellers', SellerController::class);
@@ -181,64 +182,67 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/withdraw_request/message_modal', 'message_modal')->name('withdraw_request.message_modal');
     });
 
-    // Customer
-    Route::resource('customers', CustomerController::class)->except(['update']);
-
-    // custom route for making update method as POST action
-    Route::post('customers/{id}', [CustomerController::class, 'update'])->name('customers.update');
-    Route::post('customer/store', [CustomerController::class, 'store_customer'])->name('customers.store');
-    Route::get('customers/archive/get', [CustomerController::class, 'archive'])->name('customers.archive');
-    Route::get('customer/change_password/{id}', [CustomerController::class, 'change_password'])->name('change_password');
-    Route::post('customers/restore/{id}', [CustomerController::class, 'restore'])->name('customers.restore');
-    Route::post('customer/update_password/', [CustomerController::class, 'update_password'])->name('update_password');
-    Route::get('customer/whatsapp-contact/{id}', [CustomerController::class, 'whatsapp_contact'])->name('customers.whatsapp_contact');
-    Route::post('customer/important/{id}', [CustomerController::class, 'important'])->name('customers.important');
-    Route::post('customer/not-important/{id}', [CustomerController::class, 'not_important'])->name('customers.not_important');
-    Route::post('customer/change-activity-status', [CustomerController::class, 'change_activity_status'])->name('customers.change_activity_status');
-    Route::post('customer/update-customer-notes', [CustomerController::class, 'update_customer_notes'])->name('customers.update_customer_notes');
-    Route::get('customer/{user_id}/pages-views', [CustomerController::class, 'pages_views'])->name('customers.page-views');
-
+    // Customers and representatives share customer records, with explicit write gates.
     Route::controller(CustomerController::class)->group(function () {
-        Route::post('/customers/verify/{customer}', 'verify')->name('customers.verify');
-
+        Route::get('customers', 'index')->name('customers.index');
+        Route::get('customers/create', 'create')->name('customers.create');
+        Route::post('customer/store', 'store')->name('customers.store');
+        Route::get('customers/archive/get', 'archive')->name('customers.archive');
+        Route::get('customers/{customer}/edit', 'edit')->name('customers.edit');
+        Route::post('customers/{customer}', 'update')->name('customers.update');
+        Route::delete('customers/{customer}', 'destroy')->name('customers.destroy');
+        Route::post('customers/restore/{customer}', 'restore')->name('customers.restore');
+        Route::get('customer/change_password/{customer}', 'changePassword')->name('change_password');
+        Route::post('customers/{customer}/password', 'updatePassword')->name('update_password');
+        Route::get('customer/whatsapp-contact/{customer}', 'whatsappContact')->name('customers.whatsapp_contact');
+        Route::post('customer/important/{customer}', 'important')->name('customers.important');
+        Route::post('customer/not-important/{customer}', 'notImportant')->name('customers.not_important');
+        Route::post('customers/{customer}/activity', 'changeActivityStatus')->name('customers.change_activity_status');
+        Route::post('customers/{customer}/notes', 'updateNotes')->name('customers.update_customer_notes');
+        Route::get('customer/{customer}/pages-views', 'pageViews')->name('customers.page-views');
+        Route::post('customers/verify/{customer}', 'verify')->name('customers.verify');
         Route::post('customers_ban/{customer}', 'ban')->name('customers.ban');
-        Route::get('/customers/login/{id}', 'login')->name('customers.login');
-        Route::post('/customers/destroy/{id}', 'destroy')->name('customers.destroy');
-        Route::post('/bulk-customer-delete', 'bulk_customer_delete')->name('bulk-customer-delete');
-        Route::get('/customers/download_trade_license/{filename}', 'downloadTradeLicense')->name('download.trade_license');
-        Route::get('/representatives', 'repIndex')->name('representatives.index');
-        Route::get('/representatives/create', 'repCreate')->name('representatives.create');
-        Route::post('/representatives/store', 'repStore')->name('representatives.store');
+        Route::get('customers/login/{customer}', 'login')->name('customers.login');
+        Route::post('bulk-customer-delete', 'bulkDestroy')->name('bulk-customer-delete');
+        Route::get('customers/download_trade_license/{filename}', 'downloadTradeLicense')->name('download.trade_license');
+        Route::post('customers/terms/sendMail/{customer}', 'sendAgreement')->name('customers.sendAgreement');
+        Route::get('representatives', 'repIndex')->name('representatives.index');
+        Route::get('representatives/create', 'repCreate')->name('representatives.create');
+        Route::post('representatives/store', 'repStore')->name('representatives.store');
+    });
+    Route::controller(AddressController::class)->group(function () {
+        Route::get('addresses/states', 'states')->name('admin.addresses.states');
+        Route::get('addresses/cities', 'cities')->name('admin.addresses.cities');
+        Route::post('customers/{customer}/addresses', 'store')->name('admin.customers.addresses.store');
+        Route::put('customers/{customer}/addresses/{address}', 'update')->name('admin.customers.addresses.update');
+        Route::delete('customers/{customer}/addresses/{address}', 'destroy')->name('admin.customers.addresses.destroy');
+        Route::post('customers/{customer}/addresses/{address}/default', 'setDefault')->name('admin.customers.addresses.default');
     });
 
-
-    Route::controller(RepresentativePaymentAdminController::class)->group(function() {
+    Route::controller(RepresentativePaymentController::class)->group(function () {
         Route::get('admin/representatives/payments/index', 'index')->name('admin.rep.payments.index');
-        Route::post('admin/representatives/payments/accept/{id}', 'accept')->name('admin.rep.payments.accept');
-        Route::post('admin/representatives/payments/reject/{id}', 'reject')->name('admin.rep.payments.reject');
-        Route::get('admin/representatives/payments/export/{id}', 'export')->name('admin.rep.payments.export');
-
+        Route::post('admin/representatives/payments/accept/{payment}', 'accept')->name('admin.rep.payments.accept');
+        Route::post('admin/representatives/payments/reject/{payment}', 'reject')->name('admin.rep.payments.reject');
+        Route::get('admin/representatives/payments/export/{payment}', 'export')->name('admin.rep.payments.export');
     });
 
-    Route::controller(VisitController::class)->group(function() {
+    Route::controller(App\Http\Controllers\Store\Admin\VisitController::class)->group(function () {
         Route::get('/representatives/visits/index', 'index')->name('admin.rep.visits.index');
-        Route::get('/representatives/visits/show/{id}', 'show')->name('admin.rep.visits.show');
-        Route::get('/representatives/visits/rep-show/{id}', 'show_all_visits_in_a_day')->name('admin.rep.visits.rep-show');
-        Route::post('/representatives/visits/delete/{id}', 'destroy')->name('admin.rep.visits.destroy');
-        Route::post('/representatives/visits/bulk-visit-delete', 'bulk_visit_delete')->name('bulk-visit-delete');
+        Route::delete('/representatives/visits/delete/{visit}', 'destroy')->name('admin.rep.visits.destroy');
+        Route::post('/representatives/visits/bulk-visit-delete', 'bulkDestroy')->name('bulk-visit-delete');
     });
+    // Map details remain server-rendered until the logistics patch.
+    Route::get('/representatives/visits/show/{id}', [VisitController::class, 'show'])->name('admin.rep.visits.show')->middleware('permission:view_representative_visits');
+    Route::get('/representatives/visits/rep-show/{id}', [VisitController::class, 'show_all_visits_in_a_day'])->name('admin.rep.visits.rep-show')->middleware('permission:view_representative_visits');
 
-    Route::controller(RepresentativePackageController::class)->group(function() {
+    Route::controller(RepresentativePackageController::class)->group(function () {
         Route::get('/representatives/packages/index', 'index')->name('rep.packages.index');
         Route::get('/representatives/packages/create', 'create')->name('rep.packages.create');
         Route::post('/representatives/packages/store', 'store')->name('rep.packages.store');
-        Route::get('/representatives/packages/edit/{id}', 'edit')->name('rep.packages.edit');
-        Route::post('/representatives/packages/update', 'update')->name('rep.packages.update');
-        Route::post('/representatives/packages/delete/{id}', 'delete')->name('rep.packages.destroy');
-        Route::post('/representatives/packages', 'package_modal')->name('rep.packages.modal');
-        Route::post('/representatives/packages/set_package', 'set_package')->name('rep.set-package');
-
-
+        Route::get('/representatives/packages/{package}/edit', 'edit')->name('rep.packages.edit');
+        Route::put('/representatives/packages/{package}', 'update')->name('rep.packages.update');
+        Route::delete('/representatives/packages/delete/{package}', 'destroy')->name('rep.packages.destroy');
+        Route::post('/representatives/packages/set_package', 'assign')->name('rep.set-package');
     });
     Route::group(['prefix' => 'trips'], function () {
         Route::controller(TripController::class)->group(function() {
@@ -269,72 +273,55 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
         Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
 
-        Route::controller(DriverController::class)->group(function() {
-            Route::get('/drivers/index', 'index')->name('drivers.index')->middleware('permission:view_all_drivers');
-            Route::get('/drivers/create', 'create')->name('drivers.create')->middleware('permission:add_driver');
-            Route::post('/drivers/store', 'store')->name('drivers.store')->middleware('permission:add_driver');
-            Route::get('/drivers/edit/{id}', 'edit')->name('drivers.edit')->middleware('permission:edit_driver');
-            Route::post('/drivers/update', 'update')->name('drivers.update')->middleware('permission:edit_driver');
-            Route::post('/drivers/delete/{id}', 'delete')->name('drivers.destroy')->middleware('permission:delete_driver');
-        });
+        Route::get('/drivers/index', [DriverController::class, 'index'])->name('drivers.index');
+        Route::get('/drivers/create', [DriverController::class, 'create'])->name('drivers.create');
+        Route::post('/drivers/store', [DriverController::class, 'store'])->name('drivers.store');
+        Route::get('/drivers/{driver}/edit', [DriverController::class, 'edit'])->name('drivers.edit');
+        Route::put('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+        Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
 
-        Route::controller(TruckController::class)->group(function() {
-            Route::get('/trucks/index', 'index')->name('trucks.index')->middleware('permission:view_all_trucks');
-            Route::get('/trucks/create', 'create')->name('trucks.create')->middleware('permission:add_truck');
-            Route::post('/trucks/store', 'store')->name('trucks.store')->middleware('permission:add_truck');
-            Route::get('/trucks/edit/{id}', 'edit')->name('trucks.edit')->middleware('permission:edit_truck');
-            Route::post('/trucks/update', 'update')->name('trucks.update')->middleware('permission:edit_truck');
-            Route::post('/trucks/delete/{id}', 'delete')->name('trucks.destroy')->middleware('permission:delete_truck');
-            Route::post('/trucks/bulk-trucks-delete', 'bulk_truck_delete')->name('trucks.bulk-truck-delete')->middleware('permission:delete_truck');
+        Route::get('/trucks/index', [TruckController::class, 'index'])->name('trucks.index');
+        Route::get('/trucks/create', [TruckController::class, 'create'])->name('trucks.create');
+        Route::get('/trucks/photos', [TruckController::class, 'photos'])->name('trucks.photos');
+        Route::post('/trucks/store', [TruckController::class, 'store'])->name('trucks.store');
+        Route::get('/trucks/{truck}/edit', [TruckController::class, 'edit'])->name('trucks.edit');
+        Route::put('/trucks/{truck}', [TruckController::class, 'update'])->name('trucks.update');
+        Route::get('/trucks/{truck}/qr', [TruckController::class, 'qr'])->name('trucks.qr');
 
-        });
     });
 
     // Newsletter
     Route::controller(NewsletterController::class)->group(function () {
         Route::get('/newsletter', 'index')->name('newsletters.index');
+        Route::get('/newsletter/recipients', 'recipients')->name('newsletters.recipients');
         Route::post('/newsletter/send', 'send')->name('newsletters.send');
-        Route::post('/newsletter/test/smtp', 'testEmail')->name('test.smtp');
     });
 
     // Dynamic Popup
-    Route::resource('dynamic-popups', DynamicPopupController::class);
+    Route::get('/dynamic-popups', [DynamicPopupController::class, 'index'])->name('dynamic-popups.index');
+    Route::get('/dynamic-popups/create', [DynamicPopupController::class, 'create'])->name('dynamic-popups.create');
+    Route::post('/dynamic-popups', [DynamicPopupController::class, 'store'])->name('dynamic-popups.store');
+    Route::get('/dynamic-popups/{popup}/edit', [DynamicPopupController::class, 'edit'])->name('dynamic-popups.edit');
+    Route::put('/dynamic-popups/{popup}', [DynamicPopupController::class, 'update'])->name('dynamic-popups.update');
+    Route::delete('/dynamic-popups/{popup}', [DynamicPopupController::class, 'destroy'])->name('dynamic-popups.destroy');
     Route::controller(DynamicPopupController::class)->group(function () {
-        Route::post('/dynamic-popups/destroy/{id}', 'destroy')->name('dynamic-popups.destroy');
-        Route::post('/bulk-dynamic-popup-delete', 'bulk_dynamic_popup_delete')->name('bulk-dynamic-popup-delete');
-        Route::post('/dynamic-popups-update-status', 'update_status')->name('dynamic-popups.update-status');
+        Route::post('/bulk-dynamic-popup-delete', 'bulkDestroy')->name('bulk-dynamic-popup-delete');
+        Route::post('/dynamic-popups-update-status', 'updateStatus')->name('dynamic-popups.update-status');
     });
 
-    Route::resource('profile', ProfileController::class)->only(['index', 'update']);
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::match(['PUT', 'PATCH'], '/profile/{profile}', [ProfileController::class, 'update'])->name('profile.update');
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
         Route::post('/business-settings/update', 'update')->name('business_settings.update');
-        Route::post('/business-settings/update/activation', 'updateActivationSettings')->name('business_settings.update.activation')->middleware('RaizerSuperAdmin');
+        Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
         Route::get('/general-setting', 'general_setting')->name('general_setting.index');
-        Route::get('/activation', 'activation')->name('activation.index')->middleware('RaizerSuperAdmin');
-        Route::get('/payment-method', 'payment_method')->name('payment_method.index');
-        Route::get('/file_system', 'file_system')->name('file_system.index');
-        Route::get('/social-login', 'social_login')->name('social_login.index');
-        Route::get('/smtp-settings', 'smtp_settings')->name('smtp_settings.index');
-        Route::get('/google-analytics', 'google_analytics')->name('google_analytics.index');
-        Route::get('/google-recaptcha', 'google_recaptcha')->name('google_recaptcha.index');
-        Route::get('/google-map', 'google_map')->name('google-map.index');
-        Route::get('/google-firebase', 'google_firebase')->name('google-firebase.index');
 
-        //Facebook Settings
-        Route::get('/facebook-chat', 'facebook_chat')->name('facebook_chat.index');
-        Route::post('/facebook_chat', 'facebook_chat_update')->name('facebook_chat.update');
-        Route::get('/facebook-comment', 'facebook_comment')->name('facebook-comment');
-        Route::post('/facebook-comment', 'facebook_comment_update')->name('facebook-comment.update');
-        Route::post('/facebook_pixel', 'facebook_pixel_update')->name('facebook_pixel.update');
+        Route::get('/google-map', 'google_map')->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
-        Route::post('/payment_method_update', 'payment_method_update')->name('payment_method.update');
-        Route::post('/google_analytics', 'google_analytics_update')->name('google_analytics.update');
-        Route::post('/google_recaptcha', 'google_recaptcha_update')->name('google_recaptcha.update');
-        Route::post('/google-map', 'google_map_update')->name('google-map.update');
-        Route::post('/google-firebase', 'google_firebase_update')->name('google-firebase.update');
+        Route::post('/google-map', [\App\Http\Controllers\Store\Admin\GoogleMapController::class, 'update'])->name('google-map.update');
 
         Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
         Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
@@ -342,56 +329,83 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
 
         //Shipping Configuration
-        Route::get('/shipping_configuration', 'shipping_configuration')->name('shipping_configuration.index');
-        Route::post('/shipping_configuration/update', 'shipping_configuration_update')->name('shipping_configuration.update');
 
         // Order Configuration
-        Route::get('/order-configuration', 'order_configuration')->name('order_configuration.index');
-        Route::get('/product/search', 'search')->name('order_configuration.product-search');
     });
 
+    // Migrated plain settings: each write has its page permission and keys.
+    Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');
+    Route::post('/activation', [SettingsController::class, 'updateActivation'])->name('business_settings.update.activation');
+    Route::get('/smtp-settings', [SettingsController::class, 'smtp'])->name('smtp_settings.index');
+    Route::get('/social-login', [SettingsController::class, 'socialLogin'])->name('social_login.index');
+    Route::get('/facebook-chat', [SettingsController::class, 'facebookChat'])->name('facebook_chat.index');
+    Route::post('/facebook-chat', [SettingsController::class, 'updateFacebookChat'])->name('facebook_chat.update');
+    Route::get('/facebook-comment', [SettingsController::class, 'facebookComments'])->name('facebook-comment');
+    Route::post('/facebook-comment', [SettingsController::class, 'updateFacebookComments'])->name('facebook-comment.update');
+    Route::get('/google-analytics', [SettingsController::class, 'analytics'])->name('google_analytics.index');
+    Route::post('/google-analytics', [SettingsController::class, 'updateAnalytics'])->name('google_analytics.update');
+    Route::get('/google-recaptcha', [SettingsController::class, 'recaptcha'])->name('google_recaptcha.index');
+    Route::post('/google-recaptcha', [SettingsController::class, 'updateRecaptcha'])->name('google_recaptcha.update');
+    Route::get('/google-firebase', [SettingsController::class, 'firebase'])->name('google-firebase.index');
+    Route::post('/google-firebase', [SettingsController::class, 'updateFirebase'])->name('google-firebase.update');
+    Route::get('/payment-method', [SettingsController::class, 'payments'])->name('payment_method.index');
+    Route::post('/payment-method', [SettingsController::class, 'updatePayments'])->name('payment_method.update');
+    Route::get('/file_system', [SettingsController::class, 'filesystem'])->name('file_system.index');
+    Route::post('/google-analytics/pixel', [SettingsController::class, 'updateAnalytics'])->name('facebook_pixel.update');
+    Route::post('/smtp-settings/test', [SettingsController::class, 'testSmtp'])->name('test.smtp');
 
-    //Currency
-    Route::controller(CurrencyController::class)->group(function () {
-        Route::get('/currency', 'currency')->name('currency.index');
-        Route::post('/currency/update', 'updateCurrency')->name('currency.update');
-        Route::post('/your-currency/update', 'updateYourCurrency')->name('your_currency.update');
-        Route::get('/currency/create', 'create')->name('currency.create');
-        Route::post('/currency/store', 'store')->name('currency.store');
-        Route::post('/currency/currency_edit', 'edit')->name('currency.edit');
-        Route::post('/currency/update_status', 'update_status')->name('currency.update_status');
-    });
+    // Shipping and order settings have page-specific write permissions and keys.
+    Route::get('/shipping_configuration', [ShippingConfigurationController::class, 'index'])->name('shipping_configuration.index');
+    Route::post('/shipping_configuration/update', [ShippingConfigurationController::class, 'update'])->name('shipping_configuration.update');
+    Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
+    Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
+    Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
+    Route::get('/product/search', [ProductSearchController::class, 'search'])->name('order_configuration.product-search');
 
-    //Tax
-    Route::resource('tax', TaxController::class);
-    Route::controller(TaxController::class)->group(function () {
-        Route::get('/tax/edit/{id}', 'edit')->name('tax.edit');
-        Route::post('/tax/destroy/{id}', 'destroy')->name('tax.destroy');
-        Route::post('tax-status', 'change_tax_status')->name('taxes.tax-status');
-    });
+    // Currency forms are Vue dialogs; create/edit URLs also support direct visits.
+    Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');
+    Route::get('/currency/create', [CurrencyController::class, 'create'])->name('currency.create');
+    Route::get('/currency/{currency}/edit', [CurrencyController::class, 'edit'])->name('currency.edit');
+    Route::post('/currency/store', [CurrencyController::class, 'store'])->name('currency.store');
+    Route::put('/your-currency/{currency}', [CurrencyController::class, 'update'])->name('your_currency.update');
+    Route::post('/currency/{currency}/status', [CurrencyController::class, 'updateStatus'])->name('currency.update_status');
+    Route::post('/currency/settings', [CurrencyController::class, 'configure'])->name('currency.settings.update');
 
-    // Language
-    Route::resource('/languages', LanguageController::class);
-    Route::controller(LanguageController::class)->group(function () {
-        Route::post('/languages/{id}/update', 'update')->name('languages.update');
-        Route::post('/languages/destroy/{id}', 'destroy')->name('languages.destroy');
-        Route::post('/languages/update_rtl_status', 'update_rtl_status')->name('languages.update_rtl_status');
-        Route::post('/languages/update-status', 'update_status')->name('languages.update-status');
-        Route::post('/languages/key_value_store', 'key_value_store')->name('languages.key_value_store');
+    // Tax is added inline; the orphan create and empty show routes are retired.
+    Route::get('/tax', [TaxController::class, 'index'])->name('tax.index');
+    Route::post('/tax', [TaxController::class, 'store'])->name('tax.store');
+    Route::get('/tax/{tax}/edit', [TaxController::class, 'edit'])->name('tax.edit');
+    Route::put('/tax/{tax}', [TaxController::class, 'update'])->name('tax.update');
+    Route::delete('/tax/{tax}', [TaxController::class, 'destroy'])->name('tax.destroy');
+    Route::post('/tax/{tax}/status', [TaxController::class, 'updateStatus'])->name('taxes.tax-status');
 
-        //App Trasnlation
-        Route::post('/languages/app-translations/import', 'importEnglishFile')->name('app-translations.import');
-        Route::get('/languages/app-translations/show/{id}', 'showAppTranlsationView')->name('app-translations.show');
-        Route::post('/languages/app-translations/key_value_store', 'storeAppTranlsation')->name('app-translations.store');
-        Route::get('/languages/app-translations/export/{id}', 'exportARBFile')->name('app-translations.export');
-    });
+    // Database languages and translations (storefront, seller, emails, PDFs, mobile).
+    Route::get('/languages', [LanguageController::class, 'index'])->name('languages.index');
+    Route::get('/languages/create', [LanguageController::class, 'create'])->name('languages.create');
+    Route::post('/languages', [LanguageController::class, 'store'])->name('languages.store');
+    Route::post('/languages/update_rtl_status', [LanguageController::class, 'updateRtlStatus'])->name('languages.update_rtl_status');
+    Route::post('/languages/update-status', [LanguageController::class, 'updateStatus'])->name('languages.update-status');
+    Route::post('/languages/key_value_store', [LanguageController::class, 'storeTranslations'])->name('languages.key_value_store');
+    Route::post('/languages/app-translations/import', [LanguageController::class, 'importAppTranslations'])->name('app-translations.import');
+    Route::get('/languages/app-translations/show/{language}', [LanguageController::class, 'showAppTranslations'])->name('app-translations.show');
+    Route::post('/languages/app-translations/key_value_store', [LanguageController::class, 'storeAppTranslations'])->name('app-translations.store');
+    Route::get('/languages/app-translations/export/{language}', [LanguageController::class, 'exportAppTranslations'])->name('app-translations.export');
+    Route::get('/languages/{language}/edit', [LanguageController::class, 'edit'])->name('languages.edit');
+    Route::post('/languages/{language}/update', [LanguageController::class, 'update'])->name('languages.update');
+    Route::delete('/languages/{language}', [LanguageController::class, 'destroy'])->name('languages.destroy');
+    Route::get('/languages/{language}', [LanguageController::class, 'show'])->name('languages.show');
 
+    Route::post('/website/scripts/compatibility', [\App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
 
-    // website setting
+    // Website coexistence: rich-text forms remain Blade.
+    Route::get('/website/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
+    Route::put('/website/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');
+    Route::get('/website/custom-pages/edit/home', [WebsiteHomeController::class, 'edit'])->name('website.home.edit');
+    Route::put('/website/home', [WebsiteHomeController::class, 'update'])->name('website.home.update');
     Route::group(['prefix' => 'website'], function () {
         Route::controller(WebsiteController::class)->group(function () {
             Route::get('/footer', 'footer')->name('website.footer');
-            Route::get('/header', 'header')->name('website.header');
+
             Route::get('/appearance', 'appearance')->name('website.appearance');
             Route::get('/pages', 'pages')->name('website.pages');
         });
@@ -425,186 +439,153 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::delete('/staffs/{staff}', 'destroy')->name('staffs.destroy');
     });
 
-    // Flash Deal
-    Route::resource('flash_deals', FlashDealController::class);
+    Route::get('/campaign-products', [CampaignProductController::class, 'index'])->name('admin.campaign-products.index');
+    Route::get('/campaign-brands', [CampaignProductController::class, 'brands'])->name('admin.campaign-products.brands');
     Route::controller(FlashDealController::class)->group(function () {
-        Route::get('/flash_deals/edit/{id}', 'edit')->name('flash_deals.edit');
-        Route::post('/flash_deals/destroy/{id}', 'destroy')->name('flash_deals.destroy');
-        Route::post('/flash_deals/update_status', 'update_status')->name('flash_deals.update_status');
-        Route::post('/flash_deals/update_featured', 'update_featured')->name('flash_deals.update_featured');
-        Route::post('/flash_deals/product_discount', 'product_discount')->name('flash_deals.product_discount');
-        Route::post('/flash_deals/product_discount_edit', 'product_discount_edit')->name('flash_deals.product_discount_edit');
+        Route::get('/flash_deals', 'index')->name('flash_deals.index');
+        Route::get('/flash_deals/create', 'create')->name('flash_deals.create');
+        Route::post('/flash_deals', 'store')->name('flash_deals.store');
+        Route::get('/flash_deals/{flashDeal}/edit', 'edit')->name('flash_deals.edit');
+        Route::put('/flash_deals/{flashDeal}', 'update')->name('flash_deals.update');
+        Route::delete('/flash_deals/{flashDeal}', 'destroy')->name('flash_deals.destroy');
+        Route::put('/flash_deals/{flashDeal}/status', 'update_status')->name('flash_deals.update_status');
+        Route::put('/flash_deals/{flashDeal}/featured', 'update_featured')->name('flash_deals.update_featured');
     });
 
-    Route::controller(FeatureOrderController::class)->group(function () {
-        Route::get('/feat/order/create', 'create')->name('feat-order.create');
-        Route::post('/feat/order/store', 'store')->name('feat-order.store');
-        Route::get('/feat/order/get-needed-data', 'getNeededData')->name('feat-order.needed-data');
-        // Route::get('/feat/order/products-data', 'productsData')->name('feat-order.products-table');
-        Route::get('feat/order/rep-discount', 'getRepDiscount')->name('feat-order.rep-discount');
-    });
-    Route::controller(FeatureOrderTripController::class)->group(function () {
-        Route::get('/feat/order/trip/create', 'create')->name('feat-order.trip.create');
-        Route::post('/feat/order/trip/store', 'store')->name('feat-order.trip.store');
-        Route::get('/feat/order/trip/get-needed-data', 'getNeededData')->name('feat-order.trip.needed-data');
+    Route::get('/feat/order/create', [OrderEntryController::class, 'create'])->name('feat-order.create');
+    Route::post('/feat/order/store', [OrderEntryController::class, 'store'])->name('feat-order.store');
+    Route::get('/feat/new/order/trip/create', [OrderEntryController::class, 'shippingCreate'])->name('new.feat-order.trip.create');
+    Route::post('/feat/new/order/trip/store', [OrderEntryController::class, 'shippingStore'])->name('new.feat-order.trip.store');
+    Route::get('/feat/new/order/trip/edit/{order}', [OrderEntryController::class, 'edit'])->name('new.feat-order.trip.edit');
+    Route::put('/feat/new/order/trip/update/{order}', [OrderEntryController::class, 'update'])->name('new.feat-order.trip.update');
+    Route::get('/orders/search-options', [OrderEntryController::class, 'search'])->name('orders.search-options');
 
-        Route::get('/feat/new/order/trip/create', 'newCreate')->name('new.feat-order.trip.create');
-        Route::post('/feat/new/order/trip/store', 'newStore')->name('new.feat-order.trip.store');
-
-        Route::get('/feat/new/order/trip/edit/{id}', 'newEdit')->name('new.feat-order.trip.edit');
-        Route::put('/feat/new/order/trip/update/{id}', 'newUpdate')->name('new.feat-order.trip.update');
-
-        Route::get('/feat/new/order/trip/get-needed-data', 'newGetNeededData')->name('new.feat-order.trip.needed-data');
-
-        // Route::get('/feat/order/products-data', 'productsData')->name('feat-order.products-table');
-        // Route::get('feat/order/trip/rep-discount', 'getRepDiscount')->name('feat-order.trip.rep-discount');
-    });
     Route::controller(OfferController::class)->group(function () {
         Route::get('/offer_deals/index', 'index')->name('offer_deals.index');
         Route::get('/offer_deals/create', 'create')->name('offer_deals.create');
-        Route::post('/offer_deals/store', 'store')->name('offer_deals.store');
-        Route::get('/offer_deals/edit/{id}', 'edit')->name('offer_deals.edit');
-        Route::post('/offer_deals/update/{id}', 'update')->name('offer_deals.update');
-        Route::post('/offer_deals/destroy/{id}', 'destroy')->name('offer_deals.destroy');
-        Route::post('/offer_deals/update_status', 'update_status')->name('offer_deals.update_status');
-        Route::post('/offer_deals/update_repeatable', 'update_repeatable')->name('offer_deals.update_repeatable');
-        Route::post('/offer_deals/update_multiple_usage', 'update_multiple_usage')->name('offer_deals.update_multiple_usage');
-
-        Route::get('/offer_deals/base_product_discount', 'base_product_discount')->name('offer_deals.base_product_discount');//post
-        Route::get('/offer_deals/product_discount', 'product_discount')->name('offer_deals.product_discount');//post
-        Route::post('/offer_deals/product_discount_edit', 'product_discount_edit')->name('offer_deals.product_discount_edit');
-
         Route::get('/offer_deals/brand-create', 'brandCreate')->name('offer_deals.brands.create');
-        Route::get('/offer_deals/base_brand_discount', 'base_brand_discount')->name('offer_deals.base_brand_discount');//post
-        Route::get('/offer_deals/brand_discount', 'brand_discount')->name('offer_deals.brand_discount');//post
-        Route::post('/offer_deals/brand_discount_edit', 'brand_discount_edit')->name('offer_deals.brand_discount_edit');
+        Route::post('/offer_deals/store', 'store')->name('offer_deals.store');
+        Route::get('/offer_deals/{offer}/edit', 'edit')->name('offer_deals.edit');
+        Route::put('/offer_deals/{offer}', 'update')->name('offer_deals.update');
+        Route::delete('/offer_deals/{offer}', 'destroy')->name('offer_deals.destroy');
+        Route::put('/offer_deals/{offer}/status', 'update_status')->name('offer_deals.update_status');
+        Route::put('/offer_deals/{offer}/repeatable', 'update_repeatable')->name('offer_deals.update_repeatable');
+        Route::put('/offer_deals/{offer}/multiple-usage', 'update_multiple_usage')->name('offer_deals.update_multiple_usage');
     });
 
-    //Subscribers
-    Route::controller(SubscriberController::class)->group(function () {
-        Route::get('/subscribers', 'index')->name('subscribers.index');
-        Route::post('/subscribers/destroy/{id}', 'destroy')->name('subscriber.destroy');
-    });
+    // Subscribers: the storefront keeps subscribers.index and subscribers.store.
+    Route::get('/subscribers', [SubscriberController::class, 'index'])->name('admin.subscribers.index');
+    Route::delete('/subscribers/{subscriber}', [SubscriberController::class, 'destroy'])->name('subscriber.destroy');
 
     // Order
-    Route::resource('orders', OrderController::class)->except(['destroy']);
-    Route::controller(OrderController::class)->group(function () {
-        Route::post('orders/delete/{id}', 'destroy')->name('orders.destroy');
-        // All Orders
-        Route::get('/all_orders', 'all_orders')->name('all_orders.index');
-        Route::get('/inhouse-orders', 'all_orders')->name('inhouse_orders.index');
-        Route::get('/seller_orders', 'all_orders')->name('seller_orders.index');
-        Route::get('orders_by_pickup_point', 'all_orders')->name('pick_up_point.index');
+    Route::get('/all_orders', [OrderController::class, 'all_orders'])->name('all_orders.index');
+    Route::get('/inhouse-orders', [OrderController::class, 'all_orders'])->name('inhouse_orders.index');
+    Route::get('/seller_orders', [OrderController::class, 'all_orders'])->name('seller_orders.index');
+    Route::get('/orders_by_pickup_point', [OrderController::class, 'all_orders'])->name('pick_up_point.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/show', [OrderController::class, 'show'])->name('all_orders.show');
+    Route::get('/inhouse-orders/{order}/show', [OrderController::class, 'show'])->name('inhouse_orders.show');
+    Route::get('/seller_orders/{order}/show', [OrderController::class, 'show'])->name('seller_orders.show');
+    Route::get('/orders_by_pickup_point/{order}/show', [OrderController::class, 'show'])->name('pick_up_point.order_show');
+    Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    Route::post('/bulk-order-delete', [OrderController::class, 'bulk_order_delete'])->name('bulk-order-delete');
+    Route::post('/orders/details', [OrderController::class, 'details'])->name('orders.details');
+    Route::post('/orders/update_delivery_status', [OrderController::class, 'update_delivery_status'])->name('orders.update_delivery_status');
+    Route::post('/orders/update_payment_status', [OrderController::class, 'update_payment_status'])->name('orders.update_payment_status');
+    Route::post('/orders/update_tracking_code', [OrderController::class, 'update_tracking_code'])->name('orders.update_tracking_code');
+    Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
+    Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-        Route::get('/orders/{id}/show', 'show')->name('all_orders.show');
-        Route::get('/inhouse-orders/{id}/show', 'show')->name('inhouse_orders.show');
-        Route::get('/seller_orders/{id}/show', 'show')->name('seller_orders.show');
-        Route::get('/orders_by_pickup_point/{id}/show', 'show')->name('pick_up_point.order_show');
-
-        Route::post('/bulk-order-status', 'bulk_order_status')->name('bulk-order-status');
-
-        Route::post('/orders/destroy/{id}', 'destroy')->name('orders.destroy');
-        Route::post('/bulk-order-delete', 'bulk_order_delete')->name('bulk-order-delete');
-
-        Route::post('/orders/destroy/{id}', 'destroy')->name('orders.destroy');
-        Route::post('/orders/details', 'order_details')->name('orders.details');
-        Route::post('/orders/update_delivery_status', 'update_delivery_status')->name('orders.update_delivery_status');
-        Route::post('/orders/update_payment_status', 'update_payment_status')->name('orders.update_payment_status');
-        Route::post('/orders/update_tracking_code', 'update_tracking_code')->name('orders.update_tracking_code');
-        Route::post('/orders/update_manager_notes', 'update_manager_notes')->name('orders.update_manager_notes');
-        Route::post('/orders/item/edit_price', 'edit_item_price')->name('order.item.edit_price');
-
-        //Delivery Boy Assign
-        Route::post('/orders/delivery-boy-assign', 'assign_delivery_boy')->name('orders.delivery-boy-assign');
-    });
 
     Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
 
     //Reports
-    Route::controller(ReportController::class)->group(function () {
-        Route::get('/in_house_sale_report', 'in_house_sale_report')->name('in_house_sale_report.index');
-        Route::get('/seller_sale_report', 'seller_sale_report')->name('seller_sale_report.index');
-        Route::get('/stock_report', 'stock_report')->name('stock_report.index');
-        Route::get('/wish_report', 'wish_report')->name('wish_report.index');
-        Route::get('/user_search_report', 'user_search_report')->name('user_search_report.index');
-        Route::get('/commission-log', 'commission_history')->name('commission-log.index');
-        Route::get('/wallet-history', 'wallet_transaction_history')->name('wallet-history.index');
-    });
+    Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');
+    Route::get('/seller_sale_report', [ReportController::class, 'seller_sale_report'])->name('seller_sale_report.index');
+    Route::get('/stock_report', [ReportController::class, 'stock_report'])->name('stock_report.index');
+    Route::get('/wish_report', [ReportController::class, 'wish_report'])->name('wish_report.index');
+    Route::get('/user_search_report', [ReportController::class, 'user_search_report'])->name('user_search_report.index');
+    Route::get('/commission-log', [ReportController::class, 'commission_history'])->name('commission-log.index');
+    Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
 
     //Blog Section
-    //Blog cateory
-    Route::resource('blog-category', BlogCategoryController::class);
-    Route::post('/blog-category/destroy/{id}', [BlogCategoryController::class, 'destroy'])->name('blog-category.destroy');
+    Route::get('/blog-category', [BlogCategoryController::class, 'index'])->name('blog-category.index');
+    Route::get('/blog-category/create', [BlogCategoryController::class, 'create'])->name('blog-category.create');
+    Route::post('/blog-category', [BlogCategoryController::class, 'store'])->name('blog-category.store');
+    Route::get('/blog-category/{category}/edit', [BlogCategoryController::class, 'edit'])->name('blog-category.edit');
+    Route::put('/blog-category/{category}', [BlogCategoryController::class, 'update'])->name('blog-category.update');
+    Route::delete('/blog-category/{category}', [BlogCategoryController::class, 'destroy'])->name('blog-category.destroy');
 
     // Blog
-    Route::resource('blog', BlogController::class);
-    Route::controller(BlogController::class)->group(function () {
-        Route::post('/blog/destroy/{id}', 'destroy')->name('blog.destroy');
-        Route::post('/blog/change-status', 'change_status')->name('blog.change-status');
+    Route::controller(AdminBlogController::class)->group(function () {
+        Route::get('/blog', 'index')->name('blog.index');
+        Route::get('/blog/create', 'create')->name('blog.create');
+        Route::post('/blog', 'store')->name('blog.store');
+        Route::get('/blog/{blog}/edit', 'edit')->name('blog.edit');
+        Route::put('/blog/{blog}', 'update')->name('blog.update');
+        Route::delete('/blog/{blog}', 'destroy')->name('blog.destroy');
+        Route::put('/blog/{blog}/status', 'changeStatus')->name('blog.change-status');
     });
 
-    //Coupons
-    Route::resource('coupon', CouponController::class);
-    Route::controller(CouponController::class)->group(function () {
-        Route::post('/coupon/destroy/{id}', 'destroy')->name('coupon.destroy');
-
-        //Coupon Form
-        Route::post('/coupon/get_form', 'get_coupon_form')->name('coupon.get_coupon_form');
-        Route::post('/coupon/get_form_edit', 'get_coupon_form_edit')->name('coupon.get_coupon_form_edit');
-    });
+    // Coupons: the seller's shared Blade partials and request remain in place.
+    Route::get('/coupon', [CouponController::class, 'index'])->name('coupon.index');
+    Route::get('/coupon/create', [CouponController::class, 'create'])->name('coupon.create');
+    Route::get('/coupon/product-options', [CouponController::class, 'productOptions'])->name('coupon.product-options');
+    Route::post('/coupon', [CouponController::class, 'store'])->name('coupon.store');
+    Route::get('/coupon/{coupon}/edit', [CouponController::class, 'edit'])->name('coupon.edit');
+    Route::put('/coupon/{coupon}', [CouponController::class, 'update'])->name('coupon.update');
+    Route::delete('/coupon/{coupon}', [CouponController::class, 'destroy'])->name('coupon.destroy');
 
     //Reviews
-    Route::controller(ReviewController::class)->group(function () {
-        Route::get('/reviews', 'index')->name('reviews.index');
-        Route::post('/reviews/published', 'updatePublished')->name('reviews.published');
-    });
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');
+    Route::post('/reviews/{review}/published', [ReviewController::class, 'updatePublished'])->name('reviews.published');
 
     //Support_Ticket
-    Route::controller(SupportTicketController::class)->group(function () {
-        Route::get('support_ticket/', 'admin_index')->name('support_ticket.admin_index');
-        Route::get('support_ticket/{id}/show', 'admin_show')->name('support_ticket.admin_show');
-        Route::post('support_ticket/reply', 'admin_store')->name('support_ticket.admin_store');
+    Route::get('support_ticket/', [AdminSupportTicketController::class, 'index'])->name('support_ticket.admin_index');
+    // Preserve encrypted identifiers in existing email links while binding the record.
+    Route::bind('supportTicket', function (string $value) {
+        try { $id = ctype_digit($value) ? $value : decrypt($value); }
+        catch (\Illuminate\Contracts\Encryption\DecryptException) { abort(404); }
+        abort_unless((is_int($id) && $id > 0) || (is_string($id) && ctype_digit($id)), 404);
+        return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
+    Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
+    Route::post('support_ticket/reply', [AdminSupportTicketController::class, 'reply'])->name('support_ticket.admin_store');
 
     //Pickup_Points
-    Route::resource('pick_up_points', PickupPointController::class);
-    Route::controller(PickupPointController::class)->group(function () {
-        Route::get('/pick_up_points/edit/{id}', 'edit')->name('pick_up_points.edit');
-        Route::post('/pick_up_points/destroy/{id}', 'destroy')->name('pick_up_points.destroy');
-    });
+    Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');
+    Route::get('/pick_up_points/create', [PickupPointController::class, 'create'])->name('pick_up_points.create');
+    Route::post('/pick_up_points', [PickupPointController::class, 'store'])->name('pick_up_points.store');
+    Route::get('/pick_up_points/{pickupPoint}/edit', [PickupPointController::class, 'edit'])->name('pick_up_points.edit');
+    Route::put('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'update'])->name('pick_up_points.update');
+    Route::delete('/pick_up_points/{pickupPoint}', [PickupPointController::class, 'destroy'])->name('pick_up_points.destroy');
 
-    //conversation of seller customer
-    Route::controller(ConversationController::class)->group(function () {
-        Route::get('conversations', 'admin_index')->name('conversations.admin_index');
-        Route::get('conversations/{id}/show', 'admin_show')->name('conversations.admin_show');
-    });
+    // Back-office support; storefront conversation/message routes remain Blade.
+    Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.admin_index');
+    Route::get('conversations/{conversation}/show', [ConversationController::class, 'show'])->name('conversations.admin_show');
+    Route::post('conversations/{conversation}/reply', [ConversationController::class, 'reply'])->name('conversations.admin_reply');
+    Route::delete('conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.admin_destroy');
 
-    // product Queries show on Admin panel
-    Route::controller(ProductQueryController::class)->group(function () {
-        Route::get('/product-queries', 'index')->name('product_query.index');
-        Route::get('/product-queries/{id}', 'show')->name('product_query.show');
-        Route::put('/product-queries/{id}', 'reply')->name('product_query.reply');
-    });
+    Route::get('product-queries', [ProductQueryController::class, 'index'])->name('product_query.index');
+    Route::get('product-queries/{productQuery}', [ProductQueryController::class, 'show'])->name('product_query.show');
+    Route::put('product-queries/{productQuery}', [ProductQueryController::class, 'reply'])->name('product_query.reply');
 
-    // Product Attribute
-    Route::resource('attributes', AttributeController::class);
-    Route::controller(AttributeController::class)->group(function () {
-        Route::get('/attributes/edit/{id}', 'edit')->name('attributes.edit');
-        Route::post('/attributes/destroy/{id}', 'destroy')->name('attributes.destroy');
-
-        //Attribute Value
-        Route::post('/store-attribute-value', 'store_attribute_value')->name('store-attribute-value');
-        Route::get('/edit-attribute-value/{id}', 'edit_attribute_value')->name('edit-attribute-value');
-        Route::post('/update-attribute-value/{id}', 'update_attribute_value')->name('update-attribute-value');
-        Route::post('/destroy-attribute-value/{id}', 'destroy_attribute_value')->name('destroy-attribute-value');
-
-        //Colors
-        Route::get('/colors', 'colors')->name('colors');
-        Route::post('/colors/store', 'store_color')->name('colors.store');
-        Route::get('/colors/edit/{id}', 'edit_color')->name('colors.edit');
-        Route::post('/colors/update/{id}', 'update_color')->name('colors.update');
-        Route::post('/colors/destroy/{id}', 'destroy_color')->name('colors.destroy');
-    });
+    // Product attributes, values and colors
+    Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
+    Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
+    Route::get('/attributes/edit/{attribute}', [AttributeController::class, 'edit'])->name('attributes.edit');
+    Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
+    Route::delete('/attributes/destroy/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
+    Route::get('/attributes/{attribute}', [AttributeValueController::class, 'index'])->name('attributes.show');
+    Route::post('/store-attribute-value', [AttributeValueController::class, 'store'])->name('store-attribute-value');
+    Route::get('/edit-attribute-value/{attributeValue}', [AttributeValueController::class, 'edit'])->name('edit-attribute-value');
+    Route::put('/update-attribute-value/{attributeValue}', [AttributeValueController::class, 'update'])->name('update-attribute-value');
+    Route::delete('/destroy-attribute-value/{attributeValue}', [AttributeValueController::class, 'destroy'])->name('destroy-attribute-value');
+    Route::get('/colors', [ColorController::class, 'index'])->name('colors');
+    Route::post('/colors/store', [ColorController::class, 'store'])->name('colors.store');
+    Route::get('/colors/edit/{color}', [ColorController::class, 'edit'])->name('colors.edit');
+    Route::put('/colors/update/{color}', [ColorController::class, 'update'])->name('colors.update');
+    Route::delete('/colors/destroy/{color}', [ColorController::class, 'destroy'])->name('colors.destroy');
 
     //Customer Package
     Route::resource('customer_packages', CustomerPackageController::class);
@@ -621,12 +602,16 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     });
 
     // Countries
-    Route::resource('countries', CountryController::class);
-    Route::post('/countries/status', [CountryController::class, 'updateStatus'])->name('countries.status');
+    Route::get('/countries', [CountryController::class, 'index'])->name('countries.index');
+    Route::post('/countries/{country}/status', [CountryController::class, 'updateStatus'])->name('countries.status');
 
     // States
-    Route::resource('states', StateController::class);
-    Route::post('/states/status', [StateController::class, 'updateStatus'])->name('states.status');
+    Route::get('/states', [StateController::class, 'index'])->name('states.index');
+    Route::post('/states', [StateController::class, 'store'])->name('states.store');
+    Route::get('/states/{state}/edit', [StateController::class, 'edit'])->name('states.edit');
+    Route::put('/states/{state}', [StateController::class, 'update'])->name('states.update');
+    Route::delete('/states/{state}', [StateController::class, 'destroy'])->name('states.destroy');
+    Route::post('/states/{state}/status', [StateController::class, 'updateStatus'])->name('states.status');
 
     // Carriers
     Route::resource('carriers', CarrierController::class);
@@ -635,38 +620,39 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/carriers/update_status', 'updateStatus')->name('carriers.update_status');
     });
 
-
     // Zones
-    Route::resource('zones', ZoneController::class);
-    Route::post('/zones/destroy/{id}', [ZoneController::class, 'destroy'])->name('zones.destroy');
+    Route::get('/zones', [ZoneController::class, 'index'])->name('zones.index');
+    Route::get('/zones/create', [ZoneController::class, 'create'])->name('zones.create');
+    Route::post('/zones', [ZoneController::class, 'store'])->name('zones.store');
+    Route::get('/zones/{zone}/edit', [ZoneController::class, 'edit'])->name('zones.edit');
+    Route::put('/zones/{zone}', [ZoneController::class, 'update'])->name('zones.update');
+    Route::delete('/zones/{zone}', [ZoneController::class, 'destroy'])->name('zones.destroy');
 
-    Route::resource('cities', CityController::class);
-    Route::controller(CityController::class)->group(function () {
-        Route::get('/cities/edit/{id}', 'edit')->name('cities.edit');
-        Route::post('/cities/destroy/{id}', 'destroy')->name('cities.destroy');
-        Route::post('/cities/status', 'updateStatus')->name('cities.status');
-    });
+    Route::get('/cities', [CityController::class, 'index'])->name('cities.index');
+    Route::post('/cities', [CityController::class, 'store'])->name('cities.store');
+    Route::get('/cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
+    Route::put('/cities/{city}', [CityController::class, 'update'])->name('cities.update');
+    Route::delete('/cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
+    Route::post('/cities/{city}/status', [CityController::class, 'updateStatus'])->name('cities.status');
 
     Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
-    // uploaded files
-    Route::resource('/uploaded-files', AizUploadController::class);
-    Route::controller(AizUploadController::class)->group(function () {
-        Route::any('/uploaded-files/file-info', 'file_info')->name('uploaded-files.info');
-        Route::post('/uploaded-files/destroy/{id}', 'destroy')->name('uploaded-files.destroy');
-        Route::post('/bulk-uploaded-files-delete', 'bulk_uploaded_files_delete')->name('bulk-uploaded-files-delete');
-        Route::post('/all-file', 'all_file')->name('all-file')->middleware('permission:delete_all_uploads');
-    });
+    // Admin JSON file manager; the shared Blade uploader remains in shop-web/seller.
+    Route::get('/uploads', [UploadController::class, 'index'])->name('uploaded-files.index');
+    Route::get('/uploads/create', [UploadController::class, 'create'])->name('uploaded-files.create');
+    Route::get('/uploads/files', [UploadController::class, 'files'])->name('uploaded-files.files');
+    Route::get('/uploads/previews', [UploadController::class, 'previews'])->name('uploaded-files.info');
+    Route::post('/uploads', [UploadController::class, 'store'])->name('uploaded-files.store');
+    Route::delete('/uploads/{upload}', [UploadController::class, 'destroy'])->name('uploaded-files.destroy');
+    Route::post('/bulk-uploaded-files-delete', [UploadController::class, 'bulkDestroy'])->name('bulk-uploaded-files-delete');
+    Route::post('/all-file', [UploadController::class, 'destroyAll'])->name('all-file');
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
-    Route::post('/clear-cache', [AdminController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
+    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
 
-    Route::controller(AdminNotificationController::class)->group(function () {
-        Route::get('/notifications', 'getAllNotifications')->name('admin.notifications.all');
-        Route::post('/notifications/{id}/read', 'markAsRead')->name('admin.notifications.mark-read');
-        Route::get('/notifications/create', 'createNotification')->name('admin.notifications.create');
-        Route::post('/notifications/send', 'sendFcmNotification')->name('admin.notifications.send');
-        Route::post('/notifications/{id}', 'deleteNotification')->name('admin.notifications.delete');
-    });
+    Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
+    Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');
+    Route::post('/notifications/send', [CustomerNotificationController::class, 'store'])->name('admin.notifications.send');
+    Route::delete('/notifications/{notification}', [CustomerNotificationController::class, 'destroy'])->name('admin.notifications.delete');
 });
