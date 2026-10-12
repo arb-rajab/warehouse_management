@@ -542,6 +542,9 @@
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
         "noBarcodes": "No barcodes added yet.",
+        "downloadBarcode": "Download barcode {barcode}",
+        "downloadAllBarcodes": "Download all",
+        "downloadFailed": "Download failed. Please try again.",
         "exportQrLabel": "Export barcode for {product}",
         "empty": "No products yet.",
         "saving": "Saving…"

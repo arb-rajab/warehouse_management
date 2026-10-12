@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Form, Head, Link, router } from '@inertiajs/vue3';
-import { Barcode, Plus, SlidersHorizontal, X } from '@lucide/vue';
+import { Barcode, Download, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     destroyBarcode,
+    downloadAllBarcodes,
+    downloadBarcode,
     exportQr,
     index as productsIndex,
     storeBarcode,
@@ -299,7 +301,44 @@ const barcodesDialogOpen = computed({
 });
 
 function openBarcodesDialog(product: ProductSummary): void {
+    downloadError.value = '';
     barcodesDialogProduct.value = product;
+}
+
+const downloadError = ref('');
+
+/**
+ * Fetched rather than followed as a plain link so a failed response (a barcode
+ * that cannot be rendered, a lost session, a network error) surfaces as a
+ * message in the dialog instead of navigating the admin to an error page.
+ */
+async function downloadFile(url: string): Promise<void> {
+    downloadError.value = '';
+
+    try {
+        const response = await fetch(url, { credentials: 'same-origin' });
+
+        if (!response.ok) {
+            throw new Error(`Download failed with status ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const fileName =
+            /filename="([^"]+)"/.exec(
+                response.headers.get('Content-Disposition') ?? '',
+            )?.[1] ?? 'barcode';
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+    } catch {
+        downloadError.value = t('products.downloadFailed');
+    }
 }
 
 /**
@@ -570,48 +609,85 @@ function refreshBarcodesDialogProduct(): void {
                     </div>
                 </Form>
 
+                <ActionErrorBanner class="mt-4" :message="downloadError" />
                 <p
                     v-if="barcodesDialogProduct.barcodes.length === 0"
                     class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
                 >
                     {{ t('products.noBarcodes') }}
                 </p>
-                <ul
-                    v-else
-                    class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
-                >
-                    <li
-                        v-for="barcode in barcodesDialogProduct.barcodes"
-                        :key="barcode.id"
-                        class="flex items-center justify-between gap-2 py-2 text-sm"
+                <template v-else>
+                    <button
+                        type="button"
+                        :class="[filterApplyButtonClass, 'mt-4']"
+                        @click="
+                            downloadFile(
+                                downloadAllBarcodes.url(barcodesDialogProduct),
+                            )
+                        "
                     >
-                        {{ barcode.barcode }}
-                        <Link
-                            :href="
-                                destroyBarcode(
-                                    {
-                                        product: barcodesDialogProduct,
-                                        barcode,
-                                    },
-                                    { mergeQuery: {} },
-                                )
-                            "
-                            as="button"
-                            preserve-scroll
-                            preserve-state
-                            :aria-label="
-                                t('products.removeBarcode', {
-                                    barcode: barcode.barcode,
-                                })
-                            "
-                            :on-before="() => confirmDelete(barcode.barcode)"
-                            :on-success="refreshBarcodesDialogProduct"
-                            class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        <Download class="h-4 w-4 shrink-0" />
+                        {{ t('products.downloadAllBarcodes') }}
+                    </button>
+                    <ul
+                        class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
+                    >
+                        <li
+                            v-for="barcode in barcodesDialogProduct.barcodes"
+                            :key="barcode.id"
+                            class="flex items-center justify-between gap-2 py-2 text-sm"
                         >
-                            <X class="h-4 w-4" />
-                        </Link>
-                    </li>
-                </ul>
+                            {{ barcode.barcode }}
+                            <span class="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    :aria-label="
+                                        t('products.downloadBarcode', {
+                                            barcode: barcode.barcode,
+                                        })
+                                    "
+                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    @click="
+                                        downloadFile(
+                                            downloadBarcode.url({
+                                                product: barcodesDialogProduct,
+                                                barcode,
+                                            }),
+                                        )
+                                    "
+                                >
+                                    <Download class="h-4 w-4" />
+                                </button>
+                                <Link
+                                    :href="
+                                        destroyBarcode(
+                                            {
+                                                product: barcodesDialogProduct,
+                                                barcode,
+                                            },
+                                            { mergeQuery: {} },
+                                        )
+                                    "
+                                    as="button"
+                                    preserve-scroll
+                                    preserve-state
+                                    :aria-label="
+                                        t('products.removeBarcode', {
+                                            barcode: barcode.barcode,
+                                        })
+                                    "
+                                    :on-before="
+                                        () => confirmDelete(barcode.barcode)
+                                    "
+                                    :on-success="refreshBarcodesDialogProduct"
+                                    class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                                >
+                                    <X class="h-4 w-4" />
+                                </Link>
+                            </span>
+                        </li>
+                    </ul>
+                </template>
             </template>
         </FilterDialog>
 

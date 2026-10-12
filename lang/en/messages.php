@@ -29,6 +29,8 @@ return [
     'cell_changed_since_verification_report' => 'This slot has changed since it was verified, so the reported state can no longer be applied.',
     'verification_report_accepted_note' => 'Accepted from verification report #:id',
     'qr_label_product_id' => 'ID: :id',
+    'barcode_not_printable' => 'Barcode :barcode cannot be rendered as a Code 128 label.',
+    'product_has_no_barcodes' => 'This product has no barcodes to download.',
     'password_same_as_current' => 'The new password must be different from your current password.',
     'pallet_moved' => 'This pallet has been moved since it was loaded. Refresh and try again.',
     'verification_round_scope_empty' => 'There are no rows for this verification round to cover.',

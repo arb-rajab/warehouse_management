@@ -78,6 +78,8 @@ Route::middleware('auth')->group(function () {
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
         Route::put('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->name('products.barcodes.store');
+        Route::get('products/{product}/barcodes/download', [ProductController::class, 'downloadAllBarcodes'])->name('products.barcodes.download-all');
+        Route::get('products/{product}/barcodes/{barcode}/download', [ProductController::class, 'downloadBarcode'])->scopeBindings()->name('products.barcodes.download');
         Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'destroyBarcode'])->scopeBindings()->name('products.barcodes.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
