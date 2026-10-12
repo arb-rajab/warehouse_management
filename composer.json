@@ -13,7 +13,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "bepsvpt/secure-headers": "^9.1",
         "dedoc/scramble": "^0.13.39",
-        "enshrined/svg-sanitize": "^0.22",
+        "enshrined/svg-sanitize": "^1.0",
         "genealabs/laravel-sign-in-with-apple": "^13.0",
         "genealabs/laravel-socialiter": "^13.0",
         "giggsey/libphonenumber-for-php": "^9.0",

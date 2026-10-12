@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
+import { switchLocale } from './support/nav';
 import { seedStoreFixtures } from './support/storeFixtures';
 
 for (const path of ['commission-log', 'wallet-history']) {
@@ -75,7 +76,7 @@ test('report filters and table follow the Arabic RTL layout', async ({
         Illuminate\Support\Facades\DB::table('languages')->updateOrInsert(['code' => 'ar'], ['name' => 'Arabic', 'rtl' => 1]);
     `);
     await page.goto('/temp/admin/stock_report');
-    await page.getByRole('button', { name: 'Arabic', exact: true }).click();
+    await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(
         page.getByRole('heading', {
@@ -93,6 +94,6 @@ test('report filters and table follow the Arabic RTL layout', async ({
     await page
         .getByRole('button', { name: 'إغلاق الفلاتر', exact: true })
         .click();
-    await page.getByRole('button', { name: 'الإنجليزية', exact: true }).click();
+    await switchLocale(page, 'الإنجليزية');
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
 });

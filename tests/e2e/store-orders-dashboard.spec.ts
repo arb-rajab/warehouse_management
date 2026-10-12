@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
+import { switchLocale } from './support/nav';
 test('async order entry enforces native fields, calculates totals, retains server errors, edits and cancels', async ({
     page,
 }) => {
@@ -97,7 +98,7 @@ test('order fields remain readable in dark mode and the store layout follows Ara
     expect(
         contrastRatio(styles.foreground, styles.background),
     ).toBeGreaterThanOrEqual(4.5);
-    await page.getByRole('button', { name: 'Arabic', exact: true }).click();
+    await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(
         page.getByRole('heading', { name: 'إنشاء طلب شحن' }),

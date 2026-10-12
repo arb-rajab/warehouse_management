@@ -984,3 +984,44 @@ grants, external services/payment/email, complete visual parity and unavailable
 baseline captures remain outside the completed evidence. Workflow success does
 not claim globally clean console/network output. No push, PR, merge or deployment
 was performed or authorized in this session.
+
+
+## CI repair on 2026-10-12
+
+PR #377's first GitHub run passed Pest, MySQL migrations, Vitest, lint,
+formatting and static analysis, but failed dependency audit and browser tests.
+The browser harness used HTTP while enforced CSP upgrades Inertia redirects to
+HTTPS. A local trace confirmed a successful login followed by a failed HTTPS
+redirect to the HTTP-only server.
+
+The default harness now starts a loopback HTTPS proxy with a temporary OpenSSL
+certificate, trusts only that proxy and stops its owned PHP process group on
+shutdown. Upstream connections are not pooled against PHP's development server.
+CSP and the existing assertion thresholds remain enforced. The arrow contrast
+test uses a CPU readback hint and polling for the rendered color measurement;
+both arrow assertions passed three repeated runs. Locale-switch callers now
+wait for the full reload before subsequent navigation; pagination contrast
+checks also wait for their rendered measurement without lowering thresholds.
+
+Security maintenance updates existing dependencies: `enshrined/svg-sanitize`
+0.22.0 to 1.0.0 resolves the three reported SVG advisories; `concurrently` 9.2.4
+to 9.2.5 selects fixed `shell-quote` 1.12.0 within the existing manifest range.
+No unrelated framework, editor or chart dependencies were activated.
+
+Local verification: the required pre-push script passed all 4,961 backend tests
+(23,811 assertions), all 2,050 frontend tests in 227 files, ESLint, Prettier,
+TypeScript, Pint and PHPStan. The fresh production build passed. Focused upload
+coverage passed 110 tests/492 assertions with WebP-enabled GD. Production npm
+audit reported zero vulnerabilities. Composer update reported no advisories;
+the standalone audit endpoint is blocked by local network policy and must be
+verified by GitHub. The full development npm audit still reports inherited
+`braces`/`postcss-selector-parser` tooling advisories outside the production
+audit gate; this repair does not claim to resolve those.
+
+Final full-browser result: **59/59 passed**, fresh isolated databases, one
+worker, zero suite retries, local HTTPS and enforced CSP. Local video capture is disabled only in an
+external scratch config because Playwright's ffmpeg binary is unavailable;
+screenshots and traces remain enabled, and committed CI video settings remain.
+
+These fixes do not complete deferred modules or resolve owner decisions,
+production-data rehearsal, deployed role grants or inherited product defects.

@@ -8,3 +8,11 @@ import type { Page } from '@playwright/test';
 export async function openAccountMenu(page: Page): Promise<void> {
     await page.getByRole('button', { name: 'Account' }).click();
 }
+
+/** Wait for LanguageSwitcher's full reload before starting another visit. */
+export async function switchLocale(page: Page, label: string): Promise<void> {
+    await Promise.all([
+        page.waitForEvent('load'),
+        page.getByRole('button', { name: label, exact: true }).click(),
+    ]);
+}

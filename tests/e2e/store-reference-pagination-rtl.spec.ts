@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { switchLocale } from './support/nav';
 import { ensureStoreRtlLanguage } from './support/storeFixtures';
 
 test('reference pagination arrows follow English and Arabic direction', async ({
@@ -24,13 +25,13 @@ test('reference pagination arrows follow English and Arabic direction', async ({
     const arrow = page.locator('main nav svg.lucide-chevron-right').first();
     await expect(arrow).toBeVisible();
     await expect(arrow).toHaveCSS('rotate', 'none');
-    await page.getByRole('button', { name: 'Arabic', exact: true }).click();
+    await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(arrow).toHaveCSS('rotate', '180deg');
     await expect(
         page.getByRole('heading', { name: 'الضرائب', exact: true }),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'الإنجليزية', exact: true }).click();
+    await switchLocale(page, 'الإنجليزية');
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
     await expect(arrow).toHaveCSS('rotate', 'none');
 });

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { switchLocale } from './support/nav';
 import { ensureStoreRtlLanguage } from './support/storeFixtures';
 
 test('language forms retain input after validation and confirm deletion in the browser', async ({
@@ -66,7 +67,7 @@ test('RTL settings and translation inputs coexist with Blade and retain Arabic l
         await expect(row.locator('select').first()).toHaveValue(value);
     }
 
-    await page.getByRole('button', { name: 'Arabic', exact: true }).click();
+    await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(
         page.getByRole('heading', { name: 'اللغات', exact: true }),

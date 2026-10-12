@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
+import { switchLocale } from './support/nav';
 import { ensureStoreRtlLanguage } from './support/storeFixtures';
 
 test('upload rejection, avatar selection, validation retention and native deletion confirmation', async ({
@@ -79,7 +80,7 @@ test('the picker supports RTL keyboard focus and dark inputs', async ({
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/profile');
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.getByRole('button', { name: 'Arabic' }).click();
+    await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await page.getByRole('button', { name: 'اختيار الملفات' }).click();
     const dialog = page.getByRole('dialog', { name: 'اختيار الملفات' });
