@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
+use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterCustomerPackagesRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerPackageRequest;
 use App\Http\Requests\Store\Admin\UpdateCustomerPackageRequest;
 use App\Http\Resources\Store\CustomerPackageResource;
-use App\Http\Resources\Store\UploadResource;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageTranslation;
 use App\Models\Upload;
@@ -24,6 +24,7 @@ use Inertia\Response;
 class CustomerPackageController extends Controller implements HasMiddleware
 {
     use ProvidesStoreReferenceOptions;
+    use ProvidesStoreUploadPreviews;
 
     private const array COLUMNS = ['id', 'name', 'amount', 'product_upload', 'logo'];
 
@@ -69,7 +70,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
             'name' => $package->getTranslation('name', $lang),
             'lang' => $lang,
             'languages' => $this->languageOptions(),
-            'initialFiles' => $logo && ($request->user('store')->can('view_uploads') || $logo->user_id === $request->user('store')->id) && $request->user('store')->can('view', $logo) ? [new UploadResource($logo)] : [],
+            'initialFiles' => $this->uploadPreviews($request, $logo),
         ]);
     }
 

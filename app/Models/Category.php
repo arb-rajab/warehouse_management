@@ -11,6 +11,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property int|null $parent_id
+ * @property int $level
+ * @property int $order_level
+ * @property int $digital
+ * @property int $featured
+ * @property string|float $commision_rate
+ * @property string|null $banner
+ * @property string|null $icon
+ * @property string|null $cover_image
+ * @property string|null $slug
+ * @property string|null $meta_title
+ * @property string|null $meta_description
+ */
 class Category extends Model
 {
     /** @use HasFactory<Factory<Category>> */

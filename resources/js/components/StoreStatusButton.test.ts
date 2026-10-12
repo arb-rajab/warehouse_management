@@ -42,6 +42,19 @@ describe('StoreStatusButton', () => {
             );
         },
     );
+    it('submits caller fields inside the shared status form', () => {
+        const wrapper = mount(StoreStatusButton, {
+            props: {
+                action: updateStatus(storeCountry()),
+                active: false,
+                label: 'Featured',
+            },
+            slots: { default: '<input type="hidden" name="id" value="17" />' },
+        });
+        expect(wrapper.get('form input[name=id]').attributes('value')).toBe(
+            '17',
+        );
+    });
     it('forwards processing and server errors', () => {
         formSlotPropsMock.mockReturnValue({
             errors: { status: 'Invalid status' },

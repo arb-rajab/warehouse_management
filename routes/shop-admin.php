@@ -18,7 +18,7 @@ use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\CarrierController;
-use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\Store\Admin\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\Store\Admin\CountryController;
@@ -85,12 +85,13 @@ Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.ad
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
     // category
-    Route::resource('categories', CategoryController::class);
-    Route::controller(CategoryController::class)->group(function () {
-        Route::get('/categories/edit/{id}', 'edit')->name('categories.edit');
-        Route::post('/categories/destroy/{id}', 'destroy')->name('categories.destroy');
-        Route::post('/categories/featured', 'updateFeatured')->name('categories.featured');
-    });
+    Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+    Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::get('/categories/edit/{category}', [CategoryController::class, 'edit'])->name('categories.edit');
+    Route::match(['PUT', 'PATCH'], '/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categories/destroy/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::post('/categories/featured', [CategoryController::class, 'updateFeatured'])->name('categories.featured');
 
     // Brand
     Route::resource('brands', BrandController::class);
