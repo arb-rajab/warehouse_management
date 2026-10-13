@@ -49,6 +49,10 @@ The page at `/admin/warehouse-map` is a Vue/Inertia host (`pages/Admin/Warehouse
   with a 120px blur alone was ~60% of each zoom's raster. Keep the world's shadow small, draw vignettes as
   gradients, and keep tile styling cheap (tile shadows measured as free). The `is-coarse` level of detail
   drops shadows when zoomed out.
+- Zooming also re-rasters every tile's shadows, gradients and product photos (photos roughly double the cost; with
+  ~70% of columns full that is most of the page). `PlanView` therefore adds `is-zooming` to the world for the
+  steps of a zoom plus 160ms, and `is-zooming` shares the `is-coarse` look (no shadows, bars, digits or photos).
+  Add any new costly tile decoration to that shared selector list, not as an always-on style.
 - Profile with Playwright's `trace`/`video` off (their DOM snapshots masquerade as page script time).
 
 ## Verification

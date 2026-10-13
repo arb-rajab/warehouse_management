@@ -314,6 +314,34 @@ describe('PlanView', () => {
         expect(world.classList.contains('is-coarse')).toBe(true);
     });
 
+    it('paints the light look while zooming and the full detail once it settles', () => {
+        vi.useFakeTimers();
+
+        try {
+            const { view, stage } = setup();
+            const world = stage.querySelector<HTMLElement>('.wms-plan__world')!;
+
+            flushFrames();
+            expect(world.classList.contains('is-zooming')).toBe(false);
+
+            view.zoomBy(1.2);
+            expect(world.classList.contains('is-zooming')).toBe(true);
+
+            vi.advanceTimersByTime(100);
+            view.zoomBy(1.2); // another step restarts the wait
+            vi.advanceTimersByTime(100);
+            expect(world.classList.contains('is-zooming')).toBe(true);
+
+            vi.advanceTimersByTime(100);
+            expect(world.classList.contains('is-zooming')).toBe(false);
+
+            view.fit();
+            expect(world.classList.contains('is-zooming')).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('centres on a slot to reveal it', () => {
         const { view, stage, warehouse } = setup();
         const world = stage.querySelector<HTMLElement>('.wms-plan__world')!;
