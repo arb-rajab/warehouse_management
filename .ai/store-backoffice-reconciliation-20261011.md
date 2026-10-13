@@ -30,8 +30,8 @@ were activated. The table and deferred paths below define actual scope.
 | `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | Included, canonical contract adapted | `6c21e5a482f98dd1df705cdcd05e5f2c8b70c62d`; normalization confined to selected admin path, legacy callers preserved |
 | `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | Partially included | `99a14828b557c36236cf6dea5c697ad85758de38`; customers/addresses/representatives/packages/payments/visit list; classified activation held; customer packages pending |
 | `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | Included implemented subset, adapted | `29ada8cd505074f696e6675487f6ccbc27d181da`; bounded translated search, attributes/values/colors/discount/reviews/bulk/offers; core catalogue conversion remains pending |
-| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply, Blade detail; editor/script-policy activation held |
-| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; retained Blade editors |
+| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR "newsletter and ticket detail", `[skip ci]`); script-policy activation held |
+| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms and newsletter form on the shared editor since 2026-10-13 |
 | `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list |
 | `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | Partially included | `3bece94c1e25f6f5e91606238a1c2fd6b64fd896`; orders/entry and shell utilities, dashboard/charts and proposed tax arithmetic held |
 | `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | Superseded implementation; partially included independent tests/fix | No duplicate controllers/pages/admin routes; follow-up adapts `StoreBackOfficeShellTest`, currency switcher regression and missing-currency handling |
@@ -96,13 +96,13 @@ objects. These changes remain available in Git and have not been silently lost.
 | --- | --- | --- |
 | `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
 | `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
-| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
+| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Footer/appearance/custom-page Blade GET and existing writers remain | Editor-dependent Inertia activation after editor approval and consumer adaptation |
-| `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list and typed reply integrated; existing sanitized Blade detail/reply editor remains | Vue detail/reply editor activation after shared editor approval; useful backend sanitation/authorization tests adapted now |
+| `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys | Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; generic writers already reject script keys |
 | `cf5ef305`: `StoreRichTextField.vue` / duplicate uploader infrastructure and competing upload request/resource changes | Canonical uploader and the shared `e3995898` editor basis (active since 2026-10-13) | Duplicate infrastructure superseded; its dormant `store.richText.*` keys removed; useful blog formatting/validation tests adapted |
 | `cf5ef305`: `StoreBlogFormFields.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Edit.vue` and editor-dependent tests | Inertia blog list, typed actions and, since 2026-10-13, Inertia create/edit on the shared editor; public rendering stays Blade | **Done (2026-10-13)**, adapted to the canonical uploader, `ResourceFormPage` and current locales; no `eslint-plugin-vue` or `concurrently` upgrades taken |
-| `cf5ef305`: `resources/js/pages/Store/Admin/Marketing/Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`, `StoreNewsletterRecipients.vue` and editor-dependent frontend tests; source controller’s Inertia index | Existing newsletter Blade editor; typed send/recipient search integrated; selected SMTP settings endpoint remains | Vue newsletter/editor activation after shared editor approval; SMTP retains both `smtp_settings` and `send_newsletter` gates |
+| `cf5ef305`: `resources/js/pages/Store/Admin/Marketing/Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`, `StoreNewsletterRecipients.vue` and editor-dependent frontend tests; source controller’s Inertia index | Typed send (SMTP guard, cleaned content, one queued `EmailManager` per recipient, dashboard return) and bounded recipient search unchanged; the SMTP test keeps both `smtp_settings` and `send_newsletter` gates | **Activated (2026-10-13).** Inertia newsletter form on the shared editor; Blade view removed; the source's `testEmail` duplicate of `test.smtp` not taken. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
 | `468d235c`: unconverted `TripController` / visit map Blade consumers | Existing Leaflet/Google assets, hardened coordinates/DOM output and HTTPS routing; existing departure ID 9 semantics retained | New Vue Leaflet dependency and departure business policy require decisions; no map conversion claimed |
 | `7ab01926`: `Store/Admin/DashboardController` chart implementation, `Store/Admin/Dashboard/Index.vue`, `StoreDashboardCharts.vue`, chart tests and Chart.js dependency additions | Root Blade dashboard with existing chart assets; shell counts/search/notifications and scoped cache clear integrated | Chart.js dependency approval before Inertia dashboard activation; checked-in claim is not independent evidence |
 | `7ab01926`: `app/Services/StoreAdminOrderService.php` line tax/grand-total arithmetic and corresponding UI/test expectations | Raw product tax metadata stored; grand total sums line prices, as existing entry/edit handlers did | Percentage tax conversion and adding tax/shipping/subtracting coupon require business approval; regression expectations reflect established behavior |
@@ -2011,3 +2011,169 @@ sources were used.
 Not run: MySQL, production data or role grants, and the full browser suite.
 Because of `[skip ci]`, GitHub CI, the dependency-audit workflow, SAST and the
 deploy did not run for this PR or its merge.
+
+
+## Newsletter and support ticket detail migration (2026-10-13)
+
+Work on `ccr-b2e34e7d-piwxdo` from fetched `develop` at
+`a22e4d8a` (the PR #392 merge); the branch had no commits beyond that base.
+Sources `cf5ef305` (newsletter) and `e3995898` (ticket detail/reply) were
+fetched and adapted, not cherry-picked. The owner authorized, for this session
+only, the pull request, its merge into `develop` with the merge method, and
+`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
+checks below are the only verification. No other branch, deployment, real mail
+or production data was touched. The decision table above marks both rows
+activated. The guide's §19 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Newsletter recipients.** `Store/Admin/NewsletterController.php:28-34`
+  loaded every user and subscriber email into the Blade page, whose two
+  multiselects (`marketing/newsletters/index.blade.php:16-33`) listed them all.
+  The bounded search (`:36-44`) takes `kind` users/subscribers and an optional
+  `q` (`SearchNewsletterRecipientsRequest.php:20`), returning at most 30
+  distinct emails.
+- **Newsletter sanitation and send.** `SendNewsletterRequest.php:18-25`:
+  subject required string ≤255 (plain text, never HTML), content required
+  ≤100,000, each list `required_without` the other, ≤1,000 entries, each an
+  existing email; `:28-33` cleans the content with `clean_html()` before
+  validation. `send()` (`:46-67`) refuses a blank SMTP username (`:48-50`),
+  merges and de-duplicates the lists (`:52-55`) and queues one `EmailManager`
+  per recipient with `Mail::to()->queue()` (`:62-64`) on the default connection
+  (`config/queue.php:16`, `database`; `sync` and `MAIL_MAILER=array` under
+  Pest, `phpunit.xml:30-31`), then returns to `shop.admin.dashboard` (`:66`).
+  `shop/emails/newsletter.blade.php:1-3` echoes the cleaned content.
+- **Test email.** None on the newsletter page. The SMTP test is
+  `SettingsController::testSmtp` (`:207-217`, route `test.smtp`,
+  `routes/shop-admin.php:376`), gated by `smtp_settings` and `send_newsletter`
+  (`:108`, `:118`); unchanged. The source's `testEmail` copy was not taken.
+- **Ticket visibility and seen/status.** The binding
+  (`routes/shop-admin.php:567-572`) accepts a plain or `encrypt()`ed id and
+  only tickets whose customer exists. `view_all_support_tickets` gates
+  index/show and `reply_to_support_tickets` the reply
+  (`Store/Admin/SupportTicketController.php:25`). Viewing delegated to root
+  `admin_show` (`SupportTicketController.php:153-159`), which sets `viewed = 1`
+  and nothing else. The reply (`Store/Admin/SupportTicketController.php:49-61`)
+  stores `clean_html()`ed HTML and the attachment ids in a transaction, sets
+  `client_viewed = 0` and the posted status, and queues `SupportMailManager`
+  to the customer (root `:99-113`).
+- **Blade reply form.** `support_tickets/show.blade.php:21` (`@can` reply),
+  `:27` (summernote: bold/underline/italic/lists/undo/redo), `:31-37`
+  (multiple-image legacy uploader). Its main button read "Submit as <current
+  status>" but `submit_reply('pending')` posted `pending` (`:43-47`,
+  `:134-135`); the menu offered open and solved (`:53-54`).
+- **Attachments.** `:82-89` and `:113-121` explode the stored CSV, query each
+  upload separately (N+1) and link `uploaded_asset()` with `download`, for
+  every viewer of the ticket, whatever the owner. The reply rule
+  (`ValidatesWebsiteSettings.php:29-44`) allows only the caller's own images
+  unless it holds `view_uploads`; previews need `view_uploads`
+  (`UploadController.php:30`).
+- **Rendering and legacy HTML.** Replies listed newest first
+  (`Ticket.php:20`, `orderBy created_at desc`), then the original request
+  (`:94-123`); both printed through `clean_html()` (`:79`, `:111`). Replies are
+  never edited.
+- **Reply redirect.** It returned by `encrypt()`ed id
+  (`Store/Admin/SupportTicketController.php:60`); `HtmlSanitizerTest.php:108-111`
+  documents that such an id can contain `/` or `+`, which the route cannot
+  carry.
+- **Customer and seller side.** Root `index` (`:37-41`), `store` (`:59-79`,
+  emailing staff a `support_ticket.admin_show` link, `:86`), `show`
+  (`:144-151`, sets `client_viewed = 1`) and `seller_store` (`:116-142`); the
+  seller controller's own email link (`Seller/SupportTicketController.php:57`).
+  All unchanged.
+- **Tests and links treating the pages as Blade.**
+  `NewsletterControllerTest.php:20-26`, `SupportTicketControllerTest.php:59-67`,
+  `SupportTicketAuthorizationTest.php:43-46`, `HtmlSanitizerTest.php:114-121`
+  (`assertViewIs`/raw HTML), `Tickets/Index.vue:98` (`:inertia="false"`) with
+  `Index.test.ts:81-84`, the newsletter menu entry (`storeAdminMenu.ts:628-633`,
+  no `inertia`) and the guide's §2.2/§4/§6. `HandleStoreBladePagesTest`,
+  `ReconstructedMigrationAuditTest` and the coexistence specs use the footer and
+  general settings, not these pages. `admin_sidenav.blade.php:972` and `:1034`
+  keep their route names.
+- **Blade editor consumers.** 20 `aiz-text-editor` fields in 18 views before;
+  18 in 16 after (admin appearance 2, footer 2, custom pages, product and
+  digital-product create/edit; seller ticket, product and digital-product
+  forms; customer ticket and product upload/edit). Assets stay.
+- **WAF.** The editor output (paragraphs, marks, `style` alignment/colour,
+  lists, tables, http(s) links and upload images) matches no `config/waf.php`
+  signature; no rule blocked legitimate content and none changed.
+- **Dormant leftovers.** `Services/Store/TicketAttachments.php`,
+  `TicketReplyResource.php`, `StoreSanitizedHtml.vue`, the
+  `store.newsletters.*` keys, and the `StoreTicketDetail`/`StoreTicketReply`
+  types and fixtures existed with no consumer; they were adapted or replaced.
+
+### Completed scope
+
+- **Newsletter.** Inertia `index` (`smtpConfigured` only),
+  `Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`,
+  `StoreNewsletterRecipients.vue` (bounded, debounced, stale-response-safe,
+  nameless search), one new key per locale, the Inertia menu entry. The
+  `cf5ef305` field passed a `maxlength` prop the current editor does not have
+  and posted the search box under a name; both were dropped.
+- **Ticket detail.** Inertia `show` with `SupportTicketDetailResource`,
+  paginated `TicketReplyResource`, `TicketAttachments` on the canonical
+  `UploadResource` contract, `Tickets/Show.vue`, `StoreTicketReplyForm.vue`
+  (shared editor, canonical `StoreUploadField`, status select),
+  `lib/storeSupportTicket.ts` shared with the list, the Inertia View link and
+  the plain-id reply redirect.
+- **Removed.** Both Blade views and root `admin_show` with its middleware
+  entry. The root controller stays in both analysis exclusion lists.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration,
+  route names, URIs, gates, permission definitions, role grants, stored
+  formats, mail classes and views, Blade editor assets, the legacy uploader,
+  shells, PDFs and `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost did not connect at session start, so repository files and
+installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs. The editor is one shared chunk,
+  `StoreRichTextField-*.js` (454,027 B), loaded only by the blog forms, the
+  newsletter and the ticket detail.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,203 tests in 250 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,459 tests / 28,122 assertions**.
+- **Focused checks.**
+  - Ticket and newsletter Pest files plus `HtmlSanitizerTest`: **100 tests**.
+    Mutations failed them as intended before being reverted: no `clean_html()`
+    on replies (3 failures) or on the details (3), no seen flag (1), no
+    attachment ownership rule (3).
+  - Touched Vitest files: **48 tests in 8 files**, including en and ar labels.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one
+  worker, zero retries and
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`; the harness
+  now pins `MAIL_MAILER=array`.
+  - `store-newsletter-ticket.spec.ts` **4/4**: a newsletter composed with
+    keyboard formatting, a refused forged recipient with the draft retained,
+    then sent to searched recipients (302 to the dashboard); a ticket reply
+    with keyboard formatting and a library image, stored exactly, with the
+    status change and the download link; stored and pasted script payloads
+    inert with no dialog; Arabic RTL, dark contrast ≥4.5 and the one-stop,
+    mirrored toolbar on both pages. No CSP violation; every page had the
+    enforced `script-src 'self'` policy.
+  - With the blog editor, both coexistence specs, the legacy uploader, brands,
+    products and support specs: **19/19 in 8 files**.
+  - The first runs failed on spec authoring only: bold carried onto the next
+    paragraph after Enter (editor stored marks), and the dashboard's 500 below.
+- **Pre-existing harness limit.** The retained Blade dashboard answers 500 in
+  the browser harness: strict mode (outside production) refuses its lazy load
+  of `product_translations` (`dashboard.blade.php`), including on the first
+  load after sign-in. Production does not run strict mode. The newsletter spec
+  asserts the send's redirect target instead; the dashboard is unchanged.
+- **Inventory.** **56** backend Blade files; **32**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,050** `/temp` and **438**
+  `/temp/admin` registrations, unchanged.
+
+Not run: MySQL, production data or role grants, real mail delivery and the full
+browser suite. Because of `[skip ci]`, GitHub CI, SAST and the deploy did not
+run for this PR or its merge.
