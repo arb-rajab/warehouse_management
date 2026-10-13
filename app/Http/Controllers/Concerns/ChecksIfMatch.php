@@ -2,34 +2,40 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Exceptions\PreconditionFailedException;
 use Illuminate\Http\Request;
 
 /**
  * Opt-in optimistic concurrency: a client that sends `If-Match` with the ETag
  * it last read is refused (412) when the resource has changed since. A request
- * without the header behaves exactly as before.
+ * without the header behaves exactly as before. The controller only parses the
+ * header; the comparison happens in the service, under the row locks.
  */
 trait ChecksIfMatch
 {
     /**
-     * @throws PreconditionFailedException
+     * The strong ETags the client will accept, or null when it set no precondition
+     * (no header, or `*`). A weak `W/"…"` candidate can never match (RFC 9110
+     * strong comparison), so it is dropped; a header holding only such tags
+     * yields an empty list, which matches nothing.
+     *
+     * @return list<string>|null
      */
-    private function ensureIfMatch(Request $request, string $etag): void
+    private function ifMatchEtags(Request $request): ?array
     {
         $header = $request->header('If-Match');
 
         if ($header === null || trim($header) === '*') {
-            return;
+            return null;
         }
 
-        // Strong comparison (RFC 9110): a weak `W/"…"` candidate never matches.
+        $etags = [];
+
         foreach (explode(',', $header) as $candidate) {
-            if (trim($candidate) === '"'.$etag.'"') {
-                return;
+            if (preg_match('/^"([^"]*)"$/', trim($candidate), $matches) === 1) {
+                $etags[] = $matches[1];
             }
         }
 
-        throw new PreconditionFailedException;
+        return $etags;
     }
 }

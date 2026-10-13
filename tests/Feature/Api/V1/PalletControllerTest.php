@@ -1617,3 +1617,27 @@ test('a pallet action without If-Match behaves as before', function () {
     $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 1])->assertOk();
     $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 1], ['If-Match' => '*'])->assertOk();
 });
+
+test('transferring and opening a pallet with a stale If-Match is refused with 412 and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $etag = $this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag');
+    $pallet->update(['remaining_boxes' => $pallet->remaining_boxes + 1]);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => 'B',
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ], ['If-Match' => $etag])->assertStatus(412)->assertJsonPath('error_code', 'precondition_failed');
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/open", [], ['If-Match' => $etag])
+        ->assertStatus(412);
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});

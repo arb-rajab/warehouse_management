@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CellLogAction;
 use App\Enums\CellState;
 use App\Exceptions\InvalidSlotStateException;
+use App\Exceptions\PreconditionFailedException;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
@@ -95,17 +96,33 @@ class PalletActionService
      * used to be in. That check runs before the cell's own guards, so the error
      * names the real problem rather than the state of a cell the pallet left.
      *
+     * `$ifMatchEtags` is the client's `If-Match` precondition (null: none). It is
+     * compared with the pallet's ETag as read under these locks, so no write can
+     * slip in between the check and the action.
+     *
+     * @param  list<string>|null  $ifMatchEtags
      * @return array{0: Cell, 1: Pallet}
      */
-    private function lockPalletInCell(Pallet $pallet): array
+    private function lockPalletInCell(Pallet $pallet, ?array $ifMatchEtags = null): array
     {
         $cell = $this->lockCellRow($pallet->cell_id);
         $lockedPallet = $this->lockPallet($pallet->id);
 
         $this->assertPalletStillInCell($lockedPallet, $cell);
+        $this->assertIfMatch($lockedPallet, $cell, $ifMatchEtags);
         $this->assertCellAcceptsPalletActions($cell);
 
         return [$cell, $lockedPallet];
+    }
+
+    /**
+     * @param  list<string>|null  $ifMatchEtags
+     */
+    private function assertIfMatch(Pallet $lockedPallet, Cell $cell, ?array $ifMatchEtags): void
+    {
+        if ($ifMatchEtags !== null && ! in_array($lockedPallet->setRelation('cell', $cell)->etag(), $ifMatchEtags, true)) {
+            throw new PreconditionFailedException;
+        }
     }
 
     private function assertPalletStillInCell(Pallet $lockedPallet, Cell $cell): void
@@ -316,14 +333,15 @@ class PalletActionService
      * the shelf: an accepted report of an opened pallet must be able to record
      * it whatever the policy for opening new ones is.
      *
+     * @param  list<string>|null  $ifMatchEtags  The client's `If-Match` ETags (null: no precondition); a mismatch under the row locks throws PreconditionFailedException.
      * @return array{pallet: ?Pallet, emptied: bool}
      */
-    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note, bool $enforceAllowedLevels = true): array
+    public function open(Pallet $pallet, ?int $boxesCount, bool $confirmEmpty, int $userId, ?string $note, bool $enforceAllowedLevels = true, ?array $ifMatchEtags = null): array
     {
         $emptied = false;
 
-        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, $enforceAllowedLevels, &$emptied) {
-            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
+        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, $enforceAllowedLevels, $ifMatchEtags, &$emptied) {
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet, $ifMatchEtags);
 
             if ($cell->state !== CellState::Full) {
                 throw new InvalidSlotStateException('pallet_not_full', __('messages.pallet_not_full'));
@@ -361,14 +379,15 @@ class PalletActionService
     /**
      * Remove more boxes from an already-Opened pallet.
      *
+     * @param  list<string>|null  $ifMatchEtags  The client's `If-Match` ETags (null: no precondition); a mismatch under the row locks throws PreconditionFailedException.
      * @return array{pallet: ?Pallet, emptied: bool}
      */
-    public function removeBoxes(Pallet $pallet, int $boxesCount, bool $confirmEmpty, int $userId, ?string $note): array
+    public function removeBoxes(Pallet $pallet, int $boxesCount, bool $confirmEmpty, int $userId, ?string $note, ?array $ifMatchEtags = null): array
     {
         $emptied = false;
 
-        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, &$emptied) {
-            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
+        DB::transaction(function () use ($pallet, $boxesCount, $confirmEmpty, $userId, $note, $ifMatchEtags, &$emptied) {
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet, $ifMatchEtags);
 
             if ($cell->state !== CellState::Opened) {
                 throw new InvalidSlotStateException('pallet_not_opened', __('messages.pallet_not_opened'));
@@ -398,11 +417,13 @@ class PalletActionService
 
     /**
      * Empty a pallet regardless of remaining_boxes: delete it and free its cell.
+     *
+     * @param  list<string>|null  $ifMatchEtags  The client's `If-Match` ETags (null: no precondition); a mismatch under the row locks throws PreconditionFailedException.
      */
-    public function emptyPallet(Pallet $pallet, int $userId, ?string $note): void
+    public function emptyPallet(Pallet $pallet, int $userId, ?string $note, ?array $ifMatchEtags = null): void
     {
-        DB::transaction(function () use ($pallet, $userId, $note) {
-            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet);
+        DB::transaction(function () use ($pallet, $userId, $note, $ifMatchEtags) {
+            [$cell, $lockedPallet] = $this->lockPalletInCell($pallet, $ifMatchEtags);
 
             $this->emptyLockedPallet($cell, $lockedPallet, $userId, $note);
         });
@@ -419,10 +440,12 @@ class PalletActionService
      * destination would let an A→B transfer and a concurrent B→A one each hold
      * their first cell while waiting on the other's. Every write and log below
      * goes through the locked pallet, never the caller's possibly-stale copy.
+     *
+     * @param  list<string>|null  $ifMatchEtags  The client's `If-Match` ETags (null: no precondition); a mismatch under the row locks throws PreconditionFailedException.
      */
-    public function transfer(Pallet $pallet, int $destinationCellId, int $userId, ?string $note): Pallet
+    public function transfer(Pallet $pallet, int $destinationCellId, int $userId, ?string $note, ?array $ifMatchEtags = null): Pallet
     {
-        DB::transaction(function () use ($pallet, $destinationCellId, $userId, $note) {
+        DB::transaction(function () use ($pallet, $destinationCellId, $userId, $note, $ifMatchEtags) {
             $cellIds = array_unique([$pallet->cell_id, $destinationCellId]);
             sort($cellIds);
 
@@ -436,6 +459,7 @@ class PalletActionService
             $lockedPallet = $this->lockPallet($pallet->id);
 
             $this->assertPalletStillInCell($lockedPallet, $sourceCell);
+            $this->assertIfMatch($lockedPallet, $sourceCell, $ifMatchEtags);
 
             if ($destinationCellId === $sourceCell->id) {
                 throw new InvalidSlotStateException('pallet_already_at_location', __('messages.pallet_already_at_location'));

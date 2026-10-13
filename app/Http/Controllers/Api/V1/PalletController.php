@@ -70,14 +70,13 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->ensureIfMatch($request, $this->currentEtag($pallet));
-
         $result = $this->palletActions->open(
             $pallet,
             $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
+            ifMatchEtags: $this->ifMatchEtags($request),
         );
 
         if ($result['emptied']) {
@@ -98,14 +97,13 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->ensureIfMatch($request, $this->currentEtag($pallet));
-
         $result = $this->palletActions->removeBoxes(
             $pallet,
             $request->integer('boxes_count'),
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
+            ifMatchEtags: $this->ifMatchEtags($request),
         );
 
         if ($result['emptied']) {
@@ -124,9 +122,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->ensureIfMatch($request, $this->currentEtag($pallet));
-
-        $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
+        $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'), $this->ifMatchEtags($request));
 
         return response()->noContent();
     }
@@ -142,20 +138,14 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->ensureIfMatch($request, $this->currentEtag($pallet));
-
         $pallet = $this->palletActions->transfer(
             $pallet,
             $request->resolvedSlot()->id,
             $user->id,
             $request->input('note'),
+            $this->ifMatchEtags($request),
         );
 
         return new PalletResource($pallet->load(self::EAGER_LOAD));
-    }
-
-    private function currentEtag(Pallet $pallet): string
-    {
-        return $pallet->loadMissing('cell')->etag();
     }
 }
