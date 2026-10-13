@@ -45,7 +45,6 @@ function onPerPageChange(perPage: number): void {
             <AddResourceLink
                 v-if="access.can('add_blog')"
                 :href="create()"
-                :inertia="false"
                 :label="t('store.blogPosts.index.add')"
             />
         </PageHeader>
@@ -140,7 +139,6 @@ function onPerPageChange(perPage: number): void {
                         <TableActionLink
                             v-if="access.can('edit_blog')"
                             :href="edit(blog)"
-                            :inertia="false"
                             ><Pencil class="size-3.5" />{{
                                 t('store.blogPosts.index.edit')
                             }}</TableActionLink

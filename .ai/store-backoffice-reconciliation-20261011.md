@@ -96,12 +96,12 @@ objects. These changes remain available in Git and have not been silently lost.
 | --- | --- | --- |
 | `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
 | `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
-| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain | Preferred shared editor basis after independently verified Tiptap dependency approval; checked-in claims alone were not accepted |
+| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Footer/appearance/custom-page Blade GET and existing writers remain | Editor-dependent Inertia activation after editor approval and consumer adaptation |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list and typed reply integrated; existing sanitized Blade detail/reply editor remains | Vue detail/reply editor activation after shared editor approval; useful backend sanitation/authorization tests adapted now |
 | `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys | Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; generic writers already reject script keys |
-| `cf5ef305`: `StoreRichTextField.vue` / duplicate uploader infrastructure and competing upload request/resource changes | Canonical uploader and future shared `e3995898` editor basis selected | Duplicate infrastructure superseded; useful blog formatting/validation tests retained/adapted |
-| `cf5ef305`: `StoreBlogFormFields.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Edit.vue` and editor-dependent tests | Inertia blog list/typed actions with retained Blade create/edit editors; public rendering stays Blade | Migrate forms after shared editor approval; no unrelated `eslint-plugin-vue` or `concurrently` upgrades |
+| `cf5ef305`: `StoreRichTextField.vue` / duplicate uploader infrastructure and competing upload request/resource changes | Canonical uploader and the shared `e3995898` editor basis (active since 2026-10-13) | Duplicate infrastructure superseded; its dormant `store.richText.*` keys removed; useful blog formatting/validation tests adapted |
+| `cf5ef305`: `StoreBlogFormFields.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Edit.vue` and editor-dependent tests | Inertia blog list, typed actions and, since 2026-10-13, Inertia create/edit on the shared editor; public rendering stays Blade | **Done (2026-10-13)**, adapted to the canonical uploader, `ResourceFormPage` and current locales; no `eslint-plugin-vue` or `concurrently` upgrades taken |
 | `cf5ef305`: `resources/js/pages/Store/Admin/Marketing/Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`, `StoreNewsletterRecipients.vue` and editor-dependent frontend tests; source controller’s Inertia index | Existing newsletter Blade editor; typed send/recipient search integrated; selected SMTP settings endpoint remains | Vue newsletter/editor activation after shared editor approval; SMTP retains both `smtp_settings` and `send_newsletter` gates |
 | `468d235c`: unconverted `TripController` / visit map Blade consumers | Existing Leaflet/Google assets, hardened coordinates/DOM output and HTTPS routing; existing departure ID 9 semantics retained | New Vue Leaflet dependency and departure business policy require decisions; no map conversion claimed |
 | `7ab01926`: `Store/Admin/DashboardController` chart implementation, `Store/Admin/Dashboard/Index.vue`, `StoreDashboardCharts.vue`, chart tests and Chart.js dependency additions | Root Blade dashboard with existing chart assets; shell counts/search/notifications and scoped cache clear integrated | Chart.js dependency approval before Inertia dashboard activation; checked-in claim is not independent evidence |
@@ -110,8 +110,10 @@ objects. These changes remain available in Git and have not been silently lost.
 | `e5523338`: duplicate reference controllers/requests/pages/routes/translations/progress | Selected `35ae3133` implementation remains | Superseded, not awaiting activation; retain only independently useful adapted tests/fixes |
 
 No independently verified approvals were found for the above dependency or
-business-policy changes. Integration authorization is not treated as such
-approval. No new dependencies were installed and manifests/locks are unchanged.
+business-policy changes at integration time. Integration authorization is not
+treated as such approval, and no new dependencies were installed then. The one
+later approval is Tiptap: on 2026-10-13 the owner approved it as the shared
+back-office editor, and the editor section below records the packages it added.
 
 ## Focused verification and runtime
 
@@ -1856,3 +1858,156 @@ sources were used.
 Not run: MySQL, production data or role grants, the real Google Maps script,
 and the full browser suite. Because of `[skip ci]`, GitHub CI, SAST and deploy
 did not run for this PR or its merge.
+
+## Shared rich-text editor and blog post forms (2026-10-13)
+
+Work on `ccr-f394535e-90xr6w` from fetched `develop` at
+`28643a43782d71a2c526823c79f6b057ba8aae55` (the PR #391 merge); the branch had
+no commits beyond that base. **The owner approved Tiptap as the shared
+back-office editor** and, for this session only, the dependency, the pull
+request (#392), its merge into `develop` with the merge method, and `[skip ci]` on
+every commit, the PR title and the merge commit. **No PR CI, no
+dependency-audit workflow, no PR or merge SAST and no `develop` deploy ran for
+this PR or its merge**, so the checks below are the only verification. No
+other branch, deployment or production data was touched. The decision table
+above records the approval against `e3995898` and `cf5ef305`.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Public rendering.** `shop/frontend/blog/details.blade.php:72` prints
+  `{!! clean_html($blog->description) !!}`; the meta tags (`:3-29`) and the
+  listing's summary (`listing.blade.php:50-51`) are escaped. Writes already
+  cleaned the body (`Store/Admin/BlogController.php:95`) and the edit prop was
+  cleaned (`BlogResource.php:40`). The sanitizer re-cleans its own output
+  unchanged, so cleaning on write changes no legitimate rendering.
+- **Retired Blade forms.** `Store\Admin\BlogController::create/edit`
+  (`:49-52`, `:62-65`) delegated to root `BlogController::create/edit`
+  (`:44-48`, `:101-107`), which rendered `blog_system/blog/{create,edit}`. The
+  edit form spoofed PATCH (`edit.blade.php:14`) against the PUT-only
+  `blog.update` (`routes/shop-admin.php:546`), so it could not save. Root
+  `store`, `show`, `update`, `change_status` and `destroy` had no route; only
+  `all_blog`/`blog_details` are routed (`routes/shop-web.php:440-443`).
+- **Blade editor assets and consumers.** Summernote is bundled in
+  `public/assets/js/vendors.js` and `public/assets/css/vendors.css` and started
+  by `aiz-core.js:887-933` on `.aiz-text-editor`, with image upload disabled
+  (`:915-916`) and video embeds wrapped (`:928-933`). After the blog forms, it
+  still serves 20 `aiz-text-editor` fields in 18 views: admin appearance (2),
+  footer (2), custom pages, support ticket, newsletter and the product and
+  digital-product create/edit forms; the seller's ticket, product and
+  digital-product forms; and the customer's ticket and product upload/edit.
+  The assets stay.
+- **Tests and links treating the forms as Blade.**
+  `BlogControllerTest.php:61-71` (`assertViewIs` on both views),
+  `Blog/Posts/Index.vue:48,143` (`:inertia="false"` on Add and Edit), the
+  guide's §2.2 entry note and §6 row. `admin_sidenav.blade.php:907` names
+  `blog.create`/`blog.edit` in `areActiveRoutes`; the names are kept.
+- **WAF.** `config/waf.php`'s XSS signatures (`<script`, `javascript:`,
+  `on(error|load|click|mouseover)=`, `<iframe`) never match the editor's
+  output, so no held rich-text WAF rule blocked legitimate blog HTML.
+
+### Dependency
+
+- Added exactly: `@tiptap/core`, `@tiptap/pm`, `@tiptap/starter-kit`,
+  `@tiptap/vue-3`, `@tiptap/extension-image`, `@tiptap/extension-table`,
+  `@tiptap/extension-text-align`, `@tiptap/extension-text-style` **3.31.3** and
+  `@floating-ui/dom` **1.8.0** (`npm install --save-exact`).
+- 3.31.4 (2026-09-30) was under two weeks old; 3.31.3 (2026-09-04) is the
+  newest same-major patch that is not. `--before=2026-09-29T00:00:00Z` kept the
+  optional `@tiptap/extension-bubble-menu`/`floating-menu` at 3.31.3 (they had
+  resolved to 3.31.4, a peer mismatch). The 52 new lock entries were published
+  on or before 2026-09-25; no existing entry changed. No `edgesOut` crash, no
+  `--legacy-peer-deps`, no Composer change.
+- `npm audit --omit=dev --audit-level=high` (the CI threshold): `found 0
+  vulnerabilities`. The full `npm audit` lists 6 dev-only findings (`braces`
+  through `@vue/eslint-config-typescript`, `postcss-selector-parser` through
+  `eslint-plugin-vue`), identical on the base lockfile; their fixes are
+  breaking upgrades the brief excludes.
+
+### Completed scope
+
+- **Editor.** `StoreRichTextField.vue` and its test, from `e3995898`, adapted
+  to `StoreFileManagerDialog` (`choose`, `type="image"`, `view_uploads`), the
+  current locales and the canonical upload DTO. The source's HTML-source view,
+  fullscreen mode and client-side sanitiser copy were not taken: the server
+  sanitiser is authoritative, and the source view was a raw-HTML/base64 path.
+  The contract is in the guide's §18.
+- **Blog.** Inertia `create`/`edit` in `Store\Admin\BlogController` (with
+  `ProvidesStoreUploadPreviews`), `StoreBlogFormFields.vue`,
+  `Store/Admin/Blog/Posts/Create.vue`/`Edit.vue` and their tests, the
+  `storeBlog` fixture, and Inertia Add/Edit links. The retainable image rule
+  for the banner and meta image. The `cf5ef305` form bound textareas with
+  `:value.attr`, which a textarea ignores, so an edit would have saved an
+  empty summary and meta texts; they use `v-model`.
+- **Removed.** The two Blade views, root `BlogController`'s unrouted admin
+  actions and middleware, and the dormant `store.richText.*` keys.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration,
+  Blade editor assets, the legacy uploader, shells, PDFs,
+  `HandleStoreBladePages`, route names, URIs, gates, permission definitions,
+  role grants, stored formats and the public blog.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost did not connect, so repository files and installed
+sources were used.
+
+- **Generation, install and build.**
+  - `php artisan wayfinder:generate --skip-routes --with-form` passed.
+  - The `--save-exact` install and a clean `rm -rf node_modules && npm install`
+    against the committed lockfile (sha256 `adae4872…a933`) both exited 0.
+  - `npm run build` failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`
+    (the proxy answers 403). `python3 .claude/scripts/build_without_fonts.py`
+    passed, and its manifest served the Pest and browser runs.
+- **Bundle (against a base build with the same compiled-view cache).**
+  - The editor is one chunk, `StoreBlogFormFields-*.js`: **456,742 B**
+    (**140,956 B** gzip), loaded only by the blog Create and Edit pages.
+  - `app.js` holds no editor code (480,281 → 480,145 B). `app.css` grew
+    **3,529 B** (479 B gzip) for the editor's content styles. Every other page
+    shrank 100–143 B, from the regenerated blog Wayfinder actions.
+  - All manifest files: +461,762 B (+141,989 B gzip). A blog form page now
+    loads 1,275,320 B (347,990 B gzip), against 799,401 B (198,353 B gzip) for
+    the blog-category form.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,169 tests in 244 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,438 tests / 27,846 assertions**.
+- **Focused checks.**
+  - `BlogControllerTest`: **82 tests / 691 assertions**. Mutations failed it
+    as intended before being reverted: storing the body without
+    `clean_html()` (12 failures) and dropping the retained-image rule (1).
+  - Editor, blog fields and blog page Vitest: **36 tests**. Scoped ESLint and
+    Prettier and `npm run types:check` passed.
+  - `npm audit --omit=dev --audit-level=high`: `found 0 vulnerabilities`.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one worker,
+  zero retries and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-blog-editor.spec.ts` passed **4/4** in three consecutive runs:
+    - create and edit with keyboard-only formatting, a table and a canonical
+      image, saved and reloaded, with the public page;
+    - stored and pasted script payloads inert in the editor and on the public
+      page;
+    - legacy markup round-trips unchanged and keeps its formatting when edited;
+    - Arabic RTL, dark contrast and mirrored arrow keys.
+    The editor pages reported no CSP violation, and every header was the
+    enforced `script-src 'self'` policy.
+  - With the two coexistence specs, the legacy uploader, brands, products and
+    marketing forms: **15/15** in 7 files.
+  - The first runs found three editor defects, now fixed and unit-tested:
+    - a style or colour change moved focus into the content;
+    - Vue reset the style select to a stale value until Tiptap's deferred
+      re-render;
+    - a selection the browser had not yet reported was lost when a key moved
+      focus to the toolbar.
+    The other failures were spec authoring: ProseMirror's cursor
+    `img.ProseMirror-separator`, the upload's extensionless name, a reload
+    before Inertia's URL update, and keys sent within one frame. The spec now
+    waits for selection and focus as a person would.
+- **Inventory.** **58** backend Blade files; **34**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,050** `/temp` and **438**
+  `/temp/admin` registrations, unchanged.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, the dependency-audit workflow, SAST and the
+deploy did not run for this PR or its merge.

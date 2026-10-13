@@ -301,8 +301,9 @@ prefix. That is the single point every storefront asset URL goes through.
   payloads, the admin ticket page, the product description and the email, and a
   scan that fails on a new raw print of `->details`, `->reply`, `->description`
   or a translated description. **Not covered:** admin-written content, which is
-  trusted with markup and printed as it is (CMS pages, blog posts, settings
-  texts, payment-method notes), so a compromised admin account can still plant
+  trusted with markup and printed as it is (CMS pages, settings texts,
+  payment-method notes; blog posts are cleaned on write and on display since
+  store-backoffice-migration.md §18), so a compromised admin account can still plant
   script; and the API, which returns descriptions as stored for the mobile app
   to render.
 - The store changed data on GET: delete, ban, approve, restore, duplicate and

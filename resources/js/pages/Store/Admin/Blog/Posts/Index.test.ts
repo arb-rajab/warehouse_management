@@ -93,16 +93,20 @@ describe('Store blog posts Index', () => {
         expect(wrapper.find('tbody img').exists()).toBe(false);
         expect(wrapper.get('tbody').text()).toContain('—');
     });
-    it('shows a translated empty state and uses Wayfinder add/edit/delete actions and a plain public link', () => {
+    it('shows a translated empty state, visits the Inertia create/edit forms and uses Wayfinder delete and a plain public link', () => {
         expect(mountPage([]).text()).toContain(
             t('store.blogPosts.index.empty'),
         );
         const wrapper = mountPage();
-        expect(wrapper.getComponent(AddResourceLink).props('href')).toEqual(
-            create(),
-        );
+        const add = wrapper.getComponent(AddResourceLink);
+        expect(add.props()).toMatchObject({ href: create(), inertia: true });
+        expect(add.getComponent(Link).props('href')).toEqual(create());
         const actions = wrapper.findAllComponents(TableActionLink);
-        expect(actions[0].props('href')).toEqual(edit(blog));
+        expect(actions[0].props()).toMatchObject({
+            href: edit(blog),
+            inertia: true,
+        });
+        expect(actions[0].getComponent(Link).props('href')).toEqual(edit(blog));
         expect(actions[1].props()).toMatchObject({
             href: destroy(blog, { mergeQuery: {} }),
             variant: 'danger',
