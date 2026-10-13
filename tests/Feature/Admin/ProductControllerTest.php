@@ -1509,6 +1509,22 @@ function productImageFixtureBytes(int $width, int $height, string $format): stri
     return (string) ob_get_clean();
 }
 
+test('the product image route answers a repeat request that already holds the image with a 304 without fetching it again', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
+
+    $etag = $this->get("/admin/products/{$product->id}/image")->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->get("/admin/products/{$product->id}/image", ['If-None-Match' => $etag])->assertNotModified();
+
+    Http::assertSentCount(1);
+});
+
 test('the product image route re-serves the store image as a downscaled png from this apps origin', function () {
     actingAsAdmin();
     Http::fake([
@@ -1835,6 +1851,24 @@ test('a barcode label can be previewed inline as the same SVG that is downloaded
         ->assertHeader('Content-Disposition', 'inline');
     expect($response->getContent())
         ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
+});
+
+test('a barcode preview answers a repeat request that already holds the current label with a 304', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+    $url = "/admin/products/{$product->id}/barcodes/{$barcode->id}/preview";
+
+    $etag = $this->get($url)->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->get($url, ['If-None-Match' => $etag])->assertNotModified();
+
+    $product->update(['name' => 'Renamed product']);
+
+    $this->get($url, ['If-None-Match' => $etag])->assertOk();
 });
 
 test('previewing a barcode that belongs to another product returns a 404', function () {

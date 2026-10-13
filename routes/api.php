@@ -20,9 +20,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('dashboard', [DashboardController::class, 'index'])->name('api.v1.dashboard.index');
 
-        Route::get('rows', [RowController::class, 'index'])->name('api.v1.rows.index');
+        Route::get('rows', [RowController::class, 'index'])->middleware('cache.headers:private;etag')->name('api.v1.rows.index');
         Route::get('rows/full', [RowController::class, 'full'])->middleware('cache.headers:private;etag')->name('api.v1.rows.full');
-        Route::get('rows/frozen', [RowController::class, 'frozen'])->name('api.v1.rows.frozen');
+        Route::get('rows/frozen', [RowController::class, 'frozen'])->middleware('cache.headers:private;etag')->name('api.v1.rows.frozen');
         Route::get('rows/{row}/cells', [CellController::class, 'index'])->name('api.v1.cells.index');
         Route::get('rows/{row}/cells/{cell:cell_number}/flats/{flatNumber}', [CellController::class, 'show'])
             ->whereNumber(['cell', 'flatNumber'])
