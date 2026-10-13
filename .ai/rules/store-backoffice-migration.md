@@ -2071,7 +2071,7 @@ No deployment or production-data mutation is authorized.
 The physical product create form now uses `Store/Admin/Product/Products/Create`
 with the shared editor (§18), the canonical upload picker (§2.4) and a typed
 variant endpoint. Work is on `ccr-68328473-iie1w4`, branched from `develop` at
-`6a10019` (the PR #401 merge). The owner authorized this session's PR, its
+`6a10019` (the PR #401 merge). The owner authorized this session's PR (#402), its
 merge into `develop` and `[skip ci]` on both. Every commit, the PR and its
 merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
 `develop` deploy ran for them; the local checks in the ledger are the only

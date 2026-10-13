@@ -2548,7 +2548,7 @@ or its merge.
 
 Work on `ccr-68328473-iie1w4` from fetched `develop` at `6a10019` (the PR #401
 merge); the branch had no commits beyond that base. The owner authorized, for
-this session only, the pull request, its merge into `develop` with the merge
+this session only, the pull request (#402), its merge into `develop` with the merge
 method, and `[skip ci]` on every commit, the PR title and the merge commit.
 **No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR or its
 merge**, so the checks below are the only verification. No other branch,
