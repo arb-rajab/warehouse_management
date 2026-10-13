@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Store\Admin;
 
+use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterBlogsRequest;
 use App\Http\Requests\Store\Admin\StoreBlogRequest;
@@ -9,7 +10,8 @@ use App\Http\Requests\Store\Admin\UpdateBlogRequest;
 use App\Http\Requests\Store\Admin\UpdateBlogStatusRequest;
 use App\Http\Resources\Store\BlogResource;
 use App\Models\Blog;
-use Illuminate\Contracts\View\View;
+use App\Models\BlogCategory;
+use App\Models\Upload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -19,6 +21,8 @@ use Inertia\Response;
 
 class BlogController extends Controller implements HasMiddleware
 {
+    use ProvidesStoreUploadPreviews;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -46,9 +50,11 @@ class BlogController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function create(): View
+    public function create(): Response
     {
-        return app(\App\Http\Controllers\BlogController::class)->create();
+        return Inertia::render('Store/Admin/Blog/Posts/Create', [
+            'categories' => $this->categoryOptions(),
+        ]);
     }
 
     public function store(StoreBlogRequest $request): RedirectResponse
@@ -59,9 +65,19 @@ class BlogController extends Controller implements HasMiddleware
         return redirect()->route('blog.index');
     }
 
-    public function edit(Blog $blog): View
+    public function edit(Request $request, Blog $blog): Response
     {
-        return app(\App\Http\Controllers\BlogController::class)->edit($blog->id);
+        $blog = Blog::query()->select(['id', 'category_id', 'title', 'slug', 'short_description', 'description', 'banner', 'meta_title', 'meta_img', 'meta_description', 'meta_keywords', 'status'])
+            ->with('category:id,category_name')->findOrFail($blog->id);
+
+        return Inertia::render('Store/Admin/Blog/Posts/Edit', [
+            'blog' => new BlogResource($blog),
+            'categories' => $this->categoryOptions(),
+            'initialFiles' => [
+                'banner' => $this->uploadPreviews($request, $this->imageUpload($blog->banner)),
+                'meta_img' => $this->uploadPreviews($request, $this->imageUpload($blog->meta_img)),
+            ],
+        ]);
     }
 
     public function update(UpdateBlogRequest $request, Blog $blog): RedirectResponse
@@ -84,6 +100,24 @@ class BlogController extends Controller implements HasMiddleware
         $blog->save();
 
         return $this->redirectPreservingQuery('blog.index', $request);
+    }
+
+    /**
+     * The categories a post may be filed under, in the order the Blade form
+     * listed them (`BlogCategory::all()`); deleted categories are left out.
+     *
+     * @return list<array{id: int, category_name: string}>
+     */
+    private function categoryOptions(): array
+    {
+        return array_values(BlogCategory::query()->select(['id', 'category_name'])->orderBy('id')->get()
+            ->map(fn (BlogCategory $category): array => ['id' => $category->id, 'category_name' => $category->category_name])
+            ->all());
+    }
+
+    private function imageUpload(int|string|null $id): ?Upload
+    {
+        return $id === null ? null : Upload::query()->select(['id', 'user_id', 'file_original_name', 'type', 'file_size', 'file_name', 'external_link'])->find($id);
     }
 
     /** @param array<string, mixed> $validated */

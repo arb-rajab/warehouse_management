@@ -26,6 +26,7 @@ import type {
     StoreWebsitePageForm,
     PermissionGroup,
     StaffMember,
+    StoreBlog,
     StoreBlogCategory,
     StoreCoupon,
     StoreSubscriber,
@@ -902,6 +903,27 @@ export function storeBlogCategory(
     overrides: Partial<StoreBlogCategory> = {},
 ): StoreBlogCategory {
     return { id: 4, category_name: 'Recipes', ...overrides };
+}
+
+/** A stored post as `Store\Admin\BlogController::edit()` sends it. */
+export function storeBlog(overrides: Partial<StoreBlog> = {}): StoreBlog {
+    return {
+        id: 12,
+        title: 'Fresh rice',
+        category: { id: 4, category_name: 'Recipes' },
+        status: true,
+        public_url: '/temp/blog/fresh-rice',
+        slug: 'fresh-rice',
+        short_description: 'A short introduction',
+        banner: '5',
+        description: '<p>Stored <strong>body</strong></p>',
+        meta_title: 'Rice metadata',
+        meta_img: '6',
+        meta_description: 'A rice description',
+        meta_keywords: 'rice, food',
+        category_id: 4,
+        ...overrides,
+    };
 }
 
 export function storeSubscriber(
