@@ -621,6 +621,32 @@ export interface StoreDigitalProductTax {
     tax: string;
     tax_type: 'amount' | 'percent';
 }
+/** A colour a physical product may come in, by its code. */
+export interface StoreProductColor {
+    id: number;
+    name: string;
+    code: string;
+}
+/** One value of a product attribute (`products.add-more-choice-option`). */
+export interface StoreProductAttributeValue {
+    id: number;
+    value: string;
+}
+/** A generated variant row (`products.variant_combinations`). */
+export interface StoreProductVariantRow {
+    variant: string;
+    price: string;
+    sku: string;
+    qty: string;
+}
+/** The physical product form's sections the business settings switch on. */
+export interface StoreProductFormSections {
+    shipping: boolean;
+    productWiseShipping: boolean;
+    flashDeals: boolean;
+    vat: boolean;
+    cashOnDelivery: boolean;
+}
 /** The list a product row action names (`list`): its URI segment. */
 export type StoreProductListType = 'admin' | 'all';
 /** The all-products list's legacy one-flag presets. */

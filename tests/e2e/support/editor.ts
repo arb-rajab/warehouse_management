@@ -177,3 +177,24 @@ export async function colorsOf(
         };
     });
 }
+
+/** Picks `files` for the canonical upload field `id` (StoreUploadField). */
+export async function pickUploads(
+    page: Page,
+    id: string,
+    files: string[],
+): Promise<void> {
+    await page
+        .locator(`label[for="${id}"]`)
+        .locator('..')
+        .getByRole('button', { name: 'Choose files', exact: true })
+        .click();
+    const dialog = page.getByRole('dialog', { name: 'Choose files' });
+
+    for (const file of files) {
+        await dialog.getByRole('button', { name: file, exact: true }).click();
+    }
+
+    await dialog.getByRole('button', { name: 'Use selected files' }).click();
+    await expect(dialog).toBeHidden();
+}

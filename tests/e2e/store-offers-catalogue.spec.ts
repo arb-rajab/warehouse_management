@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { seedStoreFixtures } from './support/storeFixtures';
 
 const pdf =
     '%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n';
@@ -70,12 +71,22 @@ test('order configuration renders hostile search results as text', async ({
 test('product attribute choice JSON creates literal values and titles without injected elements', async ({
     page,
 }) => {
+    // The choice script's remaining consumer is the retained Blade edit form;
+    // the create form is Inertia (.ai/rules/store-backoffice-migration.md §22).
+    seedStoreFixtures(String.raw`
+        Illuminate\Support\Facades\DB::table('product_translations')->where('product_id', 990001)->delete();
+        App\Models\Product::whereKey(990001)->delete();
+        App\Models\Product::forceCreate([
+            'id'=>990001,'name'=>'Browser choice oil','ar_name'=>'','slug'=>'browser-choice-oil','added_by'=>'admin','digital'=>0,
+            'unit_price'=>3,'colors'=>'[]','attributes'=>'[]','choice_options'=>'[]','tags'=>'',
+        ]);
+    `);
     await loginAsStoreAdmin(page);
     const value = '\"><img src=x onerror="window.catalogueXss=true">';
     await page.route('**/temp/admin/products/add-more-choice-option', (route) =>
         route.fulfill({ json: [{ id: 1, value }] }),
     );
-    await page.goto('/temp/admin/products/create');
+    await page.goto('/temp/admin/products/admin/990001/edit?lang=en');
     await page.evaluate((name) => {
         const browser = window as unknown as {
             add_more_customer_choice_option: (

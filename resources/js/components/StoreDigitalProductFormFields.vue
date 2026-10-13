@@ -2,10 +2,13 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import StoreProductDiscountFields from '@/components/StoreProductDiscountFields.vue';
+import StoreProductTaxFields from '@/components/StoreProductTaxFields.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { productAmountMax } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductForm,
     StoreDigitalProductTax,
@@ -22,8 +25,6 @@ const props = defineProps<{
     initialFiles?: Record<string, StoreUpload[]>;
     errors: Record<string, string>;
 }>();
-// The amounts are DECIMAL(20,2) columns.
-const amountMax = '999999999999999999.99';
 const categoryId = ref(
     props.product?.category_id == null ? '' : String(props.product.category_id),
 );
@@ -32,10 +33,6 @@ const photos = ref(props.product?.photos ?? '');
 const thumbnail = ref(props.product?.thumbnail_img ?? '');
 const metaImage = ref(props.product?.meta_img ?? '');
 const metaDescription = ref(props.product?.meta_description ?? '');
-const discountType = ref(
-    props.product?.discount_type === 'percent' ? 'percent' : 'amount',
-);
-const taxTypes = ref(props.taxes.map((tax) => tax.tax_type));
 const content = ref(props.description ?? '');
 const sectionClass =
     'grid gap-4 rounded-lg border border-gray-200 p-4 lg:grid-cols-2 dark:border-neutral-800';
@@ -183,7 +180,7 @@ const legendClass = 'px-1 text-sm font-semibold';
                 :value="product?.unit_price ?? '0'"
                 :error="errors.unit_price"
                 min="0"
-                :max="amountMax"
+                :max="productAmountMax"
                 step="0.01"
                 required
             />
@@ -194,113 +191,17 @@ const legendClass = 'px-1 text-sm font-semibold';
                 :value="product?.purchase_price ?? '0'"
                 :error="errors.purchase_price"
                 min="0"
-                :max="amountMax"
+                :max="productAmountMax"
                 step="0.01"
                 required
             />
-            <div
-                v-for="(tax, index) in taxes"
-                :key="tax.id"
-                class="grid grid-cols-[1fr_auto] items-start gap-2"
-            >
-                <input type="hidden" name="tax_id[]" :value="tax.id" />
-                <div>
-                    <label :for="`tax_${tax.id}`" :class="fieldLabelClass">{{
-                        tax.name
-                    }}</label>
-                    <input
-                        :id="`tax_${tax.id}`"
-                        name="tax[]"
-                        type="number"
-                        :value.attr="tax.tax"
-                        :class="plainFieldInputClass"
-                        min="0"
-                        :max="amountMax"
-                        step="0.01"
-                        required
-                    />
-                    <FieldError :message="errors[`tax.${index}`]" />
-                </div>
-                <div>
-                    <label
-                        :for="`tax_type_${tax.id}`"
-                        :class="fieldLabelClass"
-                        >{{
-                            t('store.digitalProducts.form.taxType', {
-                                tax: tax.name,
-                            })
-                        }}</label
-                    >
-                    <select
-                        :id="`tax_type_${tax.id}`"
-                        v-model="taxTypes[index]"
-                        name="tax_type[]"
-                        :class="plainFieldInputClass"
-                        required
-                    >
-                        <option value="amount">
-                            {{ t('store.digitalProducts.form.flat') }}
-                        </option>
-                        <option value="percent">
-                            {{ t('store.digitalProducts.form.percent') }}
-                        </option>
-                    </select>
-                    <FieldError :message="errors[`tax_type.${index}`]" />
-                </div>
-            </div>
-            <FieldError
-                :message="errors.tax_id ?? errors.tax ?? errors.tax_type"
+            <StoreProductTaxFields :taxes="taxes" :errors="errors" />
+            <StoreProductDiscountFields
+                :discount="product?.discount"
+                :discount-type="product?.discount_type"
+                :date-range="product?.date_range"
+                :errors="errors"
             />
-            <div class="lg:col-span-2">
-                <FormField
-                    id="date_range"
-                    :label="t('store.digitalProducts.form.dateRange')"
-                    :value="product?.date_range ?? ''"
-                    :error="errors.date_range"
-                    :placeholder="t('store.digitalProducts.form.dateFormat')"
-                    maxlength="42"
-                    pattern="\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2} to \d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2}"
-                    dir="ltr"
-                    aria-describedby="date_range_help"
-                />
-                <p
-                    id="date_range_help"
-                    class="mt-1 text-xs text-gray-600 dark:text-neutral-400"
-                >
-                    {{ t('store.digitalProducts.form.dateHelp') }}
-                </p>
-            </div>
-            <FormField
-                id="discount"
-                type="number"
-                :label="t('store.digitalProducts.form.discount')"
-                :value="product?.discount ?? '0'"
-                :error="errors.discount"
-                min="0"
-                :max="amountMax"
-                step="0.01"
-                required
-            />
-            <div>
-                <label for="discount_type" :class="fieldLabelClass">{{
-                    t('store.digitalProducts.form.discountType')
-                }}</label>
-                <select
-                    id="discount_type"
-                    v-model="discountType"
-                    name="discount_type"
-                    :class="plainFieldInputClass"
-                    required
-                >
-                    <option value="amount">
-                        {{ t('store.digitalProducts.form.flat') }}
-                    </option>
-                    <option value="percent">
-                        {{ t('store.digitalProducts.form.percent') }}
-                    </option>
-                </select>
-                <FieldError :message="errors.discount_type" />
-            </div>
         </fieldset>
 
         <fieldset :class="sectionClass">

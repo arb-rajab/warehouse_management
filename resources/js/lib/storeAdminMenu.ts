@@ -28,10 +28,7 @@ import {
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import {
-    create as productsCreate,
-    seller_products,
-} from '@/actions/App/Http/Controllers/ProductController';
+import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
@@ -77,6 +74,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
 import {
     all as allProducts,
+    create as productsCreate,
     inHouse as inHouseProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
@@ -194,6 +192,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.addProduct',
                 href: productsCreate(),
                 permission: 'add_new_product',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.allProducts',

@@ -46,8 +46,9 @@ test('a controller with dependency-injected constructor arguments keeps them alo
     $middleware = ProductController::middleware();
 
     // Seven until the in-house and all-products lists moved to
-    // Store\Admin\ProductController with their two list gates.
-    expect($middleware)->toHaveCount(5);
+    // Store\Admin\ProductController with their two list gates, five until
+    // the create form moved there with its add_new_product gate.
+    expect($middleware)->toHaveCount(4);
 
     // The constructor itself still wires up its services -- resolving the
     // controller out of the container is what would fail if that logic had

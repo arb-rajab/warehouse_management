@@ -82,13 +82,16 @@ const labelKeys = [
     'slug',
     'unitPrice',
     'purchasePrice',
+    'description',
+];
+// The tax and discount fields are the shared product form pieces.
+const sharedLabelKeys = [
     'flat',
     'percent',
     'dateRange',
     'dateHelp',
     'discount',
     'discountType',
-    'description',
 ];
 
 beforeEach(() => {
@@ -119,6 +122,10 @@ describe('StoreDigitalProductFormFields', () => {
                 );
             }
 
+            for (const key of sharedLabelKeys) {
+                expect(wrapper.text()).toContain(t(`store.productForm.${key}`));
+            }
+
             expect(
                 wrapper.findAll('legend').map((legend) => legend.text()),
             ).toEqual(
@@ -130,11 +137,11 @@ describe('StoreDigitalProductFormFields', () => {
                 t('store.digitalProducts.form.selectCategory'),
             );
             expect(wrapper.get('label[for="tax_type_2"]').text()).toBe(
-                t('store.digitalProducts.form.taxType', { tax: 'VAT' }),
+                t('store.productForm.taxType', { tax: 'VAT' }),
             );
             expect(wrapper.get('label[for="tax_2"]').text()).toBe('VAT');
             expect(wrapper.get('#date_range').attributes('placeholder')).toBe(
-                t('store.digitalProducts.form.dateFormat'),
+                t('store.productForm.dateFormat'),
             );
             expect(wrapper.get('#description-label').text()).toBe(
                 t('store.digitalProducts.form.description'),

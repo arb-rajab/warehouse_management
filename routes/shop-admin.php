@@ -107,9 +107,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
-    // Products: the in-house and all-products lists and their row actions
-    // are Inertia. The seller list, the create/edit forms (rich-text editor)
-    // and the jQuery endpoints the seller list posts to stay on the root
+    // Products: the in-house and all-products lists, their row actions and
+    // the create form are Inertia. The seller list, the edit forms and the
+    // jQuery endpoints the seller list and edit form post to stay on the root
     // ProductController's Blade.
     Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
     Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
@@ -119,10 +119,11 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/products/{product}/duplicate', [StoreProductController::class, 'duplicate'])->name('products.list.duplicate');
     Route::delete('/products/{product}', [StoreProductController::class, 'destroy'])->name('products.list.destroy');
     Route::post('/products/bulk-delete', [StoreProductController::class, 'bulkDestroy'])->name('products.list.bulk_destroy');
+    Route::get('/products/create', [StoreProductController::class, 'create'])->name('products.create');
+    Route::post('/products/store', [StoreProductController::class, 'store'])->name('products.store');
+    Route::post('/products/variant-combinations', [StoreProductController::class, 'variantCombinations'])->name('products.variant_combinations');
     Route::controller(ProductController::class)->group(function () {
         Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::get('/products/create', 'create')->name('products.create');
-        Route::post('/products/store/', 'store')->name('products.store');
         Route::get('/products/admin/{id}/edit', 'admin_product_edit')->name('products.admin.edit');
         Route::get('/products/seller/{id}/edit', 'seller_product_edit')->name('products.seller.edit');
         Route::post('/products/update/{product}', 'update')->name('products.update');

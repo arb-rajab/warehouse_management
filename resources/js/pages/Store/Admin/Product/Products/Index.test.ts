@@ -3,12 +3,12 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     admin_product_edit,
-    create,
     fetch as fetchProducts,
 } from '@/actions/App/Http/Controllers/ProductController';
 import {
     all as allProducts,
     bulkDestroy,
+    create,
     destroy,
     duplicate,
     inHouse as inHouseProducts,
@@ -342,18 +342,21 @@ describe('Store product lists Index', () => {
         );
     });
 
-    it('links create, view and edit as full loads and posts every row action through its typed route with the list', () => {
+    it('links create as an Inertia visit, view and edit as full loads and posts every row action through its typed route with the list', () => {
         const product = storeProductListRow();
 
         for (const list of ['admin', 'all'] as const) {
             const wrapper = mountPage({ listType: list, products: [product] });
             const query = { mergeQuery: { list } };
             expect(wrapper.getComponent(AddResourceLink).props()).toMatchObject(
-                { href: create(), inertia: false },
+                { href: create(), inertia: true },
             );
             expect(
-                wrapper.get(`a[href="${create().url}"]`).element.tagName,
-            ).toBe('A');
+                wrapper
+                    .getComponent(AddResourceLink)
+                    .getComponent(Link)
+                    .props('href'),
+            ).toEqual(create());
             const [view, edit, copy, remove] =
                 wrapper.findAllComponents(TableActionLink);
             expect(view.props()).toMatchObject({
