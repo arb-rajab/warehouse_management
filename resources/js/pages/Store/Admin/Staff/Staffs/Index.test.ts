@@ -113,6 +113,7 @@ describe('Store staff Index', () => {
 
         expect(wrapper.getComponent(AddResourceLink).props()).toEqual({
             href: staffCreate(),
+            inertia: true,
             label: t('store.staff.index.addStaff'),
         });
     });

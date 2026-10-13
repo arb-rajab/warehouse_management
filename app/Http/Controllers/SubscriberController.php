@@ -32,8 +32,7 @@ class SubscriberController extends Controller implements HasMiddleware
      */
     public function index()
     {
-        $subscribers = Subscriber::orderBy('created_at', 'desc')->paginate(15);
-        return view('shop.backend.marketing.subscribers.index', compact('subscribers'));
+        return redirect()->route('admin.subscribers.index');
     }
 
     /**
@@ -111,6 +110,6 @@ class SubscriberController extends Controller implements HasMiddleware
     {
         Subscriber::destroy($id);
         flash(translate('Subscriber has been deleted successfully'))->success();
-        return redirect()->route('subscribers.index');
+        return redirect()->route('admin.subscribers.index');
     }
 }

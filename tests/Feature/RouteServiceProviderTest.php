@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
-use App\Http\Controllers\BrandController;
+use App\Http\Controllers\SellerController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -37,7 +37,7 @@ test('keepLastRegisteredRouteNames keeps the last route registered with a duplic
  * duplicate. Which registration keeps a duplicated name depends on the order
  * RouteServiceProvider::map() loads the route files in: with the api/v2 files
  * loaded after the admin one, every admin link to a name the API also
- * registers (brands.index, categories.index, customers.show, ...) pointed at
+ * registers (brands.index, categories.index, customers.edit, ...) pointed at
  * the JSON API instead.
  */
 test('duplicated store route names resolve to the route the legacy app gave them', function () {
@@ -45,20 +45,20 @@ test('duplicated store route names resolve to the route the legacy app gave them
         ->and(route('brands.destroy', 5, false))->toBe('/temp/admin/brands/destroy/5')
         ->and(route('brands.edit', 5, false))->toBe('/temp/admin/brands/edit/5')
         ->and(route('categories.index', [], false))->toBe('/temp/admin/categories')
-        ->and(route('customers.show', 1, false))->toBe('/temp/admin/customers/1')
+        ->and(route('customers.edit', 1, false))->toBe('/temp/admin/customers/1/edit')
         ->and(route('customers.store', [], false))->toBe('/temp/admin/customer/store')
         ->and(route('languages.update', 3, false))->toBe('/temp/admin/languages/3/update')
-        ->and(route('orders.destroy', 7, false))->toBe('/temp/admin/orders/destroy/7')
+        ->and(route('orders.destroy', 7, false))->toBe('/temp/admin/orders/7')
         ->and(route('payhere.checkout.testing', [], false))->toBe('/temp/payhere/wallet/testing');
 });
 
 test('the routes that lost a duplicated name are still registered', function () {
     $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v2/brands'));
-    $resourceDestroy = Route::getRoutes()->match(Request::create('/temp/admin/brands/5', 'DELETE'));
+    $resourceDestroy = Route::getRoutes()->match(Request::create('/temp/admin/sellers/5', 'DELETE'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
         ->and($apiBrands->getName())->toBeNull()
-        ->and($resourceDestroy->getActionName())->toBe(BrandController::class.'@destroy')
+        ->and($resourceDestroy->getActionName())->toBe(SellerController::class.'@destroy')
         ->and($resourceDestroy->getName())->toBeNull();
 });
 

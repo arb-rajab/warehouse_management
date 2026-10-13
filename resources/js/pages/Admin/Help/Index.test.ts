@@ -56,6 +56,7 @@ describe('Help Index', () => {
         dashboard: helpShow.url({ topic: 'dashboard' }),
         rows: helpShow.url({ topic: 'rows' }),
         cells: helpShow.url({ topic: 'cells' }),
+        warehouseMap: helpShow.url({ topic: 'warehouse-map' }),
         cellLogs: helpShow.url({ topic: 'cell-logs' }),
         cellVerificationRounds: helpShow.url({
             topic: 'cell-verification-rounds',

@@ -147,6 +147,31 @@ class Row extends Model
     }
 
     /**
+     * The whole warehouse grid in one query set: each row with its cells
+     * (ordered by coordinates), the pallet occupying each occupied cell and
+     * the product facts the maps draw from it, including the product's
+     * `boxes_count`, so the 3D gauge and the rack dialog need no second request per pallet.
+     * `$productPublished` narrows each row's cells to those holding a pallet of a
+     * product with that published flag. Shared by `GET /api/v1/rows/full` (the
+     * mobile app) and the web panel's warehouse map, which therefore always
+     * receive the same payload.
+     *
+     * @param  Builder<Row>  $query
+     */
+    #[Scope]
+    protected function withFullGrid(Builder $query, ?bool $productPublished = null): void
+    {
+        $query->select(self::SELECT_COLUMNS)
+            ->withHasPallets()
+            ->with(['cells' => fn ($cells) => $cells
+                ->select(Cell::SELECT_COLUMNS)
+                ->with([...Cell::WITH_CONTENTS, 'pallet.product.setting:product_id,boxes_count'])
+                ->when($productPublished !== null, fn ($q) => $q->whereHas('pallet.product', fn ($q2) => $q2->where('published', $productPublished)))
+                ->orderedByCoordinates()])
+            ->orderBy('letter');
+    }
+
+    /**
      * `withHasPallets()` for a model that's already been resolved — route-model
      * binding hands the controller a Row it didn't query for itself.
      */

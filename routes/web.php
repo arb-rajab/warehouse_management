@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WarehouseMapController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
@@ -54,6 +55,11 @@ Route::middleware('auth')->group(function () {
         Route::get('cells/{cell}/export-qr-code', [CellController::class, 'exportQrCode'])->name('cells.export-qr-code');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
 
+        Route::get('warehouse-map', [WarehouseMapController::class, 'index'])->name('warehouse-map.index');
+        Route::get('warehouse-map/rows', [WarehouseMapController::class, 'rows'])
+            ->middleware('cache.headers:private;etag')
+            ->name('warehouse-map.rows');
+
         Route::get('pallets', [PalletController::class, 'index'])->name('pallets.index');
         Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
         Route::put('pallets/{pallet}', [PalletController::class, 'update'])->name('pallets.update');
@@ -67,6 +73,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('cell-verification-rounds', [CellVerificationRoundController::class, 'index'])->name('cell-verification-rounds.index');
         Route::get('cell-verification-rounds/{cellVerificationRound}', [CellVerificationRoundController::class, 'show'])->name('cell-verification-rounds.show');
+        Route::post('cell-verification-rounds/{cellVerificationRound}/complete', [CellVerificationRoundController::class, 'complete'])->name('cell-verification-rounds.complete');
         Route::get('cell-verification-rounds/{cellVerificationRound}/export', [CellVerificationRoundController::class, 'exportReports'])->name('cell-verification-rounds.export-reports');
         Route::post('cell-verification-reports/{cellVerificationReport}/accept', [CellVerificationReportController::class, 'accept'])->name('cell-verification-reports.accept');
 
@@ -77,6 +84,9 @@ Route::middleware('auth')->group(function () {
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
         Route::put('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->name('products.barcodes.store');
+        Route::get('products/{product}/barcodes/download', [ProductController::class, 'downloadAllBarcodes'])->name('products.barcodes.download-all');
+        Route::get('products/{product}/barcodes/{barcode}/download', [ProductController::class, 'downloadBarcode'])->scopeBindings()->name('products.barcodes.download');
+        Route::get('products/{product}/barcodes/{barcode}/preview', [ProductController::class, 'previewBarcode'])->scopeBindings()->name('products.barcodes.preview');
         Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'destroyBarcode'])->scopeBindings()->name('products.barcodes.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');

@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest';
 import FilterDateField from './FilterDateField.vue';
 
 describe('FilterDateField', () => {
+    it('passes the optional minimum date to the native picker', () => {
+        const wrapper = mount(FilterDateField, {
+            props: { id: 'to', label: 'To', modelValue: '', min: '2026-10-08' },
+        });
+        expect(wrapper.get('input').attributes('min')).toBe('2026-10-08');
+    });
+
     it('renders a labelled date input bound to modelValue', () => {
         const wrapper = mount(FilterDateField, {
             props: {

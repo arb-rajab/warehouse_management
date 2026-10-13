@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Offer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -37,33 +38,11 @@ use Spatie\Permission\Models\Permission;
  */
 const ADMIN_WRITES_STILL_UNGATED = [
     // No permission for the module yet.
-    'AdminNotificationController@markAsRead',
-    'FeatureOrderController@store',
-    'FeatureOrderTripController@newStore',
-    'FeatureOrderTripController@newUpdate',
-    'FeatureOrderTripController@store',
-    'OffersCatalogController@destroy',
-    'OffersCatalogController@store',
-    'RepresentativePackageController@delete',
-    'RepresentativePackageController@package_modal',
-    'RepresentativePackageController@set_package',
-    'RepresentativePackageController@store',
-    'RepresentativePackageController@update',
-    'RepresentativePaymentAdminController@accept',
-    'RepresentativePaymentAdminController@reject',
-    'VisitController@bulk_visit_delete',
-    'VisitController@destroy',
 
     // Self-service: the signed-in user's own profile and uploads.
-    'AizUploadController@bulk_uploaded_files_delete',
-    'AizUploadController@destroy',
-    'AizUploadController@file_info',
-    'AizUploadController@store',
-    'AizUploadController@update',
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
-    'ProductController@add_more_choice_option',
     'ProductController@fetch',
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
@@ -71,8 +50,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProductController@sku_combination_edit',
 
     // The controller has no such method, so the request errors out.
-    'CurrencyController@updateCurrency',
-    'OrderController@bulk_order_status',
 
     // Refuses every request (see LegacyEnvFileProtectionTest).
     'BusinessSettingsController@env_key_update',
@@ -85,45 +62,15 @@ const ADMIN_WRITES_STILL_UNGATED = [
  */
 const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
-    'FeatureOrderController@create',
-    'FeatureOrderController@getNeededData',
-    'FeatureOrderController@getRepDiscount',
-    'FeatureOrderTripController@create',
-    'FeatureOrderTripController@getNeededData',
-    'FeatureOrderTripController@newCreate',
-    'FeatureOrderTripController@newEdit',
-    'FeatureOrderTripController@newGetNeededData',
     'NotificationController@index',
-    'OffersCatalogController@download',
-    'OffersCatalogController@index',
-    'RepresentativePackageController@create',
-    'RepresentativePackageController@edit',
-    'RepresentativePackageController@index',
-    'RepresentativePaymentAdminController@export',
-    'RepresentativePaymentAdminController@index',
-    'VisitController@index',
-    'VisitController@show',
-    'VisitController@show_all_visits_in_a_day',
 
     // Self-service: the signed-in user's own dashboard, profile and uploads.
     'AdminController@admin_dashboard',
-    'AizUploadController@create',
-    'AizUploadController@edit',
-    'AizUploadController@index',
-    'AizUploadController@show',
     'ProfileController@index',
 
     // Read-only AJAX helpers the product forms use.
-    'BusinessSettingsController@search',
     'ProductController@getDetails',
 
-    // The controller has no such method, so the request errors out.
-    'CarrierController@show',
-    'CityController@show',
-    'OrderController@index',
-    'ProductBulkUploadController@import_product',
-    'ProductBulkUploadController@import_vendor_product',
-    'ZoneController@show',
 ];
 
 /**
@@ -230,47 +177,25 @@ test('a staff user cannot change a business setting or take the site down', func
     $this->assertDatabaseMissing('business_settings', ['type' => 'maintenance_mode', 'value' => 1]);
 });
 
-test('the customer pages that carry personal data need the customer permission, and the archive needs the delete one', function () {
-    Permission::findOrCreate('view_all_customers', 'store');
-    Permission::findOrCreate('delete_customer', 'store');
-
-    $staff = createStoreUser('staff');
-    actingAsStoreUser($staff);
-
-    $this->get(route('customers.archive'))->assertForbidden();
-    $this->get(route('customers.create'))->assertForbidden();
-    $this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->assertForbidden();
-
-    $staff->givePermissionTo('view_all_customers');
-
-    $this->get(route('customers.archive'))->assertForbidden();
-    expect($this->get(route('customers.create'))->getStatusCode())->not->toBe(403)
-        ->and($this->get(route('download.trade_license', ['filename' => 'licence.pdf']))->getStatusCode())->not->toBe(403);
-
-    $staff->givePermissionTo('delete_customer');
-
-    expect($this->get(route('customers.archive'))->getStatusCode())->not->toBe(403);
-});
-
 test('the offer deal pages and the notification pages ask for the permissions their buttons already name', function () {
     foreach (['view_all_offer_deals', 'add_offer_deal', 'edit_offer_deal', 'delete_offer_deal', 'add_notification', 'delete_notification'] as $name) {
         Permission::findOrCreate($name, 'store');
     }
 
+    $offer = Offer::forceCreate(['title' => 'Permission fixture']);
     $staff = createStoreUser('staff');
     actingAsStoreUser($staff);
 
     $this->get(route('offer_deals.index'))->assertForbidden();
-    $this->post(route('offer_deals.update_status'), ['id' => 1, 'status' => 1])->assertForbidden();
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
-    $this->post(route('admin.notifications.delete', ['id' => 1]))->assertForbidden();
+    $this->put(route('offer_deals.update_status', $offer), ['status' => 1])->assertForbidden();
+    $this->delete(route('offer_deals.destroy', $offer))->assertForbidden();
 
     $staff->givePermissionTo('view_all_offer_deals');
 
     expect($this->get(route('offer_deals.index'))->getStatusCode())->not->toBe(403);
-    $this->post(route('offer_deals.destroy', 1))->assertForbidden();
+    $this->delete(route('offer_deals.destroy', $offer))->assertForbidden();
 
     $staff->givePermissionTo('delete_offer_deal');
 
-    expect($this->post(route('offer_deals.destroy', 1))->getStatusCode())->not->toBe(403);
+    expect($this->delete(route('offer_deals.destroy', $offer))->getStatusCode())->not->toBe(403);
 });

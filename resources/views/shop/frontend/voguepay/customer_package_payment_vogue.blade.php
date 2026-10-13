@@ -32,7 +32,7 @@
          Voguepay.init({
              v_merchant_id: document.getElementById("merchant_id").value,
              total: '{{ $customer_package->amount }}',
-             cur: '{{\App\Models\Currency::findOrFail(get_setting('system_default_currency'))->first()->value)->code}}',
+             cur: '{{\App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code}}',
              merchant_ref: '{{ Session::get('voguepay_merchant_ref') }}',
              loadText:'Custom load text',
              customer: {

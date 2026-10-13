@@ -3,13 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TicketReply extends Model
 {
-    public function ticket(){
-    	return $this->belongsTo(Ticket::class);
+    /** @return BelongsTo<Ticket, $this> */
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class);
     }
-    public function user(){
-    	return $this->belongsTo(StoreUser::class);
+
+    /** @return BelongsTo<StoreUser, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
     }
 }

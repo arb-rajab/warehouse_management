@@ -7,6 +7,7 @@ import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorre
 import DataTable from '@/components/DataTable.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import {
     filterClearButtonClass,
@@ -15,7 +16,7 @@ import {
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 
-const sections = ['what', 'reports', 'accepting', 'exporting'];
+const sections = ['what', 'reports', 'finishing', 'accepting', 'exporting'];
 
 /** Representative rows for the reports-table preview below — plain fixture data, never fetched. */
 const previewReports = [
@@ -94,6 +95,16 @@ const previewReports = [
                         <td class="px-4 py-2">{{ row.when }}</td>
                     </template>
                 </DataTable>
+            </HelpUiPreview>
+
+            <HelpUiPreview v-if="section === 'finishing'" inert class="mt-2">
+                <SubmitButton
+                    :label="t('cellVerificationRound.show.finish')"
+                    :processing-label="
+                        t('cellVerificationRound.show.finishing')
+                    "
+                    :processing="false"
+                />
             </HelpUiPreview>
 
             <HelpUiPreview v-if="section === 'accepting'" inert class="mt-2">

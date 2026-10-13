@@ -3,18 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Conversation extends Model
 {
-    public function messages(){
+    /** @return HasMany<Message, $this> */
+    public function messages(): HasMany
+    {
         return $this->hasMany(Message::class);
     }
 
-    public function sender(){
+    /** @return BelongsTo<StoreUser, $this> */
+    public function sender(): BelongsTo
+    {
         return $this->belongsTo(StoreUser::class, 'sender_id');
     }
 
-    public function receiver(){
+    /** @return BelongsTo<StoreUser, $this> */
+    public function receiver(): BelongsTo
+    {
         return $this->belongsTo(StoreUser::class, 'receiver_id');
     }
 }

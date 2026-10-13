@@ -10,8 +10,10 @@
 
                 <div class="col-auto">
                     <div class="form-group mb-0">
+                        @can('add_order')
                         <a href="{{ route('new.feat-order.trip.create') }}"
                             class="btn btn-primary">{{ translate('Create Order') }}</a>
+                        @endcan
                     </div>
                 </div>
 
@@ -336,7 +338,11 @@
                                         <i class="las la-edit"></i>
                                     </button>
 
+                                    @can('edit_order')
+                                    @if (! $order->by_rep && $order->payment_status === 'unpaid' && ! $order->commission_calculated && ! in_array($order->delivery_status, ['delivered', 'cancelled'], true))
                                     <a class="" href="{{route('new.feat-order.trip.edit', $order->id)}}">{{ translate('Edit') }}</a>
+                                    @endif
+                                    @endcan
                                 </td>
                             </tr>
                         @endforeach

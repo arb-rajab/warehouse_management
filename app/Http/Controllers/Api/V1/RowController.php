@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\FilterRowsFullRequest;
 use App\Http\Resources\RowResource;
 use App\Http\Resources\RowSummaryResource;
-use App\Models\Cell;
 use App\Models\Row;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -31,19 +30,8 @@ class RowController extends Controller
      */
     public function full(FilterRowsFullRequest $request): AnonymousResourceCollection
     {
-        $productPublished = $request->productPublished();
-
         return RowResource::collection(
-            Row::query()
-                ->select(Row::SELECT_COLUMNS)
-                ->withHasPallets()
-                ->with(['cells' => fn ($query) => $query
-                    ->select(Cell::SELECT_COLUMNS)
-                    ->with(Cell::WITH_CONTENTS)
-                    ->when($productPublished !== null, fn ($q) => $q->whereHas('pallet.product', fn ($q2) => $q2->where('published', $productPublished)))
-                    ->orderedByCoordinates()])
-                ->orderBy('letter')
-                ->get()
+            Row::query()->withFullGrid($request->productPublished())->get()
         );
     }
 

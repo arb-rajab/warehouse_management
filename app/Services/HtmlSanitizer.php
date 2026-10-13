@@ -24,8 +24,9 @@ use Dom\Text;
  * against sanitisers live. Rich-text formatting (headings, lists, tables,
  * links, images, colours, alignment) is kept.
  *
- * Content an admin writes (CMS pages, blog posts, settings texts) is trusted
- * and is not passed through here.
+ * Converted store CMS/settings writers also clean rich text here before
+ * saving and exposing editor props. Other legacy admin writers remain outside
+ * this conversion; their public Blade rendering is unchanged.
  */
 class HtmlSanitizer
 {

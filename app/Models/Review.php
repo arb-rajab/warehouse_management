@@ -3,14 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $product_id
+ * @property int $user_id
+ * @property int $rating
+ * @property int $status
+ * @property string $comment
+ */
 class Review extends Model
 {
-  public function user(){
-    return $this->belongsTo(StoreUser::class);
-  }
+    /** @return BelongsTo<StoreUser, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(StoreUser::class);
+    }
 
-  public function product(){
-    return $this->belongsTo(Product::class);
-  }
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
 }

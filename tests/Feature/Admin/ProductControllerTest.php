@@ -878,13 +878,15 @@ test('an authenticated admin can search products with every property the filter 
     expect($otherProduct->id)->not->toBeNull();
 });
 
-test('the product search includes deactivated products and flags their active state', function () {
+test('the product search includes deactivated products the warehouse still holds and flags their active state', function () {
     actingAsAdmin();
 
     $active = Product::factory()->create(['name' => 'Widget Blue']);
     $inactive = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactive->id]);
     // Noise: a product that doesn't match the search term must not be returned.
     $unrelated = Product::factory()->inactive()->create(['name' => 'Gadget']);
+    Pallet::factory()->create(['product_id' => $unrelated->id]);
 
     $response = $this->getJson('/admin/products/search?q=Widget');
 
@@ -894,6 +896,68 @@ test('the product search includes deactivated products and flags their active st
     expect($rows->firstWhere('id', $active->id)['active'])->toBeTrue();
     expect($rows->firstWhere('id', $inactive->id)['active'])->toBeFalse();
     expect($rows->pluck('id'))->not->toContain($unrelated->id);
+});
+
+test('the product search excludes a deactivated product the warehouse no longer holds, keeping active products with or without pallets', function () {
+    actingAsAdmin();
+
+    $activeWithoutPallets = Product::factory()->create(['name' => 'Widget Blue']);
+    $activeWithPallet = Product::factory()->create(['name' => 'Widget Green']);
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+
+    $response = $this->getJson('/admin/products/search');
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$activeWithoutPallets->id, $activeWithPallet->id, $inactiveInWarehouse->id])
+        ->not->toContain($inactiveElsewhere->id);
+    expect($response->json('meta.total'))->toBe(3);
+});
+
+test('the product search spans every deactivated product too when asked to include inactive ones', function () {
+    actingAsAdmin();
+
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Widget Red']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+    // Noise: a product that doesn't match the search term.
+    Product::factory()->inactive()->create(['name' => 'Gadget']);
+
+    $response = $this->getJson('/admin/products/search?q=Widget&include_inactive=1');
+
+    $response->assertOk();
+    $rows = collect($response->json('data'));
+    expect($rows->pluck('id')->all())
+        ->toEqualCanonicalizing([$active->id, $inactiveInWarehouse->id, $inactiveElsewhere->id]);
+    expect($rows->firstWhere('id', $inactiveElsewhere->id)['active'])->toBeFalse();
+});
+
+test('the product search rejects a non-boolean include_inactive', function () {
+    actingAsAdmin();
+
+    $this->getJson('/admin/products/search?include_inactive=maybe')->assertUnprocessable();
+});
+
+test('the products index still lists a deactivated product with no pallets that the product search hides', function () {
+    actingAsAdmin();
+
+    $inactiveElsewhere = Product::factory()->inactive()->create(['name' => 'Widget Grey']);
+    // Noise: an active product both endpoints return.
+    $active = Product::factory()->create(['name' => 'Widget Blue']);
+
+    $this->get('/admin/products')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 2)
+            ->where('products.data.0.id', $active->id)
+            ->where('products.data.1.id', $inactiveElsewhere->id)
+            ->where('products.data.1.active', false)
+    );
+
+    expect(collect($this->getJson('/admin/products/search')->json('data'))->pluck('id')->all())
+        ->toBe([$active->id]);
 });
 
 test('the product search options carry both raw name columns under the Arabic panel locale too', function () {
@@ -1616,4 +1680,217 @@ test('fetching the image of a non-existent product returns a 404', function () {
 
     $response->assertNotFound();
     Http::assertNothingSent();
+});
+
+/**
+ * The files of a downloaded barcode ZIP, keyed by name.
+ *
+ * @return array<string, string>
+ */
+function barcodeZipEntries(string $zipContent): array
+{
+    $path = tempnam(sys_get_temp_dir(), 'barcode-test');
+    file_put_contents($path, $zipContent);
+    $zip = new ZipArchive;
+    $zip->open($path);
+    $entries = [];
+
+    for ($index = 0; $index < $zip->numFiles; $index++) {
+        $entries[$zip->getNameIndex($index)] = $zip->getFromIndex($index);
+    }
+
+    $zip->close();
+    unlink($path);
+
+    return $entries;
+}
+
+test('an admin can download one barcode of a product as an SVG carrying exactly that barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['name' => 'Widgets']);
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'ABC-12345']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'OTHER-999']);
+
+    $response = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download");
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'image/svg+xml');
+    $response->assertHeader('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode-{$barcode->id}-ABC-12345.svg\"");
+    expect($response->getContent())
+        ->toContain('>ABC-12345</text>')
+        ->toContain('Widgets')
+        ->not->toContain('OTHER-999');
+});
+
+test('a downloaded barcode is encoded as the same Code 128 bars the product label uses for that value', function () {
+    actingAsAdmin();
+
+    // A barcode equal to the product id must render bar for bar like the existing
+    // product-id export, which is already verified scannable.
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+
+    $download = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent();
+    $export = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    preg_match('/<path fill="#000000" d="([^"]+)"/', $download, $downloadBars);
+    preg_match('/<path fill="#000000" d="([^"]+)"/', $export, $exportBars);
+
+    expect($downloadBars[1])->not->toBeEmpty()->toBe($exportBars[1]);
+});
+
+test('a long barcode widens the label instead of shrinking its bars below a scannable width', function () {
+    actingAsAdmin();
+    Setting::current()->update(['qr_code_width' => 300]);
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => str_repeat('9', 40)]);
+
+    $svg = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent();
+
+    preg_match('/<svg [^>]*width="(\d+)"/', $svg, $width);
+    // 40 digits is 11 modules each plus start, checksum, stop and quiet zones — far more than 300px at 2px a module.
+    expect((int) $width[1])->toBeGreaterThan(300);
+});
+
+test('a barcode that is not printable ASCII cannot be downloaded as a label', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->assertUnprocessable();
+});
+
+test('downloading another products barcode through this product returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherBarcode = ProductBarcode::factory()->create(['barcode' => 'OTHER-999']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$otherBarcode->id}/download")->assertNotFound();
+});
+
+test('an admin can download every barcode of a product, and only that product\'s, as a ZIP', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $first = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    $second = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '2222222222222']);
+    $third = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'ABC/def 3']);
+    ProductBarcode::factory()->create(['product_id' => Product::factory()->create()->id, 'barcode' => '9999999999999']);
+
+    $response = $this->get("/admin/products/{$product->id}/barcodes/download");
+
+    $response->assertOk();
+    $response->assertDownload("product-{$product->id}-barcodes.zip");
+    $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
+
+    expect(array_keys($entries))->toBe([
+        "product-{$product->id}-barcode-{$first->id}-1111111111111.svg",
+        "product-{$product->id}-barcode-{$second->id}-2222222222222.svg",
+        "product-{$product->id}-barcode-{$third->id}-ABC_def_3.svg",
+    ])
+        ->and($entries["product-{$product->id}-barcode-{$first->id}-1111111111111.svg"])->toContain('>1111111111111</text>')
+        ->and($entries["product-{$product->id}-barcode-{$third->id}-ABC_def_3.svg"])->toContain('>ABC/def 3</text>')
+        ->and(implode('', $entries))->not->toContain('9999999999999');
+});
+
+test('downloading all barcodes of a product without any returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => Product::factory()->create()->id, 'barcode' => '9999999999999']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/download")->assertNotFound();
+});
+
+test('one barcode that cannot be rendered fails the whole ZIP instead of omitting it', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/download")->assertUnprocessable();
+});
+
+test('downloading all barcodes of a non-existent product returns a 404', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/products/999999/barcodes/download')->assertNotFound();
+});
+
+test('a barcode label can be previewed inline as the same SVG that is downloaded', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+
+    $response = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/preview");
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->getContent())
+        ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
+});
+
+test('previewing a barcode that belongs to another product returns a 404', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherBarcode = ProductBarcode::factory()->create();
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$otherBarcode->id}/preview")->assertNotFound();
+});
+
+test('a barcode that cannot be rendered as Code 128 cannot be previewed', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/preview")->assertUnprocessable();
+});
+
+test('mobile app and unauthenticated users cannot preview a barcode', function () {
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+    $url = "/admin/products/{$product->id}/barcodes/{$barcode->id}/preview";
+
+    $this->get($url)->assertRedirect(route('login'));
+
+    actingAsMobilePanelUser();
+    $this->get($url)->assertForbidden();
+});
+
+test('a mobile app user cannot download barcodes', function () {
+    actingAsMobilePanelUser();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->assertForbidden();
+    $this->get("/admin/products/{$product->id}/barcodes/download")->assertForbidden();
+});
+
+test('an unauthenticated caller cannot download barcodes', function () {
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->assertRedirect(route('login'));
+    $this->get("/admin/products/{$product->id}/barcodes/download")->assertRedirect(route('login'));
+});
+
+test('a barcode must be printable ASCII to be added', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => 'باركود']);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
 });

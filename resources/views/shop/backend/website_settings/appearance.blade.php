@@ -274,7 +274,7 @@
                     <h6 class="fw-600 mb-0">{{ translate('Custom Script') }}</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('business_settings.update') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('website.scripts.compatibility.update') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="form-group row">
                             <label class="col-md-3 col-from-label">{{ translate('Header custom script - before </head>') }}</label>

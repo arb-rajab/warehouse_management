@@ -13,7 +13,11 @@ class ProductsExport implements FromCollection, WithMapping, WithHeadings
 {
     public function collection(): Collection
     {
-        return Product::all();
+        return Product::query()
+            ->select(['id', 'name', 'description', 'added_by', 'user_id', 'category_id', 'brand_id', 'video_provider', 'video_link', 'unit_price', 'purchase_price', 'unit'])
+            ->with('stocks:id,product_id,qty')
+            ->orderBy('id')
+            ->get();
     }
 
     public function headings(): array

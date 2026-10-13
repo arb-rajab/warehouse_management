@@ -301,8 +301,9 @@ prefix. That is the single point every storefront asset URL goes through.
   payloads, the admin ticket page, the product description and the email, and a
   scan that fails on a new raw print of `->details`, `->reply`, `->description`
   or a translated description. **Not covered:** admin-written content, which is
-  trusted with markup and printed as it is (CMS pages, blog posts, settings
-  texts, payment-method notes), so a compromised admin account can still plant
+  trusted with markup and printed as it is (CMS pages, settings texts,
+  payment-method notes; blog posts are cleaned on write and on display since
+  store-backoffice-migration.md §18), so a compromised admin account can still plant
   script; and the API, which returns descriptions as stored for the mobile app
   to render.
 - The store changed data on GET: delete, ban, approve, restore, duplicate and
@@ -374,7 +375,8 @@ prefix. That is the single point every storefront asset URL goes through.
   the storefront and API downloads stay public, as they were meant to be.
   Catalogues uploaded before this are already in
   `storage/app/private/uploads/offers/catalogs/` and are found by their old
-  names. Tests: `LegacyOffersCatalogTest`.
+  names. Tests now live in `Store/Admin/OffersCatalogControllerTest`
+  after the 2026-10-08 admin Inertia migration; public downloads remain native.
 - Two more copies of the uploader, found after `MultipartUploadService`: the
   driver API's `TripService::uploadFiles` (checkpoint photos and the generated
   CMR), which now calls the service, and the admin's English app-translation
@@ -1709,7 +1711,7 @@ and 5). Each item says where its answer comes from.
   lists in `tests/Feature/LegacyAdminPermissionsTest.php`). Modules with no name
   in the legacy vocabulary: logistics (`TripController`, `TruckController`,
   `DriverController`, `FeatureOrderController`, `FeatureOrderTripController`),
-  `OffersCatalogController`, `RepresentativePackageController`,
+  `RepresentativePackageController`,
   `RepresentativePaymentAdminController` and `VisitController`. Get the existing
   names from production with `SELECT name, guard_name FROM permissions ORDER BY
   name;` and the role grants with a join of `role_has_permissions`, `roles` and
@@ -1718,7 +1720,11 @@ and 5). Each item says where its answer comes from.
   guard, grant them to the roles that run it, gate the controllers
   (`HasMiddleware`, as `OfferController` does), and empty the matching entries in
   the two ratchet lists. Staff keep access only through the role grants, so do
-  this in phase 5's role import.
+  this in phase 5's role import. Offers catalogue names were added in the
+  2026-10-08 migration (`view_offers_catalog`, `add_offers_catalog`,
+  `delete_offers_catalog`, store guard); its controller is now gated and its
+  ratchet entries are removed. The migration grants no roles: owner-approved
+  production staff grants are still outstanding (§4.1 of the migration guide).
 - [ ] **Check the six permission rows the offer-deal and notification screens now
   require** exist in production and are granted to the right staff roles
   (`view_all_offer_deals`, `add_offer_deal`, `edit_offer_deal`,

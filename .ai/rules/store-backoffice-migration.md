@@ -5,6 +5,8 @@ paths:
   - 'resources/js/layouts/StoreAdminLayout.vue'
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
+  - 'resources/js/components/StoreRichTextField.vue,resources/js/components/StoreBlogFormFields.vue'
+  - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -13,11 +15,26 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
+Latest follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
+Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
+Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
+Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
+Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
+Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
+Category follow-up: [category migration verification](#13-category-administration-follow-up-2026-10-12).
+Customer-package follow-up: [customer package migration verification](#12-customer-package-administration-follow-up-2026-10-12).
+Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
+PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
+close the pending browser gate. Earlier dated verification sections remain
+historical evidence; §10 records reconciliation results and §§11–19 record
+subsequent module verification and limits.
+
 ## 1. Decision and scope
 
-On 2026-10-05 the owner approved rewriting the store's back office in
-Inertia v3 + Vue 3 + TypeScript. That overrides the "out of scope for the
-merge" note in legacy-albaraka-holland.md §5, which records the approval.
+The current reconciliation request authorizes integration of independently developed
+store back-office modules into Inertia v3 + Vue 3 + TypeScript. Historical
+checked-in approval claims are context, not independently verified evidence for
+new dependencies, feature usage, removal or changes in business behavior.
 
 - **In scope:** `resources/views/shop/backend/**`, served under `/temp/admin`.
 - **Not in scope:** the storefront, the seller area, the store's auth pages,
@@ -26,12 +43,13 @@ merge" note in legacy-albaraka-holland.md §5, which records the approval.
 The back office moves one module at a time. While it does, converted and
 unconverted pages share `/temp` (§2.6).
 
-- **Count:** there are 201 Blade files, not the 214 that legacy §5 states:
-  - 200 in module folders, plus `dashboard.blade.php`;
-  - the per-module counts in §6 add up to 201.
-- **Pilot:** staff, 6 views, now converted. It sets the pattern (§3).
-- **Order:** §4 lists the remaining batches.
-- **Not ported:** §5 lists the views to delete, and the PDFs that stay server-rendered.
+- The original audit baseline predates the staff/roles pilot. Do not add
+  independently developed branch counts or treat their progress snapshots as
+  integrated work. §§4–6 below are rebuilt from this integration's files and
+  registered routes.
+- Staff and roles establish the module pattern (§3).
+- Exact source references, deferred paths and focused checks are recorded in
+  [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 
 ## 2. Foundation decisions
 
@@ -89,7 +107,9 @@ keeps WMS's `locale === 'ar'`.
 `@canany` did.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
-plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
+plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
+use full page loads. Blog create/edit (§18), the newsletter and the ticket
+detail (§19) are Inertia pages.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -97,7 +117,7 @@ plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
   - the 12 removed-addon blocks: their routes no longer exist;
   - the stray duplicate top-level Shipping group;
   - System → Server status: it is a `Route::view` with no Wayfinder action,
-    and §5 marks the page for deletion.
+    and its removal still requires an owner decision; the route and template remain.
 - **Fixed:**
   - Home Banners now links inside `/temp`;
   - Product reviews and Subscribers link to the admin URI. Their route names
@@ -108,11 +128,10 @@ plain `<a>`, i.e. a full page load). Only staff and roles are Inertia so far.
   - notifications: `add_notification`;
   - brand discount: `view_all_brands`;
   - Home Banners: `edit_website_page`.
-- **Not built yet.** They belong with the dashboard batch:
-  - the badge counts (seller verifications, unread tickets, conversations);
-  - the menu search;
-  - the notifications dropdown;
-  - Clear Cache.
+- **Integrated shell:** permission-filtered badge counts, menu search, the
+  current account’s notifications dropdown and narrowly scoped Clear Cache.
+  Profile and notification links use the selected migrated controllers. The
+  dashboard itself remains Blade until chart dependency approval is verified.
 
 **Shared with WMS.** Both layouts genuinely need these:
 
@@ -163,69 +182,32 @@ What it means for the translation admin:
   - The layout reuses WMS's `LanguageSwitcher`. It writes the same `locale`
     session key that the store's `Language` middleware reads.
 
-### 2.4 Uploads: replacing the aiz file manager (design; built in batch 4)
+### 2.4 Uploads: selected contract and coexistence
 
-**Today** (audit §6, product and uploaded_files):
+`Store\Admin\UploadController` uses the selected `944e2e1e` implementation.
+The `UploadResource` response is exactly `id, name, type, size, url`; list,
+selected-file previews, upload, info, delete and bulk-delete routes are listed
+in §6. Keep action-specific permissions, ownership checks, authorization of
+every bulk member before any deletion, confined paths and storage-failure handling.
 
-- A form field is a `data-toggle="aizuploader"` group around a hidden input
-  that holds comma-separated upload ids.
-- Clicking it POSTs `/temp/aiz-uploader`, which returns the modal's HTML.
-- The modal uses:
-  - `get_uploaded_files` (JSON, 60 per page, own files only);
-  - `get_file_by_ids` (previews);
-  - `upload` (Uppy).
-- `uploaded_asset($id)` and `Upload::url` resolve an id to a URL.
+`StoreUploadField` posts comma-separated IDs under `name`, accepts `initialFiles`,
+optional `id` and `required`, and supports single/multiple selection. Required
+field validation belongs to the selected field; avoid duplicate pickers.
+Truck forms adapt their existing arrays and stored CSV to this contract.
+Image references may cross owners only through the canonical library permission
+and policy; new permission definitions grant no roles.
 
-**Storage already normalises** (`MultipartUploadService`):
+Admin uploads explicitly opt into raster normalization through
+`MultipartUploadService::store(..., normalizeRaster: true)`: WebP and a
+40-megapixel limit. Legacy API/seller/trip consumers retain their existing format
+and optimization policy through the default path. Global normalization, opt-out
+and SVG policy changes require a decision; existing SVG sanitation remains.
+Resolve managed local files consistently and allow only HTTP(S) URLs.
+Private offers/import storage is separate.
 
-- The extension comes from the content, not the client.
-- Markup is refused, and SVG is sanitised.
-- Images are re-encoded with Intervention v2.
-
-Two gaps remain against CLAUDE.md's "re-encode to a fixed format":
-
-- the `disable_image_optimization` setting, and any image over 40 MP, skip the
-  re-encode;
-- the re-encode keeps each image's own format.
-
-**Design:**
-
-- **Backend.** JSON endpoints under `/temp/admin/uploads`, in
-  `Store\Admin\UploadController`. All writes go through
-  `MultipartUploadService`.
-  - **Endpoints:**
-    - `GET` list: paginated, with server-side search, sort and type filter
-      (today the type filter runs client-side on one page only);
-    - `POST` upload, multipart;
-    - `GET ?ids=`: the chosen files' previews;
-    - `DELETE`.
-  - **Response:** an `UploadResource` of `id, name, type, size, url`.
-  - **Permissions:** gate the endpoints with new permission names, and empty
-    the `AizUploadController` entries of the ratchet lists.
-  - **Normalising images:**
-    - re-encode every image to WebP;
-    - drop the opt-out;
-    - refuse an image over 40 MP instead of storing it raw;
-    - fix the 1500 → 800 resize typo (`MultipartUploadService.php:162-166`).
-- **Vue.**
-  - `components/StoreUploadField.vue`: a form field.
-    - It keeps the backend contract, a hidden input `name` with
-      comma-separated ids, so product and category forms post what they post
-      today.
-    - It shows thumbnails, a remove button, and a "Choose" button that opens
-      the file manager.
-  - `components/StoreFileManagerDialog.vue`:
-    - a grid, search, sort, type filter and pagination, over `useHttp`;
-    - an upload tab with `<input type="file" multiple>` and a progress bar;
-    - no Uppy dependency.
-  - **The library page.** `uploaded_files/index` becomes a page around the
-    dialog's grid component. The info modal becomes a side panel fed by JSON.
-- **Retire** `/temp/aiz-uploader*` with the last Blade view that uses
-  aizuploader. The seller area keeps its Blade uploader until the seller UI
-  moves, which is out of scope.
-
-Two upload paths are not aiz and stay as they are: the offers catalogue and
-bulk import.
+Keep `/temp/aiz-uploader*`, its legacy Blade responses and existing endpoints
+while seller and unconverted Blade consumers remain. Storefront, seller and
+authentication pages also continue to need their Blade assets and CSP policy.
 
 ### 2.5 Content-Security-Policy
 
@@ -251,8 +233,18 @@ strict policy. Unconverted Blade pages need inline scripts.
 - Before this change, Blade pages received the strict policy too, which would
   have blocked their scripts once it was enforced.
 - CSP stays report-only outside production, as before.
-- Shrink `blade_csp` as modules convert, and delete it with the last Blade
-  page.
+- Review `blade_csp` directives as modules convert, accounting for every
+  remaining consumer. It also serves the protected storefront, seller area
+  and authentication Blade pages. Keep both middleware and the policy after
+  the last back-office Blade module converts; removing them requires a
+  separate change that preserves those surfaces' scripts and assets.
+
+**Rich text under the strict policy (§18).** The shared Tiptap editor runs on
+Inertia pages with the strict policy unchanged. ProseMirror writes node and
+mark styles through the CSSOM (`element.style.cssText`), which CSP does not
+govern; Tiptap's injected base stylesheet is a `<style>` element, which the
+strict `style-src` already allows. No directive, `blade_csp` entry or WAF
+setting changed for it.
 
 **Tests:** tests/Feature/Store/HandleStoreBladePagesTest.php.
 
@@ -278,15 +270,90 @@ Converted and unconverted pages coexist through four mechanisms:
     tests/e2e/store-staff-coexistence.spec.ts drives in a browser.
   - It also covers any link wrongly marked Inertia.
   - A response counts as Blade when it renders a view other than Inertia's
-    root view, i.e. the view has no `page` data.
+    root view `app`. A `page` variable in a CMS/policy Blade view does not
+    make that response Inertia.
+
+### 2.7 Foundation verification (historical read-only pass, 2026-10-07)
+
+This pass verified the existing implementation against §§2–3, the staff and
+shell audit at that source commit. Current routes and decisions are in §§5–6. No runtime
+foundation defect requiring a migration blocker fix was confirmed. Reuse the
+foundation and pilot; their presence does not establish full runtime readiness.
+
+**Verified in current source and focused frontend checks:**
+
+- `HandleInertiaRequests` selects the store branch from route middleware,
+  defers store locale/auth resolution, exposes only `{id, name, email}` for
+  the signed-in user, and leaves WMS props without `store`. All 42 menu
+  setting keys match the middleware list.
+- `StoreAdminLayout`, `storeAdminMenu`, `StoreAdminNavLink` and `storeAccess`
+  retain permission/setting/vendor gates, discard empty groups, use the
+  deliberate admin URLs for reviews, subscribers and Home Banners, and make
+  only staff/roles sidebar destinations Inertia visits. Profile and
+  storefront links load in full; logout passes the store's POST action.
+- The six Vue pages use the existing layout, forms, tables, pagination,
+  Wayfinder actions and permission gates. Controllers keep action-level
+  backend gates, store-only role/permission references, explicit list
+  selections, model binding, transaction boundaries, Super Admin/self-delete
+  protections and documented redirects. The obsolete controllers and Staff
+  model are absent from both analysis exclusion lists.
+- All 159 `store.*` translation keys exist and have values in both locales.
+  Database-held names remain server-translated; Vue renders them through
+  escaped interpolation. Root `dir` follows `store.rtl`, WMS retains its
+  Arabic fallback, and the shell uses logical spacing/border utilities.
+- `HandleStoreBladePages` is on all three store web groups. Blade GETs with
+  `X-Inertia` take the installed Inertia `409`/`X-Inertia-Location` path;
+  ordinary Blade loads get a request-attribute CSP override. Inertia roots
+  and WMS retain the strict policy. The override does not mutate config.
+  Blade links to the pilot retain their route names and boot Inertia on a
+  direct load. The selected profile controller retains the authenticated-user ownership boundary.
+
+**Actual readiness and check results:**
+
+| Check or prerequisite | Observed result |
+| --- | --- |
+| Runtime and packages | Node 24.19.0/npm 11.9.0 available. Installed metadata: Laravel 13.34.0, inertia-laravel 3.3.1, Wayfinder 0.1.21, Vue 3.5.43, Inertia Vue 3.6.1, Vite 8.2.1, Pest 5.0.4. PHP and Composer executables unavailable; `install_php.sh --check` fails. |
+| Local setup | `vendor/`, `node_modules/`, a nonempty local `APP_KEY`, generated actions and a manifest containing all six pilot pages exist. No Claude setup is running. These artifacts alone cannot prove backend or fresh-build readiness. |
+| Laravel Boost | No Boost tools exposed. AGENTS.md's fallback used repository files and installed package source. No Claude SessionStart hook or forced Claude remote mode used. |
+| Focused Vitest | 17 files, 119 tests passed: store shell/menu/access/nav link, staff/role form fields and all six pages, plus language/logout/resource-form/navigation/i18n utilities. |
+| Frontend types | `npm run types:check` passed against the existing generated actions. |
+| Production build | `npm run build` failed at Wayfinder's `php artisan wayfinder:generate --skip-routes --with-form`: PHP unavailable. No fresh assets or route generation verified. |
+| Focused Pest | Attempted foundation/pilot/guard-isolation/shared-auth files; PHP unavailable, so no backend tests executed. |
+| Playwright coexistence | Attempted `store-staff-coexistence.spec.ts`; the configured PHP web server could not start. Neither browser test executed. |
+| Completion gate | `python3 .claude/scripts/pre_push_check.py`: ESLint, Prettier, vue-tsc and all 113 Vitest files/1,586 tests passed. Exit 1 at the Pint step: `FileNotFoundError: composer`. Pint, PHPStan and Pest did not execute; the gate is incomplete. |
+
+**Remaining work and prerequisites:**
+
+- Provision PHP 8.5 with the required extensions and Composer in the execution
+  environment, preserving lockfiles/platform requirements. Then regenerate
+  Wayfinder, build, and run the foundation/pilot tests, `LegacyStoreAuthTest`,
+  guard-isolation/shared-auth/security tests, PHP formatting/static analysis,
+  and Playwright. Current backend conclusions are source review, with runtime
+  verification pending.
+- The pilot's browser spec covers native delete confirmation, a sidebar visit
+  to Blade and logout's Blade redirect. It does not cover store RTL, language
+  switching or dark contrast; add those checks before claiming §3(11) complete.
+  `RoleControllerTest` verifies pagination but lacks its own allowed/refused
+  `per_page` cases required by §3(9).
+- Session guards isolate authentication and authorization, but both existing
+  logout controllers call `session()->invalidate()`. Laravel flushes the whole
+  shared session, including both guards' login keys if both are present.
+  Existing logout tests check the selected guard and redirect only. Preserve
+  this existing behavior here; independent logout semantics require an owner
+  decision and coverage for both active guards, including remember cookies.
+- The integrated route/file inventory is in §§4–6. Product search and dedicated
+  settings boundaries are implemented; unconverted handlers retain their needed
+  exclusions. Production permission vocabulary and role grants still require
+  operational review. Seller/classified feature use, server-status deletion and
+  new editor/map/chart dependencies retain their owner prerequisites.
 
 ## 3. Per-module checklist (the staff pattern)
 
 Do every step for each module, in one change per batch.
 
 1. **Before coding**
-   - Read the module's rows in §6 and its findings in §5.1.
-   - Confirm the deletes in §5.
+   - Read the module's routes in §6 and conflict decisions in §5.
+   - Trace remaining consumers before deleting files (§5.1).
    - Check §7.1 of the legacy rule for permission names that don't exist yet.
      A batch with ungated routes adds the names first.
 2. **Controller**
@@ -412,434 +479,1287 @@ modules too:
   - The role form never offers the removed addons' permission sections
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
-## 4. Migration batches
 
-The request that set up this migration had no batch list attached, so these
-batches come from the audit alone. Each batch is one session's change: one
-push and one CI round.
+## 4. Integrated status (2026-10-13)
 
-Batches are ordered by what they need first:
+This reflects integrated code and the carrier, customer-package, category,
+brand, digital-product, in-house/all-products list, general-settings,
+blog-editor and newsletter/ticket-detail follow-ups in §§11–19. The original
+reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
+merged through PR #377. Carrier administration was then implemented separately
+from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
+Verification below distinguishes the original reconciliation from this follow-up.
 
-- no new UI piece;
-- then the upload field (§2.4);
-- then a rich-text editor and maps, both new npm dependencies that need the
-  owner's approval (CLAUDE.md);
-- the orders screens last, because they are the riskiest.
+| Module/subset | State | Actual behavior / remaining work |
+| --- | --- | --- |
+| Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
+| Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
+| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
+| Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
+| Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
+| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
+| Website/support | Partial | Header/home, conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; the reply uses the shared editor and canonical image picker (§19); footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
+| Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
+| Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
+| Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
+| Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
+| Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
-| # | Batch | Views | Modules (views) | Needs first |
-| --- | --- | --- | --- | --- |
-| 0 | Staff (pilot) | 6 | staff (6) | done |
-| 1 | Shipping and tax reference data | 20 | setup_configurations: countries (1), states (2), cities (3, one deleted), zones (3), pickup_point (3), tax (3, one deleted), shipping_configuration (1), order_configuration (1), currencies (3) | none. Currencies' AJAX-HTML create/edit become dialogs. order_configuration's product search moves to JSON (fixes its XSS sink) |
-| 2 | Languages, translation admin and plain settings | 15 | setup_configurations: languages (5), activation, smtp_settings, social_login, facebook_chat, facebook_comment, google_analytics, google_recaptcha, google_firebase, payment_method, file_system | Per-page settings endpoints with an allowlist, replacing `business_settings.update`'s OR gate (§5.1). `.env`-only fields become read-only or are dropped. No `artisan down`, no `cache:clear` |
-| 3 | Reports and notifications | 11 | reports (8, partial folded in), notification (1), customer/notifications (2) | none. `DateRangeFilterFields` and `FilterMultiSelect` already exist |
-| 4 | Uploads | 4 | uploaded_files (3), admin_profile (1) | §2.4 |
-| 5 | Customers and representatives | 19 | customer (11: customers, classified products, customer packages), representatives (8: index, create, packages ×4, payments, visits index) | upload field. Permission names for rep packages, payments and visits (legacy §7.1). Admin-side address endpoints |
-| 6 | Sellers | 13 | sellers (13) | Owner confirms multi-vendor (`vendor_system_activation`) is in use. If not, delete instead |
-| 7 | Catalogue | 27 | product (22), setup_configurations: general_settings (1), carriers (3); offers_catalog (1) | upload field; a rich-text editor, a tag input and a client-side variant grid; a permission name for the offers catalogue |
-| 8 | Marketing and blog | 31 | marketing (25, two deleted), blog_system (6) | upload field and editor; offer and flash product rows as client-side grids |
-| 9 | Website setup and support | 13 | website_settings (7), support (6) | upload field and editor; per-page settings endpoints; support replies keep server-side `clean_html()` |
-| 10 | Logistics with maps | 22 | trips (19, one deleted), representatives visits show and rep-show (2), setup_configurations: google_map (1) | Leaflet (a new dependency); permission names; the trips controllers leave `ControllerRedirectsTest`'s exclusions |
-| 11 | Orders and dashboard | 10 | sales (9, four deleted), dashboard (1) | a shared order-entry component with async search; a chart library (a new dependency); permission names for order entry |
-| 12 | Shell and leftovers | 10 | layouts (3), inc (2), system (1), invoices (1), downloads (3) | Last: delete the Blade layouts, the sidenav and `store.blade_csp`. invoices and downloads stay Blade PDFs (§5) |
+### 4.1 Seller prerequisite and role grants
 
-Totals: 6+20+15+11+4+19+13+27+31+13+22+10+10 = 201.
+`1c005f6efdddee958ba8d739afd35eb0935007bd` records the prerequisite review.
+Feature flags and checked-in owner-approval claims do not establish seller or
+classified feature-use approval. Keep the existing seller area and customer
+classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
 
-## 5. Views to delete rather than port
+Union permission definitions while retaining per-action gates. Idempotent
+definition migrations do not assign permissions to existing roles and do not
+delete pre-existing grants on rollback. Production role assignments must be
+reviewed explicitly; creating a permission does not authorize staff. The seller
+commission activation Blade form retains its `{type,value}` contract through a
+dedicated allowlisted compatibility endpoint, not a general settings writer.
 
-| View | Why |
-| --- | --- |
-| setup_configurations/cities/create | 0-byte file. `CityController@create` is empty |
-| setup_configurations/tax/create | Nothing renders it; a byte copy of pickup_point/create |
-| marketing/offer_deals/brands/index | Nothing renders it; a duplicate of offer_deals/index |
-| marketing/offer_deals/brands/offer_deal_discount | Nothing renders it. Its route `offer_deals.brand_discount` points at a missing method: delete the route too |
-| sales/new-order | Nothing links to `feat-order.trip.create`; new-shipping-order replaced it. Delete routes shop-admin.php :435, :440-442 and :450 with it |
-| sales/user-data-table | Its only caller is new-order |
-| sales/products-data-repeater | Nothing renders it |
-| sales/products-data-table | Nothing renders it. Its route is commented out and its method is missing |
-| trips/inc/styles | Only included inside `@section('style')`, which the layout never yields |
-| layouts/blank | No view extends it (leftover installer CSS) |
-| system/server_status | Owner call. `/health` supersedes it; its PHP "7.3/7.4" check is always red and its `select version()` is MySQL-only |
+## 5. Conflict decisions and retained work
 
-**Ported nowhere, kept as server-rendered PDFs:** invoices/invoice and
-downloads/brand, category and user (mPDF). They move with phase 6 (§1 of the
-legacy rule plans dompdf + ar-php). `layouts/layout` stays as well: it serves
-the storefront's seller login, not the back office.
+- `StoreBooleanField` has one `name`/`value`/`disabled` API. Adapt callers.
+- Dedicated settings requests reject foreign/reserved keys before writing,
+  including plain/localized forms. Generic settings cannot write migrated
+  reference, header/home, general-settings, script, map or
+  environment-controlled keys. The general-settings keys
+  (`UpdateGeneralSettingsRequest::KEYS`, including `timezone`) are reserved
+  there since §17; the footer and appearance Blade forms keep the generic
+  writer and its four-permission gate unchanged.
+- The timezone is config-managed: `config('app.timezone')` is `'UTC'` in
+  `config/app.php`, and no settings screen stores it. The general settings
+  writer validates it against PHP's identifiers (plus the configured value)
+  and refuses any other value with a field error; nothing writes `.env`.
+- Website scripts retain the existing rendering, appearance permission and WAF
+  behavior through the narrowly scoped compatibility endpoint. New script policy,
+  `manage_website_scripts` activation and broad rich-text WAF exceptions are held.
+- Profile and notifications use selected controllers in the Inertia shell;
+  public/seller/customer handlers remain without restoring deleted admin Blade.
+- `ResourceFormPage` has one `after-form` slot inside its width wrapper outside
+  the Form. Shared types, casts/relations, resources and fixtures are additive.
+- English/Arabic translation leaf keys are merged, retaining selected upload
+  namespace shapes rather than replacing whole translation objects.
+- Preserve bounded translated catalogue product search while selected reference
+  forms use its existing route name. Preserve upload URL safety and download/PDF
+  behavior. No Composer manifest or lock changes; the frontend manifests
+  changed only for the owner-approved Tiptap packages (§18).
+- **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
+  Tiptap as the shared back-office editor. `StoreRichTextField` is the one
+  rich-text field for converted screens; blog post create/edit (§18), the
+  newsletter and the ticket reply (§19) use it. The approval lifts the editor
+  hold on the website footer, appearance and custom pages and the editor part
+  of product and digital-product create/edit; each still needs its own
+  migration, and the script policy, `manage_website_scripts` and rich-text WAF
+  exceptions stay held. The Blade editor (summernote in
+  `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
+  its assets stay while those Blade consumers remain: 18 fields in 16 views
+  since §19.
+- Chart.js and new Leaflet dependencies still lack independently verified
+  approval. Preserve existing Blade chart/map assets.
+- Product list switches share one write path. The digital-product and
+  in-house/all-products lists publish and feature through
+  `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
+  The root `ProductController` jQuery endpoints stay unchanged for the Blade
+  seller list (§16).
+- Order tax changes are held: the established entry handlers stored raw product
+  tax metadata and summed line prices for grand total. Percentage conversion and
+  tax/shipping/coupon adjustments need a business decision.
+- Preserve departure ID 9 behavior, Seller app link behavior, shared-session
+  logout semantics and server status. Missing data is handled without inventing
+  new business policy. Shared image-normalization changes remain a policy gap.
+- Remove static-analysis/legacy-test exclusions only for migrated or cleaned
+  handlers. Root controllers still serving public/Blade consumers remain excluded
+  where necessary. Do not remove legacy shells/assets/includes/CSP exceptions
+  while consumers remain. `HandleStoreBladePages` and `store.blade_csp` are still
+  required for storefront, seller and authentication pages.
 
-### 5.1 Findings to fix with (or before) their batch
+### 5.1 Actual retained backend Blade files
 
-Most severe first:
+The current backend inventory contains **56 Blade files**, down from 73 after
+removing three screens each for carriers, customer packages and categories, the
+two brand screens, the digital product list (§15), general settings (§17), the
+two blog post forms (§18), and the newsletter and ticket detail (§19).
+The in-house and all-products lists (§16) removed none:
+`product/products/index.blade.php` is shared with the retained seller product
+list. The Google Map settings screen stays (§17).
+These files remain physically present. Hardening a Blade handler does not count
+as conversion. Protected shells/downloads/invoices are not conversion targets.
 
-1. **ProfileController@update** (admin_profile) took the id from the URL
-   with no ownership check, so any staff member could rewrite any account's
-   name, email, password or avatar. **Fixed**: `AdminProfileRequest`
-   (`authorize()` compares the `profile` route parameter with the signed-in
-   store user, so a foreign id is a 403 before validation) validates name,
-   a unique email, an optional strong `new_password` (`same:confirm_password`)
-   and an existing single-id `avatar` (the uploader has no `data-multiple`);
-   the controller updates `$request->user('store')`. The five empty resource
-   stubs are gone (`->only(['index', 'update'])`). Tests:
-   `LegacyAdminProfileTest`.
-2. **`business_settings.update`** accepts any one of eight permissions and
-   upserts any key with no allowlist. A user holding only `currency_setup` can
-   write `header_script`/`footer_script`, which the storefront prints raw
-   (stored XSS).
-   - Batches 2 and 9 replace it with one endpoint per page, each with that
-     page's permission and its own keys.
-3. **Unescaped HTML built from data:**
-   - `order_configuration.product-search` concatenates `product.name` into
-     HTML (batch 1);
-   - `products.add-more-choice-option` returns unescaped `<option>` values
-     (batch 7).
-4. **Write gates that don't match the buttons:**
-   - `CustomerController` writes behind the read permission
-     `view_all_customers`;
-   - ticket, product-query and conversation replies are checked in the view
-     only;
-   - `approve_seller` exists nowhere;
-   - the store routes outside `temp/admin` (`customers.sendAgreement`,
-     `addresses.*`) are invisible to the permission ratchet.
-   - The port gates the endpoint, not the button.
-5. **Settings that affect the whole merged app:**
-   - every settings save runs `cache:clear` on the cache WMS shares;
-   - activation's `maintenance_mode` runs `artisan down`, which takes WMS down
-     too.
-   - Neither is ported.
-6. **Links and redirects that drop `/temp`:**
-   - blog category links;
-   - the flash deal page link;
-   - `BlogController.php:175` and `BlogCategoryController.php:146`;
-   - the digital-product redirects in ProductController;
-   - the aiz uploader's `appUrl`. Check that one in a browser while Blade
-     modules still use it.
-7. **Route names that went to storefront routes:** `reviews.index` and
-   `subscribers.index`. Give the admin routes their own names when their
-   batch converts. The new sidebar already links to the admin URIs.
-8. **N+1 and strict mode.** `Model::shouldBeStrict()` throws on a lazy load
-   once a list has two or more rows, and no list view in sales, reports,
-   customer or sellers has a render test. Each port eager-loads what its
-   Resource reads.
+- **customer:** `customer/classified_products/index.blade.php`.
+- **(root):** `dashboard.blade.php`.
+- **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
+- **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
+- **invoices:** `invoices/invoice.blade.php`.
+- **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
+- **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
+- **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
+- **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
+- **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
+- **system:** `system/server_status.blade.php`.
+- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
+- **website_settings:** `website_settings/appearance.blade.php`, `website_settings/footer.blade.php`, `website_settings/pages/create.blade.php`, `website_settings/pages/edit.blade.php`, `website_settings/pages/index.blade.php`.
 
-## 6. Audit, per view
+## 6. Registered migrated controllers and consumers
 
-The columns are as the request asked:
+Rebuilt from `php artisan route:list --path=temp --json` and actual controller
+render calls. Paths below are relative to `resources/js/pages/`. A listed
+controller may also return JSON, redirects, PDFs or retained Blade: those are
+identified explicitly. Route names are authoritative; do not copy source-branch
+line numbers or count sibling snapshots.
 
-- **Route name · verb URI:** the line numbers are in `routes/shop-admin.php`
-  unless another file is named.
-- **Controller@method:** the number is the line that renders the view.
-- **Permission:**
-  - "ungated" means the action is listed in `LegacyAdminPermissionsTest`'s
-    ratchet lists;
-  - every route under `/temp/admin` also runs `auth` and `admin`.
-- **Tests:** what renders or exercises the view. The 403 sweep
-  (`LegacyAdminPermissionsTest.php:185`) reaches every gated route but renders
-  nothing, so it is not listed.
+| Controller in `App\Http\Controllers\Store\Admin` | Registered route names | Inertia pages / other consumers |
+| --- | --- | --- |
+| `AddressController` | `admin.addresses.cities`, `admin.addresses.states`, `admin.customers.addresses.store`, `admin.customers.addresses.update`, `admin.customers.addresses.destroy`, `admin.customers.addresses.default` | JSON / redirects / PDF as applicable |
+| `AttributeController` | `attributes.index`, `attributes.store`, `attributes.destroy`, `attributes.edit`, `attributes.update` | `Store/Admin/Product/Attributes/Index.vue`, `Store/Admin/Product/Attributes/Edit.vue` |
+| `AttributeValueController` | `attributes.show`, `destroy-attribute-value`, `edit-attribute-value`, `store-attribute-value`, `update-attribute-value` | `Store/Admin/Product/AttributeValues/Index.vue`, `Store/Admin/Product/AttributeValues/Edit.vue` |
+| `BlogCategoryController` | `blog-category.index`, `blog-category.store`, `blog-category.create`, `blog-category.update`, `blog-category.destroy`, `blog-category.edit` | `Store/Admin/Blog/Categories/Index.vue`, `Store/Admin/Blog/Categories/Create.vue`, `Store/Admin/Blog/Categories/Edit.vue` |
+| `BlogController` | `blog.index`, `blog.store`, `blog.create`, `blog.update`, `blog.destroy`, `blog.edit`, `blog.change-status` | `Store/Admin/Blog/Posts/Index.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Store/Admin/Blog/Posts/Edit.vue`; the public blog stays on root `BlogController` (Blade) |
+| `BrandController` | `brands.index`, `brands.store`, `brands.edit`, `brands.update`, `brands.destroy` | `Store/Admin/Product/Brands/Index.vue` (list and inline add), `Edit.vue`; public/seller/mobile brand consumers and `Api/V2/BrandController` retained |
+| `BrandDiscountController` | `brands_wise_product_discount`, `set_product_discount` | `Store/Admin/Product/BrandDiscounts/Index.vue` |
+| `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
+| `CarrierController` | `carriers.index`, `carriers.create`, `carriers.store`, `carriers.edit`, `carriers.update`, `carriers.destroy`, `carriers.update_status` | `Store/Admin/Setup/Carriers/Index.vue`, `Create.vue`, `Edit.vue`; public/API carrier controller remains separate |
+| `CategoryController` | `categories.index`, `categories.create`, `categories.store`, `categories.edit`, `categories.update`, `categories.destroy`, `categories.featured` | `Store/Admin/Product/Categories/Index.vue`, `Create.vue`, `Edit.vue`; public/seller/mobile category consumers and shared hierarchy utility retained |
+| `CityController` | `cities.index`, `cities.store`, `cities.update`, `cities.destroy`, `cities.edit`, `cities.status` | `Store/Admin/Setup/Cities/Index.vue`, `Store/Admin/Setup/Cities/Edit.vue` |
+| `ColorController` | `colors`, `colors.destroy`, `colors.edit`, `colors.store`, `colors.update` | `Store/Admin/Product/Colors/Index.vue`, `Store/Admin/Product/Colors/Edit.vue` |
+| `ConversationController` | `conversations.admin_index`, `conversations.admin_destroy`, `conversations.admin_reply`, `conversations.admin_show` | `Store/Admin/Support/Conversations/Index.vue`, `Store/Admin/Support/Conversations/Show.vue` |
+| `CountryController` | `countries.index`, `countries.status` | `Store/Admin/Setup/Countries/Index.vue` |
+| `CouponController` | `coupon.index`, `coupon.store`, `coupon.create`, `coupon.product-options`, `coupon.update`, `coupon.destroy`, `coupon.edit` | `Store/Admin/Marketing/Coupons/Index.vue`, `Store/Admin/Marketing/Coupons/Create.vue`, `Store/Admin/Marketing/Coupons/Edit.vue` |
+| `CurrencyController` | `currency.index`, `currency.create`, `currency.settings.update`, `currency.store`, `currency.edit`, `currency.update_status`, `your_currency.update` | `Store/Admin/Setup/Currencies/Index.vue` |
+| `CustomerController` | `bulk-customer-delete`, `change_password`, `customers.important`, `customers.not_important`, `customers.store`, `customers.whatsapp_contact`, `customers.page-views`, `customers.index`, `customers.archive`, `customers.create`, `download.trade_license`, `customers.login`, `customers.restore`, `customers.sendAgreement`, `customers.verify`, `customers.update`, `customers.destroy`, `customers.change_activity_status`, `customers.edit`, `customers.update_customer_notes`, `update_password`, `customers.ban`, `representatives.index`, `representatives.create`, `representatives.store` | `Store/Admin/Customers/Customers/Index.vue`, `Store/Admin/Customers/Customers/Create.vue`, `Store/Admin/Customers/Customers/Edit.vue`, `Store/Admin/Customers/Customers/Views.vue` |
+| `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
+| `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
+| `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
+| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`; download → file response; `digitalproducts.create`/`store`/`edit`/`update` → root `DigitalProductController` retained Blade forms (editor-blocked); seller, mobile and storefront download consumers separate |
+| `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
+| `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
+| `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
+| `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
+| `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
+| `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
+| `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | JSON / redirects / PDF as applicable |
+| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
+| `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
+| `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
+| `OffersCatalogController` | `offers.destroy`, `(unnamed compatibility)`, `offers.index`, `offers.store` | `Store/Admin/Catalogue/Offers/Index.vue` |
+| `OrderConfigurationController` | `order_configuration.index`, `order_configuration.update`, `order_configuration.representative.update` | `Store/Admin/Setup/OrderConfiguration/Index.vue` |
+| `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue` |
+| `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
+| `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
+| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`); `products.seller`, `products.create`/`store`, `products.admin.edit`/`seller.edit`/`update`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the form helpers stay on root `ProductController` for the Blade seller list and editor forms |
+| `ProductBulkUploadController` | `bulk_product_upload`, `pdf.download_brand`, `pdf.download_category`, `pdf.download_seller`, `product_bulk_export.index`, `product_bulk_upload.index` | `Store/Admin/Product/BulkUpload/Index.vue` |
+| `ProductQueryController` | `product_query.index`, `product_query.show`, `product_query.reply` | `Store/Admin/Support/ProductQueries/Index.vue`, `Store/Admin/Support/ProductQueries/Show.vue` |
+| `ProductSearchController` | `order_configuration.product-search`, `products.add-more-choice-option` | JSON / redirects / PDF as applicable |
+| `ProfileController` | `profile.index`, `profile.update` | `Store/Admin/Profile/Index.vue` |
+| `ReportController` | `commission-log.index`, `in_house_sale_report.index`, `seller_sale_report.index`, `stock_report.index`, `user_search_report.index`, `wallet-history.index`, `wish_report.index` | `Store/Admin/Reports/CommissionHistory.vue`, `Store/Admin/Reports/InHouseSales.vue`, `Store/Admin/Reports/Searches.vue`, `Store/Admin/Reports/SellerSales.vue`, `Store/Admin/Reports/Stock.vue`, `Store/Admin/Reports/WalletHistory.vue`, `Store/Admin/Reports/Wishlist.vue` |
+| `RepresentativePackageController` | `rep.packages.create`, `rep.packages.destroy`, `rep.packages.index`, `rep.set-package`, `rep.packages.store`, `rep.packages.update`, `rep.packages.edit` | `Store/Admin/Representatives/Packages/Index.vue`, `Store/Admin/Representatives/Packages/Create.vue`, `Store/Admin/Representatives/Packages/Edit.vue` |
+| `RepresentativePaymentController` | `admin.rep.payments.accept`, `admin.rep.payments.export`, `admin.rep.payments.index`, `admin.rep.payments.reject` | `Store/Admin/Representatives/Payments/Index.vue` |
+| `ReviewController` | `admin.reviews.index`, `reviews.published` | `Store/Admin/Product/Reviews/Index.vue` |
+| `RoleController` | `roles.index`, `roles.store`, `roles.create`, `roles.update`, `roles.destroy`, `roles.edit` | `Store/Admin/Staff/Roles/Index.vue`, `Store/Admin/Staff/Roles/Create.vue`, `Store/Admin/Staff/Roles/Edit.vue` |
+| `SettingsController` | `activation.index`, `business_settings.update.activation`, `facebook_chat.index`, `facebook_chat.update`, `facebook-comment`, `facebook-comment.update`, `file_system.index`, `google_analytics.index`, `google_analytics.update`, `facebook_pixel.update`, `google-firebase.index`, `google-firebase.update`, `google_recaptcha.index`, `google_recaptcha.update`, `payment_method.index`, `payment_method.update`, `smtp_settings.index`, `test.smtp`, `social_login.index` | `Store/Admin/Settings/Index.vue` |
+| `ShippingConfigurationController` | `shipping_configuration.index`, `shipping_configuration.update` | `Store/Admin/Setup/ShippingConfiguration/Index.vue` |
+| `StaffController` | `staffs.index`, `staffs.store`, `staffs.create`, `staffs.update`, `staffs.destroy`, `staffs.edit` | `Store/Admin/Staff/Staffs/Index.vue`, `Store/Admin/Staff/Staffs/Create.vue`, `Store/Admin/Staff/Staffs/Edit.vue` |
+| `StateController` | `states.index`, `states.store`, `states.update`, `states.destroy`, `states.edit`, `states.status` | `Store/Admin/Setup/States/Index.vue`, `Store/Admin/Setup/States/Edit.vue` |
+| `SubscriberController` | `admin.subscribers.index`, `subscriber.destroy` | `Store/Admin/Marketing/Subscribers/Index.vue` |
+| `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`, `Show.vue` (§19); reply → redirect to the detail; customer/seller ticket pages stay on root/seller `SupportTicketController` (Blade) |
+| `TaxController` | `tax.index`, `tax.store`, `tax.update`, `tax.destroy`, `tax.edit`, `taxes.tax-status` | `Store/Admin/Setup/Taxes/Index.vue`, `Store/Admin/Setup/Taxes/Edit.vue` |
+| `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
+| `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
+| `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index` | `Store/Admin/Representatives/Visits/Index.vue` |
+| `WebsiteHeaderController` | `website.header`, `website.header.update` | `Store/Admin/Website/Header.vue` |
+| `WebsiteHomeController` | `website.home.edit`, `website.home.update` | `Store/Admin/Website/Home.vue` |
+| `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
-The per-module tables were built by Explore agents from static reads, cited by
-line, and spot-checked. Re-check a row against the code before relying on it
-for a batch.
+Visit details/day maps are served by retained root `VisitController`; trips and
+Google map settings also retain their Blade GET consumers. Root
+`BusinessSettingsController` keeps the Google Map GET, the generic settings
+writer, the seller commission/verification screens and `env_key_update`, so it
+stays in both analysis exclusion lists. Website footer,
+appearance and custom pages, seller/classified screens use retained root handlers. The newsletter and
+the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
+by source/path in the reconciliation ledger. The unavailable audit commit
+`aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
 
-### staff (6 views): converted in the pilot
 
-| View | Route name · verb URI | Now | Permission | Kind | JS it depended on | Tests now | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| staff/staffs/index | `staffs.index` · GET /temp/admin/staffs | Store\Admin\StaffController@index → `Store/Admin/Staff/Staffs/Index` | `view_all_staffs` | list | confirm-delete modal, data-method post | tests/Feature/Store/Admin/StaffControllerTest.php; Index.test.ts; e2e store-staff-coexistence.spec.ts | converted, Blade deleted |
-| staff/staffs/create | `staffs.create` · GET …/staffs/create; `staffs.store` · POST …/staffs | @create, @store → `…/Staffs/Create` | `add_staff` | form | aiz-selectpicker | same; Create.test.ts | converted |
-| staff/staffs/edit | `staffs.edit` · GET …/staffs/{staff}/edit; `staffs.update` · PUT …/staffs/{staff}; `staffs.destroy` · DELETE …/staffs/{staff} | @edit, @update, @destroy → `…/Staffs/Edit` | `edit_staff`, `delete_staff` | form | aiz-selectpicker | same; Edit.test.ts | converted |
-| staff/staff_roles/index | `roles.index` · GET /temp/admin/roles; `roles.destroy` · DELETE …/roles/{role} | Store\Admin\RoleController@index, @destroy → `Store/Admin/Staff/Roles/Index` | `view_staff_roles`, `delete_staff_role` | list | confirm-delete modal | tests/Feature/Store/Admin/RoleControllerTest.php; Index.test.ts | converted |
-| staff/staff_roles/create | `roles.create`, `roles.store` | @create, @store → `…/Roles/Create` | `add_staff_role` | form (permission grid) | aiz-switch checkboxes | same; Create.test.ts | converted |
-| staff/staff_roles/edit | `roles.edit` · GET …/roles/{role}/edit?lang=; `roles.update` · PUT …/roles/{role} | @edit, @update → `…/Roles/Edit` | `edit_staff_role` | form (language tabs + permission grid) | aiz-switch checkboxes | same; Edit.test.ts | converted |
+## 7. Independent reconstructed audit (2026-10-11, prompt 3)
 
-### setup_configurations (40 views) and downloads (3 views)
+This audit starts from integration HEAD `29e5e2527bf7f9920436e5970a4413c46325ed03`.
+The unavailable `aed3feab5b6edd95fb941ee92a455e058403def5` remains excluded;
+none of its code or claimed verification was recovered. Detailed evidence,
+commands and limits are in [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#independent-reconstructed-audit--prompt-3).
 
-URIs are under `/temp/admin` unless shown. `s/c/` = `setup_configurations/`, BSC = BusinessSettingsController. Every gated route here is also hit by the 403 sweep (`LegacyAdminPermissionsTest.php:185`), which never renders a page; "none" below means no test renders the view.
+- `HandleStoreBladePages` distinguishes the genuine Inertia root view `app`
+  from Blade views, including CMS/policy views with `page` data. Preserve its
+  Blade CSP override and 409 `X-Inertia-Location` fallback; do not classify
+  arbitrary view variables as an Inertia response.
+- Retained backend, frontend and seller uploader layout `app-url` metadata uses
+  `url('/temp')`, preserving request scheme/port. File-base metadata uses existing
+  `my_asset('')`, avoiding obsolete `/public/` and lost-port thumbnail URLs. Do not change shared asset URL
+  helpers as a side effect. The selected Vue resource remains `id,name,type,size,url`.
+- Public CMS metadata uses the schema's nullable `keywords` and `meta_image`,
+  rather than nonexistent `tags`/`meta_img`. Preserve public content and established
+  sanitization. The VoguePay package currency expression now reads the configured
+  currency directly; verification renders templates without payment calls.
+- Representative receipt QR compilation was already fixed in selected source
+  `218f05f15693a06f748b9d20b799cad5f8a75e81`; real receipt PDF tests pass.
+- Retained representative web visit-note writes must save only the current store
+  actor's own visit. The former integration no-op is fixed with a typed validated
+  request; foreign visits retain the established `0` response. No departure,
+  tax, logout or role-grant policy changes accompany this fix.
+- Retained `/temp/product-queries` read aliases preserve the previous
+  `view_all_product_queries` gate and redirect to selected admin handlers.
+  Encrypted legacy detail identifiers are accepted, invalid identifiers return
+  404, and customer submission/seller consumers remain separate.
+- Browser fixtures use an idempotent Arabic-language setup in dedicated
+  `database/e2e.sqlite`; selectors reflect current Inertia language pages.
+  Keep single-worker/no-retry/no-server-reuse behavior. Quote fixture seeder
+  namespaces in shell commands; use graceful shutdown for Docker-backed servers.
+  HTTPS and an installed Chromium executable can be supplied through environment
+  overrides. Enforce CSP in browser tests; do not use report-only as success evidence.
+- `CellTest` must not manually reserve `Z` beside Faker-generated unique row
+  letters. Its four reproduced collision seeds are covered with generated parents;
+  lazy factory parent creation remains unchanged.
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| downloads/brand | `pdf.download_brand`, `seller.pdf.download_brand` · GET …/bulk-upload/download/brand (:149; shop-seller:43) | ProductBulkUploadController@pdf_download_brand (:67), Seller\… (:39) | `product_bulk_import`; seller: role middleware | print (mPDF) | none | none | keep Blade (PDF download, shared with the seller area) |
-| downloads/category | `pdf.download_category`, `seller.pdf.download_category` (:148; shop-seller:42) | ProductBulkUploadController@pdf_download_category (:58), Seller\… (:30) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF download) |
-| downloads/user | `pdf.download_seller` · GET …/bulk-upload/download/seller (:150) | ProductBulkUploadController@pdf_download_seller (:76) | `product_bulk_import` | print (mPDF) | none | none | keep Blade (PDF); nothing links to it |
-| s/c/activation | `activation.index` · GET …/activation (:315) | BSC@activation (:54) | `features_activation` + `RaizerSuperAdmin` | form (toggle board) | `$.post business_settings.update.activation` (returns 1/0), notify | LegacyAdminPanelTest:152,158; LegacyEnvFileProtectionTest:77 | port-trim: wholesale/auction cards (194-223), ProxyPay card (734-752, no controller), FORCE_HTTPS card (7-19, `.env` only); do not port `maintenance_mode` → `artisan down` (takes WMS down too) |
-| s/c/carriers/create | `carriers.create` (:625) | CarrierController@create (:50) | `manage_carriers` | form | aizuploader, aiz-selectpicker, range-table cloning, `$.ajax` FormData → `carriers.store` (1 or 422 JSON) | none | port |
-| s/c/carriers/edit | `carriers.edit` (:625) | CarrierController@edit (:106) | `manage_carriers` | form | as create, `$.ajax` → `carriers.update` | none | port |
-| s/c/carriers/index | `carriers.index` (:625) | CarrierController@index (:39) | `manage_carriers` | list | `$.post carriers.update_status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/cities/create | `cities.create` (:636) | CityController@create — empty | `manage_shipping_cities` | — (0-byte file) | — | none | **delete** (empty file, nothing renders it) |
-| s/c/cities/edit | `cities.edit` · GET …/cities/edit/{id}?lang= (:638) | CityController@edit (:91) | `manage_shipping_cities` | form (language tabs) | aiz-selectpicker | none | port |
-| s/c/cities/index | `cities.index` (:636) | CityController@index (:47) | `manage_shipping_cities` | list + inline add form | aiz-selectpicker, `$.post cities.status`, confirm-delete | LegacyPaginationTest:257 | port |
-| s/c/countries/index | `countries.index` (:617) | CountryController@index (:41) | `shipping_country_setting` | list | `$.post countries.status` | LegacyPaginationTest:273; LegacyControllerMiddlewareConversionTest:27 | port |
-| s/c/currencies/create | `currency.create` · GET (:359) | CurrencyController@create (:69) | `currency_setup` | modal partial (AJAX HTML) | injected by currencies/index with `.html(data)` | none | port as a dialog |
-| s/c/currencies/edit | `currency.edit` · POST …/currency/currency_edit (:361) | CurrencyController@edit (:75) | `currency_setup` | modal partial (AJAX HTML) | injected with `.html(data)` | none | port as a dialog |
-| s/c/currencies/index | `currency.index` (:356) | CurrencyController@currency (:46) | `currency_setup` | list + 2 settings forms | aiz-selectpicker, the two `.html(data)` loads, `$.post currency.update_status` | none | port |
-| s/c/facebook_chat | `facebook_chat.index` (:326) | BSC@facebook_chat (:87) | `facebook_chat` | form | none | none | port-trim: the page-id field writes `.env` (refused); only the toggle saves |
-| s/c/facebook_configuration/facebook_comment | `facebook-comment` (:328) | BSC@facebook_comment (:92) | `facebook_comment` | form | none | none | port-trim: app-id `.env` field does nothing |
-| s/c/file_system | `file_system.index` (:317) | BSC@file_system (:102) | `file_system_&_cache_configuration` | form | aiz-selectpicker, `$.post …update.activation` | LegacyEnvFileProtectionTest:38 | port-trim: every input is `.env` (refused) and its forms post to `payment_method.update`, resetting `paypal_sandbox`; read-only status at most, stop printing secrets |
-| s/c/general_settings | `general_setting.index` (:314) | BSC@general_setting (:49) | `general_settings` | form | aizuploader ×3, aiz-selectpicker | LegacyAdminPermissionsTest:228 (write endpoint) | port-trim: timezone is `.env` only |
-| s/c/google_configuration/google_analytics | `google_analytics.index` (:320) | BSC@google_analytics (:69) | `analytics_tools_configuration` | form | none | none | port-trim: pixel/tracking-id `.env` fields do nothing |
-| s/c/google_configuration/google_firebase | `google-firebase.index` (:323) | BSC@google_firebase (:82) | `google_firebase_setting` | form | none | none | port-trim: `FCM_SERVER_KEY` field does nothing |
-| s/c/google_configuration/google_map | `google-map.index` (:322) | BSC@google_map (:78) | `google_map_setting` | form + map picker | Google Maps JS (places) via `shop.frontend.partials.google_map` | none | port-trim: `MAP_API_KEY` field does nothing |
-| s/c/google_configuration/google_recaptcha | `google_recaptcha.index` (:321) | BSC@google_recaptcha (:74) | `google_recaptcha_configuration` | form | none | none | port-trim: key field does nothing |
-| s/c/languages/app_translation | `app-translations.show` (:384) | LanguageController@showAppTranlsationView (:226) | `language_setup` | form (key grid) | inline copyTranslation() | none | port |
-| s/c/languages/create | `languages.create` (:374) | LanguageController@create (:51) | `language_setup` | form | aiz-selectpicker (flags) | none | port |
-| s/c/languages/edit | `languages.edit` (:374) | LanguageController@edit (:91) | `language_setup` | form | aiz-selectpicker | RouteServiceProviderTest:43 | port |
-| s/c/languages/index | `languages.index` (:374) | LanguageController@index (:46) | `language_setup` | list + 2 forms | `$.post languages.update_rtl_status`/`update-status`, confirm-delete | LegacyTripUploadTest:43; LegacyEnvFileProtectionTest:50 | port-trim: Default Language form posts to `env_key_update` (refused) |
-| s/c/languages/language_view | `languages.show` (:374) | LanguageController@show (:85) | `language_setup` | form (key grid) | inline copyTranslation() | none | port — this is the translation admin; see §2.3 |
-| s/c/order_configuration/index | `order_configuration.index` (:349) | BSC@order_configuration (:531) | `order_configuration` | form | second jQuery from a CDN; `$.ajax order_configuration.product-search` (JSON, ungated) builds unescaped HTML (XSS sink) | none | port |
-| s/c/payment_method | `payment_method.index` (:316) | BSC@payment_method (:97) | `payment_methods_configurations` | form (8 gateway cards) | none | none | port-trim: credential inputs are `.env` (do nothing), Authorize.Net stub; only `<gw>_sandbox` toggles save; gateways pending phase 0b |
-| s/c/pickup_point/create | `pick_up_points.create` (:563) | PickupPointController@create (:52) | `pickup_point_setup` | form | aiz-selectpicker | none | port |
-| s/c/pickup_point/edit | `pick_up_points.edit` · GET …/edit/{id}?lang= (:565) | PickupPointController@edit (:107) | `pickup_point_setup` | form (language tabs) | aiz-selectpicker | none | port |
-| s/c/pickup_point/index | `pick_up_points.index` (:563) | PickupPointController@index (:42) | `pickup_point_setup` | list | confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/shipping_configuration/index | `shipping_configuration.index` (:345) | BSC@shipping_configuration (:517) | `shipping_configuration` | form | none | none | port |
-| s/c/smtp_settings | `smtp_settings.index` (:319) | BSC@smtp_settings (:64) | `smtp_settings` | form | aiz-selectpicker, inline checkMailDriver() | LegacyEnvFileProtectionTest:50 | port-trim: whole form posts to `env_key_update` (refused) — read-only; keep "Send test email" (`test.smtp`, gated by `send_newsletter`) |
-| s/c/social_login | `social_login.index` (:318) | BSC@social_login (:59) | `social_media_logins` | form | none | LegacyEnvFileProtectionTest:50 | port-trim: all 4 forms post to `env_key_update` — read-only or drop |
-| s/c/states/edit | `states.edit` (:621) | StateController@edit (:101) | `manage_shipping_states` | form | aiz-selectpicker | none | port |
-| s/c/states/index | `states.index` (:621) | StateController@index (:47) | `manage_shipping_states` | list + inline add form | aiz-selectpicker, `$.post states.status` | none | port |
-| s/c/tax/create | `tax.create` (:366) | TaxController@create — empty | `vat_&_tax_setup` | form (orphan) | aiz-selectpicker | none | **delete** (nothing renders it; byte copy of pickup_point/create) |
-| s/c/tax/edit | `tax.edit` · GET …/tax/edit/{id} (:368) | TaxController@edit (:92) | `vat_&_tax_setup` | form | none | none | port |
-| s/c/tax/index | `tax.index` (:366) | TaxController@index (:35) | `vat_&_tax_setup` | list + inline add modal | `$.post taxes.tax-status`, confirm-delete | LegacyStoreStateChangingRoutesTest:117 | port |
-| s/c/zones/create | `zones.create` (:633) | ZoneController@create (:39) | `manage_zones` | form | aiz-selectpicker (multiple) | none | port |
-| s/c/zones/edit | `zones.edit` (:633) | ZoneController@edit (:63) | `manage_zones` | form | aiz-selectpicker (multiple) | none | port |
-| s/c/zones/index | `zones.index` (:633) | ZoneController@index (:32) | `manage_zones` | list | confirm-delete; status switch calls an undefined `update_status()` | LegacyStoreStateChangingRoutesTest:117 | port (build or drop the status toggle) |
+255 retained/current Blade templates compile and lint as PHP. Syntax coverage
+is distinct from representative runtime rendering, PDF rendering, and browser
+workflow coverage. Public initial-response HTML was compared with an isolated
+pre-pilot `cdf719789541079ce86c5dc1b605520aa1ab7c9f` worktree. Existing SEO gaps
+remain recorded: generic homepage listing/search `og:url`, missing `/temp` in
+CMS/policy `og:url`, and indexable login. Sampled pages have no canonical tags,
+JSON-LD or itemscope structured data; do not describe absent features as migrated.
 
-Notes:
-1. `env_key_update`, `overWriteEnvFile` and `updateActivationSettingsInEnv` refuse every request (BSC.php:320-358, 483-488), so smtp_settings, social_login, file_system and the Default Language form save nothing, and the google_*/facebook_*/payment_method screens save only their toggles. These views print `env()` secrets into `value=` attributes (`NoEnvOutsideConfigTest.php:58` exempts this folder); the port reads `config()` or masks them.
-2. Every settings save runs `Artisan::call('cache:clear')`, which clears the cache WMS shares. Do not port it; forget the specific keys.
-3. Only currencies/index loads HTML over AJAX (`currency.create`, `currency.edit`).
-4. Duplicate names where the explicit override wins: `tax.edit`, `cities.edit`, `pick_up_points.edit` (`…/edit/{id}`), `languages.update` (POST `…/{id}/update`), every `*.destroy` (POST `…/destroy/{id}`). The resource `GET …/{x}/edit` URIs stay registered without a name.
+Retained-module issues are separate from integration regressions: populated
+brand admin pages referenced absent `brands.order_level` (resolved by §14 without
+schema change); the populated retained
+dashboard lacks product-translation eager loading; legacy API/seller resource
+routes still include nonexistent handlers, and legacy uploader deletion
+failure handling remains weaker than the selected admin controller. These need
+separate scoped work; do not activate core catalogue/seller migrations or change
+shared storage policy during this audit. Keep all recorded owner-decision gaps.
+Final combined verification and production MySQL/role-grant review remain pending.
 
-### marketing (25 views), blog_system (6), notification (1)
 
-URIs are under `/temp/admin`. Every gated route is also hit by the 403 sweep; SCR = `LegacyStoreStateChangingRoutesTest` (verb list, plus the `:183` scan for `data-method="post"` on delete links).
+## 8. Combined verification attempt (2026-10-11, prompt 4)
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| blog_system/blog/create | `blog.create` (:533) | BlogController@create (:61) | `add_blog` | form | aiz-selectpicker, aizuploader ×2, summernote, makeSlug() | none | port |
-| blog_system/blog/edit | `blog.edit` (:533) | BlogController@edit (:120) | `edit_blog` | form | as create | none | port (`Blog::find` without 404) |
-| blog_system/blog/index | `blog.index` (:533) | BlogController@index (:50) | `view_blogs` | list | `$.post blog.change-status` (`publish_blog`), confirm-delete | SCR:32 | port |
-| blog_system/category/create | `blog-category.create` (:529) | BlogCategoryController@create (:58) | `add_blog_category` | form | none | none | port |
-| blog_system/category/edit | `blog-category.edit` (:529) | BlogCategoryController@edit (:108) | `edit_blog_category` | form | none | none | port |
-| blog_system/category/index | `blog-category.index` (:529) | BlogCategoryController@index (:47) | `view_blog_categories` | list | confirm-delete | SCR:31 | port (its links use `url('admin/blog-category/…')`, which misses `/temp`) |
-| marketing/coupons/create | `coupon.create` (:540) | CouponController@create (:51) | `add_coupon` | form | aiz-selectpicker; `$.post coupon.get_coupon_form` → `.html(data)` | none | port |
-| marketing/coupons/edit | `coupon.edit` (:540) | CouponController@edit (:90) | `edit_coupon` | form | `$.post coupon.get_coupon_form_edit` → `.html(data)` on load | none | port |
-| marketing/coupons/index | `coupon.index` (:540) | CouponController@index (:41) | `view_all_coupons` | list (not paginated) | confirm-delete | SCR:42 | port |
-| marketing/dynamic_popup/create | `dynamic-popups.create` (:301) | DynamicPopupController@create (:58) | `add_dynamic_popups` | form | aizuploader, aiz-selectpicker ×2 (queries in the view) | LegacyDynamicPopupTest:39 (store) | port |
-| marketing/dynamic_popup/edit | `dynamic-popups.edit` (:301) | DynamicPopupController@edit (:93) | `edit_dynamic_popups` | form | as create | LegacyDynamicPopupTest:60 (update) | port |
-| marketing/dynamic_popup/index | `dynamic-popups.index` (:301) | DynamicPopupController@index (:48) | `view_all_dynamic_popups` | list | confirm-delete, bulk-delete `$.ajax`, `$.post dynamic-popups.update-status` | SCR:57 | port |
-| marketing/flash_deals/create | `flash_deals.create` (:422) | FlashDealController@create (:59) | `add_flash_deal` | form | aizuploader, aiz-date-range, aiz-selectpicker ×2; `$.post flash_deals.product_discount` → `.html(data)` | none | port |
-| marketing/flash_deals/edit | `flash_deals.edit` · GET …/flash_deals/edit/{id}?lang= (:424) | FlashDealController@edit (:130) | `edit_flash_deal` | form (language tabs) | as create; `…product_discount_edit` → `.html(data)` | none | port |
-| marketing/flash_deals/flash_deal_discount | `flash_deals.product_discount` · POST (:428) | FlashDealController@product_discount (:236) | `add_flash_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/flash_deals/flash_deal_discount_edit | `flash_deals.product_discount_edit` · POST (:429) | FlashDealController@product_discount_edit (:242) | `edit_flash_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/flash_deals/index | `flash_deals.index` (:422) | FlashDealController@index (:49) | `view_all_flash_deals` | list | `$.post flash_deals.update_status`/`update_featured` | LegacyPaginationTest:220 (renders) | port (page link `url('flash-deal/'.slug)` misses `/temp`) |
-| marketing/newsletters/index | `newsletters.index` (:295) | NewsletterController@index (:33) | `send_newsletter` | form | aiz-selectpicker ×2 (every user email), summernote | none | port (replace the all-emails select with search) |
-| marketing/offer_deals/base_offer_deal_discount | `offer_deals.base_product_discount` · GET (:466) | OfferController@base_product_discount (:168) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/brands/base_offer_deal_discount | `offer_deals.base_brand_discount` · GET (:471) | OfferController@base_brand_discount (:180) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/brands/create | `offer_deals.brands.create` (:470) | OfferController@brandCreate (:192) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | port |
-| marketing/offer_deals/brands/edit | `offer_deals.edit` (brand offers) (:459) | OfferController@edit (:59) | `edit_offer_deal` | form | as create; `…brand_discount_edit` → `.html(data)` | none | port (no `brand_offer` input today, so saving recreates the base row with a null product) |
-| marketing/offer_deals/brands/index | — | none | — | list | — | none | **delete** (nothing renders it; duplicate of offer_deals/index) |
-| marketing/offer_deals/brands/offer_deal_discount | `offer_deals.brand_discount` · GET (:472) | OfferController@brand_discount — **missing** | `add_offer_deal` | partial | — | none | **delete**, with its route |
-| marketing/offer_deals/brands/offer_deal_discount_edit | `offer_deals.brand_discount_edit` · POST (:473) | OfferController@brand_discount_edit (:187) | `edit_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/create | `offer_deals.create` (:457) | OfferController@create (:47) | `add_offer_deal` | form | aizuploader, aiz-date-range, selectpickers, two `.html(data)` loads | SCR:63 | port |
-| marketing/offer_deals/edit | `offer_deals.edit` (product offers) (:459) | OfferController@edit (:61) | `edit_offer_deal` | form | `…product_discount_edit` → `.html(data)` | none | port |
-| marketing/offer_deals/index | `offer_deals.index` (:456) | OfferController@index (:42) | `view_all_offer_deals` | list | `$.post` status/repeatable/multiple-usage toggles | LegacyAdminPermissionsTest:260; SCR:62 | port |
-| marketing/offer_deals/offer_deal_discount | `offer_deals.product_discount` · GET (:467) | OfferController@product_discount (:164) | `add_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/offer_deals/offer_deal_discount_edit | `offer_deals.product_discount_edit` · POST (:468) | OfferController@product_discount_edit (:175) | `edit_offer_deal` | partial (AJAX HTML) | — | none | port as client-side rows |
-| marketing/subscribers/index | admin route unnamed (:478); the name `subscribers.index` went to the storefront's GET /temp/subscribers (shop-web:245) | SubscriberController@index (:36) | `view_all_subscribers` | list | confirm-delete | SCR:84 | port; give the admin route its own name |
-| notification/index | `admin.all-notification` (:654) | NotificationController@index (:16) | ungated (READS list) | list (15/page) | none | none | port; the GET marks every unread notification as read |
+The integration branch remains at `29e5e2527bf7f9920436e5970a4413c46325ed03`,
+with preserved reconstructed-audit work and eleven additional frontend-test
+contract fixes. No local commit, push or deployment. Full mounts now distinguish
+page fields/forms from the integrated sidebar search/cache action; exact prop
+assertions include Pagination `async:false` and AddResourceLink `inertia:true`.
+No production permission or frontend behavior was relaxed to make tests pass.
 
-Notes:
-1. AJAX endpoints that return HTML (all injected with `.html(data)`): `coupon.get_coupon_form[_edit]` (returning `shop.partials.coupons.*`, outside this folder, with their own inline scripts), `flash_deals.product_discount[_edit]`, `offer_deals.base_product_discount`, `product_discount`, `base_brand_discount`, `product_discount_edit`, `brand_discount_edit`. The partials only render product name, thumbnail and price plus inputs: client-side rows fed by props.
-2. The sidebar only shows these screens when `raizer_admin` is set or a business setting is on (`Blog_Section`, `Marketing_Section`, `Flash_deals`, `Offer_deals`, `Newsletters`, `coupon_system`); the controllers never check those settings.
-3. Hardcoded URLs without `/temp`: blog category links, the flash deal page link, `BlogController.php:175` (`redirect('admin/blogs')`), `BlogCategoryController.php:146`.
-4. No FCM sending here: that is `AdminNotificationController`, rendering `customer/notifications/*`.
+Current sandbox denies the existing Docker socket with `connect: operation not
+permitted`; host PHP/Composer are absent. User internet authorization did not
+result in granted runtime access. PHP formatting/static checks, full backend,
+Wayfinder generation, build, template compilation/render/PDF checks and isolated
+MySQL remain blocked. All-store Playwright attempt exited at PHP web-server
+startup; zero browser tests executed in this prompt. Historical focused results
+and seven-workflow browser runs are not final combined verification.
+Current full frontend run passes 2,050 tests in 227 files; TypeScript passes.
+Exact lint/format/diff outcomes are in the ledger's prompt 4 section. These
+frontend results do not satisfy the blocked backend/build/browser gate.
 
-### product (22 views), uploaded_files (3), offers_catalog (1)
+Fresh source recount: 255 Blade templates, including 253 shop/73 backend;
+§5.1 exactly matches the 73 files. Literal layout `@extends` consumers are backend
+admin 49, backend auth/error 3, frontend 49, frontend user panel 19, seller 29.
+Counts describe source consumers, not executed endpoints; retain all protected
+shells, includes, assets, PDFs, root template and Blade CSP. Source dispositions,
+completed/partial/pending/decision-blocked scope in §§4–6 remain unchanged.
 
-URIs are under `/temp/admin` unless shown. SCR = `LegacyStoreStateChangingRoutesTest` (verb list only, never renders).
+Brands/dashboard defects and legacy uploader/route concerns match baseline and
+remain separately scoped inherited debt. Six additive permission migrations add
+store definitions without role pivot writes/destructive rollback; deployed role
+grants and MySQL locking/collation/signed-FK compatibility are still unverified.
+Dedicated order-entry and blog/support permission-migration tests remain a
+coverage gap. Preserve guards, narrow allowlists, denied-write invariants and
+established order tax behavior when completing the blocked checks.
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| offers_catalog/index | `offers.index` · GET …/offers/index (:124) | OffersCatalogController@index (:21) | ungated (READS list) | list + inline PDF upload (plain file input, `OffersCatalogStorage`, not aiz) | confirm-delete | LegacyOffersCatalogTest (store/download/destroy, not this page) | port; needs a permission name (§7.1) |
-| product/attribute/attribute_value/edit | `edit-attribute-value` (:590) | AttributeController@edit_attribute_value (:166) | `edit_product_attribute_value` | form | none | none | port |
-| product/attribute/attribute_value/index | `attributes.show` (:583) | AttributeController@show (:93) | `view_product_attribute_values` | list + inline create | confirm-delete | SCR | port |
-| product/attribute/edit | `attributes.edit` · GET …/attributes/edit/{id} (:585) | AttributeController@edit (:106) | `edit_product_attribute` | form (language tabs) | none | none | port |
-| product/attribute/index | `attributes.index` (:583) | AttributeController@index (:47) | `view_product_attributes` | list + inline create | confirm-delete | SCR | port |
-| product/brand_wise_discount/set_discount | `brands_wise_product_discount` (:91) | BrandController@brandsWiseProductDiscount (:175) | `view_all_brands` (its write needs `product_edit`) | list, a form per row | aiz-date-range, `$.post set_product_discount` | none | port |
-| product/brands/edit | `brands.edit` · GET …/brands/edit/{id} (:87) | BrandController@edit (:111) | `edit_brand` | form | aizuploader ×2 | RouteServiceProviderTest:46 (name) | port |
-| product/brands/index | `brands.index` (:85) | BrandController@index (:46) | `view_all_brands` (store: `add_brand`) | list + inline create | aizuploader, confirm-delete | **LegacyAdminPanelTest:66-76 (renders)**; LegacyAdminPermissionsTest:212 | port |
-| product/bulk_upload/index | `product_bulk_upload.index` (:143) | ProductBulkUploadController@index (:46) | `product_bulk_import` | form (plain file input) | none | none | port |
-| product/categories/create | `categories.create` (:77) | CategoryController@create (:63) | `add_product_category` | form | aiz-selectpicker (live search), aizuploader ×3, `shop.categories.child_category` | none | port |
-| product/categories/edit | `categories.edit` · GET …/categories/edit/{id} (:79) | CategoryController@edit (:143) | `edit_product_category` | form | as create | none | port |
-| product/categories/index | `categories.index` (:77) | CategoryController@index (:49) | `view_product_categories` | list | `$.post categories.featured`, confirm-delete | RouteServiceProviderTest:47 (name); SCR | port |
-| product/color/edit | `colors.edit` · GET …/colors/edit/{id} (:597) | AttributeController@edit_color (:223) | `edit_color` | form | none | none | port |
-| product/color/index | `colors` (:595) | AttributeController@colors (:202) | `view_colors` | list + inline create | color-filter switch posts to `business_settings.update.activation` (RaizerSuperAdmin only) | SCR | port-trim: move the switch to settings |
-| product/digital_products/create | `digitalproducts.create` (:131) | DigitalProductController@create (:66) | `add_digital_product` | form | aizuploader ×4 (one any-type file), selectpicker, summernote, aiz-tag-input, aiz-date-range | none | port |
-| product/digital_products/edit | `digitalproducts.edit` · GET …/edit/{id} (:133) | DigitalProductController@edit (:164) | `edit_digital_product` | form | as create | none | port |
-| product/digital_products/index | `digitalproducts.index` (:131) | DigitalProductController@index (:52) | `show_digital_products` | list | 3 switches posting to `products.*` (need `product_edit`) | SCR | port |
-| product/products/create | `products.create` (:99) | ProductController@create (:270) | `add_new_product` | form | selectpicker ×10, switches ×22, aizuploader ×4, summernote, aiz-tag-input, aiz-date-range; `$.ajax add-more-choice-option` (`<option>` strings) and `sku_combination` → `.html(data)` | none | port-trim: pos barcode (:92), refund (:101), club point (:306) blocks |
-| product/products/edit | `products.admin.edit`, `products.seller.edit` · GET …/products/{admin\|seller}/{id}/edit (:101-102) | ProductController@admin_product_edit (:421), @seller_product_edit (:445) | `product_edit` | form | as create + tagify; `sku_combination_edit` → `.html(data)` | none | port-trim: same addon blocks; `seller_product_edit` passes no `$variations`/`$barcodes`, so the page errors |
-| product/products/index | `products.admin`, `products.seller`, `products.all` (:96-98) | ProductController@admin_products (:119), seller_products (:161), all_products (:253) | `show_in_house_products` / `show_seller_products` / `show_all_products` | list | switches ×20, 5 `$.post` toggles, bulk delete, `products.fetch` (JSON) | SCR | port |
-| product/products/sku_combinations | `products.sku_combination` · POST (:117); also the seller's | ProductController@sku_combination (:749) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as a client-side variant grid; retire the endpoint |
-| product/products/sku_combinations_edit | `products.sku_combination_edit` · POST (:118) | ProductController@sku_combination_edit (:781) | ungated | partial (AJAX HTML) | aizuploader per variant | none | port as above |
-| product/reviews/index | admin GET …/reviews (:551) is unnamed; `reviews.index` went to the storefront GET /temp/reviews (shop-web:358) | ReviewController@index (:42) | `view_product_reviews` | list | `$.post reviews.published` | **LegacyPaginationTest:238 (renders)** | port; give the admin route its own name |
-| uploaded_files/create | `uploaded-files.create` (:646) | AizUploadController@create (:57) | ungated | form (Uppy dashboard) | `AIZ.plugins.aizUppy` → `/aiz-uploader/upload` | none | port into the uploads replacement (§2.4) |
-| uploaded_files/index | `uploaded-files.index` (:646) | AizUploadController@index (:50) | ungated | list (60-per-page grid, search/sort) | `$.post uploaded-files.info` → `.html(data)`; bulk delete; copy URL | SCR | port into §2.4 |
-| uploaded_files/info | `uploaded-files.info` · ANY …/uploaded-files/file-info (:648) | AizUploadController@file_info (:217) | ungated + UploadPolicy | modal partial (AJAX HTML) | none | none | port-trim: a client-side panel from JSON; the GET is shadowed by the resource `show` route |
+Baseline frontend lock differs in 14 patch package versions; installed current
+versions satisfy inspected dependency ranges, with a coherent Vue-family upgrade.
+This supports compatible substitution, not historical lock equivalence. Prior
+initial-HTML comparison was reviewed but could not be recaptured; inherited SEO
+gaps and absent canonical/JSON-LD/itemscope features remain as recorded in §7.
+Exact commands, attempted/executed results, dependency differences and next checks
+are recorded in the reconciliation ledger. Runtime recovery is required before
+claiming combined verification satisfactory or creating the authorized local commit.
 
-Notes:
-1. HTML over AJAX: `products.sku_combination[_edit]`, `uploaded-files.info`, `/temp/aiz-uploader` (the modal); `products.add-more-choice-option` returns unescaped `<option>` strings.
-2. Redirects that drop `/temp`: `admin_product_edit`/`seller_product_edit` send digital products to `redirect('admin/digitalproducts/…')`, which lands in the warehouse app.
-3. `ProductController@get_products_by_subcategory` (route :109) does not exist; the `uploaded-files` resource's store/show/edit/update map to missing methods.
-4. Two upload paths bypass aiz on purpose: the offers catalogue (`OffersCatalogStorage`, private disk) and bulk import (plain file input). Keep both out of §2.4.
 
-### trips (19 views) and representatives (10)
+### 8.1 Runtime-access follow-up
 
-URIs are under `/temp/admin`. Own = `LegacyAdminOwnershipTest` (its renders only assert "not 403"); SCR as above; "ungated" = listed in `LegacyAdminPermissionsTest`'s ratchet lists.
+The running Docker daemon/socket and correct task group membership were confirmed;
+local AF_UNIX connect still returns `EPERM` under an active execution filter.
+Specific socket/network permission request returned no grant. Do not chmod the
+socket, restart the healthy daemon or bypass sandbox/proxy controls; restore
+supported managed-executor socket/connection access. Host PHP 8.5 is absent;
+the root Ubuntu-PPA installer is unsuitable unchanged for non-root Debian 13,
+and missing build prerequisites plus unreachable configured proxy block local
+runtime provisioning. Manifests/locks and all 31 changes are preserved.
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| trips/index | `trips.index`, `trips.today-trips` (:245, :250) | Trip\TripController@getAllTrips/@getTodayTrips (:396) | `view_all_trips` | list | `$.ajax trips.bulk-trip-delete`, `trips.update-notes` (JSON), status modal, confirm-delete | Own:101 | port-trim: delete link gated by `delete_customer` (should be `delete_trip`); edit/status/notes buttons have no `edit_trip` check |
-| trips/orders | `trips.orders` (:246) | TripController@all_orders (:721) | `view_all_trips` | list | aiz-date-range; `bulk-order-delete`, `…bulk-change-delivery-status`, `…update_invoice_number`, `…update_order_status_to_delivered` (JSON); google.com/maps links | none | port-trim: dead manager-notes modal, "Change status" actually marks delivered, nested `<form>`, broken `onchange` typo |
-| trips/create | `trips.create` (:251) | TripController@create (:59) | `add_trip` | form | aiz-selectpicker; includes inc/scripts, inc/map-scripts, checkpoint partials | Own:102 | port (`checkpoints_array` is never validated by TripRequest) |
-| trips/edit | `trips.edit` · GET …/trips/edit/{id} (:256) | TripController@edit (:161) | `edit_trip` | form | as create | none | port (`Trip::find` 500s on a missing id; existing checkpoints never plotted) |
-| trips/create-from-map | `trips.create-from-map` (:252) | TripController@create_from_map (:71) | `add_trip` | form (map picker) | Leaflet 1.7.1 (unpkg) + OSM tiles; `fetch` → `trips.store-from-map`, `…update_order_status_to_delivered` | none | port-trim: drop inc/scripts (throws) and inc/styles; `$truck->lastTrip()->id` fatals when a busy truck has no open trip |
-| trips/checkpoints/index | `trips.show` · GET …/trips/show/{id} (:255) | TripController@show (:52) | `view_all_trips` | show + print | Leaflet + OSM, OSRM route computed server-side, `$.ajax checkpoints.update-notes`, `window.print()`, CMR link | none | port-trim: print CSS never output (`@section('style')` has no yield); crashes on a trip with no checkpoints |
-| trips/components/checkpoint-template | (via create/edit) | — | add/edit_trip | partial | hidden clone template; Eloquent queries inside the view | indirect | port as one Vue checkpoint-row component |
-| trips/components/checkpoint | (via create/edit) | — | add/edit_trip | partial | bootstrap-select + inline script per row | none | port, merged with checkpoint-template |
-| trips/components/update-trip-status-modal | (via index) | — | endpoint needs `edit_trip` | modal partial | `$.post trips.update-status` | indirect | port |
-| trips/components/update-checkpoint-status-modal | (via checkpoints/index) | — | endpoint needs `edit_trip` | modal partial | `$.post checkpoints.update-status` | none | port |
-| trips/inc/scripts | (via create/edit/create-from-map) | — | add/edit_trip | partial (JS) | SortableJS `@latest` (jsdelivr), `$.ajax trips.available-vehicles` (JSON) | indirect | port as a composable |
-| trips/inc/map-scripts | (via create/edit) | — | add/edit_trip | partial (JS) | Leaflet + OSM, `fetch trips.user-coordinates` (JSON; geocodes through OpenCage) | indirect | port |
-| trips/inc/styles | (included inside `@section('style')`) | — | — | partial (CSS) | none | — | **delete**: the layout has no `@yield('style')`, so it never reaches the page |
-| trips/drivers/index | `drivers.index` (:273) | Trip\DriverController@index (:30) | `view_all_drivers` | list | confirm-delete | Own:108; SCR | port-trim: delete link gated by `delete_customer` (should be `delete_driver`) |
-| trips/drivers/create | `drivers.create` (:274) | DriverController@create (:37) | `add_driver` | form | aiz-selectpicker | Own:109 | port-trim: dead recaptcha div |
-| trips/drivers/edit | `drivers.edit` · GET …/edit/{id} (:276) | DriverController@edit (:68) | `edit_driver` | form | aiz-selectpicker | Own:127,144,179 (non-200 paths only) | port-trim: dead recaptcha div |
-| trips/trucks/index | `trucks.index` (:282) | Trip\TruckController@index (:28) | `view_all_trucks` | list + print | qrcode 1.5.0 + jsPDF 2.4.0 (cdnjs): QR PDF built and printed client-side | Own:113 | port (no delete UI: `trucks.destroy`/`bulk-truck-delete` point at missing methods) |
-| trips/trucks/create | `trucks.create` (:283) | TruckController@create (:33) | `add_truck` | form | aizuploader (multiple) | none | port |
-| trips/trucks/edit | `trucks.edit` (:285) | TruckController@edit (:67) | `edit_truck` | form | aizuploader | none | port (`find()` 500s on a missing id) |
-| representatives/index | `representatives.index` (:209) | CustomerController@repIndex (:441) | `view_all_customers` | list | `$.post rep.packages.modal` → `.html(data)`; bulk delete; ban/unban modals | SCR (ban buttons) | port-trim: orphan `<td>`s misalign columns |
-| representatives/create | `representatives.create` (:210) | CustomerController@repCreate (:446) | `view_all_customers` | form | double-submit guard | none | port |
-| representatives/packages/index | `rep.packages.index` (:232) | RepresentativePackageController@index (:15) | ungated | list (cards) | confirm-delete | SCR | port; needs a permission name (§7.1) |
-| representatives/packages/create | `rep.packages.create` (:233) | RepresentativePackageController@create (:21) | ungated | form | none | none | port; needs a permission name |
-| representatives/packages/edit | `rep.packages.edit` (:235) | RepresentativePackageController@edit (:47) | ungated | form | none | none | port; needs a permission name |
-| representatives/packages/modal | `rep.packages.modal` · POST (:238) | RepresentativePackageController@package_modal (:110) | ungated | modal partial (AJAX HTML) | posts to `rep.set-package` | none | port as a Vue dialog fed by props; retire the endpoint |
-| representatives/payments/index | `admin.rep.payments.index` · GET /temp/admin/**admin**/representatives/payments/index (:216) | RepresentativePaymentAdminController@index (:68) | ungated | list | accept/reject `data-method="post"`; export is a server PDF | SCR:27 | port-trim: dead ban/unban modals, package modal, checkbox column |
-| representatives/visits/index | `admin.rep.visits.index` (:224) | VisitController@index (:38) | ungated | list | aiz-date-range, `$.ajax bulk-visit-delete` | SCR:29 | port |
-| representatives/visits/show | `admin.rep.visits.show` (:225) | VisitController@show (:55) | ungated | show | Leaflet + OSM, one marker | none | port (null coordinates break the JS) |
-| representatives/visits/rep-show | `admin.rep.visits.rep-show` (:226) | VisitController@show_all_visits_in_a_day (:78) | ungated | show (map) | Leaflet markers + polyline | none | port-trim: each marker drawn twice |
+Only documentation changed; completed frontend results were not rerun.
+`git diff --check` passes. Outstanding runtime checks and deployed role grants
+remain unverified, with exact diagnostics/fallback assessment in the ledger's
+runtime-access follow-up. The local commit gate remains incomplete.
 
-Notes:
-1. Maps: no Google Maps JS here. Leaflet 1.7.1 from unpkg with OSM tiles (no key); routes from the public OSRM demo server over plain HTTP (TripController.php:514, :569); geocoding through OpenCage (`services.opencage.key`, UserService.php:80), and both GET create-from-map and `trips.user-coordinates` write coordinates back into addresses. A Vue map needs a Leaflet dependency (owner approval: CLAUDE.md "no new dependencies without approval").
-2. Only `rep.packages.modal` returns HTML; everything else answers JSON, `1`/`0` or a redirect.
-3. The trips, trucks, drivers and visits controllers are excluded from the "no `back()`" rule (`ControllerRedirectsTest.php:61-65`); converting them removes the exclusions.
-4. The representatives packages/payments/visits screens and the order-entry screens have no permission name yet (§7.1): their batch must add the names first.
 
-### sellers (13 views), customer (13), admin_profile (1)
+### Authorized local checkpoint
 
-URIs are under `/temp/admin` unless shown. No view here is rendered by any test; coverage is the 403 sweep, the SCR source scan, two "not 403" checks and the payout form-target tests.
+The user explicitly authorized a preservation-only checkpoint with message
+`chore: checkpoint reconciliation pending backend verification`. It contains
+exactly the 31 intended integration/audit/test/documentation files; scratch,
+cache, credentials and generated artifacts are excluded. This authorization
+supersedes the earlier decision to leave the blocked work uncommitted, without
+changing verification or publication status. Backend/PHP/build/template/PDF,
+browser and isolated MySQL checks remain outstanding; deployed grants remain
+unverified. Frontend results remain as recorded. No push or deployment.
+A verified Git bundle will preserve the integration branch's reachable history.
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| admin_profile/index | `profile.index`, `profile.update` (:308, 2 routes) | ProfileController@index, @update | ungated by design: self-service, `update` is self-only (`AdminProfileRequest`) | form → PATCH `profile.update` | aizuploader (single id) | LegacyAdminProfileTest | port |
-| customer/classified_products/index | `classified_products` (:611) | CustomerProductController@customer_product_index (:52) | `view_classified_products` | list | `$.post classified_products.published`, confirm-delete | SCR | port (behind `classified_product`); destroy `data-href` ends in `}}}}` |
-| customer/customer_packages/create | `customer_packages.create` (:603) | CustomerPackageController@create (:52) | `edit_classified_package` | form | aizuploader | none | port |
-| customer/customer_packages/edit | `customer_packages.edit` · GET …/edit/{id}?lang= (:605) | @edit (:101) | `edit_classified_package` | form (language tabs) | aizuploader | none | port |
-| customer/customer_packages/index | `customer_packages.index` (:603) | @index (:42) | `view_classified_packages` | list (cards) | confirm-delete | SCR | port |
-| customer/customers/address_modal | (included by customers/edit:266) | CustomerController@edit (:254) | `view_all_customers` | modal partial | 3× aiz-selectpicker; `$.ajax addresses.edit` → JSON `{html}` injected; `get-state`/`get-city` → `<option>` HTML injected; google_map partial | none | port (rework): admin edits of a customer's address get 403 from `AddressPolicy::manage`, so it needs admin-side address endpoints |
-| customer/customers/archive | `customers.archive` · GET …/customers/archive/get (:190) | @archive (:161) | `delete_customer` | list | dead bulk-delete JS, notes modal, ban/unban modals, login-as, restore | LegacyAdminPermissionsTest:238 (not 403); SCR | port-trim: fold into index as an "archived" filter |
-| customer/customers/create | `customers.create` (:185) | @create (:173) | `view_all_customers` | form → `customers.store` = POST …/customer/store → `store_customer` (:189) | none | RouteServiceProviderTest:49 | port; pick one store handler (StoreUserMassAssignmentTest covers the unnamed `@store`) |
-| customer/customers/edit | `customers.edit` (:185) | @edit (:254) | `view_all_customers` | form → POST `customers.update` (:188) | address_modal; links to trade license, `addresses.destroy`, `customers.sendAgreement` | SCR | port |
-| customer/customers/edit_password | `change_password` (:191) | @change_password (:601) | `view_all_customers` | form → `update_password` | none | GET_ROUTES_THAT_MAY_STAY | port, folded into edit |
-| customer/customers/index | `customers.index` (:185) | @index (:105) | `view_all_customers` | list | bulk delete `$.ajax`, notes modal, confirm-delete, ban/unban modals, login-as, verify/important/activity POST links | SCR | port (Package column header and cell use different conditions) |
-| customer/customers/views | `customers.page-views` (:199) | @pages_views (:744) | `view_all_customers` | list | none | none | port (category link goes to an empty `CategoryController@show`) |
-| customer/notifications/create | `admin.notifications.create` (:663) | AdminNotificationController@createNotification (:53) | `add_notification` | form → `admin.notifications.send` (FCM HTTP v1) | aiz-selectpicker; inert select2 markup | none | port-trim: drop the select2 markup |
-| customer/notifications/index | `admin.notifications.all` (:661) | @getAllNotifications (:35) | `add_notification` | list | confirm-delete | LegacyAdminPermissionsTest:261; SCR | port-trim: commented-out search and categories script |
-| sellers/create | `sellers.create` (:155) | SellerController@create (:80) | `edit_seller` | form | none | none | port |
-| sellers/edit | `sellers.edit` · GET …/sellers/{encrypted}/edit (:155) | @edit (:146) | `edit_seller` | form | none | none | port |
-| sellers/index | `sellers.index` (:155) | @index (:70) | `view_all_seller` | list | aiz-selectpicker; bulk delete; `$.post sellers.payment_modal`/`profile_modal` → `.html(data)`; approve toggle; a `.select2()` call that throws; login-as | payout (redirect target); SCR | port-trim: drop `.select2()`; the approve toggle checks `approve_seller`, which exists nowhere, while the endpoint needs `edit_seller` |
-| sellers/payment | `sellers.payment_history` · GET …/seller/payments/show/{encrypted} (:173) | PaymentController@show (:81) | `seller_payment_history` | list | none | none | port, folded into payment_histories as a filter |
-| sellers/payment_histories/index | `sellers.payment_histories` (:172) | @payment_histories (:46) | `seller_payment_history` | list | none | none | port |
-| sellers/payment_modal | `sellers.payment_modal` · POST (:165) | SellerController@payment_modal (:257) | `pay_to_seller` | modal partial (AJAX HTML) | inline selectpicker; posts to `commissions.pay_to_seller` | payout | port as a Vue dialog; retire the endpoint |
-| sellers/profile_modal | `sellers.profile_modal` · POST (:166) | @profile_modal (:263) | `view_seller_profile` | modal partial (AJAX HTML) | none | none | port as a dialog fed by props |
-| sellers/seller_commission/index | `business_settings.vendor_commission` (:341) | BusinessSettingsController@vendor_commission (:492) | `seller_commission_configuration` | form (settings) | toggles post to `business_settings.update.activation` (RaizerSuperAdmin only) | none | port; the toggles need an endpoint gated by the page's permission |
-| sellers/seller_verification_form/index | `seller_verification_form.index` (:339) | @seller_verification_form (:362) | `seller_verification_form_configuration` | form (field builder) | plain jQuery DOM appends | none | port |
-| sellers/seller_withdraw_requests/index | `withdraw_requests_all` (:179), also `withdraw_requests.index` (:177) | SellerWithdrawRequestController@index (:37) | `view_seller_payout_requests` | list | `$.post …payment_modal`/`message_modal` → `.html(data)`; a throwing `.select2()` | payout; LegacySellerWithdrawRequestTest:117 | port-trim: drop `.select2()`; "Pay Now" has no `@can` while "Message View" is gated on `pay_to_seller` |
-| sellers/seller_withdraw_requests/payment_modal | `withdraw_request.payment_modal` · POST (:180) | @payment_modal (:99) | `view_seller_payout_requests` (submit needs `pay_to_seller`) | modal partial (AJAX HTML) | inline selectpicker | payout | port as a dialog |
-| sellers/seller_withdraw_requests/withdraw_message_modal | `withdraw_request.message_modal` · POST (:181) | @message_modal (:109) | `view_seller_payout_requests` | modal partial (AJAX HTML) | none | none | port: show the message inline, retire the endpoint |
-| sellers/verification | `sellers.show_verification_request` (:160) | SellerController@show_verification_request (:218) | `view_all_seller` | show | approve/reject POST links; verification file links | LegacyShopVerificationTest (download only); SCR | port |
 
-Notes:
-1. Four admin endpoints answer a POST with Blade HTML that the page injects (`sellers.payment_modal`, `sellers.profile_modal`, `withdraw_request.payment_modal`, `withdraw_request.message_modal`); the storefront `addresses.edit` returns `{html}` and `get-state`/`get-city` return `<option>` strings.
-2. "Login as" (`sellers.login`, `customers.login`, GET with `encrypt(id)`) replaces the admin's session with the customer's on the store guard and redirects into the storefront: in Vue a plain `<a>` (full page load), never an Inertia visit.
-3. `CustomerController` gates every write behind the read permission `view_all_customers` (update, update_password, store_customer, verify, important, notes); `customers.sendAgreement` and the `addresses.*` routes live in shop-web.php outside `temp/admin`, so the permission ratchet never sees them; `addresses.store` accepts a posted `customer_id` from any signed-in user.
-4. select2 is not in vendors.js: the `.select2()` calls in sellers/index and the withdraw-requests list throw.
-5. Confirm with the owner that multi-vendor (`vendor_system_activation`) and classifieds (`classified_product`) are in use before porting their 17 views.
+## 9. Resumed runtime verification (2026-10-11)
 
-### sales (9 views), reports (8), invoices (1)
+The separate worktree started and remains at preservation checkpoint
+`924d7d9319cd1a69c41e0b191724a309f05ae86a`. Current results supersede earlier
+runtime-blocked status only for the checks actually completed. Exact evidence
+and next command are in [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#resumed-runtime-verification-2026-10-11).
 
-URIs are under `/temp/admin` unless shown.
+- PHP 8.5.11 with GD WebP and supported Docker execution were recovered during
+  the preceding resume; Composer platform requirements passed. Manifests and
+  locks remain unchanged. Scratch/runtime extensions and generated data stay
+  outside the intended source changes.
+- Full backend: **4,961 tests passed / 23,810 assertions**. Subsequent affected
+  SQLite order tests: **73 passed / 431 assertions**. Pint and PHPStan passed;
+  fresh Wayfinder, production build and TypeScript with generated actions passed.
+  The earlier full frontend 2,050-test/227-file run and full lint/format results
+  remain valid and were not repeated. Latest changed browser-spec lint/format
+  also passed.
+- All **255** Blade templates compile and lint. Full backend includes sampled
+  retained rendering and PDF evidence; syntax does not establish visual parity,
+  every endpoint, or external delivery/payment behavior.
+- New dedicated order-entry/blog-support migration tests close the §8 coverage
+  gap: store-only definitions, no automatic existing-staff grants, idempotent
+  replay and nondestructive rollback preserving permissions/store/web pivots.
+  Deployed role grants remain unverified and are not inferred from definitions.
+- Isolated MySQL 8.4.11 fresh migrations and **101 tests / 587 assertions** passed.
+  JSON assertions compare semantic content; account-search fixtures use integer
+  `AccSysID`, matching the schema. Preserve established order tax arithmetic.
+  Engine metadata confirms InnoDB/`utf8mb4_unicode_ci` and eight signed product
+  FK matches; a two-connection probe confirms held/released row locking,
+  transactional rollback and case-insensitive collation. This is not production
+  data/configuration or concurrent HTTP-load verification. The owned container
+  was stopped afterward.
+- Browser contract fixes preserve workflow/security assertions while using the
+  canonical uploader, current Inertia visits, retained Blade trips, escaped
+  search results, explicit total labels and accessible picker focus return.
+  Simulated support errors preserve the HTTPS origin and use a final Inertia
+  error response; failed-write redirect coverage is not claimed. RTL saves
+  await responses/reload; the endpoint's observed 302 is the current expectation.
+- Actual browser runs were **31 passed/8 failed**, then **11 passed/3 failed**,
+  then **5 passed/2 failed**. The last failures were the incorrect 303 expectation
+  and dependent RTL fixture state. The corrected 302 expectation has not run.
+  Latest fresh all-store attempt executed **zero tests**: current managed shell
+  denies loopback TCP with `EPERM`, and a network permission request returned no
+  grant. Preserve HTTPS/enforced CSP, single worker, zero retries, isolated DB
+  reset and no server reuse when supported access is restored. Do not count
+  partial attempts as a full pass or bypass execution policy.
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| invoices/invoice | `invoice.download` · GET /temp/invoice/{order_id} (shop-web:355); `seller.invoice.download` (shop-seller:74) | InvoiceController@invoice_download (:80), Seller\InvoiceController (:69) | `Gate::authorize('downloadInvoice')` (OrderPolicy) | print (mPDF) | none (QR SVG) | LegacyStoreInvoiceTest:36; Policies/OrderPolicyTest:28 | keep Blade (PDF) |
-| reports/commission_history_report | `commission-log.index` (:523) | ReportController@commission_history (:164) | `commission_history_report` | list | includes the partial | Own:78 (renders) | port-trim: fold the partial in, drop the dead seller branch |
-| reports/partials/commission_history_section | (via the page above) | — | as above | partial | aiz-selectpicker, aiz-date-range | indirect | merge into the page |
-| reports/in_house_sale_report | `in_house_sale_report.index` (:518) | ReportController@in_house_sale_report (:102) | `in_house_product_sale_report` | list | aiz-selectpicker | none | port |
-| reports/seller_sale_report | `seller_sale_report.index` (:519) | ReportController@seller_sale_report (:115) | `seller_products_sale_report` | list | aiz-selectpicker | none | port-trim: `$seller->shop` is not an attribute (MissingAttributeException in strict mode); per-row sums are N+1 |
-| reports/stock_report | `stock_report.index` (:520) | ReportController@stock_report (:90) | `products_stock_report` | list | aiz-selectpicker | none | port |
-| reports/user_search_report | `user_search_report.index` (:522) | ReportController@user_search_report (:132) | `user_search_report` | list | none | none | port |
-| reports/wallet_history_report | `wallet-history.index` (:524) | ReportController@wallet_transaction_history (:195) | `wallet_transaction_report` | list | aiz-selectpicker, aiz-date-range | Own:71 (validation only) | port-trim: dead seller check; "Approval" column is offline-payment addon data |
-| reports/wish_report | `wish_report.index` (:521) | ReportController@wish_report (:127) | `product_wishlist_report` | list | aiz-selectpicker | none | port (use `withCount`) |
-| sales/edit-shipping-order | `new.feat-order.trip.edit` · GET …/feat/new/order/trip/edit/{id} (:447) | FeatureOrderTripController@newEdit (:223), @newUpdate | ungated | form | select2 4.1 (CDN), `$.ajax products.get-details` (JSON), PUT JSON returning a URL | none | port as the shared order-entry component; newUpdate stores the line total as the unit price and drops variations |
-| sales/index | `all_orders.index`, `inhouse_orders.index`, `seller_orders.index`, `pick_up_point.index` (:487-490) | OrderController@all_orders (:156) | `view_all_orders\|view_inhouse_orders\|view_seller_orders\|view_pickup_point_orders` + per-route check (:85-113) | list | aiz-selectpicker, aiz-date-range, bulk checkboxes, `$.ajax bulk-order-delete`, `$.post orders.update_manager_notes` | RouteServiceProviderTest:51; SCR:183 | port-trim: refund column, commented bulk-status JS; `date` filter unvalidated (500 on bad input) |
-| sales/new-new-order | `feat-order.create` · GET …/feat/order/create (:433) | FeatureOrderController@create (:17), @store | ungated | form | select2 (CDN), `products.get-details`, POST JSON returning a URL | none | port as the shared order-entry component |
-| sales/new-order | `feat-order.trip.create` (:440) | FeatureOrderTripController@create (:19) | ungated | form | `$.get feat-order.trip.needed-data` → `.html(data)` | none | **delete** with routes :435, :440-442, :450: nothing links to it; replaced by new-shipping-order |
-| sales/new-shipping-order | `new.feat-order.trip.create` (:444) | FeatureOrderTripController@newCreate (:214), @newStore | ungated | form | select2 (CDN), `products.get-details`, POST JSON returning a URL | none | port as the shared order-entry component (drop dead `.rep-search` JS, which throws on load) |
-| sales/products-data-repeater | none | none | — | partial | jQuery UI sortable | none | **delete**: nothing renders it |
-| sales/products-data-table | none (route commented out at :436, :452) | `productsData` — missing | — | partial | inline script | none | **delete**: nothing renders it |
-| sales/show | `orders.show` + 4 aliases (:483, :492-495) | OrderController@show (:184) | `view_order_details` | show | aiz-selectpicker; `$.post orders.update_payment_status`, `update_tracking_code`, `order.item.edit_price`, `delivery-boy-assign` (dead addon); invoice link | none | port-trim: delivery-boy, manual-payment and auction sections, the hard-coded `disabled` delivery-status select; the view's `@can` checks for payment/delivery status are not enforced server-side |
-| sales/user-data-table | `feat-order.trip.needed-data`, `feat-order.needed-data`, `new.feat-order.trip.needed-data` (:442, :435, :450) | FeatureOrderTripController@getNeededData (:29), FeatureOrderController@getNeededData (:27), @newGetNeededData (:296) | ungated | partial (AJAX HTML) | footable; its inline script never runs after injection | none | **delete**: only new-order calls it |
+The session-owned HTTPS proxy was stopped, and no unrelated processes/healthy
+Docker daemon were targeted. Local fixes, traces and generated artifacts remain
+preserved; no staging/new commit because the browser gate is incomplete. Keep
+all source dispositions and owner-decision gaps in §§4–8, inherited brands/
+dashboard/legacy-route issues, and the excluded unavailable audit unchanged.
+Production MySQL/data rehearsal, deployed grants, external services and absent
+baseline captures remain unverified. No push, PR, merge or deployment.
 
-Notes:
-1. The three order-entry screens are ~95% the same view (rep select, target and pre-filled rows differ); port them as one Vue component with async customer/product search, and give them a permission name first (§7.1).
-2. `Model::shouldBeStrict()` throws on lazy loads once a list has 2+ rows; no list view here has a render test. The Inertia controllers must eager-load what each table reads.
-3. The invoice stays a server-rendered PDF (mPDF through the `PDF` alias; §1 plans dompdf + ar-php). Admin hardcodes `'sa'` fonts; the seller controller passes no `cartResults`.
 
-### dashboard, website_settings, support, system (15 views)
+### Authorized backup checkpoint — pending browser verification
 
-| View | Route name · verb URI (route line) | Controller@method (render line) | Permission | Kind | JS it depends on | Tests | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| dashboard | `shop.admin.dashboard` · GET /temp/admin (:71) | AdminController@admin_dashboard (:62) | ungated (READS list); view wraps all in `@can('admin_dashboard')`, SMTP alert `smtp_settings` | show | Chart.js 2.8 via `AIZ.plugins.chart` ×5, `aiz-carousel` (slick) | LegacyAdminPanelTest:34,42,78,164; LegacyTempRoutesReachableTest:24; StoreRoleMiddlewareTest:100; RouteServiceProviderTest:86 | port-trim: drop graph-3/`total_visits` card (never written since CountWebRouteVisits was dropped), move ~10 inline counts into the controller, send arrays not comma strings from `cached_graph_data` |
-| website_settings/header | `website.header` · GET …/website/header (:394) | WebsiteController@header (:30) | `header_setup` | form (settings) | aizuploader ×4, add-more repeater, aiz-switch | none | port (keep the misspelt `header_stikcy` key: the storefront reads it) |
-| website_settings/footer | `website.footer` · GET …/website/footer?lang= (:393) | WebsiteController@footer (:35) | `footer_setup` | form (settings, translatable) | language tabs, aizuploader ×2 (one multiple), summernote ×2, repeater, aiz-switch | none (storefront output: HtmlSanitizerTest:189) | port-trim: drop Delivery Boy app link (304-312, dead addon); Seller app link is an owner call |
-| website_settings/appearance | `website.appearance` · GET …/website/appearance (:395) | WebsiteController@appearance (:43) | `website_appearance` | form (settings) | aizuploader ×9, summernote ×2, aiz-switch | none | port-trim: drop `delivery_boy_login_page_bg` (103-118); re-gate the custom-script card (see note 1) |
-| website_settings/pages/index | `website.pages` · GET …/website/pages (:396) | WebsiteController@pages (:39) | `view_all_website_pages` (buttons add/edit/delete_website_page) | list | confirm-delete `data-method="post"` | LegacyStoreStateChangingRoutesTest:43 (destroy verb only) | port |
-| website_settings/pages/create | `custom-pages.create` · GET …/website/custom-pages/create (:400) | PageController@create (:49) | `add_website_page` | form | summernote (full toolbar), aizuploader | none | port |
-| website_settings/pages/edit | `custom-pages.edit` · GET …/custom-pages/edit/{slug}?lang= (:402) | PageController@edit (:112) | `edit_website_page` | form (translatable) | language tabs, summernote, aizuploader | LegacyUploadSecurityTest:93 | port |
-| website_settings/pages/home_page_edit | `custom-pages.edit` + `?page=home` (:402) | PageController@edit (:108) | `edit_website_page` | form (settings) | repeater rows with aizuploader, repeater of `aiz-selectpicker` | none | port-trim: delete commented-out blocks and the Auction banner (424-451); stray `</form></div></div>` at 640-642 is live markup |
-| support/support_tickets/index | `support_ticket.admin_index` · GET …/support_ticket (:557) | SupportTicketController@admin_index (:52) | `view_all_support_tickets` | list | GET search form | none | port (N+1 on user/replies) |
-| support/support_tickets/show | `support_ticket.admin_show` · GET …/support_ticket/{enc}/show (:558); reply POST (:559) | SupportTicketController@admin_show (:190), @admin_store | `view_all_support_tickets` (form shows on `reply_to_support_tickets`) | show + reply form | summernote, aizuploader multiple | HtmlSanitizerTest:100 | port; keep server-side `clean_html()` |
-| support/conversations/index | `conversations.admin_index` · GET …/conversations (:571) | ConversationController@admin_index (:59) | `view_all_product_conversations` | list | confirm-delete posting to storefront `conversations.destroy` | LegacyStoreStateChangingRoutesTest:41 | port (needs an admin-scoped delete route) |
-| support/conversations/show | `conversations.admin_show` · GET …/conversations/{enc}/show (:572) | ConversationController@admin_show (:182) | `view_all_product_conversations` (reply checked in view only) | show + reply form | none | none | port (reply posts to storefront `messages.store`: no permission, no ownership check) |
-| support/product_query/index | `product_query.index` · GET …/product-queries (:577) | ProductQueryController@index (:39) | `view_all_product_queries` | list | none | none | port-trim: unused delete modal; `translate($key + 1)` writes a translation row per number |
-| support/product_query/show | `product_query.show` · GET …/product-queries/{enc} (:578); reply PUT (:579) | ProductQueryController@show (:48), @reply | `view_all_product_queries` | show + reply form | none | none | port (`find()` without null check 500s) |
-| system/server_status | `system_server` · GET …/system/server-status (:643) | `Route::view` | `RaizerSuperAdmin` | show | none | none | delete: superseded by the WMS `/health` page (PHP "7.3/7.4" check always red, MySQL-only `select version()`, installer-era writable checks) — owner call |
+The user's subsequent instruction authorizes a preservation-only local checkpoint
+of the intended fixes and both verification records, and a public backup push to
+new branch `codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`
+in `arb-rajab/warehouse_management`. Label the commit
+`chore: checkpoint reconciliation fixes pending browser verification`. Exclude
+scratch/generated files and secrets. Reuse completed checks; do not describe
+the incomplete browser gate or deployed-role/production checks as verified.
+This narrowly supersedes the previous no-commit/no-push status for backup only;
+verify the remote HEAD afterward. No push to `develop` or the existing integration
+branch, PR, merge or deployment. Exact intended scope/limitations are in the
+ledger's matching authorization section; actual publication outcome is reported
+after execution.
 
-Notes:
-1. Every settings form posts `types[]` + values to `business_settings.update` (BusinessSettingsController@update, shop-admin.php:312), which upserts any key with no allowlist, runs `cache:clear` and returns `back()`. Its gate is an OR of eight permissions (:44), so a user with only `currency_setup` can write `header_script`/`footer_script`, which the storefront prints raw. Port as one endpoint per settings page, with that page's permission and an allowlist of keys.
-2. No view here makes its own AJAX call; every `data-toggle="aizuploader"` posts to `/temp/aiz-uploader` (AizUploadController@show_uploader), which returns the modal's HTML.
-3. Write gates disagree with the buttons: ticket reply checks `reply_to_support_tickets` in the view only; product-query reply checks `reply_to_product_queries` in the view only; conversation reply likewise. The port gates the endpoint, not the button.
-4. The sidenav "Home Banners" link hardcodes `config('app.url').'/admin/website/custom-pages/edit/home?page=home'`, which misses `/temp` and lands on the WMS `/admin`.
-5. `PageController@index` and `@show` are empty: GET …/website/custom-pages and …/custom-pages/{id} answer a blank 200.
 
-### layouts (3 views) and inc (2 views)
+## 10. Final all-store browser verification (2026-10-12)
 
-| View | Used by | Kind | What it carries | Verdict |
-| --- | --- | --- | --- | --- |
-| layouts/app | 161 back-office views | layout | vendors.css/js + aiz-core.css/js, `bootstrap-rtl.min.css` and `dir="rtl"` from `languages.rtl` (:2-6, :25), 2 inline scripts (`AIZ.local` uploader strings :37-59, flash notify loop + language switcher + `menuSearch()` :88-134), Poppins from Google Fonts. Yields `content`, `modal`, `script` only — **no `style` yield**, so the `@section('style')` in 7 views (3 order-entry, 4 trips) is dropped | replaced by `StoreAdminLayout.vue`; delete with the last Blade module |
-| layouts/blank | nothing (0 users) | layout | leftover installer CSS | **delete now-able** (dead) — deleted in the last batch with the others to keep this pilot's diff to staff |
-| layouts/layout | `shop/frontend/seller_login`, `deliveryboy_login` (HomeController.php:71,73), `shop/errors/503` | layout (no nav) | same assets as app | stays: it serves the storefront's seller login, not the back office |
-| inc/admin_sidenav | layouts/app:66 | partial (sidebar, 1747 lines) | the menu tree (§2.2); 12 removed-addon blocks link to route names that no longer exist; malformed `@canany`/`@endif` nesting in Setup & Configurations (L1392-1650); a stray top-level duplicate "Shipping" group (L1654-1687); "Home Banners" hardcodes a URL without `/temp` (L771-777) | replaced by `lib/storeAdminMenu.ts`; delete with the last Blade module |
-| inc/admin_nav | layouts/app:68 | partial (top bar) | browse-website link (`home`), Clear Cache (`cache.clear`, raizer admin), notifications dropdown (unread, `admin.all-notification`), language switcher (POST `language.change`, empty 200, then reload), user menu (`profile.index`, `shop.logout`) | replaced by the layout's header/account block |
+Resumed branch
+`codex/store-backoffice-reconciliation-pending-browser-backup-20261011-01`
+in `/workspace/warehouse_management`, confirming starting HEAD
+`a0c880ea376e716ee633c5c5191c45a0a521780a`. Both records and repository guidance
+were read. Approved IPv4/IPv6 loopback bind/connect/transfer probes passed before
+servers started. The default sandbox's socket denial was not treated as evidence
+about approved execution.
 
-Notes:
-1. The aiz uploader posts to `AIZ.data.appUrl + "/aiz-uploader"`, where `appUrl` is `getBaseURL()` (no `/temp`), while the uploader routes exist only under `/temp`. Check in a browser before relying on the Blade uploader during coexistence.
-2. `admin.all-notification` returns a view only for `user_type` admin/seller/customer: staff and accountants (both let through by `IsAdmin`) get an empty 200.
-3. `Language` middleware writes `session('locale')` on every request and runs after WMS's `SetLocale` (en/ar only), so it wins on `/temp` pages; both use the same session key.
+- **Final complete browser run: 39/39 tests passed in 22 files**, exit 0, using
+  installed Chromium 151, local HTTPS, enforced CSP, one worker, zero retries and
+  no server reuse. Every invocation recreated only the four dedicated e2e SQLite
+  databases; mail used the array driver.
+- The latest language correction is now browser-verified: RTL saves return 302,
+  reloads confirm both persisted values, and dependent Arabic order layout passes.
+- Initial complete runs passed 37/39 and 38/39. Traces show failed local navigation
+  and application stylesheet transport through the external Python HTTPS helper.
+  An unchanged fresh driver/support run passed 3/3. A streaming Node helper fixed
+  the transport problem; the five affected driver/marketing/support checks and
+  the subsequent full 39-test run passed. No application/test source, assertion
+  or retry configuration changed. Failed-attempt evidence is retained externally.
+- Native PHP 8.5.11 gained GD WebP through an external runtime extension build;
+  WebP encoding and Composer platform checks passed. Fresh Wayfinder/production
+  build and TypeScript passed. Manifests/locks remain unchanged.
+- Reuse the earlier recorded backend 4,961-test, frontend 2,050-test, isolated
+  MySQL 101-test/engine-probe, PHP/template/render/PDF and lint/format evidence
+  within its stated limits; those checks were not rerun because application/test
+  source is unchanged. Current logs/helpers are external under
+  `/workspace/work/store-browser-final-20261012/`.
+- Playwright upstreams and both owned HTTPS helpers are stopped. Ports 8010/9443
+  have no listeners; no helper container remains running. The managed Docker
+  daemon was retained. Generated uploads are preserved externally. Both records'
+  file links and `git diff --check` pass; only these records enter the authorized
+  local verification commit.
+
+This closes the pending browser gate while preserving all source dispositions,
+inherited retained-module issues, owner decisions and excluded unavailable audit
+in §§4–9. Production data/configuration, deployed grants, real external delivery/
+payment, complete visual parity and unavailable baseline captures remain unverified.
+Browser workflows do not establish globally clean console/network output.
+No push, PR, merge or deployment. Exact per-run logs and commands are in
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12).
+
+
+## 11. Carrier administration follow-up (2026-10-12)
+
+Authorized carrier-only implementation on `codex/carrier-admin-inertia`, from
+merged develop `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`. Before editing,
+actual root controller render calls and all three Blade screens were confirmed.
+The former missing `carriers.show` route had no consumer; its permission-ratchet
+exception and duplicate resource registrations were removed. Seven implemented
+admin actions retain their route names and `manage_carriers` gate. Public/API
+registrations and the separate `Api/V2/CarrierController` remain unchanged.
+
+- The selected `Store/Admin/CarrierController`, dedicated filter/store/update/
+  status requests and `CarrierResource` expose narrow paginated records and
+  explicit edit ranges/zone-price maps. Numeric zone keys serialize as an object
+  so Laravel cannot reindex prices against the wrong zone.
+- Create/update/delete transact the carrier, ranges and prices together. Updates
+  retain the established replace-all behavior, including removed ranges/zones,
+  billing changes and transitions to/from free shipping. Existing contiguous
+  ranges, inclusive lower/exclusive upper boundaries and decimal schema widths
+  are validated; shared shipping arithmetic is unchanged.
+- Canonical image-reference validation controls new logos. An unchanged existing
+  logo can round-trip without granting access to another owner's replacement;
+  previews respect library permission/ownership. No roles or grants change.
+- Carrier/CarrierRange/CarrierRangePrice were typed and removed from both analysis
+  exclusion lists. `CarrierRangePrice::carrier_ranges` explicitly uses the actual
+  `carrier_range_id` column; dedicated relationship tests include unrelated data.
+  Separate API and other legacy model exclusions remain.
+- Vue list/create/edit use existing StoreAdminLayout, ResourceFormPage, table,
+  pagination, status button and StoreUploadField. English/Arabic copy and exact
+  decimal client validation require no new dependencies. Menu/shipping links are
+  Inertia; their tests match actual destinations.
+- Coexistence and legacy-uploader browser fixtures now use retained general
+  settings; uploader interactions are scoped to `system_logo_white`. Carrier
+  browser coverage exercises paid tariff editing, canonical logo selection,
+  native delete confirms, Arabic/RTL and dark contrast through enforced HTTPS.
+
+Current inventory and consumer verification:
+
+- `resources/views/shop/backend`: **70** `.blade.php` files; setup configurations
+  now contain only general settings and Google-map settings. Other directory
+  counts and retained-module/owner-decision dispositions are unchanged.
+- Direct literal Blade inheritance/include scan: **46** templates extend
+  `shop.backend.layouts.app`; **3** extend `shop.backend.layouts.layout`
+  (store error 503, deliveryboy login, seller login). The primary shell still
+  includes admin nav and sidenav once each. The blank layout has no direct
+  literal inheritance/include caller and is retained by the shell contract.
+- Invoice and three export/download templates still have controller consumers;
+  `/temp/reviews`, seller SKU partials, public/seller/auth/email/uploader assets,
+  coexistence middleware and Blade CSP remain. No broad shell cleanup occurred.
+- Actual route inventory: **1,053** `/temp` registrations, **441** `/temp/admin`
+  registrations, seven carrier-admin actions; removed only the broken show and
+  duplicate resource registration. Counts are registrations, not module totals.
+
+Verification results are recorded in the
+[carrier ledger entry](../store-backoffice-reconciliation-20261011.md#carrier-administration-migration-2026-10-12).
+Manifests/locks, tariff helper/API implementation, role grants and unrelated
+brands/dashboard defects are unchanged. Commit authorization is local only;
+no push, PR, merge or deployment is authorized by this follow-up.
+
+
+## 12. Customer package administration follow-up (2026-10-12)
+
+Authorized local-only migration on `codex/customer-package-admin`, based on
+latest fetched develop `71de5cad28d33561ed832acc80d02cc822191e87` (PR #378).
+The package list/create/edit were confirmed Blade before migration. Neither the
+migration guide nor the reconciliation prerequisite table identifies a specific
+package dependency or business-policy decision. Classified-product activation
+and seller feature-use decisions remain separate and unresolved; no feature
+flag, role grant or dependency was changed for this migration.
+
+- Six implemented route names remain, with bound packages and DELETE for
+  destruction. Both PUT and PATCH still update. The empty, unused show action
+  and duplicate resource registrations are removed after a consumer search.
+- The established `view_classified_packages`, `edit_classified_package` and
+  `delete_classified_package` gates remain. Create/store were already edit-gated;
+  the new Add control matches that actual gate instead of the old Blade-only
+  `add_classified_package` affordance. No backend privilege is expanded.
+- `Store/Admin/CustomerPackageController`, dedicated requests and a narrow
+  resource use the established paginated Inertia pattern. The three pages reuse
+  StoreAdminLayout, ResourceFormPage, DataTable, Pagination, language tabs,
+  canonical StoreUploadField and Wayfinder. All new UI copy is English/Arabic.
+- Server validation enforces the translation name width (50), nonnegative
+  decimal(20,2) prices, nonnegative signed-integer upload limits, selected
+  languages and canonical image-reference ownership/library permissions.
+  Unchanged valid foreign logos round-trip, with previews still policy-gated.
+- Create/update transact the base package and translation together; update and
+  delete lock the package. Updating a nondefault translation leaves the base
+  name intact while updating shared price/benefits, as before. Delete removes
+  translations and package atomically, preserving existing payment history,
+  customer assignments and remaining uploads, including legacy dangling IDs.
+- The root CustomerPackageController remains for `purchase_package` and
+  `purchase_payment_done`, with those bodies unchanged. Public Blade packages,
+  customer products/dashboard, VoguePay, shared purchase helper, payment
+  adapters, GatewayPaymentService, seller consumers and V2 API contracts remain.
+  CustomerPackage/CustomerPackageTranslation are typed and removed from both
+  analysis exclusion lists; the still-legacy root/API/payment model exclusions
+  remain. No casts alter legacy amount/benefit values.
+- Current backend inventory: **67 Blade files**, **43** literal consumers of
+  `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+  direct literal consumers of the blank layout. Shells, their nav includes,
+  three downloads, invoice, seller SKU partials, uploader assets and CSP remain.
+  Actual route registrations: **1,050** under `/temp`, **438** under
+  `/temp/admin`, six customer-package admin actions. Counts are registrations.
+
+Verification and limitations are recorded in the
+[customer package ledger entry](../store-backoffice-reconciliation-20261011.md#customer-package-administration-migration-2026-10-12).
+
+
+## 13. Category administration follow-up (2026-10-12)
+
+Category administration now uses `Store/Admin/Product/Categories` from fetched
+`develop` at `03734ff6c3fe97435b08cf8d4c0644c792a09663` on
+`codex/category-admin-inertia`. The exact base SHA is also recorded in the
+reconciliation ledger. PR #379's 14 head checks, merge SAST and existing deploy
+run `38245990290` passed; deployment `7013472103` reports success. That workflow
+reused an existing successful tests run and skipped `Test the merged commit`.
+All GitHub work was read-only; no deployment was requested.
+
+No category-specific dependency, feature-use or owner prerequisite appears in
+the reconciliation decision table. The inherited `CategoryUtility` level writers
+adjust by one and return after the first child branch, including on a move across
+multiple levels. This migration preserves those bodies and pins their existing
+behavior; correcting sibling/subtree level maintenance requires separate scoped
+authorization. Deletion still moves immediate children to the deleted category's
+parent and clears only that category's product references. It does not cascade
+children, product rows, classified rows or other legacy references.
+
+Completed: three Inertia screens, seven implemented route names and the existing
+view/add/edit/delete permission vocabulary; StoreAdminLayout, shared form/table/
+pagination/actions, translation tabs, status button, canonical upload picker and
+Wayfinder. Updates support PUT/PATCH; deletes use DELETE; the empty unused show
+and duplicate registrations are removed. Search remains on the base category name
+and ordering remains descending priority. Dedicated requests validate schema
+bounds, languages, parent references/cycles, attributes and image ownership.
+Category/translation/pivot/product and hierarchy writes use transactions, with
+ordered hierarchy locks and validation repeated under those locks. Existing
+foreign image IDs can round-trip without authorizing replacement or previews.
+Shared `ProvidesStoreUploadPreviews` centralizes the unchanged preview boundary
+for category, carrier and customer-package forms.
+
+Translated names, type, commission setting/rate, ordering, banner/icon/cover,
+filtering attributes, slug and SEO title/description remain. No model casts,
+public/seller/mobile contract, role grant, feature flag or upload normalization
+policy changed. CategoryTranslation is typed and removed from both analysis
+exclusions; Category was already analyzed. CategoryUtility and API exclusions
+remain. Only the three exclusively consumed admin Blade screens and the replaced
+root controller are removed. Shared `shop.categories.child_category`, seller/SKU
+partials, PDFs, shells, assets, legacy uploader and CSP handling remain.
+
+Current inventory: **64** backend Blade files; **40** direct literal consumers of
+the primary admin shell, **3** of its secondary layout, **0** of its blank shell;
+**1,047** `/temp` and **435** `/temp/admin` registrations. No category-admin Blade
+screens remain; the protected category PDF remains. Exact filenames are in §5.1.
+
+Verification results and runtime limits are recorded in the category section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No push, PR, merge, deployment or production-data mutation is authorized.
+
+
+## 14. Brand administration follow-up (2026-10-12)
+
+Brand administration now uses `Store/Admin/Product/Brands`, from fetched
+`develop` at `f39b065d8b376d324a0ec965c333070ffe2cbf6f` (PR #385 merged) on
+`ccr-deb0d484-n8nxxo`. Both brand screens were Blade before migration. The
+reconciliation decision table has no brand-specific dependency, feature-use or
+owner hold; the form has plain text, textarea and image fields only.
+
+**`brands.order_level` evidence.** No schema source defines it: this repo's
+`create_brands_table`/legacy-columns migrations (`brands` gains only `serial`),
+the legacy `shop.sql` 6.5.0 dump, all 70 vendor `sqlupdates/v*.sql` (only
+`v42.sql` adds `order_level`, to `categories`) and all 107 legacy migrations at
+`arb-rajab/albaraka-holland@75531338fa8190891c6e334620e461f6c79fe5be`, read-only.
+The legacy list read it (500 under local/testing strict attributes) and
+`BrandController::store` wrote it, so every brand creation failed with an unknown
+column wherever the schema matches these sources. No other reader exists:
+`brands.serial` is the Otajer `Mat_Class` import key, not an ordering field; the
+admin list orders by name, and storefront/API brand reads apply no ordering. The
+converted screens neither read nor write `order_level`; no schema, replacement
+field or ordering policy was added. Production's schema was not inspected: if
+production has the column, adding it here is a separate owner-approved change.
+
+Completed:
+
+- Five implemented route names with the existing `view_all_brands`, `add_brand`,
+  `edit_brand` and `delete_brand` gates; bound `/brands/edit/{brand}`, PUT/PATCH
+  `/brands/{brand}` and DELETE `/brands/destroy/{brand}` keep their URIs. The empty
+  `create`/`show` actions and duplicate resource registrations are removed. Legacy
+  tests that used brand routes as Blade or POST-delete examples now use the still-
+  Blade digital-product routes, or the DELETE brand route.
+- The list keeps base-name search and name ordering, pages 20 with the per-page
+  selector and keeps inline add, gated by `add_brand`. Edit has translation tabs;
+  the base name changes only for the default language. Create slugs keep
+  space-to-dash replacement or the generated `<name>-<5 random>` shape; update
+  slugs are lowercased or regenerated from the posted name, as before. Update
+  returns to the edit screen in the same language. Logos use the canonical
+  StoreUploadField and image-reference policy; an unchanged foreign logo round-
+  trips without preview access. Dedicated requests validate schema widths.
+- `BrandDiscountResource` became the shared `BrandResource`, and its batched logo
+  lookup moved to `ProvidesStoreBrandLogos`; the brand-discount payload is
+  unchanged. The repeated retained-image rule in the carrier, customer-package
+  and category requests moved to `ValidatesStoreUploadReference::retainableImageUploadRule()`.
+- Brand and BrandTranslation are typed and leave both analysis exclusions with
+  the deleted root controller. ImportBrands and API exclusions remain.
+
+**Retained deletion behavior (owner decision):** deleting a brand still deletes
+every `products` row carrying it, then its translations and the brand, now in
+one transaction. This conflicts with shared-database.md's single-writer rule for
+WMS-owned `products`. A product referenced by a pallet, store product barcode or
+variation makes the delete fail atomically (those foreign keys restrict) with a
+server error; otherwise it cascades WMS product settings/barcodes and nulls
+cell-log/verification product references.
+Changing this (e.g. clearing `brand_id`, or refusing with a validation error)
+needs explicit authorization; tests pin the current behavior.
+
+Retained: public `brands.all` Blade, storefront/seller/customer brand selects,
+V2/seller brand APIs, `top`/`serial` writers, `shop.backend.downloads.brand`,
+shells, legacy uploader and Blade CSP. No casts, cache invalidation, permission
+definitions/grants, flags, manifests/locks or upload normalization policy changed.
+
+Current inventory: **62** backend Blade files; **38** direct literal consumers of
+the primary admin shell, **3** of its secondary layout, **0** of its blank shell;
+**1,043** `/temp` and **431** `/temp/admin` registrations. No brand-admin Blade
+screens remain. Verification is in the brand section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No push, PR, merge, deployment or production-data mutation is authorized.
+
+
+## 15. Digital product list follow-up (2026-10-12)
+
+The digital product list now uses `Store/Admin/Product/DigitalProducts/Index`,
+on `claude/digital-products-list-migration-6tpmmr` (PR #387), branched from
+`develop` at `f39b065d8b376d324a0ec965c333070ffe2cbf6f` (PR #385) and then
+merged with `develop` at `6de7128` once PR #386 (brands, §14) landed.
+The create and edit forms stay Blade: they use the Blade rich-text editor and
+the Tiptap dependency has no verified approval (§5).
+
+**Routes and handlers.** Ten registrations replace the resource plus three
+overrides. Every route name used by a consumer is kept; the empty, unused
+`digitalproducts.show` and the nameless resource `edit`/`destroy` duplicates
+are gone.
+
+- `Store\Admin\DigitalProductController`: `digitalproducts.index`,
+  `digitalproducts.destroy` (now `DELETE /digitalproducts/destroy/{product}`),
+  `digitalproducts.download` (still `GET /digitalproducts/download/{id}` with
+  the encrypted id) and three new typed switches, `digitalproducts.published`,
+  `.featured` and `.todays_deal` (`POST /digitalproducts/{product}/…`).
+- Root `DigitalProductController` keeps only `create`, `store`, `edit` and
+  `update`, bodies unchanged, so it stays in both analysis exclusion lists.
+  `digitalproducts.update` keeps PUT/PATCH on `/digitalproducts/{id}`; `store`
+  still redirects to the (now Inertia) list and `update` still goes back.
+- Gates are unchanged per action: `show_digital_products`,
+  `add_digital_product`, `edit_digital_product`, `delete_digital_product`,
+  `download_digital_product`. The Blade list showed edit, delete and download
+  under `add_digital_product`; the Vue list gates each on its route's own
+  permission, as §2.2 does for the sidebar.
+
+**List.** Ordering (`created_at desc`, plus `id` as a tie-breaker), base-name
+search and the `digital = 1` filter are kept; page size moves from 10 to the
+pilot's 20 with the selector. The narrow `DigitalProductResource` sends the
+translated name, author, thumbnail through `uploaded_asset()` (placeholder
+included, as the Blade did per row), the `number_format` price, the three
+flags, the public `product` URL by slug (null without a slug) and the
+encrypted download id. Create, edit and download are plain full-load `<a>`
+links built from Wayfinder `.url()`; the name links to the storefront page in
+a new tab.
+
+**Switches.** The shared `products.published`/`.featured`/`.todays_deal`
+endpoints (root `ProductController`, gated by `product_edit`) answer `1`/`0`
+for jQuery, take any product id and write stock before a possible refusal, so
+an Inertia visit cannot use them. They stay unchanged for the Blade product
+lists. The new endpoints keep the `product_edit` gate and the writes:
+unpublish also unfeatures and zeroes every stock row, publish sets stock to
+1,000, published/featured run `view:clear` and `cache:clear`, today's deal
+forgets `todays_deal_products`. Each locks the row in a transaction, accepts
+only digital products (404 otherwise) and redirects preserving the query. The
+seller-subscription refusal is kept, but now refuses (422 on `status`) before
+any write instead of after the stock update.
+
+**Deletion: owner decision pending, behaviour unchanged.** Deleting still
+removes the product's translations and stock rows and hard-deletes the
+`products` row, now in one transaction with the row locked, and only for a
+digital product. This is the same single-writer conflict as brand deletion
+(§14; `products` is WMS-owned, shared-database.md). A pallet referencing
+the product (`pallets.product_id` restrict) or a store barcode/variation
+(no-action FKs) makes the delete fail atomically with a server error; WMS
+settings/barcodes cascade and cell-log/verification references null. Tests pin
+both outcomes. Soft delete, a refusal with a validation error, or any other
+policy needs owner approval. The published switch likewise remains a second
+writer of `products.published`, which `products:sync` overwrites for feed
+products; that predates this change.
+
+**Download.** Gate `download_digital_product`; the encrypted-id contract is
+kept, since external bookmarks cannot be ruled out. Two narrow defect fixes:
+an undecryptable or non-integer id and a product whose upload is missing or
+whose local file is absent are 404s, not a 500 or an empty 200. The S3 branch
+is unchanged (a missing S3 object still fails in the driver).
+`seller.digitalproducts.download`, the mobile `purchased-products/download`
+and the storefront `digital-products.download` are separate controllers and
+untouched.
+
+**Consumers traced.** Only the root `index` rendered the removed list view;
+`create`/`edit` views, `shop.categories.child_category`, PDFs, shells, the
+legacy uploader and `HandleStoreBladePages`/`store.blade_csp` remain. The Blade
+sidebar's `areActiveRoutes(['digitalproducts.index', …])` names still resolve.
+`ProductController::admin_product_edit`/`seller_product_edit` still redirect a
+digital product to `admin/digitalproducts/{id}/edit` and
+`digitalproducts/{id}/edit` without `/temp`, which already missed the store
+(inherited debt, unchanged).
+
+**Tests retargeted, none weakened.** PR #386 moved `HandleStoreBladePagesTest`,
+`ReconstructedMigrationAuditTest` and `RouteServiceProviderTest` (plus the
+`RouteServiceProvider` docblock) from brand routes to the then-Blade digital
+product routes. With digital products converted, they now use the retained
+general settings page (`/temp/admin/general-setting`) and the `sellers`
+resource/`sellers.destroy` override as the duplicate-name example.
+`LegacyStoreStateChangingRoutesTest` already accepts DELETE for
+`digitalproducts.destroy`.
+
+Current inventory: **61** backend Blade files (62 after §14), **37** direct
+literal consumers of `shop.backend.layouts.app`, **3** of
+`shop.backend.layouts.layout`, **0** of the blank shell; **1,043** `/temp` and
+**431** `/temp/admin` registrations, unchanged by this module because ten
+registrations replace ten. Verification is recorded in the digital-product
+section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No push, PR, merge, deployment or production-data mutation is authorized.
+
+
+## 16. In-house and all-products lists follow-up (2026-10-12)
+
+The in-house (`products.admin`) and all-products (`products.all`) lists now use
+one Inertia page, `Store/Admin/Product/Products/Index`, with a `listType` of
+`admin` or `all`. Work is on `claude/migrate-admin-product-lists-2q0qog`,
+branched from `develop` at `2aafc21` (the PR #387 merge), and merged as
+PR #388 at `046be2005c3019584483a44eecefddd39116a831`. The owner authorized
+this session's PR, its merge into `develop` and `[skip ci]` on both. The PR and
+its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
+`develop` deploy ran for them.
+
+**Still Blade.** The seller list (`products.seller`) stays Blade with seller
+administration (§4.1), so the shared `product/products/index.blade.php` stays
+and its seller branch is unchanged. Product create/edit stays Blade because it
+needs the rich-text editor (Tiptap approval pending, §5). The Vue page links to
+it with plain full-load `<a>` links built from Wayfinder `.url()`.
+
+**Routes and gates.** `products.admin` and `products.all` keep their URIs and
+their `show_in_house_products`/`show_all_products` gates on
+`Store\Admin\ProductController`. Six new row actions each send `list`, the list
+they came from, as a query parameter. Each action reaches only a product that
+list shows, which is a 404 otherwise, and returns to that list with its filters.
+
+- `products.list.published`, `.featured` and `.for_sale`, all gated by
+  `product_edit`, at `POST /products/{product}/…`.
+- `products.list.duplicate`, gated by `product_duplicate`, at
+  `POST /products/{product}/duplicate`.
+- `products.list.destroy`, gated by `product_delete`, at
+  `DELETE /products/{product}`.
+- `products.list.bulk_destroy`, gated by `product_delete`, at
+  `POST /products/bulk-delete`.
+
+The in-house list shows only `added_by = admin`, non-auction, non-wholesale,
+non-digital products. The all-products list shows every owner and digital
+product, but never an auction or wholesale product.
+
+The root `ProductController` keeps everything else for the Blade seller list
+and the editor forms, unchanged: the jQuery switches, approval, duplicate,
+destroy, `bulk-product-delete`, `products.fetch`, search and the SKU/form
+helpers. It loses only `admin_products`, `all_products` and their two
+middleware entries, and stays in both analysis exclusion lists.
+
+**Lists.** The legacy filters are kept, with their legacy query names, so the
+seller Blade list's preset links still work.
+
+- **In-house state filters.** `active`, `for_sale` and `featured` always match
+  exactly, ticked or not. With nothing ticked, the list shows only products that
+  are unpublished, off sale and unfeatured, as before; the page explains this.
+  The in-house list has no deleted filter, so its checkbox (a no-op) is gone.
+- **All-products presets.** `allProducts` drops every state filter. Otherwise
+  the first of `allDeleted`, `allActive`, `allForSale` or `allFeatured` applies
+  on its own. Otherwise any ticked switch matches all four switches, `deleted`
+  included, exactly. Otherwise retired (`deleted_from_api`) products are hidden.
+  The all-products list also keeps `user_id`.
+- **Search.** The in-house list matches one phrase. The all-products list
+  matches every word, and also matches `mat_id`.
+- **Category and sort.** Both lists filter by category. The legacy unvalidated
+  `type` (`column,direction`) sort is now limited to the six orders the Blade
+  select offered (rating, number of sales, base price); any other value is a 422.
+- **Default order.** In-house stays `created_at desc`, with an `id` tie-breaker.
+  All-products had no order at all, so it now orders explicitly by `id`.
+- **Page size.** Both move from 15 to 20 per page with the per-page selector,
+  the deliberate pilot change.
+- **Query booleans.** GET booleans are normalized, so legacy `on` values still
+  work but a literal `0` now means off.
+
+Two narrow search defect fixes:
+
+- The legacy in-house search `OR` was ungrouped, so an Arabic-name or barcode
+  match leaked past the list's own conditions; for example, a seller product
+  matching the Arabic name appeared in the in-house list.
+- The legacy search went through `Product::barcodes()`. Since the model merge,
+  that reads WMS `wms_product_barcodes`, while the Otajer import stores each
+  `Mat_ID` in the store's `product_barcodes`. Search now matches both tables,
+  so nothing it found before is lost.
+
+**Rows and actions.**
+
+- **Row payload.** `ProductListResource` sends:
+  - the synced `name` and `ar_name`, and the thumbnail through
+    `uploaded_asset()`;
+  - `mat_id` and the legacy unit string;
+  - the number of sales, and the base price and profit through
+    `single_price()`;
+  - the first stock row's quantity, or each variant's, with the legacy "low"
+    comparison;
+  - the translated category name, the four flags, and the storefront URL by
+    slug (null without a slug).
+- **Switches.** The digital-product and product lists now share one
+  published/featured write path, `Concerns\UpdatesStoreProductFlags`, with the
+  rules of §15:
+  - unpublishing also unfeatures the product and zeroes its stock, and
+    publishing sets stock to 1,000;
+  - the seller-subscription refusal happens before any write;
+  - published and featured run `view:clear` and `cache:clear`.
+
+  The new for-sale switch writes what `updateSaleStatus` wrote. Today's deal
+  (commented out of the Blade list) and seller approval (seller list only)
+  stay on the Blade seller list. The refusal message is now the shared
+  `messages.store_product_package_limit`.
+- **Fetch button.** It keeps the legacy JSON `products.fetch` endpoint, called
+  through `useHttp`, and is shown under `add_new_product`, as the Blade list
+  showed it.
+  - The endpoint stays ungated, as `LegacyAdminPermissionsTest` lists it.
+  - It queues the `cron_jobs` row that `check:commands` turns into
+    `import:all-products-v2`. That command is a second writer of `products`
+    beside `products:sync`, an owner decision left unchanged.
+- **Duplicate (second writer of `products`, unchanged).** It still copies the
+  `products` row with a random slug suffix, plus its stock and tax rows, but
+  not its translations, variations or barcodes. It now runs in a transaction,
+  only on a product the list shows. Creating `products` rows here conflicts with
+  shared-database.md's single-writer rule; changing it needs owner approval.
+
+**Deletion: owner decision pending, behaviour unchanged.** Single and bulk
+deletion still remove a product's translations, stock, taxes, variations and
+store barcodes, hard-delete the `products` row and soft-delete its cart lines.
+They now run in one transaction with the rows locked. Bulk deletion checks every
+member against the list, under lock, before deleting any, and answers 422
+otherwise.
+
+Pinned foreign-key outcomes:
+
+- a pallet still referencing a product fails the whole request atomically
+  (restrict);
+- store barcodes and variations do not block, because the handler deletes them
+  first, unlike brand (§14) and digital-product (§15) deletion;
+- WMS settings and barcodes cascade;
+- cell-log and verification-report references become null.
+
+Caches clear once per request instead of once per product.
+
+**Consumers traced.**
+
+- **Unchanged handlers and links.** Seller panel products
+  (`Seller\ProductController`), V2 product APIs, the storefront `product` route
+  by slug, `products:sync` and the root `store` redirect to `products.admin`
+  are untouched. That redirect now lands on the Inertia list in a full load.
+- **Inherited debt.** `admin_product_edit`/`seller_product_edit` still redirect
+  digital products to URLs without `/temp`.
+- **Route names.** No duplicate route names arise. `admin_sidenav`'s
+  `areActiveRoutes` names all resolve.
+- **Partials.** `choice_options_script` is used by the create/edit views.
+  `sku_combinations*` are rendered by the root and seller controllers' SKU
+  helpers. All of them stay.
+
+The sidebar's in-house and all-products entries are Inertia visits. The seller
+products entry is a full load.
+
+**Tests adapted in place, none weakened.**
+
+- `LegacyControllerMiddlewareConversionTest` counts five root middleware
+  entries instead of seven.
+- `LegacyStoreStateChangingRoutesTest` adds `products.list.destroy` and
+  `products.list.duplicate`.
+- The digital-product refusal test uses the renamed message key.
+
+`HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest` and
+`RouteServiceProviderTest` keep their general-settings/`sellers` examples.
+
+Current inventory: **61** backend Blade files (no file removed), **37** direct
+literal consumers of `shop.backend.layouts.app`, **3** of
+`shop.backend.layouts.layout` and **0** of the blank shell. Registrations are
+**1,049** under `/temp` and **437** under `/temp/admin`: six new action routes
+on 1,043/431. Verification is recorded in the product-list section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 17. Setup configuration settings follow-up (2026-10-12)
+
+General settings now use `Store/Admin/Setup/GeneralSettings/Index`. The Google
+Map settings screen stays Blade. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
+`develop` at `e3eb0f5` (the PR #390 merge, after PR #389 at `a14c659`). The
+owner authorized this session's PR (#391), its merge into `develop` and
+`[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
+no PR or merge SAST and no `develop` deploy ran for them.
+
+**Google Map settings: held, map decision.** The screen's enabled state loads a
+map script. `google_map.blade.php:105-107` includes
+`shop.frontend.partials.google_map` whenever `google_map == 1`, and that partial
+loads `https://maps.googleapis.com/maps/api/js?…&libraries=places` (`:117`) and
+builds a `google.maps.Map` (`:17`). The default-location inputs are `readonly`
+(`:81`, `:89`): only the map fills them. Map activation is an owner decision
+(§5), so the GET stays on root `BusinessSettingsController::google_map`, the
+view stays, and its sidebar entry stays a full load. The typed
+`google-map.update` writer is unchanged. `GoogleMapControllerTest` pins the
+script on the enabled screen and its absence on the disabled one.
+
+**General settings.**
+
+- **Routes and gate.** `general_setting.index` (GET `/general-setting`) and the
+  new `general_setting.update` (POST `/general-setting`) are on
+  `Store\Admin\GeneralSettingsController`, gated `general_settings`. Root
+  `general_setting` and its middleware entry are gone. The root controller
+  keeps its other actions and stays in both analysis exclusion lists.
+- **Typed writer.** `UpdateGeneralSettingsRequest` takes
+  `settings[site_name|timezone|system_logo_white|system_logo_black|admin_login_background]`
+  and nothing else. Foreign, reserved or environment keys, top-level or nested,
+  and the legacy `types[]` shape are 422s before any write. The site name is
+  nullable, at most 255 characters. Each logo is an image upload id through
+  `retainableImageUploadRule()`: own images, or library images with
+  `view_uploads`; an unchanged foreign logo round-trips without a preview.
+- **Storage, unchanged.** `UpdatesStoreSettings` writes the four keys as the
+  legacy writer did: the first row of each type, ids as strings, null when
+  cleared. Reads stay on `get_setting()`.
+- **Timezone, unchanged.** It comes from `config('app.timezone')`, which
+  `config/app.php:146` hardcodes as `'UTC'`. The legacy writer sent it only to
+  the refusing `overWriteEnvFile('APP_TIMEZONE')` and stored nothing. The page
+  lists `timezones()` (PHP's identifiers plus the configured value) with the
+  configured one selected. The writer requires a listed value, and refuses any
+  value other than the configured one with
+  `messages.store_timezone_environment_managed`, so the draft stays. It writes
+  no row and never calls the `.env` writer. Every legacy save used to log and
+  flash that refusal; the typed save does neither.
+- **Generic writer.** `business_settings.update` now also reserves
+  `UpdateGeneralSettingsRequest::KEYS` (§5). Its gate, its body and the
+  footer/appearance forms that post to it are unchanged. Its `site_name` and
+  `timezone` branches are now unreachable; `overWriteEnvFile()` stays, pinned by
+  `LegacyEnvFileProtectionTest`.
+- **Page.** `StoreAdminLayout` + `ResourceFormPage`, `FormField`, three
+  `StoreUploadField`s, the timezone select, Wayfinder and 9 `store.generalSettings.*`
+  keys in English and Arabic. The sidebar entry is an Inertia visit.
+
+**Consumers traced, all unchanged.**
+
+- `system_logo_white`: the Blade admin sidenav (`inc/admin_sidenav.blade.php:5-7`).
+- `system_logo_black`: the seller and delivery-boy login pages
+  (`shop/frontend/seller_login.blade.php:12-13`, `deliveryboy_login.blade.php:12-13`).
+- `admin_login_background`: no reader. The store login reads `login_page_image`.
+- `site_name`: the Blade admin and seller shell footers and sidenav alts, the
+  admin invoice PDF (`invoices/invoice.blade.php:88`), the invoice email
+  (`shop/emails/invoice.blade.php:80`) and the V2 `business-settings`
+  `PUBLIC_KEYS`. The V2 `general-settings` endpoint reads its own table.
+- Storefront header/footer logos and email headers read `header_logo` and
+  `footer_logo`, which this form never wrote.
+- `admin_sidenav` links by `route('general_setting.index')`, with no
+  `areActiveRoutes` entry; the name is kept.
+
+**Tests retargeted, none weakened.** The footer form (`website.footer`) stays
+Blade for its editor, extends the admin shell and has a single-image
+`aizuploader` (`footer_logo`).
+
+- `HandleStoreBladePagesTest` and `ReconstructedMigrationAuditTest` use
+  `/temp/admin/website/footer` as their Blade page.
+- `SettingsReconciliationTest` and `ReferenceSettingsIsolationTest` use the
+  appearance form's `website_name` as the permitted key, under
+  `website_appearance`. The first also covers the general-settings keys and the
+  four gate permissions still saving the footer and appearance forms.
+- `store-staff-coexistence.spec.ts` follows Website setup → Footer.
+  `store-legacy-uploader.spec.ts` scopes its upload, select and remove to
+  `footer_logo`. The legacy uploader keeps real browser coverage.
+- `LegacyControllerMiddlewareConversionTest` pins the root controller's five
+  remaining middleware entries. `RouteServiceProviderTest` used only `sellers`
+  and needed no change.
+
+Current inventory: **60** backend Blade files, **36** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are **1,050** under `/temp` and **438** under
+`/temp/admin`: one new POST on 1,049/437. Verification is recorded in the
+general-settings section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 18. Shared rich-text editor and blog post forms (2026-10-13)
+
+Blog post create/edit now use `Store/Admin/Blog/Posts/Create` and `Edit` with
+the shared Tiptap editor, `components/StoreRichTextField.vue`. Work is on
+`ccr-f394535e-90xr6w`, branched from `develop` at `28643a4` (the PR #391
+merge). The owner approved Tiptap as the shared back-office editor and, for this
+session only, the dependency, this PR (#392), its merge into `develop` and
+`[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR
+CI, no dependency-audit workflow, no PR or merge SAST and no `develop` deploy
+ran for them; the local checks in the ledger are the only verification.
+
+**Dependencies (exact).** `@tiptap/core`, `@tiptap/pm`, `@tiptap/starter-kit`,
+`@tiptap/vue-3`, `@tiptap/extension-image`, `@tiptap/extension-table`,
+`@tiptap/extension-text-align` and `@tiptap/extension-text-style` at
+**3.31.3**, plus `@floating-ui/dom` **1.8.0**.
+
+- The recorded 3.31.4 was published on 2026-09-30, 13 days before this work,
+  so it fails the two-week rule; 3.31.3 (2026-09-04) is the newest patch of
+  the same major that passes. `@floating-ui/dom` 1.8.0 dates from 2026-07-11.
+- `@tiptap/pm` is a required exact-version peer of `core`, `vue-3` and
+  `extension-table`, and the editor imports its `EditorView` type.
+  `@floating-ui/dom` is a non-optional peer of `@tiptap/vue-3`.
+- `@tiptap/vue-3`'s optional bubble/floating menus resolved to 3.31.4 (a peer
+  mismatch with core 3.31.3, and under two weeks old), so the lockfile was
+  resolved with `npm install --save-exact --before=2026-09-29T00:00:00Z`. Every
+  one of the 52 added lock entries is at least 18 days old; no existing entry
+  changed. npm did not hit the `edgesOut` bug, so no `--legacy-peer-deps`
+  regeneration was needed. No Composer change.
+
+**`StoreRichTextField` contract (use it for every converted rich-text field).**
+
+- Props `id`, `name`, `label`, `error`, `required`; `v-model` holds the HTML.
+  The HTML posts under `name` through a hidden input. Stored HTML posts back
+  byte for byte until the content is edited; a blank document posts `''`; an
+  empty table or image is kept.
+- `required` adds an unnamed, `aria-hidden` validation proxy. On `invalid` it
+  shows `store.editor.required` and focuses the content.
+- The content is `role="textbox"` with `aria-multiline`, labelled by the field
+  label and described by its error (`aria-invalid` when one shows). The
+  toolbar follows the WAI-ARIA toolbar pattern: one tab stop, arrow keys,
+  Home and End, mirrored in RTL, and Alt+F10 from the content. Toolbar buttons
+  return focus to the content. The style select and colour inputs keep it.
+  The toolbar state follows each transaction at once, so the select is never
+  stale.
+- Formatting: paragraph and headings 1–6, bold, italic, underline,
+  strikethrough, lists, quote, alignment, text and background colour, links
+  (http, https, mailto, tel and relative, as `HtmlSanitizer::safeUrl()`),
+  tables with row/column tools, clear formatting, undo and redo. Labels are
+  `store.editor.*` in English and Arabic; the dormant `store.richText.*` keys
+  of the superseded `cf5ef305` editor are gone.
+- Images come only from `StoreFileManagerDialog` (`type="image"`, the canonical
+  library policy, shown with `view_uploads`), as upload URLs. Pasted or dropped
+  HTML loses `data:` and unsafe images, classes and any style the toolbar
+  cannot set. Base64 raster images already stored round-trip but cannot be
+  added.
+- Stored attributes no extension models (class, dir, lang and other style
+  declarations on blocks, tables, cells, images and spans) are kept, so a
+  legacy post keeps its bordered tables, indents, image widths and direction.
+
+**Sanitisation and CSP.** `App\Services\HtmlSanitizer` is reused unchanged: the
+editor emits no tag or attribute it lacks. Writes clean the body
+(`Store\Admin\BlogController::write()`), the edit prop is cleaned
+(`BlogResource`), and the public page still prints `clean_html()`. The
+cleaner is idempotent, so legitimate stored content renders unchanged. Inertia
+editor pages keep the strict policy (§2.5); the browser spec saw no violation.
+No CSP directive, `blade_csp` entry, WAF pattern, exclusion or skip-key changed.
+The held WAF rules let all editor output through, and still refuse a raw
+script payload with a 403.
+
+**Blog forms.**
+
+- Routes, URIs and gates are unchanged: `blog.create`/`blog.store` under
+  `add_blog`, `blog.edit`/`blog.update` (PUT) under `edit_blog`.
+- `create` and `edit` render Inertia. `edit` sends the full post (cleaned
+  body), the live categories in their Blade order (`id`) and canonical upload
+  previews for the banner and meta image.
+- `StoreBlogRequest`/`UpdateBlogRequest` keep their rules. The banner and meta
+  image use `retainableImageUploadRule()`, so an unchanged foreign image
+  round-trips without preview access.
+- Every field, the slug rules, the default publication on create and the
+  status-only publish action are unchanged. Blog posts have no translations.
+- Deliberate changes:
+  - A new post's slug follows its title until it is edited. Editing an
+    existing post's title no longer rewrites its slug, and so its public URL.
+  - The retired Blade edit form spoofed PATCH against the PUT-only route
+    (`edit.blade.php:14`, `routes/shop-admin.php:546`), so it could not save.
+  - Edited content is normalised by Tiptap (`b`→`strong`, `i`→`em`, list items
+    wrap a paragraph, `pre`→`pre > code`, tables gain a `colgroup`). The empty
+    remains of stripped video embeds are dropped.
+- The list's Add and Edit links are Inertia visits. Root `BlogController` keeps
+  only the public `all_blog`/`blog_details` actions; its unrouted admin methods
+  and middleware are gone, and it stays in both analysis exclusion lists.
+- `blog_system/blog/create.blade.php` and `edit.blade.php` are deleted; only
+  the removed root actions rendered them. `admin_sidenav`'s
+  `areActiveRoutes(['blog.create', 'blog.edit'])` names still resolve.
+
+**Retained.** The Blade editor and its assets serve the newsletter, website
+footer/appearance/custom pages, ticket detail, product and digital-product
+forms and the seller and customer areas. Also retained: the legacy uploader,
+shells, PDFs, `HandleStoreBladePages` and `store.blade_csp`. The rich-text WAF
+exceptions, `manage_website_scripts`, script policy, chart/map activation,
+seller/classified scope and server status stay held.
+
+**Known limits.** External images in a legacy post do not display inside the
+admin editor, because the strict `img-src` is `'self' data: blob:`. They are
+kept, and the public Blade page still shows them. As before, body image URLs
+are not ownership-checked on the server: the picker enforces the library
+policy.
+
+**Tests adapted in place, none weakened.** `BlogControllerTest`'s two Blade
+view tests now assert the Inertia renders and full payloads. Its refused-caller
+dataset gained a DB snapshot. The list test asserts Inertia create/edit links.
+
+Current inventory: **58** backend Blade files, **34** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
+**438** under `/temp/admin`. Verification is recorded in the editor section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 19. Newsletter and support ticket detail on the shared editor (2026-10-13)
+
+The newsletter form now uses `Store/Admin/Marketing/Newsletters/Index`, and the
+support ticket detail and reply use `Store/Admin/Support/Tickets/Show`, both
+with `StoreRichTextField` (§18). Work is on `ccr-b2e34e7d-piwxdo`, branched from
+`develop` at `a22e4d8` (the PR #392 merge). The owner authorized this session's
+PR (#393), its merge into `develop` and `[skip ci]` on both. Every commit, the PR and
+its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
+`develop` deploy ran for them; the local checks in the ledger are the only
+verification. Sources: `cf5ef305` (newsletter) and `e3995898` (ticket detail),
+adapted to current `develop`, not cherry-picked.
+
+**Newsletter.**
+
+- **Routes, gate and send: unchanged.** `newsletters.index`,
+  `newsletters.recipients` and `newsletters.send`, all `send_newsletter`.
+  The send still refuses an unconfigured SMTP username (`smtp` error), merges
+  and de-duplicates the user and subscriber emails, cleans the content with
+  `clean_html()` before validation (`SendNewsletterRequest`), queues one
+  `EmailManager` per recipient with `Mail::to()->queue()` on the default queue
+  connection, and returns to the Blade dashboard. The subject stays plain text.
+  The SMTP test stays on the settings page (`test.smtp`, `smtp_settings` and
+  `send_newsletter`); the newsletter page has none.
+- **Recipients.** The Blade page printed every user and subscriber email into
+  two select boxes. The page now sends only `smtpConfigured`; each list fills
+  from the existing bounded search (30 emails per query, debounced), keeps its
+  selections across searches and posts `user_emails[]`/`subscriber_emails[]`.
+  Either list satisfies the required recipient, mirroring `required_without`.
+  The search text has no `name`, so it never posts.
+- **Page.** `ResourceFormPage` (wide), `StoreNewsletterFormFields`,
+  `StoreNewsletterRecipients` and `StoreRichTextField` for `content`, with the
+  dormant `store.newsletters.*` keys (one added: `searchFailed`). The sidebar
+  entry is an Inertia visit. The send's redirect to the Blade dashboard is a
+  full load through `HandleStoreBladePages`.
+
+**Ticket detail and reply.**
+
+- **Routes and gates: unchanged.** `support_ticket.admin_show` (plain or
+  `encrypt()`ed id, customerless tickets 404) under `view_all_support_tickets`;
+  `support_ticket.admin_store` under `reply_to_support_tickets`. The list's View
+  link is now an Inertia visit; the sidebar entry already was.
+- **Visibility and side effects, unchanged.** A viewer sees every ticket with
+  a customer. Opening one sets `viewed` (seen by staff) and nothing else. A
+  reply stores the cleaned HTML, the caller as author and the attachment ids,
+  sets `client_viewed = 0` and the chosen status in one transaction, then
+  queues `SupportMailManager` to the customer.
+- **Status.** The Blade button read "Submit as <current status>" but posted
+  `pending` (`show.blade.php:43`, `:134-135`). The form's status select starts
+  at the current status (`pending` for an unknown one) and posts what is
+  chosen.
+- **Page.** Header with author, date and status; the reply form (shown with
+  `reply_to_support_tickets`); replies newest first, as the Blade page listed
+  them, 20 per page with the per-page selector; the customer's original request
+  closes the last page. Bodies render through `StoreSanitizedHtml` from
+  `clean_html()` output only (`SupportTicketDetailResource`,
+  `TicketReplyResource`). Avatars are not shown.
+- **Attachments.** `App\Services\Store\TicketAttachments` reads the stored
+  comma-separated ids of the ticket and the page's replies in one query (the
+  Blade page queried per id) and returns the canonical `UploadResource`
+  (`id, name, type, size, url`), in stored order, skipping missing uploads.
+  A ticket's files stay listed for everyone who may open the ticket, whoever
+  uploaded them, as before; that does not open them to the library: previews
+  still need `view_uploads`, and a reply may attach only its author's images
+  or, with `view_uploads`, library images (`uploadIdsRules('image')`). Links
+  carry `download`; an upload with no safe http(s) URL shows its name only.
+  The reply uses the canonical `StoreUploadField` (multiple images).
+- **Reply redirect fix.** The reply returned to the detail by `encrypt()`ed
+  id, which can contain a `/` the route cannot match, so it could 404. It now
+  returns by the plain id. Customer and seller email links still carry
+  `encrypt()`ed ids (inherited, unchanged).
+- **Legacy HTML.** Replies are never edited. Stored summernote markup (`b`,
+  `u`, `i`, lists, aligned paragraphs) renders as cleaned; the new reply starts
+  empty, and the editor's output passes `HtmlSanitizer` unchanged.
+
+**Consumers traced.** Only `NewsletterController::index` and root
+`SupportTicketController::admin_show` rendered the two deleted views. Root
+`admin_show` and its middleware entry are removed; the root controller keeps
+the customer index/store/show and `seller_store`, and the seller controller is
+untouched, so the customer and seller ticket pages, the admin-notification
+email (`support_ticket.admin_show` link) and the reply email are unchanged.
+`admin_sidenav`'s `newsletters.index` link and `areActiveRoutes` names still
+resolve. `TicketAttachments`, `TicketReplyResource`, `StoreSanitizedHtml` and
+the `store.newsletters.*` keys were dormant integration leftovers and now have
+their first consumers; the dormant `StoreTicketAttachment` type and ticket
+fixtures were replaced.
+
+**Unchanged.** `HtmlSanitizer`, the strict Inertia CSP, `blade_csp`, WAF
+patterns, exclusions and skip keys, route names, URIs, gates, permission
+definitions, role grants, stored formats, Blade editor assets (18 fields in 16
+views remain), the legacy uploader, shells, PDFs, `HandleStoreBladePages`, and
+the held script policy, `manage_website_scripts`, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** `tickets.created_at` and `ticket_replies.created_at` are
+`useCurrentOnUpdate()`, so on MySQL the "seen" save also moves a ticket's
+creation time, as the Blade page's did. In the browser harness the retained
+Blade dashboard (the newsletter's return target) answers 500: strict mode
+refuses its lazy load of product translations. Production does not run strict
+mode, and the newsletter spec asserts the redirect rather than the dashboard.
+
+**Tests adapted in place, none weakened.** `NewsletterControllerTest`'s Blade
+view test became render and payload tests. `SupportTicketControllerTest`,
+`SupportTicketAuthorizationTest` and `HtmlSanitizerTest` assert the Inertia
+render and the cleaned props instead of the view, keeping their raw-response
+`assertDontSee` checks. The ticket list test expects an Inertia View link; the
+menu test lists the newsletter as Inertia. The blog editor spec's CSP and
+toolbar helpers moved to `tests/e2e/support/editor.ts`. The browser harness
+pins `MAIL_MAILER=array` and a placeholder SMTP username.
+
+Current inventory: **56** backend Blade files, **32** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
+**438** under `/temp/admin`. Verification is recorded in the newsletter and
+ticket section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.

@@ -11,6 +11,7 @@ import CellVerificationAcceptButton from '@/components/CellVerificationAcceptBut
 import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationCorrectnessBadge from '@/components/CellVerificationCorrectnessBadge.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -63,6 +64,7 @@ describe('Help CellVerificationRounds', () => {
         expect(headings).toEqual([
             t('help.cellVerificationRounds.what.heading'),
             t('help.cellVerificationRounds.reports.heading'),
+            t('help.cellVerificationRounds.finishing.heading'),
             t('help.cellVerificationRounds.accepting.heading'),
             t('help.cellVerificationRounds.exporting.heading'),
         ]);
@@ -109,6 +111,23 @@ describe('Help CellVerificationRounds', () => {
                 date: formatDateTime('2026-01-02T09:30:00Z'),
             }),
         );
+    });
+
+    it('explains finishing a round and previews the completion button without allowing interaction', () => {
+        const wrapper = mountPage();
+        expect(wrapper.text()).toContain(
+            t('help.cellVerificationRounds.finishing.body'),
+        );
+        const preview = wrapper
+            .findAllComponents(HelpUiPreview)
+            .find((p) => p.findComponent(SubmitButton).exists());
+        expect(preview?.attributes('inert')).toBeDefined();
+        const button = preview!.getComponent(SubmitButton);
+        expect(button.props('label')).toBe(
+            t('cellVerificationRound.show.finish'),
+        );
+        expect(button.props('processing')).toBe(false);
+        expect(button.text()).toBe(t('cellVerificationRound.show.finish'));
     });
 
     it('renders a preview of the export button', () => {

@@ -10,25 +10,9 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mail;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 
-class SupportTicketController extends Controller implements HasMiddleware
+class SupportTicketController extends Controller
 {
-    /**
-     * Get the middleware that should be assigned to the controller.
-     *
-     * See Auth\LoginController::middleware()'s docblock for why this
-     * replaces the constructor-based $this->middleware() call.
-     *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
-     */
-    public static function middleware(): array
-    {
-        return [
-            new Middleware('permission:view_all_support_tickets', only: ['admin_index', 'admin_store', 'admin_show']),
-        ];
-    }
     /**
      * Display a listing of the resource.
      *
@@ -38,18 +22,6 @@ class SupportTicketController extends Controller implements HasMiddleware
     {
         $tickets = Ticket::where('user_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(10);
         return view('shop.frontend.user.support_ticket.index', compact('tickets'));
-    }
-
-    public function admin_index(Request $request)
-    {
-        $sort_search =null;
-        $tickets = Ticket::orderBy('created_at', 'desc');
-        if ($request->has('search')){
-            $sort_search = $request->search;
-            $tickets = $tickets->where('code', 'like', '%'.$sort_search.'%');
-        }
-        $tickets = $tickets->paginate(15);
-        return view('shop.backend.support.support_tickets.index', compact('tickets', 'sort_search'));
     }
 
     /**
@@ -124,26 +96,6 @@ class SupportTicketController extends Controller implements HasMiddleware
         }
     }
 
-    public function admin_store(Request $request)
-    {
-        $ticket_reply = new TicketReply;
-        $ticket_reply->ticket_id = $request->ticket_id;
-        $ticket_reply->user_id = Auth::user()->id;
-        $ticket_reply->reply = $request->reply;
-        $ticket_reply->files = $request->attachments;
-        $ticket_reply->ticket->client_viewed = 0;
-        $ticket_reply->ticket->status = $request->status;
-        $ticket_reply->ticket->save();
-
-        if($ticket_reply->save()){
-            flash(translate('Reply has been sent successfully'))->success();
-            $this->send_support_reply_email_to_user($ticket_reply->ticket, $ticket_reply);
-            return back();
-        }
-        else{
-            flash(translate('Something went wrong'))->error();
-        }
-    }
 
     public function seller_store(Request $request)
     {
@@ -180,14 +132,6 @@ class SupportTicketController extends Controller implements HasMiddleware
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;
         return view('shop.frontend.user.support_ticket.show', compact('ticket','ticket_replies'));
-    }
-
-    public function admin_show($id)
-    {
-        $ticket = Ticket::findOrFail(decrypt($id));
-        $ticket->viewed = 1;
-        $ticket->save();
-        return view('shop.backend.support.support_tickets.show', compact('ticket'));
     }
 
     /**

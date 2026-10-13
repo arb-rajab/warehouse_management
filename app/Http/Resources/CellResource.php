@@ -43,6 +43,10 @@ class CellResource extends JsonResource
                     ? $pallet->isStaleAfter($request->integer('stale_after_days'))
                     : null,
                 'remaining_boxes' => $pallet->remaining_boxes,
+                'product_boxes_count' => $this->when(
+                    $pallet->product->relationLoaded('setting'),
+                    fn (): int => $pallet->product->boxes_count,
+                ),
             ]),
         ];
     }

@@ -2,6 +2,7 @@
 
 use App\Models\Blog;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /**
  * The legacy store prints product and classified-ad descriptions and
@@ -111,14 +112,20 @@ test('the admin ticket page prints a customer\'s ticket text without its script'
         $encryptedId = encrypt($ticketId);
     } while (preg_match('#[/+]#', $encryptedId));
 
-    $this->get(route('support_ticket.admin_show', ['id' => $encryptedId]))
+    // The Inertia page receives only HtmlSanitizer output, which it renders as is.
+    $this->get(route('support_ticket.admin_show', ['supportTicket' => $encryptedId]))
         ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ticket.details_html', fn (string $html) => str_contains($html, '<b>keep-details</b>')
+                && ! str_contains($html, 'details-xss') && ! str_contains($html, 'onerror') && ! str_contains($html, '<script'))
+            ->where('replies.data.0.reply_html', fn (string $html) => str_contains($html, '<i>keep-reply</i>')
+                && ! str_contains($html, 'link-xss') && ! str_contains($html, 'javascript:') && ! str_contains($html, 'svg')))
         ->assertSee('keep-details', false)
         ->assertSee('keep-reply', false)
         ->assertDontSee('details-xss', false)
-        ->assertDontSee("alert('img-xss')", false)
-        ->assertDontSee("alert('link-xss')", false)
-        ->assertDontSee('<svg onload', false);
+        ->assertDontSee('img-xss', false)
+        ->assertDontSee('link-xss', false)
+        ->assertDontSee('svg-xss', false);
 });
 
 test('the storefront product description prints a seller\'s description without its script', function () {

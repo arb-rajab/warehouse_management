@@ -591,6 +591,34 @@ test('inWarehouse matches a product with more than one pallet', function () {
     expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$product->id]);
 });
 
+test('activeOrInWarehouse keeps every active product and only the inactive ones with a pallet', function () {
+    $activeWithoutPallets = Product::factory()->create();
+    $activeWithPallet = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $activeWithPallet->id]);
+    $inactiveInWarehouse = Product::factory()->inactive()->create();
+    Pallet::factory()->count(2)->create(['product_id' => $inactiveInWarehouse->id]);
+
+    // Noise: deactivated with no pallets must not match.
+    Product::factory()->inactive()->create();
+
+    expect(Product::query()->activeOrInWarehouse()->orderBy('id')->pluck('id')->all())
+        ->toBe([$activeWithoutPallets->id, $activeWithPallet->id, $inactiveInWarehouse->id]);
+});
+
+test('activeOrInWarehouse groups its OR so a further condition still narrows both branches', function () {
+    $active = Product::factory()->create(['name' => 'Widget']);
+    $inactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Widget']);
+    Pallet::factory()->create(['product_id' => $inactiveInWarehouse->id]);
+
+    // Noise: one of each branch that the name condition must exclude.
+    Product::factory()->create(['name' => 'Gadget']);
+    $otherInactiveInWarehouse = Product::factory()->inactive()->create(['name' => 'Gadget']);
+    Pallet::factory()->create(['product_id' => $otherInactiveInWarehouse->id]);
+
+    expect(Product::query()->activeOrInWarehouse()->where('name', 'Widget')->orderBy('id')->pluck('id')->all())
+        ->toBe([$active->id, $inactiveInWarehouse->id]);
+});
+
 test('matchingOccupancyFilters is a no-op when no occupancy filter is set, keeping a product with no pallets', function () {
     $withPallet = Product::factory()->create();
     Pallet::factory()->create(['product_id' => $withPallet->id]);

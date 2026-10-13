@@ -72,7 +72,7 @@ test('an authenticated worker can list every row with its cells and their pallet
     actingAsMobileUser();
 
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->boxesCount(48)->create([
         'name' => 'Widgets',
         'ar_name' => 'ودجات',
     ]);
@@ -110,6 +110,7 @@ test('an authenticated worker can list every row with its cells and their pallet
             'cell_entered_at' => null,
             'is_stale' => null,
             'remaining_boxes' => $pallet->remaining_boxes,
+            'product_boxes_count' => 48,
         ],
     ]);
     expect(collect($rowPayload['cells'])->firstWhere('id', $emptyCell->id))->toEqual([
@@ -120,6 +121,29 @@ test('an authenticated worker can list every row with its cells and their pallet
         'is_active' => true,
         'pallet' => null,
     ]);
+});
+
+test('listing every row with its cells answers a repeat request that already holds the current data with a 304', function () {
+    actingAsMobileUser();
+    Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $etag = $this->getJson('/api/v1/rows/full')->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->getJson('/api/v1/rows/full', ['If-None-Match' => $etag])->assertNotModified();
+});
+
+test('a product without a settings row reports the default box count in the full row listing', function () {
+    actingAsMobileUser();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->unconfigured()->create();
+    Pallet::factory()->create(['cell_id' => $row->cells()->first()->id, 'product_id' => $product->id]);
+
+    $cell = collect(collect($this->getJson('/api/v1/rows/full')->json())->firstWhere('id', $row->id)['cells'])->first();
+
+    expect($cell['pallet']['product_boxes_count'])->toBe(Product::DEFAULT_BOXES_COUNT);
 });
 
 test('listing every row with its cells computes has_pallets without an exists query per row', function () {

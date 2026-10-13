@@ -134,7 +134,7 @@ class RouteServiceProvider extends ServiceProvider
      * Leave each route name on the last route registered with it.
      *
      * 58 names are registered twice, mostly a Route::resource() followed by an
-     * explicit override such as Route::get('/brands/destroy/{id}')->name('brands.destroy'),
+     * explicit override such as Route::post('/sellers/destroy/{id}')->name('sellers.destroy'),
      * or an api/v2 resource sharing a name with an admin page. Up to Laravel 11 the
      * last registration won; from Laravel 12 the first one does, which would point
      * route('brands.index') at the JSON API and every GET delete link at a DELETE

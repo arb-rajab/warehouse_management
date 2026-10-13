@@ -20,21 +20,12 @@
                                 <label class="control-label">{{ translate('Google Map') }}</label>
                             </div>
                             <div class="col-md-8">
+                                <input type="hidden" name="google_map" value="0">
                                 <label class="aiz-switch aiz-switch-success mb-0">
                                     <input value="1" name="google_map" type="checkbox"
                                         @if (get_setting('google_map') == 1) checked @endif>
                                     <span class="slider round"></span>
                                 </label>
-                            </div>
-                        </div>
-                        <div class="form-group row">
-                            <input type="hidden" name="types[]" value="MAP_API_KEY">
-                            <div class="col-md-4">
-                                <label class="control-label">{{ translate('Map API KEY') }}</label>
-                            </div>
-                            <div class="col-md-8">
-                                <input type="text" class="form-control" name="MAP_API_KEY"
-                                    value="{{ env('MAP_API_KEY') }}" placeholder="{{ translate('Map API KEY') }}">
                             </div>
                         </div>
                         <div class="form-group mb-0 text-right">
@@ -56,9 +47,6 @@
                             1. {{ translate('Enable Google map ') }}
                         </li>
                         <li class="list-group-item text-dark">
-                            2. {{ translate('Set the google map API key') }}.
-                        </li>
-                        <li class="list-group-item text-dark">
                             2. {{ translate('After then you will find the google map option to set default location') }}.
                         </li>
                     </ul>
@@ -72,7 +60,7 @@
                         <h3 class="mb-0 h6">{{ translate('Default Location Setting') }}</h3>
                     </div>
                     <div class="card-body">
-                        <form class="form-horizontal" action="{{ route('business_settings.update') }}" method="POST" enctype="multipart/form-data">
+                        <form class="form-horizontal" action="{{ route('google-map.update') }}" method="POST">
                             @csrf     
                                           
                             <div class="row">
@@ -90,7 +78,6 @@
                                     <label for="exampleInputuname">Longitude</label>
                                 </div>
                                 <div class="col-md-10" id="">
-                                    <input type="hidden" name="types[]" value="google_map_longtitude">
                                     <input type="text" class="form-control mb-3" id="longitude" name="google_map_longtitude" value="{{ get_setting('google_map_longtitude') }}" readonly>
                                 </div>
                             </div>
@@ -99,7 +86,6 @@
                                     <label for="exampleInputuname">Latitude</label>
                                 </div>
                                 <div class="col-md-10" id="">
-                                    <input type="hidden" name="types[]" value="google_map_latitude">
                                     <input type="text" class="form-control mb-3" id="latitude" name="google_map_latitude" value="{{ get_setting('google_map_latitude') }}" readonly>
                                 </div>
                             </div>

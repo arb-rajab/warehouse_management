@@ -1,0 +1,921 @@
+/* The floating controls. Everything that floats at the bottom centre lives in ONE column (.wms-stack). */
+.wms-hud {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.wms-hud > * {
+    pointer-events: auto;
+}
+
+.wms-chip {
+    position: relative;
+    height: 34px;
+    padding: 0 13px;
+    border-radius: 17px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--wms-white60);
+    white-space: nowrap;
+    transition:
+        background 0.15s,
+        color 0.15s;
+}
+
+.wms-chip:hover {
+    color: #fff;
+    background: rgb(255 255 255 / 0.07);
+}
+
+.wms-chip.is-on {
+    background: var(--wms-primary);
+    color: #fff;
+}
+
+.wms-chip__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: currentcolor;
+}
+
+.wms-chip__dot--success {
+    color: var(--wms-success);
+}
+
+.wms-chip__dot--warning {
+    color: var(--wms-warning);
+}
+
+.wms-chip__dot--empty {
+    color: #64748b;
+}
+
+.wms-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: inline-grid;
+    place-items: center;
+    color: var(--wms-white70);
+    font-size: 18px;
+    transition:
+        background 0.15s,
+        color 0.15s;
+}
+
+.wms-icon-btn:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+}
+
+.wms-icon-btn--lang {
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.wms-seg {
+    display: inline-flex;
+    height: 40px;
+    padding: 3px;
+    border-radius: 20px;
+    background: var(--wms-raised);
+    border: 1px solid var(--wms-white12);
+}
+
+.wms-seg button {
+    padding: 0 14px;
+    border-radius: 16px;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--wms-white60);
+}
+
+.wms-seg button.is-on {
+    background: var(--wms-primary);
+    color: #fff;
+}
+
+/* ---------- top bar ---------- */
+.wms-topbar {
+    top: calc(10px + var(--wms-safe-top));
+    inset-inline: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wms-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    height: 50px;
+}
+
+.wms-brand {
+    gap: 10px;
+    padding-inline: 12px 14px;
+    flex: none;
+}
+
+.wms-brand__logo {
+    font-size: 26px;
+    color: var(--wms-target);
+}
+
+.wms-brand__title {
+    display: block;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.wms-brand__sub {
+    display: block;
+    color: var(--wms-white60);
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: -1px;
+    white-space: nowrap;
+}
+
+.wms-filters {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 760px;
+}
+
+.wms-search {
+    flex: 1 1 220px;
+    min-width: 0;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 20px;
+    background: var(--wms-raised);
+    border: 1px solid var(--wms-white12);
+    color: var(--wms-white60);
+}
+
+.wms-search:focus-within {
+    border-color: var(--wms-primary);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.35);
+}
+
+.wms-search__input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: 0;
+    outline: 0;
+    color: #fff;
+    font-size: 14px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.wms-search__input::placeholder {
+    color: var(--wms-white60);
+}
+
+.wms-search__clear {
+    display: none;
+    color: var(--wms-white60);
+}
+
+.wms-search.has-text .wms-search__clear {
+    display: inline-grid;
+}
+
+.wms-search-toggle {
+    display: none;
+}
+
+.wms-chips {
+    display: flex;
+    gap: 2px;
+}
+
+.wms-spacer {
+    flex: 1;
+}
+
+.wms-topbar,
+.wms-subbar,
+.wms-walkbar {
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 0.3s,
+        visibility 0s;
+}
+
+/* the toolbars step aside while the map is being moved; the notch (and T) fold them away */
+.wms[data-away='true'] .wms-topbar,
+.wms[data-away='true'] .wms-subbar {
+    transform: translateY(-120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.wms[data-folded='true'] .wms-topbar,
+.wms[data-folded='true'] .wms-subbar {
+    transform: translateY(-170%);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 0.3s,
+        visibility 0s 0.3s;
+}
+
+.wms[data-folded='true'] .wms-walkbar {
+    transform: translate(-50%, -280%);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.wms-notch {
+    position: absolute;
+    z-index: 22;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 58px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid var(--wms-white12);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    background: var(--wms-hud);
+    color: var(--wms-white70);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    transition:
+        background 0.15s,
+        color 0.15s;
+}
+
+.wms-notch::after {
+    content: '';
+    position: absolute;
+    inset: -8px -14px -14px;
+}
+
+.wms-notch:hover {
+    background: var(--wms-primary);
+    color: #fff;
+}
+
+.wms-notch .wms-icon {
+    transition: transform 0.3s;
+}
+
+.wms[data-folded='true'] .wms-notch .wms-icon {
+    transform: rotate(180deg);
+}
+
+/* ---------- sub bar: the camera bar and the result pill. Neither changes size when a filter starts. ---------- */
+.wms-subbar {
+    top: calc(70px + var(--wms-safe-top));
+    inset-inline: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+}
+
+.wms-subbar > * {
+    pointer-events: auto;
+}
+
+.wms-camera-bar {
+    height: 44px;
+    padding: 3px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.wms-camera-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.wms[data-view='3d'] .wms-camera-bar {
+    display: flex;
+}
+
+.wms-camera-bar .wms-chip {
+    padding-inline: 15px;
+}
+
+.wms-chip__count {
+    /* the count sits over the corner of its chip instead of widening it */
+    position: absolute;
+    top: 1px;
+    inset-inline-end: 2px;
+    min-width: 15px;
+    height: 15px;
+    line-height: 15px;
+    padding: 0 4px;
+    font-size: 9.5px;
+    text-align: center;
+    background: var(--wms-primary);
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+.wms-camera-bar .wms-chip.is-on .wms-chip__count {
+    background: #fff;
+    color: var(--wms-primary);
+}
+
+.wms-result-pill {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 16px;
+    white-space: nowrap;
+    font-weight: 800;
+    font-size: 13px;
+    background: var(--wms-primary);
+    border-color: transparent;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    pointer-events: none !important;
+    transition:
+        opacity 0.25s,
+        transform 0.25s,
+        filter 0.15s;
+}
+
+.wms-result-pill.is-shown {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto !important;
+}
+
+.wms-result-pill:hover {
+    filter: brightness(1.12);
+}
+
+.wms[data-view='2d'] .wms-result-pill {
+    position: static;
+}
+
+/* ---------- floors ---------- */
+.wms-floors {
+    inset-inline-start: 12px;
+    top: calc(132px + var(--wms-safe-top));
+    width: 56px;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+    border-radius: 20px;
+}
+
+.wms-floors__title {
+    text-align: center;
+    font-size: 9px;
+    color: var(--wms-white60);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding-bottom: 2px;
+}
+
+.wms-chip--floor {
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 14px;
+    font-size: 14px;
+    flex-direction: column;
+    gap: 0;
+    line-height: 1.05;
+}
+
+.wms-chip--floor small {
+    font-size: 9px;
+    opacity: 0.85;
+    font-weight: 700;
+    min-height: 11px;
+}
+
+.wms-chip--floor.is-hit:not(.is-on) {
+    color: #fff;
+    background: rgb(37 99 235 / 0.35);
+}
+
+.wms-floors:not(.has-filter) .wms-chip--floor small {
+    visibility: hidden;
+}
+
+/* ---------- plan zoom buttons (touch) ---------- */
+.wms-zoom {
+    inset-inline-end: 14px;
+    bottom: calc(16px + var(--wms-safe-bottom));
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 2px;
+    border-radius: 24px;
+}
+
+.wms[data-view='3d'] .wms-zoom {
+    display: none;
+}
+
+/* ---------- walk bar ---------- */
+.wms-walkbar {
+    top: calc(128px + var(--wms-safe-top));
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 3px;
+    padding: 4px;
+    pointer-events: auto;
+}
+
+.wms[data-view='3d'][data-mode='walk'] .wms-walkbar {
+    display: flex;
+}
+
+.wms-walkbar .wms-chip kbd {
+    height: 20px;
+    min-width: 20px;
+    font-size: 10px;
+    margin-inline-start: 2px;
+}
+
+.wms-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--wms-white12);
+    margin: 0 4px;
+}
+
+.wms-walkbar .wms-walkbar__magnet {
+    display: none;
+}
+
+.wms[data-nav='guided'] .wms-walkbar__magnet {
+    display: inline-flex;
+}
+
+.wms-walkbar__magnet.is-set {
+    background: var(--wms-target);
+    color: #0f172a;
+}
+
+.wms[data-input='touch'] .wms-walkbar__back-label {
+    display: none;
+}
+
+/* while the mouse is captured the cursor is gone, so the bar fades out; Esc brings it back */
+.wms[data-input='mouse'][data-captured='true'][data-nav='free'] .wms-walkbar {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ---------- mini-map ---------- */
+.wms-minimap {
+    inset-inline-end: 14px;
+    bottom: calc(16px + var(--wms-safe-bottom));
+    padding: 6px;
+    border-radius: 16px;
+    transition: opacity 0.3s;
+}
+
+.wms-minimap__canvas {
+    display: block;
+    width: 200px;
+    height: 180px;
+    border-radius: 10px;
+    background: rgb(11 17 32 / 0.9);
+}
+
+.wms-minimap__caption {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--wms-white70);
+    text-align: center;
+    padding: 5px 2px 1px;
+    white-space: nowrap;
+    min-height: 19px;
+}
+
+.wms[data-view='2d'] .wms-minimap {
+    display: none;
+}
+
+.wms-minimap.is-hidden {
+    display: none !important;
+}
+
+.wms-minimap,
+.wms-minimap * {
+    pointer-events: none !important;
+}
+
+/* ---------- key hints ---------- */
+.wms-keys {
+    display: none;
+    inset-inline-start: 12px;
+    bottom: calc(16px + var(--wms-safe-bottom));
+    width: 268px;
+    padding: 10px 12px;
+    border-radius: 18px;
+    font-size: 12px;
+    color: var(--wms-white70);
+    transition: opacity 0.5s;
+}
+
+.wms[data-view='3d'][data-input='mouse'] .wms-keys {
+    display: block;
+}
+
+.wms-keys.is-faded,
+.wms[data-welcome='true'] .wms-keys {
+    opacity: 0;
+}
+
+.wms-keys,
+.wms-keys * {
+    pointer-events: none !important;
+}
+
+.wms-keys__head {
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--wms-white60);
+    margin-bottom: 7px;
+}
+
+.wms-krow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 5px 0;
+    white-space: nowrap;
+}
+
+.wms-krow:first-of-type {
+    margin-top: 0;
+}
+
+.wms-krow__keys {
+    display: flex;
+    gap: 3px;
+    direction: ltr;
+}
+
+.wms-krow__desc {
+    text-align: end;
+    color: var(--wms-white70);
+}
+
+/* ---------- the bottom stack ---------- */
+.wms-stack {
+    position: absolute;
+    z-index: 21;
+    left: 50%;
+    bottom: calc(16px + var(--wms-safe-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 10px;
+    width: max-content;
+    max-width: max(360px, calc(100% - 620px));
+    pointer-events: none;
+}
+
+.wms-stack,
+.wms-stack * {
+    pointer-events: none;
+}
+
+.wms-stack__item {
+    display: none;
+    margin: 0;
+}
+
+.wms-stack__item.is-shown {
+    display: block;
+    animation: wms-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.wms-stack__item--selection.is-shown {
+    display: flex;
+}
+
+.wms-stack__item--selection.is-shown,
+.wms-stack__item--selection.is-shown * {
+    pointer-events: auto;
+}
+
+@keyframes wms-rise {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.wms-selection {
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px 8px 16px;
+    max-width: 94%;
+    display: flex;
+}
+
+.wms-selection__who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.wms-selection__who b {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+}
+
+.wms-selection__who small {
+    color: var(--wms-white60);
+    font-size: 11px;
+}
+
+.wms-card {
+    min-width: 230px;
+    max-width: min(420px, 92%);
+    padding: 12px 16px;
+    border-radius: 18px;
+}
+
+.wms-card__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wms-card__state {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.wms-card__name {
+    font-weight: 800;
+    font-size: 15px;
+    margin-top: 8px;
+}
+
+.wms-card__sub {
+    color: var(--wms-white70);
+    font-size: 12px;
+    margin-top: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.wms-card .wms-exp--bad {
+    color: var(--wms-danger-bright);
+}
+
+.wms-card .wms-exp--soon {
+    color: var(--wms-warning-bright);
+}
+
+.wms-card__hint {
+    color: var(--wms-white60);
+    font-size: 11.5px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.wms-card__hint kbd {
+    height: 20px;
+    min-width: 20px;
+    font-size: 10px;
+}
+
+.wms-card__meter {
+    height: 6px;
+    border-radius: 3px;
+    background: rgb(255 255 255 / 0.14);
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.wms-card__meter i {
+    display: block;
+    height: 100%;
+    width: var(--wms-fill, 0%);
+    background: var(--wms-success);
+    border-radius: 3px;
+}
+
+.wms-card__meter.is-opened i {
+    background: var(--wms-warning-bright);
+}
+
+.wms[data-input='touch'] .wms-stack__item--details.is-shown,
+.wms[data-input='touch'] .wms-stack__item--details.is-shown * {
+    pointer-events: auto;
+}
+
+.wms-notice {
+    padding: 12px 22px;
+    text-align: center;
+    border-radius: 22px;
+}
+
+.wms-notice b {
+    font-size: 15px;
+}
+
+.wms-notice small {
+    display: block;
+    color: var(--wms-white70);
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.wms-hint {
+    padding: 9px 18px;
+    font-size: 12.5px;
+    color: var(--wms-white70);
+    text-align: center;
+    max-width: 100%;
+}
+
+.wms-hint--touch {
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
+.wms-welcome {
+    padding: 18px 24px 16px;
+    width: min(760px, max(440px, calc(100vw - 620px)));
+    border-radius: 20px;
+}
+
+.wms-welcome__title {
+    font-weight: 900;
+    font-size: 15px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wms-welcome__title small {
+    font-weight: 600;
+    color: var(--wms-white60);
+    font-size: 12px;
+}
+
+.wms-welcome__grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 22px;
+    align-items: center;
+}
+
+.wms-welcome__caption {
+    text-align: center;
+    margin-top: 8px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.wms-welcome__col {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--wms-white70);
+}
+
+.wms-welcome__col b {
+    color: #fff;
+    font-size: 14px;
+}
+
+.wms-welcome__col--mid {
+    align-items: center;
+    text-align: center;
+}
+
+.wms-welcome__row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.wms-welcome__foot {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--wms-white12);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 12px;
+    color: var(--wms-white60);
+}
+
+.wms-welcome__foot span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wms-wasd {
+    display: grid;
+    grid-template-columns: repeat(3, 38px);
+    grid-template-rows: repeat(2, 38px);
+    gap: 5px;
+    justify-content: center;
+}
+
+.wms-wasd kbd {
+    height: 38px;
+    font-size: 15px;
+    border-radius: 9px;
+}
+
+.wms-wasd__w {
+    grid-column: 2;
+}
+
+.wms-wasd__a {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.wms-wasd__s {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.wms-wasd__d {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.wms-mouse-icon {
+    width: 34px;
+    height: 46px;
+    border: 2.5px solid #fff;
+    border-radius: 17px;
+    position: relative;
+    flex: none;
+}
+
+.wms-mouse-icon::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    width: 3px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--wms-target);
+    transform: translateX(-50%);
+}

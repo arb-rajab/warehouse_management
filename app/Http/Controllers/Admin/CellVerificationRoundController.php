@@ -12,6 +12,9 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Services\CellVerificationService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -21,6 +24,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CellVerificationRoundController extends Controller
 {
+    public function __construct(private readonly CellVerificationService $cellVerifications) {}
+
     /**
      * List verification rounds — one per mobile worker's walkthrough. Each
      * round's own reports are viewed via show(), not listed here (a given
@@ -82,6 +87,15 @@ class CellVerificationRoundController extends Controller
                 ...Row::filterOptions(),
                 'products' => Product::selectedOptions($request->productIds() ?? []),
             ],
+        ]);
+    }
+
+    public function complete(Request $request, CellVerificationRound $cellVerificationRound): RedirectResponse
+    {
+        $this->cellVerifications->completeRound($cellVerificationRound);
+
+        return $this->redirectPreservingQuery('admin.cell-verification-rounds.show', $request, [
+            'cellVerificationRound' => $cellVerificationRound->id,
         ]);
     }
 

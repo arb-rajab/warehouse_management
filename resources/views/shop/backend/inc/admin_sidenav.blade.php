@@ -301,7 +301,7 @@
                 @endif
 
                 <!-- Sales -->
-                @canany(['view_all_orders', 'view_inhouse_orders', 'view_seller_orders', 'view_pickup_point_orders'])
+                @canany(['view_all_orders', 'view_inhouse_orders', 'view_seller_orders', 'view_pickup_point_orders', 'add_order'])
                     <li class="aiz-side-nav-item">
                         <a href="#" class="aiz-side-nav-link">
                             <i class="las la-money-bill aiz-side-nav-icon"></i>
@@ -317,6 +317,8 @@
                                         <span class="aiz-side-nav-text">{{ translate('All Orders') }}</span>
                                     </a>
                                 </li>
+                            @endcan
+                            @can('add_order')
                                 <li class="aiz-side-nav-item">
                                     <a href="{{ route('feat-order.create') }}"
                                         class="aiz-side-nav-link {{ areActiveRoutes(['all_orders.index', 'all_orders.show', 'feat-order.create']) }}">
@@ -530,7 +532,7 @@
                 @endcanany
 
                 <!-- representatives -->
-                @canany(['view_all_customers', 'view_classified_products', 'view_classified_packages'])
+                @canany(['view_all_customers', 'view_classified_products', 'view_classified_packages', 'view_representative_visits'])
                     <li class="aiz-side-nav-item">
                         <a href="#" class="aiz-side-nav-link">
                             <i class="las la-user-friends aiz-side-nav-icon"></i>
@@ -563,12 +565,14 @@
                                 </a>
                             </li>
 
+                            @can('view_representative_visits')
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('admin.rep.visits.index') }}"
                                     class="aiz-side-nav-link {{ areActiveRoutes(['admin.rep.visits.index', 'admin.rep.visits.show']) }}">
                                     <span class="aiz-side-nav-text">{{ translate('Representatives Visits') }}</span>
                                 </a>
                             </li>
+                            @endcan
 
                         </ul>
                     </li>
@@ -1447,7 +1451,7 @@
                                     @can('vat_&_tax_setup')
                                         <li class="aiz-side-nav-item">
                                             <a href="{{ route('tax.index') }}"
-                                                class="aiz-side-nav-link {{ areActiveRoutes(['tax.index', 'tax.create', 'tax.store', 'tax.show', 'tax.edit']) }}">
+                                                class="aiz-side-nav-link {{ areActiveRoutes(['tax.index', 'tax.store', 'tax.show', 'tax.edit']) }}">
                                                 <span class="aiz-side-nav-text">{{ translate('Vat & TAX') }}</span>
                                             </a>
                                         </li>

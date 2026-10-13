@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    classifiedProduct,
     cell,
     cellPallet,
     cellLog,
@@ -205,6 +206,8 @@ describe('storeSharedProps', () => {
             isSuperAdmin: false,
             isRaizerAdmin: false,
             settings: {},
+            counts: { sellers: 0, tickets: 0, conversations: 0 },
+            notifications: { unread_count: 0, items: [] },
         });
     });
 
@@ -215,6 +218,8 @@ describe('storeSharedProps', () => {
             isSuperAdmin: false,
             isRaizerAdmin: false,
             settings: {},
+            counts: { sellers: 0, tickets: 0, conversations: 0 },
+            notifications: { unread_count: 0, items: [] },
         });
     });
 });
@@ -273,6 +278,20 @@ describe('permissionGroup', () => {
         expect(permissionGroup({ label: 'Orders' })).toMatchObject({
             section: 'staff',
             label: 'Orders',
+        });
+    });
+});
+
+describe('classifiedProduct', () => {
+    it('supplies the full administrative shape and allows overrides', () => {
+        expect(classifiedProduct({ published: true })).toEqual({
+            id: 1,
+            name: 'Customer advert',
+            public_url: '/temp/customer-product/customer-advert',
+            added_by: 'customer',
+            status: true,
+            published: true,
+            thumbnail_url: null,
         });
     });
 });

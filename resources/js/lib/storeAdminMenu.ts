@@ -21,74 +21,65 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import { getAllNotifications } from '@/actions/App/Http/Controllers/AdminNotificationController';
-import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/AizUploadController';
 import {
-    colors,
-    index as attributesIndex,
-} from '@/actions/App/Http/Controllers/AttributeController';
-import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/BlogCategoryController';
-import { index as blogIndex } from '@/actions/App/Http/Controllers/BlogController';
-import {
-    brandsWiseProductDiscount,
-    index as brandsIndex,
-} from '@/actions/App/Http/Controllers/BrandController';
-import {
-    activation,
-    facebook_chat,
-    facebook_comment,
-    file_system,
-    general_setting,
-    google_analytics,
-    google_firebase,
     google_map,
-    google_recaptcha,
-    order_configuration,
-    payment_method,
     seller_verification_form,
-    shipping_configuration,
-    smtp_settings,
-    social_login,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
-import { index as carriersIndex } from '@/actions/App/Http/Controllers/CarrierController';
-import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
-import { index as citiesIndex } from '@/actions/App/Http/Controllers/CityController';
-import { admin_index as conversationsIndex } from '@/actions/App/Http/Controllers/ConversationController';
-import { index as countriesIndex } from '@/actions/App/Http/Controllers/CountryController';
-import { index as couponsIndex } from '@/actions/App/Http/Controllers/CouponController';
-import { currency as currenciesIndex } from '@/actions/App/Http/Controllers/CurrencyController';
+import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
+import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
+import {
+    create as productsCreate,
+    seller_products,
+} from '@/actions/App/Http/Controllers/ProductController';
+import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
+import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
+import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
+import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
+import { index as brandsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
+import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controllers/Store/Admin/BrandDiscountController';
+import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
+import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
+import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
+import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
+import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
+import { index as couponsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
+import { index as currenciesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
 import {
     archive as customersArchive,
     create as customersCreate,
     index as customersIndex,
     repIndex as representativesIndex,
-} from '@/actions/App/Http/Controllers/CustomerController';
-import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/CustomerPackageController';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
-import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/DigitalProductController';
-import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/DynamicPopupController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/FeatureOrderController';
-import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/FlashDealController';
-import { index as languagesIndex } from '@/actions/App/Http/Controllers/LanguageController';
-import { index as newslettersIndex } from '@/actions/App/Http/Controllers/NewsletterController';
-import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/OfferController';
-import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/OffersCatalogController';
-import { all_orders } from '@/actions/App/Http/Controllers/OrderController';
-import { edit as customPageEdit } from '@/actions/App/Http/Controllers/PageController';
-import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/PickupPointController';
+} from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
+import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerPackageController';
+import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DigitalProductController';
+import {
+    create as driversCreate,
+    index as driversIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
+import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
+import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { edit as generalSettingsEdit } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
+import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
+import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
+import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
+import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
+import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import {
     exportMethod as productBulkExport,
     index as productBulkImport,
-} from '@/actions/App/Http/Controllers/ProductBulkUploadController';
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
 import {
-    admin_products,
-    all_products,
-    create as productsCreate,
-    seller_products,
-} from '@/actions/App/Http/Controllers/ProductController';
-import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/ProductQueryController';
+    all as allProducts,
+    inHouse as inHouseProducts,
+} from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     commission_history,
     in_house_sale_report,
@@ -97,22 +88,38 @@ import {
     user_search_report,
     wallet_transaction_history,
     wish_report,
-} from '@/actions/App/Http/Controllers/ReportController';
-import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/RepresentativePackageController';
-import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/RepresentativePaymentAdminController';
-import { index as reviewsIndex } from '@/actions/App/Http/Controllers/ReviewController';
-import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
-import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
-import { index as statesIndex } from '@/actions/App/Http/Controllers/StateController';
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
+import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
+import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
-import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
-import { index as subscribersIndex } from '@/actions/App/Http/Controllers/SubscriberController';
-import { admin_index as supportTicketsIndex } from '@/actions/App/Http/Controllers/SupportTicketController';
-import { index as taxesIndex } from '@/actions/App/Http/Controllers/TaxController';
 import {
-    create as driversCreate,
-    index as driversIndex,
-} from '@/actions/App/Http/Controllers/Trip/DriverController';
+    activation,
+    smtp,
+    socialLogin,
+    facebookChat,
+    facebookComments,
+    analytics,
+    recaptcha,
+    firebase,
+    payments,
+    filesystem,
+} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
+import { index as shipping_configuration } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
+import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { index as statesIndex } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
+import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
+import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
+import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
+import {
+    create as trucksCreate,
+    index as trucksIndex,
+} from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
+import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
+import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
+import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import {
     all_orders as tripOrders,
     create as tripsCreate,
@@ -121,17 +128,10 @@ import {
     getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
 import {
-    create as trucksCreate,
-    index as trucksIndex,
-} from '@/actions/App/Http/Controllers/Trip/TruckController';
-import { index as visitsIndex } from '@/actions/App/Http/Controllers/VisitController';
-import {
     appearance,
     footer,
-    header,
     pages,
 } from '@/actions/App/Http/Controllers/WebsiteController';
-import { index as zonesIndex } from '@/actions/App/Http/Controllers/ZoneController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -149,6 +149,7 @@ interface StoreMenuGate {
 }
 
 export interface StoreMenuLink extends StoreMenuGate {
+    badgeKey?: 'sellers' | 'tickets' | 'conversations';
     labelKey: string;
     href: UrlMethodPair;
     /** Top-level entries carry an icon (.ai/rules/layouts.md). */
@@ -198,12 +199,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.allProducts',
-                href: all_products(),
+                inertia: true,
+                href: allProducts(),
                 permission: 'show_all_products',
             },
             {
                 labelKey: 'store.nav.inHouseProducts',
-                href: admin_products(),
+                inertia: true,
+                href: inHouseProducts(),
                 permission: 'show_in_house_products',
                 setting: 'In_House_Products_Section',
             },
@@ -215,12 +218,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.digitalProducts',
+                inertia: true,
                 href: digitalProductsIndex(),
                 permission: 'show_digital_products',
                 setting: 'Digital_Products_Section',
             },
             {
                 labelKey: 'store.nav.bulkImport',
+                inertia: true,
                 href: productBulkImport(),
                 permission: 'product_bulk_import',
             },
@@ -231,11 +236,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.categories',
+                inertia: true,
                 href: categoriesIndex(),
                 permission: 'view_product_categories',
             },
             {
                 labelKey: 'store.nav.brands',
+                inertia: true,
                 href: brandsIndex(),
                 permission: 'view_all_brands',
             },
@@ -243,20 +250,24 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.brandDiscount',
                 href: brandsWiseProductDiscount(),
                 permission: 'view_all_brands',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.attributes',
+                inertia: true,
                 href: attributesIndex(),
                 permission: 'view_product_attributes',
             },
             {
                 labelKey: 'store.nav.colors',
+                inertia: true,
                 href: colors(),
                 permission: 'view_colors',
             },
             {
                 labelKey: 'store.nav.productReviews',
-                href: reviewsIndex['/temp/admin/reviews'](),
+                inertia: true,
+                href: reviewsIndex(),
                 permission: 'view_product_reviews',
                 setting: 'Product_Reviews_Section',
             },
@@ -268,22 +279,26 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/all_orders'](),
                 permission: 'view_all_orders',
             },
             {
                 labelKey: 'store.nav.createOrder',
+                inertia: true,
                 href: featureOrderCreate(),
-                permission: 'view_all_orders',
+                permission: 'add_order',
             },
             {
                 labelKey: 'store.nav.sellerOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/seller_orders'](),
                 permission: 'view_seller_orders',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.pickupPointOrders',
+                inertia: true,
                 href: all_orders['/temp/admin/orders_by_pickup_point'](),
                 permission: 'view_pickup_point_orders',
                 setting: 'Pickup_Orders_Section',
@@ -296,22 +311,26 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.customerList',
+                inertia: true,
                 href: customersIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.customerCreate',
+                inertia: true,
                 href: customersCreate(),
-                permission: 'view_all_customers',
+                permission: 'edit_customer',
             },
             {
                 labelKey: 'store.nav.customerArchive',
+                inertia: true,
                 href: customersArchive(),
                 permission: 'delete_customer',
             },
             {
                 labelKey: 'store.nav.notifications',
-                href: getAllNotifications(),
+                href: customerNotificationsIndex(),
+                inertia: true,
                 permission: 'add_notification',
             },
             {
@@ -323,6 +342,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.classifiedPackages',
                 href: customerPackagesIndex(),
+                inertia: true,
                 permission: 'view_classified_packages',
                 setting: 'classified_product',
             },
@@ -333,26 +353,34 @@ export const storeAdminMenu: StoreMenuItem[] = [
         icon: Contact,
         permission: [
             'view_all_customers',
-            'view_classified_products',
-            'view_classified_packages',
+            'view_representative_packages',
+            'view_representative_payments',
+            'view_representative_visits',
         ],
         children: [
             {
                 labelKey: 'store.nav.representativeList',
+                inertia: true,
                 href: representativesIndex(),
                 permission: 'view_all_customers',
             },
             {
                 labelKey: 'store.nav.representativePackages',
+                inertia: true,
                 href: representativePackagesIndex(),
+                permission: 'view_representative_packages',
             },
             {
                 labelKey: 'store.nav.representativePayments',
+                inertia: true,
                 href: representativePaymentsIndex(),
+                permission: 'view_representative_payments',
             },
             {
                 labelKey: 'store.nav.representativeVisits',
+                inertia: true,
                 href: visitsIndex(),
+                permission: 'view_representative_visits',
             },
         ],
     },
@@ -363,6 +391,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allSellers',
+                badgeKey: 'sellers',
                 href: sellersIndex(),
                 permission: 'view_all_seller',
             },
@@ -400,14 +429,17 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.trucks',
+                inertia: true,
                 children: [
                     {
                         labelKey: 'store.nav.allTrucks',
+                        inertia: true,
                         href: trucksIndex(),
                         permission: 'view_all_trucks',
                     },
                     {
                         labelKey: 'store.nav.createTruck',
+                        inertia: true,
                         href: trucksCreate(),
                         permission: 'add_truck',
                     },
@@ -445,14 +477,17 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.drivers',
+                inertia: true,
                 children: [
                     {
                         labelKey: 'store.nav.allDrivers',
+                        inertia: true,
                         href: driversIndex(),
                         permission: 'view_all_drivers',
                     },
                     {
                         labelKey: 'store.nav.createDriver',
+                        inertia: true,
                         href: driversCreate(),
                         permission: 'add_driver',
                     },
@@ -462,20 +497,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.uploadedFiles',
-        href: uploadedFilesIndex['/temp/admin/uploaded-files'](),
+        href: uploadedFilesIndex(),
+        permission: 'view_uploads',
+        inertia: true,
         icon: FolderOpen,
     },
     {
         labelKey: 'store.nav.homeBanners',
-        href: customPageEdit['/temp/admin/website/custom-pages/edit/{id}'](
-            { id: 'home' },
-            { query: { page: 'home' } },
-        ),
+        inertia: true,
+        href: homeEdit(),
         icon: Images,
         permission: 'edit_website_page',
     },
     {
         labelKey: 'store.nav.orderConfiguration',
+        inertia: true,
         href: order_configuration(),
         icon: SlidersHorizontal,
         permission: 'order_configuration',
@@ -483,6 +519,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
     {
         labelKey: 'store.nav.offersCatalog',
+        inertia: true,
+        permission: 'view_offers_catalog',
         href: offersCatalogIndex(),
         icon: BookOpen,
     },
@@ -494,42 +532,49 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.inHouseSaleReport',
                 href: in_house_sale_report(),
+                inertia: true,
                 permission: 'in_house_product_sale_report',
                 setting: 'In_House_Sales_Report',
             },
             {
                 labelKey: 'store.nav.sellerSaleReport',
                 href: seller_sale_report(),
+                inertia: true,
                 permission: 'seller_products_sale_report',
                 setting: 'vendor_system_activation',
             },
             {
                 labelKey: 'store.nav.stockReport',
                 href: stock_report(),
+                inertia: true,
                 permission: 'products_stock_report',
                 setting: 'Products_Stock_Report',
             },
             {
                 labelKey: 'store.nav.wishlistReport',
                 href: wish_report(),
+                inertia: true,
                 permission: 'product_wishlist_report',
                 setting: 'Products_Wishlist_Report',
             },
             {
                 labelKey: 'store.nav.userSearchReport',
                 href: user_search_report(),
+                inertia: true,
                 permission: 'user_search_report',
                 setting: 'User_Searches_Report',
             },
             {
                 labelKey: 'store.nav.commissionHistory',
                 href: commission_history(),
+                inertia: true,
                 permission: 'commission_history_report',
                 setting: 'Commission_History_Report',
             },
             {
                 labelKey: 'store.nav.walletHistory',
                 href: wallet_transaction_history(),
+                inertia: true,
                 permission: 'wallet_transaction_report',
                 setting: 'Wallet_Recharge_History',
             },
@@ -542,11 +587,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.allPosts',
+                inertia: true,
                 href: blogIndex(),
                 permission: 'view_blogs',
             },
             {
                 labelKey: 'store.nav.blogCategories',
+                inertia: true,
                 href: blogCategoriesIndex(),
                 permission: 'view_blog_categories',
             },
@@ -559,36 +606,42 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.flashDeals',
+                inertia: true,
                 href: flashDealsIndex(),
                 permission: 'view_all_flash_deals',
                 setting: 'Flash_deals',
             },
             {
                 labelKey: 'store.nav.offerDeals',
+                inertia: true,
                 href: offerDealsIndex(),
                 permission: 'view_all_offer_deals',
                 setting: 'Offer_deals',
             },
             {
                 labelKey: 'store.nav.dynamicPopups',
+                inertia: true,
                 href: dynamicPopupsIndex(),
                 permission: 'view_all_dynamic_popups',
                 setting: 'Offer_deals',
             },
             {
                 labelKey: 'store.nav.newsletters',
+                inertia: true,
                 href: newslettersIndex(),
                 permission: 'send_newsletter',
                 setting: 'Newsletters',
             },
             {
                 labelKey: 'store.nav.subscribers',
-                href: subscribersIndex['/temp/admin/subscribers'](),
+                inertia: true,
+                href: subscribersIndex(),
                 permission: 'view_all_subscribers',
                 setting: 'Newsletters',
             },
             {
                 labelKey: 'store.nav.coupons',
+                inertia: true,
                 href: couponsIndex(),
                 permission: 'view_all_coupons',
                 setting: 'coupon_system',
@@ -602,18 +655,23 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.tickets',
+                badgeKey: 'tickets',
+                inertia: true,
                 href: supportTicketsIndex(),
                 permission: 'view_all_support_tickets',
             },
             {
                 labelKey: 'store.nav.productConversations',
+                badgeKey: 'conversations',
+                inertia: true,
                 href: conversationsIndex(),
                 permission: 'view_all_product_conversations',
                 setting: 'conversation_system',
             },
             {
                 labelKey: 'store.nav.productQueries',
-                href: productQueriesIndex['/temp/admin/product-queries'](),
+                inertia: true,
+                href: productQueriesIndex(),
                 permission: 'view_all_product_queries',
                 setting: 'product_query_activation',
             },
@@ -626,6 +684,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.header',
+                inertia: true,
                 href: header(),
                 permission: 'header_setup',
                 setting: 'website_setup_header',
@@ -657,60 +716,70 @@ export const storeAdminMenu: StoreMenuItem[] = [
         children: [
             {
                 labelKey: 'store.nav.generalSettings',
-                href: general_setting(),
+                href: generalSettingsEdit(),
+                inertia: true,
                 permission: 'general_settings',
             },
             {
                 labelKey: 'store.nav.featuresActivation',
                 href: activation(),
+                inertia: true,
                 permission: 'features_activation',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.languages',
                 href: languagesIndex(),
+                inertia: true,
                 permission: 'language_setup',
                 setting: 'Languages_section',
             },
             {
                 labelKey: 'store.nav.currency',
+                inertia: true,
                 href: currenciesIndex(),
                 permission: 'currency_setup',
                 setting: 'currency_section',
             },
             {
                 labelKey: 'store.nav.vatTax',
+                inertia: true,
                 href: taxesIndex(),
                 permission: 'vat_&_tax_setup',
                 setting: 'VAT_TAX_section',
             },
             {
                 labelKey: 'store.nav.pickupPoints',
+                inertia: true,
                 href: pickupPointsIndex(),
                 permission: 'pickup_point_setup',
                 setting: 'Setup_pickup_point_section',
             },
             {
                 labelKey: 'store.nav.smtpSettings',
-                href: smtp_settings(),
+                href: smtp(),
+                inertia: true,
                 permission: 'smtp_settings',
                 setting: 'SMTP_Section',
             },
             {
                 labelKey: 'store.nav.paymentMethods',
-                href: payment_method(),
+                href: payments(),
+                inertia: true,
                 permission: 'payment_methods_configurations',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.fileSystem',
-                href: file_system(),
+                href: filesystem(),
+                inertia: true,
                 permission: 'file_system_&_cache_configuration',
                 raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.socialLogins',
-                href: social_login(),
+                href: socialLogin(),
+                inertia: true,
                 permission: 'social_media_logins',
                 setting: 'Socail_Media_logins_section',
             },
@@ -720,12 +789,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.facebookChat',
-                        href: facebook_chat(),
+                        href: facebookChat(),
+                        inertia: true,
                         permission: 'facebook_chat',
                     },
                     {
                         labelKey: 'store.nav.facebookComment',
-                        href: facebook_comment(),
+                        href: facebookComments(),
+                        inertia: true,
                         permission: 'facebook_comment',
                     },
                 ],
@@ -736,12 +807,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.analyticsTools',
-                        href: google_analytics(),
+                        href: analytics(),
+                        inertia: true,
                         permission: 'analytics_tools_configuration',
                     },
                     {
                         labelKey: 'store.nav.googleRecaptcha',
-                        href: google_recaptcha(),
+                        href: recaptcha(),
+                        inertia: true,
                         permission: 'google_recaptcha_configuration',
                     },
                     {
@@ -751,7 +824,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.googleFirebase',
-                        href: google_firebase(),
+                        href: firebase(),
+                        inertia: true,
                         permission: 'google_firebase_setting',
                     },
                 ],
@@ -762,31 +836,37 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.shippingConfiguration',
+                        inertia: true,
                         href: shipping_configuration(),
                         permission: 'shipping_configuration',
                     },
                     {
                         labelKey: 'store.nav.shippingCountries',
+                        inertia: true,
                         href: countriesIndex(),
                         permission: 'shipping_country_setting',
                     },
                     {
                         labelKey: 'store.nav.shippingStates',
+                        inertia: true,
                         href: statesIndex(),
                         permission: 'manage_shipping_states',
                     },
                     {
                         labelKey: 'store.nav.shippingCities',
+                        inertia: true,
                         href: citiesIndex(),
                         permission: 'manage_shipping_cities',
                     },
                     {
                         labelKey: 'store.nav.shippingZones',
+                        inertia: true,
                         href: zonesIndex(),
                         permission: 'manage_zones',
                     },
                     {
                         labelKey: 'store.nav.shippingCarriers',
+                        inertia: true,
                         href: carriersIndex(),
                         permission: 'manage_carriers',
                     },

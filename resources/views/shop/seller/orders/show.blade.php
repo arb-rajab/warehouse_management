@@ -174,7 +174,7 @@
                                             <strong><a href="{{ route('product', $orderDetail->product->slug) }}"
                                                     target="_blank"
                                                     class="text-muted">{{ $orderDetail->product->getTranslation('name') }}</a></strong>
-                                            <small>{{ $orderDetail->variation }}</small>
+                                            <small>{{ $orderDetail->entry_unit ?? $orderDetail->variation }}</small>
                                         @elseif ($orderDetail->product != null && $orderDetail->product->auction_product == 1)
                                             <strong><a href="{{ route('product', $orderDetail->product->slug) }}"
                                                     target="_blank"
