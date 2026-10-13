@@ -2,13 +2,25 @@
 
 namespace App\Http\Controllers\Store\Admin;
 
+use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
+use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterDigitalProductsRequest;
+use App\Http\Requests\Store\Admin\StoreDigitalProductRequest;
 use App\Http\Requests\Store\Admin\UpdateDigitalProductFlagRequest;
+use App\Http\Requests\Store\Admin\UpdateDigitalProductRequest;
+use App\Http\Resources\Store\DigitalProductFormResource;
 use App\Http\Resources\Store\DigitalProductResource;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductStock;
+use App\Models\ProductTax;
+use App\Models\ProductTranslation;
+use App\Models\Tax;
 use App\Models\Upload;
+use App\Services\ProductTaxService;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,12 +35,18 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * The digital products list and its row actions. Creating and editing a
- * digital product stay on the root DigitalProductController's Blade forms,
- * which need the rich-text editor.
+ * The digital products list, its row actions and the create and edit forms.
+ *
+ * Creating and updating write WMS-owned `products` rows beside
+ * `products:sync`, the table's single writer (shared-database.md), as the
+ * legacy forms did: an owner decision, like deletion
+ * (.ai/rules/store-backoffice-migration.md §§14–16, §21). The product, its
+ * stock row, its translation and its taxes now commit or fail together.
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {
+    use ProvidesStoreReferenceOptions;
+    use ProvidesStoreUploadPreviews;
     use UpdatesStoreProductFlags;
 
     /** @return array<int, Middleware> */
@@ -36,6 +54,8 @@ class DigitalProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:show_digital_products', only: ['index']),
+            new Middleware('permission:add_digital_product', only: ['create', 'store']),
+            new Middleware('permission:edit_digital_product', only: ['edit', 'update']),
             new Middleware('permission:delete_digital_product', only: ['destroy']),
             new Middleware('permission:download_digital_product', only: ['download']),
             // The list's switches used ProductController's shared endpoints,
@@ -60,6 +80,94 @@ class DigitalProductController extends Controller implements HasMiddleware
             'filters' => ['search' => $search, 'per_page' => $perPage],
             'defaultLanguage' => config('app.default_language'),
         ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('Store/Admin/Product/DigitalProducts/Create', [
+            'categories' => $this->categoryOptions(),
+            'taxes' => $this->taxOptions(null),
+        ]);
+    }
+
+    /**
+     * Creates an admin digital product as the legacy form did, with the
+     * generated slug, then the product's tax rows, one empty-variant stock row at the unit
+     * price with no quantity and the default-language translation.
+     */
+    public function store(StoreDigitalProductRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        DB::transaction(function () use ($request, $data): void {
+            $product = new Product;
+            $product->forceFill(['added_by' => 'admin', 'user_id' => $request->user('store')->id, 'digital' => 1]);
+            $product->name = $data['name'];
+            $product->setAttribute('description', $data['description'] ?? null);
+            $this->fillProduct($product, $data);
+            $product->slug = $this->generatedSlug($data['name']);
+            $product->save();
+            $this->saveTaxes($product, $data, false);
+            $this->saveStock($product, $data);
+            $this->saveTranslation($product, config('app.default_language'), $data);
+        });
+
+        return redirect()->route('digitalproducts.index');
+    }
+
+    public function edit(EditReferenceTranslationRequest $request, Product $product): Response
+    {
+        $lang = $request->validated('lang') ?? config('app.default_language');
+        $product = Product::query()->digital()
+            ->select(['id', 'name', 'description', 'category_id', 'photos', 'thumbnail_img', 'tags', 'unit_price', 'purchase_price', 'discount', 'discount_type', 'discount_start_date', 'discount_end_date', 'meta_title', 'meta_description', 'meta_img', 'slug', 'file_name'])
+            ->with('product_translations:id,product_id,lang,name,description')->findOrFail($product->id);
+        $previews = $this->uploadIdPreviews($request, [
+            'photos' => $product->getAttribute('photos'),
+            'thumbnail_img' => $product->thumbnail_img,
+            'meta_img' => $product->getAttribute('meta_img'),
+            'file' => $product->getAttribute('file_name'),
+        ]);
+
+        return Inertia::render('Store/Admin/Product/DigitalProducts/Edit', [
+            'product' => new DigitalProductFormResource($product),
+            'name' => $product->getTranslation('name', $lang),
+            'description' => clean_html($product->getTranslation('description', $lang)),
+            'lang' => $lang,
+            'languages' => $this->languageOptions(),
+            'categories' => $this->categoryOptions(),
+            'taxes' => $this->taxOptions($product),
+            'initialFiles' => $previews,
+        ]);
+    }
+
+    /**
+     * Updates as the legacy form did, for digital products only: the base
+     * name and description change only in the default language, and that
+     * language's translation is written; the stock row is replaced by a new
+     * one at the unit price with no quantity; posted taxes replace the
+     * product's tax rows. The slug is lowercased, or regenerated as on create
+     * from the base name when left blank.
+     */
+    public function update(UpdateDigitalProductRequest $request, Product $product): RedirectResponse
+    {
+        $data = $request->validated();
+        DB::transaction(function () use ($product, $data): void {
+            $product = $this->lockedDigitalProduct($product);
+            if ($data['lang'] === config('app.default_language')) {
+                $product->name = $data['name'];
+                $product->setAttribute('description', $data['description'] ?? null);
+            }
+            $this->fillProduct($product, $data);
+            $product->slug = isset($data['slug'])
+                ? strtolower($data['slug'])
+                : $this->generatedSlug($product->name);
+            $product->stocks()->delete();
+            $product->save();
+            $this->saveTaxes($product, $data, true);
+            $this->saveStock($product, $data);
+            $this->saveTranslation($product, $data['lang'], $data);
+        });
+
+        return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }
 
     /**
@@ -145,5 +253,113 @@ class DigitalProductController extends Controller implements HasMiddleware
     private function lockedDigitalProduct(Product $product): Product
     {
         return $this->lockedProduct(Product::query()->digital(), $product);
+    }
+
+    /**
+     * The legacy slug: the name's letters, digits and hyphens (spaces become
+     * hyphens), `-` and five random digits.
+     */
+    private function generatedSlug(string $name): string
+    {
+        return preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $name)).'-'.rand(10000, 99999);
+    }
+
+    /**
+     * The digital category tree the legacy forms offered: the digital root
+     * categories with every category below them (Category::treeOptions()).
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function categoryOptions(): array
+    {
+        return Category::treeOptions(fn ($roots) => $roots->where('digital', 1));
+    }
+
+    /**
+     * The active taxes, by id, with the product's amount and type for each
+     * (0 and `amount` when it has none), as the legacy forms listed them.
+     *
+     * @return list<array{id: int, name: string, tax: string, tax_type: string}>
+     */
+    private function taxOptions(?Product $product): array
+    {
+        $rows = $product ? ProductTax::query()->where('product_id', $product->id)->orderBy('id')->get(['tax_id', 'tax', 'tax_type'])->keyBy('tax_id') : collect();
+
+        return array_values(Tax::query()->where('tax_status', 1)->orderBy('id')->get(['id', 'name'])
+            ->map(function (Tax $tax) use ($rows): array {
+                $row = $rows->get($tax->getKey());
+
+                return [
+                    'id' => (int) $tax->getKey(),
+                    'name' => (string) $tax->getAttribute('name'),
+                    'tax' => $row ? (string) $row->getAttribute('tax') : '0',
+                    'tax_type' => $row?->getAttribute('tax_type') === 'percent' ? 'percent' : 'amount',
+                ];
+            })->all());
+    }
+
+    /**
+     * The fields both forms write the same way. The tags field holds
+     * comma-separated tags, stored trimmed and without repeats, comma-joined
+     * as the legacy tag input stored them; the discount range becomes the
+     * start and end timestamps ProductService writes, or none.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function fillProduct(Product $product, array $data): void
+    {
+        $tags = array_values(array_unique(array_filter(array_map(trim(...), explode(',', (string) ($data['tags'] ?? ''))), fn (string $tag): bool => $tag !== '')));
+        $dates = isset($data['date_range']) ? explode(' to ', $data['date_range']) : null;
+        $product->forceFill([
+            'category_id' => $data['category_id'],
+            'digital' => 1,
+            'photos' => $data['photos'] ?? null,
+            'thumbnail_img' => $data['thumbnail_img'] ?? null,
+            'tags' => implode(',', $tags),
+            'unit_price' => $data['unit_price'],
+            'purchase_price' => $data['purchase_price'],
+            'discount' => $data['discount'],
+            'discount_type' => $data['discount_type'],
+            'discount_start_date' => $dates ? strtotime($dates[0]) : null,
+            'discount_end_date' => $dates ? strtotime($dates[1]) : null,
+            'meta_title' => $data['meta_title'] ?? null,
+            'meta_description' => $data['meta_description'] ?? null,
+            'meta_img' => $data['meta_img'] ?? null,
+            'file_name' => isset($data['file']) ? (string) $data['file'] : null,
+        ]);
+    }
+
+    /**
+     * Posted taxes are stored through ProductTaxService; on update they first
+     * replace every tax row of the product. With no taxes posted (no active
+     * tax), the product's rows stay, as before.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function saveTaxes(Product $product, array $data, bool $replace): void
+    {
+        if (empty($data['tax_id'])) {
+            return;
+        }
+        if ($replace) {
+            ProductTax::query()->where('product_id', $product->id)->delete();
+        }
+        (new ProductTaxService)->store(['tax_id' => $data['tax_id'], 'tax' => $data['tax'], 'tax_type' => $data['tax_type'], 'product_id' => $product->id]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function saveStock(Product $product, array $data): void
+    {
+        $stock = new ProductStock;
+        $stock->forceFill(['product_id' => $product->id, 'variant' => '', 'price' => $data['unit_price'], 'sku' => '', 'qty' => 0]);
+        $stock->save();
+    }
+
+    /** @param array<string, mixed> $data */
+    private function saveTranslation(Product $product, string $lang, array $data): void
+    {
+        $translation = ProductTranslation::query()->firstOrNew(['lang' => $lang, 'product_id' => $product->id]);
+        $translation->forceFill(['name' => $data['name'], 'description' => $data['description'] ?? null]);
+        $translation->save();
     }
 }

@@ -95,24 +95,7 @@ class CategoryController extends Controller implements HasMiddleware
     /** @return array<string, mixed> */
     private function formOptions(?Category $category = null): array
     {
-        $rows = Category::query()->select(['id', 'name', 'parent_id', 'level'])
-            ->with('category_translations:id,category_id,lang,name')->orderBy('id')->get();
-        $groups = $rows->groupBy('parent_id');
-        $roots = $groups->get(0, collect());
-        if ($category) {
-            $roots = $roots->sortBy('name');
-        }
-        $options = [];
-        $walk = function ($children, int $depth, array $visited) use (&$walk, &$options, $groups, $category): void {
-            foreach ($children as $child) {
-                if ($child->id === $category?->id || in_array($child->id, $visited, true)) {
-                    continue;
-                }
-                $options[] = ['id' => $child->id, 'name' => ($depth > 0 ? str_repeat('--', max(0, $child->level)).' ' : '').$child->getTranslation('name')];
-                $walk($groups->get($child->id, collect()), $depth + 1, [...$visited, $child->id]);
-            }
-        };
-        $walk($roots, 0, []);
+        $options = Category::treeOptions(fn ($roots) => $category ? $roots->sortBy('name') : $roots, $category?->id);
 
         return [
             'parents' => $options,

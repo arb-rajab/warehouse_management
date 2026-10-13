@@ -16,7 +16,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
+Latest follow-up: [the digital product create and edit forms](#21-digital-product-create-and-edit-forms-2026-10-13).
+Website follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
 Ticket/newsletter follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
 Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
 Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
@@ -28,7 +29,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–20 record
+historical evidence; §10 records reconciliation results and §§11–21 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -111,8 +112,8 @@ keeps WMS's `locale === 'ar'`.
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
 plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
 use full page loads. Blog create/edit (§18), the newsletter and the ticket
-detail (§19), and the website footer, appearance and pages (§20) are Inertia
-pages.
+detail (§19), the website footer, appearance and pages (§20) and the digital
+product create/edit forms (§21) are Inertia pages.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -487,8 +488,8 @@ modules too:
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
-blog-editor, newsletter/ticket-detail and website-settings follow-ups in
-§§11–20. The original
+blog-editor, newsletter/ticket-detail, website-settings and digital-product
+form follow-ups in §§11–21. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -503,7 +504,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product create/edit stays Blade (the editor is no longer a blocker since §18, but its variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
 | Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
@@ -556,15 +557,21 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
   newsletter and the ticket reply (§19) use it. The approval lifts the editor
-  hold on the website footer, appearance and custom pages (migrated, §20) and
-  the editor part of product and digital-product create/edit, which still
-  need their own migration; the script policy, `manage_website_scripts` and
-  rich-text WAF exceptions stay held. The Blade editor (summernote in
-  `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
-  its assets stay while those Blade consumers remain: 12 fields in 12 views
-  since §20.
+  hold on the website footer, appearance and custom pages (migrated, §20),
+  the digital product create/edit forms (migrated, §21) and the editor part
+  of product create/edit, which still needs its own migration; the script
+  policy, `manage_website_scripts` and rich-text WAF exceptions stay held. The
+  Blade editor (summernote in `public/assets/js/vendors.js`, started by
+  `aiz-core.js` `textEditor()`) and its assets stay while those Blade
+  consumers remain: 10 fields in 10 views since §21.
 - Chart.js and new Leaflet dependencies still lack independently verified
   approval. Preserve existing Blade chart/map assets.
+- **`products` writers: owner decision pending, behaviour unchanged.** Brand
+  and digital/product deletion (§§14–16), product duplication (§16) and
+  digital product create/update (§21) still write WMS-owned `products` rows
+  beside `products:sync`, the table's single writer (shared-database.md).
+  Each now runs in one transaction and is pinned by tests; changing
+  who may write `products` needs the owner's decision.
 - Product list switches share one write path. The digital-product and
   in-house/all-products lists publish and feature through
   `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
@@ -584,11 +591,12 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **51 Blade files**, down from 73 after
+The current backend inventory contains **49 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
-two blog post forms (§18), the newsletter and ticket detail (§19), and the
-footer, appearance and three custom-page screens (§20).
+two blog post forms (§18), the newsletter and ticket detail (§19), the
+footer, appearance and three custom-page screens (§20), and the two digital
+product forms (§21).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -601,7 +609,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
-- **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
+- **product:** `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
@@ -638,7 +646,7 @@ line numbers or count sibling snapshots.
 | `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
 | `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
-| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`; download → file response; `digitalproducts.create`/`store`/`edit`/`update` → root `DigitalProductController` retained Blade forms (editor-blocked); seller, mobile and storefront download consumers separate |
+| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.create`, `digitalproducts.store`, `digitalproducts.edit`, `digitalproducts.update`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`, `Create.vue`, `Edit.vue` (§21); store → list, update → edit form in the same language; download → file response; root `DigitalProductController` removed; seller, mobile and storefront digital product and download consumers separate |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
@@ -654,7 +662,7 @@ line numbers or count sibling snapshots.
 | `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue` |
 | `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
 | `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
-| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`); `products.seller`, `products.create`/`store`, `products.admin.edit`/`seller.edit`/`update`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the form helpers stay on root `ProductController` for the Blade seller list and editor forms |
+| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`); `products.seller`, `products.create`/`store`, `products.admin.edit`/`seller.edit`/`update`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the form helpers stay on root `ProductController` for the Blade seller list and editor forms; `products.admin.edit`/`seller.edit` send a digital product to `digitalproducts.edit` (§21) |
 | `ProductBulkUploadController` | `bulk_product_upload`, `pdf.download_brand`, `pdf.download_category`, `pdf.download_seller`, `product_bulk_export.index`, `product_bulk_upload.index` | `Store/Admin/Product/BulkUpload/Index.vue` |
 | `ProductQueryController` | `product_query.index`, `product_query.show`, `product_query.reply` | `Store/Admin/Support/ProductQueries/Index.vue`, `Store/Admin/Support/ProductQueries/Show.vue` |
 | `ProductSearchController` | `order_configuration.product-search`, `products.add-more-choice-option` | JSON / redirects / PDF as applicable |
@@ -1920,5 +1928,134 @@ of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
 of the blank shell. Registrations are **1,047** under `/temp` and **435** under
 `/temp/admin`: ten replace thirteen. Verification is recorded in the website
 settings section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 21. Digital product create and edit forms (2026-10-13)
+
+Digital product create and edit now use `Store/Admin/Product/DigitalProducts/Create`
+and `Edit` with the shared editor (§18) and the canonical upload picker (§2.4).
+Work is on `claude/digital-product-forms-inertia-v66574`, branched from
+`develop` at `bb942f0` (the PR #400 merge). The owner authorized this
+session's PR (#401), its merge into `develop` and `[skip ci]` on both. Every
+commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR or
+merge SAST and no `develop` deploy ran for them; the local checks in the
+ledger are the only verification.
+
+**Routes and gates: names, URIs and methods kept.** `digitalproducts.create`
+(GET `/digitalproducts/create`) and `.store` (POST `/digitalproducts`) under
+`add_digital_product`; `.edit` (GET `/digitalproducts/edit/{product}`) and
+`.update` (PUT/PATCH `/digitalproducts/{product}`) under
+`edit_digital_product`, now on `Store\Admin\DigitalProductController` with a
+bound product. Edit and update accept only a digital product (404 otherwise).
+Root `DigitalProductController` is deleted and leaves both analysis exclusion
+lists; the list's Add and Edit links are Inertia visits, download stays a full
+load.
+
+**Writes (behaviour kept, now atomic).** `StoreDigitalProductRequest` and
+`UpdateDigitalProductRequest` (`Concerns\ValidatesStoreDigitalProduct`)
+validate; the controller writes in one transaction, the product row locked on
+update:
+
+- **Create.** `added_by = admin`, the store caller as `user_id`, `digital = 1`,
+  every form field, the slug `<name letters/digits/hyphens>-<rand(10000, 99999)>`,
+  then the posted taxes through `ProductTaxService`, one stock row (`variant`
+  and `sku` empty, the unit price, quantity 0) and the default-language
+  translation. Returns to the list.
+- **Update.** The base name and description change only in the default
+  language; the posted language's translation is written; the shared fields
+  are written for every language; every stock row is replaced by the same new
+  row (so the quantity returns to 0, as before); posted taxes replace all the
+  product's tax rows, and with no tax posted (no active tax) they stay. The
+  slug is lowercased. Returns to the edit form in the same language (the Blade
+  `back()`).
+- **Second writer of `products`: owner decision pending.** Creating and
+  updating write WMS-owned `products` rows beside `products:sync`
+  (shared-database.md), the same conflict as deletion (§§14–16). Behaviour and
+  policy are unchanged; tests pin it, including rollback of product, stock,
+  translation and taxes together.
+- No cache was cleared before and none is now.
+
+**Fields.** Name (≤200, the `products.name` and translation width), category,
+photos (CSV, ≤2000 chars, ≤50 ids), thumbnail, tags, description, unit and
+purchase price, discount and type, discount range, the active taxes (amount
+and type each), meta title, description and image, the file and, on edit, the
+slug. Amounts are `decimal(20,2)`: `0`–`999999999999999999.99`, two
+decimals. MEDIUMTEXT/LONGTEXT fields (meta texts, slug, description) have no
+length rule.
+
+- **Category.** The options are built server-side, as categories (§13) do:
+  `Category::treeOptions()` (now shared with the category form) walks the
+  digital root categories and every category below them, by id, prefixed
+  `--` per level, as the retained `shop.categories.child_category` partial
+  printed them; the request accepts only those ids. The partial stays for its
+  seller and product consumers.
+- **Tags.** The Blade tag widget posted JSON in `tags[0]`; the form now posts
+  one comma-separated text, stored trimmed, without empties or repeats and
+  comma-joined, the format the storefront already reads.
+- **Uploads.** Photos, thumbnail and meta image are images, the file an upload
+  of any type, as the legacy pickers offered them. New references need the
+  caller's own upload or, with `view_uploads`, the library; an unchanged
+  stored reference round-trips whoever owns it without granting a preview
+  (`retainableImageUploadRule()`, the new `retainableUploadReferenceRule()`
+  for the file and `retainableImageUploadIdsRule()` for the photos, the last
+  extracted from the footer's payment logos). `file_name` keeps the upload id
+  the encrypted download (§15), the storefront, seller and mobile downloads
+  read.
+- **Taxes.** Each active tax (`tax_status = 1`, by id) is listed with the
+  product's stored amount and type (0 and `amount` without one); `tax_id[]`,
+  `tax[]` and `tax_type[]` must match in length, distinct active taxes only.
+
+**Deliberate changes.**
+
+- **Discount range now stored.** Both Blade forms posted `date_range`, and the
+  edit form showed a stored range, but neither root `store` nor `update` read
+  it (seller forms neither), so a range set here was silently dropped. It is
+  now validated (`d-m-Y H:i:s to d-m-Y H:i:s`, real dates, end not before
+  start; `Concerns\ValidatesDiscountDateRange`, shared with the brand
+  discount) and stored as `ProductService` stores it: `strtotime()` of each
+  half in the app timezone (UTC). An empty range clears both dates, so the
+  discount applies without a period, as the storefront treats null dates.
+- **Blank slug on update** is regenerated from the base name as on create,
+  instead of being stored empty.
+- **Validation.** Fields gained the schema bounds above; unknown categories,
+  inactive taxes and foreign uploads are 422s.
+- **Shared product edit redirect fixed.** `ProductController::admin_product_edit`
+  and `seller_product_edit` sent a digital product to `admin/digitalproducts/{id}/edit`
+  and `digitalproducts/{id}/edit`, URLs without `/temp` that match no route,
+  so the all-products list's Edit for a digital product reached a 404. They
+  now redirect to `digitalproducts.edit` with the request's `lang`.
+
+**Description.** Cleaned with `HtmlSanitizer` before validation (stored base
+and translation alike) and on the edit prop. The storefront digital product
+page already prints `clean_html()` (`digital_product_details.blade.php:555`),
+so legitimate content renders unchanged; the mobile product APIs return the
+stored text, which is now cleaned. Legacy summernote markup round-trips.
+The strict CSP, `blade_csp`, WAF patterns and exclusions are unchanged; the
+WAF still refuses a `<script>` or `onerror=` save with a 403 before any write.
+
+**Retained.** `shop.categories.child_category`, the seller and customer digital
+product forms and their Blade editor, product create/edit, the legacy uploader
+and its browser test on the physical product create form, shells, PDFs,
+`HandleStoreBladePages`, `store.blade_csp`, and the held script policy,
+`manage_website_scripts`, rich-text WAF exceptions, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** In the browser harness (strict mode) a storefront product
+page lazy-loads translations of its owner's other products and 500s when that
+list holds a product without a slug; the browser spec gives its fixtures their
+own owner. Production does not run strict mode.
+
+**Tests adapted in place, none weakened.** `DigitalProductControllerTest`'s
+retained-Blade-forms test asserts the Inertia renders and the update redirect
+to the form; its migration test asserts both views are gone. The list's
+Vitest and browser specs expect Inertia create/edit visits.
+
+Current inventory: **49** backend Blade files, **25** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,047** under `/temp` and
+**435** under `/temp/admin`: five replace five. Blade editor: **10** fields in
+**10** views. Verification is recorded in the digital product forms section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.

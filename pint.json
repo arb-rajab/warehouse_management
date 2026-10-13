@@ -118,7 +118,6 @@
         "app/Http/Controllers/CustomerController.php",
         "app/Http/Controllers/CustomerPackageController.php",
         "app/Http/Controllers/CustomerProductController.php",
-        "app/Http/Controllers/DigitalProductController.php",
         "app/Http/Controllers/FollowSellerController.php",
         "app/Http/Controllers/HomeController.php",
         "app/Http/Controllers/InvoiceController.php",

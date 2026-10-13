@@ -47,6 +47,8 @@ import type {
     StoreCategory,
     StoreCategoryForm,
     StoreDigitalProduct,
+    StoreDigitalProductForm,
+    StoreDigitalProductTax,
     StoreProductListFilters,
     StoreProductListRow,
     StorePickupPoint,
@@ -1143,6 +1145,39 @@ export function storeDigitalProduct(
         featured: false,
         public_url: '/temp/product/recipe-e-book',
         download_token: 'encrypted-31',
+        ...overrides,
+    };
+}
+export function storeDigitalProductForm(
+    overrides: Partial<StoreDigitalProductForm> = {},
+): StoreDigitalProductForm {
+    return {
+        id: 31,
+        category_id: 12,
+        photos: '5,6',
+        thumbnail_img: '7',
+        tags: 'cooking,recipes',
+        unit_price: '1250.50',
+        purchase_price: '900.00',
+        discount: '10.00',
+        discount_type: 'percent',
+        date_range: '01-11-2026 08:00:00 to 30-11-2026 20:00:00',
+        meta_title: 'Recipe e-book',
+        meta_description: 'Family recipes',
+        meta_img: '8',
+        slug: 'recipe-e-book-12345',
+        file: '9',
+        ...overrides,
+    };
+}
+export function storeDigitalProductTax(
+    overrides: Partial<StoreDigitalProductTax> = {},
+): StoreDigitalProductTax {
+    return {
+        id: 2,
+        name: 'VAT',
+        tax: '21.00',
+        tax_type: 'percent',
         ...overrides,
     };
 }
