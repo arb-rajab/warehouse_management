@@ -12,6 +12,7 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import AdminLayout from './AdminLayout.vue';
@@ -31,13 +32,16 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function mountLayout(url: string) {
+function mountLayout(url: string, props: { fullBleed?: boolean } = {}) {
     usePageMock.mockReturnValue({
         url,
         props: defaultAuthProps(),
     });
 
-    return mount(AdminLayout, { slots: { default: '<p>Page content</p>' } });
+    return mount(AdminLayout, {
+        props,
+        slots: { default: '<p>Page content</p>' },
+    });
 }
 
 describe('AdminLayout', () => {
@@ -53,11 +57,45 @@ describe('AdminLayout', () => {
             '/admin',
             rowsIndex.url(),
             cellsIndex.url(),
+            warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),
             productsIndex.url(),
             usersIndex.url(),
         ]);
+    });
+
+    it('links to the warehouse map with its own icon and label, and marks it active on its page', () => {
+        const wrapper = mountLayout(warehouseMapIndex.url());
+
+        const link = wrapper
+            .findAll('nav a')
+            .find((a) => a.attributes('href') === warehouseMapIndex.url());
+
+        expect(link?.text()).toBe(t('nav.warehouseMap'));
+        expect(link?.attributes('aria-current')).toBe('page');
+    });
+
+    it('keeps the page in a padded, width-limited column by default', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+
+        expect(wrapper.get('main').classes()).toContain('max-w-6xl');
+        expect(wrapper.get('main').classes()).not.toContain('flex-1');
+    });
+
+    it('hands the whole area under the app bar to a full-bleed page', () => {
+        const wrapper = mountLayout(warehouseMapIndex.url(), {
+            fullBleed: true,
+        });
+
+        expect(wrapper.get('main').classes()).toEqual(
+            expect.arrayContaining(['relative', 'flex-1']),
+        );
+        expect(wrapper.get('main').classes()).not.toContain('max-w-6xl');
+        expect(wrapper.classes()).toEqual(
+            expect.arrayContaining(['flex', 'h-dvh', 'flex-col']),
+        );
+        expect(wrapper.get('nav').classes()).toContain('shrink-0');
     });
 
     it('gives every nav link a Wayfinder route object, not a bare url string', () => {
@@ -66,7 +104,7 @@ describe('AdminLayout', () => {
         const navLinks = wrapper
             .findAllComponents(Link)
             .filter((link) => link.element.closest('nav') !== null);
-        expect(navLinks).toHaveLength(7);
+        expect(navLinks).toHaveLength(8);
 
         for (const link of navLinks) {
             expect(link.props('href')).toMatchObject({ method: 'get' });
@@ -288,11 +326,12 @@ describe('AdminLayout', () => {
             panel
                 .findAll('a')
                 .map((link) => link.attributes('href'))
-                .slice(0, 7),
+                .slice(0, 8),
         ).toEqual([
             '/admin',
             rowsIndex.url(),
             cellsIndex.url(),
+            warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),
             productsIndex.url(),

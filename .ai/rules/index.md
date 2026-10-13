@@ -65,3 +65,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/pages/Admin/CellStatusLogs/Index.vue,resources/js/pages/Admin/Users/Show.vue,resources/js/lib/cellStatusLogDisplay.ts,resources/js/pages/Admin/CellVerificationRounds/Show.vue,resources/js/lib/cellVerificationReportDisplay.ts,resources/js/components/CellVerificationCorrectnessBadge.vue | .ai/rules/users-js-lib.md |
 | app/Http/Controllers/Api/V1/PalletController.php | .ai/rules/v1.md |
 | resources/views/** | .ai/rules/views.md |
+| resources/js/warehouse-map/**,resources/css/warehouse-map/**,resources/js/pages/Admin/WarehouseMap/**,app/Http/Controllers/Admin/WarehouseMapController.php,tests/e2e/warehouse-map.spec.ts | .ai/rules/warehouse-map.md |

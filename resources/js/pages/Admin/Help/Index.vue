@@ -4,6 +4,7 @@ import {
     ArrowLeftRight,
     ClipboardCheck,
     LayoutDashboard,
+    Boxes,
     Map,
     Package,
     Rows3,
@@ -20,6 +21,7 @@ const topics: { key: string; topic: string; icon: Component }[] = [
     { key: 'dashboard', topic: 'dashboard', icon: LayoutDashboard },
     { key: 'rows', topic: 'rows', icon: Rows3 },
     { key: 'cells', topic: 'cells', icon: Map },
+    { key: 'warehouseMap', topic: 'warehouse-map', icon: Boxes },
     { key: 'cellLogs', topic: 'cell-logs', icon: ArrowLeftRight },
     {
         key: 'cellVerificationRounds',

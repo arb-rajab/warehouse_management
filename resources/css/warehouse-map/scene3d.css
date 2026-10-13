@@ -1,0 +1,219 @@
+/* 3D HUD: crosshair, touch steering. Walk-only furniture must not outlive the 3D view. */
+.wms-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.wms-crosshair::before,
+.wms-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgb(255 255 255 / 0.85);
+    border-radius: 2px;
+    box-shadow: 0 0 3px rgb(0 0 0 / 0.8);
+}
+
+.wms-crosshair::before {
+    left: 10px;
+    top: 4px;
+    width: 2px;
+    height: 14px;
+}
+
+.wms-crosshair::after {
+    left: 4px;
+    top: 10px;
+    width: 14px;
+    height: 2px;
+}
+
+.wms-crosshair.is-hot::before,
+.wms-crosshair.is-hot::after {
+    background: var(--wms-target);
+}
+
+.wms[data-view='3d'][data-mode='walk'] .wms-crosshair {
+    opacity: 1;
+}
+
+/* a released mouse has no use for a crosshair; in guided mode it shrinks to a dot */
+.wms[data-view='3d'][data-mode='walk'][data-input='mouse'][data-captured='false'][data-nav='free']
+    .wms-crosshair {
+    opacity: 0;
+}
+
+.wms[data-view='3d'][data-input='mouse'][data-nav='guided'][data-mode='walk']
+    .wms-crosshair {
+    opacity: 0.75;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+}
+
+.wms[data-view='3d'][data-input='mouse'][data-nav='guided'][data-mode='walk']
+    .wms-crosshair::before {
+    left: 5px;
+    top: 5px;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+}
+
+.wms[data-view='3d'][data-input='mouse'][data-nav='guided'][data-mode='walk']
+    .wms-crosshair::after {
+    display: none;
+}
+
+.wms[data-view='2d'] .wms-walkbar,
+.wms[data-view='2d'] .wms-crosshair,
+.wms[data-view='2d'] .wms-pad,
+.wms[data-view='2d'] .wms-keys,
+.wms[data-view='2d'] .wms-touch,
+.wms[data-view='2d'] .wms-stack__item--details,
+.wms[data-view='2d'] .wms-stack__item--selection,
+.wms[data-view='2d'] .wms-stack__item--capture,
+.wms[data-view='2d'] .wms-stack__item--welcome,
+.wms[data-view='2d'] .wms-stack__item--touchhint,
+.wms[data-view='2d'] .wms-floors-3d {
+    display: none !important;
+}
+
+/* ---------- touch steering ---------- */
+.wms-touch {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    display: none;
+}
+
+.wms[data-input='touch'][data-view='3d'][data-mode='walk'] .wms-touch {
+    display: block;
+}
+
+.wms-stick {
+    position: absolute;
+    left: var(--wms-stick-left, 0);
+    top: var(--wms-stick-top, 0);
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    border-radius: 50%;
+    background: rgb(15 23 42 / 0.55);
+    border: 2px solid var(--wms-white12);
+    display: none;
+}
+
+.wms-stick.is-active {
+    display: block;
+}
+
+.wms-stick__knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 52px;
+    height: 52px;
+    margin: -26px 0 0 -26px;
+    border-radius: 50%;
+    background: var(--wms-primary);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+    transform: translate(var(--wms-knob-x, 0), var(--wms-knob-y, 0));
+}
+
+.wms-lift {
+    position: absolute;
+    right: 14px;
+    bottom: calc(190px + var(--wms-safe-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.wms[data-nav='guided'] .wms-lift,
+.wms[data-nav='guided'] .wms-stick {
+    display: none !important;
+}
+
+.wms-lift__btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    font-size: 22px;
+    display: grid;
+    place-items: center;
+}
+
+.wms-pad {
+    right: 10px;
+    bottom: calc(14px + var(--wms-safe-bottom));
+    display: none;
+    direction: ltr;
+    z-index: 14;
+}
+
+.wms[data-input='touch'][data-view='3d'][data-mode='walk'][data-nav='guided']
+    .wms-pad {
+    display: block;
+}
+
+.wms-pad__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 52px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 6px;
+}
+
+.wms-pad__btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    background: rgb(15 23 42 / 0.88);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+    border: 1px solid var(--wms-white12);
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.45);
+    touch-action: manipulation;
+}
+
+.wms-pad__btn:active {
+    background: var(--wms-primary);
+    transform: scale(0.94);
+}
+
+.wms-pad__btn--turn {
+    border: 2px solid var(--wms-primary);
+}
+
+.wms-pad__btn--level {
+    border: 2px solid var(--wms-target);
+}
+
+.wms[data-input='touch'] .wms-stack {
+    bottom: calc(86px + var(--wms-safe-bottom));
+    max-width: calc(100% - 24px);
+}
+
+.wms[data-input='touch'][data-nav='guided'][data-mode='walk'] .wms-stack {
+    bottom: calc(136px + var(--wms-safe-bottom));
+}
+
+.wms[data-input='touch'] .wms-stack__item--touchhint {
+    display: none;
+}
+
+.wms[data-input='touch'][data-view='3d'][data-mode='walk'][data-nav='free']
+    .wms-stack__item--touchhint.is-shown {
+    display: block;
+}
