@@ -6,6 +6,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Product;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -38,5 +39,15 @@ class PalletResource extends JsonResource
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
             'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
         ];
+    }
+
+    /**
+     * Hands the client the ETag to send back as `If-Match` on its next pallet action.
+     */
+    public function withResponse(Request $request, JsonResponse $response): void
+    {
+        if ($this->resource->relationLoaded('cell')) {
+            $response->setEtag($this->resource->etag());
+        }
     }
 }

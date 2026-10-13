@@ -134,6 +134,17 @@ test('listing every row with its cells answers a repeat request that already hol
     $this->getJson('/api/v1/rows/full', ['If-None-Match' => $etag])->assertNotModified();
 });
 
+test('the row summary and frozen row listings answer a repeat request that already holds the current data with a 304', function (string $url) {
+    actingAsMobileUser();
+    Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $etag = $this->getJson($url)->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->getJson($url, ['If-None-Match' => $etag])->assertNotModified();
+})->with(['rows' => '/api/v1/rows', 'frozen rows' => '/api/v1/rows/frozen']);
+
 test('a product without a settings row reports the default box count in the full row listing', function () {
     actingAsMobileUser();
 

@@ -78,7 +78,7 @@ Route::middleware('auth')->group(function () {
         Route::post('cell-verification-reports/{cellVerificationReport}/accept', [CellVerificationReportController::class, 'accept'])->name('cell-verification-reports.accept');
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
-        Route::get('products/search', [ProductController::class, 'search'])->name('products.search');
+        Route::get('products/search', [ProductController::class, 'search'])->middleware('cache.headers:private;etag')->name('products.search');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
         Route::get('products/{product}/image', [ProductController::class, 'image'])->name('products.image');
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');

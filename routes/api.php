@@ -20,17 +20,17 @@ Route::prefix('v1')->group(function () {
 
         Route::get('dashboard', [DashboardController::class, 'index'])->name('api.v1.dashboard.index');
 
-        Route::get('rows', [RowController::class, 'index'])->name('api.v1.rows.index');
+        Route::get('rows', [RowController::class, 'index'])->middleware('cache.headers:private;etag')->name('api.v1.rows.index');
         Route::get('rows/full', [RowController::class, 'full'])->middleware('cache.headers:private;etag')->name('api.v1.rows.full');
-        Route::get('rows/frozen', [RowController::class, 'frozen'])->name('api.v1.rows.frozen');
+        Route::get('rows/frozen', [RowController::class, 'frozen'])->middleware('cache.headers:private;etag')->name('api.v1.rows.frozen');
         Route::get('rows/{row}/cells', [CellController::class, 'index'])->name('api.v1.cells.index');
         Route::get('rows/{row}/cells/{cell:cell_number}/flats/{flatNumber}', [CellController::class, 'show'])
             ->whereNumber(['cell', 'flatNumber'])
             ->name('api.v1.cells.show');
 
-        Route::get('products', [ProductController::class, 'index'])->name('api.v1.products.index');
-        Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product')->name('api.v1.products.show');
-        Route::get('products/{product}/pallets', [ProductController::class, 'pallets'])->whereNumber('product')->name('api.v1.products.pallets');
+        Route::get('products', [ProductController::class, 'index'])->middleware('cache.headers:private;etag')->name('api.v1.products.index');
+        Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product')->middleware('cache.headers:private;etag')->name('api.v1.products.show');
+        Route::get('products/{product}/pallets', [ProductController::class, 'pallets'])->whereNumber('product')->middleware('cache.headers:private;etag')->name('api.v1.products.pallets');
 
         Route::post('pallets', [PalletController::class, 'store'])->name('api.v1.pallets.store');
         Route::get('pallets/{pallet}', [PalletController::class, 'show'])->name('api.v1.pallets.show');
