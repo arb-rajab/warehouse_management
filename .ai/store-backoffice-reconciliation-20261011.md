@@ -30,8 +30,8 @@ were activated. The table and deferred paths below define actual scope.
 | `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | Included, canonical contract adapted | `6c21e5a482f98dd1df705cdcd05e5f2c8b70c62d`; normalization confined to selected admin path, legacy callers preserved |
 | `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | Partially included | `99a14828b557c36236cf6dea5c697ad85758de38`; customers/addresses/representatives/packages/payments/visit list; classified activation held; customer packages pending |
 | `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | Included implemented subset, adapted | `29ada8cd505074f696e6675487f6ccbc27d181da`; bounded translated search, attributes/values/colors/discount/reviews/bulk/offers; core catalogue conversion remains pending |
-| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR "newsletter and ticket detail", `[skip ci]`); script-policy activation held |
-| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms and newsletter form on the shared editor since 2026-10-13 |
+| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); script-policy activation held |
+| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms (#392) and newsletter form (#393) on the shared editor since 2026-10-13 |
 | `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list |
 | `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | Partially included | `3bece94c1e25f6f5e91606238a1c2fd6b64fd896`; orders/entry and shell utilities, dashboard/charts and proposed tax arithmetic held |
 | `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | Superseded implementation; partially included independent tests/fix | No duplicate controllers/pages/admin routes; follow-up adapts `StoreBackOfficeShellTest`, currency switcher regression and missing-currency handling |
@@ -2019,8 +2019,8 @@ Work on `ccr-b2e34e7d-piwxdo` from fetched `develop` at
 `a22e4d8a` (the PR #392 merge); the branch had no commits beyond that base.
 Sources `cf5ef305` (newsletter) and `e3995898` (ticket detail/reply) were
 fetched and adapted, not cherry-picked. The owner authorized, for this session
-only, the pull request, its merge into `develop` with the merge method, and
-`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+only, the pull request (#393), its merge into `develop` with the merge method,
+and `[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
 PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
 checks below are the only verification. No other branch, deployment, real mail
 or production data was touched. The decision table above marks both rows

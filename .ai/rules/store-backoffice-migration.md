@@ -1653,7 +1653,7 @@ The newsletter form now uses `Store/Admin/Marketing/Newsletters/Index`, and the
 support ticket detail and reply use `Store/Admin/Support/Tickets/Show`, both
 with `StoreRichTextField` (§18). Work is on `ccr-b2e34e7d-piwxdo`, branched from
 `develop` at `a22e4d8` (the PR #392 merge). The owner authorized this session's
-PR, its merge into `develop` and `[skip ci]` on both. Every commit, the PR and
+PR (#393), its merge into `develop` and `[skip ci]` on both. Every commit, the PR and
 its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
 `develop` deploy ran for them; the local checks in the ledger are the only
 verification. Sources: `cf5ef305` (newsletter) and `e3995898` (ticket detail),
