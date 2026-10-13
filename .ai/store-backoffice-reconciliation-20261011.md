@@ -2543,3 +2543,164 @@ installed sources were used.
 Not run: MySQL, production data or role grants, and the full browser suite.
 Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
 or its merge.
+
+## Physical product create form migration (2026-10-13)
+
+Work on `ccr-68328473-iie1w4` from fetched `develop` at `6a10019` (the PR #401
+merge); the branch had no commits beyond that base. The owner authorized, for
+this session only, the pull request, its merge into `develop` with the merge
+method, and `[skip ci]` on every commit, the PR title and the merge commit.
+**No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR or its
+merge**, so the checks below are the only verification. No other branch,
+deployment or production data was touched. The guide's §22 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handler** (`app/Http/Controllers/ProductController.php`). Gate
+  `add_new_product` on `create`/`store` (`:61`); `create` (`:116-125`) loaded the
+  physical roots with `childrenCategories`; `store` (`:135-218`) called
+  `ProductService::store()` with every request field but the SKU/choice/tax/
+  flash keys, then `ProductTaxService` when `tax_id` was posted, the flash deal
+  service under `Flash_deals`, `ProductStockService::store()`, the
+  default-language `ProductTranslation::create()`, the `product_types` and
+  `product_barcodes` loops (`:194-210`), a flash, `view:clear`/`cache:clear`
+  and the in-house list. No transaction. `sku_combination` (`:567-595`) rendered
+  `sku_combinations.blade.php`.
+- **Mass assignment.** `Product` is `#[Fillable(['name', 'ar_name',
+  'thumbnail_img', 'published'])]` (`app/Models/Product.php:57`) and
+  `Model::shouldBeStrict()` runs in local/testing only
+  (`AppServiceProvider.php:154`). A probe of `ProductService::store()` threw
+  `MassAssignmentException` under strict mode and, without it, stored a product
+  with `category_id`, `slug`, `user_id` and `unit` null and `unit_price` 0.
+  `ProductStockService::store()` passes `unit_price` to `ProductStock::create()`
+  (not fillable). Callers: root and `Seller\ProductController` (store/update),
+  `Api\V2\Seller\ProductController` (store/update), `Store\Admin\ProductController::duplicate`
+  (duplicate helpers), `BrandDiscountController` (`setBrandWiseDiscount`),
+  both digital product controllers (`ProductTaxService`). The import commands
+  (`AllProductsCommand`, `NewFetchProductsCommand`) write the models directly.
+- **Form** (`create.blade.php`). Hidden `added_by` (`:24`); name, category
+  tree, brand (`Brand::all()`), unit, weight, max/min quantity, tags
+  (`aiz-tag-input`, `tags[]` JSON) (`:30-90`); addon fields for removed addons
+  (`pos_system` barcode, `refund_request`, `club_point`: `:92-111`, `:306-315`);
+  gallery, thumbnail (`:115-151`); video provider/link (`:152-175`); product
+  types and barcodes with hidden template rows (`:178-225`); colours row
+  `d-none` with a disabled select (`:232-249`); attributes and choice script
+  (`:252-272`, `choice_options_script.blade.php`); unit price, date range,
+  discount and type, quantity and SKU, external link and text, SKU table
+  (`:274-356`); description summernote (`:357-369`); PDF `data-type="document"`
+  (`:380-400`); meta fields (`:401-433`); shipping under
+  `Setup_Shipping_section`/`product_wise_shipping` (`:438-496`); low stock,
+  stock visibility (`:497-551`); COD switch under `cash_payment` plus an
+  always-posted hidden `cash_on_delivery=1` (`:553-579`); featured, today's deal
+  (`:580-612`); flash deal under `Flash_deals` with active deals (`:614-652`);
+  shipping days (`:654-673`); active taxes under `VAT_TAX_section` (`:675-701`);
+  "Save & Unpublish" then "Save & Publish" (`:707-710`).
+- **SKU table.** `sku_combinations.blade.php` lists rows of the cartesian
+  product (colours first, by colour name; other parts space-stripped, joined
+  with `-`), price default `$unit_price`, empty SKU, quantity 10; its computed
+  `$sku` is never output. `ProductStockService` reads `request()['price_'.
+  str_replace('.', '_', $str)]`, so a colour name with a space lost its row
+  values once PHP rewrote the posted name.
+- **Request.** `ProductRequest`: name required ≤255, category and unit
+  required, min qty and unit price numeric, discount `lt:unit_price` (flat) or
+  `lt:100` (percent); shared with the seller panel and seller API, unchanged.
+- **Barcodes.** `product_barcodes` has no unique index; the Otajer import skips
+  an existing barcode; `wms_product_barcodes.barcode` is unique (#389,
+  `StoreProductBarcodeRequest`), untouched here.
+- **Digital split, auction, wholesale.** The form never offered them; the
+  in-house list (§16) shows only `digital = 0`, non-auction, non-wholesale.
+- **Description readers.** Storefront `product_details/description.blade.php:22`
+  prints `clean_html()`; `Api\V2` `ProductDetailCollection.php:149` returns the
+  stored translation.
+- **Tests treating the form as Blade.** `ProductControllerTest` (retained
+  forms test), `LegacyControllerMiddlewareConversionTest` (five root entries),
+  `store-legacy-uploader.spec.ts` (ran on this form, §20) and
+  `store-offers-catalogue.spec.ts` (choice script on this form).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\ProductController::create`, `store`,
+  `variantCombinations`; `StoreProductRequest`, `ProductVariantCombinationsRequest`,
+  `Concerns\ValidatesStoreProductVariants`, `Concerns\ValidatesStoreProductTaxes`
+  (extracted from `ValidatesStoreDigitalProduct`), `Controllers\Concerns\ProvidesStoreProductTaxes`
+  (extracted from `DigitalProductController`), `Services\Store\ProductVariantCombinations`,
+  `Services\Store\InHouseProductWriter`. Root `create`/`store` and their gate
+  entry removed; `ProductService`, `ProductStockService` and `ProductRequest`
+  unchanged.
+- **Frontend.** `Products/Create.vue`, `StoreProductFormFields`,
+  `StoreProductVariantFields`, `StoreProductListField`, `StoreProductTaxFields`
+  and `StoreProductDiscountFields` (the last two now also in the digital form),
+  `lib/storeProductForm.ts`, four types, 91 `store.products.form.*` keys and 8
+  shared `store.productForm.*` keys (moved from `store.digitalProducts.form.*`)
+  in English and Arabic. The list's Add link and the sidebar entry are Inertia.
+- **Routes.** Three registrations replace two; names and URIs kept.
+- **Removed.** `product/products/create.blade.php`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/API/import product writers, the edit form and its helpers, the SKU
+  partials and endpoints, gates, permission definitions, role grants, stored
+  formats, Blade editor assets, the legacy uploader, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0; the container restarted once and the setup re-ran, exit 0). Laravel
+Boost was not needed; repository files and installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` exit 0, every stage
+  run, none skipped: ESLint, Prettier and vue-tsc clean; Vitest **2,710 tests in
+  306 files**; Pint passed; PHPStan **0 errors**; Pest **5,870 tests / 32,127
+  assertions**.
+- **Focused checks.**
+  - `ProductCreateFormTest` **90 tests / 446 assertions**: routes and gate,
+    render and full option payloads (Arabic option names, settings off), the
+    complete column/stock/translation/tax/type/barcode write with forged
+    `digital`/owner/auction fields ignored, numbered slugs and unpublish,
+    variant rows and JSON, SKU parity with the Blade endpoint for four choice
+    sets (order, names, price, quantity, empty SKU), variant mismatches and
+    the 500-row bound, flash deal service, settings-hidden fields excluded,
+    COD, rollback on a translation or barcode failure with no cache clear,
+    cache clears after commit, 47 validation cases, barcode rules, upload
+    ownership and types, WAF 403s, sanitisation, legacy markup, refused
+    callers with DB snapshots, permission isolation, WMS refusal, the list and
+    storefront page, and the seller panel form with both SKU partials and the
+    retained edit form. Related suites (product list, digital forms and list,
+    legacy permission/state/middleware/seller, search, Blade pages) **203
+    tests** passed.
+  - Mutations failed the tests as intended before being reverted: no store
+    transaction (2 failures), cache clears inside the transaction (1), no
+    description cleaning (5).
+  - Vitest: the seven new component, page and lib test files (36 tests) plus the
+    adapted digital form, product list and menu tests, every label in English
+    and Arabic.
+- **Browser.** Playwright over local HTTPS with CSP enforced, one worker, zero
+  retries and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-product-create.spec.ts` **4/4**: a simple product from the list's
+    Inertia Add link with keyboard-formatted editor content, a canonical
+    thumbnail, a barcode, a percent tax and a discount range, all stored, then
+    in the in-house list and on its storefront page; a variant product with
+    two colours and two values generating four named rows, edited prices, SKU,
+    quantity and a variant photo, saved unpublished; pasted script payloads
+    inert in the editor and the storefront, no dialog; Arabic RTL, dark contrast
+    ≥4.5 and the one-stop, mirrored toolbar. No CSP violation on admin pages;
+    the list had the enforced `script-src 'self'` policy.
+  - With the relocated legacy-uploader spec (seller panel, 2/2), products,
+    digital products, digital product forms, staff and reference coexistence,
+    blog-editor and offers catalogue specs: **23/23 in 9 files**.
+  - First runs found two real defects, both fixed and pinned by Vitest: the
+    unit price reached the variant endpoint as a number (a 422) because
+    `v-model` casts number inputs, and a refused request showed no rows
+    silently. The storefront page hit the inherited strict-mode lazy load
+    (§21); the spec gives its fixtures their own owner.
+- **Inventory.** **48** backend Blade files; **24**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,048** `/temp` and **436**
+  `/temp/admin` registrations (three replace two); Blade editor: **9** fields
+  in **9** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.
