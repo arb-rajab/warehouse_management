@@ -1778,7 +1778,8 @@ The website footer, appearance and custom pages now use
 `Store/Admin/Website/Footer`, `Appearance` and `Pages/Index|Create|Edit`, with
 the shared editor (§18) for their rich text. Work is on
 `claude/website-settings-inertia-migration-j3i59z`, branched from `develop` at
-`ef175fc` (the PR #397 merge, after the PR #393 merge `06a3806`). The owner
+`ef175fc` (the PR #397 merge, after the PR #393 merge `06a3806`), and merged
+with `develop` at `e17cdbd` (PR #399) before the push. The owner
 authorized this session's PR, its merge into `develop` and `[skip ci]` on both.
 Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR
 or merge SAST and no `develop` deploy ran for them; the local checks in the

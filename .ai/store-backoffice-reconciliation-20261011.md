@@ -2368,10 +2368,16 @@ installed sources were used.
     with 303; two strict-mode locators), on the seller product form's
     inherited 500, and on a products-spec interplay with that attempt's seeded
     seller product; the uploader spec moved to the product create form.
+- **Merge with develop.** `develop` moved to `e17cdbd` (the PR #399 merge, ETag
+  revalidation) before the push; it merged without conflicts in a
+  `[skip ci]` merge commit. After a fresh Wayfinder generation and font-less
+  build, the full gate passed again with none skipped (Vitest **2,662 tests in
+  297 files**, Pint, PHPStan **0 errors**, Pest **5,726 tests / 31,177
+  assertions**), and the browser set again passed **25/25 in 9 files**.
 - **Inventory.** **51** backend Blade files; **27**/**3**/**0** literal
   consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
-  `/temp/admin` registrations, down from 1,050/438 (ten replace thirteen);
-  Blade editor: **12** fields in **12** views.
+  `/temp/admin` registrations, down from 1,050/438 (ten replace thirteen),
+  unchanged by the merge; Blade editor: **12** fields in **12** views.
 
 Not run: MySQL, production data or role grants, and the full browser suite.
 Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
