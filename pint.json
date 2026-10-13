@@ -335,7 +335,6 @@
         "app/Models/OffersCatalog.php",
         "app/Models/Order.php",
         "app/Models/OrderDetail.php",
-        "app/Models/PageTranslation.php",
         "app/Models/PasswordReset.php",
         "app/Models/Payment.php",
         "app/Models/Permission.php",
@@ -429,7 +428,6 @@
         "routes/shop-seller.php",
         "routes/shop-web.php",
         "app/Models/CustomerProduct.php",
-        "app/Http/Controllers/WebsiteController.php",
         "app/Http/Controllers/PageController.php",
         "app/Http/Controllers/AdminController.php"
     ]

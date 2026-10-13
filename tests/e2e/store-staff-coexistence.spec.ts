@@ -39,9 +39,7 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     page,
 }) => {
     seedStoreFixtures(String.raw`
-        foreach (['website_setup', 'website_setup_footer'] as $key) {
-            Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $key], ['value' => '1']);
-        }
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'vendor_system_activation'], ['value' => '1']);
     `);
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/staffs');
@@ -50,18 +48,21 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     const navigation = page.getByRole('navigation', {
         name: 'Store admin menu',
     });
-    // The footer form stays Blade until the rich-text editor is approved.
+    // The seller list stays Blade with seller administration, an owner
+    // decision (.ai/rules/store-backoffice-migration.md §4.1).
     await navigation
-        .getByRole('button', { name: 'Website setup', exact: true })
+        .getByRole('button', { name: 'Sellers', exact: true })
         .click();
     const response = page.waitForResponse(
         (response) =>
-            new URL(response.url()).pathname === '/temp/admin/website/footer' &&
+            new URL(response.url()).pathname === '/temp/admin/sellers' &&
             response.request().isNavigationRequest(),
     );
-    await navigation.getByRole('link', { name: 'Footer', exact: true }).click();
+    await navigation
+        .getByRole('link', { name: 'All sellers', exact: true })
+        .click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/temp\/admin\/website\/footer$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/sellers$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');

@@ -20,7 +20,7 @@ test('the Google Maps configuration retains its Blade picker until the map depen
         ->assertViewIs('shop.backend.setup_configurations.google_configuration.google_map')
         ->assertSee(route('google-map.update'), false)
         ->assertDontSee('name="MAP_API_KEY"', false)
-        ->assertDontSee(route('business_settings.update'), false);
+        ->assertDontSee(retiredSettingsWriterUri(), false);
 });
 
 // The enabled screen's default-location form loads the Google Maps script
@@ -133,17 +133,17 @@ test('warehouse sessions cannot access or update store Google Maps settings', fu
     expect(DB::table('business_settings')->orderBy('id')->get()->toArray())->toEqual($before);
 });
 
-test('legacy generic settings writes cannot change migrated Google Maps settings', function (array $types) {
+test('the retired generic settings endpoint cannot change migrated Google Maps settings', function (array $types) {
     actingAsStoreUser(createStoreStaff('currency_setup'));
     $before = DB::table('business_settings')->orderBy('id')->get()->toArray();
 
-    $this->post('/temp/admin/business-settings/update', [
+    $this->post(retiredSettingsWriterUri(), [
         'types' => ['header_script', ...$types],
         'header_script' => 'must not write before refusal',
         'google_map' => 0,
         'google_map_longtitude' => 0,
         'google_map_latitude' => 0,
-    ])->assertForbidden();
+    ])->assertNotFound();
 
     expect(DB::table('business_settings')->orderBy('id')->get()->toArray())->toEqual($before);
 })->with([

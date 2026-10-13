@@ -21,4 +21,18 @@ class Page extends Model
     {
         return $this->hasMany(PageTranslation::class);
     }
+
+    /**
+     * Where the storefront shows the page, as the back office's page list
+     * gives it: the home page at the storefront root, any other page at
+     * `custom-pages.show_custom_page` by slug (none without a slug).
+     */
+    public function publicUrl(): ?string
+    {
+        if ($this->type === 'home_page') {
+            return route('home');
+        }
+
+        return $this->slug === null || $this->slug === '' ? null : route('custom-pages.show_custom_page', $this->slug);
+    }
 }

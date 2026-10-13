@@ -35,15 +35,24 @@ function scratchEnvContents(): string
     return 'APP_NAME="'.env('APP_NAME').'"'."\nDB_PASSWORD=\"secret\"\nWMS_TOKEN=\"known\"\n";
 }
 
-test('overWriteEnvFile neither rewrites an existing key nor appends a new one', function () {
+// The refusing overWriteEnvFile() stub went with its last callers, the
+// generic settings writer's `site_name` and `timezone` branches
+// (store-backoffice-migration.md §20): no settings code can reach the file.
+test('no settings writer is left that could rewrite the .env file', function () {
     $original = scratchEnvContents();
+    actingAsStoreUser(createStoreStaff('general_settings', 'footer_setup', 'website_appearance', 'edit_website_page'));
 
     withScratchEnvFile($original, function (string $path) use ($original) {
-        $controller = app(BusinessSettingsController::class);
+        expect(method_exists(BusinessSettingsController::class, 'overWriteEnvFile'))->toBeFalse();
 
-        expect($controller->overWriteEnvFile('APP_NAME', 'Hacked'))->toBeFalse()
-            ->and($controller->overWriteEnvFile('INJECTED', "x\"\nAPP_KEY=base64:attacker"))->toBeFalse()
-            ->and(file_get_contents($path))->toBe($original);
+        $this->post(retiredSettingsWriterUri(), [
+            'types' => ['site_name', 'timezone', 'APP_KEY'],
+            'site_name' => 'Hacked',
+            'timezone' => "x\"\nAPP_KEY=base64:attacker",
+            'APP_KEY' => 'base64:attacker',
+        ])->assertNotFound();
+
+        expect(file_get_contents($path))->toBe($original);
     });
 });
 

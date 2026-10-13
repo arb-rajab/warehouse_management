@@ -2,18 +2,25 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 
+/**
+ * The legacy uploader on a retained Blade admin form. No seller or trips
+ * admin screen uses it, and the admin's seller product form
+ * (`products.seller.edit`) answers 500 on an inherited defect, so the spec
+ * uses the retained product create form, which stays Blade until its variant,
+ * SKU and translation forms are converted
+ * (.ai/rules/store-backoffice-migration.md §4, §20).
+ */
 test('retained Blade uploader uploads, selects and removes an attachment over the temp URLs', async ({
     page,
 }) => {
     await loginAsStoreAdmin(page);
-    // The footer form keeps the legacy uploader until its editor is approved.
-    const response = await page.goto('/temp/admin/website/footer');
+    const response = await page.goto('/temp/admin/products/create');
     expect(response?.headers()['content-security-policy']).toContain(
         "'unsafe-inline'",
     );
     await page
         .locator('[data-toggle="aizuploader"]', {
-            has: page.locator('input[name=footer_logo]'),
+            has: page.locator('input[name=thumbnail_img]'),
         })
         .click();
     const modal = page.locator('#aizUploaderModal');
@@ -48,27 +55,27 @@ test('retained Blade uploader uploads, selects and removes an attachment over th
         .locator('.aiz-uploader-select[title="legacy-audit.png"]')
         .click();
     await modal.getByRole('button', { name: 'Add Files', exact: true }).click();
-    await expect(page.locator('input[name=footer_logo]')).not.toHaveValue('');
+    await expect(page.locator('input[name=thumbnail_img]')).not.toHaveValue('');
     const selectedId = await page
-        .locator('input[name=footer_logo]')
+        .locator('input[name=thumbnail_img]')
         .inputValue();
     await expect(
         page
-            .locator('input[name=footer_logo]')
+            .locator('input[name=thumbnail_img]')
             .locator('..')
             .locator('..')
             .locator('.file-preview-item'),
     ).toHaveCount(1);
     await page
-        .locator('input[name=footer_logo]')
+        .locator('input[name=thumbnail_img]')
         .locator('..')
         .locator('..')
         .locator('.remove-attachment')
         .click();
-    await expect(page.locator('input[name=footer_logo]')).toHaveValue('');
+    await expect(page.locator('input[name=thumbnail_img]')).toHaveValue('');
     await expect(
         page
-            .locator('input[name=footer_logo]')
+            .locator('input[name=thumbnail_img]')
             .locator('..')
             .locator('..')
             .locator('.file-preview-item'),

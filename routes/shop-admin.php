@@ -2,7 +2,6 @@
 use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Http\Controllers\Store\Admin\OrderEntryController;
 use App\Http\Controllers\Store\Admin\CampaignProductController;
-use App\Http\Controllers\PageController;
 use App\Http\Controllers\Store\Admin\ProductQueryController;
 use App\Http\Controllers\Store\Admin\ConversationController;
 
@@ -59,8 +58,11 @@ use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
 use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\RoleController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
+use App\Http\Controllers\Store\Admin\WebsiteFooterController;
 use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
+use App\Http\Controllers\Store\Admin\WebsitePageController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
@@ -69,7 +71,6 @@ use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Trip\TripController;
 use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\VisitController;
-use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\Store\Admin\ZoneController;
 use Aws\Middleware;
 
@@ -332,7 +333,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
-        Route::post('/business-settings/update', 'update')->name('business_settings.update');
         Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
 
         Route::get('/google-map', 'google_map')->name('google-map.index');
@@ -418,26 +418,23 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::post('/website/scripts/compatibility', [\App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
 
-    // Website coexistence: rich-text forms remain Blade.
+    // Website setup: Inertia pages, each settings page writing only its own
+    // keys (.ai/rules/store-backoffice-migration.md §20). The home settings
+    // route stays ahead of the custom-page edit route, whose slug it shares.
     Route::get('/website/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
     Route::put('/website/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');
+    Route::get('/website/footer', [WebsiteFooterController::class, 'edit'])->name('website.footer');
+    Route::put('/website/footer', [WebsiteFooterController::class, 'update'])->name('website.footer.update');
+    Route::get('/website/appearance', [WebsiteAppearanceController::class, 'edit'])->name('website.appearance');
+    Route::put('/website/appearance', [WebsiteAppearanceController::class, 'update'])->name('website.appearance.update');
     Route::get('/website/custom-pages/edit/home', [WebsiteHomeController::class, 'edit'])->name('website.home.edit');
     Route::put('/website/home', [WebsiteHomeController::class, 'update'])->name('website.home.update');
-    Route::group(['prefix' => 'website'], function () {
-        Route::controller(WebsiteController::class)->group(function () {
-            Route::get('/footer', 'footer')->name('website.footer');
-
-            Route::get('/appearance', 'appearance')->name('website.appearance');
-            Route::get('/pages', 'pages')->name('website.pages');
-        });
-
-        // Custom Page
-        Route::resource('custom-pages', PageController::class);
-        Route::controller(PageController::class)->group(function () {
-            Route::get('/custom-pages/edit/{id}', 'edit')->name('custom-pages.edit');
-            Route::post('/custom-pages/destroy/{id}', 'destroy')->name('custom-pages.destroy');
-        });
-    });
+    Route::get('/website/pages', [WebsitePageController::class, 'index'])->name('website.pages');
+    Route::get('/website/custom-pages/create', [WebsitePageController::class, 'create'])->name('custom-pages.create');
+    Route::post('/website/custom-pages', [WebsitePageController::class, 'store'])->name('custom-pages.store');
+    Route::get('/website/custom-pages/edit/{page:slug}', [WebsitePageController::class, 'edit'])->name('custom-pages.edit');
+    Route::match(['PUT', 'PATCH'], '/website/custom-pages/{page}', [WebsitePageController::class, 'update'])->name('custom-pages.update');
+    Route::delete('/website/custom-pages/destroy/{page}', [WebsitePageController::class, 'destroy'])->name('custom-pages.destroy');
 
     // Staff roles and staff: Inertia pages (resources/js/pages/Store/Admin/Staff),
     // so explicit routes on bound models rather than the resource-plus-override

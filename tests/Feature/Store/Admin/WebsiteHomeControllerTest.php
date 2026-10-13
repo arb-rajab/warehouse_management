@@ -65,9 +65,9 @@ test('home settings reject other pages, scripts, removed addons and commented se
     expect(BusinessSetting::count())->toBe(0);
 })->with(['header_logo', 'footer_text', 'header_script', 'footer_script', 'auction_banner_image', 'home_banner1_images', 'top10_brands']);
 
-test('legacy settings cannot bypass the home allowlist endpoint', function (string $key) {
+test('the retired generic settings endpoint cannot bypass the home allowlist endpoint', function (string $key) {
     actingAsStoreUser(createStoreStaff('currency_setup'));
-    $this->post(route('business_settings.update'), ['types' => [$key], $key => 'forged'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => [$key], $key => 'forged'])->assertNotFound();
     expect(BusinessSetting::count())->toBe(0);
 })->with(UpdateWebsiteHomeRequest::KEYS);
 
