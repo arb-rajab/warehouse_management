@@ -542,6 +542,7 @@
         "newBarcodePlaceholder": "امسح أو اكتب باركود…",
         "removeBarcode": "إزالة الباركود {barcode}",
         "noBarcodes": "لم تتم إضافة أي باركود بعد.",
+        "viewBarcode": "عرض الباركود {barcode}",
         "downloadBarcode": "تنزيل الباركود {barcode}",
         "downloadAllBarcodes": "تنزيل الكل",
         "downloadFailed": "فشل التنزيل. يرجى المحاولة مرة أخرى.",

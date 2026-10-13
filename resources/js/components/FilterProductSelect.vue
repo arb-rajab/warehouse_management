@@ -18,6 +18,8 @@ const props = defineProps<{
     allLabel: string;
     selectedCountLabel: (count: number) => string;
     selected: ProductFilterOption[];
+    /** Search every product, deactivated ones the warehouse no longer holds included. */
+    includeInactive?: boolean;
 }>();
 
 const model = defineModel<string[]>({ required: true });
@@ -33,7 +35,7 @@ const {
     rememberNames,
     fetchFirstPageIfEmpty,
     onOptionsScroll,
-} = useProductSearch();
+} = useProductSearch({ includeInactive: props.includeInactive });
 
 /**
  * Every product ever seen with full data (not just its resolved name), so a

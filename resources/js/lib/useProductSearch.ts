@@ -14,7 +14,7 @@ import type { Paginated, ProductFilterOption } from '@/types/admin';
  * its name even once it scrolls out of `results` (a new search replaces the
  * visible page, but the selection itself doesn't change).
  */
-export function useProductSearch() {
+export function useProductSearch(options: { includeInactive?: boolean } = {}) {
     const query = ref('');
     const results = ref<ProductFilterOption[]>([]);
     const page = ref<Paginated<ProductFilterOption> | null>(null);
@@ -39,7 +39,13 @@ export function useProductSearch() {
         loading.value = true;
 
         http.get(
-            searchProducts.url({ query: { q: query.value, page: pageNumber } }),
+            searchProducts.url({
+                query: {
+                    q: query.value,
+                    page: pageNumber,
+                    ...(options.includeInactive ? { include_inactive: 1 } : {}),
+                },
+            }),
             {
                 onSuccess: (response: unknown) => {
                     if (mySeq !== requestSeq) {

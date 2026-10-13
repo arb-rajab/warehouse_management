@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->name('products.barcodes.store');
         Route::get('products/{product}/barcodes/download', [ProductController::class, 'downloadAllBarcodes'])->name('products.barcodes.download-all');
         Route::get('products/{product}/barcodes/{barcode}/download', [ProductController::class, 'downloadBarcode'])->scopeBindings()->name('products.barcodes.download');
+        Route::get('products/{product}/barcodes/{barcode}/preview', [ProductController::class, 'previewBarcode'])->scopeBindings()->name('products.barcodes.preview');
         Route::delete('products/{product}/barcodes/{barcode}', [ProductController::class, 'destroyBarcode'])->scopeBindings()->name('products.barcodes.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');

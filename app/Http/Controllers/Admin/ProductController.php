@@ -186,7 +186,8 @@ class ProductController extends Controller
      * The admin product filter's searchable catalog: an inactive product is
      * only offered while the warehouse still holds it (see
      * Product::activeOrInWarehouse()). Unlike index(), the products page
-     * itself, which lists every product.
+     * itself, which lists every product — and so its own product filter
+     * sends `include_inactive=1`, searching every product, deactivated or not.
      *
      * @return array<string, mixed>
      */
@@ -196,7 +197,7 @@ class ProductController extends Controller
             Product::query()
                 ->select(['id', 'name', 'ar_name', 'published'])
                 ->searchByName($request->string('q')->value())
-                ->activeOrInWarehouse()
+                ->unless($request->boolean('include_inactive'), fn (Builder $query) => $query->activeOrInWarehouse())
                 ->orderBy('name')
                 ->paginate(20)
                 ->withQueryString()
@@ -223,17 +224,31 @@ class ProductController extends Controller
      */
     public function downloadBarcode(Product $product, ProductBarcode $barcode): HttpResponse
     {
+        return response($this->barcodeLabelSvg($product, $barcode))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', "attachment; filename=\"{$this->barcodeFileName($product, $barcode)}\"");
+    }
+
+    /**
+     * The same label as {@see downloadBarcode()}, served inline so the
+     * products page can show it in an `<img>` without downloading it.
+     */
+    public function previewBarcode(Product $product, ProductBarcode $barcode): HttpResponse
+    {
+        return response($this->barcodeLabelSvg($product, $barcode))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline');
+    }
+
+    private function barcodeLabelSvg(Product $product, ProductBarcode $barcode): string
+    {
         $setting = Setting::current();
 
         try {
-            $svg = $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height);
+            return $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height);
         } catch (InvalidArgumentException) {
             abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
         }
-
-        return response($svg)
-            ->header('Content-Type', 'image/svg+xml')
-            ->header('Content-Disposition', "attachment; filename=\"{$this->barcodeFileName($product, $barcode)}\"");
     }
 
     /**
