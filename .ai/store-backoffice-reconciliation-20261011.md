@@ -96,7 +96,7 @@ objects. These changes remain available in Git and have not been silently lost.
 | --- | --- | --- |
 | `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
 | `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
-| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
+| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms (the digital product forms use it since 2026-10-13, `[skip ci]`; see [the digital product forms section](#digital-product-create-and-edit-forms-migration-2026-10-13)); script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Stored formats, translations, image references, page slugs, gates and the storefront/mobile/email rendering of footer, appearance and pages; the scripts compatibility endpoint | **Activated (2026-10-13).** Inertia footer, appearance and custom pages on the shared editor and canonical uploader, with typed writers cleaning rich text; the Blade views, root `WebsiteController` and root page admin actions removed; the generic `business_settings.update` writer retired with its last consumers. This PR and its merge used `[skip ci]`. See [the website settings section](#website-footer-appearance-and-custom-pages-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys, posted since 2026-10-13 by plain code fields on the Inertia appearance page | **Still held.** Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; the typed appearance writer refuses script keys and the generic writer is retired. The 2026-10-13 website PR and its merge used `[skip ci]` and left this row unactivated |
@@ -2378,6 +2378,167 @@ installed sources were used.
   consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
   `/temp/admin` registrations, down from 1,050/438 (ten replace thirteen),
   unchanged by the merge; Blade editor: **12** fields in **12** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.
+
+## Digital product create and edit forms migration (2026-10-13)
+
+Work on `claude/digital-product-forms-inertia-v66574` from fetched `develop`
+at `bb942f0` (the PR #400 merge); the branch had no commits beyond that base.
+No source branch was involved. The owner authorized, for this session only,
+the pull request, its merge into `develop` with the merge method, and
+`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
+checks below are the only verification. No other branch, deployment or
+production data was touched. The guide's §21 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root writer** (`app/Http/Controllers/DigitalProductController.php`, gates
+  `:35-36`). `create`/`edit` (`:45-52`, `:130-139`) loaded the roots with
+  `parent_id = 0, digital = 1` and `childrenCategories` (`:47-50`, `:134-137`);
+  `edit` took `$request->lang` unvalidated (`:132`).
+- **`store`** (`:60-122`): `products` name, `added_by = 'admin'`, the store
+  user, category, `digital = 1`, photos, thumbnail, tags from the JSON in
+  `tags[0]` comma-joined (`:71-77`), description, unit/purchase price,
+  discount and type, meta title/description/image, `file_name = $request->file`
+  (`:89`), slug `preg_replace(...)-rand(10000, 99999)` (`:91`); then taxes
+  through `ProductTaxService` when `tax_id` was posted (`:96-100`), one stock
+  row (`variant`/`sku` empty, unit price, qty 0, `:102-108`), the
+  default-language translation (`:111-114`); a flash and the list (`:116-117`).
+  No transaction, no validation, no cache clearing; `date_range` never read.
+- **`update`** (`:148-216`): any product by id (`:150`), base name/description
+  only for the default language (`:151-154`), shared fields, `digital = 1`,
+  slug `strtolower($request->slug)` (`:177`), every stock row deleted before
+  the save (`:182-184`), tax rows replaced only when `tax_id` was posted
+  (`:189-194`), a new stock row (`:196-202`), the posted language's
+  translation (`:205-208`), `back()` (`:211`). `date_range` never read.
+- **Forms.** `create.blade.php`: file picker without `data-type` (`:44-57`),
+  tags (`:61`), photos multiple image (`:76-82`), thumbnail (`:93-99`), meta
+  image (`:129-136`), active taxes `Tax::where('tax_status', 1)` (`:166-184`),
+  date range `DD-MM-Y HH:mm:ss` with ` to ` (`:189-191`), discount (`:197-205`),
+  summernote description (`:218`). `edit.blade.php`: PATCH spoof (`:11`), lang
+  tabs (`:18-27`), translated name (`:41`), slug (`:167-168`), unit price as
+  text (`:181`), per-tax stored amount/type (`:194-226`), stored range shown
+  with `date('d-m-Y H:i:s', …)` (`:228-241`), translated description (`:272`).
+  Routes `routes/shop-admin.php:155-159`.
+- **Date range.** `ProductService.php:69-76` parses `date_range` with
+  `explode(' to ')` and `strtotime()`; the storefront and APIs apply a discount
+  always when `discount_start_date` is null (`Helpers.php:290-293` and peers),
+  else within the range. Seller digital forms do not store it either.
+- **Readers.** Storefront `digital_product_details.blade.php:555` prints
+  `clean_html()`; mobile `DigitalProductDetailCollection.php:67` returns the
+  stored description. Downloads read `file_name` as an upload id:
+  `Store\Admin\DigitalProductController::download` (encrypted id),
+  `PurchaseHistoryController.php:66-71`, `Seller\DigitalProductController.php:267-273`
+  and the API `purchased-products/download`. All untouched.
+- **Consumers of the views.** Only the root `create`/`edit` rendered
+  `product/digital_products/{create,edit}.blade.php`. `admin_sidenav`'s
+  `areActiveRoutes(['digitalproducts.index', 'digitalproducts.create', 'digitalproducts.edit'])`
+  names still resolve. `shop.categories.child_category` stays for the seller
+  and product forms.
+- **Shared edit redirect.** `ProductController.php:241-243` and `:276-278`
+  redirected digital products to `admin/digitalproducts/{id}/edit` and
+  `digitalproducts/{id}/edit` (no `/temp`, no matching route); the Inertia
+  all-products list links every row there (`Products/Index.vue`, `admin_product_edit`).
+- **Tests treating these forms as Blade.** `DigitalProductControllerTest`
+  (retained-forms and list-migration tests), `Index.test.ts` and
+  `store-digital-products.spec.ts` (full-load hops). The legacy-uploader spec
+  runs on the physical product create form and stays there.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\DigitalProductController` gains `create`, `store`,
+  `edit` and `update`; `StoreDigitalProductRequest`, `UpdateDigitalProductRequest`,
+  `Concerns\ValidatesStoreDigitalProduct`, `Concerns\ValidatesDiscountDateRange`
+  (extracted from `UpdateBrandDiscountRequest`) and `DigitalProductFormResource`.
+  Shared pieces at their second call site: `Category::treeOptions()` (category
+  form and digital forms), `ValidatesStoreUploadReference::uploadReferenceRule()`,
+  `retainableUploadReferenceRule()` and `retainableImageUploadIdsRule()` (the
+  last moved from `UpdateWebsiteFooterRequest`), and
+  `ProvidesStoreUploadPreviews::uploadIdPreviews()` (now behind
+  `settingsImagePreviews()`). Reuses `UpdatesStoreProductFlags::lockedProduct()`,
+  `ProductTaxService`, `languageRules()`, `languageOptions()` and
+  `EditReferenceTranslationRequest`. Root `ProductController`'s two digital
+  redirects point at `digitalproducts.edit`.
+- **Frontend.** `DigitalProducts/Create.vue`, `Edit.vue` (with
+  `StoreLanguageTabs`), `StoreDigitalProductFormFields` (sections, category
+  tree, four canonical `StoreUploadField`s, `StoreRichTextField`, taxes,
+  discount and range with native constraints), the `StoreDigitalProductForm`
+  and `StoreDigitalProductTax` types and fixtures, and 34
+  `store.digitalProducts.form.*` keys in English and Arabic. The list's Add and
+  Edit links are Inertia visits.
+- **Routes.** Five registrations replace five; names, URIs and methods kept,
+  `{id}` became the bound `{product}`.
+- **Removed.** `product/digital_products/create.blade.php`, `edit.blade.php`
+  and root `DigitalProductController`, which left both `pint.json` and
+  `phpstan.neon` exclusions.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/customer/mobile/storefront digital product handlers and views, the
+  download contract, gates, permission definitions, role grants, stored
+  formats (except the discount range, now written), the shared partial, Blade
+  editor assets, the legacy uploader and its spec, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost connected late and was not needed; repository files and
+installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs. `StoreDigitalProductFormFields-*.js` is
+  7,444 B; the editor stays the shared `StoreRichTextField-*.js` (454,000 B).
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` exit 0, every stage
+  run, none skipped: ESLint, Prettier and vue-tsc clean; Vitest **2,674 tests in
+  299 files**; Pint passed; PHPStan **0 errors**; Pest **5,780 tests / 31,672
+  assertions**.
+- **Focused checks.**
+  - `DigitalProductFormTest` **54 tests / 479 assertions**: render and full
+    payloads, every field's validation, atomic writes and rollback (store and
+    update), digital-only 404s, refused callers with DB snapshots, WMS
+    refusal, permission isolation, sanitisation (7 payloads, WAF 403 kept),
+    legacy markup, upload ownership/file type/retained foreign references,
+    slugs, language edits, storefront page, encrypted download and the shared
+    edit redirect. `DigitalProductControllerTest` (adapted) **41 tests / 402
+    assertions**; category, footer and brand-discount tests (shared helpers)
+    **157 tests** passed.
+  - Mutations failed the tests as intended before being reverted: no
+    description cleaning (8 failures), the plain image rule for the thumbnail
+    (1), no owner rule on the file (1), no digital scope on update (1), no
+    store transaction (1), no update transaction (1), translations rewriting
+    the base name (1), non-digital category roots (1), and a re-rendering tax
+    input that dropped typed amounts (the Vitest regression, 1).
+  - Vitest: `StoreDigitalProductFormFields.test.ts` (7), `Form.test.ts` (5)
+    and the adapted `Index.test.ts` (9), every label in English and Arabic.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one
+  worker, zero retries and
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-digital-product-forms.spec.ts` **3/3**: a product created from the
+    list with keyboard-formatted editor content, two photos, a thumbnail, a
+    meta image and a text file through the canonical picker, a percent tax and
+    a discount range, all stored; downloaded from the list with the file's
+    content; edited in the Arabic tab (translation only, base unchanged);
+    stored and pasted script payloads inert in the editor and on the
+    storefront page, with no dialog; Arabic RTL, dark contrast ≥4.5 and the
+    one-stop, mirrored toolbar. No CSP violation on admin pages; the list had
+    the enforced `script-src 'self'` policy.
+  - With the adapted digital-products list spec and the products,
+    legacy-uploader, staff and reference coexistence and blog-editor specs:
+    **15/15 in 7 files**.
+  - First runs failed on spec authoring (a two-label locator) and on two real
+    findings: the tax inputs lost typed amounts on re-render (fixed with an
+    `.attr` binding, now pinned by Vitest), and a storefront page 500s in the
+    strict-mode harness when its owner's other products include one without a
+    slug (inherited; the fixtures got their own owner).
+- **Inventory.** **49** backend Blade files; **25**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
+  `/temp/admin` registrations, unchanged (five replace five); Blade editor:
+  **10** fields in **10** views.
 
 Not run: MySQL, production data or role grants, and the full browser suite.
 Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR

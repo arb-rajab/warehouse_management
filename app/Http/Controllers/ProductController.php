@@ -239,7 +239,8 @@ class ProductController extends Controller implements HasMiddleware
 
         $product = Product::findOrFail($id);
         if ($product->digital == 1) {
-            return redirect('admin/digitalproducts/' . $id . '/edit');
+            // The digital product form; the legacy relative URL missed /temp.
+            return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $request->query('lang')]);
         }
 
 
@@ -274,7 +275,8 @@ class ProductController extends Controller implements HasMiddleware
     {
         $product = Product::findOrFail($id);
         if ($product->digital == 1) {
-            return redirect('digitalproducts/' . $id . '/edit');
+            // The digital product form; the legacy relative URL missed /temp.
+            return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $request->query('lang')]);
         }
         $lang = $request->lang ?? 'en';
 

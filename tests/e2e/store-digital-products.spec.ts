@@ -27,7 +27,7 @@ function seedDigitalProducts(): void {
     `);
 }
 
-test('digital product list switches, native delete confirmation and full-load hops into the retained Blade forms', async ({
+test('digital product list switches, native delete confirmation and Inertia visits into the create and edit forms', async ({
     page,
 }) => {
     seedDigitalProducts();
@@ -74,29 +74,34 @@ test('digital product list switches, native delete confirmation and full-load ho
         if (!$kept->published || $kept->todays_deal != 0) {throw new RuntimeException('Another product changed');}
     `);
 
-    const editRequest = page.waitForRequest((request) =>
-        request.url().includes('/temp/admin/digitalproducts/edit/'),
+    const editVisit = page.waitForResponse(
+        (response) =>
+            /^\/temp\/admin\/digitalproducts\/edit\/\d+$/.test(
+                new URL(response.url()).pathname,
+            ) && response.request().headers()['x-inertia'] === 'true',
     );
     await row.getByRole('link', { name: 'Edit', exact: true }).click();
-    expect((await editRequest).headers()['x-inertia']).toBeUndefined();
+    expect((await editVisit).status()).toBe(200);
     await expect(page).toHaveURL(
         /\/temp\/admin\/digitalproducts\/edit\/\d+\?lang=en$/,
     );
-    await expect(page.locator('#app')).toHaveCount(0);
+    await expect(page.locator('#app')).toHaveCount(1);
     await expect(
-        page.getByRole('heading', { name: 'Edit Digital Product' }),
+        page.getByRole('heading', { name: 'Edit digital product' }),
     ).toBeVisible();
     await page.goto('/temp/admin/digitalproducts');
-    const createRequest = page.waitForRequest((request) =>
-        request.url().endsWith('/temp/admin/digitalproducts/create'),
+    const createVisit = page.waitForResponse(
+        (response) =>
+            response.url().endsWith('/temp/admin/digitalproducts/create') &&
+            response.request().headers()['x-inertia'] === 'true',
     );
     await page
         .getByRole('link', { name: 'Add digital product', exact: true })
         .click();
-    expect((await createRequest).headers()['x-inertia']).toBeUndefined();
-    await expect(page.locator('#app')).toHaveCount(0);
+    expect((await createVisit).status()).toBe(200);
+    await expect(page.locator('#app')).toHaveCount(1);
     await expect(
-        page.getByRole('heading', { name: 'Add New Digital Product' }),
+        page.getByRole('heading', { name: 'Add new digital product' }),
     ).toBeVisible();
 
     await page.goto('/temp/admin/digitalproducts');

@@ -592,6 +592,35 @@ export interface StoreDigitalProduct {
     public_url: string | null;
     download_token: string;
 }
+/** The language-independent fields of the digital product edit form. */
+export interface StoreDigitalProductForm {
+    id: number;
+    category_id: number | null;
+    /** Comma-separated image upload ids. */
+    photos: string | null;
+    thumbnail_img: string | null;
+    /** Comma-separated tags. */
+    tags: string | null;
+    unit_price: string;
+    purchase_price: string | null;
+    discount: string | null;
+    discount_type: string | null;
+    /** `d-m-Y H:i:s to d-m-Y H:i:s`, or null without both ends. */
+    date_range: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    meta_img: string | null;
+    slug: string | null;
+    /** The downloadable file's upload id. */
+    file: string | null;
+}
+/** An active tax, with the product's amount and type for it. */
+export interface StoreDigitalProductTax {
+    id: number;
+    name: string;
+    tax: string;
+    tax_type: 'amount' | 'percent';
+}
 /** The list a product row action names (`list`): its URI segment. */
 export type StoreProductListType = 'admin' | 'all';
 /** The all-products list's legacy one-flag presets. */

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V2\DigitalProductController as ApiDigitalProductController;
-use App\Http\Controllers\DigitalProductController as LegacyDigitalProductController;
 use App\Http\Controllers\PurchaseHistoryController;
 use App\Http\Controllers\Seller\DigitalProductController as SellerDigitalProductController;
 use App\Http\Controllers\Store\Admin\DigitalProductController;
@@ -344,39 +343,42 @@ test('digital product download streams from s3 under its original name when that
     $this->get(route('digitalproducts.download', encrypt($this->product->id)))->assertOk()->assertDownload('Guide.pdf');
 });
 
-test('the retained Blade create and edit forms keep their routes, gates and redirects back to the list', function () {
+test('the Inertia create and edit forms keep their routes, gates and redirects back to the list and the form', function () {
     $staff = createStoreStaff('add_digital_product', 'edit_digital_product', 'show_digital_products');
     actingAsStoreUser($staff);
+    $category = DB::table('categories')->insertGetId(['name' => 'Guides', 'parent_id' => 0, 'level' => 0, 'slug' => 'guides', 'digital' => 1]);
+    $form = ['category_id' => $category, 'unit_price' => 4, 'purchase_price' => 1, 'discount' => 0, 'discount_type' => 'amount'];
     expect(route('digitalproducts.create', [], false))->toBe('/temp/admin/digitalproducts/create')
         ->and(route('digitalproducts.store', [], false))->toBe('/temp/admin/digitalproducts')
         ->and(route('digitalproducts.edit', 5, false))->toBe('/temp/admin/digitalproducts/edit/5')
         ->and(route('digitalproducts.update', 5, false))->toBe('/temp/admin/digitalproducts/5')
         ->and(Route::getRoutes()->getByName('digitalproducts.store')->methods())->toBe(['POST'])
         ->and(Route::getRoutes()->getByName('digitalproducts.update')->methods())->toBe(['PUT', 'PATCH'])
-        ->and(Route::getRoutes()->getByName('digitalproducts.create')->getActionName())->toBe(LegacyDigitalProductController::class.'@create')
-        ->and(Route::getRoutes()->getByName('digitalproducts.edit')->getActionName())->toBe(LegacyDigitalProductController::class.'@edit')
+        ->and(Route::getRoutes()->getByName('digitalproducts.create')->getActionName())->toBe(DigitalProductController::class.'@create')
+        ->and(Route::getRoutes()->getByName('digitalproducts.edit')->getActionName())->toBe(DigitalProductController::class.'@edit')
         ->and(Route::getRoutes()->getByName('digitalproducts.index')->getActionName())->toBe(DigitalProductController::class.'@index');
-    $this->get(route('digitalproducts.create'))->assertOk()->assertViewIs('shop.backend.product.digital_products.create');
-    $this->get(route('digitalproducts.edit', ['id' => $this->product->id, 'lang' => 'en']))->assertOk()->assertViewIs('shop.backend.product.digital_products.edit');
-    $this->get(route('digitalproducts.create'), inertiaHeaders())->assertConflict()->assertHeader('X-Inertia-Location', route('digitalproducts.create'));
-    $this->post(route('digitalproducts.store'), ['name' => 'New guide', 'unit_price' => 4, 'tags' => [null]])->assertRedirect(route('digitalproducts.index'));
+    $this->get(route('digitalproducts.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Create'));
+    $this->get(route('digitalproducts.edit', ['product' => $this->product->id, 'lang' => 'en']))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Edit'));
+    $this->get(route('digitalproducts.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
+    $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
     $new = Product::query()->where('name', 'New guide')->firstOrFail();
     expect($new->getAttribute('digital'))->toBe(1)->and($new->getAttribute('added_by'))->toBe('admin');
     $this->assertDatabaseHas('product_translations', ['product_id' => $new->id, 'lang' => 'en', 'name' => 'New guide']);
-    $this->from(route('digitalproducts.edit', ['id' => $new->id, 'lang' => 'en']))
-        ->patch(route('digitalproducts.update', $new->id), ['name' => 'Renamed guide', 'lang' => 'en', 'unit_price' => 5, 'slug' => 'Renamed-Guide', 'tags' => [null]])
-        ->assertRedirect(route('digitalproducts.edit', ['id' => $new->id, 'lang' => 'en']));
+    $this->patch(route('digitalproducts.update', $new->id), ['name' => 'Renamed guide', 'lang' => 'en', 'slug' => 'Renamed-Guide', ...$form])
+        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.edit', ['product' => $new->id, 'lang' => 'en']));
     expect($new->fresh()->name)->toBe('Renamed guide')->and($new->fresh()->slug)->toBe('renamed-guide');
     actingAsStoreUser(createStoreStaff('show_digital_products'));
     $this->get(route('digitalproducts.create'))->assertForbidden();
     $this->get(route('digitalproducts.edit', $this->product->id))->assertForbidden();
 });
 
-test('the list migration drops only the unused resource routes and the list view, keeping seller, app and storefront contracts', function () {
+test('the migration drops only the unused resource routes and the admin views, keeping seller, app and storefront contracts', function () {
     expect(Route::has('digitalproducts.show'))->toBeFalse()
         ->and(view()->exists('shop.backend.product.digital_products.index'))->toBeFalse()
-        ->and(view()->exists('shop.backend.product.digital_products.create'))->toBeTrue()
-        ->and(view()->exists('shop.backend.product.digital_products.edit'))->toBeTrue()
+        ->and(view()->exists('shop.backend.product.digital_products.create'))->toBeFalse()
+        ->and(view()->exists('shop.backend.product.digital_products.edit'))->toBeFalse()
+        ->and(view()->exists('shop.seller.product.digitalproducts.create'))->toBeTrue()
+        ->and(view()->exists('shop.seller.product.digitalproducts.edit'))->toBeTrue()
         ->and(Route::getRoutes()->getByName('seller.digitalproducts.download')->getActionName())->toBe(SellerDigitalProductController::class.'@download')
         ->and(route('seller.digitalproducts.download', 'token', false))->toBe('/temp/seller/digitalproducts/download/token')
         ->and(Route::getRoutes()->getByName('seller.digitalproducts.destroy')->methods())->toBe(['POST'])

@@ -3,10 +3,8 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     create,
-    edit,
-} from '@/actions/App/Http/Controllers/DigitalProductController';
-import {
     destroy,
+    edit,
     download,
     index as digitalProductsIndex,
     updateFeatured,
@@ -168,26 +166,27 @@ describe('Store digital products Index', () => {
         expect(rows[0].findAll('td')[1].text()).toBe('vendor');
         expect(rows[1].findAll('td')[1].text()).toBe('—');
     });
-    it('links create, edit and download as full loads and deletes through Wayfinder', () => {
+    it('visits create and edit with Inertia, downloads as a full load and deletes through Wayfinder', () => {
         const product = storeDigitalProduct();
         const wrapper = mountPage([product]);
-        expect(wrapper.getComponent(AddResourceLink).props()).toMatchObject({
+        const addLink = wrapper.getComponent(AddResourceLink);
+        expect(addLink.props()).toMatchObject({
             href: create(),
-            inertia: false,
+            inertia: true,
         });
-        expect(wrapper.get(`a[href="${create().url}"]`).element.tagName).toBe(
-            'A',
-        );
+        expect(addLink.getComponent(Link).props('href')).toEqual(create());
         const [editLink, downloadLink, deleteLink] =
             wrapper.findAllComponents(TableActionLink);
         expect(editLink.props()).toMatchObject({
             href: edit(product, { query: { lang: 'en' } }),
-            inertia: false,
+            inertia: true,
         });
-        expect(editLink.attributes('href')).toBe(
+        expect(editLink.getComponent(Link).props('href')).toEqual(
+            edit(product, { query: { lang: 'en' } }),
+        );
+        expect(edit(product, { query: { lang: 'en' } }).url).toBe(
             '/temp/admin/digitalproducts/edit/31?lang=en',
         );
-        expect(editLink.findComponent(Link).exists()).toBe(false);
         expect(downloadLink.props()).toMatchObject({
             href: download('encrypted-31'),
             inertia: false,

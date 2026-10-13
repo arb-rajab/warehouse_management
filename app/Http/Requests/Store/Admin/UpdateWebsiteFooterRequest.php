@@ -5,8 +5,6 @@ namespace App\Http\Requests\Store\Admin;
 use App\Http\Requests\Concerns\ValidatesStoreLanguage;
 use App\Http\Requests\Concerns\ValidatesStoreUploadReference;
 use App\Http\Requests\Concerns\ValidatesWebsiteSettings;
-use App\Models\Upload;
-use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -77,7 +75,7 @@ class UpdateWebsiteFooterRequest extends FormRequest
             'settings.widget_one_links.*' => ['required', ...$this->linkSettingRules()],
             'settings.frontend_copyright_text' => ['present', 'nullable', 'string'],
             'settings.show_social_links' => ['required', 'boolean'],
-            'settings.payment_method_images' => ['present', 'nullable', 'string', 'max:1000', $this->paymentImagesRule()],
+            'settings.payment_method_images' => ['present', 'nullable', 'string', 'max:1000', $this->retainableImageUploadIdsRule($this->storedSettingValue('payment_method_images'))],
             'settings.registration_tutorial_button' => ['required', 'boolean'],
             'settings.registration_tutorial_text' => ['present', 'nullable', 'string', 'max:255'],
         ];
@@ -94,33 +92,5 @@ class UpdateWebsiteFooterRequest extends FormRequest
             $this->refuseUnexpectedSettingInput($validator, ['settings', 'lang']);
             $this->validatePairedSettings($validator, 'widget_one_labels', 'widget_one_links');
         });
-    }
-
-    /**
-     * The payment method logos: comma-separated image upload ids, as the
-     * legacy uploader stored them. An id already stored round-trips whoever
-     * owns it, without granting a preview; any other must pass the library
-     * rule of imageUploadRule().
-     */
-    private function paymentImagesRule(): Closure
-    {
-        return function (string $attribute, mixed $value, Closure $fail): void {
-            if (! is_string($value) || preg_match('/^\d+(?:,\d+)*$/', $value) !== 1) {
-                $fail(__('validation.regex', ['attribute' => $attribute]));
-
-                return;
-            }
-            $ids = explode(',', $value);
-            $stored = explode(',', $this->storedSettingValue('payment_method_images') ?? '');
-            $user = $this->user('store');
-            $images = Upload::query()->where('type', 'image');
-            $found = (clone $images)->whereIn('id', array_intersect($ids, $stored))->count()
-                + (clone $images)->whereIn('id', array_diff($ids, $stored))
-                    ->when(! $user->can('view_uploads') || ! $user->can('viewAny', Upload::class), fn ($query) => $query->where('user_id', $user->id))
-                    ->count();
-            if (count($ids) > 50 || count(array_unique($ids)) !== count($ids) || $found !== count($ids)) {
-                $fail(__('validation.exists', ['attribute' => $attribute]));
-            }
-        };
     }
 }
