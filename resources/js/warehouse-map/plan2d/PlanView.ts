@@ -52,6 +52,8 @@ interface Pair {
 }
 
 const ANIMATION_MS = 480;
+/** How long after the last zoom step the tiles keep their light look before the full detail is painted again. */
+const ZOOM_SETTLE_MS = 160;
 
 /**
  * The 2D floor plan: a top-down view of the same warehouse as the 3D scene,
@@ -66,6 +68,7 @@ export class PlanView extends View implements PlanControls {
     private fitZoom = 1;
     private fitted = false;
     private animationTimer: ReturnType<typeof setTimeout> | undefined;
+    private zoomTimer: ReturnType<typeof setTimeout> | undefined;
     private highlight = 1.2;
 
     private gestures!: PlanGestures;
@@ -135,6 +138,7 @@ export class PlanView extends View implements PlanControls {
 
     protected onDispose(): void {
         clearTimeout(this.animationTimer);
+        clearTimeout(this.zoomTimer);
         clearTimeout(this.refreshTimer);
         this.world.remove();
     }
@@ -439,7 +443,21 @@ export class PlanView extends View implements PlanControls {
             zoomLimits(this.fitZoom),
         );
         this.apply(animate);
+        this.lightenWhileZooming();
         this.scheduleRefresh(80);
+    }
+
+    /**
+     * Every zoom step re-rasters the whole plan, and the shadows, gradients and photos of hundreds of tiles are
+     * most of that cost: paint the light look while zooming and the full detail once it settles.
+     */
+    private lightenWhileZooming(): void {
+        this.world.classList.add('is-zooming');
+        clearTimeout(this.zoomTimer);
+        this.zoomTimer = setTimeout(
+            () => this.world.classList.remove('is-zooming'),
+            ZOOM_SETTLE_MS,
+        );
     }
 
     private apply(animate: boolean): void {

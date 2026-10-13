@@ -43,7 +43,7 @@
         );
 }
 
-.wms-plan__world.is-coarse {
+.wms-plan__world:is(.is-coarse, .is-zooming) {
     box-shadow: none;
 }
 
@@ -471,32 +471,37 @@
     padding: 0 0 0 12px;
 }
 
-/* a zoomed-out plan: small tiles drop shadows, gradients and digits, which are unreadable there and cost paint time */
-.wms-plan__world.is-coarse .wms-tile {
+/* A zoomed-out plan (small tiles) and a plan being zoomed (every step re-rasters it) drop shadows, gradients, digits
+   and photos: unreadable or invisible there, and they are most of the paint time. */
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile {
     box-shadow: none;
     transition: none;
 }
 
-.wms-plan__world.is-coarse .wms-tile::before,
-.wms-plan__world.is-coarse .wms-tile__levels,
-.wms-plan__world.is-coarse .wms-tile__num {
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.has-image {
+    background-image: none;
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile::before,
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile__levels,
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile__num {
     display: none;
 }
 
-.wms-plan__world.is-coarse .wms-tile.is-match {
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-match {
     box-shadow: 0 0 0 3px var(--wms-primary);
 }
 
-.wms-plan__world.is-coarse .wms-tile.is-inactive {
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-inactive {
     box-shadow: inset 0 0 0 2px var(--wms-danger);
 }
 
-.wms-plan__world.is-coarse .wms-tile.is-target {
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-target {
     box-shadow:
         0 0 0 3px var(--wms-target),
         0 0 12px 3px rgb(250 204 21 / 0.8);
 }
 
-.wms-plan__world.is-coarse .wms-tile:hover {
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile:hover {
     transform: none;
 }
