@@ -1,6 +1,10 @@
 /// <reference types="node" />
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { php } from './editor';
 
 /** Seed only the dedicated browser-test database. */
 export function seedStoreFixtures(php: string): void {
@@ -42,4 +46,18 @@ export function ensureStoreRtlLanguage(): void {
         $language = App\Models\Language::query()->firstOrNew(['code' => 'ar']);
         $language->forceFill(['name' => 'Arabic', 'app_lang_code' => 'ar', 'rtl' => 1, 'status' => 1])->save();
     `);
+}
+
+/** Runs `$expression` against the named product and returns its JSON. */
+export function storedProduct(name: string, expression: string): unknown {
+    const file = join(
+        tmpdir(),
+        `store-product-${Date.now()}-${Math.random()}.json`,
+    );
+    seedStoreFixtures(String.raw`
+        $product = App\Models\Product::query()->where('name', ${php(name)})->sole();
+        file_put_contents(${php(file)}, json_encode(${expression}));
+    `);
+
+    return JSON.parse(readFileSync(file, 'utf8'));
 }

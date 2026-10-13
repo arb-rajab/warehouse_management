@@ -400,10 +400,10 @@ writer.
 
 The integrated legacy store back office under `/temp` still carries second
 writers it inherited: brand and product/digital-product deletion, product
-duplication, the digital product create/edit forms (each now one
-transaction, pinned by tests) and the queued `import:all-products-v2`. They
-are retained unchanged as an owner decision still pending
-(.ai/rules/store-backoffice-migration.md §5, §§14–16, §21). Do not add
+duplication, the digital product create/edit forms, the physical product
+create form (each now one transaction, pinned by tests) and the queued
+`import:all-products-v2`. They are retained unchanged as an owner decision
+still pending (.ai/rules/store-backoffice-migration.md §5, §§14–16, §§21–22). Do not add
 another, and do not treat those as precedent.
 
 Three things worth knowing before touching this:

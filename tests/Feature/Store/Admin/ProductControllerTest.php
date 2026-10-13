@@ -608,15 +608,16 @@ test('the seller list still renders the shared Blade view and keeps its jQuery e
     expect($sellerProduct->fresh()->getAttribute('for_sale'))->toBe(1);
 });
 
-test('the retained Blade create and edit forms keep their routes and gates and open in full', function () {
+test('the create form is Inertia while the retained Blade edit form keeps its routes and gates and opens in full', function () {
     actingAsStoreUser(createStoreStaff('add_new_product', 'product_edit'));
     // The legacy edit form decodes these JSON columns, which the store always fills.
     DB::table('products')->where('id', $this->product->id)->update(['colors' => '[]', 'attributes' => '[]', 'tags' => '']);
     expect(route('products.create', [], false))->toBe('/temp/admin/products/create')
         ->and(route('products.admin.edit', ['id' => 5, 'lang' => 'en'], false))->toBe('/temp/admin/products/admin/5/edit?lang=en')
-        ->and(Route::getRoutes()->getByName('products.create')->getActionName())->toBe(LegacyProductController::class.'@create')
+        ->and(Route::getRoutes()->getByName('products.create')->getActionName())->toBe(ProductController::class.'@create')
         ->and(Route::getRoutes()->getByName('products.admin.edit')->getActionName())->toBe(LegacyProductController::class.'@admin_product_edit');
-    $this->get(route('products.create'))->assertOk()->assertViewIs('shop.backend.product.products.create');
+    $this->get(route('products.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/Products/Create'));
+    $this->get(route('products.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
     $this->get(route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']))->assertOk()->assertViewIs('shop.backend.product.products.edit');
     $this->get(route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']), inertiaHeaders())
         ->assertConflict()->assertHeader('X-Inertia-Location', route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']));

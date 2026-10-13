@@ -58,7 +58,6 @@ class ProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:add_new_product', only: ['create', 'store']),
             new Middleware('permission:show_seller_products', only: ['seller_products']),
             new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate']),
@@ -106,115 +105,6 @@ class ProductController extends Controller implements HasMiddleware
         $type = 'Seller';
 
         return view('shop.backend.product.products.index', compact('products', 'type', 'col_name', 'query', 'seller_id', 'sort_search'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return Response
-     */
-    public function create()
-    {
-
-        $categories = Category::where('parent_id', 0)
-            ->where('digital', 0)
-            ->with('childrenCategories')
-            ->get();
-
-        return view('shop.backend.product.products.create', compact('categories'));
-    }
-
-
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  Request  $request
-     * @return Response
-     */
-    public function store(ProductRequest $request)
-    {
-        //  dd($request);
-        $product = $this->productService->store($request->except([
-            '_token',
-            'sku',
-            'choice',
-            'tax_id',
-            'tax',
-            'tax_type',
-            'flash_deal_id',
-            'flash_discount',
-            'flash_discount_type'
-        ]));
-        $request->merge(['product_id' => $product->id]);
-
-        //VAT & Tax
-        if ($request->tax_id) {
-            $this->productTaxService->store($request->only([
-                'tax_id',
-                'tax',
-                'tax_type',
-                'product_id'
-            ]));
-        }
-
-        //Flash Deal
-        if (get_setting('Flash_deals')) {
-            $this->productFlashDealService->store($request->only([
-                'flash_deal_id',
-                'flash_discount',
-                'flash_discount_type'
-            ]), $product);
-        }
-
-
-        //Product Stock
-        $this->productStockService->store($request->only([
-            'colors_active',
-            'colors',
-            'choice_no',
-            'unit_price',
-            'sku',
-            'current_stock',
-            'product_id'
-        ]), $product);
-
-        // Product Translations
-        $request->merge(['lang' => config('app.default_language')]);
-        ProductTranslation::create($request->only([
-            'lang',
-            'name',
-            'unit',
-            'description',
-            'product_id'
-        ]));
-
-        // Product Types
-
-        foreach ($request->product_types as $type) {
-            if ($type != null) {
-                ProductVariation::create([
-                    "product_id" => $product->id,
-                    "name" => $type
-                ]);
-            }
-        }
-
-        foreach ($request->product_barcodes as $barcode) {
-            if ($barcode != null) {
-                StoreProductBarcode::create([
-                    "product_id" => $product->id,
-                    "barcode" => $barcode
-                ]);
-            }
-        }
-
-        flash(translate('Product has been inserted successfully'))->success();
-
-        Artisan::call('view:clear');
-        Artisan::call('cache:clear');
-
-        return redirect()->route('products.admin');
     }
 
     /**

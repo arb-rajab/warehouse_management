@@ -4,12 +4,12 @@ import { Copy, Eye, Pencil, RefreshCw, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import {
     admin_product_edit,
-    create,
     fetch as fetchProducts,
 } from '@/actions/App/Http/Controllers/ProductController';
 import {
     all as allProducts,
     bulkDestroy,
+    create,
     destroy,
     duplicate,
     inHouse as inHouseProducts,
@@ -188,7 +188,6 @@ async function requestFetch(): Promise<void> {
                 </button>
                 <AddResourceLink
                     :href="create()"
-                    :inertia="false"
                     :label="t('store.products.create')"
                 />
             </div>

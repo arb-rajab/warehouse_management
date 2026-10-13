@@ -3,20 +3,29 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Enums\StoreProductList;
+use App\Http\Controllers\Concerns\ProvidesStoreProductTaxes;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\FilterAllProductsRequest;
 use App\Http\Requests\Store\Admin\FilterInHouseProductsRequest;
 use App\Http\Requests\Store\Admin\ProductListActionRequest;
+use App\Http\Requests\Store\Admin\ProductVariantCombinationsRequest;
+use App\Http\Requests\Store\Admin\StoreProductRequest;
 use App\Http\Requests\Store\Admin\UpdateProductListFlagRequest;
 use App\Http\Resources\Store\ProductListResource;
+use App\Models\Attribute;
+use App\Models\Brand;
 use App\Models\Cart;
 use App\Models\Category;
+use App\Models\Color;
+use App\Models\FlashDeal;
 use App\Models\Product;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
+use App\Services\Store\InHouseProductWriter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -30,21 +39,23 @@ use Inertia\Response;
 
 /**
  * The in-house and all-products lists and their row actions, one Inertia
- * page for both. The seller list, the create/edit forms (which need the
- * rich-text editor) and the jQuery endpoints the seller list posts to stay
- * on the root ProductController's Blade.
+ * page for both, and the physical product create form. The seller list, the
+ * edit forms and the jQuery endpoints the seller list posts to stay on the
+ * root ProductController's Blade.
  *
  * Every row action names its list (`list`), touches only a product that
  * list shows (404 otherwise) and returns to it with the list's filters.
  */
 class ProductController extends Controller implements HasMiddleware
 {
+    use ProvidesStoreProductTaxes;
     use UpdatesStoreProductFlags;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
         return [
+            new Middleware('permission:add_new_product', only: ['create', 'store', 'variantCombinations']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
             // The root ProductController's own gates for the same writes.
@@ -118,6 +129,70 @@ class ProductController extends Controller implements HasMiddleware
             'user_id' => $userId === null ? null : (int) $userId,
             'preset' => $preset,
         ]);
+    }
+
+    /**
+     * The physical product create form, with the options the Blade form
+     * listed: the physical category tree, every brand, every colour by name,
+     * every attribute, the active flash deals and the active taxes (each
+     * while its business setting shows it).
+     */
+    public function create(): Response
+    {
+        $flashDeals = StoreProductRequest::flashDealsEnabled();
+        $vat = StoreProductRequest::vatSectionEnabled();
+
+        return Inertia::render('Store/Admin/Product/Products/Create', [
+            'categories' => Category::treeOptions(fn ($roots) => $roots->where('digital', 0)),
+            'brands' => Brand::query()->select(['id', 'name'])->orderBy('id')->get()
+                ->map(fn (Brand $brand): array => ['id' => $brand->id, 'name' => (string) $brand->getTranslation('name')])->all(),
+            'colors' => Color::query()->select(['id', 'name', 'code'])->orderBy('name')->orderBy('id')->get()
+                ->map(fn (Color $color): array => ['id' => $color->id, 'name' => (string) $color->getAttribute('name'), 'code' => (string) $color->getAttribute('code')])->all(),
+            'attributes' => Attribute::query()->select(['id', 'name'])->orderBy('id')->get()
+                ->map(fn (Attribute $attribute): array => ['id' => $attribute->id, 'name' => (string) $attribute->getTranslation('name')])->all(),
+            'flashDeals' => $flashDeals ? FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title'])->where('status', 1)->orderBy('id')->get()
+                ->map(fn (FlashDeal $deal): array => ['id' => $deal->getKey(), 'name' => (string) $deal->getAttribute('title')])->all() : [],
+            'taxes' => $vat ? $this->taxOptions(null) : [],
+            'sections' => [
+                'shipping' => StoreProductRequest::shippingSectionEnabled(),
+                'productWiseShipping' => StoreProductRequest::productWiseShippingEnabled(),
+                'flashDeals' => $flashDeals,
+                'vat' => $vat,
+                'cashOnDelivery' => StoreProductRequest::cashPaymentEnabled(),
+            ],
+        ]);
+    }
+
+    /**
+     * Creates the product, its stock rows, taxes, flash deal entry,
+     * default-language translation, types and store barcodes in one
+     * transaction, then clears the compiled views and the cache as the
+     * legacy form did, once the write has committed.
+     */
+    public function store(StoreProductRequest $request, InHouseProductWriter $writer): RedirectResponse
+    {
+        $data = $request->validated();
+        DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled()));
+        $this->clearStorefrontCaches();
+
+        return redirect()->route('products.admin');
+    }
+
+    /**
+     * The variant rows the chosen colours and attribute values generate,
+     * named and ordered as the Blade SKU table named them, each defaulting to
+     * the unit price, no SKU and a quantity of 10 as that table did.
+     */
+    public function variantCombinations(ProductVariantCombinationsRequest $request): JsonResponse
+    {
+        $price = (string) ($request->validated('unit_price') ?? '');
+
+        return response()->json(array_map(fn (string $variant): array => [
+            'variant' => $variant,
+            'price' => $price,
+            'sku' => '',
+            'qty' => '10',
+        ], $request->variantNames()));
     }
 
     public function updatePublished(UpdateProductListFlagRequest $request, Product $product): RedirectResponse

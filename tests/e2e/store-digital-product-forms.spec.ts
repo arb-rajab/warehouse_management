@@ -1,6 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
@@ -11,6 +9,7 @@ import {
     expectStrictPolicy,
     focusedToolbarItem,
     php,
+    pickUploads,
     press,
     uploadPhoto,
     watchCsp,
@@ -19,6 +18,7 @@ import { switchLocale } from './support/nav';
 import {
     ensureStoreRtlLanguage,
     seedStoreFixtures,
+    storedProduct,
 } from './support/storeFixtures';
 
 /**
@@ -60,17 +60,6 @@ function resetDigitalForms(products: Record<string, string> = {}): void {
     `);
 }
 
-/** Runs `$expression` against the named product and returns its JSON. */
-function stored(name: string, expression: string): unknown {
-    const file = join(tmpdir(), `store-digital-forms-${Date.now()}.json`);
-    seedStoreFixtures(String.raw`
-        $product = App\Models\Product::query()->where('name', ${php(name)})->sole();
-        file_put_contents(${php(file)}, json_encode(${expression}));
-    `);
-
-    return JSON.parse(readFileSync(file, 'utf8'));
-}
-
 /** Uploads a text file to the library; it lists under `name`. */
 async function uploadDocument(page: Page, name: string): Promise<void> {
     await page.goto('/temp/admin/uploads/create');
@@ -84,23 +73,6 @@ async function uploadDocument(page: Page, name: string): Promise<void> {
         .last()
         .click();
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
-}
-
-/** Picks `files` for the canonical upload field `id`. */
-async function pick(page: Page, id: string, files: string[]): Promise<void> {
-    await page
-        .locator(`label[for="${id}"]`)
-        .locator('..')
-        .getByRole('button', { name: 'Choose files', exact: true })
-        .click();
-    const dialog = page.getByRole('dialog', { name: 'Choose files' });
-
-    for (const file of files) {
-        await dialog.getByRole('button', { name: file, exact: true }).click();
-    }
-
-    await dialog.getByRole('button', { name: 'Use selected files' }).click();
-    await expect(dialog).toBeHidden();
 }
 
 test('a digital product is created with editor content, canonical uploads, taxes and a discount range, edited per language and downloaded from the list', async ({
@@ -147,10 +119,13 @@ test('a digital product is created with editor content, canonical uploads, taxes
         .locator('#category_id')
         .selectOption({ label: '-- Browser recipes' });
     await page.locator('#tags').fill('bread, baking ,bread');
-    await pick(page, 'file', ['digital-guide']);
-    await pick(page, 'photos', ['digital-photo-one', 'digital-photo-two']);
-    await pick(page, 'thumbnail_img', ['digital-photo-two']);
-    await pick(page, 'meta_img', ['digital-photo-one']);
+    await pickUploads(page, 'file', ['digital-guide']);
+    await pickUploads(page, 'photos', [
+        'digital-photo-one',
+        'digital-photo-two',
+    ]);
+    await pickUploads(page, 'thumbnail_img', ['digital-photo-two']);
+    await pickUploads(page, 'meta_img', ['digital-photo-one']);
     await page.locator('#meta_title').fill('Bread guide');
     await page.locator('#meta_description').fill('How to bake bread');
     await page.locator('#unit_price').fill('19.99');
@@ -193,7 +168,7 @@ test('a digital product is created with editor content, canonical uploads, taxes
         .click();
     expect([302, 303]).toContain((await created).status());
     await expect(page).toHaveURL(/\/temp\/admin\/digitalproducts$/);
-    const product = stored(
+    const product = storedProduct(
         'Browser bread guide',
         "['description' => $product->description, 'tags' => $product->tags, 'photos' => $product->photos, 'file' => $product->file_name, 'start' => $product->discount_start_date, 'end' => $product->discount_end_date, 'discount_type' => $product->discount_type, 'taxes' => Illuminate\\Support\\Facades\\DB::table('product_taxes')->where('product_id', $product->id)->get(['tax', 'tax_type'])->map(fn ($t) => [(float) $t->tax, $t->tax_type])->all(), 'stocks' => Illuminate\\Support\\Facades\\DB::table('product_stocks')->where('product_id', $product->id)->count(), 'translation' => App\\Models\\ProductTranslation::where('product_id', $product->id)->where('lang', 'en')->value('name')]",
     ) as Record<string, unknown>;
@@ -267,7 +242,7 @@ test('a digital product is created with editor content, canonical uploads, taxes
     );
     await expect(page.locator('#name')).toHaveValue('دليل الخبز');
     expect(
-        stored(
+        storedProduct(
             'Browser bread guide',
             "[$product->description, App\\Models\\ProductTranslation::where('product_id', $product->id)->orderBy('lang')->pluck('name', 'lang')]",
         ),
@@ -345,7 +320,7 @@ test('script payloads stay inert in the digital product editor and on the storef
         .getByRole('button', { name: 'Update product', exact: true })
         .click();
     expect([302, 303]).toContain((await saved).status());
-    const body = stored(
+    const body = storedProduct(
         'Browser hostile guide',
         '$product->description',
     ) as string;

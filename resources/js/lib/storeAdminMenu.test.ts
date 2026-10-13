@@ -136,6 +136,7 @@ describe('storeAdminMenu', () => {
                 '/temp/admin/digitalproducts',
                 '/temp/admin/products/all',
                 '/temp/admin/products/admin',
+                '/temp/admin/products/create',
                 '/temp/admin/brands',
                 '/temp/admin/customer_packages',
                 customerNotificationsIndex.url(),
