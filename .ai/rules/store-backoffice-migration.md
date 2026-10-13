@@ -1895,6 +1895,9 @@ and `overWriteEnvFile()`, whose last callers were the writer's `site_name` and
   `store-legacy-uploader.spec.ts` uses the retained product create form,
   scoped to `thumbnail_img`; it keeps real browser coverage, and whoever
   converts the product form must retarget it.
+- `LegacyUploadSecurityTest`'s "page editor prints its values escaped" read
+  the Blade view; it now checks that the Inertia editor files print no raw
+  HTML and that hostile stored values reach the page escaped and cleaned.
 - `LegacyControllerMiddlewareConversionTest` pins four root entries;
   `ControllerRedirectsTest` no longer needs its `PageController` exclusion.
 
