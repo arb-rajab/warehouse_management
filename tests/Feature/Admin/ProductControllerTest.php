@@ -1928,3 +1928,14 @@ test('a barcode must be printable ASCII to be added', function () {
     $response->assertSessionHasErrors('barcode');
     $this->assertDatabaseCount('wms_product_barcodes', 0);
 });
+
+test('the product search answers a repeat request that already holds the current results with a 304', function () {
+    actingAsAdmin();
+    Product::factory()->create(['name' => 'Widget']);
+
+    $etag = $this->getJson('/admin/products/search?q=Widget')->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->getJson('/admin/products/search?q=Widget', ['If-None-Match' => $etag])->assertNotModified();
+});
