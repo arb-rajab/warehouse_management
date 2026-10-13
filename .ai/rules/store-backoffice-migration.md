@@ -1938,10 +1938,10 @@ Digital product create and edit now use `Store/Admin/Product/DigitalProducts/Cre
 and `Edit` with the shared editor (§18) and the canonical upload picker (§2.4).
 Work is on `claude/digital-product-forms-inertia-v66574`, branched from
 `develop` at `bb942f0` (the PR #400 merge). The owner authorized this
-session's PR, its merge into `develop` and `[skip ci]` on both. Every commit,
-the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR or merge
-SAST and no `develop` deploy ran for them; the local checks in the ledger are
-the only verification.
+session's PR (#401), its merge into `develop` and `[skip ci]` on both. Every
+commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR or
+merge SAST and no `develop` deploy ran for them; the local checks in the
+ledger are the only verification.
 
 **Routes and gates: names, URIs and methods kept.** `digitalproducts.create`
 (GET `/digitalproducts/create`) and `.store` (POST `/digitalproducts`) under

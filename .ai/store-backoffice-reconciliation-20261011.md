@@ -2388,7 +2388,7 @@ or its merge.
 Work on `claude/digital-product-forms-inertia-v66574` from fetched `develop`
 at `bb942f0` (the PR #400 merge); the branch had no commits beyond that base.
 No source branch was involved. The owner authorized, for this session only,
-the pull request, its merge into `develop` with the merge method, and
+the pull request (#401), its merge into `develop` with the merge method, and
 `[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
 PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
 checks below are the only verification. No other branch, deployment or
