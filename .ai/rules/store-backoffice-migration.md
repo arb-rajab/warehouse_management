@@ -1531,8 +1531,8 @@ Blog post create/edit now use `Store/Admin/Blog/Posts/Create` and `Edit` with
 the shared Tiptap editor, `components/StoreRichTextField.vue`. Work is on
 `ccr-f394535e-90xr6w`, branched from `develop` at `28643a4` (the PR #391
 merge). The owner approved Tiptap as the shared back-office editor and, for this
-session only, the dependency, this PR, its merge into `develop` and `[skip ci]`
-on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR
+session only, the dependency, this PR (#392), its merge into `develop` and
+`[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR
 CI, no dependency-audit workflow, no PR or merge SAST and no `develop` deploy
 ran for them; the local checks in the ledger are the only verification.
 

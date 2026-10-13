@@ -1865,7 +1865,7 @@ Work on `ccr-f394535e-90xr6w` from fetched `develop` at
 `28643a43782d71a2c526823c79f6b057ba8aae55` (the PR #391 merge); the branch had
 no commits beyond that base. **The owner approved Tiptap as the shared
 back-office editor** and, for this session only, the dependency, the pull
-request, its merge into `develop` with the merge method, and `[skip ci]` on
+request (#392), its merge into `develop` with the merge method, and `[skip ci]` on
 every commit, the PR title and the merge commit. **No PR CI, no
 dependency-audit workflow, no PR or merge SAST and no `develop` deploy ran for
 this PR or its merge**, so the checks below are the only verification. No
