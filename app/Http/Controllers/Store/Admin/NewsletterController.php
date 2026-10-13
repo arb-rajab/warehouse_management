@@ -8,7 +8,6 @@ use App\Http\Requests\Store\Admin\SendNewsletterRequest;
 use App\Mail\EmailManager;
 use App\Models\StoreUser;
 use App\Models\Subscriber;
-use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +15,8 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NewsletterController extends Controller implements HasMiddleware
 {
@@ -25,11 +26,15 @@ class NewsletterController extends Controller implements HasMiddleware
         return [new Middleware('permission:send_newsletter')];
     }
 
-    public function index(): View
+    /**
+     * Recipients are not listed here: the form searches them through the
+     * bounded recipients() endpoint, where the Blade screen loaded every
+     * user and subscriber email into the page.
+     */
+    public function index(): Response
     {
-        return view('shop.backend.marketing.newsletters.index', [
-            'users' => StoreUser::query()->select('email')->get(),
-            'subscribers' => Subscriber::query()->select('email')->get(),
+        return Inertia::render('Store/Admin/Marketing/Newsletters/Index', [
+            'smtpConfigured' => filled(config('mail.mailers.smtp.username')),
         ]);
     }
 

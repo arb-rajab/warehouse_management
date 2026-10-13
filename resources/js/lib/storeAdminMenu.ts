@@ -627,6 +627,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.newsletters',
+                inertia: true,
                 href: newslettersIndex(),
                 permission: 'send_newsletter',
                 setting: 'Newsletters',

@@ -24,3 +24,6 @@ Since AdminLayout.vue moved the desktop language switcher and logout action into
 Use `switchLocale(page, label)` from that helper for locale buttons. It waits
 for LanguageSwitcher's full-page reload before another navigation starts;
 checking `dir` alone can race the reload and cancel the next visit.
+
+## Shared editor and CSP helpers live in tests/e2e/support/editor.ts
+Specs that drive the shared Tiptap editor (`StoreRichTextField`) import `watchCsp`/`documentViolations`/`expectStrictPolicy` (enforced strict policy, no violations), `uploadPhoto`, `press(page, key, editorSelector)` (waits for the editor to take in the selection), `focusedToolbarItem`/`arrowTo` and `colorsOf` from there: `store-blog-editor.spec.ts` and `store-newsletter-ticket.spec.ts`. Don't re-inline them in a new spec. The webServer env pins `MAIL_MAILER=array` (no spec can deliver mail) and a placeholder `MAIL_USERNAME` that only satisfies the newsletter's SMTP guard.

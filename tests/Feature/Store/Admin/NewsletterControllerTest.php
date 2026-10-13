@@ -3,7 +3,9 @@
 use App\Http\Middleware\BlockMaliciousRequests;
 use App\Mail\EmailManager;
 use App\Models\Subscriber;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /** @return array<string, mixed> */
 function adminNewsletterForm(array $overrides = []): array
@@ -17,12 +19,35 @@ beforeEach(function () {
     Mail::fake();
 });
 
-test('the newsletter screen retains its established Blade editor', function () {
-    createStoreUser('customer');
+test('the newsletter screen can be rendered', function () {
+    actingAsStoreUser(createStoreStaff('send_newsletter'));
+    $this->get(route('newsletters.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Store/Admin/Marketing/Newsletters/Index')
+    );
+});
+
+test('the newsletter screen sends only the SMTP state and leaves recipients to the bounded search', function (?string $username, bool $configured) {
+    $customer = createStoreUser('customer');
     Subscriber::forceCreate(['email' => 'reader@example.test']);
     actingAsStoreUser(createStoreStaff('send_newsletter'));
-    config(['mail.mailers.smtp.username' => null]);
-    $this->get(route('newsletters.index'))->assertOk()->assertViewIs('shop.backend.marketing.newsletters.index');
+    config(['mail.mailers.smtp.username' => $username]);
+    $response = $this->get(route('newsletters.index'))->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Store/Admin/Marketing/Newsletters/Index')
+        ->where('smtpConfigured', $configured)
+        ->missing('users')->missing('subscribers'));
+    // The Blade screen printed every user and subscriber email into the page.
+    $response->assertDontSee($customer->email)->assertDontSee('reader@example.test');
+    Mail::assertNothingQueued();
+})->with(['unconfigured' => [null, false], 'configured' => ['mailer-user', true]]);
+
+test('WMS sessions cannot open or use the newsletter', function () {
+    config(['mail.mailers.smtp.username' => 'configured']);
+    $this->actingAs(User::factory()->create(), 'web');
+    $this->get(route('newsletters.index'))->assertRedirect(route('shop.login'));
+    $this->get(route('newsletters.recipients', ['kind' => 'users']))->assertRedirect(route('shop.login'));
+    $this->post(route('newsletters.send'), adminNewsletterForm())->assertRedirect(route('shop.login'));
+    Mail::assertNothingQueued();
 });
 
 test('newsletter recipient searches are narrow bounded and isolated by recipient kind', function () {

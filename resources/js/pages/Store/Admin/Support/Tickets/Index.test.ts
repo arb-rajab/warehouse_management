@@ -78,7 +78,7 @@ describe('Support ticket list', () => {
         expect(wrapper.text()).toContain(t('store.support.pending'));
         expect(wrapper.text()).toContain(t('store.support.new'));
         const view = wrapper.getComponent(TableActionLink);
-        expect(view.props('inertia')).toBe(false);
+        expect(view.props('inertia')).toBe(true);
         expect(view.get('a').attributes('href')).toBe(
             '/temp/admin/support_ticket/45/show',
         );

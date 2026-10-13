@@ -4,6 +4,7 @@ use App\Models\Ticket;
 use App\Models\TicketReply;
 use App\Models\Upload;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('a read-only ticket viewer cannot reply or change ticket status', function () {
     $ticket = Ticket::forceCreate(['code' => 123456, 'user_id' => createStoreUser()->id, 'subject' => 'Help', 'details' => 'Help', 'status' => 'pending', 'client_viewed' => 1]);
@@ -42,7 +43,12 @@ test('ticket reads retain their gate and render sanitized details, replies and a
     actingAsStoreUser(createStoreStaff());
     $this->get(route('support_ticket.admin_show', encrypt($ticket->id)))->assertForbidden();
     actingAsStoreUser(createStoreStaff('view_all_support_tickets'));
-    $this->get(route('support_ticket.admin_show', encrypt($ticket->id)))->assertOk()
-        ->assertViewIs('shop.backend.support.support_tickets.show')->assertSee('Keep detail')->assertSee('Keep reply')->assertDontSee('detail-xss')->assertDontSee('reply-xss');
+    $this->get(route('support_ticket.admin_show', $ticket))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Support/Tickets/Show')
+            ->where('ticket.details_html', '<p>Keep detail</p>')
+            ->where('replies.data.0.reply_html', '<b>Keep reply</b><img src="x">')
+            ->where('ticket.attachments.0.id', $upload->id)->where('ticket.attachments.0.name', 'ticket')
+            ->where('replies.data.0.attachments.0.id', $upload->id))
+        ->assertSee('Keep detail')->assertSee('Keep reply')->assertDontSee('detail-xss')->assertDontSee('reply-xss');
 
 });

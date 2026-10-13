@@ -6,6 +6,7 @@ paths:
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
   - 'resources/js/components/StoreRichTextField.vue,resources/js/components/StoreBlogFormFields.vue'
+  - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -14,7 +15,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
+Latest follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
+Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
 Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
 Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
@@ -24,7 +26,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–18 record
+historical evidence; §10 records reconciliation results and §§11–19 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -106,8 +108,8 @@ keeps WMS's `locale === 'ar'`.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
 plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
-use full page loads, including ticket details. Blog create/edit are Inertia
-pages since §18.
+use full page loads. Blog create/edit (§18), the newsletter and the ticket
+detail (§19) are Inertia pages.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -478,11 +480,11 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-12)
+## 4. Integrated status (2026-10-13)
 
 This reflects integrated code and the carrier, customer-package, category,
-brand, digital-product, in-house/all-products list, general-settings and
-blog-editor follow-ups in §§11–18. The original
+brand, digital-product, in-house/all-products list, general-settings,
+blog-editor and newsletter/ticket-detail follow-ups in §§11–19. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -498,8 +500,8 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
 | Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
-| Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
-| Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit use Inertia with the shared Tiptap editor (§18); the newsletter editor form remains Blade (its editor hold is lifted); typed newsletter sending/recipient lookup integrated |
+| Website/support | Partial | Header/home, conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; the reply uses the shared editor and canonical image picker (§19); footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
+| Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
 | Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
@@ -548,14 +550,15 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   changed only for the owner-approved Tiptap packages (§18).
 - **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
-  rich-text field for converted screens; blog post create/edit use it. The
-  approval lifts the editor hold on the newsletter form, the website footer,
-  appearance and custom pages, the ticket detail/reply editor and the editor
-  part of product and digital-product create/edit; each still needs its own
+  rich-text field for converted screens; blog post create/edit (§18), the
+  newsletter and the ticket reply (§19) use it. The approval lifts the editor
+  hold on the website footer, appearance and custom pages and the editor part
+  of product and digital-product create/edit; each still needs its own
   migration, and the script policy, `manage_website_scripts` and rich-text WAF
   exceptions stay held. The Blade editor (summernote in
   `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
-  its assets stay while those Blade consumers remain.
+  its assets stay while those Blade consumers remain: 18 fields in 16 views
+  since §19.
 - Chart.js and new Leaflet dependencies still lack independently verified
   approval. Preserve existing Blade chart/map assets.
 - Product list switches share one write path. The digital-product and
@@ -577,10 +580,10 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **58 Blade files**, down from 73 after
+The current backend inventory contains **56 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
-two brand screens, the digital product list (§15), general settings (§17) and
-the two blog post forms (§18).
+two brand screens, the digital product list (§15), general settings (§17), the
+two blog post forms (§18), and the newsletter and ticket detail (§19).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -593,12 +596,10 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
-- **marketing:** `marketing/newsletters/index.blade.php`.
 - **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
-- **support:** `support/support_tickets/show.blade.php`.
 - **system:** `system/server_status.blade.php`.
 - **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
 - **website_settings:** `website_settings/appearance.blade.php`, `website_settings/footer.blade.php`, `website_settings/pages/create.blade.php`, `website_settings/pages/edit.blade.php`, `website_settings/pages/index.blade.php`.
@@ -641,7 +642,7 @@ line numbers or count sibling snapshots.
 | `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | JSON / redirects / PDF as applicable |
-| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | Retained Blade newsletter editor; typed send and bounded JSON recipient search |
+| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
 | `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
 | `OffersCatalogController` | `offers.destroy`, `(unnamed compatibility)`, `offers.index`, `offers.store` | `Store/Admin/Catalogue/Offers/Index.vue` |
@@ -664,7 +665,7 @@ line numbers or count sibling snapshots.
 | `StaffController` | `staffs.index`, `staffs.store`, `staffs.create`, `staffs.update`, `staffs.destroy`, `staffs.edit` | `Store/Admin/Staff/Staffs/Index.vue`, `Store/Admin/Staff/Staffs/Create.vue`, `Store/Admin/Staff/Staffs/Edit.vue` |
 | `StateController` | `states.index`, `states.store`, `states.update`, `states.destroy`, `states.edit`, `states.status` | `Store/Admin/Setup/States/Index.vue`, `Store/Admin/Setup/States/Edit.vue` |
 | `SubscriberController` | `admin.subscribers.index`, `subscriber.destroy` | `Store/Admin/Marketing/Subscribers/Index.vue` |
-| `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`; show → retained Blade detail; reply → redirect |
+| `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`, `Show.vue` (§19); reply → redirect to the detail; customer/seller ticket pages stay on root/seller `SupportTicketController` (Blade) |
 | `TaxController` | `tax.index`, `tax.store`, `tax.update`, `tax.destroy`, `tax.edit`, `taxes.tax-status` | `Store/Admin/Setup/Taxes/Index.vue`, `Store/Admin/Setup/Taxes/Edit.vue` |
 | `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
 | `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
@@ -678,8 +679,8 @@ Google map settings also retain their Blade GET consumers. Root
 `BusinessSettingsController` keeps the Google Map GET, the generic settings
 writer, the seller commission/verification screens and `env_key_update`, so it
 stays in both analysis exclusion lists. Website footer,
-appearance and custom pages, seller/classified screens use retained root handlers. Newsletters use a typed
-admin controller with their retained Blade editor. Explicit approval and implementation gaps are tracked
+appearance and custom pages, seller/classified screens use retained root handlers. The newsletter and
+the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
 
@@ -1642,5 +1643,123 @@ Current inventory: **58** backend Blade files, **34** direct literal consumers
 of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
 of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
 **438** under `/temp/admin`. Verification is recorded in the editor section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 19. Newsletter and support ticket detail on the shared editor (2026-10-13)
+
+The newsletter form now uses `Store/Admin/Marketing/Newsletters/Index`, and the
+support ticket detail and reply use `Store/Admin/Support/Tickets/Show`, both
+with `StoreRichTextField` (§18). Work is on `ccr-b2e34e7d-piwxdo`, branched from
+`develop` at `a22e4d8` (the PR #392 merge). The owner authorized this session's
+PR (#393), its merge into `develop` and `[skip ci]` on both. Every commit, the PR and
+its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
+`develop` deploy ran for them; the local checks in the ledger are the only
+verification. Sources: `cf5ef305` (newsletter) and `e3995898` (ticket detail),
+adapted to current `develop`, not cherry-picked.
+
+**Newsletter.**
+
+- **Routes, gate and send: unchanged.** `newsletters.index`,
+  `newsletters.recipients` and `newsletters.send`, all `send_newsletter`.
+  The send still refuses an unconfigured SMTP username (`smtp` error), merges
+  and de-duplicates the user and subscriber emails, cleans the content with
+  `clean_html()` before validation (`SendNewsletterRequest`), queues one
+  `EmailManager` per recipient with `Mail::to()->queue()` on the default queue
+  connection, and returns to the Blade dashboard. The subject stays plain text.
+  The SMTP test stays on the settings page (`test.smtp`, `smtp_settings` and
+  `send_newsletter`); the newsletter page has none.
+- **Recipients.** The Blade page printed every user and subscriber email into
+  two select boxes. The page now sends only `smtpConfigured`; each list fills
+  from the existing bounded search (30 emails per query, debounced), keeps its
+  selections across searches and posts `user_emails[]`/`subscriber_emails[]`.
+  Either list satisfies the required recipient, mirroring `required_without`.
+  The search text has no `name`, so it never posts.
+- **Page.** `ResourceFormPage` (wide), `StoreNewsletterFormFields`,
+  `StoreNewsletterRecipients` and `StoreRichTextField` for `content`, with the
+  dormant `store.newsletters.*` keys (one added: `searchFailed`). The sidebar
+  entry is an Inertia visit. The send's redirect to the Blade dashboard is a
+  full load through `HandleStoreBladePages`.
+
+**Ticket detail and reply.**
+
+- **Routes and gates: unchanged.** `support_ticket.admin_show` (plain or
+  `encrypt()`ed id, customerless tickets 404) under `view_all_support_tickets`;
+  `support_ticket.admin_store` under `reply_to_support_tickets`. The list's View
+  link is now an Inertia visit; the sidebar entry already was.
+- **Visibility and side effects, unchanged.** A viewer sees every ticket with
+  a customer. Opening one sets `viewed` (seen by staff) and nothing else. A
+  reply stores the cleaned HTML, the caller as author and the attachment ids,
+  sets `client_viewed = 0` and the chosen status in one transaction, then
+  queues `SupportMailManager` to the customer.
+- **Status.** The Blade button read "Submit as <current status>" but posted
+  `pending` (`show.blade.php:43`, `:134-135`). The form's status select starts
+  at the current status (`pending` for an unknown one) and posts what is
+  chosen.
+- **Page.** Header with author, date and status; the reply form (shown with
+  `reply_to_support_tickets`); replies newest first, as the Blade page listed
+  them, 20 per page with the per-page selector; the customer's original request
+  closes the last page. Bodies render through `StoreSanitizedHtml` from
+  `clean_html()` output only (`SupportTicketDetailResource`,
+  `TicketReplyResource`). Avatars are not shown.
+- **Attachments.** `App\Services\Store\TicketAttachments` reads the stored
+  comma-separated ids of the ticket and the page's replies in one query (the
+  Blade page queried per id) and returns the canonical `UploadResource`
+  (`id, name, type, size, url`), in stored order, skipping missing uploads.
+  A ticket's files stay listed for everyone who may open the ticket, whoever
+  uploaded them, as before; that does not open them to the library: previews
+  still need `view_uploads`, and a reply may attach only its author's images
+  or, with `view_uploads`, library images (`uploadIdsRules('image')`). Links
+  carry `download`; an upload with no safe http(s) URL shows its name only.
+  The reply uses the canonical `StoreUploadField` (multiple images).
+- **Reply redirect fix.** The reply returned to the detail by `encrypt()`ed
+  id, which can contain a `/` the route cannot match, so it could 404. It now
+  returns by the plain id. Customer and seller email links still carry
+  `encrypt()`ed ids (inherited, unchanged).
+- **Legacy HTML.** Replies are never edited. Stored summernote markup (`b`,
+  `u`, `i`, lists, aligned paragraphs) renders as cleaned; the new reply starts
+  empty, and the editor's output passes `HtmlSanitizer` unchanged.
+
+**Consumers traced.** Only `NewsletterController::index` and root
+`SupportTicketController::admin_show` rendered the two deleted views. Root
+`admin_show` and its middleware entry are removed; the root controller keeps
+the customer index/store/show and `seller_store`, and the seller controller is
+untouched, so the customer and seller ticket pages, the admin-notification
+email (`support_ticket.admin_show` link) and the reply email are unchanged.
+`admin_sidenav`'s `newsletters.index` link and `areActiveRoutes` names still
+resolve. `TicketAttachments`, `TicketReplyResource`, `StoreSanitizedHtml` and
+the `store.newsletters.*` keys were dormant integration leftovers and now have
+their first consumers; the dormant `StoreTicketAttachment` type and ticket
+fixtures were replaced.
+
+**Unchanged.** `HtmlSanitizer`, the strict Inertia CSP, `blade_csp`, WAF
+patterns, exclusions and skip keys, route names, URIs, gates, permission
+definitions, role grants, stored formats, Blade editor assets (18 fields in 16
+views remain), the legacy uploader, shells, PDFs, `HandleStoreBladePages`, and
+the held script policy, `manage_website_scripts`, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** `tickets.created_at` and `ticket_replies.created_at` are
+`useCurrentOnUpdate()`, so on MySQL the "seen" save also moves a ticket's
+creation time, as the Blade page's did. In the browser harness the retained
+Blade dashboard (the newsletter's return target) answers 500: strict mode
+refuses its lazy load of product translations. Production does not run strict
+mode, and the newsletter spec asserts the redirect rather than the dashboard.
+
+**Tests adapted in place, none weakened.** `NewsletterControllerTest`'s Blade
+view test became render and payload tests. `SupportTicketControllerTest`,
+`SupportTicketAuthorizationTest` and `HtmlSanitizerTest` assert the Inertia
+render and the cleaned props instead of the view, keeping their raw-response
+`assertDontSee` checks. The ticket list test expects an Inertia View link; the
+menu test lists the newsletter as Inertia. The blog editor spec's CSP and
+toolbar helpers moved to `tests/e2e/support/editor.ts`. The browser harness
+pins `MAIL_MAILER=array` and a placeholder SMTP username.
+
+Current inventory: **56** backend Blade files, **32** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
+**438** under `/temp/admin`. Verification is recorded in the newsletter and
+ticket section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.

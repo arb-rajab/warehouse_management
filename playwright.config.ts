@@ -103,6 +103,11 @@ export default defineConfig({
             SESSION_DRIVER: 'cookie',
             CACHE_STORE: 'array',
             QUEUE_CONNECTION: 'sync',
+            // The array driver keeps every message in memory, so no spec can
+            // deliver real mail. The username only satisfies the newsletter's
+            // "SMTP configured" guard; nothing connects with it.
+            MAIL_MAILER: 'array',
+            MAIL_USERNAME: 'e2e-array-mailer',
         },
     },
 });

@@ -1,10 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
+import {
+    arrowTo,
+    colorsOf,
+    documentViolations,
+    expectStrictPolicy,
+    focusedToolbarItem,
+    php,
+    press,
+    uploadPhoto,
+    watchCsp,
+} from './support/editor';
 import { switchLocale } from './support/nav';
 import {
     ensureStoreRtlLanguage,
@@ -23,10 +33,6 @@ const legacyHtml =
     '<table class="table table-bordered"><tbody><tr><td>A</td><td>B</td></tr></tbody></table>' +
     '<p><a href="https://example.com/rice" target="_blank">Link</a></p><p dir="rtl" lang="ar">أرز</p>' +
     '<div class="embed-responsive embed-responsive-16by9"><iframe src="//www.youtube.com/embed/abc"></iframe></div>';
-
-function php(value: string): string {
-    return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
-}
 
 function resetBlog(posts: Record<string, string> = {}): void {
     seedStoreFixtures(String.raw`
@@ -51,123 +57,6 @@ function stored(slug: string, expression: string): unknown {
     `);
 
     return JSON.parse(readFileSync(file, 'utf8'));
-}
-
-/**
- * Records CSP violations: the browser's console reports and the
- * securitypolicyviolation events of every document that loads.
- */
-async function watchCsp(page: Page): Promise<string[]> {
-    const reports: string[] = [];
-    page.on('console', (message) => {
-        if (/content security policy|refused to/i.test(message.text())) {
-            reports.push(`${page.url()}: ${message.text()}`);
-        }
-    });
-    await page.addInitScript(() => {
-        document.addEventListener('securitypolicyviolation', (event) => {
-            const log = window as unknown as { cspViolations?: string[] };
-            log.cspViolations = [
-                ...(log.cspViolations ?? []),
-                `${event.violatedDirective} ${event.blockedURI}`,
-            ];
-        });
-    });
-
-    return reports;
-}
-
-async function documentViolations(page: Page): Promise<string[]> {
-    return page.evaluate(
-        () =>
-            (window as unknown as { cspViolations?: string[] }).cspViolations ??
-            [],
-    );
-}
-
-async function expectStrictPolicy(page: Page, path: string): Promise<void> {
-    const response = await page.goto(path);
-    const headers = response!.headers();
-    expect(headers['content-security-policy-report-only']).toBeUndefined();
-    const scriptSrc = headers['content-security-policy']
-        ?.split(';')
-        .map((directive) => directive.trim())
-        .find((directive) => directive.startsWith('script-src '));
-    expect(scriptSrc).toBe("script-src 'self'");
-}
-
-async function uploadPhoto(page: Page, name: string): Promise<void> {
-    await page.goto('/temp/admin/uploads/create');
-    await page.locator('#upload-files').setInputFiles({
-        name: `${name}.png`,
-        mimeType: 'image/png',
-        buffer: readFileSync('tests/e2e/fixtures/store-avatar.png'),
-    });
-    await page
-        .getByRole('button', { name: 'Upload files', exact: true })
-        .last()
-        .click();
-    await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
-}
-
-/**
- * Waits until the editor has taken in the browser's selection. Playwright
- * can send the next key before Chromium dispatches `selectionchange`, which
- * no human typist can, so a selection-moving key is followed by this.
- */
-async function press(page: Page, key: string): Promise<void> {
-    await page.keyboard.press(key);
-    await page.waitForFunction(() => {
-        const content = document.querySelector('#description') as
-            | (HTMLElement & {
-                  editor?: {
-                      state: { selection: { from: number; to: number } };
-                      view: { posAtDOM(node: Node, offset: number): number };
-                  };
-              })
-            | null;
-        const selection = document.getSelection();
-
-        if (
-            !content?.editor ||
-            !selection?.anchorNode ||
-            !selection.focusNode
-        ) {
-            return false;
-        }
-
-        const { state, view } = content.editor;
-        const anchor = view.posAtDOM(
-            selection.anchorNode,
-            selection.anchorOffset,
-        );
-        const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
-
-        return (
-            Math.min(anchor, head) === state.selection.from &&
-            Math.max(anchor, head) === state.selection.to
-        );
-    });
-}
-
-async function focusedToolbarItem(page: Page): Promise<string | undefined> {
-    return page.evaluate(
-        () =>
-            (document.activeElement as HTMLElement | null)?.dataset.toolbarItem,
-    );
-}
-
-/** Moves along the toolbar with the arrow key until `item` has focus. */
-async function arrowTo(page: Page, item: string, key = 'ArrowRight') {
-    for (let step = 0; step < 30; step++) {
-        if ((await focusedToolbarItem(page)) === item) {
-            return;
-        }
-
-        await page.keyboard.press(key);
-    }
-
-    throw new Error(`The toolbar never reached ${item}`);
 }
 
 test('a post is written, formatted by keyboard, saved and reloaded with a table and a canonical image under the strict CSP', async ({
@@ -215,10 +104,10 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
     );
     await page.keyboard.press('Tab');
     await expect(page.locator('#description')).toBeFocused();
-    await press(page, 'End');
+    await press(page, 'End', '#description');
     await page.keyboard.press('Enter');
     await page.keyboard.type('Bold words');
-    await press(page, 'Shift+Home');
+    await press(page, 'Shift+Home', '#description');
     await page.keyboard.press('Alt+F10');
     expect(await focusedToolbarItem(page)).toBe('blockStyle');
     await page.keyboard.press('ArrowRight');
@@ -240,7 +129,7 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
         page.locator('#description p[style*="text-align: center"]'),
     ).toHaveText('Bold words');
 
-    await press(page, 'End');
+    await press(page, 'End', '#description');
     await page.keyboard.press('Enter');
     await page.keyboard.press('Alt+F10');
     await arrowTo(page, 'table');
@@ -252,7 +141,7 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
     await page.keyboard.type('Cell');
     await expect(page.locator('#description th').first()).toHaveText('Head');
 
-    await press(page, 'Control+End');
+    await press(page, 'Control+End', '#description');
     await page.keyboard.type('Photo ');
     await page.locator('[data-toolbar-item="image"]').click();
     const dialog = page.getByRole('dialog', { name: 'Choose files' });
@@ -393,7 +282,7 @@ test('script payloads stay inert in the editor and on the public page, stored or
     );
 
     await page.locator('#description p').first().click();
-    await press(page, 'End');
+    await press(page, 'End', '#description');
     await page.evaluate(() => {
         const data = new DataTransfer();
         data.setData(
@@ -468,7 +357,7 @@ test('legacy Blade-editor markup round-trips unchanged and keeps its formatting 
         .getByRole('link', { name: 'Edit', exact: true })
         .click();
     await page.locator('#description p[dir="rtl"]').click();
-    await press(page, 'End');
+    await press(page, 'End', '#description');
     await page.keyboard.type(' edited');
     await page.getByRole('button', { name: 'Save post', exact: true }).click();
     await expect(page).toHaveURL(/\/temp\/admin\/blog$/);
@@ -525,28 +414,7 @@ test('the editor works in Arabic RTL with dark contrast and mirrored arrow keys'
     expect(await focusedToolbarItem(page)).toBe('blockStyle');
 
     for (const selector of ['#description', 'select[data-toolbar-item]']) {
-        const colors = await page.locator(selector).evaluate((element) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 1;
-            const context = canvas.getContext('2d', {
-                willReadFrequently: true,
-            })!;
-            const rgb = (color: string) => {
-                context.fillStyle = color;
-                context.fillRect(0, 0, 1, 1);
-
-                return Array.from(context.getImageData(0, 0, 1, 1).data).slice(
-                    0,
-                    3,
-                ) as [number, number, number];
-            };
-            const style = getComputedStyle(element);
-
-            return {
-                foreground: rgb(style.color),
-                background: rgb(style.backgroundColor),
-            };
-        });
+        const colors = await colorsOf(page, selector);
         expect(Math.max(...colors.background)).toBeLessThan(60);
         expect(
             contrastRatio(colors.foreground, colors.background),

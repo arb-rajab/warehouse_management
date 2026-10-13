@@ -1551,7 +1551,11 @@
             "pending": "Pending",
             "open": "Open",
             "solved": "Solved",
-            "attachments": "Attachments"
+            "attachments": "Attachments",
+            "ticketTitle": "{subject} #{code}",
+            "originalMessage": "Original request",
+            "noReplies": "No replies yet.",
+            "replyStatus": "Status after reply"
         },
         "website": {
             "header": {
@@ -1918,7 +1922,8 @@
             "recipients": {
                 "users": "User emails",
                 "subscribers": "Subscriber emails"
-            }
+            },
+            "searchFailed": "Recipients could not be loaded. Try again."
         },
         "blogPosts": {
             "index": {
