@@ -41,6 +41,16 @@ The page at `/admin/warehouse-map` is a Vue/Inertia host (`pages/Admin/Warehouse
 - Strings are in `resources/js/locales/{en,ar}.json` under `warehouseMap.*`; the language switch is the
   panel's locale POST followed by a reload.
 
+## 2D performance
+
+- Panning is compositor-only (a `transform` on a `will-change` layer); zooming re-rasters the whole
+  `.wms-plan__world`. Profiled with a 640-column synthetic warehouse: the app's JS is negligible, raster is
+  everything. Large blur radii and big gradients on that one scaled element dominate: an `inset` box-shadow
+  with a 120px blur alone was ~60% of each zoom's raster. Keep the world's shadow small, draw vignettes as
+  gradients, and keep tile styling cheap (tile shadows measured as free). The `is-coarse` level of detail
+  drops shadows when zoomed out.
+- Profile with Playwright's `trace`/`video` off (their DOM snapshots masquerade as page script time).
+
 ## Verification
 
 - Unit tests are co-located (`*.test.ts`, jsdom). Browser behaviour (WebGL, pointer, phone layout) is
