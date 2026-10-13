@@ -10,25 +10,9 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mail;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 
-class SupportTicketController extends Controller implements HasMiddleware
+class SupportTicketController extends Controller
 {
-    /**
-     * Get the middleware that should be assigned to the controller.
-     *
-     * See Auth\LoginController::middleware()'s docblock for why this
-     * replaces the constructor-based $this->middleware() call.
-     *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
-     */
-    public static function middleware(): array
-    {
-        return [
-            new Middleware('permission:view_all_support_tickets', only: ['admin_show']),
-        ];
-    }
     /**
      * Display a listing of the resource.
      *
@@ -148,14 +132,6 @@ class SupportTicketController extends Controller implements HasMiddleware
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;
         return view('shop.frontend.user.support_ticket.show', compact('ticket','ticket_replies'));
-    }
-
-    public function admin_show($id)
-    {
-        $ticket = Ticket::findOrFail(decrypt($id));
-        $ticket->viewed = 1;
-        $ticket->save();
-        return view('shop.backend.support.support_tickets.show', compact('ticket'));
     }
 
     /**

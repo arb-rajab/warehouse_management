@@ -266,6 +266,27 @@ export interface StoreSupportTicket {
     last_reply_at: string | null;
 }
 
+/** SupportTicketDetailResource: the ticket on its admin page. */
+export interface StoreTicketDetail {
+    id: number;
+    code: string;
+    subject: string;
+    status: string;
+    user: { id: number; name: string } | null;
+    created_at: string;
+    details_html: string;
+    attachments: StoreUpload[];
+}
+
+/** TicketReplyResource: one reply on the admin ticket page. */
+export interface StoreTicketReply {
+    id: number;
+    user: { id: number; name: string } | null;
+    reply_html: string;
+    created_at: string;
+    attachments: StoreUpload[];
+}
+
 export interface StoreWebsiteFooterSettings {
     footer_logo: string;
     about_us_description: string;
@@ -320,29 +341,6 @@ export interface StoreWebsitePageForm {
     keywords: string;
     meta_image: string;
 }
-export interface StoreTicketAttachment {
-    id: number;
-    name: string;
-    url: string;
-}
-export interface StoreTicketDetail {
-    id: number;
-    code: number;
-    subject: string;
-    status: string;
-    author: string;
-    created_at: string;
-    details_html: string;
-    attachments: StoreTicketAttachment[];
-}
-export interface StoreTicketReply {
-    id: number;
-    author: string | null;
-    created_at: string;
-    reply_html: string;
-    attachments: StoreTicketAttachment[];
-}
-
 export interface StoreBlogCategory {
     id: number;
     category_name: string;

@@ -791,6 +791,33 @@ export function storeSupportTicket(
         ...overrides,
     };
 }
+export function storeTicketDetail(
+    overrides: Partial<StoreTicketDetail> = {},
+): StoreTicketDetail {
+    return {
+        id: 45,
+        code: '123456',
+        subject: 'Help',
+        status: 'open',
+        user: { id: 8, name: 'Customer' },
+        created_at: '2026-10-09T10:00:00+00:00',
+        details_html: '<p>My <strong>order</strong> is late</p>',
+        attachments: [storeUpload({ id: 7, name: 'receipt' })],
+        ...overrides,
+    };
+}
+export function storeTicketReply(
+    overrides: Partial<StoreTicketReply> = {},
+): StoreTicketReply {
+    return {
+        id: 91,
+        user: { id: 3, name: 'Staff member' },
+        reply_html: '<p>It ships <em>today</em></p>',
+        created_at: '2026-10-09T12:00:00+00:00',
+        attachments: [],
+        ...overrides,
+    };
+}
 
 export function storeWebsiteFooterSettings(
     overrides: Partial<StoreWebsiteFooterSettings> = {},
@@ -867,38 +894,6 @@ export function storeWebsitePageForm(
         ...overrides,
     };
 }
-export function storeTicketDetail(
-    overrides: Partial<StoreTicketDetail> = {},
-): StoreTicketDetail {
-    return {
-        id: 1,
-        code: 123456,
-        subject: 'Help',
-        status: 'pending',
-        author: 'Customer',
-        created_at: '2026-10-09T10:00:00Z',
-        details_html: '<p>Safe customer detail</p>',
-        attachments: [
-            { id: 7, name: 'ticket.png', url: '/uploads/all/ticket.png' },
-        ],
-        ...overrides,
-    };
-}
-export function storeTicketReply(
-    overrides: Partial<StoreTicketReply> = {},
-): StoreTicketReply {
-    return {
-        id: 1,
-        author: 'Staff',
-        created_at: '2026-10-09T11:00:00Z',
-        reply_html: '<b>Safe reply</b>',
-        attachments: [
-            { id: 8, name: 'reply.png', url: '/uploads/all/reply.png' },
-        ],
-        ...overrides,
-    };
-}
-
 export function storeBlogCategory(
     overrides: Partial<StoreBlogCategory> = {},
 ): StoreBlogCategory {

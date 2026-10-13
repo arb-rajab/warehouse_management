@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterSupportTicketsRequest;
 use App\Http\Requests\Store\Admin\ReplySupportTicketRequest;
 use App\Http\Requests\Store\Admin\ShowSupportTicketRequest;
+use App\Http\Resources\Store\SupportTicketDetailResource;
 use App\Http\Resources\Store\SupportTicketResource;
+use App\Http\Resources\Store\TicketReplyResource;
 use App\Models\Ticket;
 use App\Models\TicketReply;
-use Illuminate\Contracts\View\View;
+use App\Services\Store\TicketAttachments;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -41,9 +43,35 @@ class SupportTicketController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function show(ShowSupportTicketRequest $request, Ticket $supportTicket): View
+    /**
+     * Opening a ticket marks it seen by staff (`viewed`), as the Blade page
+     * did; its status and the customer's `client_viewed` are unchanged.
+     * Replies list newest first, the Blade order, a page at a time.
+     */
+    public function show(ShowSupportTicketRequest $request, Ticket $supportTicket, TicketAttachments $attachments): Response
     {
-        return app(\App\Http\Controllers\SupportTicketController::class)->admin_show(encrypt($supportTicket->id));
+        $perPage = $this->resolvePerPage($request, 20);
+        $supportTicket->viewed = 1;
+        $supportTicket->save();
+        $supportTicket->load('user:id,name');
+        $replies = $supportTicket->ticketreplies()
+            ->select(['id', 'ticket_id', 'user_id', 'reply', 'files', 'created_at'])
+            ->with('user:id,name')->orderByDesc('id')
+            ->paginate($perPage)->withQueryString();
+        $uploads = $attachments->read([
+            $supportTicket->files,
+            ...$replies->getCollection()->map(fn (TicketReply $reply): ?string => $reply->files)->values()->all(),
+        ]);
+        $supportTicket->setAttribute('attachments', $attachments->forFiles($supportTicket->files, $uploads));
+        $replies->getCollection()->each(
+            fn (TicketReply $reply) => $reply->setAttribute('attachments', $attachments->forFiles($reply->files, $uploads))
+        );
+
+        return Inertia::render('Store/Admin/Support/Tickets/Show', [
+            'ticket' => new SupportTicketDetailResource($supportTicket),
+            'replies' => $this->paginated(TicketReplyResource::collection($replies)),
+            'filters' => ['per_page' => $perPage],
+        ]);
     }
 
     public function reply(ReplySupportTicketRequest $request): RedirectResponse
@@ -57,6 +85,8 @@ class SupportTicketController extends Controller implements HasMiddleware
         });
         app(\App\Http\Controllers\SupportTicketController::class)->send_support_reply_email_to_user($ticket, $reply);
 
-        return redirect()->route('support_ticket.admin_show', ['supportTicket' => encrypt($ticket->id)]);
+        // The binding takes the plain id. An encrypt()ed one can contain a `/`,
+        // which the route cannot match, so returning by it could 404.
+        return redirect()->route('support_ticket.admin_show', ['supportTicket' => $ticket->id]);
     }
 }

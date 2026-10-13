@@ -2,39 +2,64 @@
 
 namespace App\Services\Store;
 
+use App\Http\Resources\Store\UploadResource;
 use App\Models\Upload;
+use Illuminate\Support\Collection;
 
+/**
+ * Resolves the comma-separated upload ids a ticket or ticket reply stores in
+ * `files` into the canonical upload contract (id, name, type, size, url).
+ *
+ * A ticket's files are part of the ticket: everyone who may open the ticket
+ * sees them, whoever uploaded them, as the Blade page showed them. That does
+ * not open them to the upload library's previews or to a new reply, which
+ * keep the library permission and ownership checks.
+ */
 class TicketAttachments
 {
-    /** @param list<string|null> $fields
-     * @return array<int, array{id: int, name: string, url: string}> */
-    public function read(array $fields): array
+    /**
+     * Loads every upload the given `files` values name, in one query.
+     *
+     * @param  list<string|null>  $fields
+     * @return Collection<int, Upload> keyed by id
+     */
+    public function read(array $fields): Collection
     {
-        $ids = array_values(array_unique(array_merge(...array_map(fn ($value) => $this->ids($value), $fields))));
-        $result = [];
-        foreach (Upload::query()->select(['id', 'file_original_name', 'extension', 'file_name', 'external_link'])->whereIn('id', $ids)->get() as $upload) {
-            // Exactly uploaded_asset()'s existing local/external/S3 resolution.
-            $url = $upload->external_link === null ? my_asset($upload->file_name ?? '') : ($upload->file_name === null ? $upload->external_link : $upload->file_name);
-            $compact = (string) preg_replace('/[\x00-\x20\x7F-\x9F]+/u', '', $url);
-            if ($compact === '' || str_starts_with($compact, '//') || (preg_match('/^[a-z][a-z0-9+.-]*:/i', $compact) === 1 && preg_match('#^https?://#i', $compact) !== 1)) {
-                continue;
-            }
-            $result[$upload->id] = ['id' => $upload->id, 'name' => $upload->file_original_name.'.'.$upload->extension, 'url' => $url];
-        }
+        $ids = array_values(array_unique(array_merge([], ...array_map($this->ids(...), $fields))));
 
-        return $result;
+        return Upload::query()
+            ->select(['id', 'file_original_name', 'type', 'file_size', 'file_name', 'external_link'])
+            ->whereIn('id', $ids)->get()->keyBy('id');
     }
 
-    /** @return list<int> */
+    /**
+     * The ids a stored `files` value names, in their stored order. Blank,
+     * non-numeric and repeated entries are skipped.
+     *
+     * @return list<int>
+     */
     public function ids(?string $value): array
     {
-        return array_values(array_map(intval(...), array_filter(explode(',', $value ?? ''), ctype_digit(...))));
+        $ids = array_map(intval(...), array_filter(array_map(trim(...), explode(',', $value ?? '')), ctype_digit(...)));
+
+        return array_values(array_unique($ids));
     }
 
-    /** @param array<int, array{id: int, name: string, url: string}> $uploads
-     * @return list<array{id: int, name: string, url: string}> */
-    public function forFiles(?string $value, array $uploads): array
+    /**
+     * The attachments of one `files` value, skipping ids whose upload is gone.
+     *
+     * @param  Collection<int, Upload>  $uploads
+     * @return list<UploadResource>
+     */
+    public function forFiles(?string $value, Collection $uploads): array
     {
-        return array_values(array_intersect_key($uploads, array_flip($this->ids($value))));
+        $attachments = [];
+        foreach ($this->ids($value) as $id) {
+            if ($uploads->has($id)) {
+                $attachments[] = new UploadResource($uploads->get($id));
+            }
+        }
+
+        return $attachments;
     }
 }

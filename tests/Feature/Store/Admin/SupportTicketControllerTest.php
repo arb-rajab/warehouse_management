@@ -56,11 +56,15 @@ test('WMS sessions cannot open the ticket list', function () {
     $this->get(route('support_ticket.admin_index'))->assertRedirect(route('shop.login'));
 });
 
-test('ticket detail keeps the Blade reply form and encrypted email links', function () {
+test('ticket detail renders the Inertia page by plain id and encrypted email links', function () {
     actingAsStoreUser(createStoreStaff('view_all_support_tickets'));
     $ticket = adminSupportTicket();
-    foreach ([$ticket->id, encrypt($ticket->id)] as $id) {
-        $this->get(route('support_ticket.admin_show', $id))->assertOk()->assertViewIs('shop.backend.support.support_tickets.show');
+    do {
+        $encryptedId = encrypt($ticket->id);
+    } while (preg_match('#[/+]#', $encryptedId));
+    foreach ([$ticket->id, $encryptedId] as $id) {
+        $this->get(route('support_ticket.admin_show', $id))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Store/Admin/Support/Tickets/Show')->where('ticket.id', $ticket->id));
     }
     actingAsStoreUser(createStoreStaff());
     $this->get(route('support_ticket.admin_show', $ticket->id))->assertForbidden();

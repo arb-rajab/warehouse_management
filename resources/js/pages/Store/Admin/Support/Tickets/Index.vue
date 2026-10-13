@@ -12,6 +12,7 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { ticketStatusLabel } from '@/lib/storeSupportTicket';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreSupportTicket } from '@/types/store';
 const props = defineProps<{
@@ -34,11 +35,6 @@ function search(event: Event): void {
             per_page: props.filters.per_page ?? 20,
         },
         { preserveState: true, replace: true },
-    );
-}
-function statusLabel(status: string): string {
-    return t(
-        `store.support.${status === 'pending' || status === 'open' ? status : 'solved'}`,
     );
 }
 </script>
@@ -86,7 +82,7 @@ function statusLabel(status: string): string {
                 <td class="px-4 py-2">
                     {{ row.user?.name ?? t('store.support.missingUser') }}
                 </td>
-                <td class="px-4 py-2">{{ statusLabel(row.status) }}</td>
+                <td class="px-4 py-2">{{ ticketStatusLabel(row.status) }}</td>
                 <td class="px-4 py-2">
                     {{
                         row.last_reply_at
@@ -95,7 +91,7 @@ function statusLabel(status: string): string {
                     }}
                 </td>
                 <td class="px-4 py-2">
-                    <TableActionLink :href="show(row)" :inertia="false"
+                    <TableActionLink :href="show(row)"
                         ><Eye class="h-3.5 w-3.5" />{{
                             t('store.support.view')
                         }}</TableActionLink

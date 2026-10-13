@@ -1551,7 +1551,11 @@
             "pending": "قيد الانتظار",
             "open": "مفتوح",
             "solved": "تم الحل",
-            "attachments": "المرفقات"
+            "attachments": "المرفقات",
+            "ticketTitle": "{subject} #{code}",
+            "originalMessage": "الطلب الأصلي",
+            "noReplies": "لا توجد ردود بعد.",
+            "replyStatus": "الحالة بعد الرد"
         },
         "website": {
             "header": {
@@ -1918,7 +1922,8 @@
             "recipients": {
                 "users": "بريد المستخدمين",
                 "subscribers": "بريد المشتركين"
-            }
+            },
+            "searchFailed": "تعذّر تحميل المستلمين. حاول مرة أخرى."
         },
         "blogPosts": {
             "index": {

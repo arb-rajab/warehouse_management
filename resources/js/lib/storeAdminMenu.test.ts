@@ -19,6 +19,7 @@ import {
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
 import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
 import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
@@ -168,6 +169,7 @@ describe('storeAdminMenu', () => {
                 flashDealsIndex.url(),
                 offerDealsIndex.url(),
                 subscribersIndex.url(),
+                newslettersIndex.url(),
                 driversIndex.url(),
                 driversCreate.url(),
                 trucksIndex.url(),
