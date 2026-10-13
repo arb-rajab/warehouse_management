@@ -5,6 +5,7 @@ paths:
   - 'resources/js/layouts/StoreAdminLayout.vue'
   - 'resources/js/lib/storeAdminMenu.ts,resources/js/lib/storeAccess.ts'
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
+  - 'resources/js/components/StoreRichTextField.vue,resources/js/components/StoreBlogFormFields.vue'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -13,7 +14,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
+Latest follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
+Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
 Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
 Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
@@ -22,7 +24,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–17 record
+historical evidence; §10 records reconciliation results and §§11–18 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -104,7 +106,8 @@ keeps WMS's `locale === 'ar'`.
 
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
 plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
-use full page loads, including blog create/edit and ticket details.
+use full page loads, including ticket details. Blog create/edit are Inertia
+pages since §18.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -233,6 +236,13 @@ strict policy. Unconverted Blade pages need inline scripts.
   and authentication Blade pages. Keep both middleware and the policy after
   the last back-office Blade module converts; removing them requires a
   separate change that preserves those surfaces' scripts and assets.
+
+**Rich text under the strict policy (§18).** The shared Tiptap editor runs on
+Inertia pages with the strict policy unchanged. ProseMirror writes node and
+mark styles through the CSSOM (`element.style.cssText`), which CSP does not
+govern; Tiptap's injected base stylesheet is a `<style>` element, which the
+strict `style-src` already allows. No directive, `blade_csp` entry or WAF
+setting changed for it.
 
 **Tests:** tests/Feature/Store/HandleStoreBladePagesTest.php.
 
@@ -471,8 +481,8 @@ modules too:
 ## 4. Integrated status (2026-10-12)
 
 This reflects integrated code and the carrier, customer-package, category,
-brand, digital-product, in-house/all-products list and general-settings
-follow-ups in §§11–17. The original
+brand, digital-product, in-house/all-products list, general-settings and
+blog-editor follow-ups in §§11–18. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -487,9 +497,9 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade for the editor; the seller product list stays Blade with seller administration |
-| Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain Blade editor |
-| Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog/newsletter editor forms remain Blade; typed newsletter sending/recipient lookup integrated |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
+| Website/support | Partial | Header/home, conversations, product queries, ticket list and typed ticket replies integrated; ticket detail uses Blade; footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
+| Marketing/blog | Partial | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit use Inertia with the shared Tiptap editor (§18); the newsletter editor form remains Blade (its editor hold is lifted); typed newsletter sending/recipient lookup integrated |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
 | Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
@@ -534,9 +544,20 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   namespace shapes rather than replacing whole translation objects.
 - Preserve bounded translated catalogue product search while selected reference
   forms use its existing route name. Preserve upload URL safety and download/PDF
-  behavior. No frontend or Composer dependency manifests/locks change.
-- Tiptap, Chart.js and new Leaflet dependencies lack independently verified
-  approval. Preserve existing Blade editor/chart/map assets.
+  behavior. No Composer manifest or lock changes; the frontend manifests
+  changed only for the owner-approved Tiptap packages (§18).
+- **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
+  Tiptap as the shared back-office editor. `StoreRichTextField` is the one
+  rich-text field for converted screens; blog post create/edit use it. The
+  approval lifts the editor hold on the newsletter form, the website footer,
+  appearance and custom pages, the ticket detail/reply editor and the editor
+  part of product and digital-product create/edit; each still needs its own
+  migration, and the script policy, `manage_website_scripts` and rich-text WAF
+  exceptions stay held. The Blade editor (summernote in
+  `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
+  its assets stay while those Blade consumers remain.
+- Chart.js and new Leaflet dependencies still lack independently verified
+  approval. Preserve existing Blade chart/map assets.
 - Product list switches share one write path. The digital-product and
   in-house/all-products lists publish and feature through
   `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
@@ -556,16 +577,16 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **60 Blade files**, down from 73 after
+The current backend inventory contains **58 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
-two brand screens, the digital product list (§15) and general settings (§17).
+two brand screens, the digital product list (§15), general settings (§17) and
+the two blog post forms (§18).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
-- **blog_system:** `blog_system/blog/create.blade.php`, `blog_system/blog/edit.blade.php`.
 - **customer:** `customer/classified_products/index.blade.php`.
 - **(root):** `dashboard.blade.php`.
 - **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
@@ -596,7 +617,7 @@ line numbers or count sibling snapshots.
 | `AttributeController` | `attributes.index`, `attributes.store`, `attributes.destroy`, `attributes.edit`, `attributes.update` | `Store/Admin/Product/Attributes/Index.vue`, `Store/Admin/Product/Attributes/Edit.vue` |
 | `AttributeValueController` | `attributes.show`, `destroy-attribute-value`, `edit-attribute-value`, `store-attribute-value`, `update-attribute-value` | `Store/Admin/Product/AttributeValues/Index.vue`, `Store/Admin/Product/AttributeValues/Edit.vue` |
 | `BlogCategoryController` | `blog-category.index`, `blog-category.store`, `blog-category.create`, `blog-category.update`, `blog-category.destroy`, `blog-category.edit` | `Store/Admin/Blog/Categories/Index.vue`, `Store/Admin/Blog/Categories/Create.vue`, `Store/Admin/Blog/Categories/Edit.vue` |
-| `BlogController` | `blog.index`, `blog.store`, `blog.create`, `blog.update`, `blog.destroy`, `blog.edit`, `blog.change-status` | `Store/Admin/Blog/Posts/Index.vue`; create/edit → retained Blade forms |
+| `BlogController` | `blog.index`, `blog.store`, `blog.create`, `blog.update`, `blog.destroy`, `blog.edit`, `blog.change-status` | `Store/Admin/Blog/Posts/Index.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Store/Admin/Blog/Posts/Edit.vue`; the public blog stays on root `BlogController` (Blade) |
 | `BrandController` | `brands.index`, `brands.store`, `brands.edit`, `brands.update`, `brands.destroy` | `Store/Admin/Product/Brands/Index.vue` (list and inline add), `Edit.vue`; public/seller/mobile brand consumers and `Api/V2/BrandController` retained |
 | `BrandDiscountController` | `brands_wise_product_discount`, `set_product_discount` | `Store/Admin/Product/BrandDiscounts/Index.vue` |
 | `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
@@ -1500,5 +1521,126 @@ of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
 of the blank shell. Registrations are **1,050** under `/temp` and **438** under
 `/temp/admin`: one new POST on 1,049/437. Verification is recorded in the
 general-settings section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 18. Shared rich-text editor and blog post forms (2026-10-13)
+
+Blog post create/edit now use `Store/Admin/Blog/Posts/Create` and `Edit` with
+the shared Tiptap editor, `components/StoreRichTextField.vue`. Work is on
+`ccr-f394535e-90xr6w`, branched from `develop` at `28643a4` (the PR #391
+merge). The owner approved Tiptap as the shared back-office editor and, for this
+session only, the dependency, this PR, its merge into `develop` and `[skip ci]`
+on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR
+CI, no dependency-audit workflow, no PR or merge SAST and no `develop` deploy
+ran for them; the local checks in the ledger are the only verification.
+
+**Dependencies (exact).** `@tiptap/core`, `@tiptap/pm`, `@tiptap/starter-kit`,
+`@tiptap/vue-3`, `@tiptap/extension-image`, `@tiptap/extension-table`,
+`@tiptap/extension-text-align` and `@tiptap/extension-text-style` at
+**3.31.3**, plus `@floating-ui/dom` **1.8.0**.
+
+- The recorded 3.31.4 was published on 2026-09-30, 13 days before this work,
+  so it fails the two-week rule; 3.31.3 (2026-09-04) is the newest patch of
+  the same major that passes. `@floating-ui/dom` 1.8.0 dates from 2026-07-11.
+- `@tiptap/pm` is a required exact-version peer of `core`, `vue-3` and
+  `extension-table`, and the editor imports its `EditorView` type.
+  `@floating-ui/dom` is a non-optional peer of `@tiptap/vue-3`.
+- `@tiptap/vue-3`'s optional bubble/floating menus resolved to 3.31.4 (a peer
+  mismatch with core 3.31.3, and under two weeks old), so the lockfile was
+  resolved with `npm install --save-exact --before=2026-09-29T00:00:00Z`. Every
+  one of the 52 added lock entries is at least 18 days old; no existing entry
+  changed. npm did not hit the `edgesOut` bug, so no `--legacy-peer-deps`
+  regeneration was needed. No Composer change.
+
+**`StoreRichTextField` contract (use it for every converted rich-text field).**
+
+- Props `id`, `name`, `label`, `error`, `required`; `v-model` holds the HTML.
+  The HTML posts under `name` through a hidden input. Stored HTML posts back
+  byte for byte until the content is edited; a blank document posts `''`; an
+  empty table or image is kept.
+- `required` adds an unnamed, `aria-hidden` validation proxy. On `invalid` it
+  shows `store.editor.required` and focuses the content.
+- The content is `role="textbox"` with `aria-multiline`, labelled by the field
+  label and described by its error (`aria-invalid` when one shows). The
+  toolbar follows the WAI-ARIA toolbar pattern: one tab stop, arrow keys,
+  Home and End, mirrored in RTL, and Alt+F10 from the content. Toolbar buttons
+  return focus to the content. The style select and colour inputs keep it.
+  The toolbar state follows each transaction at once, so the select is never
+  stale.
+- Formatting: paragraph and headings 1–6, bold, italic, underline,
+  strikethrough, lists, quote, alignment, text and background colour, links
+  (http, https, mailto, tel and relative, as `HtmlSanitizer::safeUrl()`),
+  tables with row/column tools, clear formatting, undo and redo. Labels are
+  `store.editor.*` in English and Arabic; the dormant `store.richText.*` keys
+  of the superseded `cf5ef305` editor are gone.
+- Images come only from `StoreFileManagerDialog` (`type="image"`, the canonical
+  library policy, shown with `view_uploads`), as upload URLs. Pasted or dropped
+  HTML loses `data:` and unsafe images, classes and any style the toolbar
+  cannot set. Base64 raster images already stored round-trip but cannot be
+  added.
+- Stored attributes no extension models (class, dir, lang and other style
+  declarations on blocks, tables, cells, images and spans) are kept, so a
+  legacy post keeps its bordered tables, indents, image widths and direction.
+
+**Sanitisation and CSP.** `App\Services\HtmlSanitizer` is reused unchanged: the
+editor emits no tag or attribute it lacks. Writes clean the body
+(`Store\Admin\BlogController::write()`), the edit prop is cleaned
+(`BlogResource`), and the public page still prints `clean_html()`. The
+cleaner is idempotent, so legitimate stored content renders unchanged. Inertia
+editor pages keep the strict policy (§2.5); the browser spec saw no violation.
+No CSP directive, `blade_csp` entry, WAF pattern, exclusion or skip-key changed.
+The held WAF rules let all editor output through, and still refuse a raw
+script payload with a 403.
+
+**Blog forms.**
+
+- Routes, URIs and gates are unchanged: `blog.create`/`blog.store` under
+  `add_blog`, `blog.edit`/`blog.update` (PUT) under `edit_blog`.
+- `create` and `edit` render Inertia. `edit` sends the full post (cleaned
+  body), the live categories in their Blade order (`id`) and canonical upload
+  previews for the banner and meta image.
+- `StoreBlogRequest`/`UpdateBlogRequest` keep their rules. The banner and meta
+  image use `retainableImageUploadRule()`, so an unchanged foreign image
+  round-trips without preview access.
+- Every field, the slug rules, the default publication on create and the
+  status-only publish action are unchanged. Blog posts have no translations.
+- Deliberate changes:
+  - A new post's slug follows its title until it is edited. Editing an
+    existing post's title no longer rewrites its slug, and so its public URL.
+  - The retired Blade edit form spoofed PATCH against the PUT-only route
+    (`edit.blade.php:14`, `routes/shop-admin.php:546`), so it could not save.
+  - Edited content is normalised by Tiptap (`b`→`strong`, `i`→`em`, list items
+    wrap a paragraph, `pre`→`pre > code`, tables gain a `colgroup`). The empty
+    remains of stripped video embeds are dropped.
+- The list's Add and Edit links are Inertia visits. Root `BlogController` keeps
+  only the public `all_blog`/`blog_details` actions; its unrouted admin methods
+  and middleware are gone, and it stays in both analysis exclusion lists.
+- `blog_system/blog/create.blade.php` and `edit.blade.php` are deleted; only
+  the removed root actions rendered them. `admin_sidenav`'s
+  `areActiveRoutes(['blog.create', 'blog.edit'])` names still resolve.
+
+**Retained.** The Blade editor and its assets serve the newsletter, website
+footer/appearance/custom pages, ticket detail, product and digital-product
+forms and the seller and customer areas. Also retained: the legacy uploader,
+shells, PDFs, `HandleStoreBladePages` and `store.blade_csp`. The rich-text WAF
+exceptions, `manage_website_scripts`, script policy, chart/map activation,
+seller/classified scope and server status stay held.
+
+**Known limits.** External images in a legacy post do not display inside the
+admin editor, because the strict `img-src` is `'self' data: blob:`. They are
+kept, and the public Blade page still shows them. As before, body image URLs
+are not ownership-checked on the server: the picker enforces the library
+policy.
+
+**Tests adapted in place, none weakened.** `BlogControllerTest`'s two Blade
+view tests now assert the Inertia renders and full payloads. Its refused-caller
+dataset gained a DB snapshot. The list test asserts Inertia create/edit links.
+
+Current inventory: **58** backend Blade files, **34** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
+**438** under `/temp/admin`. Verification is recorded in the editor section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.
