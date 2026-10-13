@@ -116,10 +116,10 @@ test('settings writes validate values, empty payloads, and old environment paylo
     expect(DB::table('business_settings')->count())->toBe(0);
 })->with('writable settings pages');
 
-test('the old generic settings endpoint cannot bypass migrated permissions or overwrite their keys', function (string $key) {
+test('the retired generic settings endpoint cannot bypass migrated permissions or overwrite their keys', function (string $key) {
     actingAsStoreUser(createStoreStaff('currency_setup'));
-    $this->post(route('business_settings.update'), ['types' => [$key], $key => '1'])->assertForbidden();
-    $this->post(route('business_settings.update'), ['types' => [['ar' => $key]], $key => '1'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => [$key], $key => '1'])->assertNotFound();
+    $this->post(retiredSettingsWriterUri(), ['types' => [['ar' => $key]], $key => '1'])->assertNotFound();
     expect(DB::table('business_settings')->count())->toBe(0);
 })->with(array_values(array_unique(array_merge(...array_column(SettingsController::PAGES, 'keys')))));
 

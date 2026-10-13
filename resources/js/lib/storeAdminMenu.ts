@@ -117,8 +117,11 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import {
     all_orders as tripOrders,
@@ -127,11 +130,6 @@ import {
     getAllTrips,
     getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
-import {
-    appearance,
-    footer,
-    pages,
-} from '@/actions/App/Http/Controllers/WebsiteController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -691,18 +689,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.footer',
+                inertia: true,
                 href: footer(),
                 permission: 'footer_setup',
                 setting: 'website_setup_footer',
             },
             {
                 labelKey: 'store.nav.pages',
+                inertia: true,
                 href: pages(),
                 permission: 'view_all_website_pages',
                 setting: 'website_setup_pages',
             },
             {
                 labelKey: 'store.nav.appearance',
+                inertia: true,
                 href: appearance(),
                 permission: 'website_appearance',
                 setting: 'website_setup_appearance',

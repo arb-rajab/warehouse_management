@@ -30,7 +30,7 @@ were activated. The table and deferred paths below define actual scope.
 | `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | Included, canonical contract adapted | `6c21e5a482f98dd1df705cdcd05e5f2c8b70c62d`; normalization confined to selected admin path, legacy callers preserved |
 | `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | Partially included | `99a14828b557c36236cf6dea5c697ad85758de38`; customers/addresses/representatives/packages/payments/visit list; classified activation held; customer packages pending |
 | `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | Included implemented subset, adapted | `29ada8cd505074f696e6675487f6ccbc27d181da`; bounded translated search, attributes/values/colors/discount/reviews/bulk/offers; core catalogue conversion remains pending |
-| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); script-policy activation held |
+| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); Inertia footer/appearance/custom pages with typed writers since 2026-10-13 (`[skip ci]`); script-policy activation held |
 | `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms (#392) and newsletter form (#393) on the shared editor since 2026-10-13 |
 | `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list |
 | `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | Partially included | `3bece94c1e25f6f5e91606238a1c2fd6b64fd896`; orders/entry and shell utilities, dashboard/charts and proposed tax arithmetic held |
@@ -97,9 +97,9 @@ objects. These changes remain available in Git and have not been silently lost.
 | `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
 | `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
 | `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
-| `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Footer/appearance/custom-page Blade GET and existing writers remain | Editor-dependent Inertia activation after editor approval and consumer adaptation |
+| `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Stored formats, translations, image references, page slugs, gates and the storefront/mobile/email rendering of footer, appearance and pages; the scripts compatibility endpoint | **Activated (2026-10-13).** Inertia footer, appearance and custom pages on the shared editor and canonical uploader, with typed writers cleaning rich text; the Blade views, root `WebsiteController` and root page admin actions removed; the generic `business_settings.update` writer retired with its last consumers. This PR and its merge used `[skip ci]`. See [the website settings section](#website-footer-appearance-and-custom-pages-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
-| `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys | Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; generic writers already reject script keys |
+| `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys, posted since 2026-10-13 by plain code fields on the Inertia appearance page | **Still held.** Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; the typed appearance writer refuses script keys and the generic writer is retired. The 2026-10-13 website PR and its merge used `[skip ci]` and left this row unactivated |
 | `cf5ef305`: `StoreRichTextField.vue` / duplicate uploader infrastructure and competing upload request/resource changes | Canonical uploader and the shared `e3995898` editor basis (active since 2026-10-13) | Duplicate infrastructure superseded; its dormant `store.richText.*` keys removed; useful blog formatting/validation tests adapted |
 | `cf5ef305`: `StoreBlogFormFields.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Edit.vue` and editor-dependent tests | Inertia blog list, typed actions and, since 2026-10-13, Inertia create/edit on the shared editor; public rendering stays Blade | **Done (2026-10-13)**, adapted to the canonical uploader, `ResourceFormPage` and current locales; no `eslint-plugin-vue` or `concurrently` upgrades taken |
 | `cf5ef305`: `resources/js/pages/Store/Admin/Marketing/Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`, `StoreNewsletterRecipients.vue` and editor-dependent frontend tests; source controller’s Inertia index | Typed send (SMTP guard, cleaned content, one queued `EmailManager` per recipient, dashboard return) and bounded recipient search unchanged; the SMTP test keeps both `smtp_settings` and `send_newsletter` gates | **Activated (2026-10-13).** Inertia newsletter form on the shared editor; Blade view removed; the source's `testEmail` duplicate of `test.smtp` not taken. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
@@ -2177,3 +2177,208 @@ installed sources were used.
 Not run: MySQL, production data or role grants, real mail delivery and the full
 browser suite. Because of `[skip ci]`, GitHub CI, SAST and the deploy did not
 run for this PR or its merge.
+
+
+## Website footer, appearance and custom pages migration (2026-10-13)
+
+Work on `claude/website-settings-inertia-migration-j3i59z` from fetched
+`develop` at `ef175fc079c6721bbb68a853f9b761379a1dcbca` (the PR #397 merge,
+after the PR #393 merge `06a3806`); the branch had no commits beyond that
+base. Source `e3995898` was fetched and adapted, not cherry-picked; its
+`WebsiteScriptsController`, `UpdateWebsiteScriptsRequest`, permission
+migration and `config/waf.php` change were not taken. The owner authorized,
+for this session only, the pull request, its merge into `develop` with the
+merge method, and `[skip ci]` on every commit, the PR title and the merge
+commit. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge**, so the checks below are the only verification. No other
+branch, deployment or production data was touched. The decision table above
+marks the footer/appearance/custom pages row activated and keeps the website
+scripts row held. The guide's §20 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Footer form** (`website_settings/footer.blade.php`). Four forms posted to
+  `business_settings.update` (`:39`, `:90`, `:126`, `:205`). Keys: `footer_logo`
+  (single uploader, `:44-50`), `about_us_description` (summernote, per
+  language, `:57-60`), `play_store_link`/`app_store_link` (`:65-72`),
+  `contact_address` (per language, `:95-96`), `contact_phone`/`contact_email`
+  (`:101-108`), `widget_one` and `widget_one_labels` (per language) with the
+  shared `widget_one_links` (`:131-160`), `frontend_copyright_text`
+  (summernote, per language, `:216-219`), `show_social_links` (`on`, `:234-235`)
+  and five social links (`:247-280`), `seller_app_link` only with
+  `vendor_system_activation == 1` and `delivery_boy_app_link` only with the
+  `delivery_boy` addon (`:287-315`), `payment_method_images` (multiple
+  uploader, `:325-331`), and the registration tutorial switch, text and link
+  (`:349-362`). The sidebar opened it with the current locale
+  (`admin_sidenav.blade.php:1362`); the root action passed `lang` through
+  (`WebsiteController.php:32-36`).
+- **Appearance form** (`website_settings/appearance.blade.php`). Four forms to
+  the generic writer (`:12`, `:158`, `:207`, `:237`): `website_name`,
+  `site_motto`, `site_icon`, `base_color`, `base_hov_color`, `login_page_image`,
+  `register_page_image`, `seller_login_page_bg` (vendor system, `:87-102`),
+  `delivery_boy_login_page_bg` (addon, `:103-118`), `flash_deal_banner(_small)`,
+  `meta_title`, `meta_description`, `meta_keywords`, `meta_image`,
+  `cookies_agreement_text` (summernote, `:213`), `show_cookies_agreement`,
+  `show_website_popup`, `website_popup_content` (summernote, `:253`) and
+  `show_subscribe_form`: eight images and two editor fields. The scripts form
+  posted `types[]` plus the two scripts to `website.scripts.compatibility.update`
+  (`:277-292`).
+- **Generic writer.** `BusinessSettingsController.php:129-185`, gated
+  `general_settings|footer_setup|website_appearance|edit_website_page` (`:30`),
+  route `routes/shop-admin.php:335`. Non-localized keys took the first row of
+  their type and stored null `lang`; localized ones `where('lang', $lang)`;
+  arrays `json_encode()`d; a posted-but-unchecked switch stored null; then
+  `Artisan::call('cache:clear')` and a flash. Its `site_name`/`timezone`
+  branches were the only callers of `overWriteEnvFile()` (`:80`, `:141`,
+  `:144`).
+- **Readers.** Storefront footer (`shop/frontend/inc/footer.blade.php`):
+  `footer_logo` `:71-72`, `about_us_description` through `clean_html()` `:83`,
+  social links `:108-137`, app links `:145-157`, `widget_one*` `:185-191` and
+  `:351-359`, contact `:216-225` and `:380-389`, seller/delivery app links
+  `:309-333` and `:467-498`, copyright through `clean_html()` `:518`, payment
+  logos `:526-527`. `shop/frontend/layouts/app.blade.php`: title from
+  `website_name`/`site_motto` `:19`, meta `:24-48`, favicon `:54`, colours
+  `:112-114`, `header_script` echoed raw `:275`, tutorial button `:288-291`,
+  cookie text echoed raw `:322`, popup through `clean_html()` `:339`,
+  `footer_script` echoed raw `:833`. Login/registration images, seller and
+  delivery-boy backgrounds, the flash deal banners and the admin/seller shells'
+  titles and favicons read their keys. Email and PDF invoices read
+  `contact_address`/`contact_phone`/`contact_email`
+  (`shop/emails/invoice.blade.php:84-92`, `backend/invoices/invoice.blade.php:92-100`).
+  The mobile `business-settings` API lists `site_icon` among its public keys
+  (`Api/V2/BusinessSettingController.php:19`). All formats are kept.
+- **Pages.** Root `PageController` (`:23-31` gates): empty `index`/`show`,
+  `create`/`edit` views, `store` and `update` normalising the slug
+  (`:62-63`, `:131-133`) with a uniqueness check and a flash on conflict,
+  `update` changing the slug only for custom pages and the base title/content
+  only in the default language (`:132-138`), `destroy` deleting any page by id
+  (`:165-170`). Routes `routes/shop-admin.php:428-438`: the resource plus
+  `custom-pages.edit` by slug and a POST `custom-pages.destroy`. Storefront:
+  `custom_page.blade.php:55` and the five policy views echo the content raw;
+  `m_custom_page.blade.php:21` prints `clean_html()`; `PolicyCollection` returns
+  it as stored. `page_translations.title`/`content` are NOT NULL.
+- **Generic writer consumers after the move.** `rg "business_settings\.update['\"]|business-settings/update['\"]"`
+  over `resources/views`, `app`, `routes`, `resources/js` (hand-written) and
+  `public/assets/js` finds none; only tests referenced it.
+- **Tests and fixtures naming the footer as the Blade example.**
+  `HandleStoreBladePagesTest.php:29,31,37,60`, `ReconstructedMigrationAuditTest.php:43`,
+  `GeneralSettingsControllerTest.php:236`, `SettingsReconciliationTest.php:10-47`,
+  `ReferenceSettingsIsolationTest.php:5-18`, `store-staff-coexistence.spec.ts:41-66`,
+  `store-legacy-uploader.spec.ts:9-72`, `store-setup-settings.spec.ts:97`.
+- **Retarget candidates.** No `sellers/*` or `trips/*` admin view uses
+  `aizuploader` (only product and digital-product forms and SKU partials do).
+  The admin's seller product form (`products.seller.edit`,
+  `ProductController::seller_product_edit`) renders `products/edit.blade.php`
+  without `$variations`/`$barcodes`, so it answers 500 at `edit.blade.php:244`
+  (inherited; left unchanged).
+- **WAF.** `config/waf.php` refuses `<script`, `javascript:`,
+  `on(error|load|click|mouseover)=` and `<iframe`, so a script tag in the
+  scripts form is a 403, as before. The editor's output matches no signature.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\WebsiteFooterController`, `WebsiteAppearanceController`
+  and `WebsitePageController`; `UpdateWebsiteFooterRequest`,
+  `UpdateWebsiteAppearanceRequest`, `FilterWebsitePagesRequest`,
+  `StoreWebsitePageRequest`, `UpdateWebsitePageRequest` and
+  `Concerns\ValidatesWebsitePage`; `WebsitePageResource` and
+  `WebsitePageFormResource`; `Page::publicUrl()`. `ValidatesWebsiteSettings`
+  gained `storedSettingValue()`, `cleanRichTextSettings()` and
+  `enabledSettingKeys()`; `ProvidesStoreUploadPreviews` gained
+  `settingsImagePreviews()`, now also used by general settings. Reuses
+  `WebsiteSettings`, `retainableImageUploadRule()`, `languageRules()` and
+  `ProvidesStoreReferenceOptions`. `PageTranslation` is typed and leaves both
+  analysis exclusion lists.
+- **Frontend.** `Website/Footer.vue`, `Appearance.vue`,
+  `Pages/Index|Create|Edit.vue`, `StoreWebsiteFooterFormFields`,
+  `StoreWebsiteAppearanceFormFields`, `StoreWebsitePageFormFields`, the
+  dormant website types and fixtures adapted, `store.website.*` keys in English
+  and Arabic, and the Footer, Pages and Appearance sidebar entries as Inertia
+  visits.
+- **Routes.** Ten registrations replace thirteen; every consumed name is kept.
+- **Removed.** The five Blade views, root `WebsiteController`, root
+  `PageController`'s admin actions and gates, root
+  `BusinessSettingsController::update`, its gate and `overWriteEnvFile()`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration,
+  `LegacyWebsiteScriptsController` and its request, storefront/mobile/email/PDF
+  views, stored formats, gates, permission definitions, role grants, the Blade
+  editor assets, the legacy uploader, shells and `HandleStoreBladePages`. No
+  dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost did not connect at session start, so repository files and
+installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs. The editor stays one shared chunk,
+  `StoreRichTextField-*.js` (454,000 B), loaded by the footer, appearance and
+  page create/edit screens besides the blog, newsletter and ticket pages;
+  `Footer-*.js` is 10,069 B and `Appearance-*.js` 9,059 B.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,662 tests in 297 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,707 tests / 31,113 assertions**.
+  The first full run stopped on one Pest error: `LegacyUploadSecurityTest`
+  still read the deleted page-editor view. It now checks the Inertia editor
+  (no raw HTML in its Vue files; hostile stored values reach the page escaped
+  and cleaned), and the second full run passed.
+- **Focused checks.**
+  - `WebsiteFooterControllerTest`, `WebsiteAppearanceControllerTest` and
+    `WebsitePageControllerTest`: **140 tests / 1,335 assertions**. The adapted
+    existing files (Blade CSP, reconstructed audit, settings reconciliation and
+    isolation, header, home, settings, Google Map, admin permissions,
+    middleware conversion, state-changing routes, `.env` protection, general
+    settings, redirects, analysis exclusions, shared props): **773 tests**.
+  - Mutations failed the tests as intended before being reverted: no rich-text
+    cleaning in the footer request (9 failures), no foreign-input refusal in
+    the appearance request (5), the plain image rule instead of the retainable
+    one (1), no page content cleaning (8), no custom-page-only delete (1), no
+    owner check on new payment logos (1). The retainable mutation first passed
+    because bare `assertRedirect()` also accepts a validation redirect; every
+    expected-success save now also asserts no session errors.
+  - Touched Vitest files: the three form-field components and the five pages,
+    **46 tests**, with every label in English and Arabic; the menu test lists
+    the three entries as Inertia.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one
+  worker, zero retries and
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-website-settings.spec.ts` **5/5**: the footer with a canonical logo,
+    keyboard-formatted editor content, a link row and social links saved and
+    reloaded, then rendered on the storefront; appearance saved through its
+    writer and the scripts through the compatibility endpoint, reloaded,
+    printed raw in the storefront head and before `</body>`, with a
+    `<script>` save still a 403 and nothing written; a custom page created
+    with a normalised slug, edited, shown publicly and deleted after a
+    dismissed and an accepted native confirm; stored and pasted script
+    payloads inert in the footer and page editors, on the storefront and the
+    public page, with no dialog; Arabic RTL, dark contrast ≥4.5 and the one-
+    stop, mirrored toolbar. No CSP violation; every admin page had the
+    enforced `script-src 'self'` policy.
+  - With the retargeted coexistence, legacy uploader and setup specs, the blog
+    editor, newsletter/ticket, brands, products and website header specs:
+    **25/25 in 9 files**.
+  - The first runs failed on spec authoring (Inertia answers a PUT's redirect
+    with 303; two strict-mode locators), on the seller product form's
+    inherited 500, and on a products-spec interplay with that attempt's seeded
+    seller product; the uploader spec moved to the product create form.
+- **Merge with develop.** `develop` moved to `e17cdbd` (the PR #399 merge, ETag
+  revalidation) before the push; it merged without conflicts in a
+  `[skip ci]` merge commit. After a fresh Wayfinder generation and font-less
+  build, the full gate passed again with none skipped (Vitest **2,662 tests in
+  297 files**, Pint, PHPStan **0 errors**, Pest **5,726 tests / 31,177
+  assertions**), and the browser set again passed **25/25 in 9 files**.
+- **Inventory.** **51** backend Blade files; **27**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
+  `/temp/admin` registrations, down from 1,050/438 (ten replace thirteen),
+  unchanged by the merge; Blade editor: **12** fields in **12** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.

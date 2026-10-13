@@ -34,7 +34,6 @@ parameters:
     excludePaths:
         - app/Http/Controllers/AdminController.php
         - app/Http/Controllers/PageController.php
-        - app/Http/Controllers/WebsiteController.php
         - app/Models/CustomerProduct.php
         - app/Console/Commands/AllProductsCommand.php
         - app/Console/Commands/CheckForCommands.php
@@ -371,7 +370,6 @@ parameters:
         - app/Models/OffersCatalog.php
         - app/Models/Order.php
         - app/Models/OrderDetail.php
-        - app/Models/PageTranslation.php
         - app/Models/PasswordReset.php
         - app/Models/Payment.php
         - app/Models/Permission.php

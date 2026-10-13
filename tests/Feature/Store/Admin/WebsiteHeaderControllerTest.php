@@ -77,17 +77,21 @@ test('another settings permission grants neither header reads nor writes', funct
     expect($setting->fresh()->value)->toBe('unchanged')->and(BusinessSetting::count())->toBe(1);
 });
 
-test('a header-only editor cannot use the generic endpoint to modify other settings', function () {
+test('a header-only editor can modify other settings neither through the retired generic endpoint nor the footer and appearance writers', function () {
     actingAsStoreUser(createStoreStaff('header_setup'));
     $setting = headerSetting('footer_text', 'unchanged');
-    $this->post(route('business_settings.update'), ['types' => ['footer_text'], 'footer_text' => 'forged'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => ['footer_text'], 'footer_text' => 'forged'])->assertNotFound();
+    $this->put(route('website.footer.update'), ['settings' => ['footer_logo' => null], 'lang' => 'en'])->assertForbidden();
+    $this->put(route('website.appearance.update'), ['settings' => ['website_name' => 'forged']])->assertForbidden();
     expect($setting->fresh()->value)->toBe('unchanged')->and(BusinessSetting::count())->toBe(1);
 });
 
 test('website appearance editors and super admins cannot write scripts through ordinary settings', function (bool $superAdmin) {
     actingAsStoreUser($superAdmin ? createStoreAdmin() : createStoreStaff('website_appearance'));
     $setting = headerSetting('header_script', 'unchanged');
-    $this->post(route('business_settings.update'), ['types' => ['helpline_number', 'header_script'], 'helpline_number' => 'forged', 'header_script' => 'forged'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => ['helpline_number', 'header_script'], 'helpline_number' => 'forged', 'header_script' => 'forged'])->assertNotFound();
+    $this->put(route('website.appearance.update'), ['settings' => ['website_name' => 'forged', 'header_script' => 'forged']])->assertSessionHasErrors('settings');
+    $this->put(route('website.appearance.update'), ['settings' => ['website_name' => 'forged'], 'header_script' => 'forged'])->assertSessionHasErrors('header_script');
     expect($setting->fresh()->value)->toBe('unchanged')->and(BusinessSetting::count())->toBe(1);
 })->with([false, true]);
 
@@ -108,11 +112,11 @@ test('unknown and cross-page keys refuse the complete header write', function (s
     'top-level script' => ['header_script', true], 'legacy types' => ['types', true],
 ]);
 
-test('the legacy generic endpoint cannot bypass header isolation or write scripts', function (string $key, bool $translated) {
+test('the retired generic endpoint cannot bypass header isolation or write scripts', function (string $key, bool $translated) {
     actingAsStoreUser(createStoreStaff('currency_setup'));
     $setting = headerSetting($key, 'unchanged');
     $types = $translated ? [['ar' => $key]] : [$key];
-    $this->post(route('business_settings.update'), ['types' => $types, $key => 'forged'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => $types, $key => 'forged'])->assertNotFound();
     expect($setting->fresh()->value)->toBe('unchanged')->and(BusinessSetting::count())->toBe(1);
 })->with(['header_logo', 'helpline_number', 'header_menu_labels', 'header_script', 'footer_script'])->with([false, true]);
 

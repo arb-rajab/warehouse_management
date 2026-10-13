@@ -60,8 +60,11 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as uploadsIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as websitePages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -158,6 +161,9 @@ describe('storeAdminMenu', () => {
                 reviewsIndex.url(),
                 offersIndex.url(),
                 header.url(),
+                footer.url(),
+                websitePages.url(),
+                appearance.url(),
                 homeEdit.url(),
                 conversationsIndex.url(),
                 productQueriesIndex.url(),

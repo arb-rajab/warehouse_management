@@ -1805,7 +1805,17 @@
                 "empty": "No website pages found.",
                 "edit": "Edit",
                 "language": "Language",
-                "editTitle": "Edit website page"
+                "editTitle": "Edit website page",
+                "actions": "Actions",
+                "delete": "Delete",
+                "createTitle": "Add new page",
+                "content": "Page content",
+                "seo": "SEO fields",
+                "slugHint": "Letters, digits and hyphens only; spaces become hyphens.",
+                "fixedSlug": "This page keeps its address.",
+                "keywordsHint": "Separate keywords with commas.",
+                "create": "Save page",
+                "update": "Update page"
             },
             "fields": {
                 "footer_logo": "Footer logo",
@@ -1854,16 +1864,44 @@
                 "title": "Title",
                 "slug": "URL slug",
                 "content": "Content",
-                "keywords": "Keywords"
+                "keywords": "Keywords",
+                "delivery_boy_app_link": "Delivery boy app link",
+                "delivery_boy_login_page_bg": "Delivery boy login background"
             },
             "footer": {
-                "title": "Website footer"
+                "title": "Website footer",
+                "translatableHint": "About us, the contact address, the links title and labels and the copyright text are saved for the selected language. Everything else is shared by all languages.",
+                "about": "About widget",
+                "contact": "Contact info widget",
+                "links": "Link widget",
+                "linkLabel": "Label",
+                "linkUrl": "Link",
+                "addLink": "Add link",
+                "removeLink": "Remove link {row}",
+                "bottom": "Footer bottom",
+                "social": "Social links",
+                "apps": "Download app links",
+                "payment": "Payment methods",
+                "tutorial": "Registration tutorial button",
+                "save": "Save footer"
             },
             "appearance": {
-                "title": "Website appearance"
+                "title": "Website appearance",
+                "general": "General",
+                "siteIconHint": "Website favicon, 32×32 PNG.",
+                "colorHint": "Hex colour code, such as #377dff.",
+                "seo": "Global SEO",
+                "keywordsHint": "Separate keywords with commas.",
+                "cookies": "Cookies agreement",
+                "popup": "Website popup",
+                "save": "Save appearance"
             },
             "scripts": {
-                "title": "Website scripts"
+                "title": "Custom scripts",
+                "hint": "Printed on every storefront page exactly as written.",
+                "header": "Header script, before </head>",
+                "footer": "Footer script, before </body>",
+                "save": "Save scripts"
             },
             "save": "Save changes",
             "saving": "Saving…"

@@ -43,6 +43,55 @@ trait ValidatesWebsiteSettings
         }];
     }
 
+    /**
+     * The stored value of a setting, for retainableImageUploadRule(): the
+     * first row of its type, as get_setting() reads it, or null when blank.
+     */
+    protected function storedSettingValue(string $key): ?string
+    {
+        $value = get_setting($key);
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * Cleans the posted rich-text settings with App\Services\HtmlSanitizer
+     * before validation, so what is validated is what is stored.
+     *
+     * @param  list<string>  $keys
+     */
+    protected function cleanRichTextSettings(array $keys): void
+    {
+        $settings = $this->input('settings');
+        if (! is_array($settings)) {
+            return;
+        }
+        foreach ($keys as $key) {
+            if (isset($settings[$key]) && is_string($settings[$key])) {
+                $settings[$key] = clean_html($settings[$key]);
+            }
+        }
+        $this->merge(['settings' => $settings]);
+    }
+
+    /**
+     * Leaves out a seller key while the vendor system is off and a delivery
+     * boy key while that addon is off, as the Blade footer and appearance
+     * forms hid those fields.
+     *
+     * @param  list<string>  $keys
+     * @return list<string>
+     */
+    protected static function enabledSettingKeys(array $keys, string $sellerKey, string $deliveryBoyKey): array
+    {
+        $disabled = [
+            ...(get_setting('vendor_system_activation') == 1 ? [] : [$sellerKey]),
+            ...(addon_is_activated('delivery_boy') ? [] : [$deliveryBoyKey]),
+        ];
+
+        return array_values(array_diff($keys, $disabled));
+    }
+
     /** @param list<string> $allowed */
     protected function refuseUnexpectedSettingInput(Validator $validator, array $allowed = ['settings']): void
     {

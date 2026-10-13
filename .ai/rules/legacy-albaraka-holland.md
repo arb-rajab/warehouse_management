@@ -147,7 +147,8 @@ prefix. That is the single point every storefront asset URL goes through.
   staff or accountant could replace `APP_KEY`, the database credentials or
   `WMS_TOKEN`. Its `DEMO_MODE` guard read `env()`, null once config is cached.
   **Fixed 2026-10-01:** it writes nothing and returns false (logging the key,
-  never the value), `env_key_update` refuses, and the two activation toggles
+  never the value; removed on 2026-10-13 with its last callers, the generic
+  settings writer, store-backoffice-migration.md §20), `env_key_update` refuses, and the two activation toggles
   that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
   keys) are now set in the server `.env` by whoever deploys.

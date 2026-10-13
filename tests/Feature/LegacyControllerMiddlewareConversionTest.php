@@ -60,12 +60,13 @@ test('the root settings controller keeps the gates of its remaining Blade and co
     $middleware = collect(BusinessSettingsController::middleware())
         ->mapWithKeys(fn (Middleware $entry): array => [$entry->middleware => $entry->only]);
 
-    // general_setting moved to Store\Admin\GeneralSettingsController with its gate.
+    // general_setting moved to Store\Admin\GeneralSettingsController with its
+    // gate; the generic `update` writer and its four-permission gate retired
+    // with the footer and appearance forms (store-backoffice-migration.md §20).
     expect($middleware->all())->toBe([
         'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
         'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
         'permission:features_activation' => ['updateSellerCommissionActivation'],
         'permission:google_map_setting' => ['google_map'],
-        'permission:general_settings|footer_setup|website_appearance|edit_website_page' => ['update'],
-    ]);
+    ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();
 });

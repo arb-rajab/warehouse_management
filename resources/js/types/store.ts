@@ -248,12 +248,13 @@ export interface StoreWebsiteHomeSettings {
     cupon_subtitle: string;
     home_categories: string[];
 }
+/** WebsitePageResource: a row of the website page list. */
 export interface StoreWebsitePage {
     id: number;
     title: string;
-    slug: string;
+    slug: string | null;
     type: string;
-    public_url: string;
+    public_url: string | null;
 }
 export interface StoreSupportTicket {
     id: number;
@@ -287,6 +288,11 @@ export interface StoreTicketReply {
     attachments: StoreUpload[];
 }
 
+/**
+ * UpdateWebsiteFooterRequest::KEYS: upload ids are the stored strings
+ * (`payment_method_images` comma-separated); the seller and delivery boy app
+ * links are sent only while their feature is on.
+ */
 export interface StoreWebsiteFooterSettings {
     footer_logo: string;
     about_us_description: string;
@@ -305,12 +311,28 @@ export interface StoreWebsiteFooterSettings {
     instagram_link: string;
     youtube_link: string;
     linkedin_link: string;
-    seller_app_link: string;
+    seller_app_link?: string;
+    delivery_boy_app_link?: string;
     payment_method_images: string;
     registration_tutorial_button: boolean;
     registration_tutorial_text: string;
     registration_tutorial_link: string;
 }
+
+export type StoreWebsiteAppearanceImage =
+    | 'site_icon'
+    | 'login_page_image'
+    | 'register_page_image'
+    | 'seller_login_page_bg'
+    | 'delivery_boy_login_page_bg'
+    | 'flash_deal_banner'
+    | 'flash_deal_banner_small'
+    | 'meta_image';
+
+/**
+ * UpdateWebsiteAppearanceRequest::KEYS: the seller and delivery boy login
+ * backgrounds are sent only while their feature is on.
+ */
 export interface StoreWebsiteAppearanceSettings {
     website_name: string;
     site_motto: string;
@@ -319,7 +341,8 @@ export interface StoreWebsiteAppearanceSettings {
     base_hov_color: string;
     login_page_image: string;
     register_page_image: string;
-    seller_login_page_bg: string;
+    seller_login_page_bg?: string;
+    delivery_boy_login_page_bg?: string;
     flash_deal_banner: string;
     flash_deal_banner_small: string;
     meta_title: string;
@@ -332,14 +355,23 @@ export interface StoreWebsiteAppearanceSettings {
     website_popup_content: string;
     show_subscribe_form: boolean;
 }
+
+/** The stored header and footer scripts, raw (LegacyWebsiteScriptsController). */
+export interface StoreWebsiteScripts {
+    header_script: string;
+    footer_script: string;
+}
+
+/** WebsitePageFormResource: a page's language-independent edit fields. */
 export interface StoreWebsitePageForm {
-    title: string;
+    id: number;
+    type: string;
     slug: string;
-    content: string;
     meta_title: string;
     meta_description: string;
     keywords: string;
     meta_image: string;
+    public_url: string | null;
 }
 export interface StoreBlogCategory {
     id: number;

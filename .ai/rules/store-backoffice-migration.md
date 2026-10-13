@@ -7,6 +7,7 @@ paths:
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
   - 'resources/js/components/StoreRichTextField.vue,resources/js/components/StoreBlogFormFields.vue'
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
+  - 'resources/js/components/StoreWebsite*'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -15,7 +16,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
+Latest follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
+Ticket/newsletter follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
 Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
 Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
@@ -26,7 +28,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–19 record
+historical evidence; §10 records reconciliation results and §§11–20 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -109,7 +111,8 @@ keeps WMS's `locale === 'ar'`.
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
 plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
 use full page loads. Blog create/edit (§18), the newsletter and the ticket
-detail (§19) are Inertia pages.
+detail (§19), and the website footer, appearance and pages (§20) are Inertia
+pages.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -484,7 +487,8 @@ modules too:
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
-blog-editor and newsletter/ticket-detail follow-ups in §§11–19. The original
+blog-editor, newsletter/ticket-detail and website-settings follow-ups in
+§§11–20. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -495,12 +499,12 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
 | Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
-| Website/support | Partial | Header/home, conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; the reply uses the shared editor and canonical image picker (§19); footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
+| Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
@@ -525,18 +529,18 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 - `StoreBooleanField` has one `name`/`value`/`disabled` API. Adapt callers.
 - Dedicated settings requests reject foreign/reserved keys before writing,
-  including plain/localized forms. Generic settings cannot write migrated
-  reference, header/home, general-settings, script, map or
-  environment-controlled keys. The general-settings keys
-  (`UpdateGeneralSettingsRequest::KEYS`, including `timezone`) are reserved
-  there since §17; the footer and appearance Blade forms keep the generic
-  writer and its four-permission gate unchanged.
+  including plain/localized forms. The generic settings writer
+  (`business_settings.update`) and its four-permission gate are retired
+  since §20: its last consumers, the footer and appearance Blade forms, moved
+  to typed writers that accept only their own keys, so no settings writer
+  takes arbitrary keys any more.
 - The timezone is config-managed: `config('app.timezone')` is `'UTC'` in
   `config/app.php`, and no settings screen stores it. The general settings
   writer validates it against PHP's identifiers (plus the configured value)
   and refuses any other value with a field error; nothing writes `.env`.
 - Website scripts retain the existing rendering, appearance permission and WAF
-  behavior through the narrowly scoped compatibility endpoint. New script policy,
+  behavior through the narrowly scoped compatibility endpoint, now posted by a
+  plain-code form on the Inertia appearance page (§20). New script policy,
   `manage_website_scripts` activation and broad rich-text WAF exceptions are held.
 - Profile and notifications use selected controllers in the Inertia shell;
   public/seller/customer handlers remain without restoring deleted admin Blade.
@@ -552,13 +556,13 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
   newsletter and the ticket reply (§19) use it. The approval lifts the editor
-  hold on the website footer, appearance and custom pages and the editor part
-  of product and digital-product create/edit; each still needs its own
-  migration, and the script policy, `manage_website_scripts` and rich-text WAF
-  exceptions stay held. The Blade editor (summernote in
+  hold on the website footer, appearance and custom pages (migrated, §20) and
+  the editor part of product and digital-product create/edit, which still
+  need their own migration; the script policy, `manage_website_scripts` and
+  rich-text WAF exceptions stay held. The Blade editor (summernote in
   `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
-  its assets stay while those Blade consumers remain: 18 fields in 16 views
-  since §19.
+  its assets stay while those Blade consumers remain: 12 fields in 12 views
+  since §20.
 - Chart.js and new Leaflet dependencies still lack independently verified
   approval. Preserve existing Blade chart/map assets.
 - Product list switches share one write path. The digital-product and
@@ -580,10 +584,11 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **56 Blade files**, down from 73 after
+The current backend inventory contains **51 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
-two blog post forms (§18), and the newsletter and ticket detail (§19).
+two blog post forms (§18), the newsletter and ticket detail (§19), and the
+footer, appearance and three custom-page screens (§20).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -602,7 +607,6 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
 - **system:** `system/server_status.blade.php`.
 - **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
-- **website_settings:** `website_settings/appearance.blade.php`, `website_settings/footer.blade.php`, `website_settings/pages/create.blade.php`, `website_settings/pages/edit.blade.php`, `website_settings/pages/index.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -641,7 +645,7 @@ line numbers or count sibling snapshots.
 | `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
 | `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
-| `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | JSON / redirects / PDF as applicable |
+| `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
 | `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
 | `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
@@ -670,16 +674,19 @@ line numbers or count sibling snapshots.
 | `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
 | `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
 | `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index` | `Store/Admin/Representatives/Visits/Index.vue` |
+| `WebsiteAppearanceController` | `website.appearance`, `website.appearance.update` | `Store/Admin/Website/Appearance.vue` (§20) |
+| `WebsiteFooterController` | `website.footer`, `website.footer.update` | `Store/Admin/Website/Footer.vue` (§20) |
 | `WebsiteHeaderController` | `website.header`, `website.header.update` | `Store/Admin/Website/Header.vue` |
 | `WebsiteHomeController` | `website.home.edit`, `website.home.update` | `Store/Admin/Website/Home.vue` |
+| `WebsitePageController` | `website.pages`, `custom-pages.create`, `custom-pages.store`, `custom-pages.edit`, `custom-pages.update`, `custom-pages.destroy` | `Store/Admin/Website/Pages/Index.vue`, `Create.vue`, `Edit.vue` (§20); the public `custom-pages.show_custom_page` and `mobile.custom-pages` stay on root `PageController` (Blade) |
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
 Visit details/day maps are served by retained root `VisitController`; trips and
 Google map settings also retain their Blade GET consumers. Root
-`BusinessSettingsController` keeps the Google Map GET, the generic settings
-writer, the seller commission/verification screens and `env_key_update`, so it
-stays in both analysis exclusion lists. Website footer,
-appearance and custom pages, seller/classified screens use retained root handlers. The newsletter and
+`BusinessSettingsController` keeps the Google Map GET, the seller
+commission/verification screens and `env_key_update` (the generic settings
+writer and its refusing `.env` stub are gone, §20), so it stays in both
+analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
@@ -1761,5 +1768,157 @@ of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
 of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
 **438** under `/temp/admin`. Verification is recorded in the newsletter and
 ticket section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 20. Website footer, appearance and custom pages (2026-10-13)
+
+The website footer, appearance and custom pages now use
+`Store/Admin/Website/Footer`, `Appearance` and `Pages/Index|Create|Edit`, with
+the shared editor (§18) for their rich text. Work is on
+`claude/website-settings-inertia-migration-j3i59z`, branched from `develop` at
+`ef175fc` (the PR #397 merge, after the PR #393 merge `06a3806`), and merged
+with `develop` at `e17cdbd` (PR #399) before the push. The owner
+authorized this session's PR, its merge into `develop` and `[skip ci]` on both.
+Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR
+or merge SAST and no `develop` deploy ran for them; the local checks in the
+ledger are the only verification. Source: `e3995898`, adapted to current
+`develop`, not cherry-picked; its scripts pieces are not taken.
+
+**Footer (`website.footer`, gate `footer_setup`).**
+
+- **Routes.** GET `/website/footer` and the new PUT `website.footer.update` on
+  `Store\Admin\WebsiteFooterController`. Without a `lang` the screen opens in
+  the back office's current language, as the Blade sidebar linked it.
+- **Typed writer.** `UpdateWebsiteFooterRequest` takes `settings[…]` with the
+  Blade form's keys only (`KEYS`) and a `lang`. Foreign, reserved,
+  environment, script and general-settings keys, nested or top-level, and the
+  legacy `types[]` shape are 422s before any write. `seller_app_link` is
+  offered and accepted only while `vendor_system_activation` is on and
+  `delivery_boy_app_link` only while the delivery boy addon is, as the Blade
+  form showed them (`enabledKeys()`).
+- **Stored formats, unchanged.** `about_us_description`, `contact_address`,
+  `widget_one`, `widget_one_labels` and `frontend_copyright_text` are per
+  language; everything else is shared. Upload ids are strings
+  (`payment_method_images` comma-separated), the link labels and links JSON
+  arrays (`json_encode`'s default escaping, as before), the switches `on` or
+  null. The rows list one link per label of the language, as the Blade form
+  did. The tutorial switch is ticked for any stored value and the social one
+  only for `on`, as the Blade form read them.
+- **Validation.** Links are http(s), root-relative or fragments (≤2048), the
+  email an email, short texts ≤255, link rows paired and ≤50. Images use
+  `retainableImageUploadRule()`; the payment logos keep any already-stored id
+  and need the library rule for new ones.
+
+**Appearance (`website.appearance`, gate `website_appearance`).**
+
+- **Typed writer.** `website.appearance.update` (PUT) on
+  `Store\Admin\WebsiteAppearanceController` with `UpdateWebsiteAppearanceRequest`:
+  name, motto, eight images, both colours (`#rgb`/`#rrggbb`, they print into
+  CSS), meta texts, the cookie and popup texts and three switches. The seller
+  and delivery boy login backgrounds follow the same feature conditions as the
+  Blade form. Script keys are refused here.
+- **Scripts: unchanged and held.** The page shows `header_script` and
+  `footer_script` as stored, in plain `dir="ltr"` code text areas (never the
+  editor), and posts them in their own form to
+  `website.scripts.compatibility.update` (`LegacyWebsiteScriptsController`),
+  which still allows only those two keys and still returns to the appearance
+  screen. The storefront still echoes them raw; the WAF still refuses a
+  `<script>` payload with a 403. `WebsiteScriptsController`,
+  `UpdateWebsiteScriptsRequest`, `manage_website_scripts` and any
+  `config/waf.php` change stay unactivated.
+
+**Custom pages (`website.pages`, `custom-pages.*`).**
+
+- **Routes.** `Store\Admin\WebsitePageController` with the existing gates:
+  `website.pages` (`view_all_website_pages`), `custom-pages.create`/`.store`
+  (`add_website_page`), `custom-pages.edit` at the same
+  `/custom-pages/edit/{slug}` URI and `custom-pages.update` (PUT/PATCH)
+  (`edit_website_page`), `custom-pages.destroy`, now `DELETE
+  /custom-pages/destroy/{page}` (`delete_website_page`). The `Route::resource`
+  duplicates and the empty `custom-pages.index`/`.show` are gone. Root
+  `PageController` keeps only the public `show_custom_page` and
+  `mobile_custom_page`, unchanged; `website.home.edit` stays ahead of the edit
+  route.
+- **Behaviour kept.** A new page is a custom page in the default language. The
+  slug is normalised as the Blade writer did (spaces to hyphens, anything but
+  letters, digits and hyphens dropped), as typed and again on the server, and
+  must be unique among all pages; only custom pages change it. A default-
+  language save rewrites the base title and content; any save writes the meta
+  fields and the language's translation. The list pages 20 at a time with the
+  selector (it listed all), in `id` order, with the title in the back office's
+  language. The home row opens the home settings.
+- **Deliberate changes.** Deleting a policy or home page, and updating the home
+  page through this form, are 403s (only custom pages offered delete); a
+  duplicate slug is a field error instead of a flash.
+
+**Sanitisation.** The four settings texts and the page content are cleaned
+with `HtmlSanitizer` before validation and the edit props are cleaned. The
+storefront already prints the footer texts and the popup through
+`clean_html()`; the cookie text, custom and policy pages still print raw, as
+before, so cleaning on write is what now keeps scripts out of them. The
+cleaner is idempotent, so legitimate stored markup renders unchanged; legacy
+summernote markup (`b`, `u`, `i`, lists, aligned paragraphs, tables) round-
+trips as stored. Links gain `rel="noopener noreferrer nofollow"`. Not kept:
+`<iframe>` video embeds, `<font>` colours and forms, which the editor cannot
+represent and the cleaner removes; the WAF already refused a save carrying an
+iframe.
+
+**Generic writer retired.** After both forms moved, nothing posts to
+`business_settings.update`: `rg` over `resources/views`, `resources/js`
+(outside the generated Wayfinder files), `public/assets/js`, `app` and
+`routes` finds no consumer, and `SettingsReconciliationTest` pins that. The
+route, root `BusinessSettingsController::update`, its
+`general_settings|footer_setup|website_appearance|edit_website_page` gate (the
+#391 gap where any one of four permissions wrote footer and appearance keys)
+and `overWriteEnvFile()`, whose last callers were the writer's `site_name` and
+`timezone` branches, are removed. The URI now answers 404 for every caller.
+
+**Tests retargeted, none weakened.**
+
+- Generic-writer refusals (`SettingsReconciliationTest`,
+  `ReferenceSettingsIsolationTest`, `SettingsControllerTest`,
+  `WebsiteHeaderControllerTest`, `WebsiteHomeControllerTest`,
+  `GoogleMapControllerTest`, `LegacyAdminPermissionsTest`) now assert the 404
+  of the retired URI (`retiredSettingsWriterUri()`) with the same DB
+  assertions, and the footer and appearance writers refuse every other page's
+  key, plain or localized. The four-permission save test became "each former
+  permission saves only its own page". `LegacyEnvFileProtectionTest` pins that
+  no `.env` writer is left.
+- Blade-page examples moved to the seller list (`/temp/admin/sellers`, seller
+  decision): `HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest`,
+  the general-settings shell test, `store-staff-coexistence.spec.ts` (Sellers →
+  All sellers) and `store-setup-settings.spec.ts`.
+- No seller or trips admin screen uses the legacy uploader, and the admin's
+  seller product form (`products.seller.edit`) answers 500 on an inherited
+  defect (`edit.blade.php:244`, `$variations` undefined). So
+  `store-legacy-uploader.spec.ts` uses the retained product create form,
+  scoped to `thumbnail_img`; it keeps real browser coverage, and whoever
+  converts the product form must retarget it.
+- `LegacyUploadSecurityTest`'s "page editor prints its values escaped" read
+  the Blade view; it now checks that the Inertia editor files print no raw
+  HTML and that hostile stored values reach the page escaped and cleaned.
+- `LegacyControllerMiddlewareConversionTest` pins four root entries;
+  `ControllerRedirectsTest` no longer needs its `PageController` exclusion.
+
+**Retained.** The Blade editor and its assets (12 fields in 12 views: the admin
+product and digital-product create/edit forms and the seller and customer
+areas), the legacy uploader, shells, PDFs, `HandleStoreBladePages`,
+`store.blade_csp`, the strict Inertia CSP, the WAF, and the held script policy,
+`manage_website_scripts`, rich-text WAF exceptions, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** Inertia embeds page props as `json_encode()` JSON, which
+escapes `</script>` but not `<!--`; a stored script holding an unterminated
+`<!--` before a `<script` could keep the appearance page from booting (it
+cannot execute). Links in the footer had no format rule before: a stored link
+such as `www.example.com` must be corrected on the next save.
+
+Current inventory: **51** backend Blade files, **27** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are **1,047** under `/temp` and **435** under
+`/temp/admin`: ten replace thirteen. Verification is recorded in the website
+settings section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.
