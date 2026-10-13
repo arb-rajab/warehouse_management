@@ -1,0 +1,268 @@
+.wms {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    font-family: var(--wms-font);
+    background: var(--wms-page);
+    color: var(--wms-text);
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1.25;
+}
+
+.wms *,
+.wms *::before,
+.wms *::after {
+    box-sizing: border-box;
+}
+
+/* the resets use :where() so they never outrank a component class (.wms-chip, .wms-seg button …) */
+:where(.wms) button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border: 0;
+    background: none;
+    padding: 0;
+}
+
+:where(.wms) input {
+    font: inherit;
+    color: inherit;
+}
+
+.wms button:focus-visible,
+.wms input:focus-visible,
+.wms canvas:focus-visible {
+    outline: 3px solid var(--wms-target);
+    outline-offset: 2px;
+}
+
+.wms .is-hidden {
+    display: none !important;
+}
+
+.wms-sprite {
+    position: absolute;
+}
+
+.wms-icon {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+    display: inline-block;
+}
+
+.wms-stage {
+    position: absolute;
+    inset: 0;
+}
+
+.wms-stage--3d {
+    background: var(--wms-canvas);
+}
+
+.wms-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+    touch-action: none;
+    cursor: grab;
+}
+
+.wms-canvas.is-dragging {
+    cursor: grabbing;
+}
+
+.wms[data-view='2d'] .wms-stage--3d,
+.wms[data-view='3d'] .wms-stage--plan {
+    display: none;
+}
+
+.wms bdi,
+.wms-bidi {
+    unicode-bidi: isolate;
+}
+
+.wms-bidi {
+    unicode-bidi: plaintext;
+}
+
+.wms kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 7px;
+    font: 700 11px/1 var(--wms-font);
+    color: #fff;
+    background: var(--wms-raised);
+    border: 1px solid var(--wms-white12);
+    border-bottom-width: 3px;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+/* Input-aware chrome: a desktop gets key hints and no on-screen steering, a phone gets joystick, pad and buttons. */
+.wms[data-input='mouse'] .wms-touch-only,
+.wms[data-input='touch'] .wms-mouse-only {
+    display: none !important;
+}
+
+.wms-pill {
+    background: var(--wms-hud);
+    border: 1px solid var(--wms-white12);
+    border-radius: 22px;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 0.45);
+    color: #fff;
+    /* no backdrop blur: the panel is 94% opaque already, and blurring a live WebGL canvas costs a full-screen pass every frame */
+}
+
+.wms-btn {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 19px;
+    font-weight: 800;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.wms-btn--primary {
+    background: var(--wms-primary);
+    color: #fff;
+}
+
+.wms-btn--primary:hover {
+    filter: brightness(1.12);
+}
+
+.wms-btn--ghost {
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+}
+
+.wms-btn--ghost:hover {
+    background: rgb(255 255 255 / 0.18);
+}
+
+.wms-btn--soft {
+    background: var(--wms-subtle);
+    color: var(--wms-text);
+    border: 1px solid var(--wms-border-light);
+}
+
+.wms-btn--grow {
+    flex: 1;
+    justify-content: center;
+}
+
+.wms-slotcode {
+    background: var(--wms-target);
+    color: #0f172a;
+    font-weight: 900;
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    direction: ltr;
+    white-space: nowrap;
+}
+
+.wms-state-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-inline-end: 5px;
+    background: #64748b;
+}
+
+.wms-state-dot--full {
+    background: var(--wms-success);
+}
+
+.wms-state-dot--opened {
+    background: var(--wms-warning);
+}
+
+.wms-tag {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 10px;
+    color: #fff;
+}
+
+.wms-tag--full {
+    background: var(--wms-success);
+}
+
+.wms-tag--opened {
+    background: var(--wms-warning);
+    color: #422006;
+}
+
+.wms-tag--empty {
+    background: var(--wms-border);
+    color: var(--wms-text);
+}
+
+.wms-tag--off {
+    background: var(--wms-danger);
+}
+
+.wms-exp--bad {
+    color: var(--wms-danger);
+    font-weight: 800;
+}
+
+.wms-exp--soon {
+    color: var(--wms-warning-text);
+    font-weight: 800;
+}
+
+.wms[data-theme='dark'] .wms-exp--bad {
+    color: var(--wms-danger-bright);
+}
+
+.wms[data-theme='dark'] .wms-exp--soon {
+    color: var(--wms-warning-bright);
+}
+
+.wms-load {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-content: center;
+    gap: 14px;
+    justify-items: center;
+    background: var(--wms-page);
+    color: var(--wms-muted);
+    font-weight: 700;
+}
+
+.wms-load__text {
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wms *,
+    .wms *::before,
+    .wms *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

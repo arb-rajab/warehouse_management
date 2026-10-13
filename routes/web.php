@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WarehouseMapController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
@@ -53,6 +54,11 @@ Route::middleware('auth')->group(function () {
         Route::get('cells', [CellController::class, 'index'])->name('cells.index');
         Route::get('cells/{cell}/export-qr-code', [CellController::class, 'exportQrCode'])->name('cells.export-qr-code');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
+
+        Route::get('warehouse-map', [WarehouseMapController::class, 'index'])->name('warehouse-map.index');
+        Route::get('warehouse-map/rows', [WarehouseMapController::class, 'rows'])
+            ->middleware('cache.headers:private;etag')
+            ->name('warehouse-map.rows');
 
         Route::get('pallets', [PalletController::class, 'index'])->name('pallets.index');
         Route::post('cells/{cell}/pallet', [PalletController::class, 'store'])->name('pallets.store');
