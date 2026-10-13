@@ -33,6 +33,7 @@ return [
     'product_has_no_barcodes' => 'This product has no barcodes to download.',
     'password_same_as_current' => 'The new password must be different from your current password.',
     'pallet_moved' => 'This pallet has been moved since it was loaded. Refresh and try again.',
+    'precondition_failed' => 'The resource has changed since it was loaded. Refresh and try again.',
     'verification_round_scope_empty' => 'There are no rows for this verification round to cover.',
     'verification_round_rows_not_found' => 'One or more of the requested rows no longer exist.',
     'cannot_remove_last_admin' => 'This is the last admin account, so it cannot be demoted or deleted.',

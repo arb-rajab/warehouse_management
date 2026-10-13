@@ -47,6 +47,24 @@ class Pallet extends Model
     }
 
     /**
+     * Identifies the pallet's current stock state for `If-Match` / `ETag`: what
+     * a worker acts on (product, location, level, expiry, boxes left). The
+     * cell's state is included because opening a pallet changes only that.
+     */
+    public function etag(): string
+    {
+        return md5(implode('|', [
+            $this->id,
+            $this->product_id,
+            $this->cell_id,
+            $this->expiration_date?->toDateString(),
+            $this->remaining_boxes,
+            $this->cell->state->value,
+            $this->updated_at?->getTimestamp(),
+        ]));
+    }
+
+    /**
      * @return BelongsTo<Product, $this>
      */
     public function product(): BelongsTo
