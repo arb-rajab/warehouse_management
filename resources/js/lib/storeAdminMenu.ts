@@ -110,6 +110,10 @@ import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import {
+    index as tripsIndex,
+    today as todayTrips,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import {
     create as trucksCreate,
     index as trucksIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
@@ -125,8 +129,6 @@ import {
     all_orders as tripOrders,
     create as tripsCreate,
     create_from_map,
-    getAllTrips,
-    getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
@@ -447,12 +449,14 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.allTrips',
-                        href: getAllTrips(),
+                        inertia: true,
+                        href: tripsIndex(),
                         permission: 'view_all_trips',
                     },
                     {
                         labelKey: 'store.nav.todayTrips',
-                        href: getTodayTrips(),
+                        inertia: true,
+                        href: todayTrips(),
                         permission: 'view_all_trips',
                     },
                     {

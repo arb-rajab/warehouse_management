@@ -491,6 +491,35 @@ export interface StoreDriver {
     country: string | null;
 }
 
+export type StoreTripStatus = 'pending' | 'started' | 'closed';
+
+/** The two trip lists that share `Store/Admin/Trips/Trips/Index`. */
+export type StoreTripListType = 'all' | 'today';
+
+/**
+ * A row of the trip lists: the due date as `YYYY-MM-DD`, the start and close
+ * times as ISO timestamps, the distance in metres and the duration in seconds.
+ */
+export interface StoreTrip {
+    id: number;
+    code: string;
+    status: StoreTripStatus;
+    due_date: string | null;
+    started_at: string | null;
+    closed_at: string | null;
+    distance: number | null;
+    duration: number | null;
+    notes: string | null;
+    driver: { id: number; name: string } | null;
+    truck: { id: number; name: string } | null;
+}
+
+export interface StoreTripFilters {
+    per_page: number;
+    search: string;
+    status: StoreTripStatus[];
+}
+
 export interface StoreNotification {
     id: string;
     kind: 'order' | 'cart' | 'other';

@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\Route;
  * rides along: a link marked `data-method="post"` submits a form through
  * aiz-core.js, and the confirmation modals pass the mark on to their button.
  * A module moved to Inertia deletes with DELETE instead (`roles.destroy`,
- * `staffs.destroy`), which Inertia sends with its CSRF header.
+ * `staffs.destroy`), which Inertia sends with its CSRF header; a retained
+ * Blade link to such a route is marked `data-method="delete"`, and aiz-core.js
+ * submits the same form with `_method=DELETE` (`trips.destroy` on the map
+ * picker).
  *
  * Left as GET on purpose: the signed email-verification link, the terms
  * activation link and the payment gateways' redirects back to the shop.
@@ -186,7 +189,7 @@ test('a signed-in admin\'s GET to a state-changing route is refused (405, or 404
     expect($notRefused)->toBe([]);
 });
 
-test('every link to a state-changing route is marked to submit as a POST', function () {
+test('every link to a state-changing route is marked to submit as a POST or a spoofed DELETE', function () {
     // The links that open a confirmation modal carry no mark; the modal's own button does.
     $modalButtons = [
         'resources/views/shop/frontend/partials/account_delete_modal.blade.php' => ['id="account_delete_link"'],
@@ -211,7 +214,7 @@ test('every link to a state-changing route is marked to submit as a POST', funct
 
             foreach (preg_split('/(?=<(?:a|form)\b)/', $source) as $element) {
                 if (preg_match($usage, $element)
-                    && ! str_contains($element, 'data-method="post"')
+                    && ! preg_match('/data-method="(post|delete)"/', $element)
                     && ! preg_match('/^<form\b[^>]*method="post"/i', $element)) {
                     $offenders[] = "$path: $name";
                 }
@@ -225,8 +228,10 @@ test('every link to a state-changing route is marked to submit as a POST', funct
 test('the confirmation modals pass the post mark on, and a marked link submits a form with the csrf token', function () {
     $script = file_get_contents(public_path('assets/js/aiz-core.js'));
 
-    expect($script)->toContain('a[data-method="post"]')
+    expect($script)->toContain('a[data-method="post"], a[data-method="delete"]')
         ->and($script)->toContain('name: "_token"')
+        ->and($script)->toContain('name: "_method"')
+        ->and($script)->toContain('value: "DELETE"')
         ->and($script)->toContain('value: AIZ.data.csrf')
         ->and(substr_count($script, 'carryMethod('))->toBeGreaterThanOrEqual(5);
 });

@@ -32,7 +32,7 @@ were activated. The table and deferred paths below define actual scope.
 | `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | Included implemented subset, adapted | `29ada8cd505074f696e6675487f6ccbc27d181da`; bounded translated search, attributes/values/colors/discount/reviews/bulk/offers; core catalogue conversion remains pending |
 | `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); Inertia footer/appearance/custom pages with typed writers since 2026-10-13 (`[skip ci]`); script-policy activation held |
 | `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms (#392) and newsletter form (#393) on the shared editor since 2026-10-13 |
-| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list |
+| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list; Inertia trip lists with status, notes and delete actions since 2026-10-14 (`[skip ci]`); trip forms, checkpoints and maps still Blade |
 | `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | Partially included | `3bece94c1e25f6f5e91606238a1c2fd6b64fd896`; orders/entry and shell utilities, dashboard/charts and proposed tax arithmetic held |
 | `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | Superseded implementation; partially included independent tests/fix | No duplicate controllers/pages/admin routes; follow-up adapts `StoreBackOfficeShellTest`, currency switcher regression and missing-currency handling |
 | Unavailable audit | `aed3feab5b6edd95fb941ee92a455e058403def5` | Explicitly excluded | Unavailable; not recovered or included. Independently reconstructed in prompt 3 below; no source commit recovered |
@@ -2842,3 +2842,130 @@ references in earlier sections were used.
 
 Required before merge: the full `pre_push_check.py` gate with PHP 8.5, the dev
 tools and `node_modules`, plus the two browser specs above.
+
+## Trip list and status actions migration (2026-10-14)
+
+Work on `ccr-861a6e50-1xombz` from `develop` at `4cbb84d` (the PR #403 merge);
+the branch had no commits beyond that base. The owner authorized a commit,
+push, PR and merge into `develop`, each with `[skip ci]`, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR
+or its merge.** No other branch, deployment or production data was touched. The
+guide's §24 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `getTodayTrips`/`getAllTrips` (`:41-49`) called `getTrips()` (`:384-405`):
+  explicit select, `driver:id,name`/`truck:id,name`, `due_date = today()` for
+  today's list, `Trip::search()`, `applyStatusFilters()` (`:572-592`:
+  `pending`/`started`/`closed` flags ORed unless `allTrips`), newest first,
+  `paginate(15)`, `trips/index.blade.php`. `delete` (`:252-268`): checkpoints
+  by query, `SetTruckAvailability(..., true)` unconditionally (a TypeError with
+  no truck), flash, `back()`. `bulk_trip_delete` (`:270-292`): skipped unknown
+  ids, deleted checkpoints and trips with no truck update, returned `1`.
+  `update_trip_notes` (`:294-309`): any `notes`, JSON `success`.
+  `update_trip_status` (`:311-337`): `UpdateTripStatusRequest` (`id`,
+  `status` enum), one transaction, `lockTruckForTrip()` (`:200-215`) unless
+  closing, first start/close times kept, order checkpoints delivered on close,
+  truck freed when no other open trip holds it, returned `1`.
+- **Routes** (`routes/shop-admin.php`): `trips.index` `:267`,
+  `trips.today-trips` `:272`, `trips.destroy` `:280` (POST `/delete/{id}`),
+  `trips.bulk-trip-delete` `:281`, `trips.update-status` `:282`,
+  `trips.update-notes` `:283`; gates `view_all_trips`, `delete_trip`,
+  `edit_trip`.
+- **List view** (`trips/index.blade.php`): Create Order under `add_order`
+  (`:24-28`), Create Trip under `add_trip` (`:30-37`), bulk delete under
+  `delete_trip` (`:39-49`, posted by `bulk_delete()` `:325-343`), status
+  filters (`:52-111`), search (`:114-120`), the status button under
+  `edit_trip` (`:196-206`), inline notes under `edit_trip` (`:235-241`, saved
+  on change `:345-373`), Edit and Delete (`:251-265`), the status modal under
+  `edit_trip` (`:281-286`). **Modal** (`update-trip-status-modal.blade.php`):
+  every `TripStatus` case (`:12-14`), posted with `id` (`:26-44`).
+- **Consumers.** `trips/index.blade.php`: only `getTrips()`.
+  `update-trip-status-modal.blade.php`: only `trips/index.blade.php:283`.
+  `trips.destroy`: also `create-from-map.blade.php:139` (POST link through the
+  delete modal). `trips.update-status`, `trips.update-notes`,
+  `trips.bulk-trip-delete`: only the two views. `admin_sidenav.blade.php:713`
+  and `:718` link the lists by name. `trips/inc/scripts.blade.php`: create,
+  edit and create-from-map, kept.
+- **Tests treating the list as Blade.** `TripControllerTest:194-266` (status
+  via POST with `id`, `1` response) and `:453-474` (Blade list controls);
+  `LegacyAdminOwnershipTest:25-31` (four trip-list rows);
+  `LegacyStoreStateChangingRoutesTest` (POST mark on the map picker's link);
+  `store-drivers.spec.ts` (All trips as a Blade page).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripController` (`index`, `today`,
+  `updateStatus`, `updateNotes`, `destroy`, `bulkDestroy`);
+  `Controllers\Concerns\ReservesTripTrucks` (the moved `lockTruckForTrip()`,
+  also used by root); `FilterTripsRequest`, `UpdateTripStatusRequest` (now
+  `status` and `list`), `UpdateTripNotesRequest`, `TripListActionRequest`,
+  `BulkDeleteTripsRequest`, `Concerns\ValidatesStoreTripList`;
+  `Enums\StoreTripList`; `Resources\Store\TripResource`. Root loses
+  `getTodayTrips`, `getAllTrips`, `getTrips`, `applyStatusFilters`, `delete`,
+  `bulk_trip_delete`, `update_trip_notes`, `update_trip_status` and two unused
+  imports, and takes `lockTruckForTrip()` from the trait.
+- **Frontend.** `Store/Admin/Trips/Trips/Index.vue`, `StoreTripStatusDialog.vue`,
+  three types and a fixture, `store.trips.*` in English and Arabic (42 keys
+  each), the two menu entries flipped.
+- **Retained Blade.** `create-from-map.blade.php` deletes with
+  `data-method="delete"` and `list=map`; `aiz-core.js` `postLink` spoofs DELETE
+  for that mark.
+- **Routes.** Six registrations replace six; names kept.
+- **Removed (`git rm`).** `trips/index.blade.php`,
+  `trips/components/update-trip-status-modal.blade.php`.
+- **Unchanged.** Permission names and grants, the trip forms and their
+  writers, departure ID 9, checkpoints, the map picker's other controls, trip
+  orders, CMR, the API trip controllers, CSP and `blade_csp`, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/`, and installed `node_modules`.
+`wait_for_setup.py` exited 0 with "frontend (vitest, vue-tsc, prettier,
+eslint): ready. App (artisan, migrations): unavailable. Vite build … not
+built". `install_php.sh` could not reach a package source (Ubuntu mirrors
+unresolvable, the PPA refused with 403), so PHP 8.5, Composer's dev tools and
+artisan were unavailable. Laravel Boost failed to connect.
+
+Wayfinder's files are generated by artisan, so for the frontend checks below
+the session wrote throwaway stand-ins for every imported `@/actions/...` module
+into the gitignored `resources/js/actions` and `resources/js/wayfinder`
+(fake `/temp/stub/...` URLs, actions typed `any`) and deleted them afterwards.
+They let the code and tests run, but URL literals cannot match and action
+argument types are not checked.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on every changed or new PHP file: no syntax errors.
+    Syntax only, not PHP 8.5 behaviour.
+  - Vitest, the two new files (`Trips/Trips/Index.test.ts`,
+    `StoreTripStatusDialog.test.ts`): 23 tests passed.
+  - Vitest, the full suite, on this branch and on a worktree of `develop` at
+    `4cbb84d` with the same stand-ins: `develop` 2,725 tests, 65 failed;
+    this branch 2,748 tests, 65 failed, the identical 65 (assertions on real
+    `/temp/admin/...` URLs, which the stand-ins cannot produce, in the menu,
+    layout and other existing tests).
+  - `npm run types:check` (vue-tsc): 0 errors, with `any`-typed actions.
+  - ESLint (repository config) and Prettier 3.9.6 (the locked version, with its
+    plugins) on every changed frontend and spec file: clean.
+  - Both locale files round-trip through the repository's 4-space JSON format;
+    `node --check public/assets/js/aiz-core.js`; `git diff --check`: clean.
+  - `python3 .claude/scripts/pre_push_check.py`, with the stand-ins: exit 1.
+    ESLint (whole repository), Prettier (`resources/`) and vue-tsc passed;
+    Vitest failed with the same 65 stand-in failures (2,748 tests, 2,683
+    passed), so the gate stopped there. Pint, PHPStan and Pest were not
+    reached and could not have run (no `vendor/`).
+- **Not run.** Pest (`TripControllerTest`, `LegacyAdminOwnershipTest`,
+  `LegacyStoreStateChangingRoutesTest`, `StoreBackOfficeShellTest` or the
+  suite), Pint, PHPStan, `wayfinder:generate`, `npm run build`, `route:list`,
+  Playwright (`store-trips.spec.ts`, `store-drivers.spec.ts`) and MySQL. Every
+  PHP test and both browser specs written or changed here are unexecuted.
+- **Inventory** (from the files, not `route:list`). **43** backend Blade files;
+  **22**/**3** literal consumers of the app/layout shells; **1,048** `/temp` and
+  **436** `/temp/admin` registrations (six replace six); Blade editor: **8**
+  fields in **8** views.
+
+Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
+the dev tools, generated Wayfinder files and `node_modules`, plus the two
+browser specs above.
