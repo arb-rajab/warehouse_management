@@ -2388,7 +2388,7 @@ No deployment or production-data mutation is authorized.
 The all-trips and today's-trips lists now share `Store/Admin/Trips/Trips/Index`
 (`listType` `all` or `today`); the Blade status modal is `StoreTripStatusDialog`.
 Work is on `ccr-861a6e50-1xombz`, from `develop` at `4cbb84d` (the PR #403
-merge). The owner authorized this session's commit, PR, its merge into
+merge). The owner authorized this session's commit, PR (#404), its merge into
 `develop` and `[skip ci]` on all of them, because the checks run locally. So no
 PR CI, no PR or merge SAST and no `develop` deploy ran. The ledger records what
 ran here (Vitest, vue-tsc, ESLint and Prettier, against stand-in Wayfinder

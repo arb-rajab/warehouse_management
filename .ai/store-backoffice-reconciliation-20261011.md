@@ -2847,7 +2847,7 @@ tools and `node_modules`, plus the two browser specs above.
 
 Work on `ccr-861a6e50-1xombz` from `develop` at `4cbb84d` (the PR #403 merge);
 the branch had no commits beyond that base. The owner authorized a commit,
-push, PR and merge into `develop`, each with `[skip ci]`, because the checks run
+push, PR (#404) and merge into `develop`, each with `[skip ci]`, because the checks run
 locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR
 or its merge.** No other branch, deployment or production data was touched. The
 guide's §24 records the result.
