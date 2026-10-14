@@ -2222,7 +2222,7 @@ The physical product edit form now uses `Store/Admin/Product/Products/Edit`
 with the create form's components (§22), the shared editor (§18), the
 canonical upload picker (§2.4) and the language tabs. Work is on
 `claude/magical-lamport-g4w0c0`, from `develop` at `cb02808` (the PR #402
-merge). The owner authorized this session's commit, PR, its merge into
+merge). The owner authorized this session's commit, PR (#403), its merge into
 `develop` and `[skip ci]` on all of them, knowing the checks had not run. So no
 PR CI, no PR or merge SAST and no `develop` deploy ran, and the local checks in
 the ledger are the only verification: every backend, Vitest, type and browser

@@ -2710,7 +2710,7 @@ or its merge.
 
 Work on `claude/magical-lamport-g4w0c0` from `develop` at `cb02808` (the PR #402
 merge); the branch had no commits beyond that base. After the work, the owner
-authorized a commit, push, PR and merge into `develop`, each with `[skip ci]`,
+authorized a commit, push, PR (#403) and merge into `develop`, each with `[skip ci]`,
 knowing that none of the checks below had run. **No PR CI, no PR or merge SAST
 and no `develop` deploy ran for this PR or its merge.** No other branch,
 deployment or production data was touched. The guide's §23 records the result.
