@@ -2704,3 +2704,141 @@ Boost was not needed; repository files and installed sources were used.
 Not run: MySQL, production data or role grants, and the full browser suite.
 Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
 or its merge.
+
+
+## Physical product edit form migration (2026-10-14)
+
+Work on `claude/magical-lamport-g4w0c0` from `develop` at `cb02808` (the PR #402
+merge); the branch had no commits beyond that base. After the work, the owner
+authorized a commit, push, PR and merge into `develop`, each with `[skip ci]`,
+knowing that none of the checks below had run. **No PR CI, no PR or merge SAST
+and no `develop` deploy ran for this PR or its merge.** No other branch,
+deployment or production data was touched. The guide's §23 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handler** (`app/Http/Controllers/ProductController.php`). Gate
+  `product_edit` on `admin_product_edit`, `seller_product_edit`, `update` and
+  the jQuery switches (`:62`). `admin_product_edit` (`:127-156`) redirected a
+  digital product to `digitalproducts.edit`, then rendered
+  `products/edit.blade.php` with the physical roots, variations and store
+  barcodes; `seller_product_edit` (`:164-181`) rendered the same view without
+  `$variations`/`$barcodes` (the inherited 500, §20). `update` (`:190-295`)
+  called `ProductService::update()` with the request, deleted every stock row,
+  re-ran `ProductStockService::store()`, the flash deal service under
+  `Flash_deals`, the taxes when posted, `ProductTranslation::updateOrCreate()`
+  for `lang`, the type and barcode loops, a flash, `view:clear`/`cache:clear`
+  and `back()`. No transaction. `sku_combination_edit` (`:487-517`) rendered
+  `sku_combinations_edit.blade.php` for the form's AJAX table.
+- **`ProductService::update()`** (`app/Services/ProductService.php:182-319`):
+  slug from the posted slug or name with a `-count+1` suffix whenever more
+  than one slug began with it; switches unset → 0 (`cash_on_delivery`,
+  `is_quantity_multiplied`, `featured`, `todays_deal`); name/unit/description
+  dropped outside the default language; shipping cost 0 unless flat rate;
+  `$product->update($data)`, which `#[Fillable]` reduces to the four
+  `products:sync` columns (§22's defect), so the form saved almost nothing.
+  `ProductStockService::store()` never reset `variant_product` to 0.
+- **Form** (`edit.blade.php`). Language tabs linking `products.admin.edit`
+  (`:26-35`); name/unit/description per language (`:38-41`, `:68-71`,
+  `:460-463`); min quantity shown as at least 1 (`:88`); gallery, thumbnail and
+  Otajer image `old_photo` (`:126-167`); types and barcodes with stored rows
+  (`:229-294`); colours row `d-none` (`:302-323`); stored choice rows with
+  `AttributeValue::where(...)` per attribute (`:343-362`); quantity and SKU of
+  the first stock row (`:414-429`); slug (`:529-534`); shipping card `d-none`
+  (`:541-596`); COD under `cash_payment` (`:654-682`); today's deal, flash deal
+  and shipping days `d-none` but posted (`:704-784`); every active tax with the
+  product's amount (`:786-825`); `update_sku()` on load and on choice changes
+  (`:939-963`).
+- **SKU edit table** (`sku_combinations_edit.blade.php`). Stored price only
+  while the posted unit price equalled the stored one, else the posted unit
+  price for every row; SKU stored or the variant name; quantity stored or 10;
+  photo stored.
+- **Consumers.** `edit.blade.php`: only the two root actions.
+  `choice_options_script.blade.php`: only `edit.blade.php:840`.
+  `sku_combinations_edit.blade.php`: also `Seller\ProductController:239`
+  (`seller.products.sku_combination_edit`), kept. `products.sku_combination_edit`
+  (admin): only `edit.blade.php:942`. `layouts/blank.blade.php`: no caller in
+  `resources/views`, `app`, `routes` or `config`; pinned only by
+  `StoreBackOfficeShellTest`. `product/reviews/index.blade.php`: rendered by
+  root `ReviewController::index` (`app/Http/Controllers/ReviewController.php:41`,
+  route `reviews.index`, `routes/shop-web.php:353`), linked from
+  `admin_sidenav.blade.php:183`, pinned by `ReviewControllerTest:101-104`, so
+  kept. Edit links: `product/products/index.blade.php:385/:391` (seller list,
+  `['id' => …]`), `Products/Index.vue` (full load), `admin_sidenav`
+  `areActiveRoutes` names.
+- **Tests treating the form as Blade.** `ProductControllerTest` (retained forms
+  and list-contract tests), `ProductCreateFormTest` (view existence, seller
+  panel/edit SKU test), `DigitalProductFormTest` (`['id' => …]`),
+  `LegacyAdminPermissionsTest` (`sku_combination_edit` ratchet),
+  `store-offers-catalogue.spec.ts` (choice script). No `Legacy*Test` held an
+  admin edit or update case.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\ProductController::edit`, `sellerEdit`, `update`,
+  `editVariantCombinations` (create now shares `formOptions()`);
+  `UpdateProductRequest`; `Concerns\ValidatesStoreProduct` (extracted from
+  `StoreProductRequest`, which keeps its rules and `button`);
+  `ProductVariantCombinationsRequest` 404s a bound digital product;
+  `Resources\Store\ProductFormResource`; `InHouseProductWriter::update()`
+  beside `create()` (shared column, slug, stock, tax, flash, translation and
+  type/barcode helpers). Root `admin_product_edit`, `seller_product_edit`,
+  `update`, `sku_combination_edit`, their gate entries, two unused services
+  and the unused imports removed.
+- **Frontend.** `Products/Edit.vue`; `StoreProductFormFields` (stored values,
+  slug, Otajer images), `StoreProductVariantFields` (stored state, stored
+  attribute order, edit endpoint, row photos, values offered once),
+  `StoreProductListField` (stored values); three types and two fixtures; six
+  `store.products.form.*` keys in English and Arabic. The list's Edit link is
+  an Inertia visit.
+- **Routes.** Four registrations replace four; names kept; edit URIs bind
+  `{product}`.
+- **Removed (`git rm`).** `product/products/edit.blade.php`,
+  `product/products/choice_options_script.blade.php`,
+  `layouts/blank.blade.php`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/API/import product writers and `ProductService`/`ProductStockService`,
+  the seller SKU partials and endpoints, gates, permission definitions, role
+  grants, stored formats, the legacy uploader, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/` and no installed `node_modules`.
+`wait_for_setup.py` exited 0 with "frontend … unavailable; App … unavailable;
+Vite build … not built". One `npm ci` failed: `registry.npmjs.org` has no
+direct DNS here and the egress proxy refused it (`CONNECT … 403`,
+`connect_rejected`); it was not retried and no install was forced. Laravel
+Boost failed to connect; repository files and the installed-source
+references in earlier sections were used.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on all 17 changed or new PHP files: no syntax errors.
+    This is syntax only, not PHP 8.5 behaviour.
+  - Both locale files parse as JSON and round-trip byte for byte through the
+    repository's 4-space format.
+  - `git diff --check`: clean.
+  - Prettier, partially: the global Prettier 3.8.1 (the lock pins 3.9.6)
+    without `prettier-plugin-tailwindcss` (not installed) over the 16 changed
+    frontend and spec files. Three files of this change were reformatted to
+    its output; the only remaining differences are three pre-existing union
+    types in `types/store.ts` that 3.8.1 prints differently. Tailwind class
+    order was not checked.
+  - `python3 .claude/scripts/pre_push_check.py`: exit 1 at its first stage,
+    ESLint (global 10.1.0 could not load `@stylistic/eslint-plugin`); nothing
+    after it ran.
+- **Not run.** Vitest (changed files or the full suite), `npm run
+  types:check`, ESLint, the locked Prettier with the Tailwind plugin,
+  Wayfinder generation, `npm run build`, Pest (`ProductEditFormTest`,
+  `ProductCreateFormTest`, `ProductControllerTest`, `DigitalProductFormTest`,
+  `StoreBackOfficeShellTest`, the legacy permission/middleware tests or the
+  suite), Pint, PHPStan, `route:list`, Playwright
+  (`store-product-edit.spec.ts`, `store-offers-catalogue.spec.ts`) and MySQL.
+  Every test written here is unexecuted.
+- **Inventory** (from the files, not `route:list`). **45** backend Blade files;
+  **23**/**3** literal consumers of the app/layout shells, no blank shell;
+  **1,048** `/temp` and **436** `/temp/admin` registrations (four replace
+  four); Blade editor: **8** fields in **8** views.
+
+Required before merge: the full `pre_push_check.py` gate with PHP 8.5, the dev
+tools and `node_modules`, plus the two browser specs above.

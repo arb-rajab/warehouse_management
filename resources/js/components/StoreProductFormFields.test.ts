@@ -11,7 +11,11 @@ import StoreProductVariantFields from '@/components/StoreProductVariantFields.vu
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
-import { storeDigitalProductTax, storeSharedProps } from '@/testing/factories';
+import {
+    storeDigitalProductTax,
+    storeProductForm,
+    storeSharedProps,
+} from '@/testing/factories';
 import { createUseHttpStub } from '@/testing/inertiaStubs';
 import type { StoreProductFormSections } from '@/types/store';
 import Fields from './StoreProductFormFields.vue';
@@ -235,6 +239,34 @@ describe('StoreProductFormFields', () => {
             ['pdf', 'document', false, t('store.products.form.pdf')],
             ['meta_img', 'image', false, t('store.products.form.metaImage')],
         ]);
+    });
+
+    it('offers the slug and the Otajer images only on the edit form', () => {
+        const create = mountFields();
+
+        expect(create.find('#slug').exists()).toBe(false);
+        expect(create.find('input[name="old_photo"]').exists()).toBe(false);
+
+        const edit = mountFields({ product: storeProductForm() });
+        const otajer = edit
+            .findAllComponents(StoreUploadField)
+            .find((field) => field.props('name') === 'old_photo');
+
+        expect(edit.get('#slug').attributes()).toMatchObject({
+            name: 'slug',
+            dir: 'ltr',
+            'aria-describedby': 'slug_help',
+        });
+        expect((edit.get('#slug').element as HTMLInputElement).value).toBe(
+            'olive-oil',
+        );
+        expect(otajer?.props()).toMatchObject({
+            id: 'old_photo',
+            type: 'image',
+            multiple: true,
+            modelValue: '4',
+            label: t('store.products.form.otajerImage'),
+        });
     });
 
     it('lists the options and mirrors every backend rule with native constraints', () => {

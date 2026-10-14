@@ -632,13 +632,77 @@ export interface StoreProductAttributeValue {
     id: number;
     value: string;
 }
-/** A generated variant row (`products.variant_combinations`). */
+/**
+ * A generated variant row (`products.variant_combinations`). On the edit
+ * form (`products.edit_variant_combinations`) a row also carries the photo
+ * of its stored stock row, with the preview the caller may see.
+ */
 export interface StoreProductVariantRow {
     variant: string;
     price: string;
     sku: string;
     qty: string;
+    image?: string | null;
+    files?: StoreUpload[];
 }
+/** A product's stored colours and choices, with the rows they generate. */
+export interface StoreProductVariantState {
+    colors_active: boolean;
+    colors: string[];
+    choice_options: { attribute_id: number; values: string[] }[];
+    /** Each chosen attribute's values, keyed by attribute id. */
+    attribute_values: Record<number, StoreProductAttributeValue[]>;
+    rows: StoreProductVariantRow[];
+}
+/** The language-independent fields of the physical product edit form. */
+export interface StoreProductForm {
+    id: number;
+    added_by: string | null;
+    category_id: number | null;
+    brand_id: number | null;
+    weight: string | null;
+    max_qty: string | null;
+    min_qty: string;
+    /** Comma-separated tags. */
+    tags: string | null;
+    /** Comma-separated image upload ids. */
+    photos: string | null;
+    /** The Otajer import's image upload ids, comma-separated. */
+    old_photo: string | null;
+    thumbnail_img: string | null;
+    video_provider: string | null;
+    video_link: string | null;
+    pdf: string | null;
+    unit_price: string;
+    discount: string | null;
+    discount_type: string | null;
+    /** `d-m-Y H:i:s to d-m-Y H:i:s`, or null without both ends. */
+    date_range: string | null;
+    /** The first stock row's quantity and SKU. */
+    current_stock: string;
+    sku: string | null;
+    external_link: string | null;
+    external_link_btn: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    meta_img: string | null;
+    slug: string | null;
+    shipping_type: 'free' | 'flat_rate';
+    flat_shipping_cost: string;
+    is_quantity_multiplied: boolean;
+    est_shipping_days: string | null;
+    low_stock_quantity: string | null;
+    stock_visibility_state: 'quantity' | 'text' | 'hide';
+    cash_on_delivery: boolean;
+    featured: boolean;
+    todays_deal: boolean;
+    /** The product's flash deal, while the form lists it. */
+    flash_deal_id: number | null;
+    product_types: string[];
+    product_barcodes: string[];
+}
+/** The product list an edit form was opened from. */
+export type StoreProductEditListType = 'admin' | 'seller';
 /** The physical product form's sections the business settings switch on. */
 export interface StoreProductFormSections {
     shipping: boolean;

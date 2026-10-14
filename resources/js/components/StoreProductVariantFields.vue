@@ -13,6 +13,7 @@ import type {
     StoreProductAttributeValue,
     StoreProductColor,
     StoreProductVariantRow,
+    StoreProductVariantState,
     StoreReferenceOption,
 } from '@/types/store';
 
@@ -20,25 +21,40 @@ import type {
  * A product's colours and attribute values, and the variant rows they
  * generate, each with its own price, SKU, quantity and photo.
  *
- * The rows come from the server (`products.variant_combinations`), which
- * names and orders them as the legacy SKU table did; like that table, they
- * are regenerated, at the unit price, whenever a choice or the unit price
- * changes. Colours, attributes and values keep their list order, which is
- * the order the legacy selects posted them in.
+ * The rows come from the server (`products.variant_combinations`, or on the
+ * edit form `rowsUrl`), which names and orders them as the legacy SKU table
+ * did; like that table, they are regenerated whenever a choice or the unit
+ * price changes. Colours, attributes and values keep their list order, which
+ * is the order the legacy selects posted them in, except that the edit form's
+ * stored attributes (`initial`) keep their stored order ahead of the others:
+ * that order names the stored variants. A value listed twice is offered once.
  */
 const props = defineProps<{
     colors: StoreProductColor[];
     attributes: StoreReferenceOption[];
     unitPrice: string;
+    initial?: StoreProductVariantState;
+    rowsUrl?: string;
     errors: Record<string, string>;
 }>();
 const hasVariants = defineModel<boolean>('hasVariants', { default: false });
-const colorsActive = ref(false);
-const chosenColors = ref<string[]>([]);
-const chosenAttributes = ref<number[]>([]);
-const attributeOptions = ref<Record<number, StoreProductAttributeValue[]>>({});
-const chosenValues = ref<Record<number, string[]>>({});
-const rows = ref<StoreProductVariantRow[]>([]);
+const storedOrder =
+    props.initial?.choice_options.map((choice) => choice.attribute_id) ?? [];
+const colorsActive = ref(props.initial?.colors_active ?? false);
+const chosenColors = ref<string[]>([...(props.initial?.colors ?? [])]);
+const chosenAttributes = ref<number[]>([...storedOrder]);
+const attributeOptions = ref<Record<number, StoreProductAttributeValue[]>>({
+    ...props.initial?.attribute_values,
+});
+const chosenValues = ref<Record<number, string[]>>(
+    Object.fromEntries(
+        (props.initial?.choice_options ?? []).map((choice) => [
+            choice.attribute_id,
+            [...choice.values],
+        ]),
+    ),
+);
+const rows = ref<StoreProductVariantRow[]>(props.initial?.rows ?? []);
 const failure = ref<string>();
 const valuesRequest = useHttp<
     { attribute_id: number },
@@ -61,18 +77,42 @@ const orderedColors = computed(() =>
         .filter((color) => chosenColors.value.includes(color.code))
         .map((color) => color.code),
 );
+function rank(id: number, listIndex: number): number {
+    const stored = storedOrder.indexOf(id);
+
+    return stored === -1 ? storedOrder.length + listIndex : stored;
+}
+function uniqueOptions(
+    options: StoreProductAttributeValue[],
+): StoreProductAttributeValue[] {
+    return options.filter(
+        (option, index) =>
+            options.findIndex((other) => other.value === option.value) ===
+            index,
+    );
+}
 const choices = computed(() =>
     props.attributes
-        .filter((attribute) => chosenAttributes.value.includes(attribute.id))
-        .map((attribute) => ({
-            attribute,
-            options: attributeOptions.value[attribute.id] ?? [],
-            values: (attributeOptions.value[attribute.id] ?? [])
-                .map((option) => option.value)
-                .filter((value) =>
-                    (chosenValues.value[attribute.id] ?? []).includes(value),
-                ),
-        })),
+        .map((attribute, listIndex) => ({ attribute, listIndex }))
+        .filter(({ attribute }) =>
+            chosenAttributes.value.includes(attribute.id),
+        )
+        .sort(
+            (a, b) =>
+                rank(a.attribute.id, a.listIndex) -
+                rank(b.attribute.id, b.listIndex),
+        )
+        .map(({ attribute }) => {
+            const options = uniqueOptions(
+                attributeOptions.value[attribute.id] ?? [],
+            );
+            const chosen = chosenValues.value[attribute.id] ?? [];
+            const values = options.flatMap((option) =>
+                chosen.includes(option.value) ? [option.value] : [],
+            );
+
+            return { attribute, options, values };
+        }),
 );
 
 async function loadValues(attributeId: number): Promise<void> {
@@ -125,7 +165,9 @@ async function refresh(): Promise<void> {
     failure.value = undefined;
 
     try {
-        const result = await rowsRequest.post(variantCombinations.url());
+        const result = await rowsRequest.post(
+            props.rowsUrl ?? variantCombinations.url(),
+        );
 
         if (revision === current) {
             rows.value = result ?? [];
@@ -386,6 +428,8 @@ onBeforeUnmount(() => clearTimeout(timer));
                             <StoreUploadField
                                 :id="`variant_image_${index}`"
                                 :name="`variants[${index}][image]`"
+                                :model-value="row.image ?? ''"
+                                :initial-files="row.files ?? []"
                                 type="image"
                                 :label="
                                     t('store.products.form.photoOf', {

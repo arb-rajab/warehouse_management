@@ -47,7 +47,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
     'ProductController@sku_combination',
-    'ProductController@sku_combination_edit',
 
     // The controller has no such method, so the request errors out.
 

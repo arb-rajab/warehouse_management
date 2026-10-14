@@ -17,16 +17,25 @@ import { productAmountMax } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
     StoreProductColor,
+    StoreProductForm,
     StoreProductFormSections,
+    StoreProductVariantState,
     StoreReferenceOption,
+    StoreUpload,
 } from '@/types/store';
 
 /**
- * Every field of the physical product create form, in the legacy form's
- * sections. Shipping, flash deals, taxes and the cash-on-delivery switch
- * show only while the business settings that showed them are on.
+ * Every field of the physical product create and edit forms, in the legacy
+ * forms' sections. Shipping, flash deals, taxes and the cash-on-delivery
+ * switch show only while the business settings that showed them are on.
+ *
+ * On the edit form `product` holds the stored fields, `name`, `unit` and
+ * `description` the edited language's, `variants` the stored colours,
+ * choices and rows (regenerated through `variantsUrl`) and `initialFiles`
+ * the previews of the stored uploads; the slug and the Otajer image show only
+ * there, as on the Blade edit form.
  */
-defineProps<{
+const props = defineProps<{
     categories: StoreReferenceOption[];
     brands: StoreReferenceOption[];
     colors: StoreProductColor[];
@@ -34,24 +43,40 @@ defineProps<{
     flashDeals: StoreReferenceOption[];
     taxes: StoreDigitalProductTax[];
     sections: StoreProductFormSections;
+    product?: StoreProductForm;
+    name?: string;
+    unit?: string;
+    description?: string;
+    variants?: StoreProductVariantState;
+    variantsUrl?: string;
+    initialFiles?: Record<string, StoreUpload[]>;
     errors: Record<string, string>;
 }>();
 const int = '2147483647';
-const categoryId = ref('');
-const brandId = ref('');
-const photos = ref('');
-const thumbnail = ref('');
-const pdf = ref('');
-const metaImage = ref('');
-const metaDescription = ref('');
-const videoProvider = ref('youtube');
-const unitPrice = ref('0');
-const hasVariants = ref(false);
-const content = ref('');
-const shippingType = ref('free');
-const stockVisibility = ref('quantity');
-const flashDealId = ref('');
-const flashDiscountType = ref('');
+const stored = props.product;
+const categoryId = ref(
+    stored?.category_id == null ? '' : String(stored.category_id),
+);
+const brandId = ref(stored?.brand_id == null ? '' : String(stored.brand_id));
+const photos = ref(stored?.photos ?? '');
+const oldPhoto = ref(stored?.old_photo ?? '');
+const thumbnail = ref(stored?.thumbnail_img ?? '');
+const pdf = ref(stored?.pdf ?? '');
+const metaImage = ref(stored?.meta_img ?? '');
+const metaDescription = ref(stored?.meta_description ?? '');
+const videoProvider = ref(stored?.video_provider ?? 'youtube');
+const unitPrice = ref(stored?.unit_price ?? '0');
+const hasVariants = ref((props.variants?.rows.length ?? 0) > 0);
+const content = ref(props.description ?? '');
+const shippingType = ref(stored?.shipping_type ?? 'free');
+const stockVisibility = ref(stored?.stock_visibility_state ?? 'quantity');
+const flashDealId = ref(
+    stored?.flash_deal_id == null ? '' : String(stored.flash_deal_id),
+);
+// The Blade edit form offered the product's discount type for its deal.
+const flashDiscountType = ref(
+    stored?.flash_deal_id == null ? '' : (stored.discount_type ?? ''),
+);
 const sectionClass =
     'grid gap-4 rounded-lg border border-gray-200 p-4 lg:grid-cols-2 dark:border-neutral-800';
 const legendClass = 'px-1 text-sm font-semibold';
@@ -70,7 +95,7 @@ const linkClass =
             <FormField
                 id="name"
                 :label="t('store.products.form.name')"
-                value=""
+                :value="name ?? ''"
                 :error="errors.name"
                 maxlength="200"
                 required
@@ -125,7 +150,7 @@ const linkClass =
             <FormField
                 id="unit"
                 :label="t('store.products.form.unit')"
-                value=""
+                :value="unit ?? ''"
                 :error="errors.unit"
                 :placeholder="t('store.products.form.unitPlaceholder')"
                 maxlength="20"
@@ -135,7 +160,7 @@ const linkClass =
                 id="weight"
                 type="number"
                 :label="t('store.products.form.weight')"
-                value="0.00"
+                :value="product ? (product.weight ?? '') : '0.00'"
                 :error="errors.weight"
                 min="0"
                 max="999999.99"
@@ -145,7 +170,7 @@ const linkClass =
                 id="max_qty"
                 type="number"
                 :label="t('store.products.form.maxQty')"
-                value="1000"
+                :value="product ? (product.max_qty ?? '') : '1000'"
                 :error="errors.max_qty"
                 min="1"
                 :max="int"
@@ -156,7 +181,7 @@ const linkClass =
                 id="min_qty"
                 type="number"
                 :label="t('store.products.form.minQty')"
-                value="1"
+                :value="product?.min_qty ?? '1'"
                 :error="errors.min_qty"
                 min="1"
                 :max="int"
@@ -167,7 +192,7 @@ const linkClass =
                 <FormField
                     id="tags"
                     :label="t('store.products.form.tags')"
-                    value=""
+                    :value="product?.tags ?? ''"
                     :error="errors.tags"
                     maxlength="500"
                     aria-describedby="tags_help"
@@ -190,6 +215,7 @@ const linkClass =
                     type="image"
                     multiple
                     :label="t('store.products.form.photos')"
+                    :initial-files="initialFiles?.photos"
                     :error="errors.photos"
                 />
                 <p :class="helpClass">
@@ -203,12 +229,24 @@ const linkClass =
                     name="thumbnail_img"
                     type="image"
                     :label="t('store.products.form.thumbnail')"
+                    :initial-files="initialFiles?.thumbnail_img"
                     :error="errors.thumbnail_img"
                 />
                 <p :class="helpClass">
                     {{ t('store.products.form.thumbnailHelp') }}
                 </p>
             </div>
+            <StoreUploadField
+                v-if="product"
+                id="old_photo"
+                v-model="oldPhoto"
+                name="old_photo"
+                type="image"
+                multiple
+                :label="t('store.products.form.otajerImage')"
+                :initial-files="initialFiles?.old_photo"
+                :error="errors.old_photo"
+            />
         </fieldset>
 
         <fieldset :class="sectionClass">
@@ -236,7 +274,7 @@ const linkClass =
                     id="video_link"
                     type="url"
                     :label="t('store.products.form.videoLink')"
-                    value=""
+                    :value="product?.video_link ?? ''"
                     :error="errors.video_link"
                     maxlength="100"
                     dir="ltr"
@@ -259,6 +297,7 @@ const linkClass =
                 :add-label="t('store.products.form.addType')"
                 :remove-label="t('store.products.form.removeType')"
                 :placeholder="t('store.products.form.typePlaceholder')"
+                :values="product?.product_types"
                 :errors="errors"
             />
             <StoreProductListField
@@ -268,6 +307,7 @@ const linkClass =
                 :add-label="t('store.products.form.addBarcode')"
                 :remove-label="t('store.products.form.removeBarcode')"
                 :placeholder="t('store.products.form.barcodePlaceholder')"
+                :values="product?.product_barcodes"
                 :errors="errors"
             />
         </fieldset>
@@ -281,6 +321,8 @@ const linkClass =
                 :colors="colors"
                 :attributes="attributes"
                 :unit-price="unitPrice"
+                :initial="variants"
+                :rows-url="variantsUrl"
                 :errors="errors"
             />
         </fieldset>
@@ -311,7 +353,12 @@ const linkClass =
                 />
                 <FieldError :message="errors.unit_price" />
             </div>
-            <StoreProductDiscountFields :errors="errors" />
+            <StoreProductDiscountFields
+                :discount="product?.discount"
+                :discount-type="product?.discount_type"
+                :date-range="product?.date_range"
+                :errors="errors"
+            />
             <!-- Hidden, not removed, while variants carry their own stock:
                  the legacy form posted these either way. -->
             <div v-show="!hasVariants" class="contents">
@@ -319,7 +366,7 @@ const linkClass =
                     id="current_stock"
                     type="number"
                     :label="t('store.products.form.quantity')"
-                    value="0"
+                    :value="product?.current_stock ?? '0'"
                     :error="errors.current_stock"
                     min="0"
                     :max="int"
@@ -329,7 +376,7 @@ const linkClass =
                 <FormField
                     id="sku"
                     :label="t('store.products.form.sku')"
-                    value=""
+                    :value="product?.sku ?? ''"
                     :error="errors.sku"
                     maxlength="255"
                 />
@@ -339,7 +386,7 @@ const linkClass =
                     id="external_link"
                     type="url"
                     :label="t('store.products.form.externalLink')"
-                    value=""
+                    :value="product?.external_link ?? ''"
                     :error="errors.external_link"
                     maxlength="500"
                     dir="ltr"
@@ -352,7 +399,7 @@ const linkClass =
             <FormField
                 id="external_link_btn"
                 :label="t('store.products.form.externalLinkButton')"
-                value=""
+                :value="product?.external_link_btn ?? ''"
                 :error="errors.external_link_btn"
                 maxlength="255"
             />
@@ -382,6 +429,7 @@ const linkClass =
                 name="pdf"
                 type="document"
                 :label="t('store.products.form.pdf')"
+                :initial-files="initialFiles?.pdf"
                 :error="errors.pdf"
             />
         </fieldset>
@@ -393,7 +441,7 @@ const linkClass =
             <FormField
                 id="meta_title"
                 :label="t('store.products.form.metaTitle')"
-                value=""
+                :value="product?.meta_title ?? ''"
                 :error="errors.meta_title"
             />
             <StoreUploadField
@@ -402,6 +450,7 @@ const linkClass =
                 name="meta_img"
                 type="image"
                 :label="t('store.products.form.metaImage')"
+                :initial-files="initialFiles?.meta_img"
                 :error="errors.meta_img"
             />
             <div class="lg:col-span-2">
@@ -416,6 +465,19 @@ const linkClass =
                     rows="5"
                 />
                 <FieldError :message="errors.meta_description" />
+            </div>
+            <div v-if="product" class="lg:col-span-2">
+                <FormField
+                    id="slug"
+                    :label="t('store.products.form.slug')"
+                    :value="product.slug ?? ''"
+                    :error="errors.slug"
+                    dir="ltr"
+                    aria-describedby="slug_help"
+                />
+                <p id="slug_help" :class="helpClass">
+                    {{ t('store.products.form.slugHelp') }}
+                </p>
             </div>
         </fieldset>
 
@@ -458,7 +520,7 @@ const linkClass =
                         id="flat_shipping_cost"
                         type="number"
                         :label="t('store.products.form.shippingCost')"
-                        value="0"
+                        :value="product?.flat_shipping_cost ?? '0'"
                         :error="errors.flat_shipping_cost"
                         min="0"
                         :max="productAmountMax"
@@ -472,6 +534,7 @@ const linkClass =
                             type="checkbox"
                             name="is_quantity_multiplied"
                             value="1"
+                            :checked="product?.is_quantity_multiplied ?? false"
                             :class="checkboxClass"
                         />
                         {{ t('store.products.form.quantityMultiplied') }}
@@ -493,7 +556,7 @@ const linkClass =
                     id="est_shipping_days"
                     type="number"
                     :label="t('store.products.form.shippingDays')"
-                    value=""
+                    :value="product?.est_shipping_days ?? ''"
                     :error="errors.est_shipping_days"
                     min="1"
                     :max="int"
@@ -504,7 +567,7 @@ const linkClass =
                 id="low_stock_quantity"
                 type="number"
                 :label="t('store.products.form.lowStockQuantity')"
-                value="1"
+                :value="product ? (product.low_stock_quantity ?? '') : '1'"
                 :error="errors.low_stock_quantity"
                 min="0"
                 :max="int"
@@ -539,7 +602,7 @@ const linkClass =
                         type="checkbox"
                         name="cash_on_delivery"
                         value="1"
-                        checked
+                        :checked="product?.cash_on_delivery ?? true"
                         :class="checkboxClass"
                     />
                     {{ t('store.products.form.cashOnDelivery') }}
@@ -555,6 +618,7 @@ const linkClass =
                         type="checkbox"
                         name="featured"
                         value="1"
+                        :checked="product?.featured ?? false"
                         :class="checkboxClass"
                     />
                     {{ t('store.products.form.featured') }}
@@ -564,6 +628,7 @@ const linkClass =
                         type="checkbox"
                         name="todays_deal"
                         value="1"
+                        :checked="product?.todays_deal ?? false"
                         :class="checkboxClass"
                     />
                     {{ t('store.products.form.todaysDeal') }}
@@ -602,7 +667,7 @@ const linkClass =
                 id="flash_discount"
                 type="number"
                 :label="t('store.products.form.flashDiscount')"
-                value="0"
+                :value="product?.discount ?? '0'"
                 :error="errors.flash_discount"
                 min="0"
                 :max="productAmountMax"

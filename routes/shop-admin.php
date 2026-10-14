@@ -108,9 +108,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
     // Products: the in-house and all-products lists, their row actions and
-    // the create form are Inertia. The seller list, the edit forms and the
-    // jQuery endpoints the seller list and edit form post to stay on the root
-    // ProductController's Blade.
+    // the create and edit forms are Inertia. The seller list and the jQuery
+    // endpoints it posts to stay on the root ProductController's Blade.
     Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
     Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
     Route::post('/products/{product}/published', [StoreProductController::class, 'updatePublished'])->name('products.list.published');
@@ -122,11 +121,12 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/products/create', [StoreProductController::class, 'create'])->name('products.create');
     Route::post('/products/store', [StoreProductController::class, 'store'])->name('products.store');
     Route::post('/products/variant-combinations', [StoreProductController::class, 'variantCombinations'])->name('products.variant_combinations');
+    Route::get('/products/admin/{product}/edit', [StoreProductController::class, 'edit'])->name('products.admin.edit');
+    Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
+    Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
+    Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
     Route::controller(ProductController::class)->group(function () {
         Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::get('/products/admin/{id}/edit', 'admin_product_edit')->name('products.admin.edit');
-        Route::get('/products/seller/{id}/edit', 'seller_product_edit')->name('products.seller.edit');
-        Route::post('/products/update/{product}', 'update')->name('products.update');
         Route::post('/products/todays_deal', 'updateTodaysDeal')->name('products.todays_deal');
         Route::post('/products/sale_status', 'updateSaleStatus')->name('products.update_sale');
         Route::post('/products/featured', 'updateFeatured')->name('products.featured');
@@ -141,7 +141,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
 
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
-        Route::post('/products/sku_combination_edit', 'sku_combination_edit')->name('products.sku_combination_edit');
     });
 
     Route::get('/offers/index', [OffersCatalogController::class, 'index'])->name('offers.index');

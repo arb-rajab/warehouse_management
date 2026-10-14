@@ -2545,6 +2545,12 @@
             "delete": "Delete",
             "form": {
                 "createTitle": "Add new product",
+                "editTitle": "Edit product",
+                "update": "Update product",
+                "updating": "Updating…",
+                "otajerImage": "Otajer images",
+                "slug": "Slug",
+                "slugHelp": "Leave empty to generate it from the product name.",
                 "savePublish": "Save & publish",
                 "saveUnpublish": "Save & unpublish",
                 "saving": "Saving…",

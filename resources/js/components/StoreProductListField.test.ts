@@ -3,7 +3,7 @@ import type { VueWrapper } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import StoreProductListField from './StoreProductListField.vue';
 
-function mountList(errors: Record<string, string> = {}) {
+function mountList(errors: Record<string, string> = {}, values?: string[]) {
     return mount(StoreProductListField, {
         props: {
             id: 'product_barcodes',
@@ -12,6 +12,7 @@ function mountList(errors: Record<string, string> = {}) {
             addLabel: 'Add barcode',
             removeLabel: 'Remove barcode',
             placeholder: 'Barcode number',
+            values,
             errors,
         },
         attachTo: document.body,
@@ -69,6 +70,26 @@ describe('StoreProductListField', () => {
                 .findAll('input')
                 .map((input) => (input.element as HTMLInputElement).value),
         ).toEqual(['4006381333931']);
+        wrapper.unmount();
+    });
+
+    it('starts from the stored values on the edit form, each removable', async () => {
+        const wrapper = mountList({}, ['8712345678906', '4006381333931']);
+        const values = () =>
+            wrapper
+                .findAll('input')
+                .map((input) => (input.element as HTMLInputElement).value);
+
+        expect(values()).toEqual(['8712345678906', '4006381333931']);
+        expect(
+            wrapper.findAll('input').map((input) => input.attributes('name')),
+        ).toEqual(['product_barcodes[]', 'product_barcodes[]']);
+        await wrapper
+            .get('button[aria-label="Remove barcode 1"]')
+            .trigger('click');
+        await addButton(wrapper).trigger('click');
+
+        expect(values()).toEqual(['4006381333931', '']);
         wrapper.unmount();
     });
 

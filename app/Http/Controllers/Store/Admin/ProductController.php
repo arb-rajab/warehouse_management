@@ -4,26 +4,34 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Enums\StoreProductList;
 use App\Http\Controllers\Concerns\ProvidesStoreProductTaxes;
+use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
+use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
+use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterAllProductsRequest;
 use App\Http\Requests\Store\Admin\FilterInHouseProductsRequest;
 use App\Http\Requests\Store\Admin\ProductListActionRequest;
 use App\Http\Requests\Store\Admin\ProductVariantCombinationsRequest;
 use App\Http\Requests\Store\Admin\StoreProductRequest;
 use App\Http\Requests\Store\Admin\UpdateProductListFlagRequest;
+use App\Http\Requests\Store\Admin\UpdateProductRequest;
+use App\Http\Resources\Store\ProductFormResource;
 use App\Http\Resources\Store\ProductListResource;
 use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\FlashDeal;
 use App\Models\Product;
+use App\Models\ProductStock;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
+use App\Services\Store\ProductVariantCombinations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,9 +47,9 @@ use Inertia\Response;
 
 /**
  * The in-house and all-products lists and their row actions, one Inertia
- * page for both, and the physical product create form. The seller list, the
- * edit forms and the jQuery endpoints the seller list posts to stay on the
- * root ProductController's Blade.
+ * page for both, and the physical product create and edit forms. The seller
+ * list and the jQuery endpoints it posts to stay on the root
+ * ProductController's Blade.
  *
  * Every row action names its list (`list`), touches only a product that
  * list shows (404 otherwise) and returns to it with the list's filters.
@@ -49,6 +57,8 @@ use Inertia\Response;
 class ProductController extends Controller implements HasMiddleware
 {
     use ProvidesStoreProductTaxes;
+    use ProvidesStoreReferenceOptions;
+    use ProvidesStoreUploadPreviews;
     use UpdatesStoreProductFlags;
 
     /** @return array<int, Middleware> */
@@ -56,6 +66,8 @@ class ProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:add_new_product', only: ['create', 'store', 'variantCombinations']),
+            // The root ProductController's gate for the edit form it rendered.
+            new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
             // The root ProductController's own gates for the same writes.
@@ -133,34 +145,11 @@ class ProductController extends Controller implements HasMiddleware
 
     /**
      * The physical product create form, with the options the Blade form
-     * listed: the physical category tree, every brand, every colour by name,
-     * every attribute, the active flash deals and the active taxes (each
-     * while its business setting shows it).
+     * listed.
      */
     public function create(): Response
     {
-        $flashDeals = StoreProductRequest::flashDealsEnabled();
-        $vat = StoreProductRequest::vatSectionEnabled();
-
-        return Inertia::render('Store/Admin/Product/Products/Create', [
-            'categories' => Category::treeOptions(fn ($roots) => $roots->where('digital', 0)),
-            'brands' => Brand::query()->select(['id', 'name'])->orderBy('id')->get()
-                ->map(fn (Brand $brand): array => ['id' => $brand->id, 'name' => (string) $brand->getTranslation('name')])->all(),
-            'colors' => Color::query()->select(['id', 'name', 'code'])->orderBy('name')->orderBy('id')->get()
-                ->map(fn (Color $color): array => ['id' => $color->id, 'name' => (string) $color->getAttribute('name'), 'code' => (string) $color->getAttribute('code')])->all(),
-            'attributes' => Attribute::query()->select(['id', 'name'])->orderBy('id')->get()
-                ->map(fn (Attribute $attribute): array => ['id' => $attribute->id, 'name' => (string) $attribute->getTranslation('name')])->all(),
-            'flashDeals' => $flashDeals ? FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title'])->where('status', 1)->orderBy('id')->get()
-                ->map(fn (FlashDeal $deal): array => ['id' => $deal->getKey(), 'name' => (string) $deal->getAttribute('title')])->all() : [],
-            'taxes' => $vat ? $this->taxOptions(null) : [],
-            'sections' => [
-                'shipping' => StoreProductRequest::shippingSectionEnabled(),
-                'productWiseShipping' => StoreProductRequest::productWiseShippingEnabled(),
-                'flashDeals' => $flashDeals,
-                'vat' => $vat,
-                'cashOnDelivery' => StoreProductRequest::cashPaymentEnabled(),
-            ],
-        ]);
+        return Inertia::render('Store/Admin/Product/Products/Create', $this->formOptions(null));
     }
 
     /**
@@ -193,6 +182,58 @@ class ProductController extends Controller implements HasMiddleware
             'sku' => '',
             'qty' => '10',
         ], $request->variantNames()));
+    }
+
+    /**
+     * The edit form opened from the in-house or all-products list (and the
+     * language tabs). A digital product goes to its own form.
+     */
+    public function edit(EditReferenceTranslationRequest $request, Product $product): Response|RedirectResponse
+    {
+        return $this->renderEdit($request, $product, 'admin');
+    }
+
+    /**
+     * The same edit form, opened from the Blade seller product list, whose
+     * language tabs stay on this route.
+     */
+    public function sellerEdit(EditReferenceTranslationRequest $request, Product $product): Response|RedirectResponse
+    {
+        return $this->renderEdit($request, $product, 'seller');
+    }
+
+    /**
+     * Updates the product, its stock rows, taxes, flash deal entry, the
+     * edited language's translation, types and store barcodes in one
+     * transaction (InHouseProductWriter::update()), then clears the compiled
+     * views and the cache as the legacy form did, once the write has
+     * committed, and returns to the edit form in the same language.
+     */
+    public function update(UpdateProductRequest $request, Product $product, InHouseProductWriter $writer): RedirectResponse
+    {
+        $data = $request->validated();
+        $product = DB::transaction(fn (): Product => $writer->update(
+            $this->lockedProduct(Product::query()->physical(), $product),
+            $data,
+            $request->variantNames(),
+            $request->variantColorCodes(),
+            UpdateProductRequest::cashPaymentEnabled(),
+            UpdateProductRequest::productWiseShippingEnabled(),
+        ));
+        $this->clearStorefrontCaches();
+
+        return redirect()->route($product->getAttribute('added_by') === 'seller' ? 'products.seller.edit' : 'products.admin.edit', ['product' => $product->id, 'lang' => $data['lang']]);
+    }
+
+    /**
+     * The edit form's variant rows: named and ordered as on create, each
+     * keeping the price, SKU, quantity and photo of the stored stock row of
+     * the same name; a variant with no stored row starts at the unit price
+     * as typed, no SKU and a quantity of 10, as on create.
+     */
+    public function editVariantCombinations(ProductVariantCombinationsRequest $request, Product $product): JsonResponse
+    {
+        return response()->json($this->editVariantRows($request, $product, $request->variantNames(), (string) ($request->validated('unit_price') ?? '')));
     }
 
     public function updatePublished(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
@@ -360,6 +401,178 @@ class ProductController extends Controller implements HasMiddleware
             'categories' => Category::query()->without('category_translations')->select(['id', 'name'])->orderBy('id')->get()->map(fn (Category $category) => ['id' => $category->id, 'name' => $category->name])->all(),
             'defaultLanguage' => config('app.default_language'),
         ]);
+    }
+
+    /**
+     * The options both product forms list, as the Blade forms listed them:
+     * the physical category tree, every brand, every colour by name, every
+     * attribute, the active flash deals and the active taxes with the
+     * product's amounts (each while its business setting shows it).
+     *
+     * @return array<string, mixed>
+     */
+    private function formOptions(?Product $product): array
+    {
+        $flashDeals = StoreProductRequest::flashDealsEnabled();
+        $vat = StoreProductRequest::vatSectionEnabled();
+
+        return [
+            'categories' => Category::treeOptions(fn ($roots) => $roots->where('digital', 0)),
+            'brands' => Brand::query()->select(['id', 'name'])->orderBy('id')->get()
+                ->map(fn (Brand $brand): array => ['id' => $brand->id, 'name' => (string) $brand->getTranslation('name')])->all(),
+            'colors' => Color::query()->select(['id', 'name', 'code'])->orderBy('name')->orderBy('id')->get()
+                ->map(fn (Color $color): array => ['id' => $color->id, 'name' => (string) $color->getAttribute('name'), 'code' => (string) $color->getAttribute('code')])->all(),
+            'attributes' => Attribute::query()->select(['id', 'name'])->orderBy('id')->get()
+                ->map(fn (Attribute $attribute): array => ['id' => $attribute->id, 'name' => (string) $attribute->getTranslation('name')])->all(),
+            'flashDeals' => $flashDeals ? FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title'])->where('status', 1)->orderBy('id')->get()
+                ->map(fn (FlashDeal $deal): array => ['id' => $deal->getKey(), 'name' => (string) $deal->getAttribute('title')])->all() : [],
+            'taxes' => $vat ? $this->taxOptions($product) : [],
+            'sections' => [
+                'shipping' => StoreProductRequest::shippingSectionEnabled(),
+                'productWiseShipping' => StoreProductRequest::productWiseShippingEnabled(),
+                'flashDeals' => $flashDeals,
+                'vat' => $vat,
+                'cashOnDelivery' => StoreProductRequest::cashPaymentEnabled(),
+            ],
+        ];
+    }
+
+    /**
+     * The edit form in the requested language (the default without one):
+     * the form's options, the product's fields, the edited language's name,
+     * unit and cleaned description, the stored variant choices with their
+     * rows, and the previews of its stored uploads the caller may see.
+     */
+    private function renderEdit(EditReferenceTranslationRequest $request, Product $product, string $listType): Response|RedirectResponse
+    {
+        if ((int) $product->getAttribute('digital') === 1) {
+            return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $request->validated('lang')]);
+        }
+        $lang = $request->validated('lang') ?? config('app.default_language');
+        $product = Product::query()->physical()
+            ->select([
+                'id', 'name', 'added_by', 'category_id', 'brand_id', 'unit', 'weight', 'max_qty', 'min_qty', 'tags', 'photos', 'old_photo',
+                'thumbnail_img', 'video_provider', 'video_link', 'pdf', 'unit_price', 'discount', 'discount_type', 'discount_start_date',
+                'discount_end_date', 'external_link', 'external_link_btn', 'description', 'meta_title', 'meta_description', 'meta_img', 'slug',
+                'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'low_stock_quantity', 'stock_visibility_state',
+                'cash_on_delivery', 'featured', 'todays_deal', 'colors', 'choice_options',
+            ])
+            ->with([
+                'product_translations:id,product_id,lang,name,unit,description',
+                'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'sku', 'qty'])->orderBy('id'),
+                'variations' => fn ($variations) => $variations->select(['id', 'product_id', 'name'])->orderBy('id'),
+                'storeBarcodes' => fn ($barcodes) => $barcodes->select(['id', 'product_id', 'barcode'])->orderBy('id'),
+                'flash_deal_product:id,product_id,flash_deal_id',
+            ])
+            ->findOrFail($product->id);
+        $options = $this->formOptions($product);
+        $flashDealId = $product->flash_deal_product?->getAttribute('flash_deal_id');
+        $variants = $this->storedVariantChoices($product, $options['colors'], $options['attributes']);
+        $names = $variants['choice_options'] !== [] && collect($variants['choice_options'])->contains(fn (array $choice): bool => $choice['values'] === [])
+            ? []
+            : app(ProductVariantCombinations::class)->names($variants['colors'], array_column($variants['choice_options'], 'values'));
+
+        return Inertia::render('Store/Admin/Product/Products/Edit', [
+            ...$options,
+            'product' => new ProductFormResource($product, in_array($flashDealId, array_column($options['flashDeals'], 'id'), true) ? (int) $flashDealId : null),
+            'name' => (string) $product->getTranslation('name', $lang),
+            'unit' => (string) $product->getTranslation('unit', $lang),
+            'description' => clean_html((string) $product->getTranslation('description', $lang)),
+            'lang' => $lang,
+            'languages' => $this->languageOptions(),
+            'listType' => $listType,
+            'variants' => [...$variants, 'rows' => $this->editVariantRows($request, $product, $names, (string) $product->unit_price)],
+            'initialFiles' => $this->uploadIdPreviews($request, [
+                'photos' => $product->getAttribute('photos'),
+                'thumbnail_img' => $product->thumbnail_img,
+                'old_photo' => $product->getAttribute('old_photo'),
+                'pdf' => $product->getAttribute('pdf'),
+                'meta_img' => $product->getAttribute('meta_img'),
+            ]),
+        ]);
+    }
+
+    /**
+     * The product's stored colours and choices as the variant fields offer
+     * them: colours in the list's order (on while any is chosen), attributes
+     * in their stored order, each attribute's values in its value list's order
+     * with repeated values once, and that list itself. A colour, attribute or
+     * value that no longer exists is left out, so it is dropped on save, as
+     * the Blade selects dropped it.
+     *
+     * @param  list<array{id: int, name: string, code: string}>  $colors
+     * @param  list<array{id: int, name: string}>  $attributes
+     * @return array{colors_active: bool, colors: list<string>, choice_options: list<array{attribute_id: int, values: list<string>}>, attribute_values: array<int, list<array{id: int, value: string}>>}
+     */
+    private function storedVariantChoices(Product $product, array $colors, array $attributes): array
+    {
+        $storedColors = json_decode((string) $product->getAttribute('colors'), true);
+        $storedColors = is_array($storedColors) ? array_map('strval', array_filter($storedColors, 'is_scalar')) : [];
+        $chosenColors = array_values(array_unique(array_filter(array_column($colors, 'code'), fn (string $code): bool => in_array($code, $storedColors, true))));
+
+        $attributeIds = array_column($attributes, 'id');
+        $storedChoices = json_decode((string) $product->getAttribute('choice_options'), true);
+        $choices = [];
+        foreach (is_array($storedChoices) ? $storedChoices : [] as $choice) {
+            $id = is_array($choice) && is_numeric($choice['attribute_id'] ?? null) ? (int) $choice['attribute_id'] : null;
+            if ($id !== null && in_array($id, $attributeIds, true) && ! array_key_exists($id, $choices)) {
+                $choices[$id] = array_map('strval', array_filter((array) ($choice['values'] ?? []), 'is_scalar'));
+            }
+        }
+        $values = AttributeValue::query()->select(['id', 'attribute_id', 'value'])->whereIn('attribute_id', array_keys($choices))->orderBy('id')->get()->groupBy('attribute_id');
+        $attributeValues = [];
+        $choiceOptions = [];
+        foreach ($choices as $id => $storedValues) {
+            $attributeValues[$id] = ($values->get($id) ?? collect())->unique(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))->values()
+                ->map(fn (AttributeValue $value): array => ['id' => (int) $value->getKey(), 'value' => (string) $value->getAttribute('value')])->all();
+            $choiceOptions[] = [
+                'attribute_id' => $id,
+                'values' => array_values(array_filter(array_column($attributeValues[$id], 'value'), fn (string $value): bool => in_array($value, $storedValues, true))),
+            ];
+        }
+
+        return [
+            'colors_active' => $chosenColors !== [],
+            'colors' => $chosenColors,
+            'choice_options' => $choiceOptions,
+            'attribute_values' => $attributeValues,
+        ];
+    }
+
+    /**
+     * The variant rows of `$names` for the edit form: each keeps the price,
+     * SKU, quantity and photo (with its preview where the caller may see it)
+     * of the product's first stock row of that name; any other starts at
+     * `$unitPrice`, no SKU, a quantity of 10 and no photo.
+     *
+     * @param  list<string>  $names
+     * @return list<array{variant: string, price: string, sku: string, qty: string, image: string|null, files: array<int, mixed>}>
+     */
+    private function editVariantRows(Request $request, Product $product, array $names, string $unitPrice): array
+    {
+        if ($names === []) {
+            return [];
+        }
+        $stocks = ProductStock::query()->select(['id', 'variant', 'price', 'sku', 'qty', 'image'])
+            ->where('product_id', $product->id)->whereIn('variant', $names)->orderBy('id')->get()
+            ->unique(fn (ProductStock $stock): string => (string) $stock->getAttribute('variant'))
+            ->keyBy(fn (ProductStock $stock): string => 'variant:'.$stock->getAttribute('variant'));
+        $previews = $this->uploadIdPreviews($request, $stocks->map(fn (ProductStock $stock) => $stock->getAttribute('image'))->all());
+
+        return array_map(function (string $name) use ($stocks, $previews, $unitPrice): array {
+            $stock = $stocks->get('variant:'.$name);
+
+            return $stock === null
+                ? ['variant' => $name, 'price' => $unitPrice, 'sku' => '', 'qty' => '10', 'image' => null, 'files' => []]
+                : [
+                    'variant' => $name,
+                    'price' => (string) $stock->getAttribute('price'),
+                    'sku' => (string) $stock->getAttribute('sku'),
+                    'qty' => (string) $stock->getAttribute('qty'),
+                    'image' => $stock->getAttribute('image') === null ? null : (string) $stock->getAttribute('image'),
+                    'files' => $previews['variant:'.$name] ?? [],
+                ];
+        }, $names);
     }
 
     private function deleteProduct(Product $product): void

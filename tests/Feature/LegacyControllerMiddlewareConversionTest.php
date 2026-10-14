@@ -47,8 +47,12 @@ test('a controller with dependency-injected constructor arguments keeps them alo
 
     // Seven until the in-house and all-products lists moved to
     // Store\Admin\ProductController with their two list gates, five until
-    // the create form moved there with its add_new_product gate.
-    expect($middleware)->toHaveCount(4);
+    // the create form moved there with its add_new_product gate. The edit
+    // form's move took only its actions out of the product_edit entry, which
+    // still gates the seller list's jQuery switches.
+    expect($middleware)->toHaveCount(4)
+        ->and(collect($middleware)->firstWhere('middleware', 'permission:product_edit')->only)
+        ->toBe(['updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']);
 
     // The constructor itself still wires up its services -- resolving the
     // controller out of the container is what would fail if that logic had
