@@ -49,6 +49,8 @@ import type {
     StoreDigitalProduct,
     StoreDigitalProductForm,
     StoreDigitalProductTax,
+    StoreProductForm,
+    StoreProductVariantState,
     StoreProductListFilters,
     StoreProductListRow,
     StorePickupPoint,
@@ -1167,6 +1169,87 @@ export function storeDigitalProductForm(
         meta_img: '8',
         slug: 'recipe-e-book-12345',
         file: '9',
+        ...overrides,
+    };
+}
+/** A physical product's edit-form fields, as ProductFormResource sends them. */
+export function storeProductForm(
+    overrides: Partial<StoreProductForm> = {},
+): StoreProductForm {
+    return {
+        id: 41,
+        added_by: 'admin',
+        category_id: 12,
+        brand_id: 5,
+        weight: '1.25',
+        max_qty: '24',
+        min_qty: '2',
+        tags: 'oil,olive',
+        photos: '5,6',
+        old_photo: '4',
+        thumbnail_img: '7',
+        video_provider: 'vimeo',
+        video_link: 'https://vimeo.com/123',
+        pdf: '9',
+        unit_price: '12.50',
+        discount: '1.50',
+        discount_type: 'amount',
+        date_range: '01-11-2026 08:00:00 to 30-11-2026 20:30:00',
+        current_stock: '40',
+        sku: 'EVOO-1',
+        external_link: 'https://example.com/oil',
+        external_link_btn: 'Buy elsewhere',
+        meta_title: 'Olive oil',
+        meta_description: 'Fresh oil',
+        meta_img: '8',
+        slug: 'olive-oil',
+        shipping_type: 'flat_rate',
+        flat_shipping_cost: '4.95',
+        is_quantity_multiplied: true,
+        est_shipping_days: '3',
+        low_stock_quantity: '5',
+        stock_visibility_state: 'text',
+        cash_on_delivery: false,
+        featured: true,
+        todays_deal: false,
+        flash_deal_id: 9,
+        product_types: ['Cold pressed', 'Organic'],
+        product_barcodes: ['8712345678906'],
+        ...overrides,
+    };
+}
+/** A product's stored size choice with its two stored stock rows. */
+export function storeProductVariantState(
+    overrides: Partial<StoreProductVariantState> = {},
+): StoreProductVariantState {
+    return {
+        colors_active: false,
+        colors: [],
+        choice_options: [{ attribute_id: 1, values: ['S', 'Extra Large'] }],
+        attribute_values: {
+            1: [
+                { id: 10, value: 'S' },
+                { id: 11, value: 'Extra Large' },
+            ],
+        },
+        rows: [
+            {
+                variant: 'S',
+                price: '13.00',
+                sku: 'OIL-S',
+                qty: '4',
+                image: '12',
+                files: [storeUpload({ id: 12, name: 'Small bottle' })],
+            },
+            {
+                variant: 'ExtraLarge',
+                price: '15.00',
+                sku: '',
+                qty: '0',
+                image: null,
+                files: [],
+            },
+        ],
         ...overrides,
     };
 }

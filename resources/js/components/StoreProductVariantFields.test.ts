@@ -6,7 +6,11 @@ import { variantCombinations } from '@/actions/App/Http/Controllers/Store/Admin/
 import { attributeValues } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
-import { storeSharedProps } from '@/testing/factories';
+import {
+    storeProductVariantState,
+    storeSharedProps,
+    storeUpload,
+} from '@/testing/factories';
 import StoreProductVariantFields from './StoreProductVariantFields.vue';
 
 const { usePageMock, useHttpMock, postMock } = vi.hoisted(() => ({
@@ -49,6 +53,15 @@ function mountFields(props: Record<string, unknown> = {}) {
     wrappers.push(wrapper);
 
     return wrapper;
+}
+
+const rowsUrl = '/temp/admin/products/41/variant-combinations';
+
+/** The payloads the edit form's variant endpoint received, in order. */
+function editRowPosts() {
+    return postMock.mock.calls
+        .filter(([url]) => url === rowsUrl)
+        .map(([, data]) => data);
 }
 
 /** The payloads the variant endpoint received, in order. */
@@ -394,5 +407,105 @@ describe('StoreProductVariantFields', () => {
             t('store.products.form.variantsFailed'),
         );
         expect(wrapper.find('table').exists()).toBe(false);
+    });
+
+    it('starts from the stored choice and stock rows without asking the server', async () => {
+        const initial = storeProductVariantState();
+        const wrapper = mountFields({ initial, rowsUrl });
+        await settle();
+
+        expect(postMock).not.toHaveBeenCalled();
+        expect(wrapper.emitted('update:hasVariants')).toEqual([[true]]);
+        expect(
+            wrapper
+                .findAll('input[type="checkbox"]:not([name]):checked')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['1']);
+        expect(
+            wrapper
+                .findAll('input[name="choice_options[0][values][]"]:checked')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['S', 'Extra Large']);
+        expect(
+            wrapper
+                .findAll('tbody tr')
+                .map((row) => [
+                    row.get('span').text(),
+                    row.get('input[name$="[price]"]').attributes('value'),
+                    row.get('input[name$="[sku]"]').attributes('value'),
+                    row.get('input[name$="[qty]"]').attributes('value'),
+                ]),
+        ).toEqual([
+            ['S', '13.00', 'OIL-S', '4'],
+            ['ExtraLarge', '15.00', '', '0'],
+        ]);
+        expect(
+            wrapper
+                .findAllComponents(StoreUploadField)
+                .map((field) => [
+                    field.props('modelValue'),
+                    field.props('initialFiles'),
+                ]),
+        ).toEqual([
+            ['12', [storeUpload({ id: 12, name: 'Small bottle' })]],
+            ['', []],
+        ]);
+        expect(
+            wrapper.get('input[name="variants[0][image]"]').attributes('value'),
+        ).toBe('12');
+    });
+
+    it('regenerates through the edit endpoint with the stored attributes ahead of new ones', async () => {
+        const initial = storeProductVariantState({
+            choice_options: [{ attribute_id: 2, values: ['1.5 L'] }],
+            attribute_values: { 2: [{ id: 20, value: '1.5 L' }] },
+            rows: [{ variant: '1.5L', price: '9.00', sku: 'B', qty: '1' }],
+        });
+        const wrapper = mountFields({ initial, rowsUrl });
+        await wrapper
+            .get('input[value="1"][type="checkbox"]:not([name])')
+            .setValue(true);
+        await settle();
+        await wrapper
+            .get('input[name="choice_options[1][values][]"][value="S"]')
+            .setValue(true);
+        await settle();
+
+        expect(
+            wrapper
+                .findAll('input[name$="[attribute_id]"]')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['2', '1']);
+        expect(variantPosts()).toEqual([]);
+        expect(editRowPosts()).toEqual([
+            {
+                colors_active: false,
+                colors: [],
+                choice_options: [
+                    { attribute_id: 2, values: ['1.5 L'] },
+                    { attribute_id: 1, values: ['S'] },
+                ],
+                unit_price: '12.50',
+            },
+        ]);
+    });
+
+    it('offers a value listed twice once', () => {
+        const initial = storeProductVariantState({
+            attribute_values: {
+                1: [
+                    { id: 10, value: 'S' },
+                    { id: 12, value: 'S' },
+                    { id: 11, value: 'Extra Large' },
+                ],
+            },
+        });
+        const wrapper = mountFields({ initial, rowsUrl });
+
+        expect(
+            wrapper
+                .findAll('input[name="choice_options[0][values][]"]')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['S', 'Extra Large']);
     });
 });

@@ -2,19 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProductRequest;
-use App\Models\AttributeValue;
 use App\Models\Cart;
-use App\Models\Category;
 use App\Models\CronJobs;
 use App\Models\Product;
 use App\Models\ProductStock;
-use App\Models\ProductTax;
-use App\Models\ProductTranslation;
-use App\Models\ProductVariation;
-use App\Models\StoreProductBarcode;
-use App\Services\ProductFlashDealService;
-use App\Services\ProductService;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Utility\ProductUtility;
@@ -30,20 +21,14 @@ use Illuminate\Routing\Controllers\Middleware;
 
 class ProductController extends Controller implements HasMiddleware
 {
-    protected $productService;
     protected $productTaxService;
-    protected $productFlashDealService;
     protected $productStockService;
 
     public function __construct(
-        ProductService $productService,
         ProductTaxService $productTaxService,
-        ProductFlashDealService $productFlashDealService,
         ProductStockService $productStockService
     ) {
-        $this->productService = $productService;
         $this->productTaxService = $productTaxService;
-        $this->productFlashDealService = $productFlashDealService;
         $this->productStockService = $productStockService;
     }
 
@@ -59,7 +44,7 @@ class ProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:show_seller_products', only: ['seller_products']),
-            new Middleware('permission:product_edit', only: ['admin_product_edit', 'seller_product_edit', 'update', 'updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
+            new Middleware('permission:product_edit', only: ['updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate']),
             new Middleware('permission:product_delete', only: ['destroy', 'bulk_product_delete']),
         ];
@@ -116,182 +101,6 @@ class ProductController extends Controller implements HasMiddleware
     public function show($id)
     {
         //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function admin_product_edit(Request $request, $id)
-    {
-
-        $product = Product::findOrFail($id);
-        if ($product->digital == 1) {
-            // The digital product form; the legacy relative URL missed /temp.
-            return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $request->query('lang')]);
-        }
-
-
-        if (ProductVariation::where('product_id', $id)->exists()) {
-            $variations = ProductVariation::where('product_id', $id)->get();
-        } else {
-            $variations = null;
-        }
-
-        if (StoreProductBarcode::where('product_id', $id)->exists()) {
-            $barcodes = StoreProductBarcode::where('product_id', $id)->get();
-        } else {
-            $barcodes = null;
-        }
-
-        $lang = $request->lang;
-        $tags = json_decode($product->tags);
-        $categories = Category::where('parent_id', 0)
-            ->where('digital', 0)
-            ->with('childrenCategories')
-            ->get();
-        return view('shop.backend.product.products.edit', compact('product', 'categories', 'tags', 'lang', 'variations', 'barcodes'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function seller_product_edit(Request $request, $id)
-    {
-        $product = Product::findOrFail($id);
-        if ($product->digital == 1) {
-            // The digital product form; the legacy relative URL missed /temp.
-            return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $request->query('lang')]);
-        }
-        $lang = $request->lang ?? 'en';
-
-        $tags = json_decode($product->tags);
-        // $categories = Category::all();
-        $categories = Category::where('parent_id', 0)
-            ->where('digital', 0)
-            ->with('childrenCategories')
-            ->get();
-
-        return view('shop.backend.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  Request  $request
-     * @param  int  $id
-     * @return Response
-     */
-    public function update(ProductRequest $request, Product $product)
-    {
-        //Product
-        $product = $this->productService->update($request->except([
-            '_token',
-            'sku',
-            'choice',
-            'tax_id',
-            'tax',
-            'tax_type',
-            'flash_deal_id',
-            'flash_discount',
-            'flash_discount_type'
-        ]), $product);
-
-        //Product Stock
-        foreach ($product->stocks as $key => $stock) {
-            $stock->delete();
-        }
-
-        $request->merge(['product_id' => $product->id]);
-        $this->productStockService->store($request->only([
-            'colors_active',
-            'colors',
-            'choice_no',
-            'unit_price',
-            'sku',
-            'current_stock',
-            'product_id'
-        ]), $product);
-
-        //Flash Deal
-        if (get_setting('Flash_deals')) {
-            $this->productFlashDealService->store($request->only([
-                'flash_deal_id',
-                'flash_discount',
-                'flash_discount_type'
-            ]), $product);
-        }
-
-
-        //VAT & Tax
-        if ($request->tax_id) {
-            ProductTax::where('product_id', $product->id)->delete();
-            $this->productTaxService->store($request->only([
-                'tax_id',
-                'tax',
-                'tax_type',
-                'product_id'
-            ]));
-        }
-
-        // Product Translations
-        ProductTranslation::updateOrCreate(
-            $request->only([
-                'lang',
-                'product_id'
-            ]),
-            $request->only([
-                'name',
-                'unit',
-                'description'
-            ])
-        );
-
-        // Begin: Product Types
-        if (ProductVariation::where('product_id', $product->id)->exists()) { // are there any Variations?
-            foreach (ProductVariation::where('product_id', $product->id)->get() as $variation) {
-                $variation->delete(); // If yes delete them
-            }
-        } //
-
-        // store the new variations if there are any.
-        foreach ($request->product_types as $type) {
-            if ($type != null) {
-                ProductVariation::create([
-                    "product_id" => $product->id,
-                    "name" => $type
-                ]);
-            }
-        }
-        // End: Product Types
-
-        if (StoreProductBarcode::where('product_id', $product->id)->exists()) {
-            foreach (StoreProductBarcode::where('product_id', $product->id)->get() as $barcode) {
-                $barcode->delete();
-            }
-        }
-
-        foreach ($request->product_barcodes as $barcode) {
-            if ($barcode != null) {
-                StoreProductBarcode::create([
-                    "product_id" => $product->id,
-                    "barcode" => $barcode
-                ]);
-            }
-        }
-
-
-        flash(translate('Product has been updated successfully'))->success();
-
-        Artisan::call('view:clear');
-        Artisan::call('cache:clear');
-
-        return back();
     }
 
     /**
@@ -483,39 +292,6 @@ class ProductController extends Controller implements HasMiddleware
         $combinations = ProductUtility::makeCombinations($options);
         return view('shop.backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
     }
-
-    public function sku_combination_edit(Request $request)
-    {
-        $product = Product::findOrFail($request->id);
-
-        $options = [];
-        if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
-            $colors_active = 1;
-            array_push($options, $request->colors);
-        } else {
-            $colors_active = 0;
-        }
-
-        $product_name = $request->name;
-        $unit_price = $request->unit_price;
-
-        if ($request->has('choice_no')) {
-            foreach ($request->choice_no as $key => $no) {
-                $name = 'choice_options_' . $no;
-                $data = [];
-                // foreach (json_decode($request[$name][0]) as $key => $item) {
-                foreach ($request[$name] as $key => $item) {
-                    // array_push($data, $item->value);
-                    array_push($data, $item);
-                }
-                array_push($options, $data);
-            }
-        }
-
-        $combinations = ProductUtility::makeCombinations($options);
-        return view('shop.backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
-    }
-
 
     public function fetch()
     {

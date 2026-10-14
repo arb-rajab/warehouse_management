@@ -156,9 +156,10 @@ test('the create form and its writes moved to the Inertia controller with their 
         ->and(method_exists(LegacyProductController::class, 'create'))->toBeFalse()
         ->and(method_exists(LegacyProductController::class, 'store'))->toBeFalse()
         ->and(view()->exists('shop.backend.product.products.create'))->toBeFalse()
-        // The edit form, the seller panel and the seller SKU helpers keep these.
-        ->and(view()->exists('shop.backend.product.products.edit'))->toBeTrue()
-        ->and(view()->exists('shop.backend.product.products.choice_options_script'))->toBeTrue()
+        // The edit form is Inertia too (§23); the seller panel's SKU helpers
+        // keep the two tables.
+        ->and(view()->exists('shop.backend.product.products.edit'))->toBeFalse()
+        ->and(view()->exists('shop.backend.product.products.choice_options_script'))->toBeFalse()
         ->and(view()->exists('shop.backend.product.products.sku_combinations'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.products.sku_combinations_edit'))->toBeTrue();
 });
@@ -583,13 +584,8 @@ test('the seller panel product form and the retained SKU helpers still render th
     expect(array_column(legacySkuRows($html), 'variant'))->toBe(['S', 'M']);
     $this->post(route('seller.products.sku_combination_edit'), ['id' => $this->existing->id, 'name' => 'Oil', 'unit_price' => '3', 'choice_no' => [(string) $this->size], 'choice_options_'.$this->size => ['S']])
         ->assertOk()->assertViewIs('shop.backend.product.products.sku_combinations_edit');
-
-    actingAsStoreUser(createStoreStaff('product_edit'));
-    DB::table('products')->where('id', $this->existing->id)->update(['colors' => '[]', 'attributes' => '[]', 'tags' => '']);
-    $this->get(route('products.admin.edit', ['id' => $this->existing->id, 'lang' => 'en']))->assertOk()->assertViewIs('shop.backend.product.products.edit')
-        ->assertSee('function appendProductAttributeChoice', false);
-    $this->post(route('products.sku_combination_edit'), ['id' => $this->existing->id, 'name' => 'Oil', 'unit_price' => '3', 'choice_no' => [(string) $this->size], 'choice_options_'.$this->size => ['S']])
-        ->assertOk()->assertViewIs('shop.backend.product.products.sku_combinations_edit');
+    // The admin's Blade SKU edit endpoint served only the deleted edit form.
+    expect(Route::has('products.sku_combination_edit'))->toBeFalse();
 });
 
 function productUtcTimestamp(string $dateTime): int

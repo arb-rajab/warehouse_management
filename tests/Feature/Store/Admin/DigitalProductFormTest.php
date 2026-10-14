@@ -466,8 +466,8 @@ test('a created product keeps the storefront page, the encrypted list download a
         File::delete(public_path($fileName));
     }
     $this->get(route('product', $product->slug))->assertOk()->assertSee('Bread guide')->assertSee('Knead', false)->assertDontSee('alert(1)', false);
-    $this->get(route('products.admin.edit', ['id' => $product->id, 'lang' => 'ar']))
+    $this->get(route('products.admin.edit', ['product' => $product->id, 'lang' => 'ar']))
         ->assertRedirect(route('digitalproducts.edit', ['product' => $product->id, 'lang' => 'ar']));
-    $this->get(route('products.seller.edit', ['id' => $product->id]))
+    $this->get(route('products.seller.edit', ['product' => $product->id]))
         ->assertRedirect(route('digitalproducts.edit', ['product' => $product->id]));
 });

@@ -79,7 +79,10 @@ test('store Blade shells and retained templates match their remaining consumers'
             'app/Http/Controllers/Store/Admin/ProductBulkUploadController.php',
         ])
         ->and($userDownloadConsumers)->toContain('app/Http/Controllers/Store/Admin/ProductBulkUploadController.php')
-        ->and($sources)->toHaveKey($blankLayout)
+        // The blank shell (the removed installer's card layout) had no
+        // consumer and is gone (store-backoffice-migration.md §23).
+        ->and($sources)->not->toHaveKey($blankLayout)
+        ->and(array_keys(array_filter([...$sources, ...$controllerSources], fn (string $source): bool => str_contains($source, 'shop.backend.layouts.blank'))))->toBe([])
         ->and(file_get_contents(base_path('routes/shop-admin.php')))->toContain(
             "Route::view('/system/server-status', 'shop.backend.system.server_status')",
         )

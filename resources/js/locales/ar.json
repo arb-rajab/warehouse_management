@@ -2545,6 +2545,12 @@
             "delete": "حذف",
             "form": {
                 "createTitle": "إضافة منتج جديد",
+                "editTitle": "تعديل المنتج",
+                "update": "تحديث المنتج",
+                "updating": "جارٍ التحديث…",
+                "otajerImage": "صور أوتاجر",
+                "slug": "الرابط المختصر",
+                "slugHelp": "اتركه فارغًا لإنشائه من اسم المنتج.",
                 "savePublish": "حفظ ونشر",
                 "saveUnpublish": "حفظ دون نشر",
                 "saving": "جارٍ الحفظ…",

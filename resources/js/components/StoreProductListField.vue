@@ -6,20 +6,24 @@ import { plainFieldInputClass } from '@/lib/filters';
 
 /**
  * A list of free texts a product form adds row by row and posts as
- * `<name>[]`: the product types and the store barcodes. Empty rows are
- * posted and skipped by the server, as the legacy form's were.
+ * `<name>[]`: the product types and the store barcodes, starting from the
+ * stored `values` on the edit form. Empty rows are posted and skipped by the
+ * server, as the legacy form's were.
  */
-defineProps<{
+const props = defineProps<{
     id: string;
     name: string;
     label: string;
     addLabel: string;
     removeLabel: string;
     placeholder: string;
+    values?: string[];
     errors: Record<string, string>;
 }>();
 let nextKey = 0;
-const rows = ref<{ key: number; value: string }[]>([]);
+const rows = ref<{ key: number; value: string }[]>(
+    (props.values ?? []).map((value) => ({ key: nextKey++, value })),
+);
 const list = ref<HTMLElement>();
 
 async function add(): Promise<void> {
