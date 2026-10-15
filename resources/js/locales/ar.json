@@ -2321,6 +2321,48 @@
                 "label": "الحالة",
                 "submit": "تحديث الحالة",
                 "submitting": "جارٍ التحديث…"
+            },
+            "create": {
+                "title": "إنشاء رحلة",
+                "submit": "إنشاء الرحلة",
+                "submitting": "جارٍ الإنشاء…"
+            },
+            "edit": {
+                "title": "تعديل الرحلة {code}",
+                "submit": "حفظ الرحلة",
+                "submitting": "جارٍ الحفظ…"
+            },
+            "form": {
+                "dueDate": "تاريخ الاستحقاق",
+                "driver": "السائق",
+                "selectDriver": "اختر سائقًا",
+                "truck": "الشاحنة",
+                "selectTruck": "اختر شاحنة",
+                "noVehicles": "لا يتوفر سائقون أو شاحنات في هذا التاريخ. اختر تاريخًا آخر.",
+                "noDrivers": "لا يتوفر سائقون في هذا التاريخ.",
+                "noTrucks": "لا تتوفر شاحنات في هذا التاريخ.",
+                "notes": "الملاحظات",
+                "checkpoints": "نقاط التوقف",
+                "checkpointsHelp": "تبدأ الرحلة الجديدة من نقطة الانطلاق التي تُضاف عند الحفظ. تُرتَّب نقاط التوقف ذات الإحداثيات حسب أقصر مسار عندما تستجيب خدمة التوجيه.",
+                "checkpointsRequired": "أضف نقطة توقف واحدة على الأقل.",
+                "empty": "لا توجد نقاط توقف بعد. أضف طلبًا أو عميلًا.",
+                "position": "التوقف {position}",
+                "types": {
+                    "delivery": "توصيل",
+                    "other": "أخرى"
+                },
+                "order": "الطلب",
+                "customer": "العميل",
+                "selectOrder": "اختر طلبًا",
+                "selectCustomer": "اختر عميلًا",
+                "orderOption": "#{code} {customer}",
+                "unknownCustomer": "عميل غير معروف",
+                "checkpointNotes": "ملاحظات نقطة التوقف",
+                "moveUp": "نقل التوقف {position} للأعلى",
+                "moveDown": "نقل التوقف {position} للأسفل",
+                "remove": "إزالة التوقف {position}",
+                "addOrder": "إضافة نقطة توقف لطلب",
+                "addCustomer": "إضافة نقطة توقف لعميل"
             }
         },
         "orders": {

@@ -110,6 +110,7 @@ import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import {
+    create as tripsCreate,
     index as tripsIndex,
     today as todayTrips,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
@@ -127,7 +128,6 @@ import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/Websi
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import {
     all_orders as tripOrders,
-    create as tripsCreate,
     create_from_map,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
 import type { StoreAccess } from '@/lib/storeAccess';
@@ -461,6 +461,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.createTrip',
+                        inertia: true,
                         href: tripsCreate(),
                         permission: 'add_trip',
                     },

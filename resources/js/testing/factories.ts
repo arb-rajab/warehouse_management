@@ -66,6 +66,7 @@ import type {
     StoreDriver,
     StoreOrder,
     StoreTrip,
+    StoreTripForm,
 } from '@/types/store';
 
 import type {
@@ -1019,6 +1020,40 @@ export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
         notes: 'Ring at the back',
         driver: { id: 31, name: 'Sam Driver' },
         truck: { id: 11, name: 'Cargo truck' },
+        ...overrides,
+    };
+}
+
+/** A trip on the edit form: the departure checkpoint, then a delivery. */
+export function storeTripForm(
+    overrides: Partial<StoreTripForm> = {},
+): StoreTripForm {
+    return {
+        id: 41,
+        code: '20261014-080000',
+        status: 'pending',
+        driver_id: 31,
+        truck_id: 11,
+        due_date: '2026-10-14',
+        notes: 'Ring at the back',
+        checkpoints: [
+            {
+                id: 501,
+                type: 'other',
+                related_id: 9,
+                notes: 'Default starting checkpoint',
+                order_code: null,
+                customer: 'Warehouse',
+            },
+            {
+                id: 502,
+                type: 'delivery',
+                related_id: 77,
+                notes: 'Back door',
+                order_code: '20261013-0042',
+                customer: 'Alma Customer',
+            },
+        ],
         ...overrides,
     };
 }

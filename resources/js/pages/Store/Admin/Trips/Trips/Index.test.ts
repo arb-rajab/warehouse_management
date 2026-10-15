@@ -6,17 +6,15 @@ import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/D
 import { shippingCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
     bulkDestroy,
+    create as tripsCreate,
     destroy,
+    edit as tripsEdit,
     index as allTrips,
     today as todayTrips,
     updateNotes,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import {
-    create as tripsCreate,
-    edit as tripsEdit,
-    show as tripsShow,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
+import { show as tripsShow } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -197,7 +195,7 @@ describe('Store trip lists', () => {
         );
     });
 
-    it('links order and trip creation, the order form as an Inertia visit and the Blade trip form in full', () => {
+    it('links order and trip creation, both as Inertia visits', () => {
         const wrapper = mountPage();
         expect(
             wrapper
@@ -212,7 +210,7 @@ describe('Store trip lists', () => {
             {
                 href: tripsCreate(),
                 label: t('store.trips.index.createTrip'),
-                inertia: false,
+                inertia: true,
             },
         ]);
     });
@@ -300,12 +298,12 @@ describe('Store trip lists', () => {
         expect(driverOnly.text()).toContain('#11 Cargo truck');
     });
 
-    it('links the Blade edit form in full and wires native confirmation to DELETE on the list', () => {
+    it('links the edit form as an Inertia visit and wires native confirmation to DELETE on the list', () => {
         const trip = storeTrip();
         const wrapper = mountPage([trip], allPermissions, 'today');
         expect(actionLink(wrapper, 'edit')?.props()).toMatchObject({
             href: tripsEdit(trip),
-            inertia: false,
+            inertia: true,
         });
         const action = actionLink(wrapper, 'delete');
         expect(action?.props()).toMatchObject({

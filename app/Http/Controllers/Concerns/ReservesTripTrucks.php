@@ -9,8 +9,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Locks a trip's truck and refuses one another open trip holds, shared by
- * the retained Blade trip forms (root `Trip\TripController`) and the trip
- * list's status action (`Store\Admin\TripController`).
+ * the retained Blade map picker's writer (root `Trip\TripController`) and
+ * the trip forms and the trip list's status action
+ * (`Store\Admin\TripController`).
  */
 trait ReservesTripTrucks
 {

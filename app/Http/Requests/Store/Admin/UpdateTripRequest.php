@@ -7,14 +7,13 @@ use App\Models\Trip;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
+/**
+ * The trip edit form, for the bound trip: its stored checkpoints may be
+ * kept (by id) but not moved to another order, customer or trip.
+ */
 class UpdateTripRequest extends FormRequest
 {
     use ValidatesStoreTrip;
-
-    protected function prepareForValidation(): void
-    {
-        Trip::query()->findOrFail($this->input('id'));
-    }
 
     /**
      * Get the validation rules that apply to the request.
@@ -23,12 +22,15 @@ class UpdateTripRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['id' => ['required', 'integer'], ...$this->tripRules(), ...$this->checkpointRules()];
+        return [...$this->tripRules(), ...$this->checkpointRules()];
     }
 
     /** @return array<callable> */
     public function after(): array
     {
-        return [fn (Validator $validator) => $this->validateCheckpointReferences($validator, $this->integer('id'))];
+        /** @var Trip $trip */
+        $trip = $this->route('trip');
+
+        return [fn (Validator $validator) => $this->validateCheckpointReferences($validator, $trip->id)];
     }
 }
