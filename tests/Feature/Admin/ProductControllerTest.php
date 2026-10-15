@@ -1465,28 +1465,45 @@ test('a product barcode label has no id label word in either locale', function (
         ->and($svg)->not->toContain('المعرف');
 })->with(['en', 'ar']);
 
-test('a very long product name is capped at two lines and never overlaps the id', function (string $name) {
+test('a very long product name fills the configured height, ends in an ellipsis and never overlaps the id', function (string $name) {
     actingAsAdmin();
-    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 900]);
-
     $product = Product::factory()->create(['name' => $name, 'ar_name' => '']);
 
-    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+    $nameLineYs = function (int $height) use ($product): array {
+        Setting::query()->delete();
+        Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => $height]);
 
-    preg_match_all('/<text[^>]*y="(\d+)"[^>]*font-size="(\d+)"[^>]*>/', $svg, $matches, PREG_SET_ORDER);
-    $idY = (int) $matches[0][1];
-    $nameYs = array_map(fn (array $m): int => (int) $m[1], array_slice($matches, 1));
+        $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
 
-    expect($matches[0][2])->toBe('34')
-        ->and($nameYs)->toHaveCount(2)
-        ->and($svg)->toContain('…')
+        preg_match_all('/<text[^>]*y="(\d+)"[^>]*font-size="(\d+)"[^>]*>([^<]*)</', $svg, $matches, PREG_SET_ORDER);
+        preg_match('/<svg[^>]*height="(\d+)"/', $svg, $svgHeight);
+
+        return [
+            'idY' => (int) $matches[0][1],
+            'ys' => array_map(fn (array $m): int => (int) $m[1], array_slice($matches, 1)),
+            'last' => end($matches)[3],
+            'height' => (int) $svgHeight[1],
+        ];
+    };
+
+    $tall = $nameLineYs(900);
+    $short = $nameLineYs(500);
+
+    expect($tall['ys'])->not->toBeEmpty()
+        // More than two lines: the name spans the available space.
+        ->and(count($tall['ys']))->toBeGreaterThan(2)
+        ->and(count($tall['ys']))->toBeGreaterThan(count($short['ys']))
+        ->and($tall['last'])->toEndWith('…')
+        ->and($short['last'])->toEndWith('…')
+        ->and($tall['height'])->toBeLessThanOrEqual(900)
+        ->and($short['height'])->toBeLessThanOrEqual(500)
         // The first name baseline sits clear of the id's baseline by more
         // than the name's ascent, so the two blocks cannot collide.
-        ->and($nameYs[0] - $idY)->toBeGreaterThan(28);
+        ->and($tall['ys'][0] - $tall['idY'])->toBeGreaterThan(28);
 })->with([
-    'with spaces' => [str_repeat('Widget Component ', 30)],
-    'no spaces' => [str_repeat('W', 300)],
-    'arabic' => [str_repeat('مكون ودجات ', 30)],
+    'with spaces' => [str_repeat('Widget Component ', 60)],
+    'no spaces' => [str_repeat('W', 1500)],
+    'arabic' => [str_repeat('مكون ودجات ', 60)],
 ]);
 
 test('a multi-digit product id encodes to a longer barcode', function () {
