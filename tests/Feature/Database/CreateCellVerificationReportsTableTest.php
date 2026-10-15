@@ -27,7 +27,7 @@ test('deleting a user referenced by a report is restricted', function () {
     $report = CellVerificationReport::factory()->create();
     $user = $report->user;
 
-    expect(fn () => $user->delete())->toThrow(QueryException::class);
+    expect(fn () => $user->forceDelete())->toThrow(QueryException::class);
     expect(User::find($user->id))->not->toBeNull();
 });
 

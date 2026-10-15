@@ -19,7 +19,7 @@ import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import { confirmDelete } from '@/lib/confirm';
+import { confirmDeleteUser } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import type { Paginated, PerPageFilters, User } from '@/types/admin';
@@ -96,7 +96,7 @@ function onPerPageChange(perPage: number): void {
                             variant="danger"
                             method="delete"
                             as="button"
-                            :on-before="() => confirmDelete(user.name)"
+                            :on-before="() => confirmDeleteUser(user.name)"
                         >
                             <Trash2 class="h-3.5 w-3.5" />
                             {{ t('users.index.delete') }}
