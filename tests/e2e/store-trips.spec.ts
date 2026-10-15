@@ -82,7 +82,14 @@ test("the Blade map picker deletes a truck's open trip through the spoofed DELET
     seedTrip(code, truck);
     await loginAsStoreAdmin(page);
     const response = await page.goto('/temp/admin/trips/create-from-map');
-    expect(response?.status()).toBe(200);
+    // This page has returned 500 intermittently in CI; name the exception
+    // from the debug page instead of only the status.
+    expect(
+        response?.status(),
+        response?.ok()
+            ? undefined
+            : `${await page.title()}\n${(await page.locator('body').innerText()).slice(0, 1500)}`,
+    ).toBe(200);
     await expect(
         page.getByRole('heading', { name: 'Create Trip', exact: true }),
     ).toBeVisible();
