@@ -70,8 +70,13 @@ trait BuildsQrLabels
      * character is assumed to fill roughly 55% of the font-size in pixels)
      * rather than measured exactly — safe because a slight over/under
      * estimate only shifts which word happens to land on which line, never
-     * how many characters are shown. `wordwrap()`'s `cut` is enabled only as
-     * a fallback for a single word wider than the whole line on its own.
+     * how many characters are shown. A single word wider than the whole line
+     * on its own is cut at the line limit as a fallback.
+     *
+     * Lengths are counted in characters (mb_strlen), never bytes: PHP's
+     * wordwrap() counts bytes, and an Arabic letter is two bytes in UTF-8, so
+     * Arabic text was treated as twice as wide and wrapped onto lines that
+     * were half empty.
      *
      * @return list<string>
      */
@@ -79,8 +84,31 @@ trait BuildsQrLabels
     {
         $avgCharWidth = $fontSize * 0.55;
         $maxChars = max(1, (int) floor($maxWidth / $avgCharWidth));
+        $lines = [];
 
-        return explode("\n", wordwrap($text, $maxChars, "\n", true));
+        foreach (explode("\n", $text) as $paragraph) {
+            $line = '';
+
+            foreach (explode(' ', $paragraph) as $word) {
+                if ($line === '') {
+                    $line = $word;
+                } elseif (mb_strlen($line) + 1 + mb_strlen($word) <= $maxChars) {
+                    $line .= ' '.$word;
+                } else {
+                    $lines[] = $line;
+                    $line = $word;
+                }
+
+                while (mb_strlen($line) > $maxChars) {
+                    $lines[] = mb_substr($line, 0, $maxChars);
+                    $line = mb_substr($line, $maxChars);
+                }
+            }
+
+            $lines[] = $line;
+        }
+
+        return $lines;
     }
 
     /**
