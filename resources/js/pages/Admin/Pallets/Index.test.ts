@@ -1,9 +1,9 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
+import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { matchingPallet, paginated } from '@/testing/factories';
@@ -146,28 +146,10 @@ describe('Pallets Index', () => {
             .find((link) => link.text().includes(t('pallets.viewOnMap')));
     }
 
-    it('links the "view on map" button to the cell map, carrying the active filter as its query', () => {
-        const wrapper = mountPage([], {
-            state: 'full',
-            expires_within_days: 5,
-        });
-
-        expect(mapLink(wrapper)?.props('href')).toEqual(
-            cellsIndex({ query: { state: 'full', expires_within_days: 5 } }),
-        );
-        expect(mapLink(wrapper)?.attributes('href')).toBe(
-            cellsIndex.url({
-                query: { state: 'full', expires_within_days: '5' },
-            }),
-        );
-    });
-
-    it('excludes per_page from the "view on map" query, since the map has no page size', () => {
+    it('links the "view on map" button to the warehouse map', () => {
         const wrapper = mountPage([], { state: 'full', per_page: 50 });
 
-        expect(mapLink(wrapper)?.props('href')).toEqual(
-            cellsIndex({ query: { state: 'full' } }),
-        );
+        expect(mapLink(wrapper)?.props('href')).toEqual(warehouseMapIndex());
     });
 
     it('shows a chip for every active filter', () => {

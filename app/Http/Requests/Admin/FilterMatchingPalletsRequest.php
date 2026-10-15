@@ -13,11 +13,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * The same highlight-filter shape FilterCellMapRequest validates (minus its
- * map-navigation-only `flat_number`/`search` fields) — this list and the
- * cell map must accept and mean exactly the same filter query params so a
- * dashboard tile's query works unchanged on either page, and so the list
- * page's "view on map" button can hand its own query straight to the map.
+ * The highlight-filter query params the dashboard's stat tiles and the
+ * products page's occupancy counts link to the matching pallets list with.
  */
 class FilterMatchingPalletsRequest extends FormRequest
 {

@@ -2,7 +2,6 @@ import { Link } from '@inertiajs/vue3';
 import { CircleUser, Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
@@ -56,7 +55,6 @@ describe('AdminLayout', () => {
         expect(links.map((link) => link.attributes('href'))).toEqual([
             '/admin',
             rowsIndex.url(),
-            cellsIndex.url(),
             warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),
@@ -104,7 +102,7 @@ describe('AdminLayout', () => {
         const navLinks = wrapper
             .findAllComponents(Link)
             .filter((link) => link.element.closest('nav') !== null);
-        expect(navLinks).toHaveLength(8);
+        expect(navLinks).toHaveLength(7);
 
         for (const link of navLinks) {
             expect(link.props('href')).toMatchObject({ method: 'get' });
@@ -191,23 +189,6 @@ describe('AdminLayout', () => {
         expect(rowsLink?.attributes('aria-current')).toBeUndefined();
     });
 
-    it('marks the map section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout(
-            cellsIndex.url({ query: { state: 'empty' } }),
-        );
-
-        const links = wrapper.findAll('nav a');
-        const mapLink = links.find(
-            (link) => link.attributes('href') === cellsIndex.url(),
-        );
-        const dashboardLink = links.find(
-            (link) => link.attributes('href') === '/admin',
-        );
-
-        expect(mapLink?.attributes('aria-current')).toBe('page');
-        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
-    });
-
     it('marks the cell log section active when navigated to with a filter query string', () => {
         const wrapper = mountLayout(
             cellLogsIndex.url({ query: { action: 'inbound' } }),
@@ -240,16 +221,6 @@ describe('AdminLayout', () => {
 
         expect(productsLink?.attributes('aria-current')).toBe('page');
         expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
-    });
-
-    it('links the map nav item straight to the warehouse map with no filters applied', () => {
-        const wrapper = mountLayout(rowsIndex.url());
-
-        const mapLink = wrapper
-            .findAll('nav a')
-            .find((link) => link.attributes('href') === cellsIndex.url());
-
-        expect(mapLink?.attributes('href')).toBe(cellsIndex.url());
     });
 
     it("renders the signed-in user's name with a user icon", () => {
@@ -326,11 +297,10 @@ describe('AdminLayout', () => {
             panel
                 .findAll('a')
                 .map((link) => link.attributes('href'))
-                .slice(0, 8),
+                .slice(0, 7),
         ).toEqual([
             '/admin',
             rowsIndex.url(),
-            cellsIndex.url(),
             warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),

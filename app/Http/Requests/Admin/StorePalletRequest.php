@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
 use App\Http\Requests\Concerns\ValidatesPalletContents;
-use App\Http\Requests\Concerns\ValidatesReturnTo;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,7 +11,6 @@ class StorePalletRequest extends FormRequest
 {
     use ValidatesOptionalNote;
     use ValidatesPalletContents;
-    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.
@@ -23,7 +21,6 @@ class StorePalletRequest extends FormRequest
     {
         return [
             ...$this->noteRules(),
-            ...$this->returnToRules(),
             ...$this->palletContentsRules(),
         ];
     }

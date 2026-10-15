@@ -3,7 +3,6 @@
         "brand": "Warehouse Admin",
         "dashboard": "Dashboard",
         "rows": "Rows",
-        "map": "Map",
         "warehouseMap": "Warehouse map",
         "cellLog": "Cell Log",
         "cellVerificationRounds": "Verification Rounds",
@@ -339,16 +338,9 @@
         "apply": "Apply"
     },
     "cells": {
-        "title": "Cells",
         "filters": {
-            "state": "State",
-            "matchCount": "{count} matching cells",
-            "previousMatch": "Previous match",
-            "nextMatch": "Next match",
-            "matchPosition": "{current} of {total}"
+            "state": "State"
         },
-        "empty": "No rows have been added yet.",
-        "flatNotAvailable": "This level doesn't exist for this row",
         "inactiveBadge": "Inactive",
         "toggleActive": {
             "deactivateLabel": "Deactivate cell",
@@ -416,57 +408,6 @@
             "noteLabel": "Note (optional)",
             "notePlaceholder": "Reason for this change…",
             "submitting": "Saving…"
-        },
-        "search": {
-            "placeholder": "Search cell position (A12·3)…",
-            "submit": "Search",
-            "notFound": "No matching cell found."
-        },
-        "map": {
-            "zoomIn": "Zoom in",
-            "zoomOut": "Zoom out",
-            "rotateLeft": "Rotate left",
-            "rotateRight": "Rotate right",
-            "resetView": "Reset view",
-            "fitToView": "Fit to view",
-            "fullscreen": "Full screen",
-            "exitFullscreen": "Exit full screen",
-            "view2d": "2D view",
-            "view3d": "3D view",
-            "overview": "Overview (orbit) camera",
-            "standingNear": "Standing near {location}",
-            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between levels, hold Ctrl to sprint, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
-            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between levels, tap the sprint button to move faster, and tap a cell to inspect it.",
-            "orbitHint": "Drag to orbit around the warehouse, scroll or pinch to zoom, or use WASD/arrow keys and Space/Shift on the keyboard, and click a cell — or press Enter to select the cell centered in view — to inspect it.",
-            "controls": {
-                "moveLabel": "Move: WASD or arrow keys",
-                "flyLabel": "Fly between levels:",
-                "up": "up",
-                "down": "down",
-                "sprintLabel": "Sprint:",
-                "lookLabel": "Look: drag to look around, even behind you",
-                "selectLabel": "Click a cell to inspect it",
-                "cameraModeToggleLabel": "Toggle walk/overview:",
-                "touch": {
-                    "forward": "Move forward",
-                    "backward": "Move backward",
-                    "left": "Strafe left",
-                    "right": "Strafe right",
-                    "up": "Fly up",
-                    "down": "Fly down",
-                    "sprint": "Toggle sprint"
-                },
-                "orbit": {
-                    "rotateLabel": "Orbit: drag to rotate the view",
-                    "zoomLabel": "Zoom: scroll or pinch",
-                    "keyboardLabel": "Keyboard: WASD/arrows to rotate, Space/Shift to zoom",
-                    "selectLabel": "Click a cell, or press Enter to select the centered cell"
-                }
-            },
-            "announcements": {
-                "facing": "Facing {detail}",
-                "selected": "Selected {detail}"
-            }
         }
     },
     "warehouseMap": {
@@ -754,8 +695,8 @@
                     "description": "What a row is, how the cell grid works, and how to add, change, or remove a row."
                 },
                 "cells": {
-                    "title": "Warehouse map",
-                    "description": "How to read the cell map, what the colors mean, and how to manage pallets."
+                    "title": "Cells and pallets",
+                    "description": "What the cell colors mean, and how to manage pallets and deactivate cells from a row's page."
                 },
                 "warehouseMap": {
                     "title": "Warehouse map (2D / 3D)",
@@ -818,11 +759,7 @@
             }
         },
         "cells": {
-            "title": "Help: Warehouse map",
-            "map": {
-                "heading": "Reading the map",
-                "body": "The Cells page shows every row as a grid of storage cells, colored by what's inside them. Switch between the flat 2D view and the walkable 3D view, and use the search box to jump straight to a cell by its position (for example A12·3)."
-            },
+            "title": "Help: Cells and pallets",
             "legend": {
                 "heading": "Cell colors",
                 "body": "These are the same colors and icons used throughout the app, including the activity log — so a cell's color always means the same thing wherever you see it."
@@ -885,7 +822,7 @@
             },
             "legend": {
                 "heading": "Cell colors",
-                "body": "These are the same colors and icons used on the Cells map, so what you see there matches what you see in the log."
+                "body": "These are the same colors and icons used on each row's cells, so what you see there matches what you see in the log."
             }
         },
         "cellVerificationRounds": {

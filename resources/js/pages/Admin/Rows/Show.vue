@@ -268,7 +268,6 @@ const palletActionError = usePageError('action');
             v-model:open="toggleActiveDialogOpen"
             :cell="toggleActiveCell"
             :label="toggleActiveLabel"
-            return-to="row"
         />
 
         <PalletActionsDialog
@@ -276,7 +275,6 @@ const palletActionError = usePageError('action');
             :cell="palletActionsCell"
             :label="palletActionsLabel"
             :rows="rows"
-            return-to="row"
         />
     </AdminLayout>
 </template>

@@ -210,7 +210,7 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
         'note' => 'Admin backfill.',
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $row->letter));
 
     $pallet = Pallet::query()->sole();
     expect($pallet->cell_id)->toBe($cell->id);
@@ -242,7 +242,7 @@ test('storing a pallet into a first-level cell opens it automatically', function
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $row->letter));
 
     $pallet = Pallet::query()->sole();
     expect($cell->refresh()->state)->toBe(CellState::Opened);
@@ -270,39 +270,10 @@ test('an authenticated admin can store a pallet with no expiration date', functi
         'expiration_date' => null,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $row->letter));
 
     $pallet = Pallet::query()->sole();
     expect($pallet->expiration_date)->toBeNull();
-});
-
-test('storing a pallet preserves the current map query on redirect', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-    $cell = $row->cells()->where('flat_number', 2)->first();
-    $product = Product::factory()->create();
-
-    $response = $this->post("/admin/cells/{$cell->id}/pallet?flat_number=2", [
-        'product_id' => $product->id,
-        'expiration_date' => now()->addMonth()->toDateString(),
-    ]);
-
-    $response->assertRedirect('/admin/cells?flat_number=2');
-});
-
-test('storing a pallet from a row page redirects back to that row page instead of the cell map', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    $product = Product::factory()->create();
-
-    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'product_id' => $product->id,
-        'expiration_date' => now()->addMonth()->toDateString(),
-        'return_to' => 'row',
-    ]);
-
-    $response->assertRedirect("/admin/rows/{$row->letter}");
 });
 
 test('storing a pallet into a non-empty cell is rejected with a non-field action error and nothing changes', function () {
@@ -408,7 +379,7 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
     expect($pallet->refresh()->remaining_boxes)->toBe(7);
 
@@ -427,7 +398,7 @@ test('opening a pallet without a boxes_count just opens it, leaving remaining_bo
 
     $response = $this->post("/admin/pallets/{$pallet->id}/open");
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
     expect($pallet->refresh()->remaining_boxes)->toBe(10);
 
@@ -450,7 +421,7 @@ test('opening a pallet with more boxes than remain, with confirm_empty, empties 
         'confirm_empty' => true,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
@@ -466,7 +437,7 @@ test('opening a pallet with a boxes_count equal to what remains, with confirm_em
         'confirm_empty' => true,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
@@ -493,21 +464,6 @@ test('opening a pallet with more boxes than remain, without confirm_empty, is re
     $response->assertSessionHasErrors(['action' => __('messages.insufficient_boxes_remaining')]);
     expect($pallet->cell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->remaining_boxes)->toBe(5);
-});
-
-test('opening a pallet from a row page redirects back to that row page instead of the cell map', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    $product = Product::factory()->boxesCount(10)->create();
-    $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
-
-    $response = $this->post("/admin/pallets/{$pallet->id}/open", [
-        'boxes_count' => 3,
-        'return_to' => 'row',
-    ]);
-
-    $response->assertRedirect("/admin/rows/{$row->letter}");
 });
 
 test('opening an already-opened pallet is rejected with a non-field action error', function () {
@@ -567,7 +523,7 @@ test('an authenticated admin can remove more boxes from an already-opened pallet
 
     $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     expect($pallet->refresh()->remaining_boxes)->toBe(2);
 
     $this->assertDatabaseHas('cell_status_logs', [
@@ -589,7 +545,7 @@ test('removing a boxes_count equal to what remains, with confirm_empty, empties 
         'confirm_empty' => true,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
@@ -662,7 +618,7 @@ test('an authenticated admin can empty a pallet regardless of remaining boxes', 
 
     $response = $this->post("/admin/pallets/{$pallet->id}/empty", ['note' => 'Damaged.']);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 
@@ -739,7 +695,7 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
         'note' => 'Consolidating.',
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $sourceRow->letter));
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
     expect($destinationCell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->cell_id)->toBe($destinationCell->id);
@@ -775,7 +731,7 @@ test('transferring a full pallet into a first-level destination opens it automat
         'flat_number' => $destinationCell->flat_number,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $sourceRow->letter));
     expect($destinationCell->refresh()->state)->toBe(CellState::Opened);
 
     $this->assertDatabaseHas('cell_status_logs', [
@@ -798,25 +754,6 @@ test('transferring a full pallet into a first-level destination opens it automat
         'boxes_count' => 7,
         'user_id' => $admin->id,
     ]);
-});
-
-test('transferring a pallet from a row page redirects back to the source row page instead of the cell map', function () {
-    actingAsAdmin();
-    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $sourceCell = $sourceRow->cells()->first();
-    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
-
-    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
-    $destinationCell = $destinationRow->cells()->first();
-
-    $response = $this->post("/admin/pallets/{$pallet->id}/transfer", [
-        'row_letter' => $destinationRow->letter,
-        'cell_number' => $destinationCell->cell_number,
-        'flat_number' => $destinationCell->flat_number,
-        'return_to' => 'row',
-    ]);
-
-    $response->assertRedirect("/admin/rows/{$sourceRow->letter}");
 });
 
 test('transferring to a non-empty destination is rejected with a non-field action error and nothing changes', function () {
@@ -937,7 +874,7 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
         'remaining_boxes' => 3,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
 
     $pallet->refresh();
     expect($pallet->product_id)->toBe($newProduct->id);
@@ -971,7 +908,7 @@ test('an admin can update an already-expired pallet without changing its expirat
         'remaining_boxes' => 3,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
 
     $pallet->refresh();
     expect($pallet->product_id)->toBe($newProduct->id);
@@ -990,7 +927,7 @@ test('updating a pallet can clear its expiration date', function () {
         'remaining_boxes' => 6,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     expect($pallet->refresh()->expiration_date)->toBeNull();
 });
 
@@ -1007,7 +944,7 @@ test('updating a pallet\'s remaining boxes to zero, with confirm_empty, empties 
         'confirm_empty' => true,
     ]);
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 });
@@ -1044,23 +981,6 @@ test('updating a pallet with a negative remaining_boxes is rejected as a validat
 
     $response->assertSessionHasErrors('remaining_boxes');
     expect($pallet->refresh()->remaining_boxes)->toBe(6);
-});
-
-test('updating a pallet from a row page redirects back to that row page instead of the cell map', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-    $product = Product::factory()->create();
-    $pallet = Pallet::factory()->create(['cell_id' => $cell->id, 'product_id' => $product->id]);
-
-    $response = $this->put("/admin/pallets/{$pallet->id}", [
-        'product_id' => $product->id,
-        'expiration_date' => now()->addMonth()->toDateString(),
-        'remaining_boxes' => $pallet->remaining_boxes,
-        'return_to' => 'row',
-    ]);
-
-    $response->assertRedirect("/admin/rows/{$row->letter}");
 });
 
 test('updating a pallet in an inactive cell is rejected with a non-field action error and nothing changes', function () {
@@ -1166,7 +1086,7 @@ test('an admin can open a pallet on a level the settings allow', function () {
     Setting::factory()->create(['allowed_open_levels' => [3]]);
     $pallet = Pallet::factory()->onLevel(3)->create();
 
-    $this->post("/admin/pallets/{$pallet->id}/open")->assertRedirect(route('admin.cells.index'));
+    $this->post("/admin/pallets/{$pallet->id}/open")->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
 
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
 });
@@ -1182,7 +1102,7 @@ test('storing a pallet into a first-level cell leaves it full when level 1 is no
     $this->post("/admin/cells/{$cell->id}/pallet", [
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
-    ])->assertRedirect(route('admin.cells.index'));
+    ])->assertRedirect(route('admin.rows.show', $row->letter));
 
     expect($cell->refresh()->state)->toBe(CellState::Full);
 });
