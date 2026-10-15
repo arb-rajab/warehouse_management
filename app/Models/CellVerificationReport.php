@@ -129,7 +129,7 @@ class CellVerificationReport extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     /**
@@ -153,7 +153,7 @@ class CellVerificationReport extends Model
      */
     public function acceptedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'accepted_by');
+        return $this->belongsTo(User::class, 'accepted_by')->withTrashed();
     }
 
     /**

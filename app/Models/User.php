@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -25,6 +26,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -32,7 +34,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The spatie guard this model's roles and permissions live under, pinned
@@ -62,29 +64,16 @@ class User extends Authenticatable
     }
 
     /**
-     * Whether this user has ever performed an action that left a permanent
-     * record. `cell_status_logs.user_id`, `cell_verification_rounds.user_id`
-     * and `cell_verification_reports.user_id` are all `restrictOnDelete`, so
-     * a user with any of these can never be deleted — see
-     * UserController::destroy().
-     */
-    public function hasHistory(): bool
-    {
-        return CellStatusLog::query()->where('user_id', $this->id)->exists()
-            || CellVerificationRound::query()->where('user_id', $this->id)->exists()
-            || CellVerificationReport::query()->where('user_id', $this->id)->exists();
-    }
-
-    /**
      * The id/name pairs for a "filter by who did this" dropdown, ordered by
      * name — the same shape `Row::filterOptions()`/`Product::filterOptions()`
-     * return for their own filters.
+     * return for their own filters. Removed users are included: their logs
+     * and reports stay on record, so they must stay filterable.
      *
      * @return Collection<int, User>
      */
     public static function filterOptions(): Collection
     {
-        return self::query()->select(['id', 'name'])->orderBy('name')->get();
+        return self::withTrashed()->select(['id', 'name'])->orderBy('name')->get();
     }
 
     /**

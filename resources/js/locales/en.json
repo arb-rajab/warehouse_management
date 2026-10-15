@@ -123,7 +123,8 @@
             "edit": "Edit",
             "delete": "Delete",
             "roleAdmin": "Admin",
-            "roleMobile": "Mobile user"
+            "roleMobile": "Mobile user",
+            "confirmDelete": "Remove {label}? They will lose access to the system immediately, but their activity history is kept."
         },
         "create": {
             "title": "Add user",
@@ -843,6 +844,10 @@
             "roles": {
                 "heading": "What the roles mean",
                 "body": "There are two kinds of account. An Admin account can sign in here to manage rows, products, users, and view the full activity log. A Mobile user account can only use the phone/scanner app on the warehouse floor to store, open, and move pallets — it cannot sign in to this admin panel."
+            },
+            "removing": {
+                "heading": "Removing an account",
+                "body": "Click \"Delete\" next to a user to remove their access — this works for admins and mobile users alike, even if they have already done work in the warehouse. They can no longer sign in, and any phone or browser they were signed in on is signed out straight away. Everything they did stays in the activity log under their name. You cannot delete your own account or the last remaining admin, and a removed person's email address cannot be used for a new account."
             }
         },
         "products": {

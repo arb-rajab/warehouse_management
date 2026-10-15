@@ -3,6 +3,7 @@
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
+use App\Models\CellVerificationRound;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -819,30 +820,164 @@ test('an admin can delete another user', function () {
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertRedirect(route('admin.users.index'));
-    $this->assertDatabaseMissing('wms_users', ['id' => $target->id]);
+    $this->assertSoftDeleted('wms_users', ['id' => $target->id]);
+    expect(User::find($target->id))->toBeNull();
 });
 
-test('an admin cannot delete a user who has recorded activity and nothing changes', function () {
+test('an admin can delete a mobile user who has recorded activity, keeping that activity on record', function () {
     actingAsAdmin();
-    $target = User::factory()->mobileUser()->create();
+    $target = User::factory()->mobileUser()->create(['name' => 'Bob Mover']);
+    $log = CellStatusLog::factory()->create(['user_id' => $target->id]);
+    $round = CellVerificationRound::factory()->create(['user_id' => $target->id]);
+    $report = CellVerificationReport::factory()->create(['user_id' => $target->id]);
+
+    $response = $this->delete("/admin/users/{$target->id}");
+
+    $response->assertRedirect(route('admin.users.index'));
+    $response->assertSessionHasNoErrors();
+    $this->assertSoftDeleted('wms_users', ['id' => $target->id]);
+    expect($log->fresh()->user_id)->toBe($target->id);
+    expect($round->fresh()->user_id)->toBe($target->id);
+    expect($report->fresh()->user_id)->toBe($target->id);
+});
+
+test('an admin can delete another admin who has recorded activity', function () {
+    actingAsAdmin();
+    $target = User::factory()->create();
     CellStatusLog::factory()->create(['user_id' => $target->id]);
 
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertRedirect(route('admin.users.index'));
-    $response->assertSessionHasErrors(['user' => __('messages.user_cannot_delete_has_history')]);
-    $this->assertDatabaseHas('wms_users', ['id' => $target->id]);
+    $response->assertSessionHasNoErrors();
+    $this->assertSoftDeleted('wms_users', ['id' => $target->id]);
+});
+
+test('a deleted user disappears from the user list', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create(['name' => 'Gone Gary']);
+    $this->delete("/admin/users/{$target->id}");
+
+    $response = $this->get('/admin/users');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('users.data', 1)
+    );
+});
+
+test('a deleted admin can no longer sign in to the admin panel', function () {
+    $target = User::factory()->create(['email' => 'gone@example.com', 'password' => 'correct-password']);
+    CellStatusLog::factory()->create(['user_id' => $target->id]);
+    $target->delete();
+
+    $response = $this->post('/admin/login', ['email' => 'gone@example.com', 'password' => 'correct-password']);
+
+    $response->assertSessionHasErrors('email');
+    $this->assertGuest();
+});
+
+test('a deleted admin with a session that is already open is rejected on their next request', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin)->get('/admin/users')->assertOk();
+
+    $admin->delete();
+    app('auth')->forgetGuards();
+
+    $this->get('/admin/users')->assertRedirect(route('login'));
+});
+
+test('a deleted mobile user can no longer sign in to the mobile api', function () {
+    $target = User::factory()->mobileUser()->create(['email' => 'gone@example.com', 'password' => 'correct-password']);
+    CellStatusLog::factory()->create(['user_id' => $target->id]);
+    $target->delete();
+
+    $response = $this->postJson('/api/v1/login', ['email' => 'gone@example.com', 'password' => 'correct-password']);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('email');
+});
+
+test('deleting a mobile user revokes their api tokens, so a token they already hold stops working', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $plainTextToken = $target->createToken('mobile', ['warehouse:use'])->plainTextToken;
+    $otherUser = User::factory()->mobileUser()->create();
+    $otherUser->createToken('mobile', ['warehouse:use']);
+
+    $this->delete("/admin/users/{$target->id}")->assertRedirect(route('admin.users.index'));
+
+    $this->assertDatabaseCount('wms_personal_access_tokens', 1);
+    app('auth')->forgetGuards();
+    $this->withToken($plainTextToken)->getJson('/api/v1/user')->assertUnauthorized();
+});
+
+test('a deleted users email stays reserved, so a new account cannot reuse it', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create(['email' => 'taken@example.com']);
+    $target->delete();
+
+    $response = $this->post('/admin/users', [
+        'name' => 'Newcomer',
+        'email' => 'taken@example.com',
+        'password' => 'Str0ng-Passw0rd!',
+        'password_confirmation' => 'Str0ng-Passw0rd!',
+        'is_admin' => false,
+    ]);
+
+    $response->assertSessionHasErrors('email');
+    expect(User::withTrashed()->where('email', 'taken@example.com')->count())->toBe(1);
+});
+
+test('a deleted users history page and edit page are no longer reachable', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    $target->delete();
+
+    $this->get("/admin/users/{$target->id}")->assertNotFound();
+    $this->get("/admin/users/{$target->id}/edit")->assertNotFound();
+    $this->delete("/admin/users/{$target->id}")->assertNotFound();
+});
+
+test('the cell log still shows the name of a user who has since been deleted', function () {
+    actingAsAdmin();
+    $mover = User::factory()->mobileUser()->create(['name' => 'Bob Mover']);
+    CellStatusLog::factory()->create(['user_id' => $mover->id]);
+    $mover->delete();
+
+    $response = $this->get('/admin/cell-logs');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.user.name', 'Bob Mover')
+            ->where('logs.data.0.user.id', $mover->id)
+    );
+});
+
+test('the cell log can still be filtered by a user who has since been deleted', function () {
+    actingAsAdmin();
+    $mover = User::factory()->mobileUser()->create(['name' => 'Bob Mover']);
+    $otherMover = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->create(['user_id' => $mover->id]);
+    CellStatusLog::factory()->create(['user_id' => $otherMover->id]);
+    $mover->delete();
+
+    $response = $this->get("/admin/cell-logs?user_id[]={$mover->id}");
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.user.name', 'Bob Mover')
+            ->has('filterOptions.users', 3) // the acting admin, the deleted mover and the other mover
+    );
 });
 
 test('a rejected user deletion redirects back with the current page preserved', function () {
-    actingAsAdmin();
-    $target = User::factory()->mobileUser()->create();
-    CellStatusLog::factory()->create(['user_id' => $target->id]);
+    actingAsAdminWhoseAccessWasJustRevoked();
+    $lastAdmin = User::factory()->create();
 
-    $response = $this->delete("/admin/users/{$target->id}?page=2");
+    $response = $this->delete("/admin/users/{$lastAdmin->id}?page=2");
 
     $response->assertRedirect(route('admin.users.index', ['page' => 2]));
-    $response->assertSessionHasErrors(['user' => __('messages.user_cannot_delete_has_history')]);
+    $response->assertSessionHasErrors(['user' => __('messages.cannot_remove_last_admin')]);
 });
 
 test('deleting a user redirects back with the current page preserved', function () {
@@ -883,7 +1018,7 @@ test('an admin can delete another admin while at least one other admin remains',
 
     $response->assertRedirect(route('admin.users.index'));
     $response->assertSessionHasNoErrors();
-    $this->assertDatabaseMissing('wms_users', ['id' => $otherAdmin->id]);
+    $this->assertSoftDeleted('wms_users', ['id' => $otherAdmin->id]);
 });
 
 test('a mobile app user cannot delete a user and nothing changes', function () {

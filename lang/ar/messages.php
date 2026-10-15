@@ -9,7 +9,6 @@ return [
     'row_cannot_delete_has_history' => 'لا يمكن حذف ممر تم تسجيل نشاط على خلاياه.',
     'slot_does_not_exist' => 'هذا الموقع غير موجود في هذا الممر.',
     'cannot_delete_own_account' => 'لا يمكنك حذف حسابك الخاص.',
-    'user_cannot_delete_has_history' => 'لا يمكن حذف مستخدم لديه سجل نشاط.',
     'pallet_already_at_location' => 'المنصات النقالة موجودة بالفعل في هذا الموقع.',
     'slot_not_empty' => 'الموقع المطلوب غير فارغ.',
     'pallet_not_full' => 'يمكن فتح المنصات النقالة الممتلئة فقط.',

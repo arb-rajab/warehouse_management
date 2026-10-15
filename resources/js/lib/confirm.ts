@@ -9,6 +9,15 @@ export function confirmDelete(label: string): boolean {
 }
 
 /**
+ * Ask before removing a user. Unlike `confirmDelete` this isn't a "cannot be
+ * undone" wording: a removed user keeps their activity history, they only lose
+ * access.
+ */
+export function confirmDeleteUser(name: string): boolean {
+    return confirm(t('users.index.confirmDelete', { label: name }));
+}
+
+/**
  * Ask before logging out, to guard against an accidental click on the nav's logout link.
  */
 export function confirmLogout(): boolean {

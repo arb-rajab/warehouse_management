@@ -128,10 +128,11 @@ class UserController extends Controller
                 return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.cannot_remove_last_admin')]);
             }
 
-            if ($user->hasHistory()) {
-                return $this->redirectPreservingQuery('admin.users.index', $request)->withErrors(['user' => __('messages.user_cannot_delete_has_history')]);
-            }
-
+            // Soft delete: the user's logs and reports keep pointing at the row,
+            // and every default User query (sign-in, session, token) skips it.
+            // Tokens are revoked as well so a later restore can't revive a
+            // phone's old login.
+            $user->tokens()->delete();
             $user->delete();
 
             return $this->redirectPreservingQuery('admin.users.index', $request);

@@ -8,6 +8,6 @@ test('deleting a user referenced by a verification round is restricted', functio
     $round = CellVerificationRound::factory()->create();
     $user = $round->user;
 
-    expect(fn () => $user->delete())->toThrow(QueryException::class);
+    expect(fn () => $user->forceDelete())->toThrow(QueryException::class);
     expect(User::find($user->id))->not->toBeNull();
 });
