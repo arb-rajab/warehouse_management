@@ -61,7 +61,7 @@ class TripController extends Controller
 
     public function create_from_map()
     {
-        $available_trucks = Truck::available(true)->select(['id', 'name', 'photos', 'is_available'])->get();
+        $available_trucks = Truck::available(true)->select(['id', 'name', 'photos', 'is_available', 'max_pallets_number'])->get();
         $unavailable_trucks = Truck::available(false)->select(['id', 'name', 'photos', 'is_available'])->get();
         $trip = null; // to fix frontend issue
 
