@@ -133,11 +133,11 @@ const previewProducts = [
                 <span
                     tabindex="-1"
                     :aria-label="
-                        t('products.exportQrLabel', {
-                            product: t('products.columns.product'),
+                        t('products.viewBarcode', {
+                            barcode: t('products.defaultBarcode'),
                         })
                     "
-                    :title="t('products.columns.qr')"
+                    :title="t('products.defaultBarcode')"
                     class="inline-flex text-gray-400 dark:text-neutral-500"
                 >
                     <Barcode class="h-4 w-4" />

@@ -124,7 +124,9 @@ describe('Help Products', () => {
 
         const preview = wrapper
             .findAll('span')
-            .find((s) => s.attributes('title') === t('products.columns.qr'));
+            .find(
+                (s) => s.attributes('title') === t('products.defaultBarcode'),
+            );
         expect(preview).toBeTruthy();
     });
 

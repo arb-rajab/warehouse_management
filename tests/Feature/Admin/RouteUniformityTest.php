@@ -33,6 +33,7 @@ test('admin routes resolve to the URI, verb and controller method their name pro
     'barcode destroy' => ['admin.products.barcodes.destroy', 'DELETE', 'admin/products/{product}/barcodes/{barcode}', ProductController::class, 'destroyBarcode'],
     'barcode download' => ['admin.products.barcodes.download', 'GET', 'admin/products/{product}/barcodes/{barcode}/download', ProductController::class, 'downloadBarcode'],
     'barcode download all' => ['admin.products.barcodes.download-all', 'GET', 'admin/products/{product}/barcodes/download', ProductController::class, 'downloadAllBarcodes'],
+    'default barcode preview' => ['admin.products.export-qr.preview', 'GET', 'admin/products/{product}/export-qr/preview', ProductController::class, 'previewDefaultBarcode'],
     'cell qr code' => ['admin.cells.export-qr-code', 'GET', 'admin/cells/{cell}/export-qr-code', CellController::class, 'exportQrCode'],
     'round export' => ['admin.cell-verification-rounds.export-reports', 'GET', 'admin/cell-verification-rounds/{cellVerificationRound}/export', CellVerificationRoundController::class, 'exportReports'],
     'report accept' => ['admin.cell-verification-reports.accept', 'POST', 'admin/cell-verification-reports/{cellVerificationReport}/accept', CellVerificationReportController::class, 'accept'],

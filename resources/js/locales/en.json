@@ -697,6 +697,7 @@
             "lowStock": "Low stock"
         },
         "columns": {
+            "id": "ID",
             "product": "Product",
             "full": "Full",
             "opened": "Opened",
@@ -704,8 +705,7 @@
             "expiringSoon": "Expiring ≤{days}d",
             "boxesPerPallet": "Boxes / pallet",
             "minimumPallets": "Min. pallets",
-            "barcodes": "Barcodes",
-            "qr": "Barcode"
+            "barcodes": "Barcodes"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "minimumPalletsLabel": "Minimum pallets for {product}",
@@ -714,12 +714,13 @@
         "addBarcode": "Add barcode",
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
-        "noBarcodes": "No barcodes added yet.",
+        "noBarcodes": "No custom barcodes added yet.",
         "viewBarcode": "View barcode {barcode}",
         "downloadBarcode": "Download barcode {barcode}",
         "downloadAllBarcodes": "Download all",
         "downloadFailed": "Download failed. Please try again.",
-        "exportQrLabel": "Export barcode for {product}",
+        "defaultBarcode": "Default",
+        "defaultBarcodeHint": "The product ID. It cannot be edited or removed.",
         "empty": "No products yet.",
         "saving": "Saving…"
     },
@@ -862,7 +863,7 @@
             },
             "exportingQr": {
                 "heading": "Printing a product's barcode label",
-                "body": "Click the barcode icon at the end of a product's row to download a printable Code 128 barcode label for it. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
+                "body": "Click the number in a product's Barcodes column to open its barcodes. The first one, marked Default, is the product's ID: it is always there and cannot be edited or removed. Use its eye and download buttons to preview or download a printable Code 128 barcode label for it. You can also add custom barcodes, but never one equal to a product ID. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {

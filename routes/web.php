@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->middleware('cache.headers:private;etag')->name('products.search');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
+        Route::get('products/{product}/export-qr/preview', [ProductController::class, 'previewDefaultBarcode'])->name('products.export-qr.preview');
         Route::get('products/{product}/image', [ProductController::class, 'image'])->name('products.image');
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
         Route::put('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');

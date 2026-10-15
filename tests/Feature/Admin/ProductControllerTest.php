@@ -1265,6 +1265,42 @@ test('a barcode must be unique across every product, not just the one it is bein
     $this->assertDatabaseCount('wms_product_barcodes', 1);
 });
 
+test('a barcode cannot equal the id of another product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => (string) $otherProduct->id]);
+
+    $response->assertSessionHasErrors(['barcode' => __('messages.barcode_is_product_id')]);
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a barcode cannot equal the product\'s own id either, since that is its default barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => " {$product->id} "]);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a numeric barcode that is not the id of any product can be added', function (string $barcode) {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => $barcode])->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('wms_product_barcodes', ['product_id' => $product->id, 'barcode' => $barcode]);
+})->with([
+    'no product has this id' => ['99999999'],
+    'leading zeros are not the canonical id' => ['00001'],
+    'a longer code that merely starts with an id' => ['1234567890123'],
+]);
+
 test('a mobile app user cannot add a barcode', function () {
     actingAsMobilePanelUser();
 
@@ -1873,6 +1909,7 @@ test('an admin can download every barcode of a product, and only that product\'s
     $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
 
     expect(array_keys($entries))->toBe([
+        "product-{$product->id}-barcode.svg",
         "product-{$product->id}-barcode-{$first->id}-1111111111111.svg",
         "product-{$product->id}-barcode-{$second->id}-2222222222222.svg",
         "product-{$product->id}-barcode-{$third->id}-ABC_def_3.svg",
@@ -1882,13 +1919,19 @@ test('an admin can download every barcode of a product, and only that product\'s
         ->and(implode('', $entries))->not->toContain('9999999999999');
 });
 
-test('downloading all barcodes of a product without any returns a 404', function () {
+test('downloading all barcodes of a product without custom ones still yields its default barcode', function () {
     actingAsAdmin();
 
     $product = Product::factory()->create();
     ProductBarcode::factory()->create(['product_id' => Product::factory()->create()->id, 'barcode' => '9999999999999']);
 
-    $this->get("/admin/products/{$product->id}/barcodes/download")->assertNotFound();
+    $response = $this->get("/admin/products/{$product->id}/barcodes/download");
+
+    $response->assertOk();
+    $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
+
+    expect(array_keys($entries))->toBe(["product-{$product->id}-barcode.svg"])
+        ->and(implode('', $entries))->not->toContain('9999999999999');
 });
 
 test('one barcode that cannot be rendered fails the whole ZIP instead of omitting it', function () {
@@ -1920,6 +1963,35 @@ test('a barcode label can be previewed inline as the same SVG that is downloaded
         ->assertHeader('Content-Disposition', 'inline');
     expect($response->getContent())
         ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
+});
+
+test('the default barcode can be previewed inline as the same SVG that is exported', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr/preview");
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->getContent())->toBe($this->get("/admin/products/{$product->id}/export-qr")->getContent());
+
+    $etag = $response->headers->get('ETag');
+    $this->get("/admin/products/{$product->id}/export-qr/preview", ['If-None-Match' => $etag])->assertNotModified();
+});
+
+test('mobile app and unauthenticated users cannot preview the default barcode, and a missing product is a 404', function () {
+    $product = Product::factory()->create();
+    $url = "/admin/products/{$product->id}/export-qr/preview";
+
+    $this->get($url)->assertRedirect(route('login'));
+
+    actingAsMobilePanelUser();
+    $this->get($url)->assertForbidden();
+
+    actingAsAdmin();
+    $this->get('/admin/products/999999/export-qr/preview')->assertNotFound();
 });
 
 test('a barcode preview answers a repeat request that already holds the current label with a 304', function () {
