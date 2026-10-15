@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Trip extends Model
 {
@@ -43,7 +42,8 @@ class Trip extends Model
         return $this->belongsTo(StoreUser::class, 'driver_id');
     }
 
-    public function truck()
+    /** @return BelongsTo<Truck, $this> */
+    public function truck(): BelongsTo
     {
         return $this->belongsTo(Truck::class, 'truck_id');
     }
@@ -62,20 +62,20 @@ class Trip extends Model
     {
         $query->where(function ($query) use ($searchTerm) {
             $query->where('code', $searchTerm)
-                ->orWhere('status', 'like', '%' . $searchTerm . '%')
+                ->orWhere('status', 'like', '%'.$searchTerm.'%')
                 ->orWhereHas('driver', function ($q) use ($searchTerm) {
-                    $q->where('name', 'like', '%' . $searchTerm . '%');
+                    $q->where('name', 'like', '%'.$searchTerm.'%');
                 })
                 ->orWhereHas('truck', function ($q) use ($searchTerm) {
-                    $q->where('name', 'like', '%' . $searchTerm . '%');
+                    $q->where('name', 'like', '%'.$searchTerm.'%');
                 })
                 ->orWhereHas('checkpoints', function ($q) use ($searchTerm) {
                     $q->whereHasMorph('relationable', [StoreUser::class, Order::class], function ($q, $type) use ($searchTerm) {
                         if ($type === StoreUser::class) {
-                            $q->where('name', 'LIKE', '%' . $searchTerm . '%');
+                            $q->where('name', 'LIKE', '%'.$searchTerm.'%');
                         } elseif ($type === Order::class) {
                             $q->whereHas('user', function ($q) use ($searchTerm) {
-                                $q->where('name', 'LIKE', '%' . $searchTerm . '%');
+                                $q->where('name', 'LIKE', '%'.$searchTerm.'%');
                             });
                         }
                     });

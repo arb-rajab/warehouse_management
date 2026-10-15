@@ -2,16 +2,14 @@
 import { Form, Head, Link, router, useHttp } from '@inertiajs/vue3';
 import { Copy, Eye, Pencil, RefreshCw, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
-import {
-    admin_product_edit,
-    create,
-    fetch as fetchProducts,
-} from '@/actions/App/Http/Controllers/ProductController';
+import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
 import {
     all as allProducts,
     bulkDestroy,
+    create,
     destroy,
     duplicate,
+    edit,
     inHouse as inHouseProducts,
     updateFeatured,
     updateForSale,
@@ -188,7 +186,6 @@ async function requestFetch(): Promise<void> {
                 </button>
                 <AddResourceLink
                     :href="create()"
-                    :inertia="false"
                     :label="t('store.products.create')"
                 />
             </div>
@@ -481,11 +478,10 @@ async function requestFetch(): Promise<void> {
                         <TableActionLink
                             v-if="access.can('product_edit')"
                             :href="
-                                admin_product_edit(product, {
+                                edit(product, {
                                     query: { lang: defaultLanguage },
                                 })
                             "
-                            :inertia="false"
                             ><Pencil class="h-3.5 w-3.5" />{{
                                 t('store.products.edit')
                             }}</TableActionLink

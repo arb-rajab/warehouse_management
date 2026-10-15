@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ChecksIfMatch;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\EmptyPalletRequest;
 use App\Http\Requests\Api\V1\OpenPalletRequest;
@@ -18,6 +19,8 @@ use Illuminate\Http\Response;
 
 class PalletController extends Controller
 {
+    use ChecksIfMatch;
+
     private const array EAGER_LOAD = [
         'product:id,name,ar_name,thumbnail_img,published',
         'product.thumbnailUpload:id,file_name,external_link',
@@ -61,6 +64,7 @@ class PalletController extends Controller
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function open(OpenPalletRequest $request, Pallet $pallet): PalletResource|Response
     {
         /** @var User $user */
@@ -72,6 +76,7 @@ class PalletController extends Controller
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
+            ifMatchEtags: $this->ifMatchEtags($request),
         );
 
         if ($result['emptied']) {
@@ -86,6 +91,7 @@ class PalletController extends Controller
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function removeBoxes(RemovePalletBoxesRequest $request, Pallet $pallet): PalletResource|Response
     {
         /** @var User $user */
@@ -97,6 +103,7 @@ class PalletController extends Controller
             $request->boolean('confirm_empty'),
             $user->id,
             $request->input('note'),
+            ifMatchEtags: $this->ifMatchEtags($request),
         );
 
         if ($result['emptied']) {
@@ -109,12 +116,13 @@ class PalletController extends Controller
     #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function empty(EmptyPalletRequest $request, Pallet $pallet): Response
     {
         /** @var User $user */
         $user = $request->user();
 
-        $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
+        $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'), $this->ifMatchEtags($request));
 
         return response()->noContent();
     }
@@ -124,6 +132,7 @@ class PalletController extends Controller
     #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(409, description: 'The destination is the cell the pallet is already in (`error_code`: `pallet_already_at_location`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function transfer(TransferPalletRequest $request, Pallet $pallet): PalletResource
     {
         /** @var User $user */
@@ -134,6 +143,7 @@ class PalletController extends Controller
             $request->resolvedSlot()->id,
             $user->id,
             $request->input('note'),
+            $this->ifMatchEtags($request),
         );
 
         return new PalletResource($pallet->load(self::EAGER_LOAD));

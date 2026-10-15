@@ -433,3 +433,19 @@ test('an unauthenticated caller cannot list a product\'s pallets', function () {
 
     $response->assertUnauthorized();
 });
+
+test('the product listings answer a repeat request that already holds the current data with a 304', function (string $path) {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    $url = str_replace('{id}', (string) $product->id, $path);
+
+    $etag = $this->getJson($url)->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->getJson($url, ['If-None-Match' => $etag])->assertNotModified();
+})->with([
+    'index' => '/api/v1/products',
+    'show' => '/api/v1/products/{id}',
+    'pallets' => '/api/v1/products/{id}/pallets',
+]);

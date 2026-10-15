@@ -4,10 +4,8 @@ import { ArrowUpRight, Download, Pencil, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     create,
-    edit,
-} from '@/actions/App/Http/Controllers/DigitalProductController';
-import {
     destroy,
+    edit,
     download,
     index as digitalProductsIndex,
     updateFeatured,
@@ -59,7 +57,6 @@ function onPerPageChange(perPage: number): void {
             <AddResourceLink
                 v-if="access.can('add_digital_product')"
                 :href="create()"
-                :inertia="false"
                 :label="t('store.digitalProducts.create')"
             />
         </PageHeader>
@@ -154,7 +151,6 @@ function onPerPageChange(perPage: number): void {
                                     query: { lang: defaultLanguage },
                                 })
                             "
-                            :inertia="false"
                             ><Pencil class="h-3.5 w-3.5" />{{
                                 t('store.digitalProducts.edit')
                             }}</TableActionLink

@@ -28,10 +28,7 @@ import {
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import {
-    create as productsCreate,
-    seller_products,
-} from '@/actions/App/Http/Controllers/ProductController';
+import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
@@ -77,6 +74,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
 import {
     all as allProducts,
+    create as productsCreate,
     inHouse as inHouseProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
@@ -112,26 +110,26 @@ import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import { index as taxesIndex } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import {
+    create as tripsCreate,
+    index as tripsIndex,
+    today as todayTrips,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import {
     create as trucksCreate,
     index as trucksIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as uploadedFilesIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import {
     all_orders as tripOrders,
-    create as tripsCreate,
     create_from_map,
-    getAllTrips,
-    getTodayTrips,
 } from '@/actions/App/Http/Controllers/Trip/TripController';
-import {
-    appearance,
-    footer,
-    pages,
-} from '@/actions/App/Http/Controllers/WebsiteController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -196,6 +194,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.addProduct',
                 href: productsCreate(),
                 permission: 'add_new_product',
+                inertia: true,
             },
             {
                 labelKey: 'store.nav.allProducts',
@@ -450,16 +449,19 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 children: [
                     {
                         labelKey: 'store.nav.allTrips',
-                        href: getAllTrips(),
+                        inertia: true,
+                        href: tripsIndex(),
                         permission: 'view_all_trips',
                     },
                     {
                         labelKey: 'store.nav.todayTrips',
-                        href: getTodayTrips(),
+                        inertia: true,
+                        href: todayTrips(),
                         permission: 'view_all_trips',
                     },
                     {
                         labelKey: 'store.nav.createTrip',
+                        inertia: true,
                         href: tripsCreate(),
                         permission: 'add_trip',
                     },
@@ -691,18 +693,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.footer',
+                inertia: true,
                 href: footer(),
                 permission: 'footer_setup',
                 setting: 'website_setup_footer',
             },
             {
                 labelKey: 'store.nav.pages',
+                inertia: true,
                 href: pages(),
                 permission: 'view_all_website_pages',
                 setting: 'website_setup_pages',
             },
             {
                 labelKey: 'store.nav.appearance',
+                inertia: true,
                 href: appearance(),
                 permission: 'website_appearance',
                 setting: 'website_setup_appearance',

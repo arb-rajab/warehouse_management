@@ -30,9 +30,9 @@ were activated. The table and deferred paths below define actual scope.
 | `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | Included, canonical contract adapted | `6c21e5a482f98dd1df705cdcd05e5f2c8b70c62d`; normalization confined to selected admin path, legacy callers preserved |
 | `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | Partially included | `99a14828b557c36236cf6dea5c697ad85758de38`; customers/addresses/representatives/packages/payments/visit list; classified activation held; customer packages pending |
 | `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | Included implemented subset, adapted | `29ada8cd505074f696e6675487f6ccbc27d181da`; bounded translated search, attributes/values/colors/discount/reviews/bulk/offers; core catalogue conversion remains pending |
-| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); script-policy activation held |
+| `codex/store-website-support-migration-20261011` | `e3995898cd53c166968d9804fd456fe935579fcf` | Partially included | `d08097341869376bf8654e9135af6f0eda10bf59` plus follow-up; header/home/conversations/queries/ticket list and typed reply; Inertia ticket detail/reply since 2026-10-13 (PR #393, `[skip ci]`); Inertia footer/appearance/custom pages with typed writers since 2026-10-13 (`[skip ci]`); script-policy activation held |
 | `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | Partially included | `23c7619fe5a81412afb1b3ae9f00b016eab5e266` plus follow-up; marketing, blog category/list/actions and typed newsletter send/recipient lookup; Inertia blog post forms (#392) and newsletter form (#393) on the shared editor since 2026-10-13 |
-| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list |
+| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | Included implemented subset, adapted | `de582875f8e329e54123c0629658acb26cd88117`; drivers/trucks and compatible hardening, retained Blade trips/maps and customer visit list; Inertia trip lists with status, notes and delete actions since 2026-10-14 (`[skip ci]`); trip forms, checkpoints and maps still Blade |
 | `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | Partially included | `3bece94c1e25f6f5e91606238a1c2fd6b64fd896`; orders/entry and shell utilities, dashboard/charts and proposed tax arithmetic held |
 | `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | Superseded implementation; partially included independent tests/fix | No duplicate controllers/pages/admin routes; follow-up adapts `StoreBackOfficeShellTest`, currency switcher regression and missing-currency handling |
 | Unavailable audit | `aed3feab5b6edd95fb941ee92a455e058403def5` | Explicitly excluded | Unavailable; not recovered or included. Independently reconstructed in prompt 3 below; no source commit recovered |
@@ -96,10 +96,10 @@ objects. These changes remain available in Git and have not been silently lost.
 | --- | --- | --- |
 | `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
 | `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
-| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
-| `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Footer/appearance/custom-page Blade GET and existing writers remain | Editor-dependent Inertia activation after editor approval and consumer adaptation |
+| `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms (the digital product forms use it since 2026-10-13, `[skip ci]`; see [the digital product forms section](#digital-product-create-and-edit-forms-migration-2026-10-13)); script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
+| `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Stored formats, translations, image references, page slugs, gates and the storefront/mobile/email rendering of footer, appearance and pages; the scripts compatibility endpoint | **Activated (2026-10-13).** Inertia footer, appearance and custom pages on the shared editor and canonical uploader, with typed writers cleaning rich text; the Blade views, root `WebsiteController` and root page admin actions removed; the generic `business_settings.update` writer retired with its last consumers. This PR and its merge used `[skip ci]`. See [the website settings section](#website-footer-appearance-and-custom-pages-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
-| `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys | Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; generic writers already reject script keys |
+| `e3995898`: `Store/Admin/WebsiteScriptsController.php`, script requests/form, `2026_10_10_000001_add_manage_website_scripts_permission.php`, `config/waf.php` / associated policy expectations | Existing stored script rendering and appearance permission/WAF remain; compatibility endpoint allows only two script keys, posted since 2026-10-13 by plain code fields on the Inertia appearance page | **Still held.** Decide custom-script permission/rendering policy and rich-text WAF exceptions before activation; the typed appearance writer refuses script keys and the generic writer is retired. The 2026-10-13 website PR and its merge used `[skip ci]` and left this row unactivated |
 | `cf5ef305`: `StoreRichTextField.vue` / duplicate uploader infrastructure and competing upload request/resource changes | Canonical uploader and the shared `e3995898` editor basis (active since 2026-10-13) | Duplicate infrastructure superseded; its dormant `store.richText.*` keys removed; useful blog formatting/validation tests adapted |
 | `cf5ef305`: `StoreBlogFormFields.vue`, `Store/Admin/Blog/Posts/Create.vue`, `Edit.vue` and editor-dependent tests | Inertia blog list, typed actions and, since 2026-10-13, Inertia create/edit on the shared editor; public rendering stays Blade | **Done (2026-10-13)**, adapted to the canonical uploader, `ResourceFormPage` and current locales; no `eslint-plugin-vue` or `concurrently` upgrades taken |
 | `cf5ef305`: `resources/js/pages/Store/Admin/Marketing/Newsletters/Index.vue`, `StoreNewsletterFormFields.vue`, `StoreNewsletterRecipients.vue` and editor-dependent frontend tests; source controller’s Inertia index | Typed send (SMTP guard, cleaned content, one queued `EmailManager` per recipient, dashboard return) and bounded recipient search unchanged; the SMTP test keeps both `smtp_settings` and `send_newsletter` gates | **Activated (2026-10-13).** Inertia newsletter form on the shared editor; Blade view removed; the source's `testEmail` duplicate of `test.smtp` not taken. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
@@ -2177,3 +2177,937 @@ installed sources were used.
 Not run: MySQL, production data or role grants, real mail delivery and the full
 browser suite. Because of `[skip ci]`, GitHub CI, SAST and the deploy did not
 run for this PR or its merge.
+
+
+## Website footer, appearance and custom pages migration (2026-10-13)
+
+Work on `claude/website-settings-inertia-migration-j3i59z` from fetched
+`develop` at `ef175fc079c6721bbb68a853f9b761379a1dcbca` (the PR #397 merge,
+after the PR #393 merge `06a3806`); the branch had no commits beyond that
+base. Source `e3995898` was fetched and adapted, not cherry-picked; its
+`WebsiteScriptsController`, `UpdateWebsiteScriptsRequest`, permission
+migration and `config/waf.php` change were not taken. The owner authorized,
+for this session only, the pull request, its merge into `develop` with the
+merge method, and `[skip ci]` on every commit, the PR title and the merge
+commit. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge**, so the checks below are the only verification. No other
+branch, deployment or production data was touched. The decision table above
+marks the footer/appearance/custom pages row activated and keeps the website
+scripts row held. The guide's §20 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Footer form** (`website_settings/footer.blade.php`). Four forms posted to
+  `business_settings.update` (`:39`, `:90`, `:126`, `:205`). Keys: `footer_logo`
+  (single uploader, `:44-50`), `about_us_description` (summernote, per
+  language, `:57-60`), `play_store_link`/`app_store_link` (`:65-72`),
+  `contact_address` (per language, `:95-96`), `contact_phone`/`contact_email`
+  (`:101-108`), `widget_one` and `widget_one_labels` (per language) with the
+  shared `widget_one_links` (`:131-160`), `frontend_copyright_text`
+  (summernote, per language, `:216-219`), `show_social_links` (`on`, `:234-235`)
+  and five social links (`:247-280`), `seller_app_link` only with
+  `vendor_system_activation == 1` and `delivery_boy_app_link` only with the
+  `delivery_boy` addon (`:287-315`), `payment_method_images` (multiple
+  uploader, `:325-331`), and the registration tutorial switch, text and link
+  (`:349-362`). The sidebar opened it with the current locale
+  (`admin_sidenav.blade.php:1362`); the root action passed `lang` through
+  (`WebsiteController.php:32-36`).
+- **Appearance form** (`website_settings/appearance.blade.php`). Four forms to
+  the generic writer (`:12`, `:158`, `:207`, `:237`): `website_name`,
+  `site_motto`, `site_icon`, `base_color`, `base_hov_color`, `login_page_image`,
+  `register_page_image`, `seller_login_page_bg` (vendor system, `:87-102`),
+  `delivery_boy_login_page_bg` (addon, `:103-118`), `flash_deal_banner(_small)`,
+  `meta_title`, `meta_description`, `meta_keywords`, `meta_image`,
+  `cookies_agreement_text` (summernote, `:213`), `show_cookies_agreement`,
+  `show_website_popup`, `website_popup_content` (summernote, `:253`) and
+  `show_subscribe_form`: eight images and two editor fields. The scripts form
+  posted `types[]` plus the two scripts to `website.scripts.compatibility.update`
+  (`:277-292`).
+- **Generic writer.** `BusinessSettingsController.php:129-185`, gated
+  `general_settings|footer_setup|website_appearance|edit_website_page` (`:30`),
+  route `routes/shop-admin.php:335`. Non-localized keys took the first row of
+  their type and stored null `lang`; localized ones `where('lang', $lang)`;
+  arrays `json_encode()`d; a posted-but-unchecked switch stored null; then
+  `Artisan::call('cache:clear')` and a flash. Its `site_name`/`timezone`
+  branches were the only callers of `overWriteEnvFile()` (`:80`, `:141`,
+  `:144`).
+- **Readers.** Storefront footer (`shop/frontend/inc/footer.blade.php`):
+  `footer_logo` `:71-72`, `about_us_description` through `clean_html()` `:83`,
+  social links `:108-137`, app links `:145-157`, `widget_one*` `:185-191` and
+  `:351-359`, contact `:216-225` and `:380-389`, seller/delivery app links
+  `:309-333` and `:467-498`, copyright through `clean_html()` `:518`, payment
+  logos `:526-527`. `shop/frontend/layouts/app.blade.php`: title from
+  `website_name`/`site_motto` `:19`, meta `:24-48`, favicon `:54`, colours
+  `:112-114`, `header_script` echoed raw `:275`, tutorial button `:288-291`,
+  cookie text echoed raw `:322`, popup through `clean_html()` `:339`,
+  `footer_script` echoed raw `:833`. Login/registration images, seller and
+  delivery-boy backgrounds, the flash deal banners and the admin/seller shells'
+  titles and favicons read their keys. Email and PDF invoices read
+  `contact_address`/`contact_phone`/`contact_email`
+  (`shop/emails/invoice.blade.php:84-92`, `backend/invoices/invoice.blade.php:92-100`).
+  The mobile `business-settings` API lists `site_icon` among its public keys
+  (`Api/V2/BusinessSettingController.php:19`). All formats are kept.
+- **Pages.** Root `PageController` (`:23-31` gates): empty `index`/`show`,
+  `create`/`edit` views, `store` and `update` normalising the slug
+  (`:62-63`, `:131-133`) with a uniqueness check and a flash on conflict,
+  `update` changing the slug only for custom pages and the base title/content
+  only in the default language (`:132-138`), `destroy` deleting any page by id
+  (`:165-170`). Routes `routes/shop-admin.php:428-438`: the resource plus
+  `custom-pages.edit` by slug and a POST `custom-pages.destroy`. Storefront:
+  `custom_page.blade.php:55` and the five policy views echo the content raw;
+  `m_custom_page.blade.php:21` prints `clean_html()`; `PolicyCollection` returns
+  it as stored. `page_translations.title`/`content` are NOT NULL.
+- **Generic writer consumers after the move.** `rg "business_settings\.update['\"]|business-settings/update['\"]"`
+  over `resources/views`, `app`, `routes`, `resources/js` (hand-written) and
+  `public/assets/js` finds none; only tests referenced it.
+- **Tests and fixtures naming the footer as the Blade example.**
+  `HandleStoreBladePagesTest.php:29,31,37,60`, `ReconstructedMigrationAuditTest.php:43`,
+  `GeneralSettingsControllerTest.php:236`, `SettingsReconciliationTest.php:10-47`,
+  `ReferenceSettingsIsolationTest.php:5-18`, `store-staff-coexistence.spec.ts:41-66`,
+  `store-legacy-uploader.spec.ts:9-72`, `store-setup-settings.spec.ts:97`.
+- **Retarget candidates.** No `sellers/*` or `trips/*` admin view uses
+  `aizuploader` (only product and digital-product forms and SKU partials do).
+  The admin's seller product form (`products.seller.edit`,
+  `ProductController::seller_product_edit`) renders `products/edit.blade.php`
+  without `$variations`/`$barcodes`, so it answers 500 at `edit.blade.php:244`
+  (inherited; left unchanged).
+- **WAF.** `config/waf.php` refuses `<script`, `javascript:`,
+  `on(error|load|click|mouseover)=` and `<iframe`, so a script tag in the
+  scripts form is a 403, as before. The editor's output matches no signature.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\WebsiteFooterController`, `WebsiteAppearanceController`
+  and `WebsitePageController`; `UpdateWebsiteFooterRequest`,
+  `UpdateWebsiteAppearanceRequest`, `FilterWebsitePagesRequest`,
+  `StoreWebsitePageRequest`, `UpdateWebsitePageRequest` and
+  `Concerns\ValidatesWebsitePage`; `WebsitePageResource` and
+  `WebsitePageFormResource`; `Page::publicUrl()`. `ValidatesWebsiteSettings`
+  gained `storedSettingValue()`, `cleanRichTextSettings()` and
+  `enabledSettingKeys()`; `ProvidesStoreUploadPreviews` gained
+  `settingsImagePreviews()`, now also used by general settings. Reuses
+  `WebsiteSettings`, `retainableImageUploadRule()`, `languageRules()` and
+  `ProvidesStoreReferenceOptions`. `PageTranslation` is typed and leaves both
+  analysis exclusion lists.
+- **Frontend.** `Website/Footer.vue`, `Appearance.vue`,
+  `Pages/Index|Create|Edit.vue`, `StoreWebsiteFooterFormFields`,
+  `StoreWebsiteAppearanceFormFields`, `StoreWebsitePageFormFields`, the
+  dormant website types and fixtures adapted, `store.website.*` keys in English
+  and Arabic, and the Footer, Pages and Appearance sidebar entries as Inertia
+  visits.
+- **Routes.** Ten registrations replace thirteen; every consumed name is kept.
+- **Removed.** The five Blade views, root `WebsiteController`, root
+  `PageController`'s admin actions and gates, root
+  `BusinessSettingsController::update`, its gate and `overWriteEnvFile()`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration,
+  `LegacyWebsiteScriptsController` and its request, storefront/mobile/email/PDF
+  views, stored formats, gates, permission definitions, role grants, the Blade
+  editor assets, the legacy uploader, shells and `HandleStoreBladePages`. No
+  dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost did not connect at session start, so repository files and
+installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs. The editor stays one shared chunk,
+  `StoreRichTextField-*.js` (454,000 B), loaded by the footer, appearance and
+  page create/edit screens besides the blog, newsletter and ticket pages;
+  `Footer-*.js` is 10,069 B and `Appearance-*.js` 9,059 B.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` passed every stage
+  with none skipped:
+  - ESLint, Prettier and vue-tsc clean;
+  - Vitest **2,662 tests in 297 files**;
+  - Pint passed;
+  - PHPStan **0 errors**;
+  - Pest **5,707 tests / 31,113 assertions**.
+  The first full run stopped on one Pest error: `LegacyUploadSecurityTest`
+  still read the deleted page-editor view. It now checks the Inertia editor
+  (no raw HTML in its Vue files; hostile stored values reach the page escaped
+  and cleaned), and the second full run passed.
+- **Focused checks.**
+  - `WebsiteFooterControllerTest`, `WebsiteAppearanceControllerTest` and
+    `WebsitePageControllerTest`: **140 tests / 1,335 assertions**. The adapted
+    existing files (Blade CSP, reconstructed audit, settings reconciliation and
+    isolation, header, home, settings, Google Map, admin permissions,
+    middleware conversion, state-changing routes, `.env` protection, general
+    settings, redirects, analysis exclusions, shared props): **773 tests**.
+  - Mutations failed the tests as intended before being reverted: no rich-text
+    cleaning in the footer request (9 failures), no foreign-input refusal in
+    the appearance request (5), the plain image rule instead of the retainable
+    one (1), no page content cleaning (8), no custom-page-only delete (1), no
+    owner check on new payment logos (1). The retainable mutation first passed
+    because bare `assertRedirect()` also accepts a validation redirect; every
+    expected-success save now also asserts no session errors.
+  - Touched Vitest files: the three form-field components and the five pages,
+    **46 tests**, with every label in English and Arabic; the menu test lists
+    the three entries as Inertia.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one
+  worker, zero retries and
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-website-settings.spec.ts` **5/5**: the footer with a canonical logo,
+    keyboard-formatted editor content, a link row and social links saved and
+    reloaded, then rendered on the storefront; appearance saved through its
+    writer and the scripts through the compatibility endpoint, reloaded,
+    printed raw in the storefront head and before `</body>`, with a
+    `<script>` save still a 403 and nothing written; a custom page created
+    with a normalised slug, edited, shown publicly and deleted after a
+    dismissed and an accepted native confirm; stored and pasted script
+    payloads inert in the footer and page editors, on the storefront and the
+    public page, with no dialog; Arabic RTL, dark contrast ≥4.5 and the one-
+    stop, mirrored toolbar. No CSP violation; every admin page had the
+    enforced `script-src 'self'` policy.
+  - With the retargeted coexistence, legacy uploader and setup specs, the blog
+    editor, newsletter/ticket, brands, products and website header specs:
+    **25/25 in 9 files**.
+  - The first runs failed on spec authoring (Inertia answers a PUT's redirect
+    with 303; two strict-mode locators), on the seller product form's
+    inherited 500, and on a products-spec interplay with that attempt's seeded
+    seller product; the uploader spec moved to the product create form.
+- **Merge with develop.** `develop` moved to `e17cdbd` (the PR #399 merge, ETag
+  revalidation) before the push; it merged without conflicts in a
+  `[skip ci]` merge commit. After a fresh Wayfinder generation and font-less
+  build, the full gate passed again with none skipped (Vitest **2,662 tests in
+  297 files**, Pint, PHPStan **0 errors**, Pest **5,726 tests / 31,177
+  assertions**), and the browser set again passed **25/25 in 9 files**.
+- **Inventory.** **51** backend Blade files; **27**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
+  `/temp/admin` registrations, down from 1,050/438 (ten replace thirteen),
+  unchanged by the merge; Blade editor: **12** fields in **12** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.
+
+## Digital product create and edit forms migration (2026-10-13)
+
+Work on `claude/digital-product-forms-inertia-v66574` from fetched `develop`
+at `bb942f0` (the PR #400 merge); the branch had no commits beyond that base.
+No source branch was involved. The owner authorized, for this session only,
+the pull request (#401), its merge into `develop` with the merge method, and
+`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+PR or merge SAST and no `develop` deploy ran for this PR or its merge**, so the
+checks below are the only verification. No other branch, deployment or
+production data was touched. The guide's §21 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root writer** (`app/Http/Controllers/DigitalProductController.php`, gates
+  `:35-36`). `create`/`edit` (`:45-52`, `:130-139`) loaded the roots with
+  `parent_id = 0, digital = 1` and `childrenCategories` (`:47-50`, `:134-137`);
+  `edit` took `$request->lang` unvalidated (`:132`).
+- **`store`** (`:60-122`): `products` name, `added_by = 'admin'`, the store
+  user, category, `digital = 1`, photos, thumbnail, tags from the JSON in
+  `tags[0]` comma-joined (`:71-77`), description, unit/purchase price,
+  discount and type, meta title/description/image, `file_name = $request->file`
+  (`:89`), slug `preg_replace(...)-rand(10000, 99999)` (`:91`); then taxes
+  through `ProductTaxService` when `tax_id` was posted (`:96-100`), one stock
+  row (`variant`/`sku` empty, unit price, qty 0, `:102-108`), the
+  default-language translation (`:111-114`); a flash and the list (`:116-117`).
+  No transaction, no validation, no cache clearing; `date_range` never read.
+- **`update`** (`:148-216`): any product by id (`:150`), base name/description
+  only for the default language (`:151-154`), shared fields, `digital = 1`,
+  slug `strtolower($request->slug)` (`:177`), every stock row deleted before
+  the save (`:182-184`), tax rows replaced only when `tax_id` was posted
+  (`:189-194`), a new stock row (`:196-202`), the posted language's
+  translation (`:205-208`), `back()` (`:211`). `date_range` never read.
+- **Forms.** `create.blade.php`: file picker without `data-type` (`:44-57`),
+  tags (`:61`), photos multiple image (`:76-82`), thumbnail (`:93-99`), meta
+  image (`:129-136`), active taxes `Tax::where('tax_status', 1)` (`:166-184`),
+  date range `DD-MM-Y HH:mm:ss` with ` to ` (`:189-191`), discount (`:197-205`),
+  summernote description (`:218`). `edit.blade.php`: PATCH spoof (`:11`), lang
+  tabs (`:18-27`), translated name (`:41`), slug (`:167-168`), unit price as
+  text (`:181`), per-tax stored amount/type (`:194-226`), stored range shown
+  with `date('d-m-Y H:i:s', …)` (`:228-241`), translated description (`:272`).
+  Routes `routes/shop-admin.php:155-159`.
+- **Date range.** `ProductService.php:69-76` parses `date_range` with
+  `explode(' to ')` and `strtotime()`; the storefront and APIs apply a discount
+  always when `discount_start_date` is null (`Helpers.php:290-293` and peers),
+  else within the range. Seller digital forms do not store it either.
+- **Readers.** Storefront `digital_product_details.blade.php:555` prints
+  `clean_html()`; mobile `DigitalProductDetailCollection.php:67` returns the
+  stored description. Downloads read `file_name` as an upload id:
+  `Store\Admin\DigitalProductController::download` (encrypted id),
+  `PurchaseHistoryController.php:66-71`, `Seller\DigitalProductController.php:267-273`
+  and the API `purchased-products/download`. All untouched.
+- **Consumers of the views.** Only the root `create`/`edit` rendered
+  `product/digital_products/{create,edit}.blade.php`. `admin_sidenav`'s
+  `areActiveRoutes(['digitalproducts.index', 'digitalproducts.create', 'digitalproducts.edit'])`
+  names still resolve. `shop.categories.child_category` stays for the seller
+  and product forms.
+- **Shared edit redirect.** `ProductController.php:241-243` and `:276-278`
+  redirected digital products to `admin/digitalproducts/{id}/edit` and
+  `digitalproducts/{id}/edit` (no `/temp`, no matching route); the Inertia
+  all-products list links every row there (`Products/Index.vue`, `admin_product_edit`).
+- **Tests treating these forms as Blade.** `DigitalProductControllerTest`
+  (retained-forms and list-migration tests), `Index.test.ts` and
+  `store-digital-products.spec.ts` (full-load hops). The legacy-uploader spec
+  runs on the physical product create form and stays there.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\DigitalProductController` gains `create`, `store`,
+  `edit` and `update`; `StoreDigitalProductRequest`, `UpdateDigitalProductRequest`,
+  `Concerns\ValidatesStoreDigitalProduct`, `Concerns\ValidatesDiscountDateRange`
+  (extracted from `UpdateBrandDiscountRequest`) and `DigitalProductFormResource`.
+  Shared pieces at their second call site: `Category::treeOptions()` (category
+  form and digital forms), `ValidatesStoreUploadReference::uploadReferenceRule()`,
+  `retainableUploadReferenceRule()` and `retainableImageUploadIdsRule()` (the
+  last moved from `UpdateWebsiteFooterRequest`), and
+  `ProvidesStoreUploadPreviews::uploadIdPreviews()` (now behind
+  `settingsImagePreviews()`). Reuses `UpdatesStoreProductFlags::lockedProduct()`,
+  `ProductTaxService`, `languageRules()`, `languageOptions()` and
+  `EditReferenceTranslationRequest`. Root `ProductController`'s two digital
+  redirects point at `digitalproducts.edit`.
+- **Frontend.** `DigitalProducts/Create.vue`, `Edit.vue` (with
+  `StoreLanguageTabs`), `StoreDigitalProductFormFields` (sections, category
+  tree, four canonical `StoreUploadField`s, `StoreRichTextField`, taxes,
+  discount and range with native constraints), the `StoreDigitalProductForm`
+  and `StoreDigitalProductTax` types and fixtures, and 34
+  `store.digitalProducts.form.*` keys in English and Arabic. The list's Add and
+  Edit links are Inertia visits.
+- **Routes.** Five registrations replace five; names, URIs and methods kept,
+  `{id}` became the bound `{product}`.
+- **Removed.** `product/digital_products/create.blade.php`, `edit.blade.php`
+  and root `DigitalProductController`, which left both `pint.json` and
+  `phpstan.neon` exclusions.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/customer/mobile/storefront digital product handlers and views, the
+  download contract, gates, permission definitions, role grants, stored
+  formats (except the discount range, now written), the shared partial, Blade
+  editor assets, the legacy uploader and its spec, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0). Laravel Boost connected late and was not needed; repository files and
+installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs. `StoreDigitalProductFormFields-*.js` is
+  7,444 B; the editor stays the shared `StoreRichTextField-*.js` (454,000 B).
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` exit 0, every stage
+  run, none skipped: ESLint, Prettier and vue-tsc clean; Vitest **2,674 tests in
+  299 files**; Pint passed; PHPStan **0 errors**; Pest **5,780 tests / 31,672
+  assertions**.
+- **Focused checks.**
+  - `DigitalProductFormTest` **54 tests / 479 assertions**: render and full
+    payloads, every field's validation, atomic writes and rollback (store and
+    update), digital-only 404s, refused callers with DB snapshots, WMS
+    refusal, permission isolation, sanitisation (7 payloads, WAF 403 kept),
+    legacy markup, upload ownership/file type/retained foreign references,
+    slugs, language edits, storefront page, encrypted download and the shared
+    edit redirect. `DigitalProductControllerTest` (adapted) **41 tests / 402
+    assertions**; category, footer and brand-discount tests (shared helpers)
+    **157 tests** passed.
+  - Mutations failed the tests as intended before being reverted: no
+    description cleaning (8 failures), the plain image rule for the thumbnail
+    (1), no owner rule on the file (1), no digital scope on update (1), no
+    store transaction (1), no update transaction (1), translations rewriting
+    the base name (1), non-digital category roots (1), and a re-rendering tax
+    input that dropped typed amounts (the Vitest regression, 1).
+  - Vitest: `StoreDigitalProductFormFields.test.ts` (7), `Form.test.ts` (5)
+    and the adapted `Index.test.ts` (9), every label in English and Arabic.
+- **Browser.** Playwright 1.62.1 over local HTTPS with CSP enforced, one
+  worker, zero retries and
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-digital-product-forms.spec.ts` **3/3**: a product created from the
+    list with keyboard-formatted editor content, two photos, a thumbnail, a
+    meta image and a text file through the canonical picker, a percent tax and
+    a discount range, all stored; downloaded from the list with the file's
+    content; edited in the Arabic tab (translation only, base unchanged);
+    stored and pasted script payloads inert in the editor and on the
+    storefront page, with no dialog; Arabic RTL, dark contrast ≥4.5 and the
+    one-stop, mirrored toolbar. No CSP violation on admin pages; the list had
+    the enforced `script-src 'self'` policy.
+  - With the adapted digital-products list spec and the products,
+    legacy-uploader, staff and reference coexistence and blog-editor specs:
+    **15/15 in 7 files**.
+  - First runs failed on spec authoring (a two-label locator) and on two real
+    findings: the tax inputs lost typed amounts on re-render (fixed with an
+    `.attr` binding, now pinned by Vitest), and a storefront page 500s in the
+    strict-mode harness when its owner's other products include one without a
+    slug (inherited; the fixtures got their own owner).
+- **Inventory.** **49** backend Blade files; **25**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,047** `/temp` and **435**
+  `/temp/admin` registrations, unchanged (five replace five); Blade editor:
+  **10** fields in **10** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.
+
+## Physical product create form migration (2026-10-13)
+
+Work on `ccr-68328473-iie1w4` from fetched `develop` at `6a10019` (the PR #401
+merge); the branch had no commits beyond that base. The owner authorized, for
+this session only, the pull request (#402), its merge into `develop` with the merge
+method, and `[skip ci]` on every commit, the PR title and the merge commit.
+**No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR or its
+merge**, so the checks below are the only verification. No other branch,
+deployment or production data was touched. The guide's §22 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handler** (`app/Http/Controllers/ProductController.php`). Gate
+  `add_new_product` on `create`/`store` (`:61`); `create` (`:116-125`) loaded the
+  physical roots with `childrenCategories`; `store` (`:135-218`) called
+  `ProductService::store()` with every request field but the SKU/choice/tax/
+  flash keys, then `ProductTaxService` when `tax_id` was posted, the flash deal
+  service under `Flash_deals`, `ProductStockService::store()`, the
+  default-language `ProductTranslation::create()`, the `product_types` and
+  `product_barcodes` loops (`:194-210`), a flash, `view:clear`/`cache:clear`
+  and the in-house list. No transaction. `sku_combination` (`:567-595`) rendered
+  `sku_combinations.blade.php`.
+- **Mass assignment.** `Product` is `#[Fillable(['name', 'ar_name',
+  'thumbnail_img', 'published'])]` (`app/Models/Product.php:57`) and
+  `Model::shouldBeStrict()` runs in local/testing only
+  (`AppServiceProvider.php:154`). A probe of `ProductService::store()` threw
+  `MassAssignmentException` under strict mode and, without it, stored a product
+  with `category_id`, `slug`, `user_id` and `unit` null and `unit_price` 0.
+  `ProductStockService::store()` passes `unit_price` to `ProductStock::create()`
+  (not fillable). Callers: root and `Seller\ProductController` (store/update),
+  `Api\V2\Seller\ProductController` (store/update), `Store\Admin\ProductController::duplicate`
+  (duplicate helpers), `BrandDiscountController` (`setBrandWiseDiscount`),
+  both digital product controllers (`ProductTaxService`). The import commands
+  (`AllProductsCommand`, `NewFetchProductsCommand`) write the models directly.
+- **Form** (`create.blade.php`). Hidden `added_by` (`:24`); name, category
+  tree, brand (`Brand::all()`), unit, weight, max/min quantity, tags
+  (`aiz-tag-input`, `tags[]` JSON) (`:30-90`); addon fields for removed addons
+  (`pos_system` barcode, `refund_request`, `club_point`: `:92-111`, `:306-315`);
+  gallery, thumbnail (`:115-151`); video provider/link (`:152-175`); product
+  types and barcodes with hidden template rows (`:178-225`); colours row
+  `d-none` with a disabled select (`:232-249`); attributes and choice script
+  (`:252-272`, `choice_options_script.blade.php`); unit price, date range,
+  discount and type, quantity and SKU, external link and text, SKU table
+  (`:274-356`); description summernote (`:357-369`); PDF `data-type="document"`
+  (`:380-400`); meta fields (`:401-433`); shipping under
+  `Setup_Shipping_section`/`product_wise_shipping` (`:438-496`); low stock,
+  stock visibility (`:497-551`); COD switch under `cash_payment` plus an
+  always-posted hidden `cash_on_delivery=1` (`:553-579`); featured, today's deal
+  (`:580-612`); flash deal under `Flash_deals` with active deals (`:614-652`);
+  shipping days (`:654-673`); active taxes under `VAT_TAX_section` (`:675-701`);
+  "Save & Unpublish" then "Save & Publish" (`:707-710`).
+- **SKU table.** `sku_combinations.blade.php` lists rows of the cartesian
+  product (colours first, by colour name; other parts space-stripped, joined
+  with `-`), price default `$unit_price`, empty SKU, quantity 10; its computed
+  `$sku` is never output. `ProductStockService` reads `request()['price_'.
+  str_replace('.', '_', $str)]`, so a colour name with a space lost its row
+  values once PHP rewrote the posted name.
+- **Request.** `ProductRequest`: name required ≤255, category and unit
+  required, min qty and unit price numeric, discount `lt:unit_price` (flat) or
+  `lt:100` (percent); shared with the seller panel and seller API, unchanged.
+- **Barcodes.** `product_barcodes` has no unique index; the Otajer import skips
+  an existing barcode; `wms_product_barcodes.barcode` is unique (#389,
+  `StoreProductBarcodeRequest`), untouched here.
+- **Digital split, auction, wholesale.** The form never offered them; the
+  in-house list (§16) shows only `digital = 0`, non-auction, non-wholesale.
+- **Description readers.** Storefront `product_details/description.blade.php:22`
+  prints `clean_html()`; `Api\V2` `ProductDetailCollection.php:149` returns the
+  stored translation.
+- **Tests treating the form as Blade.** `ProductControllerTest` (retained
+  forms test), `LegacyControllerMiddlewareConversionTest` (five root entries),
+  `store-legacy-uploader.spec.ts` (ran on this form, §20) and
+  `store-offers-catalogue.spec.ts` (choice script on this form).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\ProductController::create`, `store`,
+  `variantCombinations`; `StoreProductRequest`, `ProductVariantCombinationsRequest`,
+  `Concerns\ValidatesStoreProductVariants`, `Concerns\ValidatesStoreProductTaxes`
+  (extracted from `ValidatesStoreDigitalProduct`), `Controllers\Concerns\ProvidesStoreProductTaxes`
+  (extracted from `DigitalProductController`), `Services\Store\ProductVariantCombinations`,
+  `Services\Store\InHouseProductWriter`. Root `create`/`store` and their gate
+  entry removed; `ProductService`, `ProductStockService` and `ProductRequest`
+  unchanged.
+- **Frontend.** `Products/Create.vue`, `StoreProductFormFields`,
+  `StoreProductVariantFields`, `StoreProductListField`, `StoreProductTaxFields`
+  and `StoreProductDiscountFields` (the last two now also in the digital form),
+  `lib/storeProductForm.ts`, four types, 91 `store.products.form.*` keys and 8
+  shared `store.productForm.*` keys (moved from `store.digitalProducts.form.*`)
+  in English and Arabic. The list's Add link and the sidebar entry are Inertia.
+- **Routes.** Three registrations replace two; names and URIs kept.
+- **Removed.** `product/products/create.blade.php`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/API/import product writers, the edit form and its helpers, the SKU
+  partials and endpoints, gates, permission definitions, role grants, stored
+  formats, Blade editor assets, the legacy uploader, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+PHP 8.5 and the dev tools came from the SessionStart setup (`wait_for_setup.py`
+exit 0; the container restarted once and the setup re-ran, exit 0). Laravel
+Boost was not needed; repository files and installed sources were used.
+
+- **Generation and build.** `php artisan wayfinder:generate --skip-routes
+  --with-form` passed. `npm run build` failed only on `getaddrinfo ENOTFOUND
+  fonts.bunny.net`; `python3 .claude/scripts/build_without_fonts.py` passed and
+  served the Pest and browser runs.
+- **Full gate.** `python3 .claude/scripts/pre_push_check.py` exit 0, every stage
+  run, none skipped: ESLint, Prettier and vue-tsc clean; Vitest **2,710 tests in
+  306 files**; Pint passed; PHPStan **0 errors**; Pest **5,870 tests / 32,127
+  assertions**.
+- **Focused checks.**
+  - `ProductCreateFormTest` **90 tests / 446 assertions**: routes and gate,
+    render and full option payloads (Arabic option names, settings off), the
+    complete column/stock/translation/tax/type/barcode write with forged
+    `digital`/owner/auction fields ignored, numbered slugs and unpublish,
+    variant rows and JSON, SKU parity with the Blade endpoint for four choice
+    sets (order, names, price, quantity, empty SKU), variant mismatches and
+    the 500-row bound, flash deal service, settings-hidden fields excluded,
+    COD, rollback on a translation or barcode failure with no cache clear,
+    cache clears after commit, 47 validation cases, barcode rules, upload
+    ownership and types, WAF 403s, sanitisation, legacy markup, refused
+    callers with DB snapshots, permission isolation, WMS refusal, the list and
+    storefront page, and the seller panel form with both SKU partials and the
+    retained edit form. Related suites (product list, digital forms and list,
+    legacy permission/state/middleware/seller, search, Blade pages) **203
+    tests** passed.
+  - Mutations failed the tests as intended before being reverted: no store
+    transaction (2 failures), cache clears inside the transaction (1), no
+    description cleaning (5).
+  - Vitest: the seven new component, page and lib test files (36 tests) plus the
+    adapted digital form, product list and menu tests, every label in English
+    and Arabic.
+- **Browser.** Playwright over local HTTPS with CSP enforced, one worker, zero
+  retries and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
+  - `store-product-create.spec.ts` **4/4**: a simple product from the list's
+    Inertia Add link with keyboard-formatted editor content, a canonical
+    thumbnail, a barcode, a percent tax and a discount range, all stored, then
+    in the in-house list and on its storefront page; a variant product with
+    two colours and two values generating four named rows, edited prices, SKU,
+    quantity and a variant photo, saved unpublished; pasted script payloads
+    inert in the editor and the storefront, no dialog; Arabic RTL, dark contrast
+    ≥4.5 and the one-stop, mirrored toolbar. No CSP violation on admin pages;
+    the list had the enforced `script-src 'self'` policy.
+  - With the relocated legacy-uploader spec (seller panel, 2/2), products,
+    digital products, digital product forms, staff and reference coexistence,
+    blog-editor and offers catalogue specs: **23/23 in 9 files**.
+  - First runs found two real defects, both fixed and pinned by Vitest: the
+    unit price reached the variant endpoint as a number (a 422) because
+    `v-model` casts number inputs, and a refused request showed no rows
+    silently. The storefront page hit the inherited strict-mode lazy load
+    (§21); the spec gives its fixtures their own owner.
+- **Inventory.** **48** backend Blade files; **24**/**3**/**0** literal
+  consumers of the app/layout/blank shells; **1,048** `/temp` and **436**
+  `/temp/admin` registrations (three replace two); Blade editor: **9** fields
+  in **9** views.
+
+Not run: MySQL, production data or role grants, and the full browser suite.
+Because of `[skip ci]`, GitHub CI, SAST and the deploy did not run for this PR
+or its merge.
+
+
+## Physical product edit form migration (2026-10-14)
+
+Work on `claude/magical-lamport-g4w0c0` from `develop` at `cb02808` (the PR #402
+merge); the branch had no commits beyond that base. After the work, the owner
+authorized a commit, push, PR (#403) and merge into `develop`, each with `[skip ci]`,
+knowing that none of the checks below had run. **No PR CI, no PR or merge SAST
+and no `develop` deploy ran for this PR or its merge.** No other branch,
+deployment or production data was touched. The guide's §23 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handler** (`app/Http/Controllers/ProductController.php`). Gate
+  `product_edit` on `admin_product_edit`, `seller_product_edit`, `update` and
+  the jQuery switches (`:62`). `admin_product_edit` (`:127-156`) redirected a
+  digital product to `digitalproducts.edit`, then rendered
+  `products/edit.blade.php` with the physical roots, variations and store
+  barcodes; `seller_product_edit` (`:164-181`) rendered the same view without
+  `$variations`/`$barcodes` (the inherited 500, §20). `update` (`:190-295`)
+  called `ProductService::update()` with the request, deleted every stock row,
+  re-ran `ProductStockService::store()`, the flash deal service under
+  `Flash_deals`, the taxes when posted, `ProductTranslation::updateOrCreate()`
+  for `lang`, the type and barcode loops, a flash, `view:clear`/`cache:clear`
+  and `back()`. No transaction. `sku_combination_edit` (`:487-517`) rendered
+  `sku_combinations_edit.blade.php` for the form's AJAX table.
+- **`ProductService::update()`** (`app/Services/ProductService.php:182-319`):
+  slug from the posted slug or name with a `-count+1` suffix whenever more
+  than one slug began with it; switches unset → 0 (`cash_on_delivery`,
+  `is_quantity_multiplied`, `featured`, `todays_deal`); name/unit/description
+  dropped outside the default language; shipping cost 0 unless flat rate;
+  `$product->update($data)`, which `#[Fillable]` reduces to the four
+  `products:sync` columns (§22's defect), so the form saved almost nothing.
+  `ProductStockService::store()` never reset `variant_product` to 0.
+- **Form** (`edit.blade.php`). Language tabs linking `products.admin.edit`
+  (`:26-35`); name/unit/description per language (`:38-41`, `:68-71`,
+  `:460-463`); min quantity shown as at least 1 (`:88`); gallery, thumbnail and
+  Otajer image `old_photo` (`:126-167`); types and barcodes with stored rows
+  (`:229-294`); colours row `d-none` (`:302-323`); stored choice rows with
+  `AttributeValue::where(...)` per attribute (`:343-362`); quantity and SKU of
+  the first stock row (`:414-429`); slug (`:529-534`); shipping card `d-none`
+  (`:541-596`); COD under `cash_payment` (`:654-682`); today's deal, flash deal
+  and shipping days `d-none` but posted (`:704-784`); every active tax with the
+  product's amount (`:786-825`); `update_sku()` on load and on choice changes
+  (`:939-963`).
+- **SKU edit table** (`sku_combinations_edit.blade.php`). Stored price only
+  while the posted unit price equalled the stored one, else the posted unit
+  price for every row; SKU stored or the variant name; quantity stored or 10;
+  photo stored.
+- **Consumers.** `edit.blade.php`: only the two root actions.
+  `choice_options_script.blade.php`: only `edit.blade.php:840`.
+  `sku_combinations_edit.blade.php`: also `Seller\ProductController:239`
+  (`seller.products.sku_combination_edit`), kept. `products.sku_combination_edit`
+  (admin): only `edit.blade.php:942`. `layouts/blank.blade.php`: no caller in
+  `resources/views`, `app`, `routes` or `config`; pinned only by
+  `StoreBackOfficeShellTest`. `product/reviews/index.blade.php`: rendered by
+  root `ReviewController::index` (`app/Http/Controllers/ReviewController.php:41`,
+  route `reviews.index`, `routes/shop-web.php:353`), linked from
+  `admin_sidenav.blade.php:183`, pinned by `ReviewControllerTest:101-104`, so
+  kept. Edit links: `product/products/index.blade.php:385/:391` (seller list,
+  `['id' => …]`), `Products/Index.vue` (full load), `admin_sidenav`
+  `areActiveRoutes` names.
+- **Tests treating the form as Blade.** `ProductControllerTest` (retained forms
+  and list-contract tests), `ProductCreateFormTest` (view existence, seller
+  panel/edit SKU test), `DigitalProductFormTest` (`['id' => …]`),
+  `LegacyAdminPermissionsTest` (`sku_combination_edit` ratchet),
+  `store-offers-catalogue.spec.ts` (choice script). No `Legacy*Test` held an
+  admin edit or update case.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\ProductController::edit`, `sellerEdit`, `update`,
+  `editVariantCombinations` (create now shares `formOptions()`);
+  `UpdateProductRequest`; `Concerns\ValidatesStoreProduct` (extracted from
+  `StoreProductRequest`, which keeps its rules and `button`);
+  `ProductVariantCombinationsRequest` 404s a bound digital product;
+  `Resources\Store\ProductFormResource`; `InHouseProductWriter::update()`
+  beside `create()` (shared column, slug, stock, tax, flash, translation and
+  type/barcode helpers). Root `admin_product_edit`, `seller_product_edit`,
+  `update`, `sku_combination_edit`, their gate entries, two unused services
+  and the unused imports removed.
+- **Frontend.** `Products/Edit.vue`; `StoreProductFormFields` (stored values,
+  slug, Otajer images), `StoreProductVariantFields` (stored state, stored
+  attribute order, edit endpoint, row photos, values offered once),
+  `StoreProductListField` (stored values); three types and two fixtures; six
+  `store.products.form.*` keys in English and Arabic. The list's Edit link is
+  an Inertia visit.
+- **Routes.** Four registrations replace four; names kept; edit URIs bind
+  `{product}`.
+- **Removed (`git rm`).** `product/products/edit.blade.php`,
+  `product/products/choice_options_script.blade.php`,
+  `layouts/blank.blade.php`.
+- **Unchanged.** `HtmlSanitizer`, CSP and `blade_csp`, WAF configuration, the
+  seller/API/import product writers and `ProductService`/`ProductStockService`,
+  the seller SKU partials and endpoints, gates, permission definitions, role
+  grants, stored formats, the legacy uploader, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/` and no installed `node_modules`.
+`wait_for_setup.py` exited 0 with "frontend … unavailable; App … unavailable;
+Vite build … not built". One `npm ci` failed: `registry.npmjs.org` has no
+direct DNS here and the egress proxy refused it (`CONNECT … 403`,
+`connect_rejected`); it was not retried and no install was forced. Laravel
+Boost failed to connect; repository files and the installed-source
+references in earlier sections were used.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on all 17 changed or new PHP files: no syntax errors.
+    This is syntax only, not PHP 8.5 behaviour.
+  - Both locale files parse as JSON and round-trip byte for byte through the
+    repository's 4-space format.
+  - `git diff --check`: clean.
+  - Prettier, partially: the global Prettier 3.8.1 (the lock pins 3.9.6)
+    without `prettier-plugin-tailwindcss` (not installed) over the 16 changed
+    frontend and spec files. Three files of this change were reformatted to
+    its output; the only remaining differences are three pre-existing union
+    types in `types/store.ts` that 3.8.1 prints differently. Tailwind class
+    order was not checked.
+  - `python3 .claude/scripts/pre_push_check.py`: exit 1 at its first stage,
+    ESLint (global 10.1.0 could not load `@stylistic/eslint-plugin`); nothing
+    after it ran.
+- **Not run.** Vitest (changed files or the full suite), `npm run
+  types:check`, ESLint, the locked Prettier with the Tailwind plugin,
+  Wayfinder generation, `npm run build`, Pest (`ProductEditFormTest`,
+  `ProductCreateFormTest`, `ProductControllerTest`, `DigitalProductFormTest`,
+  `StoreBackOfficeShellTest`, the legacy permission/middleware tests or the
+  suite), Pint, PHPStan, `route:list`, Playwright
+  (`store-product-edit.spec.ts`, `store-offers-catalogue.spec.ts`) and MySQL.
+  Every test written here is unexecuted.
+- **Inventory** (from the files, not `route:list`). **45** backend Blade files;
+  **23**/**3** literal consumers of the app/layout shells, no blank shell;
+  **1,048** `/temp` and **436** `/temp/admin` registrations (four replace
+  four); Blade editor: **8** fields in **8** views.
+
+Required before merge: the full `pre_push_check.py` gate with PHP 8.5, the dev
+tools and `node_modules`, plus the two browser specs above.
+
+## Trip list and status actions migration (2026-10-14)
+
+Work on `ccr-861a6e50-1xombz` from `develop` at `4cbb84d` (the PR #403 merge);
+the branch had no commits beyond that base. The owner authorized a commit,
+push, PR (#404) and merge into `develop`, each with `[skip ci]`, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this PR
+or its merge.** No other branch, deployment or production data was touched. The
+guide's §24 records the result.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `getTodayTrips`/`getAllTrips` (`:41-49`) called `getTrips()` (`:384-405`):
+  explicit select, `driver:id,name`/`truck:id,name`, `due_date = today()` for
+  today's list, `Trip::search()`, `applyStatusFilters()` (`:572-592`:
+  `pending`/`started`/`closed` flags ORed unless `allTrips`), newest first,
+  `paginate(15)`, `trips/index.blade.php`. `delete` (`:252-268`): checkpoints
+  by query, `SetTruckAvailability(..., true)` unconditionally (a TypeError with
+  no truck), flash, `back()`. `bulk_trip_delete` (`:270-292`): skipped unknown
+  ids, deleted checkpoints and trips with no truck update, returned `1`.
+  `update_trip_notes` (`:294-309`): any `notes`, JSON `success`.
+  `update_trip_status` (`:311-337`): `UpdateTripStatusRequest` (`id`,
+  `status` enum), one transaction, `lockTruckForTrip()` (`:200-215`) unless
+  closing, first start/close times kept, order checkpoints delivered on close,
+  truck freed when no other open trip holds it, returned `1`.
+- **Routes** (`routes/shop-admin.php`): `trips.index` `:267`,
+  `trips.today-trips` `:272`, `trips.destroy` `:280` (POST `/delete/{id}`),
+  `trips.bulk-trip-delete` `:281`, `trips.update-status` `:282`,
+  `trips.update-notes` `:283`; gates `view_all_trips`, `delete_trip`,
+  `edit_trip`.
+- **List view** (`trips/index.blade.php`): Create Order under `add_order`
+  (`:24-28`), Create Trip under `add_trip` (`:30-37`), bulk delete under
+  `delete_trip` (`:39-49`, posted by `bulk_delete()` `:325-343`), status
+  filters (`:52-111`), search (`:114-120`), the status button under
+  `edit_trip` (`:196-206`), inline notes under `edit_trip` (`:235-241`, saved
+  on change `:345-373`), Edit and Delete (`:251-265`), the status modal under
+  `edit_trip` (`:281-286`). **Modal** (`update-trip-status-modal.blade.php`):
+  every `TripStatus` case (`:12-14`), posted with `id` (`:26-44`).
+- **Consumers.** `trips/index.blade.php`: only `getTrips()`.
+  `update-trip-status-modal.blade.php`: only `trips/index.blade.php:283`.
+  `trips.destroy`: also `create-from-map.blade.php:139` (POST link through the
+  delete modal). `trips.update-status`, `trips.update-notes`,
+  `trips.bulk-trip-delete`: only the two views. `admin_sidenav.blade.php:713`
+  and `:718` link the lists by name. `trips/inc/scripts.blade.php`: create,
+  edit and create-from-map, kept.
+- **Tests treating the list as Blade.** `TripControllerTest:194-266` (status
+  via POST with `id`, `1` response) and `:453-474` (Blade list controls);
+  `LegacyAdminOwnershipTest:25-31` (four trip-list rows);
+  `LegacyStoreStateChangingRoutesTest` (POST mark on the map picker's link);
+  `store-drivers.spec.ts` (All trips as a Blade page).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripController` (`index`, `today`,
+  `updateStatus`, `updateNotes`, `destroy`, `bulkDestroy`);
+  `Controllers\Concerns\ReservesTripTrucks` (the moved `lockTruckForTrip()`,
+  also used by root); `FilterTripsRequest`, `UpdateTripStatusRequest` (now
+  `status` and `list`), `UpdateTripNotesRequest`, `TripListActionRequest`,
+  `BulkDeleteTripsRequest`, `Concerns\ValidatesStoreTripList`;
+  `Enums\StoreTripList`; `Resources\Store\TripResource`. Root loses
+  `getTodayTrips`, `getAllTrips`, `getTrips`, `applyStatusFilters`, `delete`,
+  `bulk_trip_delete`, `update_trip_notes`, `update_trip_status` and two unused
+  imports, and takes `lockTruckForTrip()` from the trait.
+- **Frontend.** `Store/Admin/Trips/Trips/Index.vue`, `StoreTripStatusDialog.vue`,
+  three types and a fixture, `store.trips.*` in English and Arabic (42 keys
+  each), the two menu entries flipped.
+- **Retained Blade.** `create-from-map.blade.php` deletes with
+  `data-method="delete"` and `list=map`; `aiz-core.js` `postLink` spoofs DELETE
+  for that mark.
+- **Routes.** Six registrations replace six; names kept.
+- **Removed (`git rm`).** `trips/index.blade.php`,
+  `trips/components/update-trip-status-modal.blade.php`.
+- **Unchanged.** Permission names and grants, the trip forms and their
+  writers, departure ID 9, checkpoints, the map picker's other controls, trip
+  orders, CMR, the API trip controllers, CSP and `blade_csp`, shells and
+  `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/`, and installed `node_modules`.
+`wait_for_setup.py` exited 0 with "frontend (vitest, vue-tsc, prettier,
+eslint): ready. App (artisan, migrations): unavailable. Vite build … not
+built". `install_php.sh` could not reach a package source (Ubuntu mirrors
+unresolvable, the PPA refused with 403), so PHP 8.5, Composer's dev tools and
+artisan were unavailable. Laravel Boost failed to connect.
+
+Wayfinder's files are generated by artisan, so for the frontend checks below
+the session wrote throwaway stand-ins for every imported `@/actions/...` module
+into the gitignored `resources/js/actions` and `resources/js/wayfinder`
+(fake `/temp/stub/...` URLs, actions typed `any`) and deleted them afterwards.
+They let the code and tests run, but URL literals cannot match and action
+argument types are not checked.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on every changed or new PHP file: no syntax errors.
+    Syntax only, not PHP 8.5 behaviour.
+  - Vitest, the two new files (`Trips/Trips/Index.test.ts`,
+    `StoreTripStatusDialog.test.ts`): 23 tests passed.
+  - Vitest, the full suite, on this branch and on a worktree of `develop` at
+    `4cbb84d` with the same stand-ins: `develop` 2,725 tests, 65 failed;
+    this branch 2,748 tests, 65 failed, the identical 65 (assertions on real
+    `/temp/admin/...` URLs, which the stand-ins cannot produce, in the menu,
+    layout and other existing tests).
+  - `npm run types:check` (vue-tsc): 0 errors, with `any`-typed actions.
+  - ESLint (repository config) and Prettier 3.9.6 (the locked version, with its
+    plugins) on every changed frontend and spec file: clean.
+  - Both locale files round-trip through the repository's 4-space JSON format;
+    `node --check public/assets/js/aiz-core.js`; `git diff --check`: clean.
+  - `python3 .claude/scripts/pre_push_check.py`, with the stand-ins: exit 1.
+    ESLint (whole repository), Prettier (`resources/`) and vue-tsc passed;
+    Vitest failed with the same 65 stand-in failures (2,748 tests, 2,683
+    passed), so the gate stopped there. Pint, PHPStan and Pest were not
+    reached and could not have run (no `vendor/`).
+- **Not run.** Pest (`TripControllerTest`, `LegacyAdminOwnershipTest`,
+  `LegacyStoreStateChangingRoutesTest`, `StoreBackOfficeShellTest` or the
+  suite), Pint, PHPStan, `wayfinder:generate`, `npm run build`, `route:list`,
+  Playwright (`store-trips.spec.ts`, `store-drivers.spec.ts`) and MySQL. Every
+  PHP test and both browser specs written or changed here are unexecuted.
+- **Inventory** (from the files, not `route:list`). **43** backend Blade files;
+  **22**/**3** literal consumers of the app/layout shells; **1,048** `/temp` and
+  **436** `/temp/admin` registrations (six replace six); Blade editor: **8**
+  fields in **8** views.
+
+Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
+the dev tools, generated Wayfinder files and `node_modules`, plus the two
+browser specs above.
+
+## Trip create and edit forms migration (2026-10-15)
+
+Work on `ccr-0ba426e7-qihjvq` from `develop` at `1f68656` (the PR #404 merge);
+the branch had no commits beyond that base. The owner authorized a commit,
+push, PR (#406) and merge into `develop`, each with `[skip ci]`, because the
+checks run locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran
+for this PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §25 records the result.
+
+### #404 checks carried over
+
+The session was asked to first run the checks this ledger lists as not run for
+#404 (`TripControllerTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, Pint, PHPStan, `wayfinder:generate`,
+`route:list`, `store-trips.spec.ts`, `store-drivers.spec.ts`) and fix what
+they exposed in a separate commit. **None could run:** the session had PHP
+8.3.6 and no `vendor/`; `wait_for_setup.py` exited 0 with "frontend (vitest,
+vue-tsc, prettier, eslint): ready. App (artisan, migrations): unavailable.
+Vite build … not built" and `install_php.sh --check` exited 1. Nothing was
+exposed, so there is no separate fix commit; the #404 PHP and browser checks
+remain outstanding, now together with this section's.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `create` (`:62-67`, `$trip = null` for the shared script), `edit`
+  (`:137-142`, `findOrFail($id)`), `store` (`:117-135`: one transaction,
+  `lockTruckForTrip()`, departure checkpoint first, `createTrip($request)`,
+  shortest-path sort, driver notified, `trips.show`), `update` (`:144-190`:
+  trip locked, closed trips not reserved, stored rows kept, others deleted by
+  query, new rows created, both trucks released only when no other open trip
+  holds them, driver notified when changed, `trips.show`) and
+  `prepareCheckpointRows` (`:194-224`). Shared with the map writer
+  `store_from_map` (`:81-115`): `createTrip` (`:330-342`),
+  `formatCheckpointsArray` (`:344-356`), `hasValidCoordinates` (`:389-394`),
+  `sortBasedOnShortestPath` (`:396-429`), `applyDefaultFirstCheckpoint`
+  (`:431-446`).
+- **Requests.** `UpdateTripRequest` 404'd a missing `id` in
+  `prepareForValidation` (`:16`) and required `id` (`:26`);
+  `ValidatesStoreTrip::validateCheckpointReferences` checked each reference
+  with a query in an after hook (`:47`).
+- **Routes** (`routes/shop-admin.php`): `trips.create` `:282`, `trips.store`
+  `:284`, `trips.edit` `:287` (`/edit/{id}`), `trips.update` `:288` (POST
+  `/update`); the lookups `:296-297`.
+- **Views.** `trips/create.blade.php` and `trips/edit.blade.php` (date,
+  driver and truck from `trips.available-vehicles`, notes, checkpoint rows,
+  the Leaflet map from `inc/map-scripts`); `components/checkpoint-template`
+  and `components/checkpoint` (the order and customer row selects, customer
+  notes `required` in markup only); `inc/scripts.blade.php` (SortableJS from
+  jsDelivr `@latest`, the vehicle lookup).
+- **Consumers.** `create.blade.php`/`edit.blade.php`: only the root
+  `create`/`edit`. The two checkpoint components: only those forms.
+  `inc/scripts.blade.php`: those forms and `create-from-map.blade.php:173`.
+  `inc/map-scripts.blade.php`: only those forms (and
+  `storeTripBladeMap.test.ts`). `trips.store`/`trips.update`: only those
+  forms. `trips.create`: `admin_sidenav.blade.php:723`, the menu and the
+  Inertia list; `trips.edit`: the Inertia list.
+- **Tests treating the forms as Blade.** `TripControllerTest` (update via
+  POST with `id`, the Blade edit view), `LegacyAdminOwnershipTest:26-28`,
+  `Index.test.ts` (full-page links), `store-drivers.spec.ts` (Blade create
+  heading).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripController` gains `create`, `store`, `edit`,
+  `update` (`add_trip`, `edit_trip`); `Controllers\Concerns\WritesTripCheckpoints`
+  (the moved shared steps, used by both controllers);
+  `Resources\Store\TripFormResource`; `UpdateTripRequest` takes the bound
+  trip; `ValidatesStoreTrip` validates each row's reference with
+  `Rule::exists`. Root loses `create`, `store`, `edit`, `update`,
+  `prepareCheckpointRows`, the moved helpers and two imports.
+  `ReservesTripTrucks` is unchanged apart from its docblock.
+- **Frontend.** `Store/Admin/Trips/Trips/Create.vue`, `Edit.vue`,
+  `StoreTripFormFields.vue`, six types and a fixture, 34 `store.trips.*` keys
+  in each of English and Arabic, the list's links and the menu's Create trip
+  entry as Inertia visits.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/create.blade.php`, `trips/edit.blade.php`,
+  `trips/components/checkpoint-template.blade.php`,
+  `trips/components/checkpoint.blade.php`; `tests/Feature/LegacyAdminOwnershipTest.php`
+  (its three rows moved to `TripControllerTest`).
+- **Unchanged.** Permission names and grants, departure ID 9, the truck lock
+  and release rules, the vehicle and coordinate lookups and the driver API,
+  the checkpoints page, the map picker and its writer, `inc/scripts`,
+  `inc/map-popups`, `inc/map-scripts`, trip orders, CMR, CSP and `blade_csp`,
+  shells and `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/`, and installed `node_modules`
+(above). Laravel Boost failed to connect. As for #404, the session wrote
+throwaway stand-ins for every imported `@/actions/...` module and
+`@/wayfinder` into the gitignored `resources/js/actions` and
+`resources/js/wayfinder` (fake `/temp/stub/...` URLs, actions typed `any`) and
+deleted them afterwards. They let the code and tests run, but URL literals
+cannot match and action argument types are not checked.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on every changed or new PHP file: no syntax errors.
+    Syntax only, not PHP 8.5 behaviour.
+  - Vitest, the four trip form and list files (`Create.test.ts`,
+    `Edit.test.ts`, `Index.test.ts`, `StoreTripFormFields.test.ts`): 35 tests
+    passed; `storeAdminMenu.test.ts` fails only its literal `/temp/admin/...`
+    URL assertion, as on `develop`.
+  - Vitest, the full suite, on this branch and on a worktree of `develop` at
+    `1f68656` with the same stand-ins: `develop` 2,748 tests, 77 failed; this
+    branch 2,766 tests, 77 failed, the identical 77 (compared by file and test
+    name: assertions on real `/temp/admin/...` URLs and stand-in action
+    shapes, in the menu, layout and other existing tests). This stand-in set
+    differs from #404's, so its 65 is not comparable.
+  - `npm run types:check` (vue-tsc): 0 errors, with `any`-typed actions.
+  - ESLint (repository config) and Prettier (the locked version, with its
+    plugins) on every changed frontend and spec file: clean.
+  - Both locale files round-trip through the repository's 4-space JSON
+    format; `git diff --check`: clean.
+  - `python3 .claude/scripts/pre_push_check.py`, with the stand-ins:
+    exit 1. ESLint (whole repository), Prettier (`resources/`) and vue-tsc
+    passed; Vitest failed with the same 77 stand-in failures (2,766 tests,
+    2,689 passed), so the gate stopped there. Pint, PHPStan and Pest were not
+    reached and could not have run (no `vendor/`).
+- **Not run.** Pest (`TripControllerTest`, `LegacyShopRouteAccessTest`,
+  `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+  `StoreBackOfficeShellTest`, `ControllerRedirectsTest` or the suite), Pint,
+  PHPStan (the new trait, resource and controller code is analysed at level
+  7; the moved helpers were in an excluded file until now),
+  `wayfinder:generate`, `npm run build`, `route:list`, Playwright
+  (`store-trips.spec.ts`, `store-drivers.spec.ts`) and MySQL. Every PHP test
+  and both browser specs written or changed here, and #404's, are unexecuted.
+- **Known limits.** The update writer's driver comparison is the legacy one:
+  the posted `driver_id` is a string, so the driver is notified on every
+  save that keeps a driver (unchanged behaviour). The customer choice list is
+  every non-representative store user, as the Blade forms loaded it, sent
+  once with only id and name.
+- **Inventory** (from the files, not `route:list`). **39** backend Blade files;
+  **20**/**3** literal consumers of the app/layout shells; **1,048** `/temp` and
+  **436** `/temp/admin` registrations (four replace four); Blade editor: **8**
+  fields in **8** views.
+
+Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
+the dev tools, generated Wayfinder files and `node_modules`, plus the two
+browser specs above, for this PR and #404.

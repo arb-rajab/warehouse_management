@@ -248,12 +248,13 @@ export interface StoreWebsiteHomeSettings {
     cupon_subtitle: string;
     home_categories: string[];
 }
+/** WebsitePageResource: a row of the website page list. */
 export interface StoreWebsitePage {
     id: number;
     title: string;
-    slug: string;
+    slug: string | null;
     type: string;
-    public_url: string;
+    public_url: string | null;
 }
 export interface StoreSupportTicket {
     id: number;
@@ -287,6 +288,11 @@ export interface StoreTicketReply {
     attachments: StoreUpload[];
 }
 
+/**
+ * UpdateWebsiteFooterRequest::KEYS: upload ids are the stored strings
+ * (`payment_method_images` comma-separated); the seller and delivery boy app
+ * links are sent only while their feature is on.
+ */
 export interface StoreWebsiteFooterSettings {
     footer_logo: string;
     about_us_description: string;
@@ -305,12 +311,28 @@ export interface StoreWebsiteFooterSettings {
     instagram_link: string;
     youtube_link: string;
     linkedin_link: string;
-    seller_app_link: string;
+    seller_app_link?: string;
+    delivery_boy_app_link?: string;
     payment_method_images: string;
     registration_tutorial_button: boolean;
     registration_tutorial_text: string;
     registration_tutorial_link: string;
 }
+
+export type StoreWebsiteAppearanceImage =
+    | 'site_icon'
+    | 'login_page_image'
+    | 'register_page_image'
+    | 'seller_login_page_bg'
+    | 'delivery_boy_login_page_bg'
+    | 'flash_deal_banner'
+    | 'flash_deal_banner_small'
+    | 'meta_image';
+
+/**
+ * UpdateWebsiteAppearanceRequest::KEYS: the seller and delivery boy login
+ * backgrounds are sent only while their feature is on.
+ */
 export interface StoreWebsiteAppearanceSettings {
     website_name: string;
     site_motto: string;
@@ -319,7 +341,8 @@ export interface StoreWebsiteAppearanceSettings {
     base_hov_color: string;
     login_page_image: string;
     register_page_image: string;
-    seller_login_page_bg: string;
+    seller_login_page_bg?: string;
+    delivery_boy_login_page_bg?: string;
     flash_deal_banner: string;
     flash_deal_banner_small: string;
     meta_title: string;
@@ -332,14 +355,23 @@ export interface StoreWebsiteAppearanceSettings {
     website_popup_content: string;
     show_subscribe_form: boolean;
 }
+
+/** The stored header and footer scripts, raw (LegacyWebsiteScriptsController). */
+export interface StoreWebsiteScripts {
+    header_script: string;
+    footer_script: string;
+}
+
+/** WebsitePageFormResource: a page's language-independent edit fields. */
 export interface StoreWebsitePageForm {
-    title: string;
+    id: number;
+    type: string;
     slug: string;
-    content: string;
     meta_title: string;
     meta_description: string;
     keywords: string;
     meta_image: string;
+    public_url: string | null;
 }
 export interface StoreBlogCategory {
     id: number;
@@ -459,6 +491,83 @@ export interface StoreDriver {
     country: string | null;
 }
 
+export type StoreTripStatus = 'pending' | 'started' | 'closed';
+
+/** The two trip lists that share `Store/Admin/Trips/Trips/Index`. */
+export type StoreTripListType = 'all' | 'today';
+
+/**
+ * A row of the trip lists: the due date as `YYYY-MM-DD`, the start and close
+ * times as ISO timestamps, the distance in metres and the duration in seconds.
+ */
+export interface StoreTrip {
+    id: number;
+    code: string;
+    status: StoreTripStatus;
+    due_date: string | null;
+    started_at: string | null;
+    closed_at: string | null;
+    distance: number | null;
+    duration: number | null;
+    notes: string | null;
+    driver: { id: number; name: string } | null;
+    truck: { id: number; name: string } | null;
+}
+
+/** A trip checkpoint's kind: an order's delivery or another stop at a customer. */
+export type StoreTripCheckpointType = 'delivery' | 'other';
+
+/** An order the trip forms offer for a new delivery checkpoint. */
+export interface StoreTripOrderOption {
+    id: number;
+    code: string;
+    customer: string | null;
+}
+
+/** A truck from the available-vehicles lookup. */
+export interface StoreTripTruckOption {
+    id: number;
+    name: string;
+    model: string | null;
+}
+
+/** The available-vehicles lookup's answer, narrowed to what the form shows. */
+export interface StoreTripVehicles {
+    drivers: StoreReferenceOption[];
+    trucks: StoreTripTruckOption[];
+}
+
+/**
+ * A stored checkpoint on the trip edit form, with what the form shows for its
+ * order (code and customer) or customer.
+ */
+export interface StoreTripCheckpoint {
+    id: number;
+    type: StoreTripCheckpointType;
+    related_id: number;
+    notes: string | null;
+    order_code: string | null;
+    customer: string | null;
+}
+
+/** The trip being edited: the due date as `YYYY-MM-DD`. */
+export interface StoreTripForm {
+    id: number;
+    code: string;
+    status: StoreTripStatus;
+    driver_id: number | null;
+    truck_id: number | null;
+    due_date: string | null;
+    notes: string | null;
+    checkpoints: StoreTripCheckpoint[];
+}
+
+export interface StoreTripFilters {
+    per_page: number;
+    search: string;
+    status: StoreTripStatus[];
+}
+
 export interface StoreNotification {
     id: string;
     kind: 'order' | 'cart' | 'other';
@@ -559,6 +668,125 @@ export interface StoreDigitalProduct {
     featured: boolean;
     public_url: string | null;
     download_token: string;
+}
+/** The language-independent fields of the digital product edit form. */
+export interface StoreDigitalProductForm {
+    id: number;
+    category_id: number | null;
+    /** Comma-separated image upload ids. */
+    photos: string | null;
+    thumbnail_img: string | null;
+    /** Comma-separated tags. */
+    tags: string | null;
+    unit_price: string;
+    purchase_price: string | null;
+    discount: string | null;
+    discount_type: string | null;
+    /** `d-m-Y H:i:s to d-m-Y H:i:s`, or null without both ends. */
+    date_range: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    meta_img: string | null;
+    slug: string | null;
+    /** The downloadable file's upload id. */
+    file: string | null;
+}
+/** An active tax, with the product's amount and type for it. */
+export interface StoreDigitalProductTax {
+    id: number;
+    name: string;
+    tax: string;
+    tax_type: 'amount' | 'percent';
+}
+/** A colour a physical product may come in, by its code. */
+export interface StoreProductColor {
+    id: number;
+    name: string;
+    code: string;
+}
+/** One value of a product attribute (`products.add-more-choice-option`). */
+export interface StoreProductAttributeValue {
+    id: number;
+    value: string;
+}
+/**
+ * A generated variant row (`products.variant_combinations`). On the edit
+ * form (`products.edit_variant_combinations`) a row also carries the photo
+ * of its stored stock row, with the preview the caller may see.
+ */
+export interface StoreProductVariantRow {
+    variant: string;
+    price: string;
+    sku: string;
+    qty: string;
+    image?: string | null;
+    files?: StoreUpload[];
+}
+/** A product's stored colours and choices, with the rows they generate. */
+export interface StoreProductVariantState {
+    colors_active: boolean;
+    colors: string[];
+    choice_options: { attribute_id: number; values: string[] }[];
+    /** Each chosen attribute's values, keyed by attribute id. */
+    attribute_values: Record<number, StoreProductAttributeValue[]>;
+    rows: StoreProductVariantRow[];
+}
+/** The language-independent fields of the physical product edit form. */
+export interface StoreProductForm {
+    id: number;
+    added_by: string | null;
+    category_id: number | null;
+    brand_id: number | null;
+    weight: string | null;
+    max_qty: string | null;
+    min_qty: string;
+    /** Comma-separated tags. */
+    tags: string | null;
+    /** Comma-separated image upload ids. */
+    photos: string | null;
+    /** The Otajer import's image upload ids, comma-separated. */
+    old_photo: string | null;
+    thumbnail_img: string | null;
+    video_provider: string | null;
+    video_link: string | null;
+    pdf: string | null;
+    unit_price: string;
+    discount: string | null;
+    discount_type: string | null;
+    /** `d-m-Y H:i:s to d-m-Y H:i:s`, or null without both ends. */
+    date_range: string | null;
+    /** The first stock row's quantity and SKU. */
+    current_stock: string;
+    sku: string | null;
+    external_link: string | null;
+    external_link_btn: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    meta_img: string | null;
+    slug: string | null;
+    shipping_type: 'free' | 'flat_rate';
+    flat_shipping_cost: string;
+    is_quantity_multiplied: boolean;
+    est_shipping_days: string | null;
+    low_stock_quantity: string | null;
+    stock_visibility_state: 'quantity' | 'text' | 'hide';
+    cash_on_delivery: boolean;
+    featured: boolean;
+    todays_deal: boolean;
+    /** The product's flash deal, while the form lists it. */
+    flash_deal_id: number | null;
+    product_types: string[];
+    product_barcodes: string[];
+}
+/** The product list an edit form was opened from. */
+export type StoreProductEditListType = 'admin' | 'seller';
+/** The physical product form's sections the business settings switch on. */
+export interface StoreProductFormSections {
+    shipping: boolean;
+    productWiseShipping: boolean;
+    flashDeals: boolean;
+    vat: boolean;
+    cashOnDelivery: boolean;
 }
 /** The list a product row action names (`list`): its URI segment. */
 export type StoreProductListType = 'admin' | 'all';

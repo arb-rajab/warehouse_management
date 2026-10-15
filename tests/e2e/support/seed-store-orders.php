@@ -17,6 +17,9 @@ $admin = StoreUser::query()->where('email', 'store-admin@example.com')->firstOrF
 foreach ([['Browser Buyer', 'browser-buyer@example.com', 0], ['Browser Representative', 'browser-rep@example.com', 1]] as [$name, $email, $isRep]) {
     StoreUser::query()->firstOrCreate(['email' => $email], ['name' => $name, 'password' => 'password'])->forceFill(['user_type' => 'customer', 'is_rep' => $isRep, 'rep_discount_percentage' => 10, 'email_verified_at' => now()])->save();
 }
+// The seller panel keeps the legacy uploader long-term; the relocated
+// legacy-uploader spec signs in as this seller (store-legacy-uploader.spec.ts).
+StoreUser::query()->firstOrCreate(['email' => 'browser-seller@example.com'], ['name' => 'Browser Seller', 'password' => 'password'])->forceFill(['user_type' => 'seller', 'email_verified_at' => now()])->save();
 $product = Product::query()->orderBy('id')->firstOrFail();
 $product->forceFill(['name' => 'Browser Order Product', 'ar_name' => 'منتج اختبار الطلب', 'user_id' => $admin->id, 'published' => 1, 'approved' => 1, 'added_by' => 'admin', 'serial' => 'BROWSER-ORDER', 'unit_price' => 12, 'unit_equal' => 6, 'tax' => 21, 'slug' => 'browser-order-product'])->save();
 ProductStock::query()->create(['product_id' => $product->id, 'variant' => '', 'qty' => 50, 'price' => 12, 'sku' => 'BROWSER-ORDER']);

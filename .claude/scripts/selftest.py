@@ -105,19 +105,66 @@ def main() -> int:
         import pre_push_check
 
         pre_push_check.php_tools_installed = lambda: True
-        labels = [label for label, _, _ in pre_push_check.build_steps()]
+        labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
-            'with the PHP tools installed, every CI step runs in CI order',
+            'with the PHP tools installed, --full runs every CI step in CI order',
             labels == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest', 'Pint', 'PHPStan', 'Clear config cache', 'Pest'],
             str(labels),
         )
 
+        def scoped(*files: str) -> dict[str, list[str]]:
+            return {label: command for label, command, _ in pre_push_check.scoped_steps(list(files))}
+
+        check(
+            'a docs-only change runs nothing',
+            scoped('.ai/rules/index.md', 'AGENTS.md', '.claude/scripts/selftest.py') == {},
+        )
+
+        steps = scoped('resources/js/app.ts', 'app/Models/Pallet.php', 'resources/js/deleted-in-this-branch.ts')
+        check(
+            'a mixed change scopes ESLint, Prettier, Vitest and Pint to the changed files that exist',
+            list(steps) == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest', 'Pint', 'PHPStan', 'Clear config cache', 'Pest']
+            and steps['ESLint'][-1] == 'resources/js/app.ts'
+            and steps['Prettier'][-1] == 'resources/js/app.ts'
+            and steps['Vitest'][-1] == 'resources/js/app.ts'
+            and steps['Pint'][-1] == 'app/Models/Pallet.php',
+            str(steps),
+        )
+
+        labels = list(scoped('tests/Pest.php'))
+        check(
+            'a PHP-test-only change runs only the PHP steps',
+            labels == ['Pint', 'PHPStan', 'Clear config cache', 'Pest'],
+            str(labels),
+        )
+
+        labels = list(scoped('routes/web.php'))
+        check(
+            'a route change still type-checks the frontend against the regenerated Wayfinder types',
+            'vue-tsc' in labels and 'ESLint' not in labels,
+            str(labels),
+        )
+
         pre_push_check.php_tools_installed = lambda: False
-        labels = [label for label, _, _ in pre_push_check.build_steps()]
+        labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
             'without the PHP tools, only the JS steps run',
             labels == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
             str(labels),
+        )
+
+        labels = list(scoped('resources/js/app.ts', 'app/Models/Pallet.php'))
+        check(
+            'without the PHP tools, a scoped run drops the PHP steps',
+            labels == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
+            str(labels),
+        )
+
+        changed = pre_push_check.changed_files('HEAD')
+        check('changed_files resolves against a reachable base', isinstance(changed, list), str(changed))
+        check(
+            'changed_files reports None for a base it cannot reach',
+            pre_push_check.changed_files('refs/does-not-exist') is None,
         )
 
         print('install-retry-guard.sh')

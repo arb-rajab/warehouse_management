@@ -136,7 +136,7 @@
                                 @can('delete_trip')
                                 <div class="col-auto">
                                     <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete"
-                                        data-method="post" data-href="{{ route('trips.destroy', ['id' => $truck->lastTrip()->id]) }}"
+                                        data-method="delete" data-href="{{ route('trips.destroy', ['trip' => $truck->lastTrip(), 'list' => 'map']) }}"
                                         title="{{ translate('Delete') }}">
                                         <i class="las la-trash"></i>
                                     </a>

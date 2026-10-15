@@ -118,7 +118,6 @@
         "app/Http/Controllers/CustomerController.php",
         "app/Http/Controllers/CustomerPackageController.php",
         "app/Http/Controllers/CustomerProductController.php",
-        "app/Http/Controllers/DigitalProductController.php",
         "app/Http/Controllers/FollowSellerController.php",
         "app/Http/Controllers/HomeController.php",
         "app/Http/Controllers/InvoiceController.php",
@@ -335,7 +334,6 @@
         "app/Models/OffersCatalog.php",
         "app/Models/Order.php",
         "app/Models/OrderDetail.php",
-        "app/Models/PageTranslation.php",
         "app/Models/PasswordReset.php",
         "app/Models/Payment.php",
         "app/Models/Permission.php",
@@ -429,7 +427,6 @@
         "routes/shop-seller.php",
         "routes/shop-web.php",
         "app/Models/CustomerProduct.php",
-        "app/Http/Controllers/WebsiteController.php",
         "app/Http/Controllers/PageController.php",
         "app/Http/Controllers/AdminController.php"
     ]
